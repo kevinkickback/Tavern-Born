@@ -17,8 +17,9 @@ import { FormattingGuide } from '@/components/character/FormattingGuide'
 import { toast } from 'sonner'
 
 export function CharacteristicsPage() {
-  const { activeCharacter, updateCharacter } = useCharacterStore()
-  
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+
   const [alignment, setAlignment] = useState(activeCharacter?.details?.alignment || '')
   const [faith, setFaith] = useState(activeCharacter?.details?.faith || '')
   const [lifestyle, setLifestyle] = useState(activeCharacter?.details?.lifestyle || '')
@@ -69,7 +70,7 @@ export function CharacteristicsPage() {
         fears,
       }
     })
-    
+
     toast.success('Characteristics saved successfully')
   }
 

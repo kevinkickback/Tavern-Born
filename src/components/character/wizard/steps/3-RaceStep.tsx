@@ -20,15 +20,15 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
     : races
 
   const selectedRace = filteredRaces.find(r => r.name === data.race)
-  
+
   const subraces = selectedRace?.subraces || []
   const selectedSubrace = subraces.find((sr: any) => sr.name === data.subrace)
-  
+
   const displayRace = selectedSubrace || selectedRace
 
   const getAbilityScoreIncreases = () => {
     if (!displayRace?.ability) return []
-    
+
     const increases: string[] = []
     for (const abilityObj of displayRace.ability) {
       for (const [key, value] of Object.entries(abilityObj)) {
@@ -58,7 +58,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
 
   const getLanguages = () => {
     if (!displayRace?.languageProficiencies) return ''
-    
+
     const languages: string[] = []
     for (const langProf of displayRace.languageProficiencies) {
       for (const [key, value] of Object.entries(langProf)) {
@@ -69,7 +69,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
       }
       if (langProf.choose) {
         const { from, count } = langProf.choose
-        const formattedLanguages = from.map((lang: string) => 
+        const formattedLanguages = from.map((lang: string) =>
           lang.charAt(0).toUpperCase() + lang.slice(1)
         ).join(', ')
         languages.push(`Choose ${count} from ${formattedLanguages}`)
@@ -83,9 +83,9 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
 
   const getTraits = () => {
     if (!displayRace) return []
-    
+
     const traits: { name: string; entries: any[] }[] = []
-    
+
     if (displayRace.entries) {
       for (const entry of displayRace.entries) {
         if (typeof entry === 'object' && entry.name && entry.type === 'entries') {
@@ -99,14 +99,14 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
         }
       }
     }
-    
+
     if (displayRace.darkvision && !traits.some(t => t.name === 'Darkvision')) {
       traits.push({
         name: 'Darkvision',
         entries: [`You have superior vision in dark and dim conditions. You can see in dim light within ${displayRace.darkvision} feet of you as if it were bright light, and in darkness as if it were dim light.`]
       })
     }
-    
+
     if (displayRace.traitTags) {
       for (const tag of displayRace.traitTags) {
         if (tag === 'Tool Proficiency' && !traits.some(t => t.name.includes('Tool'))) {
@@ -117,7 +117,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
         }
       }
     }
-    
+
     return traits
   }
 
@@ -139,8 +139,8 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
           <Label htmlFor="race-select" className="text-sm font-semibold mb-2 block">
             Race
           </Label>
-          <Select 
-            value={data.race || ''} 
+          <Select
+            value={data.race || ''}
             onValueChange={(value) => onChange({ race: value, subrace: '' })}
           >
             <SelectTrigger id="race-select" className="h-11">
@@ -166,8 +166,8 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
           <Label htmlFor="subrace-select" className="text-sm font-semibold mb-2 block">
             Subrace
           </Label>
-          <Select 
-            value={data.subrace || ''} 
+          <Select
+            value={data.subrace || ''}
             onValueChange={(value) => onChange({ subrace: value })}
             disabled={subraces.length === 0}
           >

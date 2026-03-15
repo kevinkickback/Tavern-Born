@@ -10,8 +10,9 @@ import { FormattingGuide } from '@/components/character/FormattingGuide'
 import { toast } from 'sonner'
 
 export function AppearancePage() {
-  const { activeCharacter, updateCharacter } = useCharacterStore()
-  
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+
   const [age, setAge] = useState(activeCharacter?.details?.age?.toString() || '')
   const [height, setHeight] = useState(activeCharacter?.details?.height || '')
   const [weight, setWeight] = useState(activeCharacter?.details?.weight || '')
@@ -59,7 +60,7 @@ export function AppearancePage() {
         mannerisms,
       }
     })
-    
+
     toast.success('Appearance saved successfully')
   }
 

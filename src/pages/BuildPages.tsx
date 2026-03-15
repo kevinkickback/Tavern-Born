@@ -1,10 +1,24 @@
+import { Card } from '@/components/ui/card'
+import { useCharacterStore } from '@/store/characterStore'
+import { PersonSimple, Sword, Scroll, Certificate, Barbell } from '@phosphor-icons/react'
+
 export function BuildRacePage() {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  if (!activeCharacter) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Card className="p-8 text-center max-w-md">
+          <PersonSimple className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
+          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
+          <p className="text-muted-foreground">
+            Please select or create a character to choose their race.
+          </p>
+        </Card>
+      </div>
+    )
+  }
   return (
     <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Select Race</h1>
-      <p className="text-muted-foreground mb-8">
-        Choose your character's race to determine racial traits and bonuses
-      </p>
       <div className="text-center py-20 bg-card rounded-lg border border-border">
         <p className="text-lg text-muted-foreground">
           Race selection interface - connects to 5etools data
@@ -15,12 +29,22 @@ export function BuildRacePage() {
 }
 
 export function BuildClassPage() {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  if (!activeCharacter) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Card className="p-8 text-center max-w-md">
+          <Sword className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
+          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
+          <p className="text-muted-foreground">
+            Please select or create a character to choose their class.
+          </p>
+        </Card>
+      </div>
+    )
+  }
   return (
     <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Select Class</h1>
-      <p className="text-muted-foreground mb-8">
-        Choose your character's class to determine abilities and features
-      </p>
       <div className="text-center py-20 bg-card rounded-lg border border-border">
         <p className="text-lg text-muted-foreground">
           Class selection interface - connects to 5etools data
@@ -31,12 +55,22 @@ export function BuildClassPage() {
 }
 
 export function BuildBackgroundPage() {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  if (!activeCharacter) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Card className="p-8 text-center max-w-md">
+          <Scroll className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
+          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
+          <p className="text-muted-foreground">
+            Please select or create a character to choose their background.
+          </p>
+        </Card>
+      </div>
+    )
+  }
   return (
     <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Select Background</h1>
-      <p className="text-muted-foreground mb-8">
-        Choose your character's background for skills and proficiencies
-      </p>
       <div className="text-center py-20 bg-card rounded-lg border border-border">
         <p className="text-lg text-muted-foreground">
           Background selection interface - connects to 5etools data
@@ -47,12 +81,22 @@ export function BuildBackgroundPage() {
 }
 
 export function BuildProficienciesPage() {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  if (!activeCharacter) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Card className="p-8 text-center max-w-md">
+          <Certificate className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
+          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
+          <p className="text-muted-foreground">
+            Please select or create a character to manage their proficiencies.
+          </p>
+        </Card>
+      </div>
+    )
+  }
   return (
     <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Proficiencies</h1>
-      <p className="text-muted-foreground mb-8">
-        Manage armor, weapon, tool, and language proficiencies
-      </p>
       <div className="text-center py-20 bg-card rounded-lg border border-border">
         <p className="text-lg text-muted-foreground">
           Proficiency management interface
@@ -63,12 +107,22 @@ export function BuildProficienciesPage() {
 }
 
 export function BuildAbilityScoresPage() {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  if (!activeCharacter) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Card className="p-8 text-center max-w-md">
+          <Barbell className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
+          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
+          <p className="text-muted-foreground">
+            Please select or create a character to assign their ability scores.
+          </p>
+        </Card>
+      </div>
+    )
+  }
   return (
     <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Ability Scores</h1>
-      <p className="text-muted-foreground mb-8">
-        Assign your character's ability scores using point buy, standard array, or manual entry
-      </p>
       <div className="text-center py-20 bg-card rounded-lg border border-border">
         <p className="text-lg text-muted-foreground">
           Ability score assignment interface

@@ -1,26 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useGameDataStore } from '@/store/gameDataStore'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { MagnifyingGlass, Sword, Sparkle, Backpack, Book, Users, Flag, Star, Lightbulb, Scroll, Globe } from '@phosphor-icons/react'
+import { MagnifyingGlass, Book } from '@phosphor-icons/react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 
-type CompendiumCategory = 
-  | 'all'
-  | 'races'
-  | 'classes'
-  | 'spells'
-  | 'items'
-  | 'backgrounds'
-  | 'feats'
-  | 'skills'
-  | 'actions'
-  | 'conditions'
-  | 'languages'
-  | 'deities'
+type CompendiumCategory = 'all'
 
 interface CompendiumEntry {
   name: string
@@ -30,25 +17,12 @@ interface CompendiumEntry {
   data: any
 }
 
-const categoryIcons: Record<CompendiumCategory, any> = {
-  all: Book,
-  races: Users,
-  classes: Sword,
-  spells: Sparkle,
-  items: Backpack,
-  backgrounds: Flag,
-  feats: Star,
-  skills: Lightbulb,
-  actions: Scroll,
-  conditions: Scroll,
-  languages: Globe,
-  deities: Sparkle,
-}
+
+const MAX_DISPLAY = 200
 
 export function CompendiumPage() {
-  const { gameData } = useGameDataStore()
+  const gameData = useGameDataStore((state) => state.gameData)
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState<CompendiumCategory>('all')
   const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(null)
 
   const allEntries = useMemo(() => {
@@ -194,12 +168,6 @@ export function CompendiumPage() {
   const filteredEntries = useMemo(() => {
     let filtered = allEntries
 
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(
-        (entry) => entry.type.toLowerCase() === selectedCategory
-      )
-    }
-
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
@@ -211,20 +179,10 @@ export function CompendiumPage() {
     }
 
     return filtered.sort((a, b) => a.name.localeCompare(b.name))
-  }, [allEntries, selectedCategory, searchQuery])
+  }, [allEntries, searchQuery])
 
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      all: allEntries.length,
-    }
-
-    allEntries.forEach((entry) => {
-      const type = entry.type.toLowerCase()
-      counts[type] = (counts[type] || 0) + 1
-    })
-
-    return counts
-  }, [allEntries])
+  const displayedEntries = filteredEntries.slice(0, MAX_DISPLAY)
+  const hasMore = filteredEntries.length > MAX_DISPLAY
 
   if (!gameData) {
     return (
@@ -270,37 +228,18 @@ export function CompendiumPage() {
 
       <div className="flex-1 overflow-hidden">
         <div className="max-w-7xl mx-auto h-full p-6">
-          <Tabs
-            value={selectedCategory}
-            onValueChange={(value) => setSelectedCategory(value as CompendiumCategory)}
-            className="h-full flex flex-col"
-          >
-            <TabsList className="grid grid-cols-6 lg:grid-cols-12 mb-4">
-              {Object.keys(categoryIcons).map((category) => {
-                const Icon = categoryIcons[category as CompendiumCategory]
-                const count = categoryCounts[category] || 0
-                return (
-                  <TabsTrigger
-                    key={category}
-                    value={category}
-                    className="flex flex-col gap-1 h-auto py-2"
-                  >
-                    <Icon className="text-lg" />
-                    <span className="text-xs capitalize">{category}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {count}
-                    </Badge>
-                  </TabsTrigger>
-                )
-              })}
-            </TabsList>
-
-            <TabsContent value={selectedCategory} className="flex-1 overflow-hidden mt-0">
+          <div className="h-full flex flex-col">
+            <div className="flex-1 overflow-hidden mt-0">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
                 <Card className="overflow-hidden flex flex-col">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg">
                       Results ({filteredEntries.length})
+                      {hasMore && (
+                        <span className="text-sm font-normal text-muted-foreground ml-2">
+                          showing first {MAX_DISPLAY}
+                        </span>
+                      )}
                     </CardTitle>
                   </CardHeader>
                   <Separator />
@@ -311,23 +250,22 @@ export function CompendiumPage() {
                           No entries found
                         </div>
                       ) : (
-                        filteredEntries.map((entry, index) => (
+                        displayedEntries.map((entry) => (
                           <button
-                            key={`${entry.type}-${entry.name}-${index}`}
+                            key={`${entry.type}-${entry.source}-${entry.name}`}
                             onClick={() => setSelectedEntry(entry)}
-                            className={`w-full text-left p-3 rounded-lg border transition-all hover:border-accent ${
-                              selectedEntry === entry
-                                ? 'border-accent bg-accent/10'
-                                : 'border-border bg-card'
-                            }`}
+                            className={`w-full text-left p-3 rounded-lg border transition-colors hover:border-accent ${selectedEntry === entry
+                              ? 'border-accent bg-accent/10'
+                              : 'border-border bg-card'
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <h3 className="font-semibold truncate">{entry.name}</h3>
                                 {entry.description && (
                                   <p className="text-sm text-muted-foreground line-clamp-1">
-                                    {typeof entry.description === 'string' 
-                                      ? entry.description 
+                                    {typeof entry.description === 'string'
+                                      ? entry.description
                                       : JSON.stringify(entry.description)}
                                   </p>
                                 )}
@@ -387,8 +325,8 @@ export function CompendiumPage() {
                   </ScrollArea>
                 </Card>
               </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -11,8 +11,9 @@ import { toast } from 'sonner'
 import type { Ally } from '@/types/character'
 
 export function AlliesOrganizationsPage() {
-  const { activeCharacter, updateCharacter } = useCharacterStore()
-  
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+
   const [faction, setFaction] = useState(activeCharacter?.details?.faction || '')
   const [rank, setRank] = useState(activeCharacter?.details?.rank || '')
   const [factionNotes, setFactionNotes] = useState(activeCharacter?.details?.factionNotes || '')
@@ -50,7 +51,7 @@ export function AlliesOrganizationsPage() {
   }
 
   const updateAlly = (id: string, field: keyof Ally, value: string) => {
-    setAllies(allies.map(ally => 
+    setAllies(allies.map(ally =>
       ally.id === id ? { ...ally, [field]: value } : ally
     ))
   }
@@ -73,7 +74,7 @@ export function AlliesOrganizationsPage() {
         allies,
       }
     })
-    
+
     toast.success('Allies & Organizations saved successfully')
   }
 

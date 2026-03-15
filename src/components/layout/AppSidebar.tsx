@@ -88,7 +88,7 @@ export function AppSidebar() {
 
   const toggleSection = (label: string) => {
     setExpandedSections((prev) =>
-      prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]
+      prev.includes(label) ? [] : [label]
     )
   }
 
@@ -108,7 +108,7 @@ export function AppSidebar() {
                   <button
                     onClick={() => toggleSection(item.label)}
                     className={cn(
-                      'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all',
+                      'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
                       isActive(item.path)
                         ? 'bg-primary text-primary-foreground'
                         : 'text-foreground hover:bg-secondary hover:text-secondary-foreground'
@@ -132,7 +132,7 @@ export function AppSidebar() {
                           <Link
                             to={child.path}
                             className={cn(
-                              'block px-4 py-2 rounded-lg text-sm transition-all',
+                              'block px-4 py-2 rounded-lg text-sm transition-colors',
                               isActive(child.path)
                                 ? 'bg-accent text-accent-foreground font-medium'
                                 : 'text-muted-foreground hover:bg-secondary hover:text-secondary-foreground'
@@ -149,7 +149,7 @@ export function AppSidebar() {
                 <Link
                   to={item.path}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all',
+                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
                     isActive(item.path)
                       ? 'bg-primary text-primary-foreground'
                       : 'text-foreground hover:bg-secondary hover:text-secondary-foreground'
@@ -165,7 +165,7 @@ export function AppSidebar() {
       </nav>
 
       <div className="p-4 border-t border-border flex items-center justify-center gap-4">
-        <button 
+        <button
           onClick={() => navigate('/compendium')}
           className="p-2 rounded-lg hover:bg-secondary transition-colors"
         >

@@ -1,10 +1,24 @@
+import { Card } from '@/components/ui/card'
+import { useCharacterStore } from '@/store/characterStore'
+import { Star, MagicWand, Backpack } from '@phosphor-icons/react'
+
 export function FeatsPage() {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  if (!activeCharacter) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Card className="p-8 text-center max-w-md">
+          <Star className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
+          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
+          <p className="text-muted-foreground">
+            Please select or create a character to choose their feats.
+          </p>
+        </Card>
+      </div>
+    )
+  }
   return (
     <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Feats</h1>
-      <p className="text-muted-foreground mb-8">
-        Select feats to customize your character's abilities
-      </p>
       <div className="text-center py-20 bg-card rounded-lg border border-border">
         <p className="text-lg text-muted-foreground">
           Feat selection interface - connects to 5etools data
@@ -15,12 +29,22 @@ export function FeatsPage() {
 }
 
 export function SpellsPage() {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  if (!activeCharacter) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Card className="p-8 text-center max-w-md">
+          <MagicWand className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
+          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
+          <p className="text-muted-foreground">
+            Please select or create a character to manage their spell list.
+          </p>
+        </Card>
+      </div>
+    )
+  }
   return (
     <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Spells</h1>
-      <p className="text-muted-foreground mb-8">
-        Manage your character's spell list and prepared spells
-      </p>
       <div className="text-center py-20 bg-card rounded-lg border border-border">
         <p className="text-lg text-muted-foreground">
           Spell management interface - connects to 5etools data
@@ -31,12 +55,22 @@ export function SpellsPage() {
 }
 
 export function EquipmentPage() {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  if (!activeCharacter) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Card className="p-8 text-center max-w-md">
+          <Backpack className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
+          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
+          <p className="text-muted-foreground">
+            Please select or create a character to manage their equipment.
+          </p>
+        </Card>
+      </div>
+    )
+  }
   return (
     <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Equipment</h1>
-      <p className="text-muted-foreground mb-8">
-        Manage your character's weapons, armor, and adventuring gear
-      </p>
       <div className="text-center py-20 bg-card rounded-lg border border-border">
         <p className="text-lg text-muted-foreground">
           Equipment management interface - connects to 5etools data
@@ -49,10 +83,6 @@ export function EquipmentPage() {
 export function DetailsPage() {
   return (
     <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Character Details</h1>
-      <p className="text-muted-foreground mb-8">
-        Add personality, appearance, and backstory details
-      </p>
       <div className="text-center py-20 bg-card rounded-lg border border-border">
         <p className="text-lg text-muted-foreground">
           Character details editing interface
@@ -65,10 +95,6 @@ export function DetailsPage() {
 export function CharacterSheetPage() {
   return (
     <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Character Sheet</h1>
-      <p className="text-muted-foreground mb-8">
-        View and print your completed character sheet
-      </p>
       <div className="text-center py-20 bg-card rounded-lg border border-border">
         <p className="text-lg text-muted-foreground">
           Character sheet display and export interface
@@ -82,11 +108,7 @@ import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigur
 
 export function SettingsPage() {
   return (
-    <div>
-      <h1 className="font-display text-4xl font-bold mb-4">Settings</h1>
-      <p className="text-muted-foreground mb-8">
-        Configure data sources and application preferences
-      </p>
+    <div className="max-w-7xl mx-auto w-full">
       <DataSourceConfigurator />
     </div>
   )
