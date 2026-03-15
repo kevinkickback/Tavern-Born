@@ -89,7 +89,10 @@ export function CharacterCreationWizard({
       background: characterData.background,
       portrait: characterData.portrait,
       allowedSources: characterData.allowedSources,
-      variantRules: characterData.variantRules,
+      variantRules: {
+        ...characterData.variantRules,
+        abilityScoreMethod: (characterData.abilityScoreMethod as 'point-buy' | 'standard-array' | 'custom') || 'standard-array',
+      },
       details: {
         gender: characterData.gender,
       },
