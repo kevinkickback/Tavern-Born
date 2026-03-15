@@ -5,6 +5,7 @@ export interface Character {
   race: string
   subrace?: string
   class: string
+  subclass?: string
   background: string
   level: number
   experiencePoints: number
@@ -39,6 +40,7 @@ export interface Character {
 export interface VariantRules {
   optionalClassFeatures?: boolean
   averageHitPoints?: boolean
+  abilityScoreMethod?: 'point-buy' | 'standard-array' | 'custom'
 }
 
 export interface AbilityScores {
@@ -99,10 +101,21 @@ export interface SpellSlots {
 export interface Equipment {
   id: string
   name: string
+  /** 5etools type code: 'LA', 'MA', 'HA', 'S', 'M', 'R', 'G', 'P', 'WO', etc. */
   type: string
   quantity: number
   equipped: boolean
+  attuned?: boolean
   description?: string
+  weight?: number
+  value?: number
+  rarity?: string
+  source?: string
+  reqAttune?: boolean
+  /** Base armour class for worn armour items. */
+  ac?: number
+  /** Resolved armour category (derived from type on import). */
+  armorType?: 'light' | 'medium' | 'heavy' | 'shield'
 }
 
 export interface HitPoints {
