@@ -5,6 +5,20 @@ interface BackgroundStepProps extends StepProps {
   backgrounds: any[]
 }
 
+function getFirstStringEntry(entries: any[]): string {
+  for (const entry of entries) {
+    if (typeof entry === 'string') return entry
+    if (entry && typeof entry === 'object') {
+      const nested = entry.entries ?? entry.items
+      if (Array.isArray(nested)) {
+        const found = getFirstStringEntry(nested)
+        if (found) return found
+      }
+    }
+  }
+  return ''
+}
+
 export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepProps) {
   const filteredBackgrounds = data.allowedSources && data.allowedSources.length > 0
     ? backgrounds.filter(bg => data.allowedSources.includes(bg.source))
@@ -48,7 +62,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
                 <div className="text-xs font-mono text-muted-foreground">{bg.source}</div>
               </div>
               <div className="text-sm text-muted-foreground line-clamp-2">
-                {bg.entries?.[0]?.entries?.[0] || bg.entries?.[0] || 'No description available'}
+                {getFirstStringEntry(bg.entries ?? []) || 'No description available'}
               </div>
             </button>
           ))

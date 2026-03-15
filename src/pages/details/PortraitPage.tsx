@@ -6,8 +6,10 @@ import { Slider } from '@/components/ui/slider'
 import { Image, Upload, X, MagnifyingGlassMinus, MagnifyingGlassPlus, ArrowsOut, ArrowsIn, Crop } from '@phosphor-icons/react'
 import { useState, useRef } from 'react'
 import { toast } from 'sonner'
+import { useCharacterStore } from '@/store/characterStore'
 
 export function PortraitPage() {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [zoom, setZoom] = useState(100)
   const [panX, setPanX] = useState(0)
@@ -73,16 +75,23 @@ export function PortraitPage() {
     }
   }
 
-  return (
-    <div className="space-y-6 max-w-7xl">
-      <div>
-        <h1 className="font-display text-4xl font-bold mb-2">Portrait</h1>
-        <p className="text-muted-foreground">
-          Upload and manage your character's portrait image
-        </p>
+  if (!activeCharacter) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Card className="p-8 text-center max-w-md">
+          <Image className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
+          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
+          <p className="text-muted-foreground">
+            Please select or create a character to manage their portrait.
+          </p>
+        </Card>
       </div>
+    )
+  }
 
-      <Card className="p-4 sm:p-6">
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto w-full">
+      <Card className="p-4 sm:p-6 w-full">
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
           <div className="w-full lg:w-1/2 space-y-3">
             <Label className="flex items-center gap-2">
@@ -114,7 +123,7 @@ export function PortraitPage() {
                 <Upload className="h-5 w-5" />
                 Upload Portrait
               </Label>
-              
+
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="outline"

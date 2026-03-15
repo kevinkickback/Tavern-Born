@@ -1,58 +1,52 @@
+import {
+  wizardStep1Schema,
+  wizardStep2Schema,
+  wizardStep3Schema,
+  wizardStep4Schema,
+  wizardStep5Schema,
+  wizardStep6Schema,
+} from '@/lib/schemas/characterSchema'
 import { CharacterWizardData, ValidationResult } from './types'
+
+const STEP_SCHEMAS = {
+  1: wizardStep1Schema,
+  2: wizardStep2Schema,
+  3: wizardStep3Schema,
+  4: wizardStep4Schema,
+  5: wizardStep5Schema,
+  6: wizardStep6Schema,
+} as const
 
 export function validateStep(
   step: number,
   characterData: CharacterWizardData,
   gameData: any
 ): ValidationResult {
-  const races = gameData?.races || []
-  const classes = gameData?.classes || []
-  const backgrounds = gameData?.backgrounds || []
-
-  switch (step) {
-    case 1:
-      if (!characterData.name.trim()) {
-        return { valid: false, error: 'Please enter a character name', fields: ['name'] }
-      }
-      break
-    case 2:
-      if (!characterData.abilityScoreMethod) {
-        return { valid: false, error: 'Please select an ability score generation method' }
-      }
-      if (characterData.allowedSources.length === 0) {
-        return { valid: false, error: 'Please select at least one source book' }
-      }
-      break
-    case 3:
-      if (races.length === 0) {
-        return { valid: false, error: 'No races available. Please load game data in Settings first.' }
-      }
-      if (!characterData.race) {
-        return { valid: false, error: 'Please select a race' }
-      }
-      break
-    case 4:
-      if (classes.length === 0) {
-        return { valid: false, error: 'No classes available. Please load game data in Settings first.' }
-      }
-      if (!characterData.class) {
-        return { valid: false, error: 'Please select a class' }
-      }
-      break
-    case 5:
-      if (backgrounds.length === 0) {
-        return { valid: false, error: 'No backgrounds available. Please load game data in Settings first.' }
-      }
-      if (!characterData.background) {
-        return { valid: false, error: 'Please select a background' }
-      }
-      break
-    case 6:
-      if (!characterData.abilityScoreMethod) {
-        return { valid: false, error: 'Please select an ability score method' }
-      }
-      break
+  // Data-availability guards (can't be encoded in schema — requires loaded game data)
+  if (step === 3 && (gameData?.races ?? []).length === 0) {
+    return { valid: false, error: 'No races available. Please load game data in Settings first.' }
   }
-  
-  return { valid: true }
+  if (step === 4 && (gameData?.classes ?? []).length === 0) {
+    return { valid: false, error: 'No classes available. Please load game data in Settings first.' }
+  }
+  if (step === 5 && (gameData?.backgrounds ?? []).length === 0) {
+    return { valid: false, error: 'No backgrounds available. Please load game data in Settings first.' }
+  }
+
+  const schema = STEP_SCHEMAS[step as keyof typeof STEP_SCHEMAS]
+  if (!schema) return { valid: true }
+
+  const result = schema.safeParse(characterData)
+  if (result.success) return { valid: true }
+
+  const first = result.error.errors[0]
+  const fields = result.error.errors
+    .map((e) => e.path[0])
+    .filter((p): p is string => typeof p === 'string')
+
+  return {
+    valid: false,
+    error: first?.message ?? 'Validation failed',
+    fields: fields.length > 0 ? fields : undefined,
+  }
 }

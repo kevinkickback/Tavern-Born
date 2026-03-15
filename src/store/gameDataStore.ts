@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { GameData, DataSourceConfig } from '@/types/5etools'
 import { loadDataFromSource } from '@/lib/5etools'
+import { createIdbStorage } from '@/lib/idb-storage'
 
 interface LoadProgress {
   current: number
@@ -90,6 +91,7 @@ export const useGameDataStore = create<GameDataState>()(
     }),
     {
       name: 'game-data-storage',
+      storage: createIdbStorage(),
       partialize: (state) => ({
         dataSourceConfig: state.dataSourceConfig,
         lastLoadedAt: state.lastLoadedAt,

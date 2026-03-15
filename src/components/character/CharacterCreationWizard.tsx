@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   Dialog,
   DialogContent,
@@ -35,10 +34,10 @@ export function CharacterCreationWizard({
   open,
   onOpenChange,
 }: CharacterCreationWizardProps) {
-  const navigate = useNavigate()
-  const { createNewCharacter, setActiveCharacter } = useCharacterStore()
+  const createNewCharacter = useCharacterStore((state) => state.createNewCharacter)
+  const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const gameData = useGameDataStore((state) => state.gameData)
-  
+
   const [currentStep, setCurrentStep] = useState(1)
   const [characterData, setCharacterData] = useState<CharacterWizardData>(INITIAL_CHARACTER_DATA)
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -54,7 +53,7 @@ export function CharacterCreationWizard({
 
   const handleNext = () => {
     const validation = validateStep(currentStep, characterData, gameData)
-    
+
     if (!validation.valid) {
       setValidationError(validation.error || 'Please complete this step')
       if (validation.fields) {
@@ -62,10 +61,10 @@ export function CharacterCreationWizard({
       }
       return
     }
-    
+
     setValidationError(null)
     setInvalidFields(new Set())
-    
+
     if (currentStep < WIZARD_STEPS.length) {
       setCurrentStep(currentStep + 1)
     } else {
@@ -95,10 +94,9 @@ export function CharacterCreationWizard({
         gender: characterData.gender,
       },
     })
-    
+
     setActiveCharacter(character.id)
     handleClose()
-    navigate('/build/race')
     toast.success('Character created successfully')
   }
 
@@ -134,7 +132,7 @@ export function CharacterCreationWizard({
                   <AlertDescription>{validationError}</AlertDescription>
                 </Alert>
               )}
-              
+
               {currentStep === 1 && (
                 <BasicsStep
                   data={characterData}

@@ -11,15 +11,16 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { 
-  Database, 
-  CloudArrowDown, 
-  FolderOpen, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Database,
+  CloudArrowDown,
+  FolderOpen,
+  CheckCircle,
+  XCircle,
   Warning,
   ArrowClockwise,
-  MagnifyingGlass
+  MagnifyingGlass,
+  Trash
 } from '@phosphor-icons/react'
 
 type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid'
@@ -47,7 +48,7 @@ export function DataSourceConfigurator() {
     foundResources?: string[]
     normalizedPath?: string
   } | null>(null)
-  
+
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleSourceTypeChange = (newType: 'local' | 'remote') => {
@@ -88,14 +89,7 @@ export function DataSourceConfigurator() {
       setValidationResult(result)
       setValidationStatus(result.isValid ? 'valid' : 'invalid')
 
-      if (result.isValid) {
-        const normalizedMsg = result.normalizedPath && result.normalizedPath !== path 
-          ? ` (normalized to raw content URL)` 
-          : ''
-        toast.success('Data source is valid!', {
-          description: `Found ${result.foundResources?.length || 0} resources${normalizedMsg}`,
-        })
-      } else {
+      if (!result.isValid) {
         toast.error('Data source validation failed', {
           description: result.error,
         })
@@ -114,6 +108,22 @@ export function DataSourceConfigurator() {
 
   const handleValidate = () => {
     performValidation(sourcePath, sourceType)
+  }
+
+  const handleLocalPathChange = (value: string) => {
+    setSourcePath(value)
+    setValidationStatus('idle')
+    setValidationResult(null)
+
+    if (validationTimeoutRef.current) {
+      clearTimeout(validationTimeoutRef.current)
+    }
+
+    if (value) {
+      validationTimeoutRef.current = setTimeout(() => {
+        performValidation(value, 'local')
+      }, 1000)
+    }
   }
 
   const handleUrlChange = (value: string) => {
@@ -139,34 +149,22 @@ export function DataSourceConfigurator() {
 
   const handleSelectFolder = async () => {
     try {
-      if (!('showDirectoryPicker' in window)) {
-        toast.error('Folder selection not supported', {
-          description: 'Your browser does not support the File System Access API',
-        })
-        return
-      }
+      const folderPath = await window.electronAPI.selectFolder()
+      if (!folderPath) return
 
-      const dirHandle = await (window as any).showDirectoryPicker({
-        mode: 'read',
-      })
-
-      const folderPath = dirHandle.name
       setSourcePath(folderPath)
-      
       performValidation(folderPath, 'local')
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        toast.error('Failed to select folder', {
-          description: error instanceof Error ? error.message : 'Unknown error',
-        })
-      }
+      toast.error('Failed to select folder', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
     }
   }
 
   const handleSaveConfig = async () => {
     try {
       const pathToUse = validationResult?.normalizedPath || sourcePath
-      
+
       await loadGameData({
         type: sourceType,
         path: pathToUse,
@@ -176,6 +174,9 @@ export function DataSourceConfigurator() {
       toast.success('Data source updated and loaded!', {
         description: 'Game data is now available',
       })
+      setSourcePath('')
+      setValidationStatus('idle')
+      setValidationResult(null)
     } catch (error) {
       toast.error('Failed to load game data', {
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -234,17 +235,13 @@ export function DataSourceConfigurator() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm">Current Data Source</h3>
+            <div className="relative space-y-3 bg-muted/50 p-4 rounded-lg">
               {hasActiveDataSource && (
-                <Badge variant="default" className="gap-1">
+                <Badge variant="default" className="gap-1 absolute top-3 right-3">
                   <CheckCircle size={14} />
                   Active
                 </Badge>
               )}
-            </div>
-
-            <div className="space-y-3 bg-muted/50 p-4 rounded-lg">
               <div className="flex items-center gap-2">
                 {hasActiveDataSource ? (
                   dataSourceConfig.type === 'remote' ? (
@@ -256,7 +253,7 @@ export function DataSourceConfigurator() {
                   <XCircle size={18} className="text-muted-foreground" />
                 )}
                 <span className="text-sm font-medium capitalize">
-                  {hasActiveDataSource 
+                  {hasActiveDataSource
                     ? (dataSourceConfig.type === 'remote' ? 'Remote URL' : 'Local Directory')
                     : 'None'}
                 </span>
@@ -283,7 +280,7 @@ export function DataSourceConfigurator() {
                   )}
                 </>
               )}
-              
+
               {!hasActiveDataSource && (
                 <p className="text-xs text-muted-foreground">
                   No data source configured. Configure a remote URL or local directory below to load game data.
@@ -291,20 +288,24 @@ export function DataSourceConfigurator() {
               )}
             </div>
           </div>
-          
+
           <Separator />
 
           <Tabs value={sourceType} onValueChange={(v) => handleSourceTypeChange(v as 'local' | 'remote')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="remote" className="gap-2">
-                <CloudArrowDown size={18} />
-                Remote URL
-              </TabsTrigger>
-              <TabsTrigger value="local" className="gap-2">
-                <FolderOpen size={18} />
-                Local Directory
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex justify-center">
+              <div style={{ width: '50%', minWidth: '280px' }}>
+                <TabsList style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', width: '100%' }}>
+                  <TabsTrigger value="remote" className="gap-2">
+                    <CloudArrowDown size={18} />
+                    Remote URL
+                  </TabsTrigger>
+                  <TabsTrigger value="local" className="gap-2">
+                    <FolderOpen size={18} />
+                    Local Directory
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
             <TabsContent value="remote" className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label htmlFor="remote-path">Repository URL</Label>
@@ -339,16 +340,9 @@ export function DataSourceConfigurator() {
                   </p>
                 )}
                 {validationStatus === 'valid' && (
-                  <div className="space-y-1">
-                    <p className="text-sm text-green-600">
-                      ✓ Valid data source ready to load
-                    </p>
-                    {validationResult?.normalizedPath && validationResult.normalizedPath !== sourcePath && (
-                      <p className="text-xs text-muted-foreground">
-                        URL normalized to: {validationResult.normalizedPath}
-                      </p>
-                    )}
-                  </div>
+                  <p className="text-sm text-green-600">
+                    ✓ Valid data source ready to load
+                  </p>
                 )}
                 {validationStatus === 'invalid' && validationResult?.error && (
                   <p className="text-sm text-destructive">
@@ -369,7 +363,7 @@ export function DataSourceConfigurator() {
                   <Input
                     id="local-path"
                     value={sourcePath}
-                    onChange={(e) => setSourcePath(e.target.value)}
+                    onChange={(e) => handleLocalPathChange(e.target.value)}
                     placeholder="/path/to/5etools/data"
                     disabled={isLoading}
                     className={`flex-1 ${getValidationBorderClass()}`}
@@ -409,21 +403,25 @@ export function DataSourceConfigurator() {
           </Tabs>
 
           <div className="flex gap-2">
-            <Button
-              onClick={handleSaveConfig}
-              disabled={isLoading || !sourcePath || !isValidSource}
-              className="gap-2"
-            >
-              <Database size={16} />
-              {isLoading ? 'Saving...' : 'Save & Load'}
-            </Button>
-            <Button onClick={handleRefresh} disabled={isLoading || !hasActiveDataSource} variant="outline" className="gap-2">
-              <ArrowClockwise size={16} />
-              Update Data
-            </Button>
-            <Button onClick={handleClear} disabled={isLoading || !hasActiveDataSource} variant="outline">
+            <Button onClick={handleClear} disabled={isLoading || !hasActiveDataSource} variant="destructive" className="gap-2">
+              <Trash size={16} />
               Clear Data
             </Button>
+            <div className="flex gap-2 ml-auto">
+              <Button onClick={handleRefresh} disabled={isLoading || !hasActiveDataSource} variant="outline" className="gap-2">
+                <ArrowClockwise size={16} />
+                Update Data
+              </Button>
+              <Button
+                onClick={handleSaveConfig}
+                disabled={isLoading || !sourcePath || !isValidSource}
+                variant="outline"
+                className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-green-600 !text-white !border-green-600 hover:!bg-green-700 hover:!border-green-700' : 'text-muted-foreground'}`}
+              >
+                <Database size={16} />
+                {isLoading ? 'Saving...' : 'Save & Load'}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

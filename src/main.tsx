@@ -1,4 +1,3 @@
-import "@github/spark/spark"
 import { createRoot } from 'react-dom/client'
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -12,5 +11,5 @@ import "./index.css"
 createRoot(document.getElementById('root')!).render(
   <ErrorBoundary FallbackComponent={ErrorFallback}>
     <App />
-   </ErrorBoundary>
+  </ErrorBoundary>
 )

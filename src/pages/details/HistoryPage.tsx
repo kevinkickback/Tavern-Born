@@ -9,8 +9,9 @@ import { FormattingGuide } from '@/components/character/FormattingGuide'
 import { toast } from 'sonner'
 
 export function HistoryPage() {
-  const { activeCharacter, updateCharacter } = useCharacterStore()
-  
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+
   const [origin, setOrigin] = useState(activeCharacter?.details?.origin || '')
   const [family, setFamily] = useState(activeCharacter?.details?.family || '')
   const [definingMoment, setDefiningMoment] = useState(activeCharacter?.details?.definingMoment || '')
@@ -43,7 +44,7 @@ export function HistoryPage() {
         backstory,
       }
     })
-    
+
     toast.success('History saved successfully')
   }
 

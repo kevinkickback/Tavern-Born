@@ -9,7 +9,7 @@ export function AppHeader() {
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
       <div className="flex-1 flex items-center">
         <h1 className="font-display text-2xl font-bold text-primary">
-          Fizbane's Forge
+          Tavern Born
         </h1>
       </div>
 

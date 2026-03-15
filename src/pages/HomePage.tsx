@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Plus, Upload } from '@phosphor-icons/react'
@@ -10,21 +10,24 @@ import { toast } from 'sonner'
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { characters, activeCharacterId, setActiveCharacter, deleteCharacter } = useCharacterStore()
+  const characters = useCharacterStore((state) => state.characters)
+  const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
+  const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
+  const deleteCharacter = useCharacterStore((state) => state.deleteCharacter)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
 
-  const handleLoadCharacter = (id: string) => {
+  const handleLoadCharacter = useCallback((id: string) => {
     setActiveCharacter(id)
-  }
+  }, [setActiveCharacter])
 
-  const handleDeleteCharacter = (id: string) => {
+  const handleDeleteCharacter = useCallback((id: string) => {
     if (confirm('Are you sure you want to delete this character?')) {
       deleteCharacter(id)
       toast.success('Character deleted')
     }
-  }
+  }, [deleteCharacter])
 
-  const handleExportCharacter = (character: Character) => {
+  const handleExportCharacter = useCallback((character: Character) => {
     const dataStr = JSON.stringify(character, null, 2)
     const dataBlob = new Blob([dataStr], { type: 'application/json' })
     const url = URL.createObjectURL(dataBlob)
@@ -34,7 +37,7 @@ export function HomePage() {
     link.click()
     URL.revokeObjectURL(url)
     toast.success('Character exported successfully')
-  }
+  }, [])
 
   const handleImportCharacter = () => {
     const input = document.createElement('input')
@@ -57,37 +60,33 @@ export function HomePage() {
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-4xl font-bold mb-2">Your Characters</h1>
-          <p className="text-muted-foreground">
-            Create and manage your D&D 5e characters
-          </p>
+      {characters.length > 0 && (
+        <div className="mb-8 flex items-center justify-between">
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handleImportCharacter}
+              className="gap-2"
+            >
+              <Upload />
+              Import Character
+            </Button>
+            <Button
+              variant="default"
+              size="lg"
+              onClick={() => setShowCreateWizard(true)}
+              className="gap-2 bg-accent hover:bg-accent/90"
+            >
+              <Plus />
+              New Character
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleImportCharacter}
-            className="gap-2"
-          >
-            <Upload />
-            Import Character
-          </Button>
-          <Button
-            variant="default"
-            size="lg"
-            onClick={() => setShowCreateWizard(true)}
-            className="gap-2 bg-accent hover:bg-accent/90"
-          >
-            <Plus />
-            New Character
-          </Button>
-        </div>
-      </div>
+      )}
 
       {characters.length === 0 ? (
-        <div className="text-center py-20">
+        <div className="flex flex-col items-center justify-center text-center min-h-[60vh]">
           <div className="w-32 h-32 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center">
             <Plus className="text-6xl text-muted-foreground" />
           </div>
@@ -108,7 +107,7 @@ export function HomePage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl">
           {characters.map((character) => (
             <CharacterCard
               key={character.id}
