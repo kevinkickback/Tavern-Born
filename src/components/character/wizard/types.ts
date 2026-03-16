@@ -8,10 +8,15 @@ export interface CharacterWizardData {
   name: string
   gender: string
   race: string
+  raceSource: string
   subrace: string
+  subraceSource: string
   class: string
+  classSource: string
   background: string
+  backgroundSource: string
   abilityScoreMethod: string
+  abilityScores: Record<string, number>
   portrait: string
   rulesMode: string
   allowedSources: string[]

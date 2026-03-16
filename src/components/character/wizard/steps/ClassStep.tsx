@@ -34,7 +34,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
         ) : (
           filteredClasses.map((cls) => (
             <button
-              key={cls.name}
+              key={`${cls.name}|${(cls as any).source ?? ''}`}
               onClick={() => onChange({ class: cls.name })}
               className={cn(
                 'p-4 rounded-lg border-2 text-left transition-all hover:scale-[1.02]',

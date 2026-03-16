@@ -104,7 +104,7 @@ export function CharacteristicsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto w-full space-y-6">
       <div>
         <h1 className="font-display text-4xl font-bold mb-2">Characteristics</h1>
         <p className="text-muted-foreground">

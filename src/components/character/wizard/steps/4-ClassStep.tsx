@@ -34,11 +34,13 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
         ) : (
           filteredClasses.map((cls) => (
             <button
-              key={cls.name}
-              onClick={() => onChange({ class: cls.name })}
+              key={`${cls.name}|${cls.source ?? ''}`}
+              onClick={() => onChange({ class: cls.name, classSource: cls.source || '' })}
               className={cn(
                 'p-4 rounded-lg border-2 text-left transition-all hover:scale-[1.02]',
-                data.class === cls.name
+                (data.classSource
+                  ? (data.class === cls.name && data.classSource === (cls.source ?? ''))
+                  : data.class === cls.name)
                   ? 'border-accent bg-accent/10'
                   : 'border-border hover:border-accent/50'
               )}

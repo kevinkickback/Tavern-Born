@@ -258,6 +258,18 @@ export class DataFilter {
   }
 }
 
+/** Filter any array of named entries to those whose `name` contains the query (case-insensitive). */
+export function searchByName<T extends { name: string }>(entries: T[], query: string): T[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return entries
+  return entries.filter((e) => e.name.toLowerCase().includes(q))
+}
+
+/** Sort any array of named entries alphabetically by `name`. */
+export function sortByName<T extends { name: string }>(entries: T[]): T[] {
+  return [...entries].sort((a, b) => a.name.localeCompare(b.name))
+}
+
 export function extractUniqueSources(items: { source: string }[]): string[] {
   const sources = new Set<string>()
   items.forEach(item => sources.add(item.source))

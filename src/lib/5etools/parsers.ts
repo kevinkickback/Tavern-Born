@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { SOURCE_FALLBACKS } from './sourceFallbacks'
 
 function validateData<T>(data: any, schema: z.ZodType<T>, resourceName: string): T[] {
   try {
@@ -20,9 +21,30 @@ function validateData<T>(data: any, schema: z.ZodType<T>, resourceName: string):
 }
 
 export function parseRaces(data: any): any[] {
-  if (data.race) return data.race
-  if (Array.isArray(data)) return data
-  return []
+  const races: any[] = data.race ? [...data.race] : Array.isArray(data) ? [...data] : []
+  const subraceEntries: any[] = data.subrace || []
+
+  if (subraceEntries.length === 0) return races
+
+  // Group subraces by parent race. The parent is identified by raceName + raceSource.
+  // Some subraces store this directly; others use _copy.raceName / _copy.raceSource.
+  const subraceMap = new Map<string, any[]>()
+  for (const sr of subraceEntries) {
+    const raceName: string | undefined = sr.raceName ?? sr._copy?.raceName
+    const raceSource: string | undefined = sr.raceSource ?? sr._copy?.raceSource ?? sr.source
+    if (!raceName) continue
+    const key = `${raceName}|${raceSource ?? ''}`
+    if (!subraceMap.has(key)) subraceMap.set(key, [])
+    subraceMap.get(key)!.push(sr)
+  }
+
+  // Nest subraces into their parent race objects (non-mutating spread)
+  return races.map((race) => {
+    const key = `${race.name}|${race.source ?? ''}`
+    const nested = subraceMap.get(key)
+    if (!nested || nested.length === 0) return race
+    return { ...race, subraces: nested }
+  })
 }
 
 export function parseClasses(data: any): any[] {
@@ -50,7 +72,7 @@ export function parseFeats(data: any): any[] {
 }
 
 export function parseItems(data: any): any[] {
-  const items = []
+  const items: any[] = []
   
   if (data.item) items.push(...data.item)
   if (data.itemGroup) items.push(...data.itemGroup)
@@ -73,7 +95,7 @@ export function parseActions(data: any): any[] {
 }
 
 export function parseConditions(data: any): any[] {
-  const conditions = []
+  const conditions: any[] = []
   if (data.condition) conditions.push(...data.condition)
   if (data.disease) conditions.push(...data.disease)
   if (Array.isArray(data)) conditions.push(...data)
@@ -126,19 +148,54 @@ export function parseVariantRules(data: any): any[] {
 export function parseBooks(data: any): any[] {
   if (!data) return []
   if (data.book) return data.book
+  if (data.adventure) return data.adventure
   if (Array.isArray(data)) return data
   return []
 }
 
-export function buildSourcesList(sourceAbbreviations: string[], booksData: any): any[] {
+/**
+ * Extract named proficiencies from a 5etools proficiency/language block array.
+ * Returns an array of string labels (name, "choose N", "any N standard").
+ * Omits structural keys like `choose` and `anyStandard`.
+ *
+ * @param blocks  - e.g. `race.languageProficiencies`, `bg.skillProficiencies`, etc.
+ * @param includeAnyStandard - include "any N standard" entries (default true)
+ */
+export function extractProficiencyBlockNames(
+  blocks: any[],
+  { includeAnyStandard = true } = {},
+): string[] {
+  const out: string[] = []
+  for (const block of blocks) {
+    for (const [key, val] of Object.entries(block)) {
+      if (key !== 'choose' && key !== 'anyStandard' && val === true) out.push(key)
+    }
+    if (includeAnyStandard && (block as any).anyStandard)
+      out.push(`any ${(block as any).anyStandard} standard`)
+    const choose = (block as any).choose
+    if (choose) out.push(`choose ${choose.count}`)
+  }
+  return out
+}
+
+export function buildSourcesList(sourceAbbreviations: string[], booksData: any, adventuresData?: any): any[] {
   const booksList = parseBooks(booksData)
-  const booksMap = new Map(booksList.map(book => [book.id || book.source, book]))
+  const adventuresList = adventuresData ? parseBooks(adventuresData) : []
+  const allEntries = [...booksList, ...adventuresList]
+  // Key by both id AND source so entries like {id:"PS-A", source:"PSA"} resolve under both keys
+  const booksMap = new Map<string, any>()
+  for (const entry of allEntries) {
+    if (entry.id) booksMap.set(entry.id, entry)
+    if (entry.source && entry.source !== entry.id) booksMap.set(entry.source, entry)
+  }
   
-  const characterRelevantGroups = ['core', 'supplement', 'setting', 'adventure']
+  const characterRelevantGroups = ['core', 'supplement', 'supplement-alt', 'setting', 'setting-alt', 'adventure', 'organized-play']
   
   return sourceAbbreviations
     .map(abbr => {
-      const book = booksMap.get(abbr)
+      const book = booksMap.get(abbr) ?? (SOURCE_FALLBACKS[abbr]
+        ? { id: abbr, source: abbr, ...SOURCE_FALLBACKS[abbr] }
+        : null)
       if (!book) {
         return { 
           abbreviation: abbr, 

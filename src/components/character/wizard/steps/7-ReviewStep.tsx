@@ -2,13 +2,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Warning } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { CharacterWizardData } from '../types'
+import { ABILITY_NAMES, ABILITY_ABBREVIATIONS, formatModifier } from '@/lib/abilityScores'
+import { getAbilityModifier } from '@/lib/gameRules'
 
 interface ReviewStepProps {
   data: CharacterWizardData
 }
 
 export function ReviewStep({ data }: ReviewStepProps) {
-  const missingFields = []
+  const missingFields: string[] = []
   if (!data.name) missingFields.push('Character Name')
   if (!data.race) missingFields.push('Race')
   if (!data.class) missingFields.push('Class')
@@ -85,9 +87,26 @@ export function ReviewStep({ data }: ReviewStepProps) {
         </div>
 
         <div className="p-4 rounded-lg bg-muted/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-1">Ability Score Method</div>
-          <div className="font-semibold capitalize">
-            {data.abilityScoreMethod?.replace('-', ' ') || 'Standard Array'}
+          <div className="text-sm text-muted-foreground mb-2">Ability Scores</div>
+          <div className="text-xs text-muted-foreground mb-3 capitalize">
+            Method: {data.abilityScoreMethod?.replace(/-/g, ' ') || 'Standard Array'}
+          </div>
+          <div className="grid grid-cols-6 gap-2">
+            {ABILITY_NAMES.map((ability) => {
+              const score = (data.abilityScores?.[ability] as number | undefined) ?? 8
+              const mod = getAbilityModifier(score)
+              return (
+                <div key={ability} className="text-center">
+                  <div className="text-xs text-muted-foreground uppercase font-semibold mb-0.5">
+                    {ABILITY_ABBREVIATIONS[ability]}
+                  </div>
+                  <div className="text-lg font-bold font-mono">{score}</div>
+                  <div className={cn('text-xs font-medium', mod >= 0 ? 'text-green-500' : 'text-destructive')}>
+                    {formatModifier(mod)}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>

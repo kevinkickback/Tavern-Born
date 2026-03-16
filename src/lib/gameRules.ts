@@ -1,6 +1,9 @@
 // Game rules constants and pure calculation functions.
 // Ported from fizbanes-forge/src/lib/GameRules.js — no React or Zustand dependencies.
 
+import type { Class5e } from '@/types/5etools'
+import type { AbilityScores } from '@/types/character'
+
 export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const;
 
 export const POINT_BUY_BUDGET = 27;
@@ -32,13 +35,6 @@ export const HEAVY_ENCUMBRANCE_MULTIPLIER = 10;
 export const MAX_CHARACTER_SIZE = 10 * 1024 * 1024;
 export const MAX_PORTRAIT_SIZE = 5 * 1024 * 1024;
 
-export const DEFAULT_ASI_LEVELS = [4, 8, 12, 16, 19] as const;
-
-export const CLASS_ASI_LEVELS: Readonly<Record<string, readonly number[]>> = {
-  Fighter: [4, 6, 8, 12, 14, 16, 19],
-  Rogue: [4, 8, 10, 12, 16, 19],
-};
-
 export const PROFICIENCY_TYPES = {
   SKILLS: 'skills',
   SAVING_THROWS: 'savingThrows',
@@ -50,22 +46,6 @@ export const PROFICIENCY_TYPES = {
 
 export type ProficiencyType = (typeof PROFICIENCY_TYPES)[keyof typeof PROFICIENCY_TYPES];
 
-/** Default hit dice face value per class (fallback when class JSON lacks hd field). */
-export const DEFAULT_HIT_DICE: Readonly<Record<string, number>> = {
-  Barbarian: 12,
-  Bard: 8,
-  Cleric: 8,
-  Druid: 8,
-  Fighter: 10,
-  Monk: 8,
-  Paladin: 10,
-  Ranger: 10,
-  Rogue: 8,
-  Sorcerer: 6,
-  Warlock: 8,
-  Wizard: 6,
-};
-
 /**
  * Parse a hit dice string (e.g. "1d8", "d10") into its numeric face value.
  * Returns 8 as a safe default.
@@ -73,6 +53,77 @@ export const DEFAULT_HIT_DICE: Readonly<Record<string, number>> = {
 export function parseHitDice(hitDice: string | undefined | null): number {
   const match = hitDice?.match(/d(\d+)/);
   return match ? parseInt(match[1], 10) : 8;
+}
+
+/** Get hit die face value from a Class5e object. Falls back to 8. */
+export function getHitDiceFromClass(cls: Class5e | undefined | null): number {
+  return cls?.hd?.faces ?? 8;
+}
+
+/**
+ * Parse ASI levels from a Class5e classFeatures array.
+ * Feature strings have format "Feature Name|ClassName|Source|Level".
+ * Falls back to the standard [4,8,12,16,19] if no ASI features are found.
+ */
+export function getASILevelsFromClass(cls: Class5e | undefined | null): number[] {
+  if (!cls?.classFeatures) return [4, 8, 12, 16, 19];
+  const levels: number[] = [];
+  for (const feat of cls.classFeatures) {
+    if (typeof feat === 'string') {
+      const parts = feat.split('|');
+      if (parts[0]?.toLowerCase().includes('ability score improvement') && parts[3]) {
+        const lvl = parseInt(parts[3], 10);
+        if (!isNaN(lvl) && !levels.includes(lvl)) levels.push(lvl);
+      }
+    } else if (feat && typeof feat === 'object' && 'name' in feat) {
+      const f = feat as { name?: string; level?: number };
+      if (f.name?.toLowerCase().includes('ability score improvement') && f.level) {
+        if (!levels.includes(f.level)) levels.push(f.level);
+      }
+    }
+  }
+  return levels.length > 0 ? levels.sort((a, b) => a - b) : [4, 8, 12, 16, 19];
+}
+
+/** Ability score abbreviation to full name mapping (matches 5etools JSON keys). */
+const ABILITY_ABBREV_TO_FULL: Record<string, string> = {
+  str: 'strength', dex: 'dexterity', con: 'constitution',
+  int: 'intelligence', wis: 'wisdom', cha: 'charisma',
+};
+
+/**
+ * Check whether the given ability scores meet the multiclassing requirements
+ * for a class, reading the requirements directly from the Class5e data.
+ */
+export function checkMulticlassRequirements(
+  cls: Class5e,
+  abilityScores: AbilityScores,
+): { meetsRequirements: boolean; requirementText: string } {
+  const reqs = cls.multiclassing?.requirements;
+  if (!reqs) return { meetsRequirements: true, requirementText: '' };
+
+  const scores = abilityScores as unknown as Record<string, number>;
+  const getScore = (ab: string): number => {
+    const full = ABILITY_ABBREV_TO_FULL[ab.toLowerCase()] ?? ab.toLowerCase();
+    return scores[full] ?? scores[ab.toLowerCase()] ?? 0;
+  };
+  const formatGroup = (group: Record<string, number>) =>
+    Object.entries(group).map(([ab, min]) => `${ab.toUpperCase()} ${min}+`).join(' & ');
+  const checkGroup = (group: Record<string, number>) =>
+    Object.entries(group).every(([ab, min]) => getScore(ab) >= min);
+
+  if (Array.isArray(reqs.or)) {
+    return {
+      meetsRequirements: reqs.or.some(checkGroup),
+      requirementText: (reqs.or as Array<Record<string, number>>).map(formatGroup).join(' or '),
+    };
+  }
+
+  const entries = Object.entries(reqs).filter(([k]) => k !== 'or') as [string, number][];
+  return {
+    meetsRequirements: entries.every(([ab, min]) => getScore(ab) >= min),
+    requirementText: entries.map(([ab, min]) => `${ab.toUpperCase()} ${min}+`).join(' & '),
+  };
 }
 
 /** Proficiency bonus by total character level (index 0 = level 1). */

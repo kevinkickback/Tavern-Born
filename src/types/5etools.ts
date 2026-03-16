@@ -16,11 +16,20 @@ export interface Race5e {
   [key: string]: any
 }
 
+export interface MulticlassRequirements {
+  or?: Array<Record<string, number>>
+  [ability: string]: number | Array<Record<string, number>> | undefined
+}
+
 export interface Class5e {
   name: string
   source: string
   page?: number
   hd?: { faces: number; number?: number }
+  multiclassing?: {
+    requirements?: MulticlassRequirements
+    proficienciesGained?: any
+  }
   proficiency?: string[]
   startingProficiencies?: {
     armor?: string[]

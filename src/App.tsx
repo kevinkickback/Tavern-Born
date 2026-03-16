@@ -3,34 +3,28 @@ import { Toaster } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { HomePage } from '@/pages/HomePage'
-import {
-  BuildRacePage,
-  BuildClassPage,
-  BuildBackgroundPage,
-  BuildProficienciesPage,
-  BuildAbilityScoresPage,
-} from '@/pages/BuildPages'
-import {
-  FeatsPage,
-  SpellsPage,
-  EquipmentPage,
-  DetailsPage,
-  CharacterSheetPage,
-  SettingsPage,
-} from '@/pages/OtherPages'
-import {
-  PortraitPage,
-  CharacteristicsPage,
-  AppearancePage,
-  AlliesOrganizationsPage,
-  HistoryPage,
-} from '@/pages/details'
+import { BuildRacePage } from '@/pages/build/BuildRacePage'
+import { BuildClassPage } from '@/pages/build/BuildClassPage'
+import { BuildBackgroundPage } from '@/pages/build/BuildBackgroundPage'
+import { BuildProficienciesPage } from '@/pages/build/BuildProficienciesPage'
+import { BuildAbilityScoresPage } from '@/pages/build/BuildAbilityScoresPage'
+import { FeatsPage } from '@/pages/FeatsPage'
+import { SpellsPage } from '@/pages/SpellsPage'
+import { EquipmentPage } from '@/pages/EquipmentPage'
+import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
+import { SettingsPage } from '@/pages/SettingsPage'
+import { PortraitPage } from '@/pages/details/PortraitPage'
+import { CharacteristicsPage } from '@/pages/details/CharacteristicsPage'
+import { AppearancePage } from '@/pages/details/AppearancePage'
+import { AlliesOrganizationsPage } from '@/pages/details/AlliesOrganizationsPage'
+import { HistoryPage } from '@/pages/details/HistoryPage'
 import { CompendiumPage } from '@/pages/CompendiumPage'
+import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
 import { useSeedData } from '@/hooks/useSeedData'
 
 function App() {
   useSeedData()
-  
+
   return (
     <TooltipProvider delayDuration={300}>
       <BrowserRouter>
@@ -58,6 +52,7 @@ function App() {
           </Routes>
         </AppLayout>
         <Toaster position="bottom-right" />
+        <DataSourceStartupModal />
       </BrowserRouter>
     </TooltipProvider>
   )

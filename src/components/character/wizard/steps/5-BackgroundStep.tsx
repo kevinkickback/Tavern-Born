@@ -48,11 +48,13 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
         ) : (
           filteredBackgrounds.map((bg) => (
             <button
-              key={bg.name}
-              onClick={() => onChange({ background: bg.name })}
+              key={`${bg.name}|${bg.source ?? ''}`}
+              onClick={() => onChange({ background: bg.name, backgroundSource: bg.source || '' })}
               className={cn(
                 'p-4 rounded-lg border-2 text-left transition-all hover:scale-[1.02]',
-                data.background === bg.name
+                (data.backgroundSource
+                  ? (data.background === bg.name && data.backgroundSource === (bg.source ?? ''))
+                  : data.background === bg.name)
                   ? 'border-accent bg-accent/10'
                   : 'border-border hover:border-accent/50'
               )}

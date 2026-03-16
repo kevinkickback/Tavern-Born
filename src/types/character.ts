@@ -1,14 +1,30 @@
+export interface CharacterClassEntry {
+  name: string
+  source?: string
+  levels: number
+  subclass?: string
+}
+
 export interface Character {
   id: string
   version: string
   name: string
   race: string
+  raceSource?: string
   subrace?: string
+  subraceSource?: string
+  /** Primary class name — always mirrors classProgression[0].name when classProgression is present */
   class: string
+  classSource?: string
   subclass?: string
+  subclassSource?: string
   background: string
+  backgroundSource?: string
+  /** Total character level — always mirrors sum of classProgression[*].levels when classProgression is present */
   level: number
   experiencePoints: number
+  /** Authoritative multiclass progression. When present, class/level are derived from it. */
+  classProgression?: CharacterClassEntry[]
   
   abilityScores: AbilityScores
   proficiencyBonus: number

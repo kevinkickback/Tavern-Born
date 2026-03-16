@@ -8,7 +8,7 @@ interface ReviewStepProps {
 }
 
 export function ReviewStep({ data }: ReviewStepProps) {
-  const missingFields = []
+  const missingFields: string[] = []
   if (!data.name) missingFields.push('Character Name')
   if (!data.race) missingFields.push('Race')
   if (!data.class) missingFields.push('Class')

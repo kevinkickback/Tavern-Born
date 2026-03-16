@@ -21,7 +21,20 @@ export function renderEntry(entry: any): string {
     }
     
     if (entry.type === 'table') {
-      return '[Table]'
+      const caption = entry.caption
+        ? `<caption class="text-sm font-semibold text-left mb-1 text-muted-foreground">${entry.caption}</caption>`
+        : ''
+      const headers = (entry.colLabels ?? []).map((h: string) =>
+        `<th class="border border-border bg-muted p-2 text-left font-semibold text-xs uppercase tracking-wide">${renderTags(h)}</th>`
+      ).join('')
+      const thead = headers ? `<thead><tr>${headers}</tr></thead>` : ''
+      const tbody = (entry.rows ?? []).map((row: any[]) => {
+        const cells = row.map((cell: any) =>
+          `<td class="border border-border p-2 text-sm">${renderEntry(cell)}</td>`
+        ).join('')
+        return `<tr>${cells}</tr>`
+      }).join('')
+      return `<table class="w-full border-collapse my-3">${caption}${thead}<tbody>${tbody}</tbody></table>`
     }
     
     if (entry.type === 'inset') {
@@ -75,6 +88,28 @@ export function renderTags(text: string): string {
   result = result.replace(/{@scaledice ([^}]+)}/g, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-accent/20 text-accent-foreground">$1</span>')
   result = result.replace(/{@scaledamage ([^}]+)}/g, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-destructive/20 text-destructive-foreground">$1</span>')
   result = result.replace(/{@footnote ([^}]+)}/g, '<sup class="text-xs text-muted-foreground cursor-help" title="$1">*</sup>')
+  
+  // Cross-reference tags
+  result = result.replace(/{@book ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-muted-foreground italic" title="Book">$1</span>')
+  result = result.replace(/{@adventure ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-muted-foreground italic" title="Adventure">$1</span>')
+  result = result.replace(/{@variantrule ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-accent font-medium italic cursor-help" title="Variant Rule: $1">$1</span>')
+  result = result.replace(/{@trap ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-destructive font-medium italic cursor-help" title="Trap: $1">$1</span>')
+  result = result.replace(/{@hazard ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-destructive font-medium italic cursor-help" title="Hazard: $1">$1</span>')
+  result = result.replace(/{@vehicle ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-secondary font-medium italic cursor-help" title="Vehicle: $1">$1</span>')
+  result = result.replace(/{@object ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-secondary font-medium italic cursor-help" title="Object: $1">$1</span>')
+  result = result.replace(/{@reward ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-accent font-medium italic cursor-help" title="Reward: $1">$1</span>')
+  result = result.replace(/{@area ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-muted-foreground font-medium" title="Area: $1">$1</span>')
+  result = result.replace(/{@card ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-accent italic" title="Card: $1">$1</span>')
+  result = result.replace(/{@deck ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-accent italic" title="Deck: $1">$1</span>')
+  result = result.replace(/{@link ([^|}]+)\|([^}]+)}/g, '<a href="$2" class="text-primary underline cursor-pointer">$1</a>')
+  result = result.replace(/{@5etools ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-primary font-medium" title="5etools">$1</span>')
+  result = result.replace(/{@coinflip}/g, '<span class="font-mono text-sm text-accent" title="Coin flip">🪙</span>')
+  result = result.replace(/{@itemProperty ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-xs font-mono bg-secondary/20 px-1 rounded" title="Item Property: $1">$1</span>')
+  result = result.replace(/{@status ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-destructive font-medium italic cursor-help" title="Status: $1">$1</span>')
+  result = result.replace(/{@table ([^|}]+)(?:\|[^}]*)?}/g, '<span class="text-muted-foreground font-medium" title="Table: $1">$1</span>')
+  
+  // Catch-all: strip any remaining unrecognized tags, showing just the display text
+  result = result.replace(/\{@[a-zA-Z]+ ([^|}]+)(?:\|[^}]*)?\}/g, '$1')
   
   result = result.replace(/\n\n/g, '</p><p class="mt-3">')
   result = result.replace(/\n/g, '<br />')

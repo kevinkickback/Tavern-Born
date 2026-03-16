@@ -2,14 +2,14 @@
 // Ported from fizbanes-forge/src/app/Character.js and src/main/pdf/FieldMapping.js.
 
 import {
-  CLASS_ASI_LEVELS,
-  DEFAULT_ASI_LEVELS,
-  DEFAULT_HIT_DICE,
   MAX_CHARACTER_LEVEL,
   getProficiencyBonus,
   getAbilityModifier,
   parseHitDice,
+  getASILevelsFromClass,
+  getHitDiceFromClass,
 } from './gameRules';
+import type { Class5e } from '@/types/5etools';
 import { AbilityName, AbilityBonuses, AbilityScores } from './abilityScores';
 
 // ── Progression types ────────────────────────────────────────────────────────
@@ -17,6 +17,7 @@ import { AbilityName, AbilityBonuses, AbilityScores } from './abilityScores';
 /** A single class entry within a character's multiclass progression. */
 export interface ClassEntry {
   name: string;
+  source?: string;
   levels: number;
   subclass?: string;
   hitDice?: string;
@@ -63,16 +64,19 @@ export function getCharacterProficiencyBonus(
 
 /**
  * Count how many ASI choices are available across all classes for the levels earned.
- * Ported from Character.getFeatAvailability().
+ * Pass `classesData` (from the game data store) for accurate per-class ASI counts;
+ * without it, the standard PHB schedule [4,8,12,16,19] is used as a fallback.
  */
 export function countAvailableASIs(
   progression: Progression | undefined | null,
   race?: { name?: string } | null,
+  classesData?: Class5e[],
 ): number {
   let count = 0;
   if (progression?.classes) {
     for (const entry of progression.classes) {
-      const asiLevels = CLASS_ASI_LEVELS[entry.name] ?? DEFAULT_ASI_LEVELS;
+      const cls = classesData?.find((c) => c.name === entry.name);
+      const asiLevels = getASILevelsFromClass(cls);
       count += asiLevels.filter((l) => l <= (entry.levels || 0)).length;
     }
   }
@@ -93,13 +97,16 @@ export function countAvailableASIs(
  * - Level 1 of primary class: max hit die + CON modifier
  * - Each subsequent level: average hit die + CON modifier  (or max if averageHp = false)
  * - Multiclass into another class: average/max of that class's hit die + CON modifier per level
+ *
+ * Pass `classesData` (from the game data store) for accurate per-class hit dice;
+ * without it, falls back to `entry.hitDice` string or 8.
  */
 export function calculateMaxHP(
   progression: Progression | undefined | null,
   conModifier: number,
-  options?: { averageHp?: boolean },
+  options?: { averageHp?: boolean; classesData?: Class5e[] },
 ): number {
-  const { averageHp = true } = options ?? {};
+  const { averageHp = true, classesData } = options ?? {};
   const classes = progression?.classes ?? [];
   if (!classes.length) return 1 + conModifier;
 
@@ -107,7 +114,8 @@ export function calculateMaxHP(
   let firstLevel = true;
 
   for (const entry of classes) {
-    const die = parseHitDice(entry.hitDice) || DEFAULT_HIT_DICE[entry.name] || 8;
+    const cls = classesData?.find((c) => c.name === entry.name);
+    const die = parseHitDice(entry.hitDice) || getHitDiceFromClass(cls);
     const avgRoll = averageHp ? Math.floor(die / 2) + 1 : die;
 
     for (let lvl = 1; lvl <= (entry.levels || 0); lvl++) {
@@ -128,7 +136,7 @@ export function calculateMaxHPFromScores(
   progression: Progression | undefined | null,
   scores: AbilityScores,
   bonuses: AbilityBonuses,
-  options?: { averageHp?: boolean },
+  options?: { averageHp?: boolean; classesData?: Class5e[] },
 ): number {
   const conTotal = scores.constitution + (bonuses.constitution ?? []).reduce((s, b) => s + b.value, 0);
   const conMod = getAbilityModifier(Math.min(conTotal, 20));
@@ -147,4 +155,21 @@ export function canGainLevel(
   additionalLevels = 1,
 ): boolean {
   return getTotalLevel(progression) + additionalLevels <= MAX_CHARACTER_LEVEL;
+}
+
+// ── Game data matching ───────────────────────────────────────────────────────
+
+/**
+ * Match a stored character field (name + optional source) against a game data entry.
+ * When the character was saved without a source, falls back to name-only match.
+ */
+export function matchesGameDataEntry(
+  charName: string | undefined,
+  charSource: string | undefined,
+  entry: { name: string; source?: string },
+): boolean {
+  if (!charName) return false;
+  return charSource
+    ? entry.name === charName && (entry.source ?? '') === charSource
+    : entry.name === charName;
 }
