@@ -36,6 +36,7 @@ export class FiveEToolsDataLoader {
 	async loadAllData(options?: DataLoaderOptions): Promise<GameData> {
 		const resources = [
 			{ key: "books", file: "books.json" },
+			{ key: "adventures", file: "adventures.json" },
 			{ key: "races", file: "races.json" },
 			{ key: "classIndex", file: "class/index.json" },
 			{ key: "backgrounds", file: "backgrounds.json" },
@@ -77,6 +78,7 @@ export class FiveEToolsDataLoader {
 
 		const sourcesSet = new Set<string>();
 		let booksData: any = null;
+		let adventuresData: any = null;
 		let classIndexData: any = null;
 		let spellIndexData: any = null;
 
@@ -97,6 +99,9 @@ export class FiveEToolsDataLoader {
 				switch (resource.key) {
 					case "books":
 						booksData = data;
+						break;
+					case "adventures":
+						adventuresData = data;
 						break;
 					case "classIndex":
 						classIndexData = data;
@@ -230,7 +235,7 @@ export class FiveEToolsDataLoader {
 			await this.loadSpellData(spellIndexData, gameData, sourcesSet, options);
 		}
 
-		gameData.sources = buildSourcesList(Array.from(sourcesSet), booksData);
+		gameData.sources = buildSourcesList(Array.from(sourcesSet), booksData, adventuresData);
 
 		if (options?.onProgress) {
 			options.onProgress(resources.length, resources.length, "Complete");

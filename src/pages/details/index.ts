@@ -1,5 +1,0 @@
-export { PortraitPage } from './PortraitPage'
-export { CharacteristicsPage } from './CharacteristicsPage'
-export { AppearancePage } from './AppearancePage'
-export { AlliesOrganizationsPage } from './AlliesOrganizationsPage'
-export { HistoryPage } from './HistoryPage'

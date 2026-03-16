@@ -19,12 +19,28 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
     ? races.filter(race => data.allowedSources.includes(race.source))
     : races
 
-  const selectedRace = filteredRaces.find(r => r.name === data.race)
+  const selectedRace = data.race
+    ? (data.raceSource
+      ? filteredRaces.find(r => r.name === data.race && (r.source ?? '') === data.raceSource)
+      : filteredRaces.find(r => r.name === data.race))
+    : undefined
 
-  const subraces = selectedRace?.subraces || []
+  const subraces = (selectedRace?.subraces || []).filter((sr: any) => sr.name)
   const selectedSubrace = subraces.find((sr: any) => sr.name === data.subrace)
 
-  const displayRace = selectedSubrace || selectedRace
+  // Subraces inherit parent's size/speed/languages if they don't define them;
+  // ability: replace parent when overwrite.ability is true, otherwise additive.
+  const displayRace = selectedSubrace && selectedRace
+    ? {
+      ...selectedSubrace,
+      ability: (selectedSubrace as any).overwrite?.ability
+        ? (selectedSubrace.ability ?? [])
+        : [...(selectedRace.ability ?? []), ...(selectedSubrace.ability ?? [])],
+      size: (selectedSubrace as any).size ?? (selectedRace as any).size,
+      speed: (selectedSubrace as any).speed ?? (selectedRace as any).speed,
+      languageProficiencies: (selectedSubrace as any).languageProficiencies ?? (selectedRace as any).languageProficiencies,
+    }
+    : (selectedSubrace || selectedRace)
 
   const getAbilityScoreIncreases = () => {
     if (!displayRace?.ability) return []
@@ -140,8 +156,13 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
             Race
           </Label>
           <Select
-            value={data.race || ''}
-            onValueChange={(value) => onChange({ race: value, subrace: '' })}
+            value={data.race ? `${data.race}|${data.raceSource ?? ''}` : ''}
+            onValueChange={(value) => {
+              const sepIdx = value.indexOf('|')
+              const raceName = sepIdx >= 0 ? value.slice(0, sepIdx) : value
+              const raceSource = sepIdx >= 0 ? value.slice(sepIdx + 1) : ''
+              onChange({ race: raceName, raceSource, subrace: '', subraceSource: '' })
+            }}
           >
             <SelectTrigger id="race-select" className="h-11">
               <SelectValue placeholder="Select a Race" />
@@ -153,8 +174,8 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                 </div>
               ) : (
                 filteredRaces.map((race) => (
-                  <SelectItem key={race.name} value={race.name}>
-                    {race.name}
+                  <SelectItem key={`${race.name}|${(race as any).source ?? ''}`} value={`${race.name}|${(race as any).source ?? ''}`}>
+                    {race.name}{(race as any).source ? ` (${(race as any).source})` : ''}
                   </SelectItem>
                 ))
               )}
@@ -176,7 +197,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
             </SelectTrigger>
             <SelectContent>
               {subraces.map((subrace: any) => (
-                <SelectItem key={subrace.name} value={subrace.name}>
+                <SelectItem key={`${subrace.name}|${subrace.source ?? ''}`} value={subrace.name}>
                   {subrace.name}
                 </SelectItem>
               ))}

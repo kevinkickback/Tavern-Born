@@ -8,6 +8,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+import type { AbilityScores } from '@/types/character'
 import { toast } from 'sonner'
 import { Warning } from '@phosphor-icons/react'
 import { WIZARD_STEPS, INITIAL_CHARACTER_DATA } from './wizard/constants'
@@ -84,11 +85,16 @@ export function CharacterCreationWizard({
     const character = createNewCharacter({
       name: characterData.name,
       race: characterData.race,
+      raceSource: characterData.raceSource || undefined,
       subrace: characterData.subrace,
+      subraceSource: characterData.subraceSource || undefined,
       class: characterData.class,
+      classSource: characterData.classSource || undefined,
       background: characterData.background,
+      backgroundSource: characterData.backgroundSource || undefined,
       portrait: characterData.portrait,
       allowedSources: characterData.allowedSources,
+      abilityScores: characterData.abilityScores as unknown as AbilityScores,
       variantRules: {
         ...characterData.variantRules,
         abilityScoreMethod: (characterData.abilityScoreMethod as 'point-buy' | 'standard-array' | 'custom') || 'standard-array',

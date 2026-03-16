@@ -24,132 +24,56 @@ A comprehensive comparison of the original vanilla JS Electron app (**fizbanes-f
 
 ## Feature Status Matrix
 
-### ✅ Fully Implemented in Tavern-Born
+### ✅ Completed Since Last Review (Phase 6b / 6c / 6d / 6e)
 
-| Feature | Notes |
-|---------|-------|
-| **Character CRUD** | Create, load, delete, set active — via Zustand + IDB |
-| **Character creation wizard** | 7-step modal: name, rules, race, class, background, ability scores (stub), review |
-| **Data loading pipeline** | Remote (GitHub mirror) + local filesystem, 16 resource types, progress tracking |
-| **Data filtering by source** | Per-character `allowedSources`, applied across all data hooks |
-| **Race selection** (wizard) | Pick race + subrace with trait display |
-| **Class selection** (wizard) | Pick class with hit die info |
-| **Background selection** (wizard) | Pick background |
-| **Portrait management** | Upload with zoom/pan/rotate, 5MB limit, base64 storage |
-| **Character details pages** | Characteristics, Appearance, History, Allies/Organizations — all save correctly |
-| **Rich text editing** | `RichTextArea` with preview mode + `@`-tag formatting guide |
-| **Compendium** | Searchable browser across all data types |
-| **Settings page** | Data source configuration (remote URL / local folder) |
-| **Tag rendering** | ~25 `@`-tag types rendered with Tailwind classes |
-| **Sidebar navigation** | Collapsible sections for Build/Details |
-| **Responsive design** | Mobile breakpoint detection via `useIsMobile()` |
-| **Theming** | CSS variables + dark fantasy aesthetic from PRD |
-| **Dev seed data** | Auto-populated example characters for development |
-| **Security hardening** | CSP, context isolation, sandbox, link restrictions |
+| Feature | Status |
+|---------|--------|
+| **Compendium detail view** | Right panel now renders via `renderEntry` with type-specific metadata (spell stats, etc.), entry prose, and a type filter dropdown. Raw JSON dump removed. |
+| **Details sub-nav card containers** | `max-w-7xl mx-auto w-full` container added to Characteristics, Appearance, History, and Allies/Organizations pages. |
+| **Wizard ability scores step** | Step 6 fully implemented — point-buy, standard-array, and custom panels with live score/modifier preview. `CharacterWizardData` extended with `abilityScores`; `handleFinish` passes scores to `createNewCharacter`. Review step updated to display all six scores with modifiers. |
+| **Tag rendering** | All 17 previously missing tags added (`@table`, `@book`, `@adventure`, `@variantrule`, `@trap`, `@hazard`, `@vehicle`, `@object`, `@reward`, `@area`, `@card`, `@deck`, `@link`, `@5etools`, `@coinflip`, `@itemProperty`, `@status`). Catch-all fallback strips any remaining unknown tags. `@table` entry type now renders a proper HTML table instead of a `[Table]` placeholder. |
+| **Split-pane Build pages** | Race, Class, Background, and Proficiencies Build pages converted to the single-card split-pane pattern matching CompendiumPage. Race page: radio list with inline subrace dropdown; detail panel shows ASI, size, speed, languages, traits via `renderEntry`. Class page: class grid + level controls left; features accordion by level right (click to drill-in to feature detail). Background page: radio list with inline equipment-package dropdown; detail panel shows proficiencies + feature entries via `renderEntry`. Proficiencies page: tabs left (all clickable); detail panel right shows modifier, proficiency/expertise status, and skill descriptions from game data. |
+| **Source-unique selection** | `Character` type extended with `raceSource`, `subraceSource`, `classSource`, `subclassSource`, `backgroundSource` optional fields. All `isSelected` checks on Build pages and wizard steps now use `name + source` composite matching. `CharacterWizardData` and `INITIAL_CHARACTER_DATA` updated accordingly. |
+| **Subrace data loading** | `parseRaces()` in `src/lib/5etools/parsers.ts` was discarding the separate top-level `data.subrace` array entirely. Fixed to group subraces by `raceName`/`raceSource` and nest them into each parent race as `subraces: [...]`. |
+| **Subrace inline dropdown placement** | The subrace `<Select>` on the Race Build page is embedded inline within the race row (right side), replacing the badge display. |
+| **Subrace stat inheritance** | `mergeRaceWithSubrace()` helper merges inherited parent values (ASI, size, speed, languages) when a subrace is selected. Applied in both Race Build page and wizard's `3-RaceStep.tsx`. |
+| **Ability Scores Build page** | `BuildAbilityScoresPage.tsx` fully implemented — point-buy, standard-array, and custom methods with live score/modifier/racial bonus preview. Mirrors the wizard step and is accessible from the Build nav. |
+| **Full hook layer** | All derived-state hooks implemented: `useAbilityScores`, `useArmorClass`, `useCharacterLevel`, `useEquipment`, `useHitPoints`, `useProficiencies`, `useSavingThrows`, `useSkills`, `useSpellSlots`. All hooks are thin wrappers over pure `src/lib/` functions with zero duplication of business logic. |
+| **Spells page** | `SpellsPage.tsx` fully implemented — spell slot tracker (use/restore), cantrip manager, spells known list, prepared spells toggle, long rest button. Powered by `useSpellSlots` hook. |
+| **Equipment page** | `EquipmentPage.tsx` fully implemented — item browser, equip/unequip toggle, attunement tracker (max 3 slots), weight/carry display, item type filter. Powered by `useEquipment` hook. |
+| **Feats page** | `FeatsPage.tsx` fully implemented — feat browser with prerequisite checking, ASI counter (class-aware), add/remove feats. Uses `checkAllPrerequisites()` from `src/lib/prerequisites.ts`. |
+| **Pure lib layer** | `src/lib/armorClass.ts`, `src/lib/prerequisites.ts` implemented as pure functions with no React/Zustand dependencies. `src/lib/skills.ts` has `deriveAllSkills()`, `deriveAllSavingThrows()`. |
+| **Character sheet view (interim)** | `CharacterSheetPage.tsx` implemented as a read-only summary view (ability scores, saving throws, skills, combat stats, proficiencies, features, feats, equipment, spells). Kept as a foundation for later PDF export work. **Note:** the primary purpose of this page is PDF generation and in-app preview (`pdf:generate` / `pdf:preview` IPC channels, Phase 6e item 15). The current view serves as a placeholder until the export pipeline is built. |
 
-### 🟡 Partially Implemented (Missing Features)
+### 🟡 Partially Implemented
 
 | Feature | What Exists | What's Missing |
 |---------|------------|----------------|
-| **Tag rendering** | ~25 tags with styled spans | ~25 more tags from forge (`@table`, `@book`, `@variantrule`, `@adventure`, `@trap`, `@area`, `@link`, etc.). **No interactive hover/click** — tags render as styled text only, not linked to tooltips or navigation. `@table` shows `[Table]` placeholder. |
-| **Ability score assignment** | Wizard step 6 exists but defers to Build page | No point-buy UI, no standard array UI, no custom entry UI. No `GameRules` constants for costs/limits. |
-| **Compendium detail view** | Two-panel layout with search | Detail panel shows **raw JSON** instead of formatted rendering via `FormattedTextRenderer`. |
-| **Character creation wizard** | All 7 steps functional | Step 6 (Ability Scores) is a stub. No class feature display during class selection. No background equipment preview. |
-| **Character type definition** | Comprehensive TypeScript interface | No behavioral methods — can't compute modifiers, bonuses, or derived stats. Just a data shape. |
-| **Electron IPC** | 2 channels (`dialog:selectFolder`, `fs:readJson`) | Missing 26+ channels for file-based save/load, PDF export, portraits, settings, UUID generation, data validation. |
-| **Import/Export** | JSON export exists on home page | No `.ffp` file format support. No conflict detection on import (keep both / replace / cancel). |
+| **Tooltip interactivity** | All tag spans have `title` attributes and cursor styles. `TraitTooltip` exists on Race Build page. | No Radix `<Tooltip>` wrapping — hover shows browser native tooltip only, no stat-block popover. |
+| **Level-up system** | `LevelUpModal` (`src/components/character/LevelUpModal.tsx`) — Radix Dialog with "Your Classes" section (class card, Add Level, Remove Last Level w/ confirm) and "Add Class" section (class picker, Ignore Restrictions toggle, PHB multiclass ability score requirements). Triggered via "Level Up" button in the app header (`AppHeader.tsx`). | No HP roll UI. No ASI/feat picker on level-up. No spell unlock automation. True multiclass (adding second class) needs `classProgression[]` model change. |
+| **Source name resolution** | `buildSourcesList` indexes by both `id` and `source`, `adventures.json` merged, `SOURCE_FALLBACKS` map added. | Some abbreviations still show raw (absent from both JSON files and fallback map). Requires manual `sourceFallbacks.ts` additions or a build-time scrape script. |
 
 ### ❌ Not Yet Implemented
 
-| Feature | Forge Implementation | Priority |
-|---------|---------------------|----------|
-| **Build pages** (Race/Class/Background/Proficiencies/Ability Scores) | Full interactive selectors with source filtering, trait display, equipment preview | **Critical** — core character building |
-| **Game rules engine** | `GameRules.js`: point-buy costs, standard array, ASI levels per class, hit dice, carry capacity, proficiency bonus by level | **Critical** — drives all calculations |
-| **Ability score calculations** | Modifiers, racial bonuses by source, point-buy budget tracking, ASI application | **Critical** |
-| **Hit point calculation** | CON modifier + class hit die + level progression | **Critical** |
-| **Armor class calculation** | Equipped armor + DEX mod + shield + magical bonuses | **Critical** |
-| **Proficiency system** | Source tracking (race/class/background), type categories (armor/weapons/tools/skills/languages), expertise | **Critical** |
-| **Class features** | Feature unlocks per level, subclass features, choices (Fighting Style, Invocations, Metamagic) | **Critical** |
-| **Spell management** | Known vs. prepared, slot calculation, cantrip count, multiclass spellcasting, pact magic | **High** |
-| **Equipment/inventory** | Add/remove items, equip/unequip, attunement (max 3), weight tracking, encumbrance | **High** |
-| **Feat system** | Selection via ASI, prerequisite validation, feat benefit application | **High** |
-| **Level-up system** | Multiclass support, HP rolls, ASI/feat selection, spell unlocks, feature unlocks, progression history | **High** |
-| **Character validation** | Missing spells, ASIs, subclass warnings, completeness checking | **Medium** |
-| **Prerequisite validation** | Level, ability scores, race, class, spellcasting requirements for feats/features | **Medium** |
-| **Character rehydration** | Re-populate computed fields (racial features, subrace traits) on load | **Medium** |
-| **PDF export** | Template-based character sheet generation + in-app preview | **Medium** |
-| **Multiclass** | Secondary class addition, combined spell slots, proficiency merging | **Medium** |
-| **Tooltip interactivity** | Hover on `@spell`, `@item`, etc. to see full stat blocks / descriptions | **Low** (nice-to-have) |
-| **Stat block rendering** | Monster/NPC stat block format display | **Low** |
-| **Character sheet view** | Calculated read-only character sheet for gameplay reference | **Medium** |
+| Feature | Priority |
+|---------|----------|
+| **Character validation** — completeness warnings (missing ASIs, subclass, required choices) | Medium |
+| **PDF export** — template-based character sheet generation | Medium |
+| **Multiclass** — secondary class, combined spell slots, proficiency merging | Medium |
+| **Tooltip interactivity** — hover on `@spell`, `@item`, etc. via Radix `<Tooltip>` | Medium |
+| **Character import/export** — `.ffp` file format, conflict detection on import; IPC channel count TBD (verify before implementing) | Medium |
+| **Base selection modal** — reusable `SelectionModal` (Radix `Dialog`) for browse-and-pick flows | Medium |
+| **Level-up modal** — guided HP/ASI/spell step flow triggered on level increment | Medium |
 
 ---
 
 ## Detailed Gap Analysis
 
-### 1. Game Rules Engine (Not Present in Tavern-Born)
+### 1. Tag Rendering
 
-Forge's `GameRules.js` defines critical constants that drive the entire app. Tavern-Born has **none** of this:
+All previously missing tags have been implemented in `src/lib/renderer.ts`. Coverage is now complete for static rendering. Remaining gap is **tooltip interactivity** only — tags render `title` attributes but no Radix `<Tooltip>` stat-block popovers. The `TraitTooltip` component exists on the Race Build page but is not wired to the tag renderer.
 
-```
-Point-buy costs:     { 8:0, 9:1, 10:2, 11:3, 12:4, 13:5, 14:7, 15:9 }
-Standard array:      [15, 14, 13, 12, 10, 8]
-Point-buy budget:    27
-Ability range:       3–20 (base), 1–30 (with bonuses)
-ASI levels by class: Fighter [4,6,8,12,14,16,19], Rogue [4,8,10,12,16,19], default [4,8,12,16,19]
-Hit dice per class:  Barbarian d12, Fighter/Paladin/Ranger d10, etc.
-Proficiency bonus:   [2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,6,6,6,6]
-Carry capacity:      STR × 15
-```
-
-### 2. Character Domain Object (Interface-Only in Tavern-Born)
-
-Forge has a rich `Character` class (300+ lines) with behavioral methods. Tavern-Born has only a TypeScript interface — a data shape with no logic.
-
-**Missing capabilities:**
-- `getAbilityModifier(ability)` — compute `Math.floor((score - 10) / 2)`
-- `getAbilityScore(ability)` — base + racial bonuses + ASI + feat bonuses
-- `getProficienciesByType(type)` — armor, weapons, tools, skills, languages
-- `getTotalLevel()` — sum across multiclass
-- `getPrimaryClass()` — first class entry
-- Source-tracked ability bonuses (know *why* STR is 16: "base 14 + racial +2")
-- Source-tracked proficiencies (know *why* you have Athletics: "class: Fighter")
-
-### 3. Service Layer (Absent in Tavern-Born)
-
-Forge has **30 specialized services** enforcing data access patterns. Tavern-Born accesses data directly through hooks + the Zustand store. There is no equivalent to:
-
-- `AbilityScoreService` — score assignment methods, bonus tracking
-- `ProficiencyService` — add/remove with source tracking
-- `SpellSelectionService` — known/prepared management, slot calculation
-- `EquipmentService` — inventory CRUD, attunement, encumbrance
-- `LevelUpService` — progression, multiclass, HP allocation
-- `CharacterValidationService` — completeness checking
-- `RehydrationService` — re-populate computed fields on load
-- `CharacterImportService` — file import with conflict detection
-
-### 4. Tag Rendering Gaps
-
-Tags present in forge but missing in Tavern-Born:
-
-| Missing Tag | Used For |
-|-------------|----------|
-| `@table` | Inline table references |
-| `@book` / `@adventure` | Source book/adventure references |
-| `@variantrule` | Variant rule references |
-| `@trap` / `@hazard` | Trap and hazard descriptions |
-| `@vehicle` / `@object` | Vehicle and object references |
-| `@reward` | Supernatural gift/blessing refs |
-| `@area` | Map area references |
-| `@card` / `@deck` | Tarot/deck references |
-| `@link` / `@5etools` | External URLs |
-| `@coinflip` | Random coin flip display |
-| `@itemProperty` | Item property abbreviations |
-| `@status` | Status condition display |
-
-More critically, forge's tags emit `data-hover-type`, `data-hover-source`, `data-hover-name` attributes that power an interactive tooltip system. Tavern-Born's tags are **display-only** — no click or hover behavior.
-
-### 5. IPC Channel Gaps
+### 2. IPC Channel Gaps
 
 Forge has 29 IPC channels across 6 handler files. Tavern-Born has 2.
 
@@ -342,51 +266,111 @@ Forge's tooltip system uses DOM data attributes (`data-hover-type`, `data-hover-
 
 This replaces forge's imperative tooltip manager with React's declarative component model. The Radix `TooltipProvider` with `delayDuration` is already configured in `App.tsx`.
 
+### Strategy 8: Split-Pane Card Pattern
+
+All pages with a list + detail layout (Compendium, Race Build, Class Build, Background Build, Proficiencies) must use this **single-card split-pane** pattern — NOT two separate cards in a CSS grid.
+
+**Structure:**
+```tsx
+// One Card, flex-row body, toggle button absolutely positioned top-right
+<Card className="h-full overflow-hidden flex flex-col">
+  <div className="relative flex flex-row flex-1 overflow-hidden min-h-0">
+
+    {/* Toggle button — absolute top-right of the card body */}
+    <button
+      onClick={() => setDetailCollapsed((c) => !c)}
+      className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground ..."
+    >
+      {detailCollapsed ? <CaretLeft /> : <CaretRight />}
+    </button>
+
+    {/* Left pane — always flex-1, naturally expands when right collapses */}
+    <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+      {/* search bar, list, scroll area */}
+    </div>
+
+    {/* Right pane — width/opacity/pointer-events animated via inline style */}
+    <div
+      className="flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out"
+      style={{
+        width: detailCollapsed ? 0 : '42%',
+        minWidth: detailCollapsed ? 0 : 320,
+        opacity: detailCollapsed ? 0 : 1,
+        pointerEvents: detailCollapsed ? 'none' : undefined,
+      }}
+    >
+      {/* detail content rendered via renderEntry */}
+    </div>
+  </div>
+</Card>
+```
+
+**Key rules:**
+- `flex-1` on the left pane — it expands automatically when the right collapses to 0.
+- Right pane uses **inline styles** for `width`/`minWidth` because Tailwind cannot transition arbitrary widths via class toggling.
+- `transition-all duration-300 ease-in-out` on the right pane outer div drives the animation.
+- Toggle button icon flips: `CaretRight` (detail visible) → `CaretLeft` (detail collapsed).
+- Selecting an entry in the list while collapsed automatically re-opens the detail panel.
+- **Reference implementation:** `CompendiumPage.tsx` (fully implemented). Applies to: Compendium ✅, Race Build ✅, Class Build ✅, Background Build ✅, Proficiencies ✅.
+- The `Card` component has `py-6` baked in. Use `-my-6` on the flex-row container so the right panel's background color bleeds edge-to-edge vertically instead of being clipped by the card padding:
+  ```tsx
+  <Card className="h-full overflow-hidden flex flex-col">
+    {/* -my-6 cancels Card's py-6 — right panel bg covers top and bottom edge */}
+    <div className="relative flex flex-row flex-1 overflow-hidden min-h-0 -my-6">
+  ```
+- Use `overflow-hidden` on every `ScrollArea` root inside the panes. Without it the Radix viewport has no bounded height and `flex-1` never creates a scroll constraint:
+  ```tsx
+  <ScrollArea className="flex-1 overflow-hidden">
+  ```
+- Any header/search bar for the page should sit **outside** (above) the split-pane container so it is unaffected by the `-my-6` bleed.
+
 ---
 
-## Suggested Implementation Order
+## Implementation Backlog
 
-This order minimizes blocked work — each phase builds on the previous:
+Phases 1–5 are complete. The following breaks down remaining work by priority.
 
-### Phase 1: Foundation (Unblocks everything else)
-1. **Game rules constants** (`src/lib/gameRules.ts`) — point-buy, standard array, hit dice, ASI levels, proficiency bonus table
-2. **Ability score utilities** (`src/lib/abilityScores.ts`) — modifier calc, point-buy cost, bonus tracking
-3. **Character utility functions** (`src/lib/characterUtils.ts`) — `getTotalLevel()`, `getPrimaryClass()`, derived stat calculations
+### 🔴 Phase 6a — Critical Correctness (Do First)
 
-### Phase 2: Core Build Pages
-4. **Ability Scores Build page** — Point-buy, standard array, custom entry UIs with real-time validation
-5. **Race Build page** — Full race/subrace selector with trait display, ability bonus application
-6. **Class Build page** — Class selector with feature preview, hit die display, subclass selection
-7. **Background Build page** — Background selector with proficiency + equipment grants
-8. **Proficiencies Build page** — Category display with source tracking
+1. ✅ **Non-unique React list keys** — All race/class/background/subrace/subclass/spell/feat list renderers now use composite `name|source` keys. **DONE.**
 
-### Phase 3: Character Mechanics
-9. **HP calculation** — CON mod + hit die per level
-10. **AC calculation** — Equipped armor + DEX + modifiers
-11. **Proficiency system** — Source tracking, type categories, expertise
-12. **Saving throws** — Class-based proficiency
-13. **Skills** — Proficiency + expertise + ability modifier
+### 🟠 Phase 6b — Core UX (High Impact, Low Friction)
 
-### Phase 4: Progression
-14. **Level-up system** — Add class levels, HP allocation, feature unlocks
-15. **ASI/Feat selection** — At appropriate levels, with prerequisite validation
-16. **Prerequisite validator** — Port from forge's `PrerequisiteValidator.js`
-17. **Class feature choices** — Fighting Styles, Invocations, Metamagic, etc.
+2. ✅ **Data-source startup modal** (`DataSourceModal`) — **DONE.** `DataSourceStartupModal.tsx` implemented as a blocking first-run Radix `Dialog`.
 
-### Phase 5: Spells & Equipment
-18. **Spell management** — Known vs. prepared, cantrips, slot calculation
-19. **Spell selection UI** — Filter by class/level/school, search
-20. **Equipment system** — Inventory CRUD, equip/unequip, attunement
-21. **Item selection UI** — Category display, search, magic item support
+3. ✅ **Compendium split-pane + detail view** — **DONE.** Single-card split-pane layout. Detail panel renders via `renderEntry` with type-specific metadata and a type filter dropdown. Raw JSON dump removed.
 
-### Phase 6: Polish & Export
-22. **Character sheet view** — Read-only calculated display
-23. **Character validation** — Completeness warnings
-24. **Remaining tag rendering** — `@table`, `@book`, `@link`, etc.
-25. **Tooltip interactivity** — Hover previews for `@spell`, `@item`, etc.
-26. **PDF export** — Template-based generation (requires new IPC channels)
-27. **File-based save/load** — `.ffp` format with conflict detection (IPC channels)
-28. **Multiclass support** — Secondary class, combined spell slots
+4. ✅ **Details sub-nav card containers** — **DONE.** `max-w-7xl mx-auto w-full` added to Characteristics, Appearance, History, and Allies/Organizations pages.
+
+5. ✅ **Wizard ability scores step** — **DONE.** Step 6 fully implemented with point-buy, standard-array, and custom panels. Review step shows all six scores with modifiers. `CharacterWizardData.abilityScores` wired through to `createNewCharacter`.
+
+### 🟡 Phase 6c — Modals & Guided Flows
+
+6. ✅ **Split-pane Build page layout** — **DONE.** Race, Class, Background, and Proficiencies pages now use the single-card split-pane pattern. See completed entry above for full details.
+
+7. ✅ **Level-up modal** (`LevelUpModal`) — `src/components/character/LevelUpModal.tsx`. Radix Dialog with two sections: (1) "Your Classes" — current class card with Add Level / Remove Last Level (with `AlertDialog` confirmation); (2) "Add Class" — class picker with PHB multiclass ability score requirements + Ignore Restrictions toggle. Triggered via "Level Up" button in the app header (`AppHeader.tsx`). HP gain roll, ASI/feat picker on level-up, and true multiclass (second class via `classProgression[]`) remain future work.
+
+8. ❌ **Base selection modal** (`SelectionModal`) — Reusable Radix `Dialog` template for all browse-and-pick flows (items, spells, feats, languages, tools). Search bar, optional category filter tabs, virtualised scrolling list left, formatted detail panel right via `renderEntry`. Existing inline browsers (spell, item, feat) should eventually open this modal. Reference: `BaseSelectorModal.js` and its subclasses in fizbanes-forge.
+
+### 🔵 Phase 6d — Content & Display Completeness
+
+9. ✅ **Remaining tag rendering** — **DONE.** All 17 missing tags implemented. `@table` now renders a proper HTML table. Catch-all strips any future unknown tags gracefully.
+
+9b. ⚠️ **Incomplete source name resolution** — See Partially Implemented section above. `SOURCE_FALLBACKS` in `src/lib/5etools/sourceFallbacks.ts` is the designated place to add overrides as they are discovered.
+
+10. ❌ **Tooltip interactivity** — Wrap `@spell`, `@item`, `@condition`, etc. tag spans in Radix `<Tooltip>` showing the stat block / description on hover. The `TooltipProvider` is already in `App.tsx`. The `TraitTooltip` component on the Race Build page is the reference pattern.
+
+11. ❌ **Character validation** — Completeness warnings: missing ASI choices, no subclass selected at eligible levels, required spell selections unpicked, etc. Reference: `src/services/CharacterValidationService.js` in fizbanes-forge.
+
+12. ✅ **Character sheet view (interim)** — **DONE.** `CharacterSheetPage.tsx` is a read-only calculated display. Intentionally kept simple — the page's final purpose is PDF generation/preview (Phase 6e item 15). The current view is a usable placeholder until the PDF pipeline is wired up.
+
+### ⚪ Phase 6e — Platform & Export
+
+13. ❌ **Multiclass support** — Secondary class addition, combined spell slot calculation (already in `spellSlots.ts`), proficiency merging. UI in `BuildClassPage`. Reference: `src/services/LevelUpService.js` in fizbanes-forge.
+
+14. ❌ **Character import/export** — Export a character to a `.ffp` JSON file and import one back, with conflict detection (keep both / replace / cancel) if the character already exists. Characters are otherwise persisted in IndexedDB as normal. **Before implementing, audit the actual IPC channels needed** — forge's full 26-channel count covers save/load/list/delete to a continuous save path, which is out of scope here; import/export likely needs only `dialog:saveFile`, `dialog:openFile`, and `fs:writeJson` (the read side may already be covered by the existing `fs:readJson`). Reference: `src/app/CharacterSerializer.js`, `src/services/CharacterImportService.js` in fizbanes-forge.
+
+15. ❌ **PDF export** — Template-based character sheet generation + in-app preview. Requires additional IPC channels (`pdf:generate`, `pdf:preview`, `pdf:listTemplates`). Reference: `src/ui/components/preview/PdfPreviewRenderer.js` in fizbanes-forge.
 
 ---
 
@@ -411,3 +395,6 @@ When implementing each feature, use these forge files as logic references (not c
 | 5eTools tag rendering | `src/lib/5eToolsRenderer.js` |
 | PDF export | `src/ui/components/preview/PdfPreviewRenderer.js` |
 | Import with conflict detection | `src/services/CharacterImportService.js` |
+| Base selection modal template | `src/ui/components/modals/BaseSelectorModal.js`, `ItemSelectorModal.js`, `SpellSelectorModal.js`, `FeatSelectorModal.js` |
+| Level-up modal | `src/ui/components/levelup/LevelUpModal.js`, `src/services/LevelUpService.js` |
+| Data-source startup modal | `src/ui/pages/SettingsPage.js` (data-source section), `src/app/AppInitializer.js` |

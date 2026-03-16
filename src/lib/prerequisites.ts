@@ -5,6 +5,8 @@
 //   const { met, failures } = checkAllPrerequisites(feat, character);
 //   const { met, reason } = checkPrerequisite(prereq, character, { className: 'Fighter' });
 
+import type { AbilityName } from './abilityScores';
+
 // ── Character snapshot ────────────────────────────────────────────────────────
 // A structural subset accepted by the validator. Both the current flat
 // `Character` type and future multi-class progression shapes satisfy it.
@@ -16,7 +18,7 @@ export interface PrereqCharacterSnapshot {
   class?: string;
   /** Race name (string, e.g. "Dwarf"). */
   race?: string;
-  abilityScores?: Partial<Record<string, number>>;
+  abilityScores?: Partial<Record<AbilityName, number>>;
   features?: Array<{ name: string }>;
   spells?: {
     cantrips?: string[];

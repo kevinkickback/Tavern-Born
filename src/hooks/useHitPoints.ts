@@ -3,7 +3,8 @@
 
 import { useMemo } from 'react'
 import { useCharacterStore } from '@/store/characterStore'
-import { getAbilityModifier, DEFAULT_HIT_DICE } from '@/lib/gameRules'
+import { useGameDataStore } from '@/store/gameDataStore'
+import { getAbilityModifier, getHitDiceFromClass } from '@/lib/gameRules'
 import type { HitPoints } from '@/types/character'
 
 export interface HitPointsState {
@@ -29,10 +30,11 @@ export interface HitPointsState {
 export function useHitPoints(): HitPointsState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const classes = useGameDataStore((s) => s.gameData?.classes ?? [])
 
   const hitDie = useMemo(
-    () => DEFAULT_HIT_DICE[character?.class ?? ''] ?? 8,
-    [character?.class],
+    () => getHitDiceFromClass(classes.find((c) => c.name === character?.class)),
+    [character?.class, classes],
   )
 
   const conMod = useMemo(

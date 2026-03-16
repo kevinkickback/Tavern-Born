@@ -34,7 +34,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
         ) : (
           filteredBackgrounds.map((bg) => (
             <button
-              key={bg.name}
+              key={`${bg.name}|${(bg as any).source ?? ''}`}
               onClick={() => onChange({ background: bg.name })}
               className={cn(
                 'p-4 rounded-lg border-2 text-left transition-all hover:scale-[1.02]',

@@ -1,5 +1,4 @@
 export * from './dataLoader'
-export * from './parser'
 export * from './filters'
 export * from './validator'
 export * from './parsers'
