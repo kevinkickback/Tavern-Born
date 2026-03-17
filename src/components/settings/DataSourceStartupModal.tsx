@@ -11,35 +11,35 @@ import { DataSourceConfigurator } from './DataSourceConfigurator'
 
 const FORCE_KEY = 'tb:force-setup'
 
-/** Returns true if the startup prompt should be shown. */
-function shouldShowSetup(hasDataSource: boolean): boolean {
-    if (localStorage.getItem(FORCE_KEY)) return true
-    return !hasDataSource
-}
-
 /**
- * Modal that appears on launch when no data source is configured.
+ * Modal that gates the app until game data is available.
+ *
+ * Shows when:
+ *  - Store has fully hydrated from IDB, AND
+ *  - gameData is null (not loaded from cache or source), AND
+ *  - data is not currently loading.
+ *
  * Can also be forced open via `localStorage.setItem('tb:force-setup', '1')` + reload.
- * When forced, it is dismissible and clears the flag on close.
  */
 export function DataSourceStartupModal() {
+    const hasHydrated = useGameDataStore((s) => s.hasHydrated)
     const gameData = useGameDataStore((s) => s.gameData)
-    const dataSourceConfig = useGameDataStore((s) => s.dataSourceConfig)
-    const hasDataSource = dataSourceConfig !== null && dataSourceConfig.isValid && gameData !== null
+    const isLoading = useGameDataStore((s) => s.isLoading)
 
-    const [open, setOpen] = useState(() => shouldShowSetup(hasDataSource))
     const [isForced] = useState(() => Boolean(localStorage.getItem(FORCE_KEY)))
+    const [open, setOpen] = useState(false)
 
-    // Auto-close once a data source is successfully loaded (non-forced flow).
+    // Only evaluate visibility once the IDB hydration pass is complete.
+    // This prevents the modal from flashing on launch before cached config is read.
     useEffect(() => {
-        if (hasDataSource && !isForced) {
-            setOpen(false)
-        }
-    }, [hasDataSource, isForced])
+        if (!hasHydrated) return
+        const needsSetup = !gameData && !isLoading
+        setOpen(isForced || needsSetup)
+    }, [hasHydrated, gameData, isLoading, isForced])
 
     const handleOpenChange = (next: boolean) => {
-        if (!next && !hasDataSource && !isForced) {
-            // Don't allow dismissal when there's genuinely no data source.
+        if (!next && !gameData && !isLoading && !isForced) {
+            // Block closing when there is genuinely no data available.
             return
         }
         if (!next && isForced) {
@@ -54,22 +54,21 @@ export function DataSourceStartupModal() {
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent
                 className="max-w-3xl max-h-[90vh] overflow-y-auto"
-                // Prevent closing via Escape/overlay when no data source and not forced.
                 onPointerDownOutside={(e) => {
-                    if (!hasDataSource && !isForced) e.preventDefault()
+                    if (!gameData && !isLoading && !isForced) e.preventDefault()
                 }}
                 onEscapeKeyDown={(e) => {
-                    if (!hasDataSource && !isForced) e.preventDefault()
+                    if (!gameData && !isLoading && !isForced) e.preventDefault()
                 }}
             >
                 <DialogHeader>
                     <DialogTitle className="font-display text-2xl">
-                        {isForced ? 'Data Source Setup (Test Mode)' : 'Welcome to Tavern Born'}
+                        {isForced ? 'Data Source Setup' : 'Welcome to Tavern Born'}
                     </DialogTitle>
                     <DialogDescription>
                         {isForced
-                            ? 'Startup prompt forced for testing. Close this dialog when done.'
-                            : 'Before you begin, configure a data source so the app can load 5etools game data (races, classes, spells, items, and more).'}
+                            ? 'Reconfigure your data source. Close when done.'
+                            : 'Configure a data source so the app can load 5etools game data (races, classes, spells, items, and more).'}
                     </DialogDescription>
                 </DialogHeader>
 

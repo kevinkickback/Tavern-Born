@@ -3,6 +3,7 @@ export interface CharacterClassEntry {
   source?: string
   levels: number
   subclass?: string
+  subclassSource?: string
 }
 
 export interface Character {
@@ -33,6 +34,8 @@ export interface Character {
   features: Feature[]
   feats: Feat[]
   spells: SpellSelection
+  /** Spells chosen at each class level during character building. Key is "${className}:${classLevel}". */
+  spellsByLevel?: Record<string, string[]>
   equipment: Equipment[]
   
   hitPoints: HitPoints

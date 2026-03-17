@@ -48,9 +48,68 @@ export function parseRaces(data: any): any[] {
 }
 
 export function parseClasses(data: any): any[] {
-  if (data.class) return data.class
-  if (Array.isArray(data)) return data
-  return []
+  const classes: any[] = data.class ? [...data.class] : Array.isArray(data) ? [...data] : []
+  const subclassEntries: any[] = data.subclass ?? []
+
+  if (subclassEntries.length === 0) return classes
+
+  // Build maps for intro entries and per-level features from subclassFeature records.
+  // XPHB-style subclasses have an intro record whose name === shortName (e.g. "Abjurer").
+  // PHB-style subclasses have an intro record whose name === the full subclass name (e.g.
+  // "School of Abjuration"), which never matches the shortName ("Abjuration").
+  // We capture both patterns: introEntriesMap keyed by shortName, fullNameIntroMap keyed
+  // by feature name, so that the lookup below can fall back for PHB-style entries.
+  const introEntriesMap = new Map<string, any[]>()
+  const fullNameIntroMap = new Map<string, any[]>()
+  const levelFeaturesMap = new Map<string, { level: number; features: any[] }[]>()
+  const subclassFeatureRecords: any[] = data.subclassFeature ?? []
+  for (const scf of subclassFeatureRecords) {
+    if (!scf.subclassShortName || !scf.className || !scf.entries) continue
+    const key = `${scf.subclassShortName}|${scf.className}|${scf.classSource ?? ''}`
+    if (scf.name === scf.subclassShortName) {
+      // XPHB-style intro: name === shortName — capture for shortName-keyed lookup
+      if (!introEntriesMap.has(key)) introEntriesMap.set(key, scf.entries)
+    } else {
+      // PHB-style: feature name is the full subclass name (e.g. "School of Abjuration").
+      // Index by feature name so the lookup below can find it via sc.name.
+      const nameKey = `${scf.name}|${scf.className}|${scf.classSource ?? ''}`
+      if (!fullNameIntroMap.has(nameKey)) fullNameIntroMap.set(nameKey, scf.entries)
+
+      // Content feature — group by level for the rich detail pane
+      if (!levelFeaturesMap.has(key)) levelFeaturesMap.set(key, [])
+      const levels = levelFeaturesMap.get(key)!
+      const existing = levels.find((l) => l.level === scf.level)
+      if (existing) {
+        existing.features.push(scf)
+      } else {
+        levels.push({ level: scf.level, features: [scf] })
+      }
+    }
+  }
+
+  // Group subclasses by parent class (by className + classSource)
+  const subclassMap = new Map<string, any[]>()
+  for (const sc of subclassEntries) {
+    const className: string | undefined = sc.className
+    const classSource: string | undefined = sc.classSource
+    if (!className) continue
+    const parentKey = `${className}|${classSource ?? ''}`
+    if (!subclassMap.has(parentKey)) subclassMap.set(parentKey, [])
+    const introKey = `${sc.shortName}|${className}|${classSource ?? ''}`
+    // Fallback: PHB-style subclasses where shortName != feature name; look up by sc.name
+    const fullNameKey = `${sc.name}|${className}|${classSource ?? ''}`
+    const entries = introEntriesMap.get(introKey) ?? fullNameIntroMap.get(fullNameKey) ?? []
+    const levelFeatures = levelFeaturesMap.get(introKey) ?? []
+    subclassMap.get(parentKey)!.push({ ...sc, entries, levelFeatures })
+  }
+
+  // Merge subclasses into their parent class objects
+  return classes.map((cls) => {
+    const key = `${cls.name}|${cls.source ?? ''}`
+    const nested = subclassMap.get(key)
+    if (!nested || nested.length === 0) return cls
+    return { ...cls, subclasses: nested }
+  })
 }
 
 export function parseBackgrounds(data: any): any[] {

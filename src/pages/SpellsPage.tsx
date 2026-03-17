@@ -25,6 +25,7 @@ import { useSpellSlots } from '@/hooks/useSpellSlots'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from './_shared'
+import { SpellSelectionModal } from '@/components/character/SpellSelectionModal'
 
 export function SpellsPage() {
     const character = useCharacterStore((s) => s.activeCharacter)
@@ -47,6 +48,7 @@ export function SpellsPage() {
     } = useSpellSlots()
     const [spellSearch, setSpellSearch] = useState('')
     const [levelFilter, setLevelFilter] = useState<string>('all')
+    const [spellModalOpen, setSpellModalOpen] = useState(false)
 
     if (!character) {
         return <NoCharCard icon={<MagicWand weight="duotone" />} noun="manage spells" />
@@ -179,10 +181,20 @@ export function SpellsPage() {
                 <div className="lg:col-span-2">
                     <Card className="w-full">
                         <CardHeader>
-                            <CardTitle className="font-display text-xl flex items-center gap-2">
-                                <BookOpen className="h-5 w-5 text-accent" weight="duotone" />
-                                Spell Browser
-                            </CardTitle>
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <CardTitle className="font-display text-xl flex items-center gap-2">
+                                    <BookOpen className="h-5 w-5 text-accent" weight="duotone" />
+                                    Spell Browser
+                                </CardTitle>
+                                <Button
+                                    size="sm"
+                                    className="bg-accent text-accent-foreground hover:bg-accent/90 flex-shrink-0"
+                                    onClick={() => setSpellModalOpen(true)}
+                                >
+                                    <Plus className="h-3.5 w-3.5 mr-1.5" />
+                                    Add Spells
+                                </Button>
+                            </div>
                             <div className="flex items-center gap-3 mt-2 flex-wrap">
                                 <Input
                                     placeholder="Search spells…"
@@ -258,6 +270,21 @@ export function SpellsPage() {
                     </Card>
                 </div>
             </div>
+
+            <SpellSelectionModal
+                open={spellModalOpen}
+                onOpenChange={setSpellModalOpen}
+                spells={spells as Spell5e[]}
+                ownedNames={ownedSet}
+                classFilter={classLower}
+                onConfirm={(names) => {
+                    for (const name of names) {
+                        const spell = (spells as Spell5e[]).find((s) => s.name === name)
+                        if (spell?.level === 0) addCantrip(name)
+                        else addSpellKnown(name)
+                    }
+                }}
+            />
         </div>
     )
 }
