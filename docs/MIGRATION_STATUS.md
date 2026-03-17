@@ -50,7 +50,9 @@ A comprehensive comparison of the original vanilla JS Electron app (**fizbanes-f
 | Feature | What Exists | What's Missing |
 |---------|------------|----------------|
 | **Tooltip interactivity** | All tag spans have `title` attributes and cursor styles. `TraitTooltip` exists on Race Build page. | No Radix `<Tooltip>` wrapping — hover shows browser native tooltip only, no stat-block popover. |
-| **Level-up system** | `LevelUpModal` (`src/components/character/LevelUpModal.tsx`) — Radix Dialog with "Your Classes" section (class card, Add Level, Remove Last Level w/ confirm) and "Add Class" section (class picker, Ignore Restrictions toggle, PHB multiclass ability score requirements). Triggered via "Level Up" button in the app header (`AppHeader.tsx`). | No HP roll UI. No ASI/feat picker on level-up. No spell unlock automation. True multiclass (adding second class) needs `classProgression[]` model change. |
+| **Level-up system** | `LevelUpModal` (`src/components/character/LevelUpModal.tsx`) — Radix Dialog with "Your Classes" section (class card, Add Level, Remove Last Level w/ confirm) and "Add Class" section (class picker, Ignore Restrictions toggle, PHB multiclass ability score requirements). Triggered via "Level Up" button in the app header (`AppHeader.tsx`). `classProgression[]` model is in `Character` type with per-entry `subclass?`. `BuildClassPage` reads it and renders per-class feature tabs. | No HP roll UI. No ASI/feat picker on level-up. No spell unlock automation. No subclass selection per class in the level-up flow. Combined multiclass spell slot calculation not yet implemented. |
+| **Multiclass spell slots & subclass** | `classProgression[]` model exists. `LevelUpModal` adds/levels a second class. `BuildClassPage` renders per-class feature tabs. `checkMulticlassRequirements()` enforces PHB ability score prerequisites. | Combined multiclass spell slot table not applied (each class computed independently). No subclass selection per multiclass class in modal or build page. |
+| **Character import/export** | `HomePage.tsx` exports `.dndchar` JSON via browser download and imports `.dndchar`/`.json` via browser file picker. | No conflict detection on import. No IPC/native file dialog. No `.ffp` round-trip compatibility. |
 | **Source name resolution** | `buildSourcesList` indexes by both `id` and `source`, `adventures.json` merged, `SOURCE_FALLBACKS` map added. | Some abbreviations still show raw (absent from both JSON files and fallback map). Requires manual `sourceFallbacks.ts` additions or a build-time scrape script. |
 
 ### ❌ Not Yet Implemented
@@ -59,11 +61,8 @@ A comprehensive comparison of the original vanilla JS Electron app (**fizbanes-f
 |---------|----------|
 | **Character validation** — completeness warnings (missing ASIs, subclass, required choices) | Medium |
 | **PDF export** — template-based character sheet generation | Medium |
-| **Multiclass** — secondary class, combined spell slots, proficiency merging | Medium |
 | **Tooltip interactivity** — hover on `@spell`, `@item`, etc. via Radix `<Tooltip>` | Medium |
-| **Character import/export** — `.ffp` file format, conflict detection on import; IPC channel count TBD (verify before implementing) | Medium |
-| **Base selection modal** — reusable `SelectionModal` (Radix `Dialog`) for browse-and-pick flows | Medium |
-| **Level-up modal** — guided HP/ASI/spell step flow triggered on level increment | Medium |
+| **Base selection modal** — reusable `SelectionModal` (Radix `Dialog`) + `SpellSelectionModal` wired into `SpellsPage` | Medium |
 
 ---
 
@@ -79,7 +78,7 @@ Forge has 29 IPC channels across 6 handler files. Tavern-Born has 2.
 
 **Missing IPC capabilities:**
 - Character save/load/delete/list to filesystem
-- Character import/export (`.ffp` files)
+- Character import/export via native dialog (basic browser-level export/import exists; IPC upgrade and conflict detection remain)
 - PDF generation and preview
 - Portrait save/list from disk
 - Settings persistence (save path, window bounds, preferences)
@@ -348,9 +347,16 @@ Phases 1–5 are complete. The following breaks down remaining work by priority.
 
 6. ✅ **Split-pane Build page layout** — **DONE.** Race, Class, Background, and Proficiencies pages now use the single-card split-pane pattern. See completed entry above for full details.
 
-7. ✅ **Level-up modal** (`LevelUpModal`) — `src/components/character/LevelUpModal.tsx`. Radix Dialog with two sections: (1) "Your Classes" — current class card with Add Level / Remove Last Level (with `AlertDialog` confirmation); (2) "Add Class" — class picker with PHB multiclass ability score requirements + Ignore Restrictions toggle. Triggered via "Level Up" button in the app header (`AppHeader.tsx`). HP gain roll, ASI/feat picker on level-up, and true multiclass (second class via `classProgression[]`) remain future work.
+7. ✅ **Level-up modal** (`LevelUpModal`) — `src/components/character/LevelUpModal.tsx`. Radix Dialog with two sections: (1) "Your Classes" — current class card with Add Level / Remove Last Level (with `AlertDialog` confirmation); (2) "Add Class" — class picker with PHB multiclass ability score requirements + Ignore Restrictions toggle; full `classProgression[]` model wired through. Triggered via "Level Up" button in the app header (`AppHeader.tsx`). Remaining gaps (HP roll, ASI/feat picker on level-up, subclass selection per class, combined multiclass spell slots) are tracked in Phase 6e.
 
-8. ❌ **Base selection modal** (`SelectionModal`) — Reusable Radix `Dialog` template for all browse-and-pick flows (items, spells, feats, languages, tools). Search bar, optional category filter tabs, virtualised scrolling list left, formatted detail panel right via `renderEntry`. Existing inline browsers (spell, item, feat) should eventually open this modal. Reference: `BaseSelectorModal.js` and its subclasses in fizbanes-forge.
+8. 🟡 **Base selection modal** (`SelectionModal`) — Reusable Radix `Dialog` for all browse-and-pick flows (spells, items, feats, languages, tools). **`src/components/ui/SelectionModal.tsx` implemented; `src/components/character/SpellSelectionModal.tsx` implemented and wired into `SpellsPage.tsx`.** Remaining: ItemSelectionModal, FeatSelectionModal, LanguageSelectorModal (forge refs: `ItemSelectorModal.js`, `FeatSelectorModal.js`). Layout has three zones:
+   - **Header**: `DialogTitle` showing the task (e.g. "Learn 3 cantrips, 6 1st-level spells"), search bar spanning the full width with a filter-toggle button (collapses/expands the sidebar) and a Clear button.
+   - **Body** (flex-row, fills remaining height):
+     - *Left sidebar* (collapsible, ~240px) — stacked accordion sections (e.g. "Spell Level", "School", "Type") each containing checkboxes or toggles. Collapses to 0-width when the filter button is toggled off.
+     - *Right content area* (flex-1, `ScrollArea`) — vertically scrolling list of inline summary cards. Each card shows the entry name + school/type tag on one line, then a two-column stats grid (Casting Time, Range, Duration, Components for spells) followed by a short description excerpt. No separate detail panel — all relevant metadata is inline on the card.
+   - **Footer**: left side shows "SELECTED" label plus per-category counter badges (e.g. `0/3 cantrips`, `0/6 1st level`) and a plain-text status line ("No selections" / comma-joined names). Right side has Cancel and Confirm buttons.
+   
+   Existing inline browsers (spell, item, feat) should eventually open this modal. Reference: `BaseSelectorModal.js`, `SpellSelectorModal.js`, `ItemSelectorModal.js`, `FeatSelectorModal.js` in fizbanes-forge.
 
 ### 🔵 Phase 6d — Content & Display Completeness
 
@@ -366,9 +372,9 @@ Phases 1–5 are complete. The following breaks down remaining work by priority.
 
 ### ⚪ Phase 6e — Platform & Export
 
-13. ❌ **Multiclass support** — Secondary class addition, combined spell slot calculation (already in `spellSlots.ts`), proficiency merging. UI in `BuildClassPage`. Reference: `src/services/LevelUpService.js` in fizbanes-forge.
+13. 🟡 **Multiclass support** — `classProgression[]` model is in `Character` type (with per-entry `subclass?`). `LevelUpModal` handles adding a second class and levelling each class independently. `BuildClassPage` renders per-class feature tabs from `classProgression`. Remaining: combined multiclass spell slot table (currently each class computed independently), subclass selection per class in the level-up modal/build page. Reference: `src/services/LevelUpService.js` in fizbanes-forge.
 
-14. ❌ **Character import/export** — Export a character to a `.ffp` JSON file and import one back, with conflict detection (keep both / replace / cancel) if the character already exists. Characters are otherwise persisted in IndexedDB as normal. **Before implementing, audit the actual IPC channels needed** — forge's full 26-channel count covers save/load/list/delete to a continuous save path, which is out of scope here; import/export likely needs only `dialog:saveFile`, `dialog:openFile`, and `fs:writeJson` (the read side may already be covered by the existing `fs:readJson`). Reference: `src/app/CharacterSerializer.js`, `src/services/CharacterImportService.js` in fizbanes-forge.
+14. 🟡 **Character import/export** — Export to `.dndchar` and import from `.dndchar`/`.json` are functional in `HomePage.tsx` using browser file APIs. Remaining: conflict detection on import (keep both / replace / cancel), native file-dialog via IPC (`dialog:saveFile`, `dialog:openFile`, `fs:writeJson`). Reference: `src/app/CharacterSerializer.js`, `src/services/CharacterImportService.js` in fizbanes-forge.
 
 15. ❌ **PDF export** — Template-based character sheet generation + in-app preview. Requires additional IPC channels (`pdf:generate`, `pdf:preview`, `pdf:listTemplates`). Reference: `src/ui/components/preview/PdfPreviewRenderer.js` in fizbanes-forge.
 

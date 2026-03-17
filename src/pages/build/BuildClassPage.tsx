@@ -26,10 +26,18 @@ import {
     CaretLeft,
     CaretRight,
     MagicWand,
+    Sparkle,
 } from '@phosphor-icons/react'
 import { renderEntry } from '@/lib/renderer'
 import { useCharacterStore } from '@/store/characterStore'
 import { useFilteredGameData } from '@/hooks/useFilteredGameData'
+import { SpellSelectionModal } from '@/components/character/SpellSelectionModal'
+import { OptionalFeatureSelectionModal } from '@/components/character/OptionalFeatureSelectionModal'
+import { SubclassSelectionModal } from '@/components/character/SubclassSelectionModal'
+import type { CategoryLimit, ActiveFilters } from '@/components/ui/SelectionModal'
+import type { PrereqCharacterSnapshot } from '@/lib/prerequisites'
+import type { Spell5e } from '@/types/5etools'
+import { formatSpellLevel, getSchoolName } from '@/lib/spellUtils'
 import {
     getASILevelsFromClass,
     getProficiencyBonus,
@@ -83,6 +91,27 @@ function getSpellGainAtLevel(
     return { cantrips: newCantrips, spells: newSpells, maxSpellLevel }
 }
 
+// ─── Optional feature progression helpers ────────────────────────────────────
+
+interface OptFeatureProg {
+    name: string
+    featureType: string[]
+    progression: number[] | Record<string, number>
+}
+
+/** Total optional features of this type allowed at the given class level. */
+function getOptFeatureTotal(
+    prog: number[] | Record<string, number>,
+    level: number,
+): number {
+    if (Array.isArray(prog)) return prog[Math.max(0, level - 1)] ?? 0
+    let total = 0
+    for (const [k, v] of Object.entries(prog)) {
+        if (Number(k) <= level) total = Math.max(total, Number(v))
+    }
+    return total
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,7 +119,7 @@ function getSpellGainAtLevel(
 export function BuildClassPage() {
     const character = useCharacterStore((s) => s.activeCharacter)
     const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-    const { classes, classFeatures, optionalfeatures } = useFilteredGameData()
+    const { classes, classFeatures, optionalfeatures, spells } = useFilteredGameData()
     // Dialog / panel state
     const [selectedClassTab, setSelectedClassTab] = useState('')
     const [classPickerOpen, setClassPickerOpen] = useState(false)
@@ -98,10 +127,8 @@ export function BuildClassPage() {
     const [subclassPickerOpen, setSubclassPickerOpen] = useState(false)
     const [spellPickerLevel, setSpellPickerLevel] = useState<number | null>(null)
     const [detailCollapsed, setDetailCollapsed] = useState(false)
-    const [selectedFeature, setSelectedFeature] = useState<{ name: string; source?: string; entries: any[] } | null>(null)
-
-    // Optional features search
-    const [featureSearch, setFeatureSearch] = useState('')
+    const [selectedFeature, setSelectedFeature] = useState<{ name: string; source?: string; entries: any[]; levelFeatures?: { level: number; features: any[] }[] } | null>(null)
+    const [optPickerState, setOptPickerState] = useState<{ progName: string; featureTypes: string[]; total: number } | null>(null)
 
     if (!character) {
         return <NoCharCard icon={<Sword weight="duotone" />} noun="configure your class" />
@@ -180,39 +207,29 @@ export function BuildClassPage() {
 
     // ── Optional feature choices (Invocations, Metamagic, etc.) ─────────────────
     const optFeatures = optionalfeatures ?? []
-    const relevantOptFeatures = useMemo(() => {
-        if (!character.class) return []
-        const classLower = (viewingClass ?? '').toLowerCase()
-        const ftClassMap: Record<string, string[]> = {
-            'FS:F': ['fighter'],
-            'FS:P': ['paladin'],
-            'FS:R': ['ranger'],
-            'FS:B': ['bard'],
-            EI: ['warlock'],
-            MM: ['sorcerer'],
-            'MV:B': ['monk'],
-            OR: ['druid'],
-        }
-        return (optFeatures as any[]).filter((of) => {
-            const ft: string = Array.isArray(of.featureType) ? of.featureType[0] : (of.featureType ?? '')
-            return (ftClassMap[ft] ?? []).includes(classLower)
-        })
-    }, [character.class, optFeatures, viewingClass])
 
     const selectedNames = new Set((character.features ?? []).map((f) => f.name))
-    const filteredOptFeatures = relevantOptFeatures.filter(
-        (f: any) => !featureSearch || f.name?.toLowerCase().includes(featureSearch.toLowerCase()),
-    )
 
-    const toggleOptFeature = (feat: any) => {
-        const alreadySelected = selectedNames.has(feat.name)
-        const next = alreadySelected
-            ? character.features.filter((f) => f.name !== feat.name)
-            : [
-                ...character.features,
-                { id: `${feat.name}-opt`, name: feat.name, source: feat.source ?? '', description: '' },
-            ]
-        updateCharacter(character.id, { features: next })
+    const handleOptFeatureConfirm = (names: string[], featureTypes: string[]) => {
+        // Keep features that belong to other types (spells, class features, feats, etc.).
+        const existingNonOpt = character.features.filter((f) => {
+            const of = (optFeatures as any[]).find((o: any) => o.name === f.name)
+            if (!of) return true
+            const fTypes: string[] = Array.isArray(of.featureType)
+                ? of.featureType
+                : [of.featureType ?? '']
+            return !featureTypes.some((t) => fTypes.includes(t))
+        })
+        const newFeatures = names.map((name) => {
+            const feat = (optFeatures as any[]).find((f: any) => f.name === name)
+            return {
+                id: `${name}-opt`,
+                name,
+                source: (feat as any)?.source ?? '',
+                description: '',
+            }
+        })
+        updateCharacter(character.id, { features: [...existingNonOpt, ...newFeatures] })
     }
 
     // ── Spell choices per level (cantrips / spells gained) ───────────────────────
@@ -226,6 +243,12 @@ export function BuildClassPage() {
         return map
     }, [viewingClassData])
 
+    // ── Optional feature progression (Invocations, Fighting Styles, Metamagic…) ─
+    const optFeatureProgressions = useMemo(
+        () => ((viewingClassData as any)?.optionalfeatureProgression ?? []) as OptFeatureProg[],
+        [viewingClassData],
+    )
+
     // ── Levels to show in accordion (1..character.level that have content) ────
     const levelsToShow = useMemo(() => {
         const set = new Set<number>()
@@ -233,17 +256,92 @@ export function BuildClassPage() {
         asiLevels.filter((l) => l <= viewingClassLevel).forEach((l) => set.add(l))
         if (subclassLevel <= viewingClassLevel) set.add(subclassLevel)
         spellChoicesByLevel.forEach((_, lv) => { if (lv <= viewingClassLevel) set.add(lv) })
+        for (const prog of optFeatureProgressions) {
+            for (let lv = 1; lv <= viewingClassLevel; lv++) {
+                if (getOptFeatureTotal(prog.progression, lv) > getOptFeatureTotal(prog.progression, lv - 1))
+                    set.add(lv)
+            }
+        }
         return Array.from(set).sort((a, b) => a - b)
-    }, [allClassFeatures, asiLevels, subclassLevel, viewingClassLevel, spellChoicesByLevel])
+    }, [allClassFeatures, asiLevels, subclassLevel, viewingClassLevel, spellChoicesByLevel, optFeatureProgressions])
 
     // ── Subclasses for the picker dialog ─────────────────────────────────────
     const subclasses = (viewingClassData as any)?.subclasses ?? []
+
+    // ── Subclass for the currently-viewed class (multiclass-aware) ───────────
+    const viewingSubclass = viewingEntry
+        ? (classProgression.length > 1
+            ? viewingEntry.subclass
+            : (viewingEntry.subclass ?? character.subclass))
+        : character.subclass
+
+    const handleSubclassSelect = (sc: any) => {
+        if (classProgression.length > 0 && viewingEntry) {
+            const newProg = classProgression.map((e) =>
+                e.name === viewingEntry.name && (e.source ?? '') === (viewingEntry.source ?? '')
+                    ? { ...e, subclass: sc.name, subclassSource: sc.source ?? undefined }
+                    : e,
+            )
+            const updates: Record<string, any> = { classProgression: newProg }
+            // Keep top-level character.subclass in sync for the primary class.
+            if (viewingEntry.name === character.class) {
+                updates.subclass = sc.name
+                updates.subclassSource = sc.source ?? undefined
+            }
+            updateCharacter(character.id, updates)
+        } else {
+            updateCharacter(character.id, {
+                subclass: sc.name,
+                subclassSource: sc.source ?? undefined,
+            })
+        }
+        setSelectedFeature({ name: sc.name, source: sc.source, entries: sc.entries ?? [], levelFeatures: sc.levelFeatures })
+        setSubclassPickerOpen(false)
+        if (detailCollapsed) setDetailCollapsed(false)
+    }
+
+    // ── Character snapshot for prerequisite checking ───────────────────────
+    const characterSnapshot: PrereqCharacterSnapshot = {
+        level: character.level,
+        class: viewingClass,
+        race: character.race,
+        abilityScores: character.abilityScores as any,
+        features: character.features ?? [],
+        spells: {
+            cantrips: character.spells?.cantrips ?? [],
+            spellsKnown: character.spells?.spellsKnown ?? [],
+            preparedSpells: character.spells?.preparedSpells ?? [],
+        },
+        ...(classProgression.length > 0
+            ? {
+                progression: {
+                    classes: classProgression.map((e) => ({
+                        name: e.name,
+                        levels: e.levels,
+                        source: e.source,
+                    })),
+                },
+            }
+            : {}),
+    }
 
     // ── Filtered class list for the picker dialog ─────────────────────────────
     const filteredClasses = useMemo(
         () => classes.filter((c) => !classPickerSearch || c.name.toLowerCase().includes(classPickerSearch.toLowerCase())),
         [classes, classPickerSearch],
     )
+
+    // ── Spells pre-filtered to viewing class (passed to the spell picker) ────
+    // Reduces array from ~1255 to ~100-200 before it reaches the modal,
+    // cutting both filter cost and initial card render count.
+    const classSpells = useMemo(() => {
+        const classLower = viewingClass?.toLowerCase()
+        if (!classLower) return spells as Spell5e[]
+        return (spells as Spell5e[]).filter((s) => {
+            const fromList = s.classes?.fromClassList ?? []
+            return fromList.length === 0 || fromList.some((c: any) => c.name?.toLowerCase() === classLower)
+        })
+    }, [spells, viewingClass])
 
     return (
         <div className="h-full flex flex-col">
@@ -325,6 +423,12 @@ export function BuildClassPage() {
                                                         const isASILevel = (asiLevels as readonly number[]).includes(lv)
                                                         const spellGain = spellChoicesByLevel.get(lv)
 
+                                                        const optFeatureGainsAtLevel = optFeatureProgressions.filter(
+                                                            (prog) =>
+                                                                getOptFeatureTotal(prog.progression, lv) >
+                                                                getOptFeatureTotal(prog.progression, lv - 1),
+                                                        )
+
                                                         // Passive features: exclude the subclass unlock entry and ASI entries
                                                         // since those are surfaced as dedicated choice rows
                                                         const passiveFeatures = (featuresByLevel.get(lv) ?? []).filter((f: any) => {
@@ -336,7 +440,8 @@ export function BuildClassPage() {
                                                         const choiceCount =
                                                             (isSubclassLevel ? 1 : 0) +
                                                             (isASILevel ? 1 : 0) +
-                                                            (spellGain ? 1 : 0)
+                                                            (spellGain ? 1 : 0) +
+                                                            optFeatureGainsAtLevel.length
                                                         const totalCount = passiveFeatures.length + choiceCount
 
                                                         return (
@@ -362,35 +467,162 @@ export function BuildClassPage() {
                                                                         {/* Subclass choice row */}
                                                                         {isSubclassLevel && (
                                                                             <div className={cn(
-                                                                                'flex items-center justify-between px-3 py-2.5 rounded-lg border',
-                                                                                character.subclass
+                                                                                'rounded-lg border overflow-hidden',
+                                                                                viewingSubclass
                                                                                     ? 'border-green-500/30 bg-green-500/5'
                                                                                     : 'border-amber-500/30 bg-amber-500/5',
                                                                             )}>
-                                                                                <div className="flex items-center gap-2 min-w-0">
-                                                                                    <Star className="h-4 w-4 text-accent flex-shrink-0" weight="duotone" />
-                                                                                    <div className="min-w-0">
-                                                                                        <div className="flex items-center gap-1.5 text-sm font-semibold">
-                                                                                            Subclass Selection
-                                                                                            {character.subclass && (
-                                                                                                <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
-                                                                                            )}
-                                                                                        </div>
-                                                                                        <div className="text-xs text-muted-foreground truncate">
-                                                                                            {character.subclass ?? 'None selected'}
+                                                                                <div className="flex items-center justify-between px-3 py-2.5">
+                                                                                    <div className="flex items-center gap-2 min-w-0">
+                                                                                        <Star className="h-4 w-4 text-accent flex-shrink-0" weight="duotone" />
+                                                                                        <div className="min-w-0">
+                                                                                            <div className="flex items-center gap-1.5 text-sm font-semibold">
+                                                                                                {viewingSubclass
+                                                                                                    ? (viewingClassData as any)?.subclassTitle ?? 'Subclass'
+                                                                                                    : 'Subclass Selection'}
+                                                                                                {viewingSubclass && (
+                                                                                                    <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                                                                                                )}
+                                                                                            </div>
+                                                                                            <div className="text-xs text-muted-foreground">
+                                                                                                {viewingSubclass
+                                                                                                    ? `${(viewingClassData as any)?.subclassTitle ?? 'Subclass'} chosen`
+                                                                                                    : 'None selected'}
+                                                                                            </div>
                                                                                         </div>
                                                                                     </div>
+                                                                                    <Button
+                                                                                        variant={viewingSubclass ? 'outline' : 'default'}
+                                                                                        size="sm"
+                                                                                        className="flex-shrink-0 ml-2 h-7 text-xs"
+                                                                                        onClick={() => setSubclassPickerOpen(true)}
+                                                                                    >
+                                                                                        {viewingSubclass ? 'Change' : 'Choose'}
+                                                                                    </Button>
                                                                                 </div>
-                                                                                <Button
-                                                                                    variant={character.subclass ? 'outline' : 'default'}
-                                                                                    size="sm"
-                                                                                    className="flex-shrink-0 ml-2 h-7 text-xs"
-                                                                                    onClick={() => setSubclassPickerOpen(true)}
-                                                                                >
-                                                                                    {character.subclass ? 'Change' : 'Choose'}
-                                                                                </Button>
+                                                                                {viewingSubclass && (() => {
+                                                                                    const sc = subclasses.find((s: any) => s.name === viewingSubclass)
+                                                                                    return (
+                                                                                        <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-green-500/20 pt-2">
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onMouseEnter={() => {
+                                                                                                    setSelectedFeature({
+                                                                                                        name: viewingSubclass,
+                                                                                                        source: sc?.source,
+                                                                                                        entries: sc?.entries ?? [],
+                                                                                                        levelFeatures: sc?.levelFeatures,
+                                                                                                    })
+                                                                                                    if (detailCollapsed) setDetailCollapsed(false)
+                                                                                                }}
+                                                                                                onClick={() =>
+                                                                                                    setSelectedFeature({
+                                                                                                        name: viewingSubclass,
+                                                                                                        source: sc?.source,
+                                                                                                        entries: sc?.entries ?? [],
+                                                                                                        levelFeatures: sc?.levelFeatures,
+                                                                                                    })
+                                                                                                }
+                                                                                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-green-500/30 bg-green-500/5 hover:border-green-500/50 hover:bg-green-500/15 text-foreground transition-colors"
+                                                                                            >
+                                                                                                <span className="font-medium">{viewingSubclass}</span>
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    )
+                                                                                })()}
                                                                             </div>
                                                                         )}
+
+                                                                        {/* Optional feature choice rows (Invocations, Fighting Styles, Metamagic…) */}
+                                                                        {optFeatureGainsAtLevel.map((prog) => {
+                                                                            const totalAllowed = getOptFeatureTotal(
+                                                                                prog.progression,
+                                                                                viewingClassLevel,
+                                                                            )
+                                                                            const featuresOfType = (optFeatures as any[]).filter(
+                                                                                (f: any) => {
+                                                                                    const fTypes: string[] = Array.isArray(f.featureType)
+                                                                                        ? f.featureType
+                                                                                        : [f.featureType ?? '']
+                                                                                    return prog.featureType.some((t) =>
+                                                                                        fTypes.includes(t),
+                                                                                    )
+                                                                                },
+                                                                            )
+                                                                            const selectedCount = featuresOfType.filter((f: any) =>
+                                                                                selectedNames.has(f.name),
+                                                                            ).length
+                                                                            const isFull = selectedCount >= totalAllowed
+                                                                            const chosenFeatures = featuresOfType.filter((f: any) =>
+                                                                                selectedNames.has(f.name),
+                                                                            )
+                                                                            return (
+                                                                                <div
+                                                                                    key={prog.name}
+                                                                                    className={cn(
+                                                                                        'rounded-lg border overflow-hidden',
+                                                                                        isFull
+                                                                                            ? 'border-green-500/30 bg-green-500/5'
+                                                                                            : 'border-amber-500/30 bg-amber-500/5',
+                                                                                    )}
+                                                                                >
+                                                                                    <div className="flex items-center justify-between px-3 py-2.5">
+                                                                                        <div className="flex items-center gap-2 min-w-0">
+                                                                                            <Sparkle
+                                                                                                className="h-4 w-4 text-accent flex-shrink-0"
+                                                                                                weight="duotone"
+                                                                                            />
+                                                                                            <div className="min-w-0">
+                                                                                                <div className="flex items-center gap-1.5 text-sm font-semibold">
+                                                                                                    {prog.name}
+                                                                                                    {isFull && (
+                                                                                                        <Check className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                                                                                                    )}
+                                                                                                </div>
+                                                                                                <div className="text-xs text-muted-foreground">
+                                                                                                    {selectedCount} / {totalAllowed} chosen
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <Button
+                                                                                            variant={selectedCount > 0 ? 'outline' : 'default'}
+                                                                                            size="sm"
+                                                                                            className="flex-shrink-0 ml-2 h-7 text-xs"
+                                                                                            onClick={() =>
+                                                                                                setOptPickerState({
+                                                                                                    progName: prog.name,
+                                                                                                    featureTypes: prog.featureType,
+                                                                                                    total: totalAllowed,
+                                                                                                })
+                                                                                            }
+                                                                                        >
+                                                                                            {selectedCount > 0 ? 'Edit' : 'Choose'}
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                    {chosenFeatures.length > 0 && (
+                                                                                        <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-green-500/20 pt-2">
+                                                                                            {chosenFeatures.map((feat: any) => (
+                                                                                                <button
+                                                                                                    key={feat.name}
+                                                                                                    type="button"
+                                                                                                    onMouseEnter={() => {
+                                                                                                        setSelectedFeature({ name: feat.name, source: feat.source, entries: feat.entries ?? [] })
+                                                                                                        if (detailCollapsed) setDetailCollapsed(false)
+                                                                                                    }}
+                                                                                                    onClick={() => {
+                                                                                                        setSelectedFeature({ name: feat.name, source: feat.source, entries: feat.entries ?? [] })
+                                                                                                        if (detailCollapsed) setDetailCollapsed(false)
+                                                                                                    }}
+                                                                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-green-500/30 bg-green-500/5 hover:border-green-500/50 hover:bg-green-500/15 text-foreground transition-colors"
+                                                                                                >
+                                                                                                    <span className="font-medium">{feat.name}</span>
+                                                                                                </button>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            )
+                                                                        })}
 
                                                                         {/* ASI / Feat row */}
                                                                         {isASILevel && (
@@ -404,30 +636,62 @@ export function BuildClassPage() {
                                                                         )}
 
                                                                         {/* Spell selection row */}
-                                                                        {spellGain && (
-                                                                            <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-purple-500/30 bg-purple-500/5">
-                                                                                <div className="flex items-center gap-2 min-w-0">
-                                                                                    <MagicWand className="h-4 w-4 text-purple-400 flex-shrink-0" weight="duotone" />
-                                                                                    <div className="min-w-0">
-                                                                                        <div className="text-sm font-semibold">Spell Selection</div>
-                                                                                        <div className="text-xs text-muted-foreground">
-                                                                                            {[
-                                                                                                spellGain.cantrips > 0 && `${spellGain.cantrips} cantrip${spellGain.cantrips > 1 ? 's' : ''}`,
-                                                                                                spellGain.spells > 0 && `${spellGain.spells} spell${spellGain.spells > 1 ? 's' : ''}${spellGain.maxSpellLevel > 0 ? ` (up to ${['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'][spellGain.maxSpellLevel - 1] ?? spellGain.maxSpellLevel + 'th'}-level)` : ''}`,
-                                                                                            ].filter(Boolean).join(' · ')}
+                                                                        {spellGain && (() => {
+                                                                            const levelKey = `${viewingClass}:${lv}`
+                                                                            const chosenNames = character.spellsByLevel?.[levelKey] ?? []
+                                                                            return (
+                                                                                <div className="rounded-lg border border-purple-500/30 bg-purple-500/5 overflow-hidden">
+                                                                                    <div className="flex items-center justify-between px-3 py-2.5">
+                                                                                        <div className="flex items-center gap-2 min-w-0">
+                                                                                            <MagicWand className="h-4 w-4 text-purple-400 flex-shrink-0" weight="duotone" />
+                                                                                            <div className="min-w-0">
+                                                                                                <div className="text-sm font-semibold">Spell Selection</div>
+                                                                                                <div className="text-xs text-muted-foreground">
+                                                                                                    {[
+                                                                                                        spellGain.cantrips > 0 && `${spellGain.cantrips} cantrip${spellGain.cantrips > 1 ? 's' : ''}`,
+                                                                                                        spellGain.spells > 0 && `${spellGain.spells} spell${spellGain.spells > 1 ? 's' : ''}${spellGain.maxSpellLevel > 0 ? ` (up to ${['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'][spellGain.maxSpellLevel - 1] ?? spellGain.maxSpellLevel + 'th'}-level)` : ''}`,
+                                                                                                    ].filter(Boolean).join(' · ')}
+                                                                                                </div>
+                                                                                            </div>
                                                                                         </div>
+                                                                                        <Button
+                                                                                            variant={chosenNames.length > 0 ? 'outline' : 'default'}
+                                                                                            size="sm"
+                                                                                            className="flex-shrink-0 ml-2 h-7 text-xs"
+                                                                                            onClick={() => setSpellPickerLevel(lv)}
+                                                                                        >
+                                                                                            {chosenNames.length > 0 ? 'Edit' : 'Choose'}
+                                                                                        </Button>
                                                                                     </div>
+                                                                                    {/* Chosen spells for this level */}
+                                                                                    {chosenNames.length > 0 && (
+                                                                                        <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-purple-500/20 pt-2">
+                                                                                            {chosenNames.map((name) => {
+                                                                                                const spell = (spells as Spell5e[]).find((s) => s.name === name)
+                                                                                                return (
+                                                                                                    <button
+                                                                                                        key={name}
+                                                                                                        type="button"
+                                                                                                        onMouseEnter={() => {
+                                                                                                            if (spell) {
+                                                                                                                setSelectedFeature({ name: spell.name, source: spell.source, entries: spell.entries ?? [] })
+                                                                                                                if (detailCollapsed) setDetailCollapsed(false)
+                                                                                                            }
+                                                                                                        }}
+                                                                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-purple-500/30 bg-purple-500/5 hover:border-purple-500/50 hover:bg-purple-500/15 text-foreground transition-colors"
+                                                                                                    >
+                                                                                                        <span className="font-medium">{name}</span>
+                                                                                                        {spell && (
+                                                                                                            <span className="text-muted-foreground opacity-80">{formatSpellLevel(spell.level)}</span>
+                                                                                                        )}
+                                                                                                    </button>
+                                                                                                )
+                                                                                            })}
+                                                                                        </div>
+                                                                                    )}
                                                                                 </div>
-                                                                                <Button
-                                                                                    variant="default"
-                                                                                    size="sm"
-                                                                                    className="flex-shrink-0 ml-2 h-7 text-xs"
-                                                                                    onClick={() => setSpellPickerLevel(lv)}
-                                                                                >
-                                                                                    Choose
-                                                                                </Button>
-                                                                            </div>
-                                                                        )}
+                                                                            )
+                                                                        })()}
 
                                                                         {/* Passive features */}
                                                                         {passiveFeatures.map((f: any, i: number) => (
@@ -456,47 +720,7 @@ export function BuildClassPage() {
                                                     })}
                                                 </Accordion>
 
-                                                {/* Optional class feature choices (Invocations, Metamagic, etc.) */}
-                                                {relevantOptFeatures.length > 0 && (
-                                                    <div className="mt-4 pt-4 border-t border-border">
-                                                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                                                            Class Feature Choices
-                                                        </div>
-                                                        <Input
-                                                            placeholder="Search features…"
-                                                            value={featureSearch}
-                                                            onChange={(e) => setFeatureSearch(e.target.value)}
-                                                            className="mb-3 h-8 text-sm"
-                                                        />
-                                                        <div className="space-y-1.5">
-                                                            {filteredOptFeatures.map((feat: any, i: number) => {
-                                                                const selected = selectedNames.has(feat.name)
-                                                                return (
-                                                                    <button
-                                                                        key={i}
-                                                                        type="button"
-                                                                        onClick={() => toggleOptFeature(feat)}
-                                                                        className={cn(
-                                                                            'w-full text-left px-3 py-2.5 rounded-lg border-2 transition-colors',
-                                                                            selected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/40',
-                                                                        )}
-                                                                    >
-                                                                        <div className="flex items-center justify-between">
-                                                                            <span className="font-medium text-sm">{feat.name}</span>
-                                                                            {selected && <Check className="h-4 w-4 text-accent flex-shrink-0" />}
-                                                                        </div>
-                                                                        <div className="text-xs text-muted-foreground mt-0.5">
-                                                                            {feat.featureType} · {feat.source}
-                                                                        </div>
-                                                                    </button>
-                                                                )
-                                                            })}
-                                                            {filteredOptFeatures.length === 0 && (
-                                                                <p className="text-sm text-muted-foreground text-center py-3">No matching features</p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
+
                                             </>
                                         )}
                                     </div>
@@ -531,17 +755,53 @@ export function BuildClassPage() {
                                 </div>
                                 {selectedFeature ? (
                                     <ScrollArea className="flex-1 overflow-hidden">
-                                        <div className="p-4">
-                                            {selectedFeature.entries.length > 0 ? (
-                                                selectedFeature.entries.map((e: any, i: number) => (
-                                                    <div
-                                                        key={i}
-                                                        className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
-                                                        dangerouslySetInnerHTML={{ __html: renderEntry(e) }}
-                                                    />
-                                                ))
+                                        <div className="p-4 space-y-4">
+                                            {selectedFeature.levelFeatures ? (
+                                                // ── Rich subclass detail view ──────────────────────────
+                                                <>
+                                                    {/* Intro description */}
+                                                    {selectedFeature.entries.filter((e: any) => typeof e === 'string').map((e: any, i: number) => (
+                                                        <p key={i} className="text-sm text-muted-foreground leading-relaxed">{e}</p>
+                                                    ))}
+                                                    {selectedFeature.levelFeatures
+                                                        .slice()
+                                                        .sort((a, b) => a.level - b.level)
+                                                        .map(({ level, features }) => (
+                                                            <div key={level}>
+                                                                <div className="flex items-center gap-2 mb-3">
+                                                                    <Badge variant="outline" className="text-xs font-mono flex-shrink-0">Level {level}</Badge>
+                                                                    <div className="flex-1 h-px bg-border" />
+                                                                </div>
+                                                                <div className="space-y-4">
+                                                                    {features.map((feat: any) => (
+                                                                        <div key={`${feat.name}|${feat.source ?? ''}`}>
+                                                                            <div className="text-sm font-semibold mb-1">{feat.name}</div>
+                                                                            {feat.entries?.map((e: any, i: number) => (
+                                                                                <div
+                                                                                    key={i}
+                                                                                    className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
+                                                                                    dangerouslySetInnerHTML={{ __html: renderEntry(e) }}
+                                                                                />
+                                                                            ))}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                </>
                                             ) : (
-                                                <p className="text-sm text-muted-foreground italic">No description available.</p>
+                                                // ── Standard feature / spell / invocation view ──────────
+                                                selectedFeature.entries.length > 0 ? (
+                                                    selectedFeature.entries.map((e: any, i: number) => (
+                                                        <div
+                                                            key={i}
+                                                            className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
+                                                            dangerouslySetInnerHTML={{ __html: renderEntry(e) }}
+                                                        />
+                                                    ))
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground italic">No description available.</p>
+                                                )
                                             )}
                                         </div>
                                     </ScrollArea>
@@ -560,7 +820,7 @@ export function BuildClassPage() {
                                                     <span className="text-sm font-mono">d{viewingClassData.hd?.faces ?? 8}</span>
                                                 </InfoTile>
                                                 <InfoTile title="Subclass">
-                                                    <span className="text-sm">{character.subclass ?? <span className="text-muted-foreground">—</span>}</span>
+                                                    <span className="text-sm">{viewingSubclass ?? <span className="text-muted-foreground">—</span>}</span>
                                                 </InfoTile>
                                                 <InfoTile title="Spellcasting">
                                                     <span className="text-sm capitalize">
@@ -677,75 +937,87 @@ export function BuildClassPage() {
             </Dialog>
 
             {/* ── Spell picker dialog ──────────────────────────────────────────── */}
-            <Dialog open={spellPickerLevel !== null} onOpenChange={(open) => { if (!open) setSpellPickerLevel(null) }}>
-                <DialogContent className="sm:max-w-lg flex flex-col gap-4 max-h-[70vh]">
-                    <DialogHeader>
-                        <DialogTitle>Spell Selection — Level {spellPickerLevel}</DialogTitle>
-                        <DialogDescription>
-                            {spellPickerLevel !== null && (() => {
-                                const gain = spellChoicesByLevel.get(spellPickerLevel)
-                                if (!gain) return null
-                                return [
-                                    gain.cantrips > 0 && `${gain.cantrips} cantrip${gain.cantrips > 1 ? 's' : ''}`,
-                                    gain.spells > 0 && `${gain.spells} spell${gain.spells > 1 ? 's' : ''}${gain.maxSpellLevel > 0 ? ` (up to ${['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'][gain.maxSpellLevel - 1] ?? gain.maxSpellLevel + 'th'}-level)` : ''}`,
-                                ].filter(Boolean).join(' · ')
-                            })()}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col items-center justify-center py-8 gap-3 text-muted-foreground">
-                        <MagicWand className="h-8 w-8 opacity-30" weight="duotone" />
-                        <p className="text-sm text-center">Spell selection coming soon</p>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            {spellPickerLevel !== null && (() => {
+                const gain = spellChoicesByLevel.get(spellPickerLevel)
+                if (!gain) return null
+                const ownedNames = new Set([...(character.cantrips ?? []), ...(character.spellsKnown ?? [])])
+                const cats: CategoryLimit<Spell5e>[] = []
+                if (gain.cantrips > 0) cats.push({ key: 'cantrips', label: 'cantrips', max: gain.cantrips, test: (s) => s.level === 0 })
+                if (gain.spells > 0) cats.push({ key: 'spells', label: gain.maxSpellLevel > 0 ? `≤${['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'][gain.maxSpellLevel - 1]} spells` : 'spells', max: gain.spells, test: (s) => s.level > 0 && (gain.maxSpellLevel === 0 || s.level <= gain.maxSpellLevel) })
+                const title = [gain.cantrips > 0 && `Learn ${gain.cantrips} cantrip${gain.cantrips > 1 ? 's' : ''}`, gain.spells > 0 && `${gain.spells} spell${gain.spells > 1 ? 's' : ''}${gain.maxSpellLevel > 0 ? ` (up to ${['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'][gain.maxSpellLevel - 1]}-level)` : ''}`].filter(Boolean).join(' · ')
+                // Pre-check the level filter checkboxes for available spell levels
+                const levelValues: string[] = []
+                if (gain.cantrips > 0) levelValues.push('0')
+                if (gain.spells > 0 && gain.maxSpellLevel > 0) {
+                    for (let i = 1; i <= gain.maxSpellLevel; i++) levelValues.push(String(i))
+                }
+                const allowedLevels = new Set(levelValues)
+                const initialFilters: ActiveFilters = { level: new Set(levelValues), school: new Set(), type: new Set() }
+                const levelKey = `${viewingClass}:${spellPickerLevel}`
+                return (
+                    <SpellSelectionModal
+                        open={true}
+                        onOpenChange={(o) => { if (!o) setSpellPickerLevel(null) }}
+                        title={title}
+                        spells={classSpells}
+                        ownedNames={ownedNames}
+                        categories={cats}
+                        initialFilters={initialFilters}
+                        allowedLevels={allowedLevels}
+                        onConfirm={(names) => {
+                            const newCantrips = names.filter((n) => (spells as Spell5e[]).find((s) => s.name === n)?.level === 0)
+                            const newKnown = names.filter((n) => (spells as Spell5e[]).find((s) => s.name === n)?.level !== 0)
+                            updateCharacter(character.id, {
+                                cantrips: [...new Set([...(character.cantrips ?? []), ...newCantrips])],
+                                spellsKnown: [...new Set([...(character.spellsKnown ?? []), ...newKnown])],
+                                spellsByLevel: { ...(character.spellsByLevel ?? {}), [levelKey]: names },
+                            })
+                            setSpellPickerLevel(null)
+                        }}
+                    />
+                )
+            })()}
 
             {/* ── Subclass picker dialog ───────────────────────────────────────── */}
-            <Dialog open={subclassPickerOpen} onOpenChange={setSubclassPickerOpen}>
-                <DialogContent className="sm:max-w-lg flex flex-col gap-4 max-h-[70vh]">
-                    <DialogHeader>
-                        <DialogTitle>Choose a Subclass</DialogTitle>
-                        <DialogDescription>
-                            {viewingClassData?.name} — subclass available at level {subclassLevel}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <ScrollArea className="flex-1 max-h-[52vh]">
-                        <div className="space-y-2 pr-3">
-                            {subclasses.length === 0 ? (
-                                <p className="text-muted-foreground text-sm text-center py-4">No subclasses available</p>
-                            ) : (
-                                subclasses.map((sc: any) => (
-                                    <button
-                                        key={`${sc.name}|${sc.source ?? ''}`}
-                                        type="button"
-                                        onClick={() => {
-                                            updateCharacter(character.id, { subclass: sc.name, subclassSource: sc.source ?? undefined })
-                                            setSelectedFeature({ name: sc.name, source: sc.source, entries: sc.entries ?? [] })
-                                            setSubclassPickerOpen(false)
-                                            if (detailCollapsed) setDetailCollapsed(false)
-                                        }}
-                                        className={cn(
-                                            'w-full text-left p-3 rounded-lg border-2 transition-all',
-                                            character.subclass === sc.name
-                                                ? 'border-accent bg-accent/10'
-                                                : 'border-border hover:border-accent/50',
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <div className="font-semibold text-sm">{sc.name}</div>
-                                                <div className="text-xs text-muted-foreground mt-0.5">Source: {sc.source ?? 'PHB'}</div>
-                                            </div>
-                                            {character.subclass === sc.name && (
-                                                <Check className="h-4 w-4 text-accent flex-shrink-0" />
-                                            )}
-                                        </div>
-                                    </button>
-                                ))
-                            )}
-                        </div>
-                    </ScrollArea>
-                </DialogContent>
-            </Dialog>
+            {subclassPickerOpen && (
+                <SubclassSelectionModal
+                    open={subclassPickerOpen}
+                    onOpenChange={setSubclassPickerOpen}
+                    title={`Choose ${(viewingClassData as any)?.subclassTitle ?? 'Subclass'}`}
+                    subclasses={subclasses}
+                    selectedName={viewingSubclass ?? undefined}
+                    onConfirm={(sc) => { handleSubclassSelect(sc) }}
+                />
+            )}
+
+            {/* ── Optional feature picker ──────────────────────────────────── */}
+            {optPickerState && (() => {
+                const featuresOfType = (optFeatures as any[]).filter((f: any) => {
+                    const fTypes: string[] = Array.isArray(f.featureType)
+                        ? f.featureType
+                        : [f.featureType ?? '']
+                    return optPickerState.featureTypes.some((t) => fTypes.includes(t))
+                })
+                const initialSelectedNames = character.features
+                    .filter((f) => featuresOfType.some((of: any) => of.name === f.name))
+                    .map((f) => f.name)
+                return (
+                    <OptionalFeatureSelectionModal
+                        open={true}
+                        onOpenChange={(o) => { if (!o) setOptPickerState(null) }}
+                        title={`Choose ${optPickerState.progName}`}
+                        features={featuresOfType}
+                        maxSelections={optPickerState.total}
+                        initialSelectedNames={initialSelectedNames}
+                        characterSnapshot={characterSnapshot}
+                        className={viewingClass}
+                        onConfirm={(names) => {
+                            handleOptFeatureConfirm(names, optPickerState.featureTypes)
+                            setOptPickerState(null)
+                        }}
+                    />
+                )
+            })()}
         </div>
     )
 }

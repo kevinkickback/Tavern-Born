@@ -20,10 +20,11 @@ import { AlliesOrganizationsPage } from '@/pages/details/AlliesOrganizationsPage
 import { HistoryPage } from '@/pages/details/HistoryPage'
 import { CompendiumPage } from '@/pages/CompendiumPage'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
-import { useSeedData } from '@/hooks/useSeedData'
+import { AppLoadingOverlay } from '@/components/AppLoadingOverlay'
+import { useDataInit } from '@/hooks/useDataInit'
 
 function App() {
-  useSeedData()
+  useDataInit()
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -53,6 +54,7 @@ function App() {
         </AppLayout>
         <Toaster position="bottom-right" />
         <DataSourceStartupModal />
+        <AppLoadingOverlay />
       </BrowserRouter>
     </TooltipProvider>
   )
