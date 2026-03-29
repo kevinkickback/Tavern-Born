@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { useCharacterStore } from '@/store/characterStore';
-import { getAbilityModifier } from '@/lib/gameRules';
-import { getProficiencyBonus } from '@/lib/gameRules';
-import { AbilityName, ABILITY_NAMES } from '@/lib/abilityScores';
-import { deriveAllSavingThrows, SavingThrowResult } from '@/lib/skills';
+import { getAbilityModifier } from '@/lib/calculations/gameRules';
+import { getProficiencyBonus } from '@/lib/calculations/gameRules';
+import { AbilityName, ABILITY_NAMES } from '@/lib/calculations/abilityScores';
+import { deriveAllSavingThrows, SavingThrowResult } from '@/lib/calculations/skills';
 
 export type { SavingThrowResult };
 

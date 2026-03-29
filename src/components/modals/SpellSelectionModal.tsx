@@ -9,7 +9,7 @@ import {
     type ActiveFilters,
     type FilterSection,
     type CategoryLimit,
-} from '@/components/ui/SelectionModal'
+} from '@/components/modals/SelectionModal'
 import {
     SPELL_SCHOOL_NAMES,
     getSchoolName,
@@ -18,7 +18,7 @@ import {
     formatDuration,
     formatComponents,
     formatSpellLevel,
-} from '@/lib/spellUtils'
+} from '@/lib/calculations/spellUtils'
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'

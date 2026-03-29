@@ -20,8 +20,8 @@ import { AlliesOrganizationsPage } from '@/pages/details/AlliesOrganizationsPage
 import { HistoryPage } from '@/pages/details/HistoryPage'
 import { CompendiumPage } from '@/pages/CompendiumPage'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
-import { AppLoadingOverlay } from '@/components/AppLoadingOverlay'
-import { useDataInit } from '@/hooks/useDataInit'
+import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
+import { useDataInit } from '@/hooks/data/useDataInit'
 
 function App() {
   useDataInit()

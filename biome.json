@@ -10,9 +10,9 @@
 		"includes": [
 			"**",
 			"!.github",
-			"!src/data",
-			"!test-results",
-			"!src/ui/assets"
+			"!data",
+			"!node_modules",
+			"!test-results"
 		]
 	},
 	"formatter": {

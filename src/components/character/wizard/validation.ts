@@ -5,7 +5,7 @@ import {
   wizardStep4Schema,
   wizardStep5Schema,
   wizardStep6Schema,
-} from '@/lib/schemas/characterSchema'
+} from '@/types/characterSchema'
 import { CharacterWizardData, ValidationResult } from './types'
 
 const STEP_SCHEMAS = {

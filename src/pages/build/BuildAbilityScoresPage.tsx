@@ -20,8 +20,8 @@ import {
     Check,
 } from '@phosphor-icons/react'
 import { useCharacterStore } from '@/store/characterStore'
-import { useFilteredGameData } from '@/hooks/useFilteredGameData'
-import { useAbilityScores } from '@/hooks/useAbilityScores'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useAbilityScores } from '@/hooks/character/useAbilityScores'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
 import {
     ABILITY_NAMES,
@@ -29,7 +29,7 @@ import {
     formatModifier,
     normalizeAbilityName,
     type AbilityName,
-} from '@/lib/abilityScores'
+} from '@/lib/calculations/abilityScores'
 import {
     STANDARD_ARRAY,
     POINT_BUY_COSTS,
@@ -37,7 +37,7 @@ import {
     POINT_BUY_MIN,
     POINT_BUY_MAX,
     getAbilityModifier,
-} from '@/lib/gameRules'
+} from '@/lib/calculations/gameRules'
 import { cn } from '@/lib/utils'
 import type { Race5e } from '@/types/5etools'
 import { NoCharCard } from '@/pages/_shared'

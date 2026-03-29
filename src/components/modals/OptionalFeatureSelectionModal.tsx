@@ -10,12 +10,12 @@ import {
     SelectionModal,
     type CategoryLimit,
     type ActiveFilters,
-} from '@/components/ui/SelectionModal'
+} from '@/components/modals/SelectionModal'
 import { renderEntry } from '@/lib/renderer'
 import {
     checkAllPrerequisites,
     type PrereqCharacterSnapshot,
-} from '@/lib/prerequisites'
+} from '@/lib/calculations/prerequisites'
 import { cn } from '@/lib/utils'
 
 // ─── renderEntry cache ────────────────────────────────────────────────────────

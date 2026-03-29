@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { FloppyDisk, TrendUp } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { useCharacterStore } from '@/store/characterStore'
-import { LevelUpModal } from '@/components/character/LevelUpModal'
+import { LevelUpModal } from '@/components/modals/LevelUpModal'
 
 export function AppHeader() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)

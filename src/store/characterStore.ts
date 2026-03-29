@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Character } from "@/types/character";
-import { createIdbStorage } from "@/lib/idb-storage";
+import { createIdbStorage } from "@/lib/storage/idb-storage";
 
 const generateId = () => {
 	return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

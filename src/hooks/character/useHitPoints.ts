@@ -4,7 +4,7 @@
 import { useMemo } from 'react'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import { getAbilityModifier, getHitDiceFromClass } from '@/lib/gameRules'
+import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
 import type { HitPoints } from '@/types/character'
 
 export interface HitPointsState {

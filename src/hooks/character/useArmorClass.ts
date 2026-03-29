@@ -3,8 +3,8 @@
 
 import { useMemo } from 'react'
 import { useCharacterStore } from '@/store/characterStore'
-import { getAbilityModifier } from '@/lib/gameRules'
-import { computeArmorClass } from '@/lib/armorClass'
+import { getAbilityModifier } from '@/lib/calculations/gameRules'
+import { computeArmorClass } from '@/lib/calculations/armorClass'
 
 export interface ArmorClassState {
   /** Derived AC from equipped armour + DEX (reflects game rules). */

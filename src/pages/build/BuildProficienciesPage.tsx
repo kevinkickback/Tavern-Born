@@ -13,11 +13,11 @@ import {
 import { renderEntry } from '@/lib/renderer'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import { useSkills } from '@/hooks/useSkills'
-import { useSavingThrows } from '@/hooks/useSavingThrows'
+import { useSkills } from '@/hooks/character/useSkills'
+import { useSavingThrows } from '@/hooks/character/useSavingThrows'
 import { cn } from '@/lib/utils'
 import { NoCharCard, InfoTile } from '@/pages/_shared'
-import { SKILL_TO_ABILITY } from '@/lib/skills'
+import { SKILL_TO_ABILITY } from '@/lib/calculations/skills'
 
 type ProfFocus =
     | { type: 'skill'; name: string; ability: string; proficient: boolean; expertise: boolean; modifierString: string }

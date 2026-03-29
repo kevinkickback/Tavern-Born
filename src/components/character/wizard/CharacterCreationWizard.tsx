@@ -11,11 +11,11 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { AbilityScores } from '@/types/character'
 import { toast } from 'sonner'
 import { Warning } from '@phosphor-icons/react'
-import { WIZARD_STEPS, INITIAL_CHARACTER_DATA } from './wizard/constants'
-import { WizardNavigation } from './wizard/WizardNavigation'
-import { WizardFooter } from './wizard/WizardFooter'
-import { validateStep } from './wizard/validation'
-import { CharacterWizardData } from './wizard/types'
+import { WIZARD_STEPS, INITIAL_CHARACTER_DATA } from './constants'
+import { WizardNavigation } from './WizardNavigation'
+import { WizardFooter } from './WizardFooter'
+import { validateStep } from './validation'
+import { CharacterWizardData } from './types'
 import {
   BasicsStep,
   RulesStep,
@@ -24,7 +24,7 @@ import {
   BackgroundStep,
   AbilityScoresStep,
   ReviewStep,
-} from './wizard/steps'
+} from './steps'
 
 interface CharacterCreationWizardProps {
   open: boolean

@@ -9,8 +9,8 @@ import {
   isValidPointBuyScore,
   calculatePointBuyTotal,
   getRemainingPointBuy,
-} from '@/lib/abilityScores';
-import { getAbilityModifier, POINT_BUY_BUDGET, POINT_BUY_MIN } from '@/lib/gameRules';
+} from '@/lib/calculations/abilityScores';
+import { getAbilityModifier, POINT_BUY_BUDGET, POINT_BUY_MIN } from '@/lib/calculations/gameRules';
 
 /**
  * Derived ability score state for the active character.

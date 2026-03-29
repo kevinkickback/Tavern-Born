@@ -18,7 +18,7 @@ import {
 } from '@phosphor-icons/react'
 import { renderEntry } from '@/lib/renderer'
 import { useCharacterStore } from '@/store/characterStore'
-import { useFilteredGameData } from '@/hooks/useFilteredGameData'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { cn } from '@/lib/utils'
 import type { Background5e } from '@/types/5etools'
 import { NoCharCard, InfoTile } from '@/pages/_shared'

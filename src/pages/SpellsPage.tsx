@@ -20,12 +20,12 @@ import {
     Check,
 } from '@phosphor-icons/react'
 import { useCharacterStore } from '@/store/characterStore'
-import { useFilteredGameData } from '@/hooks/useFilteredGameData'
-import { useSpellSlots } from '@/hooks/useSpellSlots'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from './_shared'
-import { SpellSelectionModal } from '@/components/character/SpellSelectionModal'
+import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 
 export function SpellsPage() {
     const character = useCharacterStore((s) => s.activeCharacter)

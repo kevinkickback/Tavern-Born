@@ -1,8 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { useCharacterStore } from '@/store/characterStore';
-import { getAbilityModifier, getProficiencyBonus } from '@/lib/gameRules';
-import { AbilityName, ABILITY_NAMES } from '@/lib/abilityScores';
-import { deriveAllSkills, SkillResult, ALL_SKILLS } from '@/lib/skills';
+import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules';
+import { AbilityName, ABILITY_NAMES } from '@/lib/calculations/abilityScores';
+import { deriveAllSkills, SkillResult, ALL_SKILLS } from '@/lib/calculations/skills';
 
 export type { SkillResult };
 

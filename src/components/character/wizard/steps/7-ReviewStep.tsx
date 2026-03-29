@@ -2,8 +2,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Warning } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { CharacterWizardData } from '../types'
-import { ABILITY_NAMES, ABILITY_ABBREVIATIONS, formatModifier } from '@/lib/abilityScores'
-import { getAbilityModifier } from '@/lib/gameRules'
+import { ABILITY_NAMES, ABILITY_ABBREVIATIONS, formatModifier } from '@/lib/calculations/abilityScores'
+import { getAbilityModifier } from '@/lib/calculations/gameRules'
 
 interface ReviewStepProps {
   data: CharacterWizardData

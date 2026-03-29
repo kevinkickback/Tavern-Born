@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import {
     SelectionModal,
     type ActiveFilters,
-} from '@/components/ui/SelectionModal'
+} from '@/components/modals/SelectionModal'
 import { cn } from '@/lib/utils'
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
