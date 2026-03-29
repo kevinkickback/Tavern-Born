@@ -8,9 +8,9 @@ import {
   parseHitDice,
   getASILevelsFromClass,
   getHitDiceFromClass,
-} from './gameRules';
+} from './calculations/gameRules';
 import type { Class5e } from '@/types/5etools';
-import { AbilityName, AbilityBonuses, AbilityScores } from './abilityScores';
+import { AbilityName, AbilityBonuses, AbilityScores } from './calculations/abilityScores';
 
 // ── Progression types ────────────────────────────────────────────────────────
 

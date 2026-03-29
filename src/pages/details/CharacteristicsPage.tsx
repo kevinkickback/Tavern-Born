@@ -12,8 +12,8 @@ import {
 import { Sparkle } from '@phosphor-icons/react'
 import { useCharacterStore } from '@/store/characterStore'
 import { useState, useEffect } from 'react'
-import { RichTextArea } from '@/components/character/RichTextArea'
-import { FormattingGuide } from '@/components/character/FormattingGuide'
+import { RichTextArea } from '@/components/editor/RichTextArea'
+import { FormattingGuide } from '@/components/editor/FormattingGuide'
 import { toast } from 'sonner'
 
 export function CharacteristicsPage() {

@@ -3,14 +3,14 @@
 
 import { useMemo, useCallback } from 'react'
 import { useCharacterStore } from '@/store/characterStore'
-import { useClass } from '@/hooks/useGameData'
+import { useClass } from '@/hooks/data/useGameData'
 import {
   calculateSpellSlots,
   getSpellSlotsFromClassData,
   mergeSpellSlots,
   isSpellcaster,
   type SpellSlotsResult,
-} from '@/lib/spellSlots'
+} from '@/lib/calculations/spellSlots'
 import type { SpellSlots } from '@/types/character'
 
 // Map from SpellSlots named keys to numeric spell levels

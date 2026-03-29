@@ -79,7 +79,3 @@ Settings, Compendium, and all Details sub-nav pages wrap cards in:
 <div className="max-w-7xl mx-auto w-full"><Card className="w-full">...</Card></div>
 ```
 Exceptions: character cards, sidebar, Portrait page (full-bleed).
-
-### 11. fizbanes-forge is a reference, not a copy source
-
-Understand forge's logic and rewrite it in React/TypeScript idioms. Do not copy vanilla JS DOM manipulation, event buses, or mutable class methods.

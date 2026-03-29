@@ -458,31 +458,6 @@ export function DataSourceConfigurator() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
-      <Card className="border-dashed border-muted-foreground/30">
-        <CardContent className="pt-4 pb-4">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-sm font-medium">Test Startup Prompt</p>
-              <p className="text-xs text-muted-foreground">
-                Force the data-source setup modal to appear on next launch.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 shrink-0"
-              onClick={() => {
-                localStorage.setItem('tb:force-setup', '1')
-                window.location.reload()
-              }}
-            >
-              <Flask size={15} />
-              Force on Next Launch
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

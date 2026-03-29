@@ -3,8 +3,8 @@
 
 import { useCallback, useMemo } from 'react'
 import { useCharacterStore } from '@/store/characterStore'
-import { computeArmorClass, resolveArmorType } from '@/lib/armorClass'
-import { getAbilityModifier, MAX_ATTUNEMENT_SLOTS, getCarryCapacity } from '@/lib/gameRules'
+import { computeArmorClass, resolveArmorType } from '@/lib/calculations/armorClass'
+import { getAbilityModifier, MAX_ATTUNEMENT_SLOTS, getCarryCapacity } from '@/lib/calculations/gameRules'
 import type { Equipment } from '@/types/character'
 import type { Item5e } from '@/types/5etools'
 

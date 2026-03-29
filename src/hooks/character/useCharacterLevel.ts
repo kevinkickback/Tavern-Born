@@ -4,8 +4,8 @@ import {
   getProficiencyBonus,
   getAbilityModifier,
   MAX_CHARACTER_LEVEL,
-} from '@/lib/gameRules';
-import { formatModifier } from '@/lib/abilityScores';
+} from '@/lib/calculations/gameRules';
+import { formatModifier } from '@/lib/calculations/abilityScores';
 
 /**
  * Derived level and proficiency state for the active character.

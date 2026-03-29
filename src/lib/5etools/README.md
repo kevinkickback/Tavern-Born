@@ -116,7 +116,7 @@ await loadGameData({
 ### 2. Access Data with React Hooks
 
 ```typescript
-import { useRaces, useClasses, useSpells } from '@/hooks/useGameData'
+import { useRaces, useClasses, useSpells } from '@/hooks/data/useGameData'
 
 function MyComponent() {
   // Get all races
@@ -153,7 +153,7 @@ function MyComponent() {
 ### 3. Get Specific Items
 
 ```typescript
-import { useRace, useClass, useSpell } from '@/hooks/useGameData'
+import { useRace, useClass, useSpell } from '@/hooks/data/useGameData'
 
 function CharacterBuilder() {
   const humanRace = useRace('Human')
@@ -173,7 +173,7 @@ function CharacterBuilder() {
 ### 4. Filter Data
 
 ```typescript
-import { useSpells } from '@/hooks/useGameData'
+import { useSpells } from '@/hooks/data/useGameData'
 
 function SpellList() {
   const spells = useSpells({
@@ -201,7 +201,7 @@ function SpellList() {
 ### 5. Monitor Loading Status
 
 ```typescript
-import { useGameDataStatus } from '@/hooks/useGameData'
+import { useGameDataStatus } from '@/hooks/data/useGameData'
 
 function LoadingIndicator() {
   const { isLoading, loadProgress, error, hasData } = useGameDataStatus()

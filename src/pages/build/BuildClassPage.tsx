@@ -30,22 +30,22 @@ import {
 } from '@phosphor-icons/react'
 import { renderEntry } from '@/lib/renderer'
 import { useCharacterStore } from '@/store/characterStore'
-import { useFilteredGameData } from '@/hooks/useFilteredGameData'
-import { SpellSelectionModal } from '@/components/character/SpellSelectionModal'
-import { OptionalFeatureSelectionModal } from '@/components/character/OptionalFeatureSelectionModal'
-import { SubclassSelectionModal } from '@/components/character/SubclassSelectionModal'
-import type { CategoryLimit, ActiveFilters } from '@/components/ui/SelectionModal'
-import type { PrereqCharacterSnapshot } from '@/lib/prerequisites'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
+import { OptionalFeatureSelectionModal } from '@/components/modals/OptionalFeatureSelectionModal'
+import { SubclassSelectionModal } from '@/components/modals/SubclassSelectionModal'
+import type { CategoryLimit, ActiveFilters } from '@/components/modals/SelectionModal'
+import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import type { Spell5e } from '@/types/5etools'
-import { formatSpellLevel, getSchoolName } from '@/lib/spellUtils'
+import { formatSpellLevel, getSchoolName } from '@/lib/calculations/spellUtils'
 import {
     getASILevelsFromClass,
     getProficiencyBonus,
-} from '@/lib/gameRules'
+} from '@/lib/calculations/gameRules'
 import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 import { NoCharCard, InfoTile } from '@/pages/_shared'
-import { normalizeAbilityName } from '@/lib/abilityScores'
+import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -940,7 +940,7 @@ export function BuildClassPage() {
             {spellPickerLevel !== null && (() => {
                 const gain = spellChoicesByLevel.get(spellPickerLevel)
                 if (!gain) return null
-                const ownedNames = new Set([...(character.cantrips ?? []), ...(character.spellsKnown ?? [])])
+                const ownedNames = new Set([...(character.spells?.cantrips ?? []), ...(character.spells?.spellsKnown ?? [])])
                 const cats: CategoryLimit<Spell5e>[] = []
                 if (gain.cantrips > 0) cats.push({ key: 'cantrips', label: 'cantrips', max: gain.cantrips, test: (s) => s.level === 0 })
                 if (gain.spells > 0) cats.push({ key: 'spells', label: gain.maxSpellLevel > 0 ? `≤${['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th'][gain.maxSpellLevel - 1]} spells` : 'spells', max: gain.spells, test: (s) => s.level > 0 && (gain.maxSpellLevel === 0 || s.level <= gain.maxSpellLevel) })
@@ -968,8 +968,11 @@ export function BuildClassPage() {
                             const newCantrips = names.filter((n) => (spells as Spell5e[]).find((s) => s.name === n)?.level === 0)
                             const newKnown = names.filter((n) => (spells as Spell5e[]).find((s) => s.name === n)?.level !== 0)
                             updateCharacter(character.id, {
-                                cantrips: [...new Set([...(character.cantrips ?? []), ...newCantrips])],
-                                spellsKnown: [...new Set([...(character.spellsKnown ?? []), ...newKnown])],
+                                spells: {
+                                    ...character.spells,
+                                    cantrips: [...new Set([...(character.spells?.cantrips ?? []), ...newCantrips])],
+                                    spellsKnown: [...new Set([...(character.spells?.spellsKnown ?? []), ...newKnown])],
+                                },
                                 spellsByLevel: { ...(character.spellsByLevel ?? {}), [levelKey]: names },
                             })
                             setSpellPickerLevel(null)

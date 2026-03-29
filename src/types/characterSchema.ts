@@ -10,7 +10,7 @@ import {
   POINT_BUY_MIN,
   POINT_BUY_MAX,
   MAX_CHARACTER_LEVEL,
-} from '@/lib/gameRules';
+} from '@/lib/calculations/gameRules';
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 

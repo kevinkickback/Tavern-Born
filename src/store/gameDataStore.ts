@@ -2,8 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { GameData, DataSourceConfig } from '@/types/5etools'
 import { loadDataFromSource } from '@/lib/5etools'
-import { createIdbStorage } from '@/lib/idb-storage'
-import { writeGameDataCache, clearGameDataCache } from '@/lib/dataCache'
+import { createIdbStorage } from '@/lib/storage/idb-storage'
+import { writeGameDataCache, clearGameDataCache } from '@/lib/storage/dataCache'
 
 interface LoadProgress {
   current: number
