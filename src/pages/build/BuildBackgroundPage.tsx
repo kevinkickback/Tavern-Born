@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -19,6 +19,7 @@ import {
 import { renderEntry } from '@/lib/renderer'
 import { useCharacterStore } from '@/store/characterStore'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useProvenance } from '@/hooks/character/useProvenance'
 import { cn } from '@/lib/utils'
 import type { Background5e } from '@/types/5etools'
 import { NoCharCard, InfoTile } from '@/pages/_shared'
@@ -45,6 +46,10 @@ export function BuildBackgroundPage() {
     const { backgrounds } = useFilteredGameData()
     const [detailCollapsed, setDetailCollapsed] = useState(false)
     const [bgSearch, setBgSearch] = useState('')
+    const { applyBackgroundSelection } = useProvenance()
+    const selectedBackgroundRef = useRef<HTMLDivElement | null>(null)
+    const isInitialLoadRef = useRef(true)
+    const previousSearchRef = useRef('')
 
     const filteredBackgrounds = useMemo(() => {
         const q = bgSearch.trim().toLowerCase()
@@ -59,22 +64,34 @@ export function BuildBackgroundPage() {
     const selectedBg = backgrounds.find((b) =>
         matchesGameDataEntry(character.background, character.backgroundSource, b),
     ) as Background5e | undefined
+    const selectedBackgroundKey = selectedBg ? `${selectedBg.name}|${selectedBg.source ?? ''}` : null
+
+    useEffect(() => {
+        // Only scroll on initial mount or when search changes, not on selection change
+        const isSearchChanged = previousSearchRef.current !== bgSearch
+        const shouldScroll = isInitialLoadRef.current || isSearchChanged
+
+        if (shouldScroll && selectedBackgroundRef.current) {
+            selectedBackgroundRef.current.scrollIntoView({
+                behavior: 'auto',
+                block: 'start',
+                inline: 'nearest',
+            })
+        }
+
+        isInitialLoadRef.current = false
+        previousSearchRef.current = bgSearch
+    }, [bgSearch])
 
     const handleBackground = (name: string, bgSource?: string) => {
         const bg = backgrounds.find((b) =>
             matchesGameDataEntry(name, bgSource, b),
         ) as Background5e | undefined
         if (!bg) return
-        const langs = extractProficiencyBlockNames(bg.languageProficiencies ?? [])
-        const tools = extractProficiencyBlockNames(bg.toolProficiencies ?? [])
+        applyBackgroundSelection(bg)
         updateCharacter(character.id, {
             background: name,
             backgroundSource: bgSource ?? undefined,
-            proficiencies: {
-                ...character.proficiencies,
-                languages: [...new Set([...character.proficiencies.languages, ...langs])],
-                tools: [...new Set([...character.proficiencies.tools, ...tools])],
-            },
         })
         if (detailCollapsed) setDetailCollapsed(false)
     }
@@ -138,15 +155,15 @@ export function BuildBackgroundPage() {
                                 <ScrollArea className="flex-1 overflow-hidden">
                                     <div className="p-4 space-y-1 pr-8">
                                         {filteredBackgrounds.map((bg) => {
-                                            const isSelected = character.backgroundSource
-                                                ? (character.background === bg.name && character.backgroundSource === (bg.source ?? ''))
-                                                : character.background === bg.name
+                                            const bgKey = `${bg.name}|${bg.source ?? ''}`
+                                            const isSelected = selectedBackgroundKey === bgKey
                                             const hasEquip = (bg.startingEquipment ?? []).some(
                                                 (b: any) => typeof b === 'object' && b.A,
                                             )
                                             return (
                                                 <div
-                                                    key={`${bg.name}|${bg.source ?? ''}`}
+                                                    key={bgKey}
+                                                    ref={isSelected ? selectedBackgroundRef : null}
                                                     role="button"
                                                     tabIndex={0}
                                                     onClick={(e) => {

@@ -227,7 +227,7 @@ export function CharacterSheetPage() {
                     <Card>
                         <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                                <Heart className="h-4 w-4 text-red-400" weight="duotone" />
+                                <Heart className="h-4 w-4 text-destructive" weight="duotone" />
                                 Death Saves
                             </CardTitle>
                         </CardHeader>

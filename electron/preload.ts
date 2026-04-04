@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	selectFolder: () => ipcRenderer.invoke("dialog:selectFolder"),
 	readLocalJson: (filePath: string) =>
 		ipcRenderer.invoke("fs:readJson", filePath),
+	setUnsavedChanges: (value: boolean) =>
+		ipcRenderer.send("state:setUnsavedChanges", value),
 });
 
 // Type declaration for the exposed API
@@ -26,6 +28,7 @@ declare global {
 			};
 			selectFolder: () => Promise<string | null>;
 			readLocalJson: (filePath: string) => Promise<any>;
+			setUnsavedChanges?: (value: boolean) => void;
 		};
 	}
 }

@@ -170,6 +170,66 @@ export const variantRulesSchema = z.object({
   averageHitPoints: z.boolean().default(true),
 });
 
+// ── Provenance ledger ─────────────────────────────────────────────────────────
+
+export const sourceTypeSchema = z.enum([
+  'race', 'subrace', 'class', 'subclass', 'background', 'feat', 'optionalFeature', 'manual',
+]);
+
+export const grantTypeSchema = z.enum(['fixed', 'choice', 'placeholder']);
+
+export const choiceStatusSchema = z.enum(['pending', 'resolved', 'partially-resolved']);
+
+export const choiceDomainSchema = z.enum([
+  'skills', 'languages', 'tools', 'armor', 'weapons', 'spells', 'features', 'feats',
+  'abilityBonuses', 'equipment',
+]);
+
+export const sourceTagSchema = z.object({
+  sourceType: sourceTypeSchema,
+  sourceName: z.string(),
+  sourceRef: z.string().optional(),
+  grantType: grantTypeSchema,
+  label: z.string(),
+});
+
+export const abilityBonusProvenanceRecordSchema = z.object({
+  ability: z.string(),
+  value: z.number().int(),
+  sourceTag: sourceTagSchema,
+});
+
+export const choiceRecordSchema = z.object({
+  id: z.string(),
+  domain: choiceDomainSchema,
+  sourceTag: sourceTagSchema,
+  chooseCount: z.number().int().min(1),
+  optionPool: z.array(z.string()),
+  selected: z.array(z.string()),
+  status: choiceStatusSchema,
+});
+
+const sourceTagListMapSchema = z.record(z.array(sourceTagSchema));
+
+export const proficiencyProvenanceSchema = z.object({
+  armor: sourceTagListMapSchema,
+  weapons: sourceTagListMapSchema,
+  tools: sourceTagListMapSchema,
+  languages: sourceTagListMapSchema,
+  skills: sourceTagListMapSchema,
+  savingThrows: sourceTagListMapSchema,
+});
+
+export const provenanceLedgerSchema = z.object({
+  proficiencies: proficiencyProvenanceSchema,
+  abilityBonuses: z.array(abilityBonusProvenanceRecordSchema),
+  features: sourceTagListMapSchema,
+  feats: sourceTagListMapSchema,
+  spells: sourceTagListMapSchema,
+  equipment: sourceTagListMapSchema,
+  choices: z.array(choiceRecordSchema),
+});
+
 // ── Character creation wizard ─────────────────────────────────────────────────
 
 export const abilityScoreMethodSchema = z.enum([
@@ -220,6 +280,7 @@ export const characterSchema = z.object({
   proficiencyBonus: z.number().int().min(2).max(6).optional(),
   allowedSources: z.array(z.string()).default(['PHB']),
   variantRules: variantRulesSchema.optional(),
+  provenance: provenanceLedgerSchema.optional(),
   createdAt: z.string(),
   lastModified: z.string(),
 });

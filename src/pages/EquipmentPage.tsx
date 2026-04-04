@@ -14,16 +14,23 @@ import {
 import { Backpack, Plus, Trash, ShieldCheck } from '@phosphor-icons/react'
 import { useCharacterStore } from '@/store/characterStore'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useProvenance } from '@/hooks/character/useProvenance'
 import { useEquipment } from '@/hooks/character/useEquipment'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { cn } from '@/lib/utils'
 import type { Item5e } from '@/types/5etools'
+import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { NoCharCard } from './_shared'
 
 export function EquipmentPage() {
     const character = useCharacterStore((s) => s.activeCharacter)
     const updateCharacter = useCharacterStore((s) => s.updateCharacter)
     const { items } = useFilteredGameData()
+    const {
+        applyManualEquipmentGrant,
+        removeEquipmentProvenance,
+        getSourcesRowsBySection,
+    } = useProvenance()
     const {
         equipment,
         totalWeight,
@@ -60,6 +67,15 @@ export function EquipmentPage() {
     }, [items])
 
     const encumbrancePct = carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0
+    const handleAddItem = (item: Item5e) => {
+        addFromGameData(item)
+        applyManualEquipmentGrant(item.name)
+    }
+    const handleRemoveItem = (itemId: string) => {
+        const existing = equipment.find((item) => item.id === itemId)
+        removeItem(itemId)
+        if (existing) removeEquipmentProvenance(existing.name)
+    }
 
     return (
         <div className="max-w-7xl mx-auto w-full space-y-6">
@@ -202,7 +218,7 @@ export function EquipmentPage() {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
-                                                onClick={() => removeItem(item.id)}
+                                                onClick={() => handleRemoveItem(item.id)}
                                             >
                                                 <Trash className="h-3.5 w-3.5" />
                                             </Button>
@@ -211,6 +227,13 @@ export function EquipmentPage() {
                                 </div>
                             )}
                         </CardContent>
+                        <div className="px-6 pb-4 border-t border-border">
+                            <SourcesAccordion
+                                sectionId="equipment"
+                                rows={getSourcesRowsBySection('equipment')}
+                                emptyText="Add equipment to see source attribution."
+                            />
+                        </div>
                     </Card>
                 </div>
 
@@ -246,7 +269,7 @@ export function EquipmentPage() {
                                     <button
                                         key={`${item.name}|${item.source ?? ''}`}
                                         type="button"
-                                        onClick={() => addFromGameData(item)}
+                                        onClick={() => handleAddItem(item)}
                                         className="w-full text-left px-3 py-2 rounded-lg border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors"
                                     >
                                         <div className="flex items-center justify-between gap-2">

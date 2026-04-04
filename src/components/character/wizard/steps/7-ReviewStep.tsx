@@ -1,107 +1,133 @@
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Warning } from '@phosphor-icons/react'
+import { Warning, UserCircle } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { CharacterWizardData } from '../types'
-import { ABILITY_NAMES, ABILITY_ABBREVIATIONS, formatModifier } from '@/lib/calculations/abilityScores'
+import {
+  ABILITY_NAMES,
+  ABILITY_ABBREVIATIONS,
+  formatModifier,
+  getRaceAbilityData,
+  normalizeAbilityName,
+  type AbilityName,
+} from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
+import { useGameDataStore } from '@/store/gameDataStore'
 
 interface ReviewStepProps {
   data: CharacterWizardData
 }
 
+function InfoRow({ label, value, warn }: { label: string; value?: string; warn?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 py-1.5 border-b border-border/50 last:border-0">
+      <span className={cn('text-xs text-muted-foreground shrink-0', warn && 'text-destructive')}>
+        {label}{warn && <Warning className="inline ml-1 h-3 w-3" />}
+      </span>
+      <span className={cn('text-sm font-semibold text-right truncate', !value && 'text-muted-foreground italic font-normal')}>
+        {value || 'Not set'}
+      </span>
+    </div>
+  )
+}
+
 export function ReviewStep({ data }: ReviewStepProps) {
+  const gameData = useGameDataStore((s) => s.gameData)
+
   const missingFields: string[] = []
-  if (!data.name) missingFields.push('Character Name')
+  if (!data.name) missingFields.push('Name')
   if (!data.race) missingFields.push('Race')
   if (!data.class) missingFields.push('Class')
   if (!data.background) missingFields.push('Background')
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-display text-xl font-semibold mb-2">Review Your Character</h3>
-        <p className="text-muted-foreground mb-6">
-          Review your choices before creating your character.
-        </p>
-      </div>
+  // Build racial bonuses for score totals
+  const raceObj = (gameData?.races ?? []).find(
+    (r: any) => r.name === data.race && (!data.raceSource || r.source === data.raceSource)
+  )
+  const subraceObj = raceObj?.subraces?.find((sr: any) => sr.name === data.subrace)
+  const raceAsiData = getRaceAbilityData(raceObj, subraceObj)
+  const racialBonuses: Partial<Record<AbilityName, number>> = {}
+  for (const fb of raceAsiData.fixed) {
+    racialBonuses[fb.ability] = (racialBonuses[fb.ability] ?? 0) + fb.value
+  }
+  for (const [blockIdx, block] of raceAsiData.choices.entries()) {
+    for (const raw of data.raceAsiChoices?.[blockIdx] ?? []) {
+      const ab = normalizeAbilityName(raw)
+      if (ab) racialBonuses[ab] = (racialBonuses[ab] ?? 0) + block.amount
+    }
+  }
 
+  return (
+    <div className="h-full flex flex-col gap-3">
       {missingFields.length > 0 && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="shrink-0 py-2">
           <Warning className="h-4 w-4" />
-          <AlertDescription>
-            Some fields are not set: {missingFields.join(', ')}. You can still create the character, but you'll need to configure these later.
+          <AlertDescription className="text-xs">
+            Missing: {missingFields.join(', ')}. You can configure these after creation.
           </AlertDescription>
         </Alert>
       )}
 
-      <div className="space-y-4">
-        <div className={cn(
-          "p-4 rounded-lg border",
-          !data.name ? "bg-destructive/10 border-destructive/50" : "bg-muted/50 border-border"
-        )}>
-          <div className="text-sm text-muted-foreground mb-1 flex items-center gap-2">
-            Character Name
-            {!data.name && <Warning className="h-4 w-4 text-destructive" />}
-          </div>
-          <div className="font-semibold">{data.name || 'Not set'}</div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 rounded-lg bg-muted/50 border border-border">
-            <div className="text-sm text-muted-foreground mb-1">Gender</div>
-            <div className="font-semibold">{data.gender || 'Not set'}</div>
-          </div>
-          <div className={cn(
-            "p-4 rounded-lg border",
-            !data.race ? "bg-destructive/10 border-destructive/50" : "bg-muted/50 border-border"
-          )}>
-            <div className="text-sm text-muted-foreground mb-1 flex items-center gap-2">
-              Race
-              {!data.race && <Warning className="h-4 w-4 text-destructive" />}
+      <div className="flex-1 min-h-0 flex gap-4">
+        {/* Portrait */}
+        <div className="w-[160px] shrink-0 flex flex-col gap-3 min-h-0">
+          <div className="flex-1 min-h-0 max-h-[260px] rounded-lg overflow-hidden border border-border relative bg-muted/10">
+            {data.portrait ? (
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundImage: `url(${data.portrait})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center top',
+                }}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <UserCircle className="h-16 w-16 text-muted-foreground/20" weight="thin" />
+              </div>
+            )}
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-card/95 via-card/50 to-transparent px-2 pb-2 pt-6">
+              <div className="font-display text-sm font-bold leading-tight">
+                {data.name || <span className="text-muted-foreground italic font-normal text-xs">Unnamed</span>}
+              </div>
+              {data.gender && <div className="text-[10px] text-muted-foreground">{data.gender}</div>}
             </div>
-            <div className="font-semibold">{data.race || 'Not set'}</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className={cn(
-            "p-4 rounded-lg border",
-            !data.class ? "bg-destructive/10 border-destructive/50" : "bg-muted/50 border-border"
-          )}>
-            <div className="text-sm text-muted-foreground mb-1 flex items-center gap-2">
-              Class
-              {!data.class && <Warning className="h-4 w-4 text-destructive" />}
-            </div>
-            <div className="font-semibold">{data.class || 'Not set'}</div>
-          </div>
-          <div className={cn(
-            "p-4 rounded-lg border",
-            !data.background ? "bg-destructive/10 border-destructive/50" : "bg-muted/50 border-border"
-          )}>
-            <div className="text-sm text-muted-foreground mb-1 flex items-center gap-2">
-              Background
-              {!data.background && <Warning className="h-4 w-4 text-destructive" />}
-            </div>
-            <div className="font-semibold">{data.background || 'Not set'}</div>
           </div>
         </div>
 
-        <div className="p-4 rounded-lg bg-muted/50 border border-border">
-          <div className="text-sm text-muted-foreground mb-2">Ability Scores</div>
-          <div className="text-xs text-muted-foreground mb-3 capitalize">
-            Method: {data.abilityScoreMethod?.replace(/-/g, ' ') || 'Standard Array'}
+        {/* Character details */}
+        <div className="w-[190px] shrink-0 flex flex-col min-h-0">
+          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Character</div>
+          <div className="flex-1 bg-muted/10 rounded-lg border border-border px-3 py-1">
+            <InfoRow label="Race" value={[data.race, data.subrace].filter(Boolean).join(' \u2022 ')} warn={!data.race} />
+            <InfoRow label="Class" value={data.class} warn={!data.class} />
+            <InfoRow label="Background" value={data.background} warn={!data.background} />
+            <InfoRow label="Score Method" value={data.abilityScoreMethod?.replace(/-/g, ' ')} />
+            {data.gender && <InfoRow label="Gender" value={data.gender} />}
           </div>
-          <div className="grid grid-cols-6 gap-2">
+        </div>
+
+        {/* Ability scores — fills remaining width */}
+        <div className="flex-1 min-w-0 flex flex-col min-h-0">
+          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Ability Scores</div>
+          <div className="flex-1 min-h-0 grid grid-cols-3 gap-2 max-h-[280px]">
             {ABILITY_NAMES.map((ability) => {
-              const score = (data.abilityScores?.[ability] as number | undefined) ?? 8
-              const mod = getAbilityModifier(score)
+              const base = (data.abilityScores?.[ability] as number | undefined) ?? 8
+              const bonus = racialBonuses[ability] ?? 0
+              const total = base + bonus
+              const mod = getAbilityModifier(total)
               return (
-                <div key={ability} className="text-center">
-                  <div className="text-xs text-muted-foreground uppercase font-semibold mb-0.5">
+                <div
+                  key={ability}
+                  className="border rounded-lg bg-card/50 border-border flex flex-col items-center justify-center gap-0.5 p-2"
+                >
+                  <div className="text-[10px] font-bold text-accent uppercase tracking-wider">
                     {ABILITY_ABBREVIATIONS[ability]}
                   </div>
-                  <div className="text-lg font-bold font-mono">{score}</div>
-                  <div className={cn('text-xs font-medium', mod >= 0 ? 'text-green-500' : 'text-destructive')}>
+                  <div className="text-2xl font-bold font-mono leading-none">{total}</div>
+                  {bonus !== 0 && (
+                    <div className="text-[10px] text-emerald-500 font-semibold leading-none">{base}+{bonus}</div>
+                  )}
+                  <div className={cn('text-sm font-semibold', mod >= 0 ? 'text-success' : 'text-destructive')}>
                     {formatModifier(mod)}
                   </div>
                 </div>

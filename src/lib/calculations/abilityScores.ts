@@ -9,6 +9,7 @@ import {
   POINT_BUY_COSTS,
   POINT_BUY_MAX,
   POINT_BUY_MIN,
+  STANDARD_ARRAY,
 } from './gameRules';
 
 export type AbilityName = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma';
@@ -123,6 +124,28 @@ export function getValidPointBuyScores(): number[] {
 
 export function isValidPointBuyScore(score: number): boolean {
   return score >= POINT_BUY_MIN && score <= POINT_BUY_MAX;
+}
+
+/**
+ * Check if scores form a valid standard array assignment.
+ * Valid assignment: each value from STANDARD_ARRAY appears at most once across abilities.
+ */
+export function isValidStandardArrayAssignment(scores: Partial<AbilityScores>): boolean {
+  const values = Object.values(scores).filter(v => v !== undefined) as number[];
+  const usedCounts = new Map<number, number>();
+  
+  for (const val of values) {
+    usedCounts.set(val, (usedCounts.get(val) ?? 0) + 1);
+  }
+  
+  // Each value can be used at most once, and must be in STANDARD_ARRAY
+  for (const [val, count] of usedCounts) {
+    if (count > 1 || !STANDARD_ARRAY.includes(val as any)) {
+      return false;
+    }
+  }
+  
+  return true;
 }
 
 /**

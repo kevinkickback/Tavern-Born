@@ -21,15 +21,18 @@ import {
 } from '@phosphor-icons/react'
 import { useCharacterStore } from '@/store/characterStore'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useProvenance } from '@/hooks/character/useProvenance'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from './_shared'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
+import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 
 export function SpellsPage() {
     const character = useCharacterStore((s) => s.activeCharacter)
     const { spells } = useFilteredGameData()
+    const { applyManualSpellGrant, removeSpellProvenance, getSourcesRowsBySection } = useProvenance()
     const {
         slots,
         isSpellcaster,
@@ -72,6 +75,14 @@ export function SpellsPage() {
     )
 
     const ownedSet = new Set([...cantrips, ...spellsKnown])
+    const handleRemoveCantrip = (name: string) => {
+        removeCantrip(name)
+        removeSpellProvenance(name)
+    }
+    const handleRemoveKnownSpell = (name: string) => {
+        removeSpellKnown(name)
+        removeSpellProvenance(name)
+    }
 
     return (
         <div className="max-w-7xl mx-auto w-full space-y-6">
@@ -157,7 +168,7 @@ export function SpellsPage() {
                                         <SpellList
                                             names={cantrips}
                                             preparedSpells={preparedSpells}
-                                            onRemove={removeCantrip}
+                                            onRemove={handleRemoveCantrip}
                                             onTogglePrepared={() => undefined}
                                             showPrepare={false}
                                         />
@@ -166,13 +177,20 @@ export function SpellsPage() {
                                         <SpellList
                                             names={spellsKnown}
                                             preparedSpells={preparedSpells}
-                                            onRemove={removeSpellKnown}
+                                            onRemove={handleRemoveKnownSpell}
                                             onTogglePrepared={togglePrepared}
                                             showPrepare
                                         />
                                     </TabsContent>
                                 </Tabs>
                             </CardContent>
+                            <div className="px-6 pb-4 border-t border-border">
+                                <SourcesAccordion
+                                    sectionId="spells"
+                                    rows={getSourcesRowsBySection('spells')}
+                                    emptyText="Add spells to see their source attribution."
+                                />
+                            </div>
                         </Card>
                     )}
                 </div>
@@ -244,9 +262,11 @@ export function SpellsPage() {
                                                     variant="ghost"
                                                     size="sm"
                                                     className="h-7 w-7 p-0 flex-shrink-0 ml-2"
-                                                    onClick={() =>
-                                                        spell.level === 0 ? addCantrip(spell.name) : addSpellKnown(spell.name)
-                                                    }
+                                                    onClick={() => {
+                                                        if (spell.level === 0) addCantrip(spell.name)
+                                                        else addSpellKnown(spell.name)
+                                                        applyManualSpellGrant(spell.name)
+                                                    }}
                                                     title="Add to known spells"
                                                 >
                                                     <Plus className="h-3.5 w-3.5" />
@@ -282,6 +302,7 @@ export function SpellsPage() {
                         const spell = (spells as Spell5e[]).find((s) => s.name === name)
                         if (spell?.level === 0) addCantrip(name)
                         else addSpellKnown(name)
+                        applyManualSpellGrant(name)
                     }
                 }}
             />

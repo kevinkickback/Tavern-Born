@@ -1,3 +1,7 @@
+import type { ProvenanceLedger } from '@/lib/provenance/types'
+
+export type { ProvenanceLedger }
+
 export interface CharacterClassEntry {
   name: string
   source?: string
@@ -51,7 +55,12 @@ export interface Character {
   
   allowedSources?: string[]
   variantRules?: VariantRules
-  
+  /** Per-block ability score increase choices for races with choosable bonuses (Tasha's variant). */
+  raceAsiChoices?: string[][]
+
+  /** Provenance ledger tracking the origin of every granted option. */
+  provenance?: ProvenanceLedger
+
   createdAt: string
   lastModified: string
 }

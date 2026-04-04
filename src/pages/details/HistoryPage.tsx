@@ -1,16 +1,13 @@
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { BookOpen } from '@phosphor-icons/react'
 import { useCharacterStore } from '@/store/characterStore'
 import { useState, useEffect } from 'react'
 import { RichTextArea } from '@/components/editor/RichTextArea'
-import { FormattingGuide } from '@/components/editor/FormattingGuide'
-import { toast } from 'sonner'
 
 export function HistoryPage() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
-  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+  const updateActiveCharacterDetails = useCharacterStore((state) => state.updateActiveCharacterDetails)
 
   const [origin, setOrigin] = useState(activeCharacter?.details?.origin || '')
   const [family, setFamily] = useState(activeCharacter?.details?.family || '')
@@ -28,35 +25,8 @@ export function HistoryPage() {
     }
   }, [activeCharacter])
 
-  const handleSave = () => {
-    if (!activeCharacter) {
-      toast.error('No active character')
-      return
-    }
-
-    updateCharacter(activeCharacter.id, {
-      details: {
-        ...activeCharacter.details,
-        origin,
-        family,
-        definingMoment,
-        lifeEvents,
-        backstory,
-      }
-    })
-
-    toast.success('History saved successfully')
-  }
-
-  const handleReset = () => {
-    if (activeCharacter?.details) {
-      setOrigin(activeCharacter.details.origin || '')
-      setFamily(activeCharacter.details.family || '')
-      setDefiningMoment(activeCharacter.details.definingMoment || '')
-      setLifeEvents(activeCharacter.details.lifeEvents || '')
-      setBackstory(activeCharacter.details.backstory || '')
-      toast.info('Changes reset')
-    }
+  const updateDraftDetails = (updates: Record<string, unknown>) => {
+    updateActiveCharacterDetails(updates)
   }
 
   if (!activeCharacter) {
@@ -82,8 +52,6 @@ export function HistoryPage() {
         </p>
       </div>
 
-      <FormattingGuide />
-
       <div className="grid gap-6">
         <Card className="p-6 space-y-4">
           <div className="flex items-center gap-2 mb-2">
@@ -93,8 +61,11 @@ export function HistoryPage() {
           <RichTextArea
             id="origin"
             value={origin}
-            onChange={setOrigin}
-            placeholder="Where was your character born? What was their childhood like?&#10;&#10;Use {@b bold text}, {@i italic text}, and @-tags like {@race Elf} or {@background Soldier} to add rich formatting."
+            onChange={(value) => {
+              setOrigin(value)
+              updateDraftDetails({ origin: value })
+            }}
+            placeholder="Where was your character born? What was their childhood like?&#10;&#10;Describe key memories, people, and places that shaped them."
             rows={6}
             helpText="Describe your character's birthplace, childhood, and formative years."
           />
@@ -105,8 +76,11 @@ export function HistoryPage() {
             id="family"
             label="Family & Heritage"
             value={family}
-            onChange={setFamily}
-            placeholder="Who are your character's family members? What is their family history?&#10;&#10;Example: My father was a renowned {@class Fighter} who served {@deity Bahamut}."
+            onChange={(value) => {
+              setFamily(value)
+              updateDraftDetails({ family: value })
+            }}
+            placeholder="Who are your character's family members? What is their family history?&#10;&#10;Example: My father was a renowned soldier who served in the royal guard."
             rows={5}
             helpText="Detail your character's family members, relationships, and ancestral heritage."
           />
@@ -117,7 +91,10 @@ export function HistoryPage() {
             id="defining-moment"
             label="Defining Moment"
             value={definingMoment}
-            onChange={setDefiningMoment}
+            onChange={(value) => {
+              setDefiningMoment(value)
+              updateDraftDetails({ definingMoment: value })
+            }}
             placeholder="What pivotal event shaped your character into who they are today?&#10;&#10;This moment changed everything..."
             rows={5}
             helpText="The crucial event or turning point that set your character on their current path."
@@ -129,8 +106,11 @@ export function HistoryPage() {
             id="life-events"
             label="Major Life Events"
             value={lifeEvents}
-            onChange={setLifeEvents}
-            placeholder="Chronicle significant events in your character's life...&#10;&#10;Age 15: Apprenticed to a master {@skill Arcana} scholar&#10;Age 20: First encountered {@creature Mind Flayers}"
+            onChange={(value) => {
+              setLifeEvents(value)
+              updateDraftDetails({ lifeEvents: value })
+            }}
+            placeholder="Chronicle significant events in your character's life...&#10;&#10;Age 15: Apprenticed to a master scholar&#10;Age 20: Survived a deadly encounter in the Underdark"
             rows={6}
             helpText="A timeline or list of important events in your character's life."
           />
@@ -141,17 +121,15 @@ export function HistoryPage() {
             id="backstory"
             label="Full Backstory"
             value={backstory}
-            onChange={setBackstory}
-            placeholder="Write your character's complete backstory. This can be as detailed as you like...&#10;&#10;Use double line breaks to create paragraphs. Reference {@spell spells}, {@creature creatures}, {@item items}, and more with @-tags."
+            onChange={(value) => {
+              setBackstory(value)
+              updateDraftDetails({ backstory: value })
+            }}
+            placeholder="Write your character's complete backstory. This can be as detailed as you like...&#10;&#10;Use double line breaks to create paragraphs and keep events in a clear timeline."
             rows={10}
             helpText="Your character's full narrative. Be as creative and detailed as you want!"
           />
         </Card>
-      </div>
-
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={handleReset}>Reset</Button>
-        <Button onClick={handleSave}>Save History</Button>
       </div>
     </div>
   )

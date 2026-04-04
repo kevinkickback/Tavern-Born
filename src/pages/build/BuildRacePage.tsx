@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -19,11 +19,13 @@ import {
 import { renderEntry } from '@/lib/renderer'
 import { useCharacterStore } from '@/store/characterStore'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useProvenance } from '@/hooks/character/useProvenance'
 import { cn } from '@/lib/utils'
 import type { Race5e } from '@/types/5etools'
 import { NoCharCard, InfoTile } from '@/pages/_shared'
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
+import { getRaceAbilityData, ABILITY_ABBREVIATIONS } from '@/lib/calculations/abilityScores'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -36,17 +38,25 @@ function getSpeedText(race: Race5e): string {
     return '—'
 }
 
-function getASILines(race: Race5e): string[] {
+function getASILines(race: Race5e, raceAsiChoices?: string[][]): string[] {
     const lines: string[] = []
-    for (const block of race.ability ?? []) {
-        for (const [key, val] of Object.entries(block)) {
-            if (key !== 'choose' && typeof val === 'number') lines.push(`${key.toUpperCase()} +${val}`)
-        }
-        const choose = (block as any).choose
-        if (choose) {
-            lines.push(
-                `Choose ${choose.count} from ${(choose.from as string[]).join(', ').toUpperCase()} +${choose.amount ?? 1}`,
-            )
+    const { fixed, choices } = getRaceAbilityData(race)
+    for (const fb of fixed) {
+        lines.push(`${ABILITY_ABBREVIATIONS[fb.ability]} +${fb.value}`)
+    }
+    for (const [blockIdx, block] of choices.entries()) {
+        const selections = (raceAsiChoices?.[blockIdx] ?? []).filter(Boolean)
+        if (selections.length > 0) {
+            // Show actual selections
+            for (const ab of selections) {
+                const abbr = ABILITY_ABBREVIATIONS[ab as keyof typeof ABILITY_ABBREVIATIONS] ?? ab.toUpperCase().slice(0, 3)
+                lines.push(`${abbr} +${block.amount}`)
+            }
+            const remaining = block.count - selections.length
+            if (remaining > 0) lines.push(`Choose ${remaining} more +${block.amount}`)
+        } else {
+            const fromStr = block.from.map((a) => ABILITY_ABBREVIATIONS[a] ?? a.toUpperCase().slice(0, 3)).join('/')
+            lines.push(`Choose ${block.count} × +${block.amount} from ${fromStr}`)
         }
     }
     return lines
@@ -102,8 +112,12 @@ export function BuildRacePage() {
     const character = useCharacterStore((s) => s.activeCharacter)
     const updateCharacter = useCharacterStore((s) => s.updateCharacter)
     const { races } = useFilteredGameData()
+    const { applyRaceSelection, applySubraceChange } = useProvenance()
     const [detailCollapsed, setDetailCollapsed] = useState(false)
     const [raceSearch, setRaceSearch] = useState('')
+    const selectedRaceRef = useRef<HTMLDivElement | null>(null)
+    const isInitialLoadRef = useRef(true)
+    const previousSearchRef = useRef('')
 
     const filteredRaces = useMemo(() => {
         const q = raceSearch.trim().toLowerCase()
@@ -119,10 +133,28 @@ export function BuildRacePage() {
         matchesGameDataEntry(character.race, character.raceSource, r),
     ) as Race5e | undefined
     const subraces = (selectedRace?.subraces ?? []) as Race5e[]
-    const selectedSubrace = subraces.find((sr) => sr.name === character.subrace)
+    const selectedSubrace = subraces.find((sr) => sr.name === character.subrace && (sr.source ?? '') === (character.subraceSource ?? ''))
     const displayRace = selectedSubrace && selectedRace
         ? mergeRaceWithSubrace(selectedRace, selectedSubrace)
         : (selectedSubrace ?? selectedRace)
+    const selectedRaceKey = selectedRace ? `${selectedRace.name}|${selectedRace.source ?? ''}` : null
+
+    useEffect(() => {
+        // Only scroll on initial mount or when search changes, not on selection change
+        const isSearchChanged = previousSearchRef.current !== raceSearch
+        const shouldScroll = isInitialLoadRef.current || isSearchChanged
+
+        if (shouldScroll && selectedRaceRef.current) {
+            selectedRaceRef.current.scrollIntoView({
+                behavior: 'auto',
+                block: 'start',
+                inline: 'nearest',
+            })
+        }
+
+        isInitialLoadRef.current = false
+        previousSearchRef.current = raceSearch
+    }, [raceSearch])
 
     return (
         <div className="h-full flex flex-col">
@@ -139,8 +171,6 @@ export function BuildRacePage() {
                 <div className="max-w-7xl mx-auto h-full">
                     <Card className="h-full overflow-hidden flex flex-col">
                         <div className="relative flex flex-row flex-1 overflow-hidden min-h-0 -my-6">
-
-                            {/* Toggle button */}
                             <button
                                 onClick={() => setDetailCollapsed((c) => !c)}
                                 title={detailCollapsed ? 'Expand details panel' : 'Collapse details panel'}
@@ -153,7 +183,6 @@ export function BuildRacePage() {
                                 )}
                             </button>
 
-                            {/* Left pane — race list */}
                             <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
                                 <div className="p-4 border-b border-border flex flex-col gap-2">
                                     <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -169,36 +198,44 @@ export function BuildRacePage() {
                                 <ScrollArea className="flex-1 overflow-hidden">
                                     <div className="p-4 space-y-1 pr-8">
                                         {filteredRaces.map((race) => {
-                                            const isSelected = character.raceSource
-                                                ? (character.race === race.name && character.raceSource === (race.source ?? ''))
-                                                : character.race === race.name
+                                            const raceKey = `${race.name}|${race.source ?? ''}`
+                                            const isSelected = selectedRaceKey === raceKey
                                             const namedSubraces = (race.subraces ?? [] as Race5e[]).filter((sr: any) => sr.name) as Race5e[]
                                             const hasSubraces = namedSubraces.length > 0
                                             return (
                                                 <div
-                                                    key={`${race.name}|${race.source ?? ''}`}
+                                                    key={raceKey}
+                                                    ref={isSelected ? selectedRaceRef : null}
                                                     role="button"
                                                     tabIndex={0}
                                                     onClick={(e) => {
-                                                        // don't re-fire if click came from inside the subrace Select
                                                         if ((e.target as HTMLElement).closest('[data-radix-select-trigger],[data-radix-select-content]')) return
-                                                        updateCharacter(character.id, { race: race.name, raceSource: race.source ?? undefined, subrace: undefined, subraceSource: undefined })
+                                                        updateCharacter(character.id, {
+                                                            race: race.name,
+                                                            raceSource: race.source ?? undefined,
+                                                            subrace: undefined,
+                                                            subraceSource: undefined,
+                                                        })
+                                                        applyRaceSelection(race as any, undefined)
                                                         if (detailCollapsed) setDetailCollapsed(false)
                                                     }}
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter' || e.key === ' ') {
-                                                            updateCharacter(character.id, { race: race.name, raceSource: race.source ?? undefined, subrace: undefined, subraceSource: undefined })
+                                                            updateCharacter(character.id, {
+                                                                race: race.name,
+                                                                raceSource: race.source ?? undefined,
+                                                                subrace: undefined,
+                                                                subraceSource: undefined,
+                                                            })
+                                                            applyRaceSelection(race as any, undefined)
                                                             if (detailCollapsed) setDetailCollapsed(false)
                                                         }
                                                     }}
                                                     className={cn(
                                                         'w-full text-left p-3 rounded-lg border transition-colors cursor-pointer hover:border-accent flex items-center justify-between gap-2',
-                                                        isSelected
-                                                            ? 'border-accent bg-accent/10'
-                                                            : 'border-border bg-card',
+                                                        isSelected ? 'border-accent bg-accent/10' : 'border-border bg-card',
                                                     )}
                                                 >
-                                                    {/* Radio dot + name */}
                                                     <div className="flex items-center gap-2 min-w-0">
                                                         <div
                                                             className={cn(
@@ -209,12 +246,25 @@ export function BuildRacePage() {
                                                         <span className="font-medium text-sm truncate">{race.name}</span>
                                                     </div>
 
-                                                    {/* Right side: subrace dropdown when selected, badges otherwise */}
                                                     <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                                                         {isSelected && hasSubraces ? (
                                                             <Select
-                                                                value={character.subrace ?? ''}
-                                                                onValueChange={(v) => updateCharacter(character.id, { subrace: v })}
+                                                                value={character.subrace ? `${character.subrace}|${character.subraceSource ?? ''}` : ''}
+                                                                onValueChange={(v) => {
+                                                                    const [subraceNameOrFull, ...sourceParts] = v.split('|')
+                                                                    const subraceSource = sourceParts.length > 0 ? sourceParts.join('|') : undefined
+                                                                    const subraceNameFromKey = subraceNameOrFull
+                                                                    const sr = namedSubraces.find(
+                                                                        (s) =>
+                                                                            s.name === subraceNameFromKey &&
+                                                                            ((subraceSource ?? '') === ((s as any).source ?? '')),
+                                                                    )
+                                                                    updateCharacter(character.id, {
+                                                                        subrace: subraceNameFromKey,
+                                                                        subraceSource: subraceSource ?? undefined,
+                                                                    })
+                                                                    applySubraceChange(race.name, race.source ?? undefined, sr as any)
+                                                                }}
                                                             >
                                                                 <SelectTrigger className="h-7 text-xs min-w-[120px] max-w-[180px]">
                                                                     <SelectValue placeholder="Subrace…" />
@@ -223,7 +273,7 @@ export function BuildRacePage() {
                                                                     {namedSubraces.map((sr) => (
                                                                         <SelectItem
                                                                             key={`${sr.name}|${(sr as any).source ?? ''}`}
-                                                                            value={sr.name}
+                                                                            value={`${sr.name}|${(sr as any).source ?? ''}`}
                                                                             className="text-xs"
                                                                         >
                                                                             {sr.name}
@@ -249,7 +299,6 @@ export function BuildRacePage() {
                                 </ScrollArea>
                             </div>
 
-                            {/* Right pane — race detail */}
                             <div
                                 className={cn(
                                     'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
@@ -267,11 +316,6 @@ export function BuildRacePage() {
                                             <div className="space-y-4">
                                                 <div>
                                                     <h2 className="text-2xl font-display font-bold">{displayRace.name}</h2>
-                                                    {selectedSubrace && (
-                                                        <p className="text-sm text-muted-foreground mt-0.5">
-                                                            {selectedRace?.name}
-                                                        </p>
-                                                    )}
                                                     <Badge variant="outline" className="mt-2">{displayRace.source}</Badge>
                                                 </div>
 
@@ -279,8 +323,8 @@ export function BuildRacePage() {
 
                                                 <div className="grid grid-cols-3 gap-3">
                                                     <InfoTile title="Ability Bonuses">
-                                                        {getASILines(displayRace).length > 0 ? (
-                                                            getASILines(displayRace).map((t, i) => (
+                                                        {getASILines(displayRace, character.raceAsiChoices).length > 0 ? (
+                                                            getASILines(displayRace, character.raceAsiChoices).map((t, i) => (
                                                                 <div key={i} className="text-sm font-mono">{t}</div>
                                                             ))
                                                         ) : (
@@ -318,7 +362,6 @@ export function BuildRacePage() {
                                                     </div>
                                                 )}
 
-                                                {/* Top-level string entries (e.g. intro text) */}
                                                 {(displayRace.entries ?? []).filter((e: any) => typeof e === 'string').map((e: any, i: number) => (
                                                     <div
                                                         key={i}
@@ -335,7 +378,6 @@ export function BuildRacePage() {
                                     </div>
                                 </ScrollArea>
                             </div>
-
                         </div>
                     </Card>
                 </div>

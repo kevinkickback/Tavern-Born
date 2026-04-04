@@ -1,6 +1,5 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   Select,
@@ -13,12 +12,10 @@ import { Sparkle } from '@phosphor-icons/react'
 import { useCharacterStore } from '@/store/characterStore'
 import { useState, useEffect } from 'react'
 import { RichTextArea } from '@/components/editor/RichTextArea'
-import { FormattingGuide } from '@/components/editor/FormattingGuide'
-import { toast } from 'sonner'
 
 export function CharacteristicsPage() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
-  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+  const updateActiveCharacterDetails = useCharacterStore((state) => state.updateActiveCharacterDetails)
 
   const [alignment, setAlignment] = useState(activeCharacter?.details?.alignment || '')
   const [faith, setFaith] = useState(activeCharacter?.details?.faith || '')
@@ -50,43 +47,8 @@ export function CharacteristicsPage() {
     'Lawful Evil', 'Neutral Evil', 'Chaotic Evil'
   ]
 
-  const handleSave = () => {
-    if (!activeCharacter) {
-      toast.error('No active character')
-      return
-    }
-
-    updateCharacter(activeCharacter.id, {
-      details: {
-        ...activeCharacter.details,
-        alignment,
-        faith,
-        lifestyle,
-        personalityTraits,
-        ideals,
-        bonds,
-        flaws,
-        goals,
-        fears,
-      }
-    })
-
-    toast.success('Characteristics saved successfully')
-  }
-
-  const handleReset = () => {
-    if (activeCharacter?.details) {
-      setAlignment(activeCharacter.details.alignment || '')
-      setFaith(activeCharacter.details.faith || '')
-      setLifestyle(activeCharacter.details.lifestyle || '')
-      setPersonalityTraits(activeCharacter.details.personalityTraits || '')
-      setIdeals(activeCharacter.details.ideals || '')
-      setBonds(activeCharacter.details.bonds || '')
-      setFlaws(activeCharacter.details.flaws || '')
-      setGoals(activeCharacter.details.goals || '')
-      setFears(activeCharacter.details.fears || '')
-      toast.info('Changes reset')
-    }
+  const updateDraftDetails = (updates: Record<string, unknown>) => {
+    updateActiveCharacterDetails(updates)
   }
 
   if (!activeCharacter) {
@@ -112,8 +74,6 @@ export function CharacteristicsPage() {
         </p>
       </div>
 
-      <FormattingGuide />
-
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="p-6 space-y-4">
           <div>
@@ -121,7 +81,10 @@ export function CharacteristicsPage() {
               <Sparkle className="h-4 w-4" weight="fill" />
               Alignment
             </Label>
-            <Select value={alignment} onValueChange={setAlignment}>
+            <Select value={alignment} onValueChange={(value) => {
+              setAlignment(value)
+              updateDraftDetails({ alignment: value })
+            }}>
               <SelectTrigger id="alignment">
                 <SelectValue placeholder="Select alignment" />
               </SelectTrigger>
@@ -142,8 +105,12 @@ export function CharacteristicsPage() {
             <Input
               id="faith"
               value={faith}
-              onChange={(e) => setFaith(e.target.value)}
-              placeholder="e.g., {@deity Bahamut}, {@deity Pelor}, None"
+              onChange={(e) => {
+                const value = e.target.value
+                setFaith(value)
+                updateDraftDetails({ faith: value })
+              }}
+              placeholder="e.g., Bahamut, Pelor, None"
             />
           </div>
 
@@ -151,7 +118,10 @@ export function CharacteristicsPage() {
             <Label htmlFor="lifestyle" className="mb-2 block">
               Lifestyle
             </Label>
-            <Select value={lifestyle} onValueChange={setLifestyle}>
+            <Select value={lifestyle} onValueChange={(value) => {
+              setLifestyle(value)
+              updateDraftDetails({ lifestyle: value })
+            }}>
               <SelectTrigger id="lifestyle">
                 <SelectValue placeholder="Select lifestyle" />
               </SelectTrigger>
@@ -173,8 +143,11 @@ export function CharacteristicsPage() {
             id="personality-traits"
             label="Personality Traits"
             value={personalityTraits}
-            onChange={setPersonalityTraits}
-            placeholder="Describe your character's personality traits... Use {@b bold} or {@i italic} for emphasis."
+            onChange={(value) => {
+              setPersonalityTraits(value)
+              updateDraftDetails({ personalityTraits: value })
+            }}
+            placeholder="Describe your character's personality traits in plain language."
             rows={4}
           />
 
@@ -182,8 +155,11 @@ export function CharacteristicsPage() {
             id="ideals"
             label="Ideals"
             value={ideals}
-            onChange={setIdeals}
-            placeholder="What does your character believe in? (e.g., Justice, Freedom, {@b Honor})"
+            onChange={(value) => {
+              setIdeals(value)
+              updateDraftDetails({ ideals: value })
+            }}
+            placeholder="What does your character believe in? (e.g., Justice, Freedom, Honor)"
             rows={3}
           />
         </Card>
@@ -193,7 +169,10 @@ export function CharacteristicsPage() {
             id="bonds"
             label="Bonds"
             value={bonds}
-            onChange={setBonds}
+            onChange={(value) => {
+              setBonds(value)
+              updateDraftDetails({ bonds: value })
+            }}
             placeholder="What ties bind your character to the world?"
             rows={4}
           />
@@ -202,7 +181,10 @@ export function CharacteristicsPage() {
             id="flaws"
             label="Flaws"
             value={flaws}
-            onChange={setFlaws}
+            onChange={(value) => {
+              setFlaws(value)
+              updateDraftDetails({ flaws: value })
+            }}
             placeholder="What weaknesses does your character have?"
             rows={3}
           />
@@ -213,7 +195,10 @@ export function CharacteristicsPage() {
             id="goals"
             label="Goals & Motivations"
             value={goals}
-            onChange={setGoals}
+            onChange={(value) => {
+              setGoals(value)
+              updateDraftDetails({ goals: value })
+            }}
             placeholder="What drives your character forward?"
             rows={4}
           />
@@ -222,16 +207,14 @@ export function CharacteristicsPage() {
             id="fears"
             label="Fears & Phobias"
             value={fears}
-            onChange={setFears}
-            placeholder="What does your character fear? (e.g., {@creature dragons}, {@condition darkness})"
+            onChange={(value) => {
+              setFears(value)
+              updateDraftDetails({ fears: value })
+            }}
+            placeholder="What does your character fear? (e.g., dragons, darkness)"
             rows={3}
           />
         </Card>
-      </div>
-
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={handleReset}>Reset</Button>
-        <Button onClick={handleSave}>Save Characteristics</Button>
       </div>
     </div>
   )

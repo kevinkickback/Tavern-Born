@@ -2,22 +2,53 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Character } from "@/types/character";
 import { createIdbStorage } from "@/lib/storage/idb-storage";
+import type { ProvenanceLedger } from "@/lib/provenance/types";
 
 const generateId = () => {
 	return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
+export function emptyProvenance(): ProvenanceLedger {
+	const emptyMap = () => ({} as Record<string, import("@/lib/provenance/types").SourceTag[]>);
+	return {
+		proficiencies: {
+			armor: emptyMap(),
+			weapons: emptyMap(),
+			tools: emptyMap(),
+			languages: emptyMap(),
+			skills: emptyMap(),
+			savingThrows: emptyMap(),
+		},
+		abilityBonuses: [],
+		features: emptyMap(),
+		feats: emptyMap(),
+		spells: emptyMap(),
+		equipment: emptyMap(),
+		choices: [],
+	};
+}
+
+/** Ensure a persisted character has the provenance ledger, migrating gracefully. */
+export function normalizeCharacterProvenance(character: Character): Character {
+	if (character.provenance) return character;
+	return { ...character, provenance: emptyProvenance() };
+}
+
 interface CharacterState {
 	characters: Character[];
 	activeCharacterId: string | null;
 	activeCharacter: Character | null;
+	hasUnsavedChanges: () => boolean;
 
 	setCharacters: (characters: Character[]) => void;
 	addCharacter: (character: Character) => void;
 	updateCharacter: (id: string, updates: Partial<Character>) => void;
+	updateActiveCharacter: (updates: Partial<Character>) => void;
+	updateActiveCharacterDetails: (updates: Partial<Character["details"]>) => void;
 	deleteCharacter: (id: string) => void;
 	setActiveCharacter: (id: string | null) => void;
 	createNewCharacter: (initial: Partial<Character>) => Character;
+	saveActiveCharacter: () => void;
 }
 
 const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
@@ -87,6 +118,7 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
 		details: {},
 		createdAt: now,
 		lastModified: now,
+		provenance: emptyProvenance(),
 		...initial,
 	};
 };
@@ -98,6 +130,29 @@ export const useCharacterStore = create<CharacterState>()(
 			activeCharacterId: null,
 			activeCharacter: null,
 
+			hasUnsavedChanges: () => {
+				const { characters, activeCharacter, activeCharacterId } = get();
+				if (!activeCharacter || !activeCharacterId) {
+					return false;
+				}
+
+				const persistedCharacter = characters.find(
+					(character) => character.id === activeCharacterId,
+				);
+				if (!persistedCharacter) {
+					return false;
+				}
+
+				const { lastModified: _activeLastModified, ...activeComparable } =
+					activeCharacter;
+				const { lastModified: _savedLastModified, ...savedComparable } =
+					normalizeCharacterProvenance(persistedCharacter);
+
+				return (
+					JSON.stringify(activeComparable) !== JSON.stringify(savedComparable)
+				);
+			},
+
 			setCharacters: (characters) => set({ characters }),
 
 			addCharacter: (character) =>
@@ -107,20 +162,57 @@ export const useCharacterStore = create<CharacterState>()(
 
 			updateCharacter: (id, updates) =>
 				set((state) => {
+					const now = new Date().toISOString();
+
+					// Active character updates are treated as in-memory draft changes.
+					if (state.activeCharacterId === id && state.activeCharacter) {
+						return {
+							activeCharacter: {
+								...state.activeCharacter,
+								...updates,
+								lastModified: now,
+							},
+						};
+					}
+
+					// Fallback for non-active records: update persisted collection directly.
 					const characters = state.characters.map((char) =>
-						char.id === id
-							? { ...char, ...updates, lastModified: new Date().toISOString() }
-							: char,
+						char.id === id ? { ...char, ...updates, lastModified: now } : char,
 					);
-					const activeCharacter =
-						state.activeCharacterId === id && state.activeCharacter
-							? {
-									...state.activeCharacter,
-									...updates,
-									lastModified: new Date().toISOString(),
-								}
-							: state.activeCharacter;
-					return { characters, activeCharacter };
+					return { characters };
+				}),
+
+			updateActiveCharacter: (updates) =>
+				set((state) => {
+					if (!state.activeCharacter) {
+						return {};
+					}
+
+					return {
+						activeCharacter: {
+							...state.activeCharacter,
+							...updates,
+							lastModified: new Date().toISOString(),
+						},
+					};
+				}),
+
+			updateActiveCharacterDetails: (updates) =>
+				set((state) => {
+					if (!state.activeCharacter) {
+						return {};
+					}
+
+					return {
+						activeCharacter: {
+							...state.activeCharacter,
+							details: {
+								...state.activeCharacter.details,
+								...updates,
+							},
+							lastModified: new Date().toISOString(),
+						},
+					};
 				}),
 
 			deleteCharacter: (id) =>
@@ -134,9 +226,10 @@ export const useCharacterStore = create<CharacterState>()(
 
 			setActiveCharacter: (id) =>
 				set((state) => {
-					const character = id
+					const found = id
 						? state.characters.find((c) => c.id === id) || null
 						: null;
+					const character = found ? normalizeCharacterProvenance(found) : null;
 					return {
 						activeCharacterId: id,
 						activeCharacter: character,
@@ -148,6 +241,38 @@ export const useCharacterStore = create<CharacterState>()(
 				get().addCharacter(character);
 				return character;
 			},
+
+			saveActiveCharacter: () =>
+				set((state) => {
+					if (!state.activeCharacter) {
+						return {};
+					}
+
+					const now = new Date().toISOString();
+					const savedCharacter = {
+						...state.activeCharacter,
+						lastModified: now,
+					};
+
+					const existingIndex = state.characters.findIndex(
+						(char) => char.id === savedCharacter.id,
+					);
+
+					if (existingIndex === -1) {
+						return {
+							characters: [...state.characters, savedCharacter],
+							activeCharacter: savedCharacter,
+						};
+					}
+
+					const characters = [...state.characters];
+					characters[existingIndex] = savedCharacter;
+
+					return {
+						characters,
+						activeCharacter: savedCharacter,
+					};
+				}),
 		}),
 		{
 			name: "character-storage",
@@ -159,11 +284,13 @@ export const useCharacterStore = create<CharacterState>()(
 			onRehydrateStorage: () => (state) => {
 				if (state) {
 					// Rehydrate activeCharacter from activeCharacterId after loading
-					const active = state.activeCharacterId
+					const activeFound = state.activeCharacterId
 						? state.characters.find((c) => c.id === state.activeCharacterId) ||
 							null
 						: null;
-					state.activeCharacter = active;
+					state.activeCharacter = activeFound
+						? normalizeCharacterProvenance(activeFound)
+						: null;
 				}
 			},
 		},

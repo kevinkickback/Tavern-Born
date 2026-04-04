@@ -7,16 +7,19 @@ import { Switch } from '@/components/ui/switch'
 import { Star, Plus, Trash, Check } from '@phosphor-icons/react'
 import { useCharacterStore } from '@/store/characterStore'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useProvenance } from '@/hooks/character/useProvenance'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { checkAllPrerequisites, type PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import { cn } from '@/lib/utils'
 import type { Feat5e } from '@/types/5etools'
+import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { NoCharCard } from './_shared'
 
 export function FeatsPage() {
     const character = useCharacterStore((s) => s.activeCharacter)
     const updateCharacter = useCharacterStore((s) => s.updateCharacter)
     const { feats, classes } = useFilteredGameData()
+    const { applyFeatSelection, removeFeatProvenance, getSourcesRowsBySection } = useProvenance()
     const [search, setSearch] = useState('')
     const [showOwned, setShowOwned] = useState(false)
 
@@ -63,12 +66,14 @@ export function FeatsPage() {
                 { id: `${feat.name}-${feat.source}`, name: feat.name, source: feat.source, description: '' },
             ],
         })
+        applyFeatSelection(feat.name, feat.source)
     }
 
     const removeFeat = (featName: string) => {
         updateCharacter(character.id, {
             feats: character.feats.filter((f) => f.name !== featName),
         })
+        removeFeatProvenance(featName)
     }
 
     return (
@@ -95,7 +100,7 @@ export function FeatsPage() {
                             <div
                                 className={cn(
                                     'text-3xl font-bold font-mono',
-                                    remainingASI > 0 ? 'text-green-500' : remainingASI < 0 ? 'text-destructive' : '',
+                                    remainingASI > 0 ? 'text-success' : remainingASI < 0 ? 'text-destructive' : '',
                                 )}
                             >
                                 {remainingASI}
@@ -132,6 +137,13 @@ export function FeatsPage() {
                         </div>
                     )}
                 </CardContent>
+                <div className="px-6 pb-6 border-t border-border">
+                    <SourcesAccordion
+                        sectionId="feats"
+                        rows={getSourcesRowsBySection('feats')}
+                        emptyText="Add feats to see their source attribution."
+                    />
+                </div>
             </Card>
 
             {/* Feat browser */}
@@ -173,7 +185,7 @@ export function FeatsPage() {
                                             <span className="font-medium text-sm">{feat.name}</span>
                                             <span className="text-xs text-muted-foreground">{feat.source}</span>
                                             {met ? (
-                                                <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                                <Badge variant="outline" className="text-xs text-success border-success">
                                                     Met
                                                 </Badge>
                                             ) : (
