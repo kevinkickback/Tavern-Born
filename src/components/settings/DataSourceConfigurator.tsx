@@ -213,7 +213,7 @@ export function DataSourceConfigurator() {
 
   const getValidationBorderClass = () => {
     if (validationStatus === 'validating') return 'border-muted-foreground/50'
-    if (validationStatus === 'valid') return 'border-green-500'
+    if (validationStatus === 'valid') return 'border-success'
     if (validationStatus === 'invalid') return 'border-destructive'
     return ''
   }
@@ -326,7 +326,7 @@ export function DataSourceConfigurator() {
                   )}
                   {validationStatus === 'valid' && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <CheckCircle size={18} className="text-green-500" />
+                      <CheckCircle size={18} className="text-success" />
                     </div>
                   )}
                   {validationStatus === 'invalid' && (
@@ -341,7 +341,7 @@ export function DataSourceConfigurator() {
                   </p>
                 )}
                 {validationStatus === 'valid' && (
-                  <p className="text-sm text-green-600">
+                  <p className="text-sm text-success">
                     ✓ Valid data source ready to load
                   </p>
                 )}
@@ -385,7 +385,7 @@ export function DataSourceConfigurator() {
                   </p>
                 )}
                 {validationStatus === 'valid' && (
-                  <p className="text-sm text-green-600">
+                  <p className="text-sm text-success">
                     ✓ Valid data source ready to load
                   </p>
                 )}
@@ -417,7 +417,7 @@ export function DataSourceConfigurator() {
                 onClick={handleSaveConfig}
                 disabled={isLoading || !sourcePath || !isValidSource}
                 variant="outline"
-                className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-green-600 !text-white !border-green-600 hover:!bg-green-700 hover:!border-green-700' : 'text-muted-foreground'}`}
+                className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-success !text-success-foreground !border-success hover:!bg-success/90 hover:!border-success/90' : 'text-muted-foreground'}`}
               >
                 <Database size={16} />
                 {isLoading ? 'Saving...' : 'Save & Load'}

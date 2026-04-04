@@ -3,10 +3,27 @@ import { FloppyDisk, TrendUp } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { useCharacterStore } from '@/store/characterStore'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
+import { toast } from 'sonner'
 
 export function AppHeader() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
+  const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter)
   const [levelUpOpen, setLevelUpOpen] = useState(false)
+
+  const handleSave = () => {
+    if (!activeCharacter) {
+      return
+    }
+
+    if (!hasUnsavedChanges) {
+      toast.info('No changes to save')
+      return
+    }
+
+    saveActiveCharacter()
+    toast.success('Character saved')
+  }
 
   return (
     <>
@@ -45,9 +62,13 @@ export function AppHeader() {
           <Button
             variant="default"
             size="sm"
-            disabled={!activeCharacter}
-            className="gap-2 bg-accent hover:bg-accent/90"
+            disabled={!activeCharacter || !hasUnsavedChanges}
+            className="relative gap-2 bg-accent hover:bg-accent/90"
+            onClick={handleSave}
           >
+            {hasUnsavedChanges && (
+              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
+            )}
             <FloppyDisk />
             Save
           </Button>

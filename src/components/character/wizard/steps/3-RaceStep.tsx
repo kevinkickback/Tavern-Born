@@ -26,7 +26,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
     : undefined
 
   const subraces = (selectedRace?.subraces || []).filter((sr: any) => sr.name)
-  const selectedSubrace = subraces.find((sr: any) => sr.name === data.subrace)
+  const selectedSubrace = subraces.find((sr: any) => sr.name === data.subrace && ((sr.source ?? '') === (data.subraceSource ?? '')))
 
   // Subraces inherit parent's size/speed/languages if they don't define them;
   // ability: replace parent when overwrite.ability is true, otherwise additive.
@@ -144,70 +144,76 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
   const traits = getTraits()
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <Users className="h-6 w-6 text-accent" weight="fill" />
-        <h3 className="font-display text-2xl font-semibold">Race Selection</h3>
-      </div>
-
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <Label htmlFor="race-select" className="text-sm font-semibold mb-2 block">
-            Race
-          </Label>
-          <Select
-            value={data.race ? `${data.race}|${data.raceSource ?? ''}` : ''}
-            onValueChange={(value) => {
-              const sepIdx = value.indexOf('|')
-              const raceName = sepIdx >= 0 ? value.slice(0, sepIdx) : value
-              const raceSource = sepIdx >= 0 ? value.slice(sepIdx + 1) : ''
-              onChange({ race: raceName, raceSource, subrace: '', subraceSource: '' })
-            }}
-          >
-            <SelectTrigger id="race-select" className="h-11">
-              <SelectValue placeholder="Select a Race" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredRaces.length === 0 ? (
-                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  No races available
-                </div>
-              ) : (
-                filteredRaces.map((race) => (
-                  <SelectItem key={`${race.name}|${(race as any).source ?? ''}`} value={`${race.name}|${(race as any).source ?? ''}`}>
-                    {race.name}{(race as any).source ? ` (${(race as any).source})` : ''}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+    <div className="space-y-4">
+      <div className="rounded-lg border border-border bg-muted/20 p-4">
+        <div className="flex items-center gap-2 pb-2 mb-3 border-b border-border">
+          <Users className="h-4 w-4 text-accent" weight="fill" />
+          <h3 className="font-semibold">Race Selection</h3>
         </div>
+        <div className="grid grid-cols-2 gap-6">
+          <div>
+            <Label htmlFor="race-select" className="text-sm font-semibold mb-2 block">
+              Race
+            </Label>
+            <Select
+              value={data.race ? `${data.race}|${data.raceSource ?? ''}` : ''}
+              onValueChange={(value) => {
+                const sepIdx = value.indexOf('|')
+                const raceName = sepIdx >= 0 ? value.slice(0, sepIdx) : value
+                const raceSource = sepIdx >= 0 ? value.slice(sepIdx + 1) : ''
+                onChange({ race: raceName, raceSource, subrace: '', subraceSource: '' })
+              }}
+            >
+              <SelectTrigger id="race-select" className="h-11">
+                <SelectValue placeholder="Select a Race" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredRaces.length === 0 ? (
+                  <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                    No races available
+                  </div>
+                ) : (
+                  filteredRaces.map((race) => (
+                    <SelectItem key={`${race.name}|${(race as any).source ?? ''}`} value={`${race.name}|${(race as any).source ?? ''}`}>
+                      {race.name}{(race as any).source ? ` (${(race as any).source})` : ''}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div>
-          <Label htmlFor="subrace-select" className="text-sm font-semibold mb-2 block">
-            Subrace
-          </Label>
-          <Select
-            value={data.subrace || ''}
-            onValueChange={(value) => onChange({ subrace: value })}
-            disabled={subraces.length === 0}
-          >
-            <SelectTrigger id="subrace-select" className="h-11">
-              <SelectValue placeholder={subraces.length === 0 ? 'No Subraces' : 'Select a Subrace'} />
-            </SelectTrigger>
-            <SelectContent>
-              {subraces.map((subrace: any) => (
-                <SelectItem key={`${subrace.name}|${subrace.source ?? ''}`} value={subrace.name}>
-                  {subrace.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <Label htmlFor="subrace-select" className="text-sm font-semibold mb-2 block">
+              Subrace
+            </Label>
+            <Select
+              value={data.subrace ? `${data.subrace}|${data.subraceSource ?? ''}` : ''}
+              onValueChange={(value) => {
+                const sepIdx = value.indexOf('|')
+                const subraceNamePart = sepIdx >= 0 ? value.slice(0, sepIdx) : value
+                const subraceSourcePart = sepIdx >= 0 ? value.slice(sepIdx + 1) : ''
+                onChange({ subrace: subraceNamePart, subraceSource: subraceSourcePart })
+              }}
+              disabled={subraces.length === 0}
+            >
+              <SelectTrigger id="subrace-select" className="h-11">
+                <SelectValue placeholder={subraces.length === 0 ? 'No Subraces' : 'Select a Subrace'} />
+              </SelectTrigger>
+              <SelectContent>
+                {subraces.map((subrace: any) => (
+                  <SelectItem key={`${subrace.name}|${subrace.source ?? ''}`} value={`${subrace.name}|${subrace.source ?? ''}`}>
+                    {subrace.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <div className="border border-accent/30 rounded-lg p-4 bg-card/50">
+        <div className="border border-border rounded-lg p-4 bg-muted/20">
           <h4 className="text-sm font-bold text-accent uppercase tracking-wider mb-3">
             Ability Score Increases
           </h4>
@@ -222,7 +228,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
           )}
         </div>
 
-        <div className="border border-accent/30 rounded-lg p-4 bg-card/50">
+        <div className="border border-border rounded-lg p-4 bg-muted/20">
           <h4 className="text-sm font-bold text-accent uppercase tracking-wider mb-3">
             Size
           </h4>
@@ -233,7 +239,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
           )}
         </div>
 
-        <div className="border border-accent/30 rounded-lg p-4 bg-card/50">
+        <div className="border border-border rounded-lg p-4 bg-muted/20">
           <h4 className="text-sm font-bold text-accent uppercase tracking-wider mb-3">
             Speed
           </h4>
@@ -245,7 +251,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
         </div>
       </div>
 
-      <div className="border border-accent/30 rounded-lg p-4 bg-card/50">
+      <div className="border border-border rounded-lg p-4 bg-muted/20">
         <h4 className="text-sm font-bold text-accent uppercase tracking-wider mb-3">
           Languages
         </h4>
@@ -256,7 +262,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
         )}
       </div>
 
-      <div className="border border-border rounded-lg p-4 bg-muted/30">
+      <div className="border border-border rounded-lg p-4 bg-muted/20">
         <h4 className="text-sm font-bold uppercase tracking-wider mb-3">
           Traits
         </h4>

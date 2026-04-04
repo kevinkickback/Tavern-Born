@@ -252,7 +252,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                                 )}
 
                                 {isAtCap && (
-                                    <p className="text-xs text-amber-400 text-center mt-3 border border-amber-500/30 bg-amber-500/5 rounded-lg py-2 px-3">
+                                    <p className="text-xs text-warning text-center mt-3 border border-warning/30 bg-warning/5 rounded-lg py-2 px-3">
                                         Character is already level {MAX_CHARACTER_LEVEL}. Remove a level to add more.
                                     </p>
                                 )}

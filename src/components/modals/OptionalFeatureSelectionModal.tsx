@@ -100,12 +100,12 @@ const FeatureCard = memo(function FeatureCard({
 
             {/* Prerequisite failure warning */}
             {!prereqMet && prereqReasons.length > 0 && (
-                <div className="flex items-start gap-1.5 mb-1.5 px-2 py-1.5 rounded bg-amber-500/10 border border-amber-500/20">
+                <div className="flex items-start gap-1.5 mb-1.5 px-2 py-1.5 rounded bg-warning/10 border border-warning/20">
                     <Warning
-                        className="h-3.5 w-3.5 text-amber-500 flex-shrink-0 mt-0.5"
+                        className="h-3.5 w-3.5 text-warning flex-shrink-0 mt-0.5"
                         weight="fill"
                     />
-                    <div className="text-xs text-amber-500/90 leading-snug">
+                    <div className="text-xs text-warning/90 leading-snug">
                         {prereqReasons.join(' · ')}
                     </div>
                 </div>

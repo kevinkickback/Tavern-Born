@@ -191,12 +191,12 @@ const SpellCard = memo(function SpellCard({ spell, isSelected }: SpellCardProps)
                 </div>
                 <div className="flex gap-1 flex-wrap flex-shrink-0">
                     {isRitual && (
-                        <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 border-blue-500/60 text-blue-500">
+                        <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 border-info/60 text-info">
                             R
                         </Badge>
                     )}
                     {isConcentration && (
-                        <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 border-yellow-500/60 text-yellow-500">
+                        <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 border-warning/60 text-warning">
                             C
                         </Badge>
                     )}

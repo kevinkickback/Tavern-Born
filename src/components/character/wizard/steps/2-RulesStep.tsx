@@ -10,7 +10,7 @@ interface RulesStepProps extends StepProps {
 
 export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
   const sources = gameData?.sources || []
-  
+
   const sourcesByGroup = sources.reduce((acc: any, source: any) => {
     if (!acc[source.group]) {
       acc[source.group] = []
@@ -18,7 +18,7 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
     acc[source.group].push(source)
     return acc
   }, {})
-  
+
   const groupLabels: Record<string, string> = {
     'core': 'Core Rulebooks',
     'supplement': 'Supplements',
@@ -27,9 +27,9 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
     'playtest': 'Playtest & Unofficial',
     'other': 'Other Sources',
   }
-  
+
   const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
-  
+
   const toggleSource = (sourceAbbr: string) => {
     const currentSources = data.allowedSources || []
     if (currentSources.includes(sourceAbbr)) {
@@ -38,27 +38,28 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
       onChange({ allowedSources: [...currentSources, sourceAbbr] })
     }
   }
-  
+
   const selectAllSources = () => {
     onChange({ allowedSources: sources.map((s: any) => s.abbreviation) })
   }
-  
+
   const selectRecommendedSources = () => {
+    const recommendedAbbrs = new Set(['PHB', 'DMG', 'MM', 'XGE', 'TCE', 'VGM', 'MTF', 'SCAG', 'ERLW', 'EGW'])
     const recommended = sources
-      .filter((s: any) => s.group === 'core' || ['PHB', 'XPHB'].includes(s.abbreviation))
+      .filter((s: any) => recommendedAbbrs.has(s.abbreviation))
       .map((s: any) => s.abbreviation)
     onChange({ allowedSources: recommended })
   }
-  
+
   const selectNoneSources = () => {
     onChange({ allowedSources: [] })
   }
-  
+
   const selectGroupSources = (group: string) => {
     const currentSources = data.allowedSources || []
     const groupSources = sourcesByGroup[group]?.map((s: any) => s.abbreviation) || []
     const allSelected = groupSources.every((abbr: string) => currentSources.includes(abbr))
-    
+
     if (allSelected) {
       onChange({ allowedSources: currentSources.filter((s: string) => !groupSources.includes(s)) })
     } else {
@@ -66,34 +67,34 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
       onChange({ allowedSources: newSources })
     }
   }
-  
+
   const isGroupSelected = (group: string) => {
     const currentSources = data.allowedSources || []
     const groupSources = sourcesByGroup[group]?.map((s: any) => s.abbreviation) || []
     return groupSources.length > 0 && groupSources.every((abbr: string) => currentSources.includes(abbr))
   }
-  
+
   const isPhbRequired = () => {
-    const phbSources = sources.filter((s: any) => 
+    const phbSources = sources.filter((s: any) =>
       s.abbreviation === 'PHB' || s.abbreviation === 'XPHB'
     )
     return !phbSources.some((s: any) => data.allowedSources?.includes(s.abbreviation))
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Sparkle className="h-5 w-5 text-accent" weight="fill" />
-            <h3 className="font-semibold text-lg">Ability Score Generation</h3>
+    <div className="flex flex-col h-full gap-4">
+      <div className="shrink-0 grid grid-cols-2 gap-6 max-w-2xl mx-auto w-full">
+        <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+          <div className="flex items-center gap-2 pb-1 border-b border-border">
+            <Sparkle className="h-4 w-4 text-accent" weight="fill" />
+            <h3 className="font-semibold">Ability Score Generation</h3>
           </div>
-          
+
           <div className="space-y-2">
             <button
               onClick={() => onChange({ abilityScoreMethod: 'point-buy' })}
               className={cn(
-                'w-full px-4 py-3 rounded-lg border-2 text-left transition-all',
+                'w-full px-3 py-2 rounded-lg border-2 text-left transition-all text-sm',
                 data.abilityScoreMethod === 'point-buy'
                   ? 'border-accent bg-accent/10'
                   : 'border-border hover:border-accent/50'
@@ -105,7 +106,7 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
             <button
               onClick={() => onChange({ abilityScoreMethod: 'standard-array' })}
               className={cn(
-                'w-full px-4 py-3 rounded-lg border-2 text-left transition-all',
+                'w-full px-3 py-2 rounded-lg border-2 text-left transition-all text-sm',
                 data.abilityScoreMethod === 'standard-array'
                   ? 'border-accent bg-accent/10'
                   : 'border-border hover:border-accent/50'
@@ -117,7 +118,7 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
             <button
               onClick={() => onChange({ abilityScoreMethod: 'custom' })}
               className={cn(
-                'w-full px-4 py-3 rounded-lg border-2 text-left transition-all',
+                'w-full px-3 py-2 rounded-lg border-2 text-left transition-all text-sm',
                 data.abilityScoreMethod === 'custom'
                   ? 'border-accent bg-accent/10'
                   : 'border-border hover:border-accent/50'
@@ -128,44 +129,44 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Sparkle className="h-5 w-5 text-accent" weight="fill" />
-            <h3 className="font-semibold text-lg">Variant Rules</h3>
+        <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+          <div className="flex items-center gap-2 pb-1 border-b border-border">
+            <Sparkle className="h-4 w-4 text-accent" weight="fill" />
+            <h3 className="font-semibold">Variant Rules</h3>
           </div>
-          
-          <div className="space-y-3">
-            <div className="flex items-center justify-between py-2">
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between py-1.5">
               <Label htmlFor="optional-class-features" className="text-sm cursor-pointer">
                 Optional Class Features
               </Label>
               <Switch
                 id="optional-class-features"
                 checked={data.variantRules?.optionalClassFeatures || false}
-                onCheckedChange={(checked) => 
-                  onChange({ 
-                    variantRules: { 
-                      ...data.variantRules, 
-                      optionalClassFeatures: checked 
-                    } 
+                onCheckedChange={(checked) =>
+                  onChange({
+                    variantRules: {
+                      ...data.variantRules,
+                      optionalClassFeatures: checked
+                    }
                   })
                 }
               />
             </div>
 
-            <div className="flex items-center justify-between py-2">
+            <div className="flex items-center justify-between py-1.5">
               <Label htmlFor="average-hit-points" className="text-sm cursor-pointer">
                 Average Hit Points
               </Label>
               <Switch
                 id="average-hit-points"
                 checked={data.variantRules?.averageHitPoints || false}
-                onCheckedChange={(checked) => 
-                  onChange({ 
-                    variantRules: { 
-                      ...data.variantRules, 
-                      averageHitPoints: checked 
-                    } 
+                onCheckedChange={(checked) =>
+                  onChange({
+                    variantRules: {
+                      ...data.variantRules,
+                      averageHitPoints: checked
+                    }
                   })
                 }
               />
@@ -174,33 +175,23 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
         </div>
       </div>
 
-      <div className="border-t border-border pt-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="flex-1 min-h-0 flex flex-col rounded-lg border border-border bg-muted/20 p-4">
+        <div className="flex items-center justify-between mb-3 flex-shrink-0">
           <div className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-accent" weight="fill" />
             <h4 className="font-semibold text-lg">Allowed Sources</h4>
+            {(data.allowedSources?.length ?? 0) > 0 && (
+              <span className="inline-flex items-center justify-center rounded-full bg-accent/15 text-accent text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
+                {data.allowedSources?.length}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 text-sm">
-            <button
-              onClick={selectAllSources}
-              className="text-accent hover:underline font-medium"
-            >
-              Select All
-            </button>
+            <button onClick={selectAllSources} className="text-accent hover:underline font-medium">Select All</button>
             <span className="text-muted-foreground">|</span>
-            <button
-              onClick={selectRecommendedSources}
-              className="text-accent hover:underline font-medium"
-            >
-              Recommended
-            </button>
+            <button onClick={selectRecommendedSources} className="text-accent hover:underline font-medium">Recommended</button>
             <span className="text-muted-foreground">|</span>
-            <button
-              onClick={selectNoneSources}
-              className="text-accent hover:underline font-medium"
-            >
-              None
-            </button>
+            <button onClick={selectNoneSources} className="text-accent hover:underline font-medium">None</button>
           </div>
         </div>
 
@@ -209,25 +200,17 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
             No sources available. Please load game data in Settings first.
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="max-h-[280px] overflow-y-auto pr-2 space-y-4">
+          <div className="flex-1 min-h-0 flex flex-col gap-2">
+            <div className="flex-1 overflow-y-auto pr-1 space-y-4">
               {groupOrder.map(group => {
                 const groupSources = sourcesByGroup[group]
                 if (!groupSources || groupSources.length === 0) return null
-                
+
                 return (
-                  <div key={group} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h5 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                        {groupLabels[group]}
-                      </h5>
-                      <button
-                        onClick={() => selectGroupSources(group)}
-                        className="text-xs text-accent hover:underline font-medium"
-                      >
-                        {isGroupSelected(group) ? 'Deselect All' : 'Select All'}
-                      </button>
-                    </div>
+                  <div key={group} className="space-y-1.5">
+                    <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {groupLabels[group]}
+                    </h5>
                     <div className="grid grid-cols-2 gap-2">
                       {groupSources.map((source: any) => (
                         <button
@@ -240,7 +223,7 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
                               : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground'
                           )}
                         >
-                          <BookOpen className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                          <BookOpen className={cn('h-4 w-4 flex-shrink-0 mt-0.5', data.allowedSources?.includes(source.abbreviation) ? 'text-accent' : 'text-muted-foreground')} />
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold truncate">{source.name}</div>
                             <div className="text-xs font-mono text-muted-foreground">
@@ -255,11 +238,11 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
                 )
               })}
             </div>
-            
+
             {isPhbRequired() && (
-              <div className="text-xs text-muted-foreground flex items-start gap-1.5 mt-2 bg-muted/30 p-3 rounded-md">
-                <Warning className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                <span>At least one Player's Handbook (2014 or 2024) should be selected for a complete character creation experience.</span>
+              <div className="text-xs text-destructive flex items-center gap-1.5 flex-shrink-0 bg-destructive/10 border border-destructive/30 p-3 rounded-md">
+                <Warning className="h-3.5 w-3.5 flex-shrink-0" />
+                <span>At least one Player's Handbook (2014 or 2024) is required.</span>
               </div>
             )}
           </div>

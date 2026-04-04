@@ -20,6 +20,7 @@ export interface CharacterWizardData {
   portrait: string
   rulesMode: string
   allowedSources: string[]
+  raceAsiChoices: string[][]
   variantRules: {
     optionalClassFeatures: boolean
     averageHitPoints: boolean

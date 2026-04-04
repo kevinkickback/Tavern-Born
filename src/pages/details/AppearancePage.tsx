@@ -1,17 +1,14 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Eye } from '@phosphor-icons/react'
 import { useCharacterStore } from '@/store/characterStore'
 import { useState, useEffect } from 'react'
 import { RichTextArea } from '@/components/editor/RichTextArea'
-import { FormattingGuide } from '@/components/editor/FormattingGuide'
-import { toast } from 'sonner'
 
 export function AppearancePage() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
-  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+  const updateActiveCharacterDetails = useCharacterStore((state) => state.updateActiveCharacterDetails)
 
   const [age, setAge] = useState(activeCharacter?.details?.age?.toString() || '')
   const [height, setHeight] = useState(activeCharacter?.details?.height || '')
@@ -39,45 +36,8 @@ export function AppearancePage() {
     }
   }, [activeCharacter])
 
-  const handleSave = () => {
-    if (!activeCharacter) {
-      toast.error('No active character')
-      return
-    }
-
-    updateCharacter(activeCharacter.id, {
-      details: {
-        ...activeCharacter.details,
-        age: age ? parseInt(age) : undefined,
-        height,
-        weight,
-        eyes,
-        hair,
-        skin,
-        distinguishingMarks,
-        physicalDescription,
-        clothingStyle,
-        mannerisms,
-      }
-    })
-
-    toast.success('Appearance saved successfully')
-  }
-
-  const handleReset = () => {
-    if (activeCharacter?.details) {
-      setAge(activeCharacter.details.age?.toString() || '')
-      setHeight(activeCharacter.details.height || '')
-      setWeight(activeCharacter.details.weight || '')
-      setEyes(activeCharacter.details.eyes || '')
-      setHair(activeCharacter.details.hair || '')
-      setSkin(activeCharacter.details.skin || '')
-      setDistinguishingMarks(activeCharacter.details.distinguishingMarks || '')
-      setPhysicalDescription(activeCharacter.details.physicalDescription || '')
-      setClothingStyle(activeCharacter.details.clothingStyle || '')
-      setMannerisms(activeCharacter.details.mannerisms || '')
-      toast.info('Changes reset')
-    }
+  const updateDraftDetails = (updates: Record<string, unknown>) => {
+    updateActiveCharacterDetails(updates)
   }
 
   if (!activeCharacter) {
@@ -103,8 +63,6 @@ export function AppearancePage() {
         </p>
       </div>
 
-      <FormattingGuide />
-
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -116,7 +74,11 @@ export function AppearancePage() {
                 id="age"
                 type="number"
                 value={age}
-                onChange={(e) => setAge(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setAge(value)
+                  updateDraftDetails({ age: value ? parseInt(value) : undefined })
+                }}
                 placeholder="25"
               />
             </div>
@@ -128,7 +90,11 @@ export function AppearancePage() {
               <Input
                 id="height"
                 value={height}
-                onChange={(e) => setHeight(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setHeight(value)
+                  updateDraftDetails({ height: value })
+                }}
                 placeholder="5'10&quot;"
               />
             </div>
@@ -140,7 +106,11 @@ export function AppearancePage() {
               <Input
                 id="weight"
                 value={weight}
-                onChange={(e) => setWeight(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setWeight(value)
+                  updateDraftDetails({ weight: value })
+                }}
                 placeholder="180 lbs"
               />
             </div>
@@ -165,7 +135,11 @@ export function AppearancePage() {
             <Input
               id="eyes"
               value={eyes}
-              onChange={(e) => setEyes(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                setEyes(value)
+                updateDraftDetails({ eyes: value })
+              }}
               placeholder="e.g., Blue, Green, Amber"
             />
           </div>
@@ -177,7 +151,11 @@ export function AppearancePage() {
             <Input
               id="hair"
               value={hair}
-              onChange={(e) => setHair(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                setHair(value)
+                updateDraftDetails({ hair: value })
+              }}
               placeholder="e.g., Long black hair, Bald, Red beard"
             />
           </div>
@@ -189,7 +167,11 @@ export function AppearancePage() {
             <Input
               id="skin"
               value={skin}
-              onChange={(e) => setSkin(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                setSkin(value)
+                updateDraftDetails({ skin: value })
+              }}
               placeholder="e.g., Tan, Pale, Dark green scales"
             />
           </div>
@@ -200,7 +182,10 @@ export function AppearancePage() {
             id="distinguishing-marks"
             label="Distinguishing Marks"
             value={distinguishingMarks}
-            onChange={setDistinguishingMarks}
+            onChange={(value) => {
+              setDistinguishingMarks(value)
+              updateDraftDetails({ distinguishingMarks: value })
+            }}
             placeholder="Scars, tattoos, birthmarks, or other notable features..."
             rows={4}
           />
@@ -209,7 +194,10 @@ export function AppearancePage() {
             id="physical-description"
             label="Physical Description"
             value={physicalDescription}
-            onChange={setPhysicalDescription}
+            onChange={(value) => {
+              setPhysicalDescription(value)
+              updateDraftDetails({ physicalDescription: value })
+            }}
             placeholder="Describe your character's overall appearance and build..."
             rows={5}
           />
@@ -220,8 +208,11 @@ export function AppearancePage() {
             id="clothing-style"
             label="Clothing & Style"
             value={clothingStyle}
-            onChange={setClothingStyle}
-            placeholder="Describe what your character typically wears and their sense of style... Use {@item leather armor} or {@item cloak} for equipment references."
+            onChange={(value) => {
+              setClothingStyle(value)
+              updateDraftDetails({ clothingStyle: value })
+            }}
+            placeholder="Describe what your character typically wears and their sense of style."
             rows={3}
           />
 
@@ -229,16 +220,14 @@ export function AppearancePage() {
             id="mannerisms"
             label="Mannerisms & Body Language"
             value={mannerisms}
-            onChange={setMannerisms}
+            onChange={(value) => {
+              setMannerisms(value)
+              updateDraftDetails({ mannerisms: value })
+            }}
             placeholder="How does your character move, speak, or carry themselves?"
             rows={3}
           />
         </Card>
-      </div>
-
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={handleReset}>Reset</Button>
-        <Button onClick={handleSave}>Save Appearance</Button>
       </div>
     </div>
   )

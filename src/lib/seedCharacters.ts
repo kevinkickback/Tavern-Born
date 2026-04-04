@@ -183,6 +183,8 @@ export const DEV_SEED_CHARACTERS: Character[] = [
 			backstory:
 				"Born in the high elven city of Silverymoon, Thendrin showed an early aptitude for the arcane arts. After a century of study, he left the city to seek ancient magical lore lost during the Spellplague.",
 		},
+		portrait:
+			'/assets/images/characters/placeholder_char_card0.jpg',
 		createdAt: "2026-01-01T00:00:00.000Z",
 		lastModified: "2026-01-01T00:00:00.000Z",
 	},
@@ -353,6 +355,8 @@ export const DEV_SEED_CHARACTERS: Character[] = [
 			backstory:
 				"Serra served ten years in the Flaming Fist mercenary company before an incident in Baldur's Gate left her disillusioned with military life. Now she wanders, selling her blade where her conscience allows.",
 		},
+		portrait:
+			'/assets/images/characters/placeholder_char_card4.jpg',
 		createdAt: "2026-01-05T00:00:00.000Z",
 		lastModified: "2026-01-05T00:00:00.000Z",
 	},
@@ -530,6 +534,8 @@ export const DEV_SEED_CHARACTERS: Character[] = [
 			backstory:
 				"Raised in the back alleys of Waterdeep, Brindal learned to survive by his wits and nimble fingers. A chance encounter with a street magician opened his eyes to the arcane, and he now blends sleight-of-hand with genuine spellcraft.",
 		},
+		portrait:
+			'/assets/images/characters/placeholder_char_card7.jpg',
 		createdAt: "2026-01-10T00:00:00.000Z",
 		lastModified: "2026-01-10T00:00:00.000Z",
 	},

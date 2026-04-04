@@ -6,11 +6,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useCharacterStore } from '@/store/characterStore'
+import { useCharacterStore, emptyProvenance } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { AbilityScores } from '@/types/character'
 import { toast } from 'sonner'
 import { Warning } from '@phosphor-icons/react'
+import { applyRaceGrants, applyClassGrants, applyBackgroundGrants, addGrant, makeSourceTag } from '@/lib/provenance'
 import { WIZARD_STEPS, INITIAL_CHARACTER_DATA } from './constants'
 import { WizardNavigation } from './WizardNavigation'
 import { WizardFooter } from './WizardFooter'
@@ -82,6 +83,34 @@ export function CharacterCreationWizard({
   }
 
   const handleFinish = () => {
+    const raceObj = (gameData?.races ?? []).find(
+      (r: any) => r.name === characterData.race && (!characterData.raceSource || r.source === characterData.raceSource)
+    )
+    const subraceObj = raceObj?.subraces?.find((sr: any) => sr.name === characterData.subrace)
+    const classObj = (gameData?.classes ?? []).find(
+      (c: any) => c.name === characterData.class && (!characterData.classSource || c.source === characterData.classSource)
+    )
+    const bgObj = (gameData?.backgrounds ?? []).find(
+      (b: any) => b.name === characterData.background && (!characterData.backgroundSource || b.source === characterData.backgroundSource)
+    )
+
+    let provenance = emptyProvenance()
+    if (raceObj) provenance = applyRaceGrants(raceObj, subraceObj, provenance)
+    if (classObj) provenance = applyClassGrants(classObj, undefined, provenance)
+    if (bgObj) provenance = applyBackgroundGrants(bgObj, provenance)
+    provenance = addGrant(provenance, 'languages', 'Common', makeSourceTag('manual', 'Default', 'fixed'))
+
+    const classProficiencies = classObj?.startingProficiencies ?? {}
+    const proficiencies = {
+      armor: classProficiencies.armor ?? [],
+      weapons: classProficiencies.weapons ?? [],
+      tools: (classProficiencies.tools ?? []).filter(
+        (t: string) => !t.toLowerCase().includes('choose') && !t.toLowerCase().includes('any')
+      ),
+      languages: ['Common'],
+      savingThrows: [],
+    }
+
     const character = createNewCharacter({
       name: characterData.name,
       race: characterData.race,
@@ -102,6 +131,9 @@ export function CharacterCreationWizard({
       details: {
         gender: characterData.gender,
       },
+      provenance,
+      proficiencies,
+      raceAsiChoices: characterData.raceAsiChoices,
     })
 
     setActiveCharacter(character.id)
@@ -135,7 +167,7 @@ export function CharacterCreationWizard({
 
           <div className="flex-1 flex flex-col min-w-0">
             <div className="flex-1 overflow-y-auto px-8 py-6 min-h-0">
-              {validationError && (
+              {validationError && invalidFields.size === 0 && (
                 <Alert variant="destructive" className="mb-4">
                   <Warning className="h-4 w-4" />
                   <AlertDescription>{validationError}</AlertDescription>

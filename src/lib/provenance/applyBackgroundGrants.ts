@@ -1,0 +1,122 @@
+import type { ProvenanceLedger, ChoiceRecord } from './types'
+import { makeSourceTag } from './sourceLabels'
+import { addGrant, addChoicePlaceholder } from './ledger'
+import { normalizeKey } from './normalization'
+
+type ProfBlock = Record<string, boolean | { choose?: { from: string[]; count: number } } | number>
+
+function normalizeGenericToolChoice(value: string): string | null {
+  const key = normalizeKey(value)
+  if (key.includes('musical instrument') || key === 'anymusicalinstrument' || key === 'instrumentmusical') {
+    return 'musical instrument'
+  }
+  if (
+    key.includes("artisan's tool") ||
+    key.includes('artisans tool') ||
+    key === 'anyartisanstool' ||
+    key === 'anyartisantool'
+  ) {
+    return "artisan's tools"
+  }
+  if (key.includes('gaming set') || key === 'anygamingset' || key === 'setgaming') {
+    return 'gaming set'
+  }
+  return null
+}
+
+function applyProfBlocks(
+  ledger: ProvenanceLedger,
+  domain: 'skills' | 'languages' | 'tools',
+  blocks: ProfBlock[],
+  tag: import('./types').SourceTag,
+  choiceIdPrefix: string,
+): ProvenanceLedger {
+  let result = ledger
+  let choiceIndex = 0
+  for (const block of blocks) {
+    for (const [key, val] of Object.entries(block)) {
+      if (key === 'choose' || key === 'anyStandard') continue
+      if (domain === 'tools') {
+        const generic = normalizeGenericToolChoice(key)
+        if (generic) {
+          if (val === true || (typeof val === 'number' && val > 0)) {
+            const choiceRecord: ChoiceRecord = {
+              id: `${choiceIdPrefix}:${domain}:generic:${choiceIndex}`,
+              domain,
+              sourceTag: { ...tag, grantType: 'placeholder' },
+              chooseCount: typeof val === 'number' && val > 0 ? val : 1,
+              optionPool: [generic],
+              selected: [],
+              status: 'pending',
+            }
+            result = addChoicePlaceholder(result, choiceRecord)
+            choiceIndex++
+            continue
+          }
+        }
+      }
+      if (val === true) {
+        result = addGrant(result, domain, key, tag)
+      }
+    }
+    const anyStandard = (block as any).anyStandard as number | undefined
+    if (anyStandard) {
+      const choiceRecord: ChoiceRecord = {
+        id: `${choiceIdPrefix}:${domain}:any:${choiceIndex}`,
+        domain,
+        sourceTag: { ...tag, grantType: 'placeholder' },
+        chooseCount: anyStandard,
+        optionPool: [],
+        selected: [],
+        status: 'pending',
+      }
+      result = addChoicePlaceholder(result, choiceRecord)
+      choiceIndex++
+    }
+    const choose = (block as any).choose as
+      | { from?: string[]; count?: number }
+      | undefined
+    if (choose) {
+      const normalizedPool = domain === 'tools'
+        ? (choose.from ?? []).map((entry) => normalizeGenericToolChoice(entry) ?? entry)
+        : (choose.from ?? [])
+      const choiceRecord: ChoiceRecord = {
+        id: `${choiceIdPrefix}:${domain}:choose:${choiceIndex}`,
+        domain,
+        sourceTag: { ...tag, grantType: 'placeholder' },
+        chooseCount: choose.count ?? 1,
+        optionPool: normalizedPool,
+        selected: [],
+        status: 'pending',
+      }
+      result = addChoicePlaceholder(result, choiceRecord)
+      choiceIndex++
+    }
+  }
+  return result
+}
+
+/**
+ * Apply proficiency grants from a background to the ledger.
+ * Handles fixed and choice-based skill, language, and tool proficiencies.
+ */
+export function applyBackgroundGrants(
+  bg: {
+    name: string
+    source?: string
+    skillProficiencies?: any[]
+    languageProficiencies?: any[]
+    toolProficiencies?: any[]
+  },
+  ledger: ProvenanceLedger,
+): ProvenanceLedger {
+  let result = ledger
+  const bgTag = makeSourceTag('background', bg.name, 'fixed', bg.source)
+  const prefix = `background:${normalizeKey(bg.name)}`
+
+  result = applyProfBlocks(result, 'skills', bg.skillProficiencies ?? [], bgTag, prefix)
+  result = applyProfBlocks(result, 'languages', bg.languageProficiencies ?? [], bgTag, prefix)
+  result = applyProfBlocks(result, 'tools', bg.toolProficiencies ?? [], bgTag, prefix)
+
+  return result
+}

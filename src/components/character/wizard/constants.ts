@@ -30,11 +30,12 @@ export const INITIAL_CHARACTER_DATA = {
   classSource: '',
   background: '',
   backgroundSource: '',
-  abilityScoreMethod: 'standard-array',
+  abilityScoreMethod: 'point-buy',
   abilityScores: { strength: 15, dexterity: 14, constitution: 13, intelligence: 12, wisdom: 10, charisma: 8 },
   portrait: '',
   rulesMode: 'strict',
   allowedSources: [] as string[],
+  raceAsiChoices: [] as string[][],
   variantRules: {
     optionalClassFeatures: false,
     averageHitPoints: false,

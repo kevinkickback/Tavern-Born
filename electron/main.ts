@@ -7,6 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
+let hasUnsavedChanges = false;
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 
@@ -67,6 +68,27 @@ function createWindow(): void {
 	mainWindow.on("closed", () => {
 		mainWindow = null;
 	});
+
+	mainWindow.on("close", (event) => {
+		if (!hasUnsavedChanges) {
+			return;
+		}
+
+		const choice = dialog.showMessageBoxSync(mainWindow!, {
+			type: "warning",
+			title: "Unsaved changes",
+			message: "You have unsaved changes.",
+			detail:
+				"Closing the app now will discard those changes. Are you sure you want to continue?",
+			buttons: ["Cancel", "Discard Changes"],
+			defaultId: 0,
+			cancelId: 0,
+		});
+
+		if (choice === 0) {
+			event.preventDefault();
+		}
+	});
 }
 
 // --- Security: Content Security Policy ---
@@ -117,6 +139,9 @@ app.on("ready", () => {
 		const normalized = normalize(filePath);
 		const content = await readFile(normalized, "utf-8");
 		return JSON.parse(content);
+	});
+	ipcMain.on("state:setUnsavedChanges", (_event, value: boolean) => {
+		hasUnsavedChanges = !!value;
 	});
 });
 

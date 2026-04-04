@@ -6,13 +6,11 @@ import { Plus, Trash, Users } from '@phosphor-icons/react'
 import { useState, useEffect } from 'react'
 import { useCharacterStore } from '@/store/characterStore'
 import { RichTextArea } from '@/components/editor/RichTextArea'
-import { FormattingGuide } from '@/components/editor/FormattingGuide'
-import { toast } from 'sonner'
 import type { Ally } from '@/types/character'
 
 export function AlliesOrganizationsPage() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
-  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+  const updateActiveCharacterDetails = useCharacterStore((state) => state.updateActiveCharacterDetails)
 
   const [faction, setFaction] = useState(activeCharacter?.details?.faction || '')
   const [rank, setRank] = useState(activeCharacter?.details?.rank || '')
@@ -34,8 +32,12 @@ export function AlliesOrganizationsPage() {
     }
   }, [activeCharacter])
 
+  const updateDraftDetails = (updates: Record<string, unknown>) => {
+    updateActiveCharacterDetails(updates)
+  }
+
   const addAlly = () => {
-    setAllies([
+    const nextAllies = [
       ...allies,
       {
         id: Date.now().toString(),
@@ -43,52 +45,25 @@ export function AlliesOrganizationsPage() {
         relationship: '',
         description: '',
       },
-    ])
+    ]
+
+    setAllies(nextAllies)
+    updateDraftDetails({ allies: nextAllies })
   }
 
   const removeAlly = (id: string) => {
-    setAllies(allies.filter((ally) => ally.id !== id))
+    const nextAllies = allies.filter((ally) => ally.id !== id)
+    setAllies(nextAllies)
+    updateDraftDetails({ allies: nextAllies })
   }
 
   const updateAlly = (id: string, field: keyof Ally, value: string) => {
-    setAllies(allies.map(ally =>
+    const nextAllies = allies.map(ally =>
       ally.id === id ? { ...ally, [field]: value } : ally
-    ))
-  }
+    )
 
-  const handleSave = () => {
-    if (!activeCharacter) {
-      toast.error('No active character')
-      return
-    }
-
-    updateCharacter(activeCharacter.id, {
-      details: {
-        ...activeCharacter.details,
-        faction,
-        rank,
-        factionNotes,
-        patron,
-        patronDetails,
-        nemesis,
-        allies,
-      }
-    })
-
-    toast.success('Allies & Organizations saved successfully')
-  }
-
-  const handleReset = () => {
-    if (activeCharacter?.details) {
-      setFaction(activeCharacter.details.faction || '')
-      setRank(activeCharacter.details.rank || '')
-      setFactionNotes(activeCharacter.details.factionNotes || '')
-      setPatron(activeCharacter.details.patron || '')
-      setPatronDetails(activeCharacter.details.patronDetails || '')
-      setNemesis(activeCharacter.details.nemesis || '')
-      setAllies(activeCharacter.details.allies || [])
-      toast.info('Changes reset')
-    }
+    setAllies(nextAllies)
+    updateDraftDetails({ allies: nextAllies })
   }
 
   if (!activeCharacter) {
@@ -114,8 +89,6 @@ export function AlliesOrganizationsPage() {
         </p>
       </div>
 
-      <FormattingGuide />
-
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="p-6 space-y-4">
           <div>
@@ -126,7 +99,11 @@ export function AlliesOrganizationsPage() {
             <Input
               id="faction"
               value={faction}
-              onChange={(e) => setFaction(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                setFaction(value)
+                updateDraftDetails({ faction: value })
+              }}
               placeholder="e.g., Harpers, Zhentarim, None"
             />
           </div>
@@ -138,7 +115,11 @@ export function AlliesOrganizationsPage() {
             <Input
               id="rank"
               value={rank}
-              onChange={(e) => setRank(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                setRank(value)
+                updateDraftDetails({ rank: value })
+              }}
               placeholder="e.g., Initiate, Member, Agent"
             />
           </div>
@@ -147,7 +128,10 @@ export function AlliesOrganizationsPage() {
             id="faction-notes"
             label="Faction Notes"
             value={factionNotes}
-            onChange={setFactionNotes}
+            onChange={(value) => {
+              setFactionNotes(value)
+              updateDraftDetails({ factionNotes: value })
+            }}
             placeholder="Details about your standing and activities within the organization..."
             rows={4}
           />
@@ -161,7 +145,11 @@ export function AlliesOrganizationsPage() {
             <Input
               id="patron"
               value={patron}
-              onChange={(e) => setPatron(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                setPatron(value)
+                updateDraftDetails({ patron: value })
+              }}
               placeholder="Who guides or sponsors your character?"
             />
           </div>
@@ -170,7 +158,10 @@ export function AlliesOrganizationsPage() {
             id="patron-details"
             label="Patron Details"
             value={patronDetails}
-            onChange={setPatronDetails}
+            onChange={(value) => {
+              setPatronDetails(value)
+              updateDraftDetails({ patronDetails: value })
+            }}
             placeholder="Describe your relationship with your patron..."
             rows={4}
           />
@@ -182,7 +173,11 @@ export function AlliesOrganizationsPage() {
             <Input
               id="nemesis"
               value={nemesis}
-              onChange={(e) => setNemesis(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                setNemesis(value)
+                updateDraftDetails({ nemesis: value })
+              }}
               placeholder="Who opposes your character?"
             />
           </div>
@@ -258,11 +253,6 @@ export function AlliesOrganizationsPage() {
           </div>
         )}
       </Card>
-
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={handleReset}>Reset</Button>
-        <Button onClick={handleSave}>Save Allies & Organizations</Button>
-      </div>
     </div>
   )
 }

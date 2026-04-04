@@ -79,3 +79,11 @@ Settings, Compendium, and all Details sub-nav pages wrap cards in:
 <div className="max-w-7xl mx-auto w-full"><Card className="w-full">...</Card></div>
 ```
 Exceptions: character cards, sidebar, Portrait page (full-bleed).
+
+### 11. Comments, docs, style, and tests
+
+- **Inline comments**: use only when code is not self-documenting.
+- **JSDoc scope**: add JSDoc only for public functions, public classes, and exported types.
+- **Naming first**: prefer clear, descriptive names over explanatory comments.
+- **Code style**: keep formatting consistent and follow idiomatic TypeScript/React patterns.
+- **Testing requirement**: every new feature must include relevant test coverage (unit and/or E2E as appropriate to the change).

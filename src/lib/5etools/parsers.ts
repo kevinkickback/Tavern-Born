@@ -279,6 +279,17 @@ export function buildSourcesList(sourceAbbreviations: string[], booksData: any, 
       const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
       const groupDiff = groupOrder.indexOf(a.group) - groupOrder.indexOf(b.group)
       if (groupDiff !== 0) return groupDiff
+      // Within core: PHB first, DMG second, MM third
+      if (a.group === 'core') {
+        const coreSlot = (abbr: string) => {
+          if (abbr === 'PHB' || abbr === 'XPHB') return 0
+          if (abbr === 'DMG' || abbr === 'XDMG') return 1
+          if (abbr === 'MM'  || abbr === 'XMM')  return 2
+          return 3
+        }
+        const slotDiff = coreSlot(a.abbreviation) - coreSlot(b.abbreviation)
+        if (slotDiff !== 0) return slotDiff
+      }
       if (a.year && b.year && a.year !== b.year) return b.year - a.year
       return a.name.localeCompare(b.name)
     })
