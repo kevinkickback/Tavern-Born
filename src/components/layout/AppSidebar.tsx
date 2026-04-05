@@ -1,27 +1,26 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
 import {
-  House,
-  Sword,
-  Star,
-  MagicWand,
   Backpack,
-  User,
+  Bell,
+  BookOpen,
+  CaretDown,
   FileText,
   Gear,
-  Bell,
+  House,
+  MagicWand,
   Moon,
-  CaretDown,
-  BookOpen,
-} from '@phosphor-icons/react'
-import { useNavigate } from 'react-router-dom'
-import { cn } from '@/lib/utils'
+  Star,
+  Sword,
+  User,
+} from '@phosphor-icons/react';
+import { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 interface NavItem {
-  label: string
-  path: string
-  icon: React.ReactNode
-  children?: NavItem[]
+  label: string;
+  path: string;
+  icon: React.ReactNode;
+  children?: NavItem[];
 }
 
 const navItems: NavItem[] = [
@@ -63,9 +62,17 @@ const navItems: NavItem[] = [
     icon: <User />,
     children: [
       { label: 'Portrait', path: '/details/portrait', icon: null },
-      { label: 'Characteristics', path: '/details/characteristics', icon: null },
+      {
+        label: 'Characteristics',
+        path: '/details/characteristics',
+        icon: null,
+      },
       { label: 'Appearance', path: '/details/appearance', icon: null },
-      { label: 'Allies & Organizations', path: '/details/allies-organizations', icon: null },
+      {
+        label: 'Allies & Organizations',
+        path: '/details/allies-organizations',
+        icon: null,
+      },
       { label: 'History', path: '/details/history', icon: null },
     ],
   },
@@ -79,23 +86,21 @@ const navItems: NavItem[] = [
     path: '/settings',
     icon: <Gear />,
   },
-]
+];
 
 export function AppSidebar() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [expandedSections, setExpandedSections] = useState<string[]>([])
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [expandedSections, setExpandedSections] = useState<string[]>([]);
 
   const toggleSection = (label: string) => {
-    setExpandedSections((prev) =>
-      prev.includes(label) ? [] : [label]
-    )
-  }
+    setExpandedSections((prev) => (prev.includes(label) ? [] : [label]));
+  };
 
   const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/'
-    return location.pathname.startsWith(path)
-  }
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <aside className="w-60 bg-card border-r border-border flex flex-col h-full">
@@ -106,12 +111,13 @@ export function AppSidebar() {
               {item.children ? (
                 <div>
                   <button
+                    type="button"
                     onClick={() => toggleSection(item.label)}
                     className={cn(
                       'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
                       isActive(item.path)
                         ? 'bg-primary text-primary-foreground'
-                        : 'text-foreground hover:bg-secondary hover:text-secondary-foreground'
+                        : 'text-foreground hover:bg-secondary hover:text-secondary-foreground',
                     )}
                   >
                     <span className="flex items-center gap-3">
@@ -121,7 +127,7 @@ export function AppSidebar() {
                     <CaretDown
                       className={cn(
                         'transition-transform text-base',
-                        expandedSections.includes(item.label) && 'rotate-180'
+                        expandedSections.includes(item.label) && 'rotate-180',
                       )}
                     />
                   </button>
@@ -135,7 +141,7 @@ export function AppSidebar() {
                               'block px-4 py-2 rounded-lg text-sm transition-colors',
                               isActive(child.path)
                                 ? 'bg-accent text-accent-foreground font-medium'
-                                : 'text-muted-foreground hover:bg-secondary hover:text-secondary-foreground'
+                                : 'text-muted-foreground hover:bg-secondary hover:text-secondary-foreground',
                             )}
                           >
                             {child.label}
@@ -152,7 +158,7 @@ export function AppSidebar() {
                     'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
                     isActive(item.path)
                       ? 'bg-primary text-primary-foreground'
-                      : 'text-foreground hover:bg-secondary hover:text-secondary-foreground'
+                      : 'text-foreground hover:bg-secondary hover:text-secondary-foreground',
                   )}
                 >
                   <span className="text-lg">{item.icon}</span>
@@ -163,21 +169,27 @@ export function AppSidebar() {
           ))}
         </ul>
       </nav>
-
       <div className="p-4 border-t border-border flex items-center justify-center gap-4">
         <button
+          type="button"
           onClick={() => navigate('/compendium')}
           className="p-2 rounded-lg hover:bg-secondary transition-colors"
         >
           <BookOpen className="text-lg" />
         </button>
-        <button className="p-2 rounded-lg hover:bg-secondary transition-colors">
+        <button
+          className="p-2 rounded-lg hover:bg-secondary transition-colors"
+          type="button"
+        >
           <Bell className="text-lg" />
         </button>
-        <button className="p-2 rounded-lg hover:bg-secondary transition-colors">
+        <button
+          className="p-2 rounded-lg hover:bg-secondary transition-colors"
+          type="button"
+        >
           <Moon className="text-lg" />
         </button>
       </div>
     </aside>
-  )
+  );
 }

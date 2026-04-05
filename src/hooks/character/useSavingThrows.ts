@@ -1,9 +1,17 @@
 import { useMemo } from 'react';
+import {
+  ABILITY_NAMES,
+  type AbilityName,
+} from '@/lib/calculations/abilityScores';
+import {
+  getAbilityModifier,
+  getProficiencyBonus,
+} from '@/lib/calculations/gameRules';
+import {
+  deriveAllSavingThrows,
+  type SavingThrowResult,
+} from '@/lib/calculations/skills';
 import { useCharacterStore } from '@/store/characterStore';
-import { getAbilityModifier } from '@/lib/calculations/gameRules';
-import { getProficiencyBonus } from '@/lib/calculations/gameRules';
-import { AbilityName, ABILITY_NAMES } from '@/lib/calculations/abilityScores';
-import { deriveAllSavingThrows, SavingThrowResult } from '@/lib/calculations/skills';
 
 export type { SavingThrowResult };
 
@@ -21,18 +29,27 @@ export function useSavingThrows(): SavingThrowsState {
 
   const level = activeCharacter?.level ?? 1;
   const abilityScores = activeCharacter?.abilityScores;
-  const proficientSavingThrows = activeCharacter?.proficiencies?.savingThrows ?? [];
+  const proficientSavingThrows =
+    activeCharacter?.proficiencies?.savingThrows ?? [];
 
   const abilityModifiers = useMemo(() => {
     return Object.fromEntries(
-      ABILITY_NAMES.map((a) => [a, getAbilityModifier(abilityScores?.[a] ?? 10)]),
+      ABILITY_NAMES.map((a) => [
+        a,
+        getAbilityModifier(abilityScores?.[a] ?? 10),
+      ]),
     ) as Record<AbilityName, number>;
   }, [abilityScores]);
 
   const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level]);
 
   const savingThrows = useMemo(
-    () => deriveAllSavingThrows(abilityModifiers, proficientSavingThrows, proficiencyBonus),
+    () =>
+      deriveAllSavingThrows(
+        abilityModifiers,
+        proficientSavingThrows,
+        proficiencyBonus,
+      ),
     [abilityModifiers, proficientSavingThrows, proficiencyBonus],
   );
 
@@ -43,7 +60,10 @@ export function useSavingThrows(): SavingThrowsState {
       ? current.filter((a) => a !== ability)
       : [...current, ability];
     updateCharacter(activeCharacter.id, {
-      proficiencies: { ...activeCharacter.proficiencies, savingThrows: updated },
+      proficiencies: {
+        ...activeCharacter.proficiencies,
+        savingThrows: updated,
+      },
     });
   };
 

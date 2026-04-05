@@ -1,21 +1,33 @@
-import { useState, useMemo } from 'react'
-import { useGameDataStore } from '@/store/gameDataStore'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { MagnifyingGlass, Book, CaretRight, CaretLeft, Funnel, X } from '@phosphor-icons/react'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
+import {
+  Book,
+  CaretLeft,
+  CaretRight,
+  Funnel,
+  MagnifyingGlass,
+  X,
+} from '@phosphor-icons/react';
+import { useMemo, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { renderEntry } from '@/lib/renderer'
-import { cn } from '@/lib/utils'
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { renderEntry } from '@/lib/renderer';
+import { cn } from '@/lib/utils';
+import { useGameDataStore } from '@/store/gameDataStore';
 
 const ENTRY_TYPES = [
   'Race',
@@ -29,230 +41,271 @@ const ENTRY_TYPES = [
   'Condition',
   'Language',
   'Deity',
-] as const
+] as const;
 
 interface CompendiumEntry {
-  name: string
-  type: string
-  source: string
-  description?: string
-  data: any
+  name: string;
+  type: string;
+  source: string;
+  description?: string;
+  data: Record<string, unknown>;
 }
 
-
-const MAX_DISPLAY = 200
+const MAX_DISPLAY = 200;
 
 export function CompendiumPage() {
-  const gameData = useGameDataStore((state) => state.gameData)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set())
-  const [activeSources, setActiveSources] = useState<Set<string>>(new Set())
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(null)
-  const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const gameData = useGameDataStore((state) => state.gameData);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
+  const [activeSources, setActiveSources] = useState<Set<string>>(new Set());
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(
+    null,
+  );
+  const [detailCollapsed, setDetailCollapsed] = useState(false);
 
   const allEntries = useMemo(() => {
-    if (!gameData) return []
+    if (!gameData) return [];
 
-    const entries: CompendiumEntry[] = []
+    const entries: CompendiumEntry[] = [];
+    const asObj = (value: unknown): Record<string, unknown> =>
+      typeof value === 'object' && value !== null
+        ? (value as Record<string, unknown>)
+        : {};
 
     if (gameData.races) {
-      Object.values(gameData.races).forEach((race: any) => {
+      Object.values(gameData.races).forEach((race) => {
+        const raceObj = asObj(race);
+        const entriesList = Array.isArray(raceObj.entries)
+          ? raceObj.entries
+          : [];
         entries.push({
-          name: race.name,
+          name: String(raceObj.name ?? ''),
           type: 'Race',
-          source: race.source || 'Unknown',
-          description: race.entries?.[0] || '',
-          data: race,
-        })
-      })
+          source: String(raceObj.source ?? 'Unknown'),
+          description: String(entriesList[0] ?? ''),
+          data: raceObj,
+        });
+      });
     }
 
     if (gameData.classes) {
-      Object.values(gameData.classes).forEach((cls: any) => {
+      Object.values(gameData.classes).forEach((cls) => {
+        const clsObj = asObj(cls);
+        const fluffEntries = Array.isArray(asObj(clsObj.fluff).entries)
+          ? (asObj(clsObj.fluff).entries as unknown[])
+          : [];
         entries.push({
-          name: cls.name,
+          name: String(clsObj.name ?? ''),
           type: 'Class',
-          source: cls.source || 'Unknown',
-          description: cls.fluff?.entries?.[0] || '',
-          data: cls,
-        })
-      })
+          source: String(clsObj.source ?? 'Unknown'),
+          description: String(fluffEntries[0] ?? ''),
+          data: clsObj,
+        });
+      });
     }
 
     if (gameData.spells) {
-      Object.values(gameData.spells).forEach((spell: any) => {
+      Object.values(gameData.spells).forEach((spell) => {
+        const spellObj = asObj(spell);
         entries.push({
-          name: spell.name,
+          name: String(spellObj.name ?? ''),
           type: 'Spell',
-          source: spell.source || 'Unknown',
-          description: `Level ${spell.level} ${spell.school}`,
-          data: spell,
-        })
-      })
+          source: String(spellObj.source ?? 'Unknown'),
+          description: `Level ${String(spellObj.level ?? '?')} ${String(spellObj.school ?? '')}`,
+          data: spellObj,
+        });
+      });
     }
 
     if (gameData.items) {
-      gameData.items.forEach((item: any) => {
+      gameData.items.forEach((item) => {
+        const itemObj = asObj(item);
+        const itemEntries = Array.isArray(itemObj.entries)
+          ? itemObj.entries
+          : [];
         entries.push({
-          name: item.name,
+          name: String(itemObj.name ?? ''),
           type: 'Item',
-          source: item.source || 'Unknown',
-          description: item.entries?.[0] || item.type || '',
-          data: item,
-        })
-      })
+          source: String(itemObj.source ?? 'Unknown'),
+          description: String(itemEntries[0] ?? itemObj.type ?? ''),
+          data: itemObj,
+        });
+      });
     }
 
     if (gameData.backgrounds) {
-      Object.values(gameData.backgrounds).forEach((bg: any) => {
+      Object.values(gameData.backgrounds).forEach((bg) => {
+        const bgObj = asObj(bg);
+        const bgEntries = Array.isArray(bgObj.entries) ? bgObj.entries : [];
         entries.push({
-          name: bg.name,
+          name: String(bgObj.name ?? ''),
           type: 'Background',
-          source: bg.source || 'Unknown',
-          description: bg.entries?.[0] || '',
-          data: bg,
-        })
-      })
+          source: String(bgObj.source ?? 'Unknown'),
+          description: String(bgEntries[0] ?? ''),
+          data: bgObj,
+        });
+      });
     }
 
     if (gameData.feats) {
-      Object.values(gameData.feats).forEach((feat: any) => {
+      Object.values(gameData.feats).forEach((feat) => {
+        const featObj = asObj(feat);
+        const featEntries = Array.isArray(featObj.entries)
+          ? featObj.entries
+          : [];
         entries.push({
-          name: feat.name,
+          name: String(featObj.name ?? ''),
           type: 'Feat',
-          source: feat.source || 'Unknown',
-          description: feat.entries?.[0] || '',
-          data: feat,
-        })
-      })
+          source: String(featObj.source ?? 'Unknown'),
+          description: String(featEntries[0] ?? ''),
+          data: featObj,
+        });
+      });
     }
 
     if (gameData.skills) {
-      Object.values(gameData.skills).forEach((skill: any) => {
+      Object.values(gameData.skills).forEach((skill) => {
+        const skillObj = asObj(skill);
+        const skillEntries = Array.isArray(skillObj.entries)
+          ? skillObj.entries
+          : [];
         entries.push({
-          name: skill.name,
+          name: String(skillObj.name ?? ''),
           type: 'Skill',
-          source: skill.source || 'Unknown',
-          description: skill.entries?.[0] || '',
-          data: skill,
-        })
-      })
+          source: String(skillObj.source ?? 'Unknown'),
+          description: String(skillEntries[0] ?? ''),
+          data: skillObj,
+        });
+      });
     }
 
     if (gameData.actions) {
-      gameData.actions.forEach((action: any) => {
+      gameData.actions.forEach((action) => {
+        const actionObj = asObj(action);
+        const actionEntries = Array.isArray(actionObj.entries)
+          ? actionObj.entries
+          : [];
         entries.push({
-          name: action.name,
+          name: String(actionObj.name ?? ''),
           type: 'Action',
-          source: action.source || 'Unknown',
-          description: action.entries?.[0] || '',
-          data: action,
-        })
-      })
+          source: String(actionObj.source ?? 'Unknown'),
+          description: String(actionEntries[0] ?? ''),
+          data: actionObj,
+        });
+      });
     }
 
     if (gameData.conditions) {
-      gameData.conditions.forEach((cond: any) => {
+      gameData.conditions.forEach((cond) => {
+        const condObj = asObj(cond);
+        const condEntries = Array.isArray(condObj.entries)
+          ? condObj.entries
+          : [];
         entries.push({
-          name: cond.name,
+          name: String(condObj.name ?? ''),
           type: 'Condition',
-          source: cond.source || 'Unknown',
-          description: cond.entries?.[0] || '',
-          data: cond,
-        })
-      })
+          source: String(condObj.source ?? 'Unknown'),
+          description: String(condEntries[0] ?? ''),
+          data: condObj,
+        });
+      });
     }
 
     if (gameData.languages) {
-      Object.values(gameData.languages).forEach((lang: any) => {
+      Object.values(gameData.languages).forEach((lang) => {
+        const langObj = asObj(lang);
+        const langEntries = Array.isArray(langObj.entries)
+          ? langObj.entries
+          : [];
         entries.push({
-          name: lang.name,
+          name: String(langObj.name ?? ''),
           type: 'Language',
-          source: lang.source || 'Unknown',
-          description: lang.entries?.[0] || lang.type || '',
-          data: lang,
-        })
-      })
+          source: String(langObj.source ?? 'Unknown'),
+          description: String(langEntries[0] ?? langObj.type ?? ''),
+          data: langObj,
+        });
+      });
     }
 
     if (gameData.deities) {
-      gameData.deities.forEach((deity: any) => {
+      gameData.deities.forEach((deity) => {
+        const deityObj = asObj(deity);
         entries.push({
-          name: deity.name,
+          name: String(deityObj.name ?? ''),
           type: 'Deity',
-          source: deity.source || 'Unknown',
-          description: deity.title || deity.alignment || '',
-          data: deity,
-        })
-      })
+          source: String(deityObj.source ?? 'Unknown'),
+          description: String(deityObj.title ?? deityObj.alignment ?? ''),
+          data: deityObj,
+        });
+      });
     }
 
-    return entries
-  }, [gameData])
+    return entries;
+  }, [gameData]);
 
   const allSources = useMemo(
     () => Array.from(new Set(allEntries.map((e) => e.source))).sort(),
     [allEntries],
-  )
+  );
 
   const sourceNameMap = useMemo(() => {
-    const map = new Map<string, string>()
+    const map = new Map<string, string>();
     for (const s of gameData?.sources ?? []) {
-      map.set(s.abbreviation, s.name)
+      map.set(s.abbreviation, s.name);
     }
-    return map
-  }, [gameData?.sources])
+    return map;
+  }, [gameData?.sources]);
 
-  const activeFilterCount = activeTypes.size + activeSources.size
+  const activeFilterCount = activeTypes.size + activeSources.size;
 
   const toggleType = (type: string) => {
     setActiveTypes((prev) => {
-      const next = new Set(prev)
-      next.has(type) ? next.delete(type) : next.add(type)
-      return next
-    })
-  }
+      const next = new Set(prev);
+      next.has(type) ? next.delete(type) : next.add(type);
+      return next;
+    });
+  };
 
   const toggleSource = (source: string) => {
     setActiveSources((prev) => {
-      const next = new Set(prev)
-      next.has(source) ? next.delete(source) : next.add(source)
-      return next
-    })
-  }
+      const next = new Set(prev);
+      next.has(source) ? next.delete(source) : next.add(source);
+      return next;
+    });
+  };
 
   const clearFilters = () => {
-    setActiveTypes(new Set())
-    setActiveSources(new Set())
-  }
+    setActiveTypes(new Set());
+    setActiveSources(new Set());
+  };
 
   const filteredEntries = useMemo(() => {
-    let filtered = allEntries
+    let filtered = allEntries;
 
     if (activeTypes.size > 0) {
-      filtered = filtered.filter((entry) => activeTypes.has(entry.type))
+      filtered = filtered.filter((entry) => activeTypes.has(entry.type));
     }
 
     if (activeSources.size > 0) {
-      filtered = filtered.filter((entry) => activeSources.has(entry.source))
+      filtered = filtered.filter((entry) => activeSources.has(entry.source));
     }
 
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (entry) =>
           entry.name.toLowerCase().includes(query) ||
           entry.type.toLowerCase().includes(query) ||
           entry.source.toLowerCase().includes(query),
-      )
+      );
     }
 
-    return filtered.sort((a, b) => a.name.localeCompare(b.name))
-  }, [allEntries, searchQuery, activeTypes, activeSources])
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+  }, [allEntries, searchQuery, activeTypes, activeSources]);
 
-  const displayedEntries = filteredEntries.slice(0, MAX_DISPLAY)
-  const hasMore = filteredEntries.length > MAX_DISPLAY
+  const displayedEntries = filteredEntries.slice(0, MAX_DISPLAY);
+  const hasMore = filteredEntries.length > MAX_DISPLAY;
 
   if (!gameData) {
     return (
@@ -261,12 +314,13 @@ export function CompendiumPage() {
           <CardHeader>
             <CardTitle>No Data Loaded</CardTitle>
             <CardDescription>
-              Please configure and load a data source in Settings before using the Compendium.
+              Please configure and load a data source in Settings before using
+              the Compendium.
             </CardDescription>
           </CardHeader>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -295,14 +349,21 @@ export function CompendiumPage() {
               />
             </div>
             <Button
-              variant={filtersOpen || activeFilterCount > 0 ? 'default' : 'outline'}
+              variant={
+                filtersOpen || activeFilterCount > 0 ? 'default' : 'outline'
+              }
               onClick={() => setFiltersOpen((o) => !o)}
               className="gap-2 shrink-0"
             >
-              <Funnel className="h-4 w-4" weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
+              <Funnel
+                className="h-4 w-4"
+                weight={activeFilterCount > 0 ? 'fill' : 'regular'}
+              />
               Filters
               {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">{activeFilterCount}</Badge>
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {activeFilterCount}
+                </Badge>
               )}
             </Button>
           </div>
@@ -310,7 +371,9 @@ export function CompendiumPage() {
           {filtersOpen && (
             <div className="mt-3 pt-3 border-t border-border space-y-3">
               <div className="flex items-start gap-3">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1 w-14 shrink-0">Type</span>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1 w-14 shrink-0">
+                  Type
+                </span>
                 <div className="flex flex-wrap gap-1.5">
                   {ENTRY_TYPES.map((t) => (
                     <button
@@ -330,33 +393,39 @@ export function CompendiumPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1 w-14 shrink-0">Source</span>
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1 w-14 shrink-0">
+                  Source
+                </span>
                 <div className="flex-1 space-y-2">
-                  <Select
-                    value=""
-                    onValueChange={(s) => s && toggleSource(s)}
-                  >
+                  <Select value="" onValueChange={(s) => s && toggleSource(s)}>
                     <SelectTrigger className="h-8 w-56 text-xs bg-background">
                       <SelectValue placeholder="Add source filter…" />
                     </SelectTrigger>
                     <SelectContent>
-                      {allSources.filter((s) => !activeSources.has(s)).map((s) => (
-                        <SelectItem key={s} value={s} className="text-xs">{sourceNameMap.get(s) ?? s}</SelectItem>
-                      ))}
+                      {allSources
+                        .filter((s) => !activeSources.has(s))
+                        .map((s) => (
+                          <SelectItem key={s} value={s} className="text-xs">
+                            {sourceNameMap.get(s) ?? s}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   {activeSources.size > 0 && (
                     <div className="flex flex-wrap gap-1.5">
-                      {Array.from(activeSources).sort().map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => toggleSource(s)}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border bg-accent text-accent-foreground border-accent hover:bg-accent/80 transition-colors"
-                        >
-                          {sourceNameMap.get(s) ?? s} <X className="h-2.5 w-2.5" />
-                        </button>
-                      ))}
+                      {Array.from(activeSources)
+                        .sort()
+                        .map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => toggleSource(s)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border bg-accent text-accent-foreground border-accent hover:bg-accent/80 transition-colors"
+                          >
+                            {sourceNameMap.get(s) ?? s}{' '}
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        ))}
                     </div>
                   )}
                 </div>
@@ -383,11 +452,15 @@ export function CompendiumPage() {
               Toggle button: absolutely positioned top-right of the card body. */}
           <Card className="h-full overflow-hidden flex flex-col">
             <div className="relative flex flex-row flex-1 overflow-hidden min-h-0 -my-6">
-
               {/* Toggle button — absolute, top-right of the card body */}
               <button
+                type="button"
                 onClick={() => setDetailCollapsed((c) => !c)}
-                title={detailCollapsed ? 'Expand details panel' : 'Collapse details panel'}
+                title={
+                  detailCollapsed
+                    ? 'Expand details panel'
+                    : 'Collapse details panel'
+                }
                 className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all"
               >
                 {detailCollapsed ? (
@@ -416,21 +489,24 @@ export function CompendiumPage() {
                     ) : (
                       displayedEntries.map((entry) => (
                         <button
+                          type="button"
                           key={`${entry.type}-${entry.source}-${entry.name}`}
                           onClick={() => {
-                            setSelectedEntry(entry)
-                            if (detailCollapsed) setDetailCollapsed(false)
+                            setSelectedEntry(entry);
+                            if (detailCollapsed) setDetailCollapsed(false);
                           }}
                           className={cn(
                             'w-full text-left p-3 rounded-lg border transition-colors hover:border-accent',
                             selectedEntry === entry
                               ? 'border-accent bg-accent/10'
-                              : 'border-border bg-card'
+                              : 'border-border bg-card',
                           )}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold truncate">{entry.name}</h3>
+                              <h3 className="font-semibold truncate">
+                                {entry.name}
+                              </h3>
                               {entry.description && (
                                 <p className="text-sm text-muted-foreground line-clamp-1">
                                   {typeof entry.description === 'string'
@@ -459,7 +535,9 @@ export function CompendiumPage() {
               <div
                 className={cn(
                   'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
-                  detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'min-w-[320px]',
+                  detailCollapsed
+                    ? 'w-0 min-w-0 opacity-0 pointer-events-none'
+                    : 'min-w-[320px]',
                   !detailCollapsed && 'w-[42%]',
                 )}
               >
@@ -478,7 +556,9 @@ export function CompendiumPage() {
                           </h2>
                           <div className="flex gap-2 mb-4">
                             <Badge>{selectedEntry.type}</Badge>
-                            <Badge variant="outline">{selectedEntry.source}</Badge>
+                            <Badge variant="outline">
+                              {selectedEntry.source}
+                            </Badge>
                           </div>
                         </div>
 
@@ -487,23 +567,82 @@ export function CompendiumPage() {
                         <div className="space-y-3">
                           {selectedEntry.type === 'Spell' && (
                             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm p-4 bg-muted/50 rounded-lg">
-                              <div><span className="text-muted-foreground">Level: </span><span className="font-medium">{selectedEntry.data.level === 0 ? 'Cantrip' : `Level ${selectedEntry.data.level}`}</span></div>
-                              <div><span className="text-muted-foreground">School: </span><span className="font-medium capitalize">{selectedEntry.data.school}</span></div>
-                              {selectedEntry.data.time?.[0] && <div><span className="text-muted-foreground">Casting Time: </span><span className="font-medium">{selectedEntry.data.time[0].number} {selectedEntry.data.time[0].unit}</span></div>}
-                              {selectedEntry.data.range?.distance && <div><span className="text-muted-foreground">Range: </span><span className="font-medium">{selectedEntry.data.range.distance.amount ?? selectedEntry.data.range.distance.type} {selectedEntry.data.range.distance.amount != null ? selectedEntry.data.range.distance.type : ''}</span></div>}
-                              {selectedEntry.data.duration?.[0] && <div><span className="text-muted-foreground">Duration: </span><span className="font-medium capitalize">{selectedEntry.data.duration[0].type}{selectedEntry.data.duration[0].duration ? ` ${selectedEntry.data.duration[0].duration.amount} ${selectedEntry.data.duration[0].duration.type}` : ''}</span></div>}
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Level:{' '}
+                                </span>
+                                <span className="font-medium">
+                                  {selectedEntry.data.level === 0
+                                    ? 'Cantrip'
+                                    : `Level ${selectedEntry.data.level}`}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">
+                                  School:{' '}
+                                </span>
+                                <span className="font-medium capitalize">
+                                  {selectedEntry.data.school}
+                                </span>
+                              </div>
+                              {selectedEntry.data.time?.[0] && (
+                                <div>
+                                  <span className="text-muted-foreground">
+                                    Casting Time:{' '}
+                                  </span>
+                                  <span className="font-medium">
+                                    {selectedEntry.data.time[0].number}{' '}
+                                    {selectedEntry.data.time[0].unit}
+                                  </span>
+                                </div>
+                              )}
+                              {selectedEntry.data.range?.distance && (
+                                <div>
+                                  <span className="text-muted-foreground">
+                                    Range:{' '}
+                                  </span>
+                                  <span className="font-medium">
+                                    {selectedEntry.data.range.distance.amount ??
+                                      selectedEntry.data.range.distance
+                                        .type}{' '}
+                                    {selectedEntry.data.range.distance.amount !=
+                                    null
+                                      ? selectedEntry.data.range.distance.type
+                                      : ''}
+                                  </span>
+                                </div>
+                              )}
+                              {selectedEntry.data.duration?.[0] && (
+                                <div>
+                                  <span className="text-muted-foreground">
+                                    Duration:{' '}
+                                  </span>
+                                  <span className="font-medium capitalize">
+                                    {selectedEntry.data.duration[0].type}
+                                    {selectedEntry.data.duration[0].duration
+                                      ? ` ${selectedEntry.data.duration[0].duration.amount} ${selectedEntry.data.duration[0].duration.type}`
+                                      : ''}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           )}
                           {(selectedEntry.data.entries ?? []).length > 0 ? (
-                            (selectedEntry.data.entries as any[]).map((entry: any, i: number) => (
+                            (
+                              (selectedEntry.data.entries as unknown[]) ?? []
+                            ).map((entry) => (
                               <div
-                                key={i}
+                                key={`${selectedEntry.name}|${selectedEntry.source}|${typeof entry === 'string' ? entry : JSON.stringify(entry)}`}
                                 className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
-                                dangerouslySetInnerHTML={{ __html: renderEntry(entry) }}
+                                dangerouslySetInnerHTML={{
+                                  __html: renderEntry(entry),
+                                }}
                               />
                             ))
                           ) : (
-                            <p className="text-sm text-muted-foreground italic">No description available for this entry.</p>
+                            <p className="text-sm text-muted-foreground italic">
+                              No description available for this entry.
+                            </p>
                           )}
                         </div>
                       </div>
@@ -515,11 +654,10 @@ export function CompendiumPage() {
                   </div>
                 </ScrollArea>
               </div>
-
             </div>
           </Card>
         </div>
       </div>
     </div>
-  )
+  );
 }

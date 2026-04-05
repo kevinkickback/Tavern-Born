@@ -1,8 +1,5 @@
-// Game rules constants and pure calculation functions.
-// Ported from fizbanes-forge/src/lib/GameRules.js — no React or Zustand dependencies.
-
-import type { Class5e } from '@/types/5etools'
-import type { AbilityScores } from '@/types/character'
+import type { Class5e } from '@/types/5etools';
+import type { AbilityScores } from '@/types/character';
 
 export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const;
 
@@ -44,7 +41,8 @@ export const PROFICIENCY_TYPES = {
   LANGUAGES: 'languages',
 } as const;
 
-export type ProficiencyType = (typeof PROFICIENCY_TYPES)[keyof typeof PROFICIENCY_TYPES];
+export type ProficiencyType =
+  (typeof PROFICIENCY_TYPES)[keyof typeof PROFICIENCY_TYPES];
 
 /**
  * Parse a hit dice string (e.g. "1d8", "d10") into its numeric face value.
@@ -52,7 +50,7 @@ export type ProficiencyType = (typeof PROFICIENCY_TYPES)[keyof typeof PROFICIENC
  */
 export function parseHitDice(hitDice: string | undefined | null): number {
   const match = hitDice?.match(/d(\d+)/);
-  return match ? parseInt(match[1], 10) : 8;
+  return match ? Number.parseInt(match[1], 10) : 8;
 }
 
 /** Get hit die face value from a Class5e object. Falls back to 8. */
@@ -65,19 +63,27 @@ export function getHitDiceFromClass(cls: Class5e | undefined | null): number {
  * Feature strings have format "Feature Name|ClassName|Source|Level".
  * Falls back to the standard [4,8,12,16,19] if no ASI features are found.
  */
-export function getASILevelsFromClass(cls: Class5e | undefined | null): number[] {
+export function getASILevelsFromClass(
+  cls: Class5e | undefined | null,
+): number[] {
   if (!cls?.classFeatures) return [4, 8, 12, 16, 19];
   const levels: number[] = [];
   for (const feat of cls.classFeatures) {
     if (typeof feat === 'string') {
       const parts = feat.split('|');
-      if (parts[0]?.toLowerCase().includes('ability score improvement') && parts[3]) {
-        const lvl = parseInt(parts[3], 10);
-        if (!isNaN(lvl) && !levels.includes(lvl)) levels.push(lvl);
+      if (
+        parts[0]?.toLowerCase().includes('ability score improvement') &&
+        parts[3]
+      ) {
+        const lvl = Number.parseInt(parts[3], 10);
+        if (!Number.isNaN(lvl) && !levels.includes(lvl)) levels.push(lvl);
       }
     } else if (feat && typeof feat === 'object' && 'name' in feat) {
       const f = feat as { name?: string; level?: number };
-      if (f.name?.toLowerCase().includes('ability score improvement') && f.level) {
+      if (
+        f.name?.toLowerCase().includes('ability score improvement') &&
+        f.level
+      ) {
         if (!levels.includes(f.level)) levels.push(f.level);
       }
     }
@@ -85,10 +91,13 @@ export function getASILevelsFromClass(cls: Class5e | undefined | null): number[]
   return levels.length > 0 ? levels.sort((a, b) => a - b) : [4, 8, 12, 16, 19];
 }
 
-/** Ability score abbreviation to full name mapping (matches 5etools JSON keys). */
 const ABILITY_ABBREV_TO_FULL: Record<string, string> = {
-  str: 'strength', dex: 'dexterity', con: 'constitution',
-  int: 'intelligence', wis: 'wisdom', cha: 'charisma',
+  str: 'strength',
+  dex: 'dexterity',
+  con: 'constitution',
+  int: 'intelligence',
+  wis: 'wisdom',
+  cha: 'charisma',
 };
 
 /**
@@ -108,26 +117,36 @@ export function checkMulticlassRequirements(
     return scores[full] ?? scores[ab.toLowerCase()] ?? 0;
   };
   const formatGroup = (group: Record<string, number>) =>
-    Object.entries(group).map(([ab, min]) => `${ab.toUpperCase()} ${min}+`).join(' & ');
+    Object.entries(group)
+      .map(([ab, min]) => `${ab.toUpperCase()} ${min}+`)
+      .join(' & ');
   const checkGroup = (group: Record<string, number>) =>
     Object.entries(group).every(([ab, min]) => getScore(ab) >= min);
 
   if (Array.isArray(reqs.or)) {
     return {
       meetsRequirements: reqs.or.some(checkGroup),
-      requirementText: (reqs.or as Array<Record<string, number>>).map(formatGroup).join(' or '),
+      requirementText: (reqs.or as Array<Record<string, number>>)
+        .map(formatGroup)
+        .join(' or '),
     };
   }
 
-  const entries = Object.entries(reqs).filter(([k]) => k !== 'or') as [string, number][];
+  const entries = Object.entries(reqs).filter(([k]) => k !== 'or') as [
+    string,
+    number,
+  ][];
   return {
     meetsRequirements: entries.every(([ab, min]) => getScore(ab) >= min),
-    requirementText: entries.map(([ab, min]) => `${ab.toUpperCase()} ${min}+`).join(' & '),
+    requirementText: entries
+      .map(([ab, min]) => `${ab.toUpperCase()} ${min}+`)
+      .join(' & '),
   };
 }
 
-/** Proficiency bonus by total character level (index 0 = level 1). */
-const PROFICIENCY_BONUS_TABLE = [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6];
+const PROFICIENCY_BONUS_TABLE = [
+  2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6,
+];
 
 export function getProficiencyBonus(totalLevel: number): number {
   const idx = Math.min(Math.max(totalLevel, 1), MAX_CHARACTER_LEVEL) - 1;
@@ -146,7 +165,6 @@ export function calculatePointBuyTotal(scores: Record<string, number>): number {
   return Object.values(scores).reduce((sum, s) => sum + getPointBuyCost(s), 0);
 }
 
-/** Returns remaining point-buy budget given a set of base scores. */
 export function getRemainingPointBuy(scores: Record<string, number>): number {
   return POINT_BUY_BUDGET - calculatePointBuyTotal(scores);
 }

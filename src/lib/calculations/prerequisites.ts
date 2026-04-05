@@ -1,22 +1,8 @@
-// Prerequisite validation — pure, no React/Zustand dependencies.
-// Ported from fizbanes-forge/src/lib/PrerequisiteValidator.js.
-//
-// Usage:
-//   const { met, failures } = checkAllPrerequisites(feat, character);
-//   const { met, reason } = checkPrerequisite(prereq, character, { className: 'Fighter' });
-
 import type { AbilityName } from './abilityScores';
 
-// ── Character snapshot ────────────────────────────────────────────────────────
-// A structural subset accepted by the validator. Both the current flat
-// `Character` type and future multi-class progression shapes satisfy it.
-
 export interface PrereqCharacterSnapshot {
-  /** Total character level. */
   level: number;
-  /** Primary class name (string, e.g. "Fighter"). */
   class?: string;
-  /** Race name (string, e.g. "Dwarf"). */
   race?: string;
   abilityScores?: Partial<Record<AbilityName, number>>;
   features?: Array<{ name: string }>;
@@ -31,11 +17,9 @@ export interface PrereqCharacterSnapshot {
   };
 }
 
-// ── Raw 5etools prerequisite shapes ──────────────────────────────────────────
-
 type AbilityReq = string | { ability: string; score?: number };
-type RaceReq   = string | { name: string };
-type ClassReq  = string | { name: string };
+type RaceReq = string | { name: string };
+type ClassReq = string | { name: string };
 
 interface Raw5ePrereq {
   level?: number | { level: number };
@@ -47,8 +31,6 @@ interface Raw5ePrereq {
   pact?: string;
   patron?: string;
 }
-
-// ── Options ───────────────────────────────────────────────────────────────────
 
 export interface CheckPrereqOptions {
   /**
@@ -70,8 +52,6 @@ export interface CheckPrereqOptions {
   spellcastingClasses?: Set<string>;
 }
 
-// ── Single-prerequisite check ─────────────────────────────────────────────────
-
 export interface PrereqResult {
   met: boolean;
   reason?: string;
@@ -88,14 +68,12 @@ export function checkPrerequisite(
   options: CheckPrereqOptions = {},
 ): PrereqResult {
   if (!character) return { met: false, reason: 'No character' };
-
-  // ── Level ──────────────────────────────────────────────────────────────────
   if (prereq.level !== undefined) {
     let charLevel: number;
 
     if (options.className && character.progression?.classes) {
       const entry = character.progression.classes.find(
-        (c) => c.name.toLowerCase() === options.className!.toLowerCase(),
+        (c) => c.name.toLowerCase() === options.className?.toLowerCase(),
       );
       charLevel = entry?.levels ?? 0;
     } else {
@@ -103,7 +81,9 @@ export function checkPrerequisite(
     }
 
     const required =
-      typeof prereq.level === 'object' ? prereq.level.level ?? 1 : prereq.level;
+      typeof prereq.level === 'object'
+        ? (prereq.level.level ?? 1)
+        : prereq.level;
 
     if (charLevel < required) {
       return {
@@ -112,8 +92,6 @@ export function checkPrerequisite(
       };
     }
   }
-
-  // ── Ability scores ─────────────────────────────────────────────────────────
   if (Array.isArray(prereq.ability)) {
     const scores = character.abilityScores ?? {};
     const meetsAbility = prereq.ability.some((req) => {
@@ -129,8 +107,6 @@ export function checkPrerequisite(
       return { met: false, reason: 'Does not meet ability score requirement' };
     }
   }
-
-  // ── Race ───────────────────────────────────────────────────────────────────
   if (!options.ignoreRacePrereq && Array.isArray(prereq.race)) {
     const charRace = (character.race ?? '').toLowerCase();
     const meetsRace = prereq.race.some((req) => {
@@ -142,11 +118,9 @@ export function checkPrerequisite(
     }
   }
 
-  // ── Class ──────────────────────────────────────────────────────────────────
   if (Array.isArray(prereq.class)) {
-    const primaryClass = character.progression?.classes?.[0]?.name
-      ?? character.class
-      ?? '';
+    const primaryClass =
+      character.progression?.classes?.[0]?.name ?? character.class ?? '';
     const charClass = primaryClass.toLowerCase();
     const meetsClass = prereq.class.some((req) => {
       const name = typeof req === 'string' ? req : req.name;
@@ -156,8 +130,6 @@ export function checkPrerequisite(
       return { met: false, reason: 'Class requirement not met' };
     }
   }
-
-  // ── Spellcasting ───────────────────────────────────────────────────────────
   if (prereq.spellcasting === true) {
     const casterClasses = options.spellcastingClasses;
     let hasSpellcasting = false;
@@ -181,15 +153,17 @@ export function checkPrerequisite(
       return { met: false, reason: 'Requires spellcasting ability' };
     }
   }
-
-  // ── Known spells ───────────────────────────────────────────────────────────
   if (prereq.spell) {
-    const required = Array.isArray(prereq.spell) ? prereq.spell : [prereq.spell];
-    const knownNames = new Set([
-      ...(character.spells?.cantrips ?? []),
-      ...(character.spells?.spellsKnown ?? []),
-      ...(character.spells?.preparedSpells ?? []),
-    ].map((s) => s.toLowerCase()));
+    const required = Array.isArray(prereq.spell)
+      ? prereq.spell
+      : [prereq.spell];
+    const knownNames = new Set(
+      [
+        ...(character.spells?.cantrips ?? []),
+        ...(character.spells?.spellsKnown ?? []),
+        ...(character.spells?.preparedSpells ?? []),
+      ].map((s) => s.toLowerCase()),
+    );
 
     const missing = required.filter((ref) => {
       // 5etools spell refs: "SpellName|Source" or "SpellName#anchor|Source"
@@ -198,25 +172,24 @@ export function checkPrerequisite(
     });
 
     if (missing.length > 0) {
-      const names = missing.map((r) => r.split('#')[0].split('|')[0]).join(', ');
+      const names = missing
+        .map((r) => r.split('#')[0].split('|')[0])
+        .join(', ');
       return { met: false, reason: `Requires spell: ${names}` };
     }
   }
-
-  // ── Pact ───────────────────────────────────────────────────────────────────
   if (prereq.pact) {
     const hasPact = character.features?.some((f) =>
-      f.name.toLowerCase().includes(prereq.pact!.toLowerCase()),
+      f.name.toLowerCase().includes(prereq.pact?.toLowerCase()),
     );
     if (!hasPact) {
       return { met: false, reason: `Requires ${prereq.pact}` };
     }
   }
 
-  // ── Patron ─────────────────────────────────────────────────────────────────
   if (prereq.patron) {
     const hasPatron = character.features?.some((f) =>
-      f.name.toLowerCase().includes(prereq.patron!.toLowerCase()),
+      f.name.toLowerCase().includes(prereq.patron?.toLowerCase()),
     );
     if (!hasPatron) {
       return { met: false, reason: `Requires patron: ${prereq.patron}` };
@@ -225,8 +198,6 @@ export function checkPrerequisite(
 
   return { met: true };
 }
-
-// ── All-prerequisites check (AND across array elements) ───────────────────────
 
 export interface AllPrereqsResult {
   met: boolean;

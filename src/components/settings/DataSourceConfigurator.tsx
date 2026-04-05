@@ -1,222 +1,231 @@
-import { useState, useEffect, useRef } from 'react'
-import { useGameDataStore } from '@/store/gameDataStore'
-import { validateDataSource } from '@/lib/5etools'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { toast } from 'sonner'
 import {
-  Database,
-  CloudArrowDown,
-  FolderOpen,
-  CheckCircle,
-  XCircle,
-  Warning,
   ArrowClockwise,
-  MagnifyingGlass,
+  CheckCircle,
+  CloudArrowDown,
+  Database,
+  FolderOpen,
   Trash,
-  Flask,
-} from '@phosphor-icons/react'
+  Warning,
+  XCircle,
+} from '@phosphor-icons/react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { validateDataSource } from '@/lib/5etools';
+import { useGameDataStore } from '@/store/gameDataStore';
 
-type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid'
+type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid';
 
 export function DataSourceConfigurator() {
-  const dataSourceConfig = useGameDataStore((state) => state.dataSourceConfig)
-  const gameData = useGameDataStore((state) => state.gameData)
-  const isLoading = useGameDataStore((state) => state.isLoading)
-  const loadProgress = useGameDataStore((state) => state.loadProgress)
-  const error = useGameDataStore((state) => state.error)
-  const lastLoadedAt = useGameDataStore((state) => state.lastLoadedAt)
-  const loadGameData = useGameDataStore((state) => state.loadGameData)
-  const refreshGameData = useGameDataStore((state) => state.refreshGameData)
-  const clearGameData = useGameDataStore((state) => state.clearGameData)
+  const dataSourceConfig = useGameDataStore((state) => state.dataSourceConfig);
+  const gameData = useGameDataStore((state) => state.gameData);
+  const isLoading = useGameDataStore((state) => state.isLoading);
+  const loadProgress = useGameDataStore((state) => state.loadProgress);
+  const error = useGameDataStore((state) => state.error);
+  const lastLoadedAt = useGameDataStore((state) => state.lastLoadedAt);
+  const loadGameData = useGameDataStore((state) => state.loadGameData);
+  const refreshGameData = useGameDataStore((state) => state.refreshGameData);
+  const clearGameData = useGameDataStore((state) => state.clearGameData);
 
   const [sourceType, setSourceType] = useState<'local' | 'remote'>(
-    dataSourceConfig?.type || 'remote'
-  )
-  const [sourcePath, setSourcePath] = useState('')
-  const [isValidating, setIsValidating] = useState(false)
-  const [validationStatus, setValidationStatus] = useState<ValidationStatus>('idle')
+    dataSourceConfig?.type || 'remote',
+  );
+  const [sourcePath, setSourcePath] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationStatus, setValidationStatus] =
+    useState<ValidationStatus>('idle');
+  const remotePathId = useId();
+  const localPathId = useId();
   const [validationResult, setValidationResult] = useState<{
-    isValid: boolean
-    error?: string
-    foundResources?: string[]
-    normalizedPath?: string
-  } | null>(null)
+    isValid: boolean;
+    error?: string;
+    foundResources?: string[];
+    normalizedPath?: string;
+  } | null>(null);
 
-  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const handleSourceTypeChange = (newType: 'local' | 'remote') => {
-    setSourceType(newType)
-    setSourcePath('')
-    setValidationStatus('idle')
-    setValidationResult(null)
+    setSourceType(newType);
+    setSourcePath('');
+    setValidationStatus('idle');
+    setValidationResult(null);
     if (validationTimeoutRef.current) {
-      clearTimeout(validationTimeoutRef.current)
+      clearTimeout(validationTimeoutRef.current);
     }
-  }
+  };
 
   useEffect(() => {
     return () => {
       if (validationTimeoutRef.current) {
-        clearTimeout(validationTimeoutRef.current)
+        clearTimeout(validationTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const performValidation = async (path: string, type: 'local' | 'remote') => {
     if (!path) {
-      setValidationStatus('idle')
-      setValidationResult(null)
-      return
+      setValidationStatus('idle');
+      setValidationResult(null);
+      return;
     }
 
-    setValidationStatus('validating')
-    setIsValidating(true)
+    setValidationStatus('validating');
+    setIsValidating(true);
 
     try {
       const result = await validateDataSource({
         type,
         path,
         isValid: false,
-      })
+      });
 
-      setValidationResult(result)
-      setValidationStatus(result.isValid ? 'valid' : 'invalid')
+      setValidationResult(result);
+      setValidationStatus(result.isValid ? 'valid' : 'invalid');
 
       if (!result.isValid) {
         toast.error('Data source validation failed', {
           description: result.error,
-        })
+        });
       }
     } catch (error) {
       setValidationResult({
         isValid: false,
         error: error instanceof Error ? error.message : 'Unknown error',
-      })
-      setValidationStatus('invalid')
-      toast.error('Validation failed')
+      });
+      setValidationStatus('invalid');
+      toast.error('Validation failed');
     } finally {
-      setIsValidating(false)
+      setIsValidating(false);
     }
-  }
+  };
 
-  const handleValidate = () => {
-    performValidation(sourcePath, sourceType)
-  }
+  const _handleValidate = () => {
+    performValidation(sourcePath, sourceType);
+  };
 
   const handleLocalPathChange = (value: string) => {
-    setSourcePath(value)
-    setValidationStatus('idle')
-    setValidationResult(null)
+    setSourcePath(value);
+    setValidationStatus('idle');
+    setValidationResult(null);
 
     if (validationTimeoutRef.current) {
-      clearTimeout(validationTimeoutRef.current)
+      clearTimeout(validationTimeoutRef.current);
     }
 
     if (value) {
       validationTimeoutRef.current = setTimeout(() => {
-        performValidation(value, 'local')
-      }, 1000)
+        performValidation(value, 'local');
+      }, 1000);
     }
-  }
+  };
 
   const handleUrlChange = (value: string) => {
-    setSourcePath(value)
-    setValidationStatus('idle')
-    setValidationResult(null)
+    setSourcePath(value);
+    setValidationStatus('idle');
+    setValidationResult(null);
 
     if (validationTimeoutRef.current) {
-      clearTimeout(validationTimeoutRef.current)
+      clearTimeout(validationTimeoutRef.current);
     }
 
     if (value && sourceType === 'remote') {
       try {
-        new URL(value)
+        new URL(value);
         validationTimeoutRef.current = setTimeout(() => {
-          performValidation(value, 'remote')
-        }, 1500)
+          performValidation(value, 'remote');
+        }, 1500);
       } catch {
-        setValidationStatus('idle')
+        setValidationStatus('idle');
       }
     }
-  }
+  };
 
   const handleSelectFolder = async () => {
     try {
-      const folderPath = await window.electronAPI.selectFolder()
-      if (!folderPath) return
+      const folderPath = await window.electronAPI.selectFolder();
+      if (!folderPath) return;
 
-      setSourcePath(folderPath)
-      performValidation(folderPath, 'local')
+      setSourcePath(folderPath);
+      performValidation(folderPath, 'local');
     } catch (error) {
       toast.error('Failed to select folder', {
         description: error instanceof Error ? error.message : 'Unknown error',
-      })
+      });
     }
-  }
+  };
 
   const handleSaveConfig = async () => {
     try {
-      const pathToUse = validationResult?.normalizedPath || sourcePath
+      const pathToUse = validationResult?.normalizedPath || sourcePath;
 
       await loadGameData({
         type: sourceType,
         path: pathToUse,
         isValid: true,
-      })
+      });
 
       toast.success('Data source updated and loaded!', {
         description: 'Game data is now available',
-      })
-      setSourcePath('')
-      setValidationStatus('idle')
-      setValidationResult(null)
+      });
+      setSourcePath('');
+      setValidationStatus('idle');
+      setValidationResult(null);
     } catch (error) {
       toast.error('Failed to load game data', {
         description: error instanceof Error ? error.message : 'Unknown error',
-      })
+      });
     }
-  }
+  };
 
   const handleRefresh = async () => {
     try {
-      await refreshGameData()
-      toast.success('Game data refreshed successfully!')
-    } catch (error) {
-      toast.error('Failed to refresh game data')
+      await refreshGameData();
+      toast.success('Game data refreshed successfully!');
+    } catch (_error) {
+      toast.error('Failed to refresh game data');
     }
-  }
+  };
 
   const handleClear = () => {
-    clearGameData()
-    setSourcePath('')
-    setValidationStatus('idle')
-    setValidationResult(null)
-    toast.info('Game data cleared')
-  }
+    clearGameData();
+    setSourcePath('');
+    setValidationStatus('idle');
+    setValidationResult(null);
+    toast.info('Game data cleared');
+  };
 
-  const hasActiveDataSource = dataSourceConfig && dataSourceConfig.isValid && gameData !== null
+  const hasActiveDataSource = dataSourceConfig?.isValid && gameData !== null;
 
   const getProgressPercent = () => {
-    if (!loadProgress) return 0
-    return Math.round((loadProgress.current / loadProgress.total) * 100)
-  }
+    if (!loadProgress) return 0;
+    return Math.round((loadProgress.current / loadProgress.total) * 100);
+  };
 
-  const isValidSource = validationStatus === 'valid'
+  const isValidSource = validationStatus === 'valid';
 
   const getValidationBorderClass = () => {
-    if (validationStatus === 'validating') return 'border-muted-foreground/50'
-    if (validationStatus === 'valid') return 'border-success'
-    if (validationStatus === 'invalid') return 'border-destructive'
-    return ''
-  }
+    if (validationStatus === 'validating') return 'border-muted-foreground/50';
+    if (validationStatus === 'valid') return 'border-success';
+    if (validationStatus === 'invalid') return 'border-destructive';
+    return '';
+  };
 
   return (
     <div className="space-y-6">
@@ -238,7 +247,10 @@ export function DataSourceConfigurator() {
           <div>
             <div className="relative space-y-3 bg-muted/50 p-4 rounded-lg">
               {hasActiveDataSource && (
-                <Badge variant="default" className="gap-1 absolute top-3 right-3">
+                <Badge
+                  variant="default"
+                  className="gap-1 absolute top-3 right-3"
+                >
                   <CheckCircle size={14} />
                   Active
                 </Badge>
@@ -246,7 +258,10 @@ export function DataSourceConfigurator() {
               <div className="flex items-center gap-2">
                 {hasActiveDataSource ? (
                   dataSourceConfig.type === 'remote' ? (
-                    <CloudArrowDown size={18} className="text-muted-foreground" />
+                    <CloudArrowDown
+                      size={18}
+                      className="text-muted-foreground"
+                    />
                   ) : (
                     <FolderOpen size={18} className="text-muted-foreground" />
                   )
@@ -255,7 +270,9 @@ export function DataSourceConfigurator() {
                 )}
                 <span className="text-sm font-medium capitalize">
                   {hasActiveDataSource
-                    ? (dataSourceConfig.type === 'remote' ? 'Remote URL' : 'Local Directory')
+                    ? dataSourceConfig.type === 'remote'
+                      ? 'Remote URL'
+                      : 'Local Directory'
                     : 'None'}
                 </span>
               </div>
@@ -273,7 +290,9 @@ export function DataSourceConfigurator() {
 
                   {lastLoadedAt && (
                     <div className="flex items-start gap-2">
-                      <span className="text-xs text-muted-foreground min-w-24">Last Loaded:</span>
+                      <span className="text-xs text-muted-foreground min-w-24">
+                        Last Loaded:
+                      </span>
                       <span className="text-xs">
                         {new Date(lastLoadedAt).toLocaleString()}
                       </span>
@@ -284,7 +303,8 @@ export function DataSourceConfigurator() {
 
               {!hasActiveDataSource && (
                 <p className="text-xs text-muted-foreground">
-                  No data source configured. Configure a remote URL or local directory below to load game data.
+                  No data source configured. Configure a remote URL or local
+                  directory below to load game data.
                 </p>
               )}
             </div>
@@ -292,7 +312,12 @@ export function DataSourceConfigurator() {
 
           <Separator />
 
-          <Tabs value={sourceType} onValueChange={(v) => handleSourceTypeChange(v as 'local' | 'remote')}>
+          <Tabs
+            value={sourceType}
+            onValueChange={(v) =>
+              handleSourceTypeChange(v as 'local' | 'remote')
+            }
+          >
             <div className="flex justify-center">
               <div className="w-1/2 min-w-[280px]">
                 <TabsList className="grid grid-cols-2 w-full">
@@ -309,10 +334,10 @@ export function DataSourceConfigurator() {
             </div>
             <TabsContent value="remote" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="remote-path">Repository URL</Label>
+                <Label htmlFor={remotePathId}>Repository URL</Label>
                 <div className="relative">
                   <Input
-                    id="remote-path"
+                    id={remotePathId}
                     value={sourcePath}
                     onChange={(e) => handleUrlChange(e.target.value)}
                     placeholder="https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/master"
@@ -359,10 +384,10 @@ export function DataSourceConfigurator() {
             </TabsContent>
             <TabsContent value="local" className="space-y-4 mt-4">
               <div className="space-y-2">
-                <Label htmlFor="local-path">Local Path</Label>
+                <Label htmlFor={localPathId}>Local Path</Label>
                 <div className="flex gap-2">
                   <Input
-                    id="local-path"
+                    id={localPathId}
                     value={sourcePath}
                     onChange={(e) => handleLocalPathChange(e.target.value)}
                     placeholder="/path/to/5etools/data"
@@ -404,12 +429,22 @@ export function DataSourceConfigurator() {
           </Tabs>
 
           <div className="flex gap-2">
-            <Button onClick={handleClear} disabled={isLoading || !hasActiveDataSource} variant="destructive" className="gap-2">
+            <Button
+              onClick={handleClear}
+              disabled={isLoading || !hasActiveDataSource}
+              variant="destructive"
+              className="gap-2"
+            >
               <Trash size={16} />
               Clear Data
             </Button>
             <div className="flex gap-2 ml-auto">
-              <Button onClick={handleRefresh} disabled={isLoading || !hasActiveDataSource} variant="outline" className="gap-2">
+              <Button
+                onClick={handleRefresh}
+                disabled={isLoading || !hasActiveDataSource}
+                variant="outline"
+                className="gap-2"
+              >
                 <ArrowClockwise size={16} />
                 Update Data
               </Button>
@@ -437,7 +472,8 @@ export function DataSourceConfigurator() {
               <div className="flex-1">
                 <CardTitle className="text-base">Loading Game Data</CardTitle>
                 <CardDescription>
-                  {loadProgress.resource} ({loadProgress.current} of {loadProgress.total})
+                  {loadProgress.resource} ({loadProgress.current} of{' '}
+                  {loadProgress.total})
                 </CardDescription>
               </div>
               <Badge variant="secondary" className="font-mono">
@@ -459,5 +495,5 @@ export function DataSourceConfigurator() {
         </Alert>
       )}
     </div>
-  )
+  );
 }

@@ -1,13 +1,23 @@
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Slider } from '@/components/ui/slider'
-import { Image, Upload, X, MagnifyingGlassMinus, MagnifyingGlassPlus, ArrowsOut, ArrowsIn, Crop, Images } from '@phosphor-icons/react'
-import { useEffect, useState, useRef } from 'react'
-import { toast } from 'sonner'
-import { useCharacterStore } from '@/store/characterStore'
-import { cn } from '@/lib/utils'
+import {
+  ArrowsIn,
+  ArrowsOut,
+  Crop,
+  Image,
+  Images,
+  MagnifyingGlassMinus,
+  MagnifyingGlassPlus,
+  Upload,
+  X,
+} from '@phosphor-icons/react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { cn } from '@/lib/utils';
+import { useCharacterStore } from '@/store/characterStore';
 
 const PLACEHOLDER_PORTRAITS = [
   '/assets/images/characters/placeholder_char_card.jpg',
@@ -22,100 +32,107 @@ const PLACEHOLDER_PORTRAITS = [
   '/assets/images/characters/placeholder_char_card9.jpg',
   '/assets/images/characters/placeholder_char_card10.jpg',
   '/assets/images/characters/placeholder_char_card11.jpg',
-]
+];
 
 export function PortraitPage() {
-  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
-  const updateActiveCharacter = useCharacterStore((state) => state.updateActiveCharacter)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [zoom, setZoom] = useState(100)
-  const [panX, setPanX] = useState(0)
-  const [panY, setPanY] = useState(0)
-  const [rotation, setRotation] = useState(0)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter);
+  const updateActiveCharacter = useCharacterStore(
+    (state) => state.updateActiveCharacter,
+  );
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(100);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [rotation, setRotation] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const portraitUploadId = useId();
+  const resetTransforms = useCallback(() => {
+    setZoom(100);
+    setPanX(0);
+    setPanY(0);
+    setRotation(0);
+  }, []);
 
   useEffect(() => {
-    setImagePreview(activeCharacter?.portrait ?? null)
-    resetTransforms()
+    setImagePreview(activeCharacter?.portrait ?? null);
+    resetTransforms();
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      fileInputRef.current.value = '';
     }
-  }, [activeCharacter?.id, activeCharacter?.portrait])
+  }, [activeCharacter?.portrait, resetTransforms]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size must be less than 5MB')
-        return
+        toast.error('File size must be less than 5MB');
+        return;
       }
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onloadend = () => {
-        const image = reader.result as string
-        setImagePreview(image)
-        updateActiveCharacter({ portrait: image })
-        resetTransforms()
-        toast.success('Portrait uploaded successfully')
-      }
-      reader.readAsDataURL(file)
+        const image = reader.result as string;
+        setImagePreview(image);
+        updateActiveCharacter({ portrait: image });
+        resetTransforms();
+        toast.success('Portrait uploaded successfully');
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   const handleClear = () => {
-    setImagePreview(null)
-    updateActiveCharacter({ portrait: undefined })
+    setImagePreview(null);
+    updateActiveCharacter({ portrait: undefined });
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      fileInputRef.current.value = '';
     }
-    resetTransforms()
-    toast.info('Portrait cleared')
-  }
-
-  const resetTransforms = () => {
-    setZoom(100)
-    setPanX(0)
-    setPanY(0)
-    setRotation(0)
-  }
+    resetTransforms();
+    toast.info('Portrait cleared');
+  };
 
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 10, 200))
-  }
+    setZoom((prev) => Math.min(prev + 10, 200));
+  };
 
   const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 10, 50))
-  }
+    setZoom((prev) => Math.max(prev - 10, 50));
+  };
 
   const handleFitToView = () => {
-    setZoom(100)
-    setPanX(0)
-    setPanY(0)
-  }
+    setZoom(100);
+    setPanX(0);
+    setPanY(0);
+  };
 
   const handleRotate = () => {
-    setRotation(prev => (prev + 90) % 360)
-  }
+    setRotation((prev) => (prev + 90) % 360);
+  };
 
   const getTransformStyle = () => {
     return {
       transform: `scale(${zoom / 100}) translate(${panX}px, ${panY}px) rotate(${rotation}deg)`,
-      transition: 'transform 0.2s ease-out'
-    }
-  }
+      transition: 'transform 0.2s ease-out',
+    };
+  };
 
   if (!activeCharacter) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Card className="p-8 text-center max-w-md">
-          <Image className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
-          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
+          <Image
+            className="h-12 w-12 mx-auto mb-4 text-muted-foreground"
+            weight="duotone"
+          />
+          <h2 className="font-display text-2xl font-bold mb-2">
+            No Character Selected
+          </h2>
           <p className="text-muted-foreground">
             Please select or create a character to manage their portrait.
           </p>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -174,7 +191,7 @@ export function PortraitPage() {
               </div>
               <Input
                 ref={fileInputRef}
-                id="portrait-upload"
+                id={portraitUploadId}
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
@@ -196,16 +213,16 @@ export function PortraitPage() {
                     key={src}
                     type="button"
                     onClick={() => {
-                      setImagePreview(src)
-                      updateActiveCharacter({ portrait: src })
-                      resetTransforms()
-                      toast.success('Portrait selected')
+                      setImagePreview(src);
+                      updateActiveCharacter({ portrait: src });
+                      resetTransforms();
+                      toast.success('Portrait selected');
                     }}
                     className={cn(
                       'relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105',
                       imagePreview === src
                         ? 'border-accent ring-2 ring-accent/50'
-                        : 'border-border hover:border-accent/50'
+                        : 'border-border hover:border-accent/50',
                     )}
                   >
                     <img
@@ -297,7 +314,9 @@ export function PortraitPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-muted-foreground">Rotation</span>
+                    <span className="text-sm text-muted-foreground">
+                      Rotation
+                    </span>
                     <span className="text-sm font-medium">{rotation}°</span>
                   </div>
                   <Button
@@ -328,5 +347,5 @@ export function PortraitPage() {
         </div>
       </Card>
     </div>
-  )
+  );
 }
