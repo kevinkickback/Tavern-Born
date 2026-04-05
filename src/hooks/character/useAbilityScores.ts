@@ -1,16 +1,20 @@
 import { useCallback, useMemo } from 'react';
-import { useCharacterStore } from '@/store/characterStore';
 import {
-  ABILITY_NAMES,
   ABILITY_ABBREVIATIONS,
-  AbilityName,
+  ABILITY_NAMES,
+  type AbilityName,
+  calculatePointBuyTotal,
   formatModifier,
+  getRemainingPointBuy,
   getValidPointBuyScores,
   isValidPointBuyScore,
-  calculatePointBuyTotal,
-  getRemainingPointBuy,
 } from '@/lib/calculations/abilityScores';
-import { getAbilityModifier, POINT_BUY_BUDGET, POINT_BUY_MIN } from '@/lib/calculations/gameRules';
+import {
+  getAbilityModifier,
+  POINT_BUY_BUDGET,
+  POINT_BUY_MIN,
+} from '@/lib/calculations/gameRules';
+import { useCharacterStore } from '@/store/characterStore';
 
 /**
  * Derived ability score state for the active character.
@@ -20,13 +24,9 @@ export interface AbilityScoreState {
   scores: Record<AbilityName, number>;
   modifiers: Record<AbilityName, number>;
   modifierStrings: Record<AbilityName, string>;
-
-  // Point-buy helpers
   pointBuyTotal: number;
   pointBuyRemaining: number;
   validPointBuyScores: number[];
-
-  // Actions
   setScore: (ability: AbilityName, score: number) => void;
   setAllScores: (scores: Partial<Record<AbilityName, number>>) => void;
   resetScores: (base?: number) => void;
@@ -96,7 +96,9 @@ export function useAbilityScores(): AbilityScoreState {
     (base = POINT_BUY_MIN) => {
       if (!activeCharacter) return;
       updateCharacter(activeCharacter.id, {
-        abilityScores: Object.fromEntries(ABILITY_NAMES.map((a) => [a, base])) as Record<AbilityName, number>,
+        abilityScores: Object.fromEntries(
+          ABILITY_NAMES.map((a) => [a, base]),
+        ) as Record<AbilityName, number>,
       });
     },
     [activeCharacter, updateCharacter],
@@ -115,8 +117,5 @@ export function useAbilityScores(): AbilityScoreState {
   };
 }
 
-/** Lookup the short abbreviation for an ability name (e.g. "strength" → "STR"). */
 export { ABILITY_NAMES, ABILITY_ABBREVIATIONS };
-
-/** Whether a score is within the legal point-buy range. */
 export { isValidPointBuyScore };

@@ -1,233 +1,476 @@
-import { useState, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
-import { Star, Plus, Trash, Check } from '@phosphor-icons/react'
-import { useCharacterStore } from '@/store/characterStore'
-import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useProvenance } from '@/hooks/character/useProvenance'
-import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
-import { checkAllPrerequisites, type PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
-import { cn } from '@/lib/utils'
-import type { Feat5e } from '@/types/5etools'
-import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
-import { NoCharCard } from './_shared'
+import { CaretDown, Check, Star, Trash } from '@phosphor-icons/react';
+import { memo, useCallback, useMemo, useState } from 'react';
+import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal';
+import { SourcesAccordion } from '@/components/provenance/SourcesAccordion';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { useProvenance } from '@/hooks/character/useProvenance';
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
+import { getASILevelsFromClass } from '@/lib/calculations/gameRules';
+import {
+  checkAllPrerequisites,
+  type PrereqCharacterSnapshot,
+} from '@/lib/calculations/prerequisites';
+import { renderEntry } from '@/lib/renderer';
+import { cn } from '@/lib/utils';
+import { useCharacterStore } from '@/store/characterStore';
+import type { Feat5e } from '@/types/5etools';
+import { NoCharCard } from './_shared';
+
+const _cache = new WeakMap<object, string>();
+function cachedRender(entry: unknown): string {
+  if (!entry) return '';
+  if (typeof entry !== 'object') return renderEntry(entry);
+  const hit = _cache.get(entry as object);
+  if (hit !== undefined) return hit;
+  const html = renderEntry(entry);
+  _cache.set(entry as object, html);
+  return html;
+}
+
+interface FeatDetailCardProps {
+  feat: { id: string; name: string; source: string };
+  featData: Feat5e | undefined;
+  characterSnapshot: PrereqCharacterSnapshot;
+  onRemove: (name: string) => void;
+  isSpecial?: boolean;
+}
+
+const FeatDetailCard = memo(function FeatDetailCard({
+  feat,
+  featData,
+  characterSnapshot,
+  onRemove,
+  isSpecial,
+}: FeatDetailCardProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  const { met, failures } = useMemo(
+    () =>
+      featData
+        ? checkAllPrerequisites(
+            featData as { prerequisite?: unknown[] },
+            characterSnapshot,
+          )
+        : { met: true, failures: [] },
+    [featData, characterSnapshot],
+  );
+
+  const allEntries = featData?.entries ?? [];
+  const visibleEntries = expanded ? allEntries : allEntries.slice(0, 2);
+  const descHtml = useMemo(
+    () =>
+      visibleEntries
+        .map((e) => cachedRender(e))
+        .filter(Boolean)
+        .join('<br/>'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [visibleEntries],
+  );
+  const hasMore = allEntries.length > 2;
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden transition-colors hover:border-accent/30">
+      <div className="flex items-start gap-3 p-4">
+        <Star
+          className="h-4 w-4 text-accent flex-shrink-0 mt-0.5"
+          weight="duotone"
+        />
+        <div className="flex-1 min-w-0">
+          {/* Name row */}
+          <div className="flex items-center gap-2 flex-wrap mb-1.5">
+            <span className="font-semibold text-sm">{feat.name}</span>
+            {feat.source && (
+              <Badge
+                variant="outline"
+                className="text-xs px-1.5 py-0 h-5 text-muted-foreground"
+              >
+                {feat.source}
+              </Badge>
+            )}
+            {isSpecial && (
+              <Badge className="text-xs px-1.5 py-0 h-5 bg-warning/20 text-warning border border-warning/40">
+                Special
+              </Badge>
+            )}
+            {met ? (
+              <Badge
+                variant="outline"
+                className="text-xs px-1.5 py-0 h-5 text-success border-success/50"
+              >
+                <Check className="h-2.5 w-2.5 mr-0.5" />
+                Prereqs met
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="text-xs px-1.5 py-0 h-5 text-warning border-warning/50"
+              >
+                Prereqs unmet
+              </Badge>
+            )}
+          </div>
+
+          {/* Prereq failure detail */}
+          {!met && failures.length > 0 && (
+            <p className="text-xs text-warning/80 mb-1.5">
+              {failures.join(' · ')}
+            </p>
+          )}
+
+          {/* Description */}
+          {descHtml ? (
+            <div
+              className="text-xs text-muted-foreground leading-relaxed"
+              // renderEntry outputs safe HTML from structured 5etools entries.
+              // eslint-disable-next-line react/no-danger
+              dangerouslySetInnerHTML={{ __html: descHtml }}
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              No description available.
+            </p>
+          )}
+
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="flex items-center gap-1 mt-1.5 text-xs text-accent hover:text-accent/80 transition-colors"
+            >
+              <CaretDown
+                className={cn(
+                  'h-3 w-3 transition-transform',
+                  expanded && 'rotate-180',
+                )}
+              />
+              {expanded ? 'Show less' : 'Show more'}
+            </button>
+          )}
+        </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
+          onClick={() => onRemove(feat.name)}
+          title="Remove feat"
+        >
+          <Trash className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+});
 
 export function FeatsPage() {
-    const character = useCharacterStore((s) => s.activeCharacter)
-    const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-    const { feats, classes } = useFilteredGameData()
-    const { applyFeatSelection, removeFeatProvenance, getSourcesRowsBySection } = useProvenance()
-    const [search, setSearch] = useState('')
-    const [showOwned, setShowOwned] = useState(false)
+  const character = useCharacterStore((s) => s.activeCharacter);
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter);
+  const { feats, classes } = useFilteredGameData();
+  const { replaceFeatSelections, getSourcesRowsBySection } = useProvenance();
+  const [modalOpen, setModalOpen] = useState(false);
 
-    if (!character) {
-        return <NoCharCard icon={<Star weight="duotone" />} noun="choose feats" />
-    }
+  const primaryClassData = classes.find((c) => c.name === character?.class);
+  const asiLevels = getASILevelsFromClass(primaryClassData);
+  const earnedASILevels = asiLevels.filter((l) => l <= (character?.level ?? 0));
+  const appliedAsiCount = (character?.asiChoices ?? []).filter((ac) =>
+    earnedASILevels.includes(ac.level),
+  ).length;
+  const totalASI = earnedASILevels.length - appliedAsiCount;
+  const usedASI = character?.feats?.length ?? 0;
+  const specialFeatCount = character?.specialFeats?.length ?? 0;
+  const remainingASI = totalASI - usedASI;
 
-    const primaryClassData = (classes as any[]).find((c) => c.name === character.class)
-    const asiLevels = getASILevelsFromClass(primaryClassData)
-    const totalASI = asiLevels.filter((l) => l <= character.level).length
-    const usedASI = character.feats?.length ?? 0
-    const remainingASI = totalASI - usedASI
+  const characterSnapshot: PrereqCharacterSnapshot = {
+    level: character?.level ?? 0,
+    class: character?.class ?? '',
+    race: character?.race ?? '',
+    abilityScores: character?.abilityScores ?? {
+      strength: 10,
+      dexterity: 10,
+      constitution: 10,
+      intelligence: 10,
+      wisdom: 10,
+      charisma: 10,
+    },
+    features: character?.features ?? [],
+    spells: {
+      cantrips: character?.spells?.cantrips ?? [],
+      spellsKnown: character?.spells?.spellsKnown ?? [],
+      preparedSpells: character?.spells?.preparedSpells ?? [],
+    },
+  };
 
-    const characterSnapshot: PrereqCharacterSnapshot = {
-        level: character.level,
-        class: character.class,
-        race: character.race,
-        abilityScores: character.abilityScores,
-        features: character.features,
-        spells: {
-            cantrips: character.spells?.cantrips ?? [],
-            spellsKnown: character.spells?.spellsKnown ?? [],
-            preparedSpells: character.spells?.preparedSpells ?? [],
-        },
-    }
+  // Merge saved feats back in case they came from a now-disallowed source.
+  // Include both normal and special feats in the modal's browse list.
+  const modalFeats = useMemo(() => {
+    const available = feats as Feat5e[];
+    const availableIds = new Set(
+      available.map((f) => `${f.name}|${f.source ?? ''}`),
+    );
+    const savedNotInList = [
+      ...(character?.feats ?? []),
+      ...(character?.specialFeats ?? []),
+    ]
+      .filter((f) => !availableIds.has(`${f.name}|${f.source ?? ''}`))
+      .map((f) => ({ name: f.name, source: f.source, entries: [] }) as Feat5e);
+    return [...available, ...savedNotInList];
+  }, [feats, character?.feats, character?.specialFeats]);
 
-    const ownedNames = new Set((character.feats ?? []).map((f) => f.name))
+  // Both normal and special feats are pre-selected when the modal opens.
+  const initialSelectedIds = [
+    ...(character?.feats ?? []).map((f) => `${f.name}|${f.source ?? ''}`),
+    ...(character?.specialFeats ?? []).map(
+      (f) => `${f.name}|${f.source ?? ''}`,
+    ),
+  ];
+  const initialSpecialIds = (character?.specialFeats ?? []).map(
+    (f) => `${f.name}|${f.source ?? ''}`,
+  );
 
-    const filteredFeats = useMemo(
-        () =>
-            (feats as Feat5e[]).filter((f) => {
-                if (!showOwned && ownedNames.has(f.name)) return false
-                if (search && !f.name.toLowerCase().includes(search.toLowerCase())) return false
-                return true
-            }),
-        [feats, search, showOwned, ownedNames],
-    )
+  const handleModalConfirm = useCallback(
+    (selectedFeats: Feat5e[]) => {
+      if (!character) return;
+      const prevSpecialKeys = new Set(
+        (character.specialFeats ?? []).map((f) => `${f.name}|${f.source}`),
+      );
+      const prevNormalKeys = new Set(
+        (character.feats ?? []).map((f) => `${f.name}|${f.source}`),
+      );
 
-    const addFeat = (feat: Feat5e) => {
-        if (ownedNames.has(feat.name)) return
-        updateCharacter(character.id, {
-            feats: [
-                ...(character.feats ?? []),
-                { id: `${feat.name}-${feat.source}`, name: feat.name, source: feat.source, description: '' },
-            ],
-        })
-        applyFeatSelection(feat.name, feat.source)
-    }
+      // Feats previously classified as special stay special if still selected.
+      const keptSpecial: Feat5e[] = [];
+      const rest: Feat5e[] = [];
+      for (const feat of selectedFeats) {
+        if (prevSpecialKeys.has(`${feat.name}|${feat.source ?? ''}`)) {
+          keptSpecial.push(feat);
+        } else {
+          rest.push(feat);
+        }
+      }
 
-    const removeFeat = (featName: string) => {
-        updateCharacter(character.id, {
-            feats: character.feats.filter((f) => f.name !== featName),
-        })
-        removeFeatProvenance(featName)
-    }
+      // Fill normal slots: previously-normal feats first (stability), then brand-new.
+      // Feats beyond totalASI overflow into special.
+      const prevNormal = rest.filter((f) =>
+        prevNormalKeys.has(`${f.name}|${f.source ?? ''}`),
+      );
+      const brandNew = rest.filter(
+        (f) => !prevNormalKeys.has(`${f.name}|${f.source ?? ''}`),
+      );
+      const fillOrder = [...prevNormal, ...brandNew];
+      const normalFeats = fillOrder.slice(0, totalASI);
+      const overflow = fillOrder.slice(totalASI);
+      const newSpecialFeats = [...keptSpecial, ...overflow];
 
-    return (
-        <div className="max-w-7xl mx-auto w-full space-y-6">
-            {/* ASI budget */}
-            <Card className="w-full">
-                <CardHeader>
-                    <CardTitle className="font-display text-2xl flex items-center gap-3">
-                        <Star className="h-6 w-6 text-accent" weight="duotone" />
-                        Feats &amp; ASI
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center gap-6 flex-wrap mb-4">
-                        <div className="text-center">
-                            <div className="text-3xl font-bold font-mono text-accent">{totalASI}</div>
-                            <div className="text-xs text-muted-foreground">Total Slots</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-3xl font-bold font-mono">{usedASI}</div>
-                            <div className="text-xs text-muted-foreground">Feats Taken</div>
-                        </div>
-                        <div className="text-center">
-                            <div
-                                className={cn(
-                                    'text-3xl font-bold font-mono',
-                                    remainingASI > 0 ? 'text-success' : remainingASI < 0 ? 'text-destructive' : '',
-                                )}
-                            >
-                                {remainingASI}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Remaining</div>
-                        </div>
-                    </div>
+      replaceFeatSelections(normalFeats);
+      updateCharacter(character.id, {
+        specialFeats: newSpecialFeats.map((f) => {
+          const existing = (character.specialFeats ?? []).find(
+            (sf) => sf.name === f.name && sf.source === (f.source ?? ''),
+          );
+          return (
+            existing ?? {
+              id: `special-${f.name}-${f.source ?? ''}`,
+              name: f.name,
+              source: f.source ?? '',
+              description: '',
+            }
+          );
+        }),
+      });
+    },
+    [character, totalASI, replaceFeatSelections, updateCharacter],
+  );
 
-                    {/* Current feats */}
-                    {(character.feats?.length ?? 0) > 0 && (
-                        <div className="space-y-2 mb-4">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                                Current Feats
-                            </h4>
-                            {character.feats.map((feat) => (
-                                <div
-                                    key={feat.id}
-                                    className="flex items-center justify-between px-4 py-2 rounded-lg border border-accent/40 bg-accent/5"
-                                >
-                                    <div>
-                                        <span className="font-medium text-sm">{feat.name}</span>
-                                        <span className="text-xs text-muted-foreground ml-2">{feat.source}</span>
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                                        onClick={() => removeFeat(feat.name)}
-                                    >
-                                        <Trash className="h-3.5 w-3.5" />
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
+  const handleRemoveFeat = useCallback(
+    (featName: string) => {
+      const remaining = (character.feats ?? [])
+        .filter((f) => f.name !== featName)
+        .map((f) => ({ name: f.name, source: f.source }) as Feat5e);
+      replaceFeatSelections(remaining);
+    },
+    [character, replaceFeatSelections],
+  );
+
+  const handleRemoveSpecialFeat = useCallback(
+    (featName: string) => {
+      updateCharacter(character.id, {
+        specialFeats: (character.specialFeats ?? []).filter(
+          (f) => f.name !== featName,
+        ),
+      });
+    },
+    [character, updateCharacter],
+  );
+
+  if (!character) {
+    return <NoCharCard />;
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto w-full space-y-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="font-display text-4xl font-bold flex items-center gap-3">
+          <Star className="h-8 w-8 text-accent" weight="duotone" />
+          Feats
+        </h1>
+        <Button onClick={() => setModalOpen(true)} className="gap-2">
+          <Star className="h-4 w-4" weight="duotone" />
+          {usedASI > 0 || specialFeatCount > 0 ? 'Edit Feats' : 'Choose Feats'}
+        </Button>
+      </div>
+      <Card className="w-full">
+        <CardContent className="pt-6">
+          {/* Stat tiles */}
+          <div className="flex items-center gap-8 flex-wrap mb-5">
+            <div className="text-center">
+              <div className="text-3xl font-bold font-mono text-accent">
+                {totalASI}
+              </div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">
+                Total Slots
+              </div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold font-mono">{usedASI}</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">
+                Feats Taken
+              </div>
+            </div>
+            <div className="text-center">
+              <div
+                className={cn(
+                  'text-3xl font-bold font-mono',
+                  remainingASI > 0
+                    ? 'text-success'
+                    : remainingASI < 0
+                      ? 'text-destructive'
+                      : 'text-muted-foreground',
+                )}
+              >
+                {remainingASI}
+              </div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">
+                Remaining
+              </div>
+            </div>
+          </div>
+
+          {/* ASI level slot grid */}
+          {earnedASILevels.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {earnedASILevels.map((level, i) => {
+                const feat = (character.feats ?? [])[i];
+                return (
+                  <div
+                    key={level}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm',
+                      feat
+                        ? 'border-accent/40 bg-accent/10'
+                        : 'border-border bg-muted/30 text-muted-foreground',
                     )}
-                </CardContent>
-                <div className="px-6 pb-6 border-t border-border">
-                    <SourcesAccordion
-                        sectionId="feats"
-                        rows={getSourcesRowsBySection('feats')}
-                        emptyText="Add feats to see their source attribution."
+                  >
+                    <span className="text-xs font-mono text-muted-foreground">
+                      Lv {level}
+                    </span>
+                    {feat ? (
+                      <>
+                        <Check className="h-3 w-3 text-accent flex-shrink-0" />
+                        <span className="font-medium text-xs">{feat.name}</span>
+                      </>
+                    ) : (
+                      <span className="text-xs italic">Open</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {character?.class
+                ? `No ASI slots unlocked yet at level ${character?.level}.`
+                : 'Select a class to see your ASI schedule.'}
+            </p>
+          )}
+          {usedASI + specialFeatCount > 0 ? (
+            <div className="mt-6 pt-5 border-t border-border space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Selected Feats
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(character.feats ?? []).map((feat) => {
+                  const featData = (feats as Feat5e[]).find(
+                    (f) => f.name === feat.name,
+                  );
+                  return (
+                    <FeatDetailCard
+                      key={feat.id}
+                      feat={feat}
+                      featData={featData}
+                      characterSnapshot={characterSnapshot}
+                      onRemove={handleRemoveFeat}
                     />
-                </div>
-            </Card>
+                  );
+                })}
+                {(character.specialFeats ?? []).map((feat) => {
+                  const featData = (feats as Feat5e[]).find(
+                    (f) => f.name === feat.name,
+                  );
+                  return (
+                    <FeatDetailCard
+                      key={feat.id}
+                      feat={feat}
+                      featData={featData}
+                      characterSnapshot={characterSnapshot}
+                      onRemove={handleRemoveSpecialFeat}
+                      isSpecial
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          ) : earnedASILevels.length > 0 ? (
+            <div className="mt-6 pt-5 border-t border-border flex flex-col items-center gap-3 py-6 text-center">
+              <Star
+                className="h-10 w-10 text-muted-foreground/30"
+                weight="duotone"
+              />
+              <p className="text-muted-foreground">No feats chosen yet.</p>
+              <p className="text-sm text-muted-foreground/70">
+                You have {remainingASI} feat slot{remainingASI !== 1 ? 's' : ''}{' '}
+                available.
+              </p>
+              <Button onClick={() => setModalOpen(true)} className="mt-1">
+                Choose Feats
+              </Button>
+            </div>
+          ) : null}
+        </CardContent>
 
-            {/* Feat browser */}
-            <Card className="w-full">
-                <CardHeader>
-                    <CardTitle className="font-display text-xl">Feat Browser</CardTitle>
-                    <div className="flex items-center gap-4 mt-2 flex-wrap">
-                        <Input
-                            placeholder="Search feats…"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="max-w-xs"
-                        />
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <Switch checked={showOwned} onCheckedChange={setShowOwned} />
-                            Show owned
-                        </label>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-2 max-h-[450px] overflow-y-auto pr-1">
-                        {filteredFeats.map((feat) => {
-                            const { met, failures } = checkAllPrerequisites(
-                                feat as { prerequisite?: any[] },
-                                characterSnapshot,
-                            )
-                            const owned = ownedNames.has(feat.name)
-                            return (
-                                <div
-                                    key={`${feat.name}|${feat.source ?? ''}`}
-                                    className={cn(
-                                        'flex items-start justify-between px-4 py-3 rounded-lg border transition-colors',
-                                        owned ? 'border-accent/40 bg-accent/5' : 'border-border',
-                                        !met && 'opacity-60',
-                                    )}
-                                >
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-medium text-sm">{feat.name}</span>
-                                            <span className="text-xs text-muted-foreground">{feat.source}</span>
-                                            {met ? (
-                                                <Badge variant="outline" className="text-xs text-success border-success">
-                                                    Met
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="outline" className="text-xs text-destructive border-destructive">
-                                                    Req. not met
-                                                </Badge>
-                                            )}
-                                            {owned && (
-                                                <Badge variant="secondary" className="text-xs">
-                                                    Owned
-                                                </Badge>
-                                            )}
-                                        </div>
-                                        {failures.length > 0 && (
-                                            <p className="text-xs text-muted-foreground mt-1">{failures.join(' · ')}</p>
-                                        )}
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-7 w-7 p-0 flex-shrink-0 ml-2"
-                                        onClick={() => addFeat(feat)}
-                                        disabled={owned || (remainingASI <= 0 && totalASI > 0)}
-                                        title={
-                                            owned
-                                                ? 'Already owned'
-                                                : remainingASI <= 0 && totalASI > 0
-                                                    ? 'No ASI slots remaining'
-                                                    : 'Add feat'
-                                        }
-                                    >
-                                        {owned ? <Check className="h-3.5 w-3.5 text-accent" /> : <Plus className="h-3.5 w-3.5" />}
-                                    </Button>
-                                </div>
-                            )
-                        })}
-                        {filteredFeats.length === 0 && (
-                            <p className="text-sm text-muted-foreground text-center py-8">No feats found</p>
-                        )}
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
-    )
+        {/* Sources accordion — tracks provenance of normal feats only */}
+        {(character.feats?.length ?? 0) > 0 && (
+          <div className="px-6 pb-3 border-t border-border">
+            <SourcesAccordion
+              sectionId="feats"
+              rows={getSourcesRowsBySection('feats')}
+              emptyText="Add feats to see their source attribution."
+            />
+          </div>
+        )}
+      </Card>
+
+      <FeatSelectionModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        feats={modalFeats}
+        maxSelections={totalASI}
+        initialSelectedIds={initialSelectedIds}
+        initialSpecialIds={initialSpecialIds}
+        characterSnapshot={characterSnapshot}
+        onConfirm={handleModalConfirm}
+      />
+    </div>
+  );
 }

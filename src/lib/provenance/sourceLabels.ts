@@ -1,4 +1,4 @@
-import type { SourceTag, SourceType, GrantType } from './types'
+import type { GrantType, SourceTag, SourceType } from './types';
 
 /** Build a SourceTag from raw metadata. */
 export function makeSourceTag(
@@ -13,16 +13,19 @@ export function makeSourceTag(
     sourceRef,
     grantType,
     label: resolveLabel(sourceType, sourceName),
-  }
+  };
 }
 
 /**
  * Resolve the user-visible label for a source tag.
  * Manual edits and user-driven picks always display as 'User Choice'.
  */
-export function resolveLabel(sourceType: SourceType, sourceName: string): string {
-  if (sourceType === 'manual') return 'User Choice'
-  return sourceName
+export function resolveLabel(
+  sourceType: SourceType,
+  sourceName: string,
+): string {
+  if (sourceType === 'manual') return 'User Choice';
+  return sourceName;
 }
 
 /**
@@ -34,7 +37,7 @@ export function resolveLabel(sourceType: SourceType, sourceName: string): string
  *  - "User Choice" — manual toggle
  */
 export function formatSourceAttribution(tag: SourceTag): string {
-  if (tag.sourceType === 'manual') return 'User Choice'
-  if (tag.grantType === 'choice') return `${tag.label} (User Choice)`
-  return tag.label
+  if (tag.sourceType === 'manual') return 'User Choice';
+  if (tag.grantType === 'choice') return `${tag.label} (User Choice)`;
+  return tag.label;
 }

@@ -1,147 +1,208 @@
-import { Label } from '@/components/ui/label'
+import { Users } from '@phosphor-icons/react';
+import { useId } from 'react';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Users } from '@phosphor-icons/react'
-import { TraitTooltip } from '../../TraitTooltip'
-import { StepProps } from '../types'
+} from '@/components/ui/select';
+import type { Race5e } from '@/types/5etools';
+import { TraitTooltip } from '../../TraitTooltip';
+import type { StepProps } from '../types';
 
 interface RaceStepProps extends StepProps {
-  races: any[]
+  races: Race5e[];
 }
 
+type RaceEntry = {
+  type?: string;
+  name?: string;
+  entries?: unknown[];
+};
+
+type RaceWithOverwrite = Race5e & {
+  overwrite?: {
+    ability?: boolean;
+  };
+};
+
 export function RaceStep({ data, onChange, races }: RaceStepProps) {
-  const filteredRaces = data.allowedSources && data.allowedSources.length > 0
-    ? races.filter(race => data.allowedSources.includes(race.source))
-    : races
+  const raceSelectId = useId();
+  const subraceSelectId = useId();
+  const filteredRaces =
+    data.allowedSources && data.allowedSources.length > 0
+      ? races.filter((race) => data.allowedSources.includes(race.source))
+      : races;
 
   const selectedRace = data.race
-    ? (data.raceSource
-      ? filteredRaces.find(r => r.name === data.race && (r.source ?? '') === data.raceSource)
-      : filteredRaces.find(r => r.name === data.race))
-    : undefined
+    ? data.raceSource
+      ? filteredRaces.find(
+          (r) => r.name === data.race && (r.source ?? '') === data.raceSource,
+        )
+      : filteredRaces.find((r) => r.name === data.race)
+    : undefined;
 
-  const subraces = (selectedRace?.subraces || []).filter((sr: any) => sr.name)
-  const selectedSubrace = subraces.find((sr: any) => sr.name === data.subrace && ((sr.source ?? '') === (data.subraceSource ?? '')))
+  const subraces = (selectedRace?.subraces || []).filter((sr) => sr.name);
+  const selectedSubrace = subraces.find(
+    (sr) =>
+      sr.name === data.subrace &&
+      (sr.source ?? '') === (data.subraceSource ?? ''),
+  );
 
   // Subraces inherit parent's size/speed/languages if they don't define them;
   // ability: replace parent when overwrite.ability is true, otherwise additive.
-  const displayRace = selectedSubrace && selectedRace
-    ? {
-      ...selectedSubrace,
-      ability: (selectedSubrace as any).overwrite?.ability
-        ? (selectedSubrace.ability ?? [])
-        : [...(selectedRace.ability ?? []), ...(selectedSubrace.ability ?? [])],
-      size: (selectedSubrace as any).size ?? (selectedRace as any).size,
-      speed: (selectedSubrace as any).speed ?? (selectedRace as any).speed,
-      languageProficiencies: (selectedSubrace as any).languageProficiencies ?? (selectedRace as any).languageProficiencies,
-    }
-    : (selectedSubrace || selectedRace)
+  const displayRace =
+    selectedSubrace && selectedRace
+      ? {
+          ...selectedSubrace,
+          ability: (selectedSubrace as RaceWithOverwrite).overwrite?.ability
+            ? (selectedSubrace.ability ?? [])
+            : [
+                ...(selectedRace.ability ?? []),
+                ...(selectedSubrace.ability ?? []),
+              ],
+          size: selectedSubrace.size ?? selectedRace.size,
+          speed: selectedSubrace.speed ?? selectedRace.speed,
+          languageProficiencies:
+            selectedSubrace.languageProficiencies ??
+            selectedRace.languageProficiencies,
+        }
+      : selectedSubrace || selectedRace;
 
   const getAbilityScoreIncreases = () => {
-    if (!displayRace?.ability) return []
+    if (!displayRace?.ability) return [];
 
-    const increases: string[] = []
+    const increases: string[] = [];
     for (const abilityObj of displayRace.ability) {
       for (const [key, value] of Object.entries(abilityObj)) {
         if (key !== 'choose' && typeof value === 'number') {
-          increases.push(`${key.toUpperCase()} +${value}`)
+          increases.push(`${key.toUpperCase()} +${value}`);
         }
       }
       if (abilityObj.choose) {
-        const { from, count, amount = 1 } = abilityObj.choose
-        increases.push(`Choose ${count} from ${from.map((a: string) => a.toUpperCase()).join(', ')} +${amount}`)
+        const { from, count, amount = 1 } = abilityObj.choose;
+        increases.push(
+          `Choose ${count} from ${from.map((a: string) => a.toUpperCase()).join(', ')} +${amount}`,
+        );
       }
     }
-    return increases
-  }
+    return increases;
+  };
 
   const getSize = () => {
-    if (!displayRace?.size) return []
-    return displayRace.size
-  }
+    if (!displayRace?.size) return [];
+    return displayRace.size;
+  };
 
   const getSpeed = () => {
-    if (!displayRace?.speed) return null
-    if (typeof displayRace.speed === 'number') return `${displayRace.speed} ft.`
-    if (displayRace.speed.walk) return `${displayRace.speed.walk} ft.`
-    return null
-  }
+    if (!displayRace?.speed) return null;
+    if (typeof displayRace.speed === 'number')
+      return `${displayRace.speed} ft.`;
+    if (displayRace.speed.walk) return `${displayRace.speed.walk} ft.`;
+    return null;
+  };
 
   const getLanguages = () => {
-    if (!displayRace?.languageProficiencies) return ''
+    if (!displayRace?.languageProficiencies) return '';
 
-    const languages: string[] = []
+    const languages: string[] = [];
     for (const langProf of displayRace.languageProficiencies) {
       for (const [key, value] of Object.entries(langProf)) {
         if (key !== 'choose' && key !== 'anyStandard' && value === true) {
-          const formattedLang = key.charAt(0).toUpperCase() + key.slice(1)
-          languages.push(formattedLang)
+          const formattedLang = key.charAt(0).toUpperCase() + key.slice(1);
+          languages.push(formattedLang);
         }
       }
       if (langProf.choose) {
-        const { from, count } = langProf.choose
-        const formattedLanguages = from.map((lang: string) =>
-          lang.charAt(0).toUpperCase() + lang.slice(1)
-        ).join(', ')
-        languages.push(`Choose ${count} from ${formattedLanguages}`)
+        const { from, count } = langProf.choose;
+        const formattedLanguages = from
+          .map((lang: string) => lang.charAt(0).toUpperCase() + lang.slice(1))
+          .join(', ');
+        languages.push(`Choose ${count} from ${formattedLanguages}`);
       }
       if (langProf.anyStandard) {
-        languages.push(`Choose ${langProf.anyStandard} standard`)
+        languages.push(`Choose ${langProf.anyStandard} standard`);
       }
     }
-    return languages.join(', ')
-  }
+    return languages.join(', ');
+  };
 
   const getTraits = () => {
-    if (!displayRace) return []
+    if (!displayRace) return [];
 
-    const traits: { name: string; entries: any[] }[] = []
+    const traits: { name: string; entries: unknown[] }[] = [];
 
     if (displayRace.entries) {
       for (const entry of displayRace.entries) {
-        if (typeof entry === 'object' && entry.name && entry.type === 'entries') {
-          const skipNames = ['Age', 'Alignment', 'Size', 'Speed', 'Languages', 'Names', 'Dragonborn Names', 'Drow Names', 'Dwarf Names', 'Elf Names', 'Halfling Names', 'Human Names']
-          if (!skipNames.includes(entry.name) && !entry.name.includes('Names')) {
+        const entryObj = entry as RaceEntry;
+        if (
+          typeof entry === 'object' &&
+          entryObj.name &&
+          entryObj.type === 'entries'
+        ) {
+          const skipNames = [
+            'Age',
+            'Alignment',
+            'Size',
+            'Speed',
+            'Languages',
+            'Names',
+            'Dragonborn Names',
+            'Drow Names',
+            'Dwarf Names',
+            'Elf Names',
+            'Halfling Names',
+            'Human Names',
+          ];
+          if (
+            !skipNames.includes(entryObj.name) &&
+            !entryObj.name.includes('Names')
+          ) {
             traits.push({
-              name: entry.name,
-              entries: entry.entries || []
-            })
+              name: entryObj.name,
+              entries: entryObj.entries || [],
+            });
           }
         }
       }
     }
 
-    if (displayRace.darkvision && !traits.some(t => t.name === 'Darkvision')) {
+    if (
+      displayRace.darkvision &&
+      !traits.some((t) => t.name === 'Darkvision')
+    ) {
       traits.push({
         name: 'Darkvision',
-        entries: [`You have superior vision in dark and dim conditions. You can see in dim light within ${displayRace.darkvision} feet of you as if it were bright light, and in darkness as if it were dim light.`]
-      })
+        entries: [
+          `You have superior vision in dark and dim conditions. You can see in dim light within ${displayRace.darkvision} feet of you as if it were bright light, and in darkness as if it were dim light.`,
+        ],
+      });
     }
 
     if (displayRace.traitTags) {
       for (const tag of displayRace.traitTags) {
-        if (tag === 'Tool Proficiency' && !traits.some(t => t.name.includes('Tool'))) {
+        if (
+          tag === 'Tool Proficiency' &&
+          !traits.some((t) => t.name.includes('Tool'))
+        ) {
           traits.push({
             name: 'Tool Proficiency',
-            entries: ['You have proficiency with certain tools.']
-          })
+            entries: ['You have proficiency with certain tools.'],
+          });
         }
       }
     }
 
-    return traits
-  }
+    return traits;
+  };
 
-  const abilityScoreIncreases = getAbilityScoreIncreases()
-  const size = getSize()
-  const speed = getSpeed()
-  const languages = getLanguages()
-  const traits = getTraits()
+  const abilityScoreIncreases = getAbilityScoreIncreases();
+  const size = getSize();
+  const speed = getSpeed();
+  const languages = getLanguages();
+  const traits = getTraits();
 
   return (
     <div className="space-y-4">
@@ -152,19 +213,27 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
         </div>
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label htmlFor="race-select" className="text-sm font-semibold mb-2 block">
+            <Label
+              htmlFor={raceSelectId}
+              className="text-sm font-semibold mb-2 block"
+            >
               Race
             </Label>
             <Select
               value={data.race ? `${data.race}|${data.raceSource ?? ''}` : ''}
               onValueChange={(value) => {
-                const sepIdx = value.indexOf('|')
-                const raceName = sepIdx >= 0 ? value.slice(0, sepIdx) : value
-                const raceSource = sepIdx >= 0 ? value.slice(sepIdx + 1) : ''
-                onChange({ race: raceName, raceSource, subrace: '', subraceSource: '' })
+                const sepIdx = value.indexOf('|');
+                const raceName = sepIdx >= 0 ? value.slice(0, sepIdx) : value;
+                const raceSource = sepIdx >= 0 ? value.slice(sepIdx + 1) : '';
+                onChange({
+                  race: raceName,
+                  raceSource,
+                  subrace: '',
+                  subraceSource: '',
+                });
               }}
             >
-              <SelectTrigger id="race-select" className="h-11">
+              <SelectTrigger id={raceSelectId} className="h-11">
                 <SelectValue placeholder="Select a Race" />
               </SelectTrigger>
               <SelectContent>
@@ -174,8 +243,12 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                   </div>
                 ) : (
                   filteredRaces.map((race) => (
-                    <SelectItem key={`${race.name}|${(race as any).source ?? ''}`} value={`${race.name}|${(race as any).source ?? ''}`}>
-                      {race.name}{(race as any).source ? ` (${(race as any).source})` : ''}
+                    <SelectItem
+                      key={`${race.name}|${race.source ?? ''}`}
+                      value={`${race.name}|${race.source ?? ''}`}
+                    >
+                      {race.name}
+                      {race.source ? ` (${race.source})` : ''}
                     </SelectItem>
                   ))
                 )}
@@ -184,25 +257,44 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
           </div>
 
           <div>
-            <Label htmlFor="subrace-select" className="text-sm font-semibold mb-2 block">
+            <Label
+              htmlFor={subraceSelectId}
+              className="text-sm font-semibold mb-2 block"
+            >
               Subrace
             </Label>
             <Select
-              value={data.subrace ? `${data.subrace}|${data.subraceSource ?? ''}` : ''}
+              value={
+                data.subrace
+                  ? `${data.subrace}|${data.subraceSource ?? ''}`
+                  : ''
+              }
               onValueChange={(value) => {
-                const sepIdx = value.indexOf('|')
-                const subraceNamePart = sepIdx >= 0 ? value.slice(0, sepIdx) : value
-                const subraceSourcePart = sepIdx >= 0 ? value.slice(sepIdx + 1) : ''
-                onChange({ subrace: subraceNamePart, subraceSource: subraceSourcePart })
+                const sepIdx = value.indexOf('|');
+                const subraceNamePart =
+                  sepIdx >= 0 ? value.slice(0, sepIdx) : value;
+                const subraceSourcePart =
+                  sepIdx >= 0 ? value.slice(sepIdx + 1) : '';
+                onChange({
+                  subrace: subraceNamePart,
+                  subraceSource: subraceSourcePart,
+                });
               }}
               disabled={subraces.length === 0}
             >
-              <SelectTrigger id="subrace-select" className="h-11">
-                <SelectValue placeholder={subraces.length === 0 ? 'No Subraces' : 'Select a Subrace'} />
+              <SelectTrigger id={subraceSelectId} className="h-11">
+                <SelectValue
+                  placeholder={
+                    subraces.length === 0 ? 'No Subraces' : 'Select a Subrace'
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {subraces.map((subrace: any) => (
-                  <SelectItem key={`${subrace.name}|${subrace.source ?? ''}`} value={`${subrace.name}|${subrace.source ?? ''}`}>
+                {subraces.map((subrace) => (
+                  <SelectItem
+                    key={`${subrace.name}|${subrace.source ?? ''}`}
+                    value={`${subrace.name}|${subrace.source ?? ''}`}
+                  >
                     {subrace.name}
                   </SelectItem>
                 ))}
@@ -221,8 +313,10 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
             <p className="text-muted-foreground text-sm">-</p>
           ) : (
             <ul className="space-y-1">
-              {abilityScoreIncreases.map((asi, idx) => (
-                <li key={idx} className="text-sm font-mono">{asi}</li>
+              {abilityScoreIncreases.map((asi) => (
+                <li key={asi} className="text-sm font-mono">
+                  {asi}
+                </li>
               ))}
             </ul>
           )}
@@ -272,8 +366,12 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {traits.map((trait, idx) => (
-              <TraitTooltip key={idx} name={trait.name} entries={trait.entries}>
+            {traits.map((trait) => (
+              <TraitTooltip
+                key={`${trait.name}|${trait.entries?.length ?? 0}`}
+                name={trait.name}
+                entries={trait.entries}
+              >
                 <span className="inline-flex items-center px-3 py-1.5 rounded-md border border-border bg-card hover:bg-accent/10 hover:border-accent transition-colors cursor-help text-sm font-medium">
                   {trait.name}
                 </span>
@@ -283,5 +381,5 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
         )}
       </div>
     </div>
-  )
+  );
 }

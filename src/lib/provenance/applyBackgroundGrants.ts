@@ -1,14 +1,21 @@
-import type { ProvenanceLedger, ChoiceRecord } from './types'
-import { makeSourceTag } from './sourceLabels'
-import { addGrant, addChoicePlaceholder } from './ledger'
-import { normalizeKey } from './normalization'
+import { addChoicePlaceholder, addGrant } from './ledger';
+import { normalizeKey } from './normalization';
+import { makeSourceTag } from './sourceLabels';
+import type { ChoiceRecord, ProvenanceLedger } from './types';
 
-type ProfBlock = Record<string, boolean | { choose?: { from: string[]; count: number } } | number>
+type ProfBlock = Record<
+  string,
+  boolean | { choose?: { from: string[]; count: number } } | number
+>;
 
 function normalizeGenericToolChoice(value: string): string | null {
-  const key = normalizeKey(value)
-  if (key.includes('musical instrument') || key === 'anymusicalinstrument' || key === 'instrumentmusical') {
-    return 'musical instrument'
+  const key = normalizeKey(value);
+  if (
+    key.includes('musical instrument') ||
+    key === 'anymusicalinstrument' ||
+    key === 'instrumentmusical'
+  ) {
+    return 'musical instrument';
   }
   if (
     key.includes("artisan's tool") ||
@@ -16,12 +23,16 @@ function normalizeGenericToolChoice(value: string): string | null {
     key === 'anyartisanstool' ||
     key === 'anyartisantool'
   ) {
-    return "artisan's tools"
+    return "artisan's tools";
   }
-  if (key.includes('gaming set') || key === 'anygamingset' || key === 'setgaming') {
-    return 'gaming set'
+  if (
+    key.includes('gaming set') ||
+    key === 'anygamingset' ||
+    key === 'setgaming'
+  ) {
+    return 'gaming set';
   }
-  return null
+  return null;
 }
 
 function applyProfBlocks(
@@ -31,13 +42,13 @@ function applyProfBlocks(
   tag: import('./types').SourceTag,
   choiceIdPrefix: string,
 ): ProvenanceLedger {
-  let result = ledger
-  let choiceIndex = 0
+  let result = ledger;
+  let choiceIndex = 0;
   for (const block of blocks) {
     for (const [key, val] of Object.entries(block)) {
-      if (key === 'choose' || key === 'anyStandard') continue
+      if (key === 'choose' || key === 'anyStandard') continue;
       if (domain === 'tools') {
-        const generic = normalizeGenericToolChoice(key)
+        const generic = normalizeGenericToolChoice(key);
         if (generic) {
           if (val === true || (typeof val === 'number' && val > 0)) {
             const choiceRecord: ChoiceRecord = {
@@ -48,18 +59,18 @@ function applyProfBlocks(
               optionPool: [generic],
               selected: [],
               status: 'pending',
-            }
-            result = addChoicePlaceholder(result, choiceRecord)
-            choiceIndex++
-            continue
+            };
+            result = addChoicePlaceholder(result, choiceRecord);
+            choiceIndex++;
+            continue;
           }
         }
       }
       if (val === true) {
-        result = addGrant(result, domain, key, tag)
+        result = addGrant(result, domain, key, tag);
       }
     }
-    const anyStandard = (block as any).anyStandard as number | undefined
+    const anyStandard = (block as { anyStandard?: number }).anyStandard;
     if (anyStandard) {
       const choiceRecord: ChoiceRecord = {
         id: `${choiceIdPrefix}:${domain}:any:${choiceIndex}`,
@@ -69,17 +80,19 @@ function applyProfBlocks(
         optionPool: [],
         selected: [],
         status: 'pending',
-      }
-      result = addChoicePlaceholder(result, choiceRecord)
-      choiceIndex++
+      };
+      result = addChoicePlaceholder(result, choiceRecord);
+      choiceIndex++;
     }
-    const choose = (block as any).choose as
-      | { from?: string[]; count?: number }
-      | undefined
+    const choose = (block as { choose?: { from?: string[]; count?: number } })
+      .choose;
     if (choose) {
-      const normalizedPool = domain === 'tools'
-        ? (choose.from ?? []).map((entry) => normalizeGenericToolChoice(entry) ?? entry)
-        : (choose.from ?? [])
+      const normalizedPool =
+        domain === 'tools'
+          ? (choose.from ?? []).map(
+              (entry) => normalizeGenericToolChoice(entry) ?? entry,
+            )
+          : (choose.from ?? []);
       const choiceRecord: ChoiceRecord = {
         id: `${choiceIdPrefix}:${domain}:choose:${choiceIndex}`,
         domain,
@@ -88,12 +101,12 @@ function applyProfBlocks(
         optionPool: normalizedPool,
         selected: [],
         status: 'pending',
-      }
-      result = addChoicePlaceholder(result, choiceRecord)
-      choiceIndex++
+      };
+      result = addChoicePlaceholder(result, choiceRecord);
+      choiceIndex++;
     }
   }
-  return result
+  return result;
 }
 
 /**
@@ -102,21 +115,39 @@ function applyProfBlocks(
  */
 export function applyBackgroundGrants(
   bg: {
-    name: string
-    source?: string
-    skillProficiencies?: any[]
-    languageProficiencies?: any[]
-    toolProficiencies?: any[]
+    name: string;
+    source?: string;
+    skillProficiencies?: unknown[];
+    languageProficiencies?: unknown[];
+    toolProficiencies?: unknown[];
   },
   ledger: ProvenanceLedger,
 ): ProvenanceLedger {
-  let result = ledger
-  const bgTag = makeSourceTag('background', bg.name, 'fixed', bg.source)
-  const prefix = `background:${normalizeKey(bg.name)}`
+  let result = ledger;
+  const bgTag = makeSourceTag('background', bg.name, 'fixed', bg.source);
+  const prefix = `background:${normalizeKey(bg.name)}`;
 
-  result = applyProfBlocks(result, 'skills', bg.skillProficiencies ?? [], bgTag, prefix)
-  result = applyProfBlocks(result, 'languages', bg.languageProficiencies ?? [], bgTag, prefix)
-  result = applyProfBlocks(result, 'tools', bg.toolProficiencies ?? [], bgTag, prefix)
+  result = applyProfBlocks(
+    result,
+    'skills',
+    bg.skillProficiencies ?? [],
+    bgTag,
+    prefix,
+  );
+  result = applyProfBlocks(
+    result,
+    'languages',
+    bg.languageProficiencies ?? [],
+    bgTag,
+    prefix,
+  );
+  result = applyProfBlocks(
+    result,
+    'tools',
+    bg.toolProficiencies ?? [],
+    bgTag,
+    prefix,
+  );
 
-  return result
+  return result;
 }

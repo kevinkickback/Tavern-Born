@@ -1,14 +1,16 @@
-import { cn } from '@/lib/utils'
-import { StepProps } from '../types'
+import { cn } from '@/lib/utils';
+import type { Class5e } from '@/types/5etools';
+import type { StepProps } from '../types';
 
 interface ClassStepProps extends StepProps {
-  classes: any[]
+  classes: Class5e[];
 }
 
 export function ClassStep({ data, onChange, classes }: ClassStepProps) {
-  const filteredClasses = data.allowedSources && data.allowedSources.length > 0
-    ? classes.filter(cls => data.allowedSources.includes(cls.source))
-    : classes
+  const filteredClasses =
+    data.allowedSources && data.allowedSources.length > 0
+      ? classes.filter((cls) => data.allowedSources.includes(cls.source))
+      : classes;
 
   return (
     <div className="flex flex-col h-full gap-4">
@@ -16,7 +18,9 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">Choose Your Class</h3>
           {data.allowedSources && data.allowedSources.length > 0 && (
-            <span className="ml-auto text-xs text-muted-foreground">{filteredClasses.length} available</span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {filteredClasses.length} available
+            </span>
           )}
         </div>
         <p className="text-sm text-muted-foreground mt-1">
@@ -35,20 +39,28 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
           ) : (
             filteredClasses.map((cls) => (
               <button
+                type="button"
                 key={`${cls.name}|${cls.source ?? ''}`}
-                onClick={() => onChange({ class: cls.name, classSource: cls.source || '' })}
+                onClick={() =>
+                  onChange({ class: cls.name, classSource: cls.source || '' })
+                }
                 className={cn(
                   'p-4 rounded-lg border-2 text-left transition-colors',
-                  (data.classSource
-                    ? (data.class === cls.name && data.classSource === (cls.source ?? ''))
-                    : data.class === cls.name)
+                  (
+                    data.classSource
+                      ? data.class === cls.name &&
+                        data.classSource === (cls.source ?? '')
+                      : data.class === cls.name
+                  )
                     ? 'border-accent bg-accent/10'
-                    : 'border-border hover:border-accent/60 hover:bg-accent/5'
+                    : 'border-border hover:border-accent/60 hover:bg-accent/5',
                 )}
               >
                 <div className="flex items-start justify-between mb-1">
                   <div className="font-semibold font-display">{cls.name}</div>
-                  <div className="text-xs font-mono text-muted-foreground">{cls.source}</div>
+                  <div className="text-xs font-mono text-muted-foreground">
+                    {cls.source}
+                  </div>
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Hit Die: d{cls.hd?.faces || 6}
@@ -56,7 +68,9 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
                 </div>
               </button>
             ))
-          )}        </div>      </div>
+          )}{' '}
+        </div>{' '}
+      </div>
     </div>
-  )
+  );
 }

@@ -1,20 +1,13 @@
 import { useMemo } from 'react';
-import { useCharacterStore } from '@/store/characterStore';
+import { formatModifier } from '@/lib/calculations/abilityScores';
 import {
-  getProficiencyBonus,
   getAbilityModifier,
+  getProficiencyBonus,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules';
-import { formatModifier } from '@/lib/calculations/abilityScores';
+import { useCharacterStore } from '@/store/characterStore';
 
-/**
- * Derived level and proficiency state for the active character.
- *
- * Uses the stored `level` field (which mirrors total level). When the
- * progression/multi-class system is added, this hook can be updated to
- * read from `character.progression` via `getTotalLevel()` without any
- * change to callers.
- */
+/** Derived level and proficiency state for the active character. */
 export interface CharacterLevelState {
   level: number;
   proficiencyBonus: number;
@@ -38,7 +31,10 @@ export function useCharacterLevel(): CharacterLevelState {
     [proficiencyBonus],
   );
 
-  const initiativeModifier = useMemo(() => getAbilityModifier(dexScore), [dexScore]);
+  const initiativeModifier = useMemo(
+    () => getAbilityModifier(dexScore),
+    [dexScore],
+  );
   const initiativeString = useMemo(
     () => formatModifier(initiativeModifier),
     [initiativeModifier],

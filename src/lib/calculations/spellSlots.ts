@@ -1,16 +1,13 @@
-// Spell slot calculation — pure, no React dependencies.
-// Ported from fizbanes-forge/src/services/SpellSlotCalculatorService.js.
-//
-// Prefers reading slot data directly from the 5etools class JSON
-// (classTableGroups[].rowsSpellProgression) when available.
-// Falls back to the canonical SRD tables for classes without rowsSpellProgression
-// (e.g. Warlock pact magic, which uses a complex inline row format).
+import type { Class5e } from '@/types/5etools';
 
-import type { Class5e } from '@/types/5etools'
+export type CasterProgression =
+  | 'full'
+  | '1/2'
+  | '1/3'
+  | 'pact'
+  | 'artificer'
+  | 'none';
 
-export type CasterProgression = 'full' | '1/2' | '1/3' | 'pact' | 'artificer' | 'none'
-
-// ── Standard 5e spell-slot table (indexed 1–20) ───────────────────────────────
 // Each row is [level-1 slots, level-2 slots, …, level-9 slots].
 // Missing entries are 0 / not present.
 const STANDARD_SPELL_SLOTS: number[][] = [
@@ -35,13 +32,15 @@ const STANDARD_SPELL_SLOTS: number[][] = [
   /* lv 18 */ [4, 3, 3, 3, 3, 2, 1, 1, 1],
   /* lv 19 */ [4, 3, 3, 3, 3, 2, 2, 1, 1],
   /* lv 20 */ [4, 3, 3, 3, 3, 2, 2, 2, 1],
-]
+];
 
-// ── Warlock pact magic slot counts + levels ───────────────────────────────────
-const PACT_SLOT_COUNT = [0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4]
-const PACT_SLOT_LEVEL = [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
+const PACT_SLOT_COUNT = [
+  0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4,
+];
+const PACT_SLOT_LEVEL = [
+  0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+];
 
-// ── Known caster progressions by class name ─────────────────────────────────
 // Used only as a last-resort fallback when class data is not loaded.
 // Prefer Class5e.casterProgression read from the actual data files.
 export const CLASS_CASTER_PROGRESSION: Record<string, CasterProgression> = {
@@ -58,35 +57,35 @@ export const CLASS_CASTER_PROGRESSION: Record<string, CasterProgression> = {
   Fighter: 'none',
   Monk: 'none',
   Rogue: 'none',
-}
+};
 
 export interface SpellSlotLevel {
-  max: number
-  used: number
-  isPactMagic?: boolean
+  max: number;
+  used: number;
+  isPactMagic?: boolean;
 }
 
-export type SpellSlotsResult = Partial<Record<number, SpellSlotLevel>>
+export type SpellSlotsResult = Partial<Record<number, SpellSlotLevel>>;
 
 /** Return the standard (non-pact) spell slot maximums for a given `casterLevel`. */
 export function getStandardSpellSlots(casterLevel: number): SpellSlotsResult {
-  if (casterLevel < 1 || casterLevel > 20) return {}
-  const row = STANDARD_SPELL_SLOTS[casterLevel] ?? []
-  const result: SpellSlotsResult = {}
+  if (casterLevel < 1 || casterLevel > 20) return {};
+  const row = STANDARD_SPELL_SLOTS[casterLevel] ?? [];
+  const result: SpellSlotsResult = {};
   for (let sl = 1; sl <= 9; sl++) {
-    const count = row[sl - 1]
-    if (count) result[sl] = { max: count, used: 0 }
+    const count = row[sl - 1];
+    if (count) result[sl] = { max: count, used: 0 };
   }
-  return result
+  return result;
 }
 
 /** Return pact magic slot maximums for a Warlock of the given `level`. */
 export function getPactMagicSlots(level: number): SpellSlotsResult {
-  if (level < 1 || level > 20) return {}
-  const count = PACT_SLOT_COUNT[level]
-  const slotLevel = PACT_SLOT_LEVEL[level]
-  if (!count) return {}
-  return { [slotLevel]: { max: count, used: 0, isPactMagic: true } }
+  if (level < 1 || level > 20) return {};
+  const count = PACT_SLOT_COUNT[level];
+  const slotLevel = PACT_SLOT_LEVEL[level];
+  if (!count) return {};
+  return { [slotLevel]: { max: count, used: 0, isPactMagic: true } };
 }
 
 /**
@@ -98,19 +97,23 @@ export function getPactMagicSlots(level: number): SpellSlotsResult {
  * (e.g. Warlock, whose pact slot data is in a complex inline row format).
  * In that case, fall back to `calculateSpellSlots`.
  */
-export function getSpellSlotsFromClassData(classData: Class5e, level: number): SpellSlotsResult | null {
+export function getSpellSlotsFromClassData(
+  classData: Class5e,
+  level: number,
+): SpellSlotsResult | null {
   const tableGroup = classData.classTableGroups?.find(
-    (g: any) => Array.isArray(g.rowsSpellProgression),
-  )
-  if (!tableGroup) return null
+    (g: { rowsSpellProgression?: unknown[] }) =>
+      Array.isArray(g.rowsSpellProgression),
+  );
+  if (!tableGroup) return null;
 
-  const row: number[] = tableGroup.rowsSpellProgression[level - 1] ?? []
-  const result: SpellSlotsResult = {}
+  const row: number[] = tableGroup.rowsSpellProgression[level - 1] ?? [];
+  const result: SpellSlotsResult = {};
   for (let sl = 1; sl <= row.length; sl++) {
-    const count = row[sl - 1]
-    if (count && count > 0) result[sl] = { max: count, used: 0 }
+    const count = row[sl - 1];
+    if (count && count > 0) result[sl] = { max: count, used: 0 };
   }
-  return result
+  return result;
 }
 
 /**
@@ -130,17 +133,17 @@ export function calculateSpellSlots(
   const progression: CasterProgression =
     (casterProgression as CasterProgression) ??
     CLASS_CASTER_PROGRESSION[className] ??
-    'none'
+    'none';
 
-  if (progression === 'none') return {}
-  if (progression === 'pact') return getPactMagicSlots(level)
+  if (progression === 'none') return {};
+  if (progression === 'pact') return getPactMagicSlots(level);
 
-  let casterLevel = level
-  if (progression === '1/2') casterLevel = Math.floor(level / 2)
-  if (progression === '1/3') casterLevel = Math.floor(level / 3)
-  if (progression === 'artificer') casterLevel = Math.ceil(level / 2)
+  let casterLevel = level;
+  if (progression === '1/2') casterLevel = Math.floor(level / 2);
+  if (progression === '1/3') casterLevel = Math.floor(level / 3);
+  if (progression === 'artificer') casterLevel = Math.ceil(level / 2);
 
-  return getStandardSpellSlots(casterLevel)
+  return getStandardSpellSlots(casterLevel);
 }
 
 /**
@@ -148,9 +151,14 @@ export function calculateSpellSlots(
  * Returns `false` for classes not in the table; use with game-data class objects
  * where `casterProgression` is available for better coverage.
  */
-export function isSpellcaster(className: string, casterProgression?: string): boolean {
-  const prog = (casterProgression as CasterProgression) ?? CLASS_CASTER_PROGRESSION[className]
-  return !!prog && prog !== 'none'
+export function isSpellcaster(
+  className: string,
+  casterProgression?: string,
+): boolean {
+  const prog =
+    (casterProgression as CasterProgression) ??
+    CLASS_CASTER_PROGRESSION[className];
+  return !!prog && prog !== 'none';
 }
 
 /**
@@ -164,12 +172,12 @@ export function mergeSpellSlots(
   calculated: SpellSlotsResult,
   storedUsed: Record<number, number>,
 ): SpellSlotsResult {
-  const result: SpellSlotsResult = {}
+  const result: SpellSlotsResult = {};
   for (let sl = 1; sl <= 9; sl++) {
-    const calc = calculated[sl]
-    if (!calc) continue
-    const used = Math.min(storedUsed[sl] ?? 0, calc.max)
-    result[sl] = { ...calc, used }
+    const calc = calculated[sl];
+    if (!calc) continue;
+    const used = Math.min(storedUsed[sl] ?? 0, calc.max);
+    result[sl] = { ...calc, used };
   }
-  return result
+  return result;
 }

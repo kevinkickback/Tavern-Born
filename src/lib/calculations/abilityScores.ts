@@ -1,6 +1,3 @@
-// Ability score utility functions — pure, no React/Zustand dependencies.
-// Ported from fizbanes-forge/src/lib/AbilityScoreUtils.js and AbilityScoreService.js.
-
 import {
   ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MAX,
@@ -12,7 +9,13 @@ import {
   STANDARD_ARRAY,
 } from './gameRules';
 
-export type AbilityName = 'strength' | 'dexterity' | 'constitution' | 'intelligence' | 'wisdom' | 'charisma';
+export type AbilityName =
+  | 'strength'
+  | 'dexterity'
+  | 'constitution'
+  | 'intelligence'
+  | 'wisdom'
+  | 'charisma';
 
 export const ABILITY_NAMES: readonly AbilityName[] = [
   'strength',
@@ -96,26 +99,32 @@ export function getAbilityModifierForCharacter(
   return getAbilityModifier(getAbilityScore(ability, scores, bonuses));
 }
 
-/** All ability modifiers for a character's scores + bonuses. */
 export function getAllAbilityModifiers(
   scores: AbilityScores,
   bonuses: AbilityBonuses,
 ): Record<AbilityName, number> {
   return Object.fromEntries(
-    ABILITY_NAMES.map((a) => [a, getAbilityModifierForCharacter(a, scores, bonuses)]),
+    ABILITY_NAMES.map((a) => [
+      a,
+      getAbilityModifierForCharacter(a, scores, bonuses),
+    ]),
   ) as Record<AbilityName, number>;
 }
 
-/** Total point-buy cost for a set of base scores. */
 export function calculatePointBuyTotal(scores: Partial<AbilityScores>): number {
-  return Object.values(scores).reduce((sum: number, s) => sum + getPointBuyCost(s as number), 0);
+  return Object.values(scores).reduce(
+    (sum: number, s) => sum + getPointBuyCost(s as number),
+    0,
+  );
 }
 
-export function getRemainingPointBuy(scores: Partial<AbilityScores>, budget: number): number {
+export function getRemainingPointBuy(
+  scores: Partial<AbilityScores>,
+  budget: number,
+): number {
   return budget - calculatePointBuyTotal(scores);
 }
 
-/** Returns all valid point-buy scores in ascending order. */
 export function getValidPointBuyScores(): number[] {
   return Object.keys(POINT_BUY_COSTS)
     .map(Number)
@@ -130,21 +139,25 @@ export function isValidPointBuyScore(score: number): boolean {
  * Check if scores form a valid standard array assignment.
  * Valid assignment: each value from STANDARD_ARRAY appears at most once across abilities.
  */
-export function isValidStandardArrayAssignment(scores: Partial<AbilityScores>): boolean {
-  const values = Object.values(scores).filter(v => v !== undefined) as number[];
+export function isValidStandardArrayAssignment(
+  scores: Partial<AbilityScores>,
+): boolean {
+  const values = Object.values(scores).filter(
+    (v) => v !== undefined,
+  ) as number[];
   const usedCounts = new Map<number, number>();
-  
+
   for (const val of values) {
     usedCounts.set(val, (usedCounts.get(val) ?? 0) + 1);
   }
-  
+
   // Each value can be used at most once, and must be in STANDARD_ARRAY
   for (const [val, count] of usedCounts) {
-    if (count > 1 || !STANDARD_ARRAY.includes(val as any)) {
+    if (count > 1 || !STANDARD_ARRAY.includes(val)) {
       return false;
     }
   }
-  
+
   return true;
 }
 
@@ -155,9 +168,6 @@ export function formatModifier(mod: number): string {
   return mod >= 0 ? `+${mod}` : `${mod}`;
 }
 
-// ── Racial ability data helpers ─────────────────────────────────────────────
-
-/** A fixed racial ability bonus. */
 export interface FixedAbilityBonus {
   ability: AbilityName;
   value: number;
@@ -188,19 +198,24 @@ type RaceAbilityEntry = Partial<Record<string, number>> & {
 /** Normalize an ability abbreviation (e.g. "str", "STR") to a full lowercase name. */
 export function normalizeAbilityName(input: string): AbilityName | null {
   const map: Record<string, AbilityName> = {
-    str: 'strength', strength: 'strength',
-    dex: 'dexterity', dexterity: 'dexterity',
-    con: 'constitution', constitution: 'constitution',
-    int: 'intelligence', intelligence: 'intelligence',
-    wis: 'wisdom', wisdom: 'wisdom',
-    cha: 'charisma', charisma: 'charisma',
+    str: 'strength',
+    strength: 'strength',
+    dex: 'dexterity',
+    dexterity: 'dexterity',
+    con: 'constitution',
+    constitution: 'constitution',
+    int: 'intelligence',
+    intelligence: 'intelligence',
+    wis: 'wisdom',
+    wisdom: 'wisdom',
+    cha: 'charisma',
+    charisma: 'charisma',
   };
   return map[input.toLowerCase().trim()] ?? null;
 }
 
 /**
  * Extract fixed bonuses and choosable bonuses from 5etools race/subrace ability arrays.
- * Ported from AbilityScoreUtils.getRaceAbilityData().
  */
 export function getRaceAbilityData(
   race?: { ability?: RaceAbilityEntry[] } | null,
@@ -219,9 +234,9 @@ export function getRaceAbilityData(
         choices.push({
           count: entry.choose.count ?? 1,
           amount: entry.choose.amount ?? 1,
-          from: (entry.choose.from ?? Object.keys(ABILITY_ABBREVIATIONS)).map(
-            (a) => normalizeAbilityName(a),
-          ).filter((a): a is AbilityName => a !== null),
+          from: (entry.choose.from ?? Object.keys(ABILITY_ABBREVIATIONS))
+            .map((a) => normalizeAbilityName(a))
+            .filter((a): a is AbilityName => a !== null),
           source,
         });
       } else {

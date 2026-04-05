@@ -1,14 +1,14 @@
-import { Textarea } from '@/components/ui/textarea'
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react';
+import { Textarea } from '@/components/ui/textarea';
 
 interface RichTextAreaProps {
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  rows?: number
-  label?: ReactNode
-  helpText?: string
-  id?: string
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  rows?: number;
+  label?: ReactNode;
+  helpText?: string;
+  id?: string;
 }
 
 export function RichTextArea({
@@ -39,9 +39,7 @@ export function RichTextArea({
         className="resize-none font-mono text-sm"
       />
 
-      {helpText && (
-        <p className="text-xs text-muted-foreground">{helpText}</p>
-      )}
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
     </div>
-  )
+  );
 }

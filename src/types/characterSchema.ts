@@ -1,18 +1,11 @@
-// Character and game-data Zod schemas.
-// Ported from fizbanes-forge/src/lib/ValidationSchemas.js.
-// These schemas are the single source of truth for input validation — use them
-// in forms, wizard steps, and service-layer entry points.
-
 import { z } from 'zod';
 import {
-  ABILITY_SCORE_MIN,
   ABILITY_SCORE_ABSOLUTE_MAX,
-  POINT_BUY_MIN,
-  POINT_BUY_MAX,
+  ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
+  POINT_BUY_MAX,
+  POINT_BUY_MIN,
 } from '@/lib/calculations/gameRules';
-
-// ── Primitives ────────────────────────────────────────────────────────────────
 
 export const sourceSchema = z
   .string()
@@ -26,8 +19,6 @@ export const nameSchema = z.string().min(1).max(200);
 export const levelSchema = z.number().int().min(1).max(MAX_CHARACTER_LEVEL);
 
 export const sourceArraySchema = z.array(sourceSchema).min(1);
-
-// ── Ability scores ────────────────────────────────────────────────────────────
 
 /** Any legal ability score, including magical boosted maximums. */
 export const abilityScoreSchema = z
@@ -56,13 +47,27 @@ export const abilityNameSchema = z.enum([
 /** Accepts both abbreviations and full names, normalises to lowercase full name. */
 export const abilityNameLooseSchema = z
   .enum([
-    'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
-    'str', 'dex', 'con', 'int', 'wis', 'cha',
+    'strength',
+    'dexterity',
+    'constitution',
+    'intelligence',
+    'wisdom',
+    'charisma',
+    'str',
+    'dex',
+    'con',
+    'int',
+    'wis',
+    'cha',
   ])
   .transform((v) => {
     const map: Record<string, string> = {
-      str: 'strength', dex: 'dexterity', con: 'constitution',
-      int: 'intelligence', wis: 'wisdom', cha: 'charisma',
+      str: 'strength',
+      dex: 'dexterity',
+      con: 'constitution',
+      int: 'intelligence',
+      wis: 'wisdom',
+      cha: 'charisma',
     };
     return (map[v] ?? v) as z.infer<typeof abilityNameSchema>;
   });
@@ -91,8 +96,6 @@ export const abilityBonusSchema = z.object({
   source: z.string().min(1),
 });
 
-// ── Proficiency ───────────────────────────────────────────────────────────────
-
 export const proficiencyTypeSchema = z.enum([
   'armor',
   'weapons',
@@ -101,8 +104,6 @@ export const proficiencyTypeSchema = z.enum([
   'languages',
   'savingThrows',
 ]);
-
-// ── 5etools entity identifiers ────────────────────────────────────────────────
 
 export const raceIdentifierSchema = z.object({
   name: nameSchema,
@@ -163,26 +164,41 @@ export const itemFilterSchema = z.object({
   attunement: z.boolean().optional(),
 });
 
-// ── Variant rules ─────────────────────────────────────────────────────────────
-
 export const variantRulesSchema = z.object({
   optionalClassFeatures: z.boolean().default(false),
   averageHitPoints: z.boolean().default(true),
 });
 
-// ── Provenance ledger ─────────────────────────────────────────────────────────
-
 export const sourceTypeSchema = z.enum([
-  'race', 'subrace', 'class', 'subclass', 'background', 'feat', 'optionalFeature', 'manual',
+  'race',
+  'subrace',
+  'class',
+  'subclass',
+  'background',
+  'feat',
+  'optionalFeature',
+  'manual',
 ]);
 
 export const grantTypeSchema = z.enum(['fixed', 'choice', 'placeholder']);
 
-export const choiceStatusSchema = z.enum(['pending', 'resolved', 'partially-resolved']);
+export const choiceStatusSchema = z.enum([
+  'pending',
+  'resolved',
+  'partially-resolved',
+]);
 
 export const choiceDomainSchema = z.enum([
-  'skills', 'languages', 'tools', 'armor', 'weapons', 'spells', 'features', 'feats',
-  'abilityBonuses', 'equipment',
+  'skills',
+  'languages',
+  'tools',
+  'armor',
+  'weapons',
+  'spells',
+  'features',
+  'feats',
+  'abilityBonuses',
+  'equipment',
 ]);
 
 export const sourceTagSchema = z.object({
@@ -230,8 +246,6 @@ export const provenanceLedgerSchema = z.object({
   choices: z.array(choiceRecordSchema),
 });
 
-// ── Character creation wizard ─────────────────────────────────────────────────
-
 export const abilityScoreMethodSchema = z.enum([
   'point-buy',
   'standard-array',
@@ -239,14 +253,20 @@ export const abilityScoreMethodSchema = z.enum([
 ]);
 
 export const wizardStep1Schema = z.object({
-  name: z.string().min(1, 'Character name is required').max(100, 'Name must be 100 characters or fewer'),
+  name: z
+    .string()
+    .min(1, 'Character name is required')
+    .max(100, 'Name must be 100 characters or fewer'),
 });
 
 export const wizardStep2Schema = z.object({
   abilityScoreMethod: abilityScoreMethodSchema.refine((v) => !!v, {
     message: 'Please select an ability score generation method',
   }),
-  allowedSources: sourceArraySchema.min(1, 'Please select at least one source book'),
+  allowedSources: sourceArraySchema.min(
+    1,
+    'Please select at least one source book',
+  ),
 });
 
 export const wizardStep3Schema = z.object({
@@ -266,6 +286,13 @@ export const wizardStep6Schema = z.object({
 });
 
 /** Full character schema for file import / data integrity checks. */
+export const asiChoiceSchema = z.object({
+  id: z.string(),
+  level: z.number().int(),
+  className: z.string(),
+  abilityChanges: z.record(z.union([z.literal(1), z.literal(2)])),
+});
+
 export const characterSchema = z.object({
   id: z.string().min(1),
   version: z.string().optional(),
@@ -280,12 +307,11 @@ export const characterSchema = z.object({
   proficiencyBonus: z.number().int().min(2).max(6).optional(),
   allowedSources: z.array(z.string()).default(['PHB']),
   variantRules: variantRulesSchema.optional(),
+  asiChoices: z.array(asiChoiceSchema).optional(),
   provenance: provenanceLedgerSchema.optional(),
   createdAt: z.string(),
   lastModified: z.string(),
 });
-
-// ── Inferred types ────────────────────────────────────────────────────────────
 
 export type AbilityName = z.infer<typeof abilityNameSchema>;
 export type AbilityScores = z.infer<typeof abilityScoresSchema>;

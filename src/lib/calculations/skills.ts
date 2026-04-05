@@ -1,15 +1,8 @@
-// Skill and saving throw utility functions — pure, no React/Zustand dependencies.
-// Ported from fizbanes-forge/src/ui/components/proficiencies/ProficiencyCalculator.js
-// and fizbanes-forge/src/lib/5eToolsParser.js (SKILL_TO_ABILITY).
-
-import { AbilityName } from './abilityScores';
+import type { AbilityName } from './abilityScores';
 import { formatModifier } from './abilityScores';
 
 export { formatModifier };
 
-// ── Skill → ability mapping ──────────────────────────────────────────────────
-
-/** Map of lowercase skill name → governing ability. */
 export const SKILL_TO_ABILITY: Readonly<Record<string, AbilityName>> = {
   acrobatics: 'dexterity',
   'animal handling': 'wisdom',
@@ -36,8 +29,6 @@ export const ALL_SKILLS = Object.keys(SKILL_TO_ABILITY) as readonly string[];
 export function getSkillAbility(skillName: string): AbilityName | null {
   return SKILL_TO_ABILITY[skillName.toLowerCase().trim()] ?? null;
 }
-
-// ── Saving throw utilities ───────────────────────────────────────────────────
 
 export const SAVING_THROW_ABILITIES: readonly AbilityName[] = [
   'strength',
@@ -75,7 +66,9 @@ export function deriveAllSavingThrows(
   proficientSavingThrows: string[],
   proficiencyBonus: number,
 ): SavingThrowResult[] {
-  const proficientSet = new Set(proficientSavingThrows.map((s) => s.toLowerCase()));
+  const proficientSet = new Set(
+    proficientSavingThrows.map((s) => s.toLowerCase()),
+  );
   return SAVING_THROW_ABILITIES.map((ability) => {
     const proficient = proficientSet.has(ability);
     const modifier = calculateSavingThrowModifier(
@@ -83,11 +76,14 @@ export function deriveAllSavingThrows(
       proficiencyBonus,
       proficient,
     );
-    return { ability, proficient, modifier, modifierString: formatModifier(modifier) };
+    return {
+      ability,
+      proficient,
+      modifier,
+      modifierString: formatModifier(modifier),
+    };
   });
 }
-
-// ── Skill utilities ──────────────────────────────────────────────────────────
 
 export interface SkillResult {
   name: string;
@@ -127,7 +123,7 @@ export function deriveAllSkills(
   const expertiseSet = new Set(expertiseSkills.map((s) => s.toLowerCase()));
 
   return ALL_SKILLS.map((name) => {
-    const ability = SKILL_TO_ABILITY[name]!;
+    const ability = SKILL_TO_ABILITY[name] ?? 'strength';
     const proficient = proficientSet.has(name);
     const expertise = expertiseSet.has(name);
     const modifier = calculateSkillModifier(
@@ -136,6 +132,13 @@ export function deriveAllSkills(
       proficient,
       expertise,
     );
-    return { name, ability, proficient, expertise, modifier, modifierString: formatModifier(modifier) };
+    return {
+      name,
+      ability,
+      proficient,
+      expertise,
+      modifier,
+      modifierString: formatModifier(modifier),
+    };
   });
 }

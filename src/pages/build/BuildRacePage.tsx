@@ -1,387 +1,463 @@
-import { useLayoutEffect, useMemo, useRef, useState, useEffect } from 'react'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Input } from '@/components/ui/input'
+import { CaretLeft, CaretRight, PersonSimple } from '@phosphor-icons/react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { useProvenance } from '@/hooks/character/useProvenance';
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
+import { extractProficiencyBlockNames } from '@/lib/5etools/parsers';
 import {
-    PersonSimple,
-    CaretLeft,
-    CaretRight,
-} from '@phosphor-icons/react'
-import { renderEntry } from '@/lib/renderer'
-import { useCharacterStore } from '@/store/characterStore'
-import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { useProvenance } from '@/hooks/character/useProvenance'
-import { cn } from '@/lib/utils'
-import type { Race5e } from '@/types/5etools'
-import { NoCharCard, InfoTile } from '@/pages/_shared'
-import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
-import { matchesGameDataEntry } from '@/lib/characterUtils'
-import { getRaceAbilityData, ABILITY_ABBREVIATIONS } from '@/lib/calculations/abilityScores'
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+  ABILITY_ABBREVIATIONS,
+  getRaceAbilityData,
+} from '@/lib/calculations/abilityScores';
+import { matchesGameDataEntry } from '@/lib/characterUtils';
+import { renderEntry } from '@/lib/renderer';
+import { cn } from '@/lib/utils';
+import { InfoTile, NoCharCard } from '@/pages/_shared';
+import { useCharacterStore } from '@/store/characterStore';
+import type { Race5e } from '@/types/5etools';
 
 function getSpeedText(race: Race5e): string {
-    if (!race.speed) return '—'
-    if (typeof race.speed === 'number') return `${race.speed} ft.`
-    if (typeof race.speed === 'object' && 'walk' in race.speed) return `${race.speed.walk ?? 30} ft.`
-    return '—'
+  if (!race.speed) return '—';
+  if (typeof race.speed === 'number') return `${race.speed} ft.`;
+  if (typeof race.speed === 'object' && 'walk' in race.speed)
+    return `${race.speed.walk ?? 30} ft.`;
+  return '—';
 }
 
 function getASILines(race: Race5e, raceAsiChoices?: string[][]): string[] {
-    const lines: string[] = []
-    const { fixed, choices } = getRaceAbilityData(race)
-    for (const fb of fixed) {
-        lines.push(`${ABILITY_ABBREVIATIONS[fb.ability]} +${fb.value}`)
+  const lines: string[] = [];
+  const { fixed, choices } = getRaceAbilityData(race);
+  for (const fb of fixed) {
+    lines.push(`${ABILITY_ABBREVIATIONS[fb.ability]} +${fb.value}`);
+  }
+  for (const [blockIdx, block] of choices.entries()) {
+    const selections = (raceAsiChoices?.[blockIdx] ?? []).filter(Boolean);
+    if (selections.length > 0) {
+      for (const ab of selections) {
+        const abbr =
+          ABILITY_ABBREVIATIONS[ab as keyof typeof ABILITY_ABBREVIATIONS] ??
+          ab.toUpperCase().slice(0, 3);
+        lines.push(`${abbr} +${block.amount}`);
+      }
+      const remaining = block.count - selections.length;
+      if (remaining > 0)
+        lines.push(`Choose ${remaining} more +${block.amount}`);
+    } else {
+      const fromStr = block.from
+        .map((a) => ABILITY_ABBREVIATIONS[a] ?? a.toUpperCase().slice(0, 3))
+        .join('/');
+      lines.push(`Choose ${block.count} × +${block.amount} from ${fromStr}`);
     }
-    for (const [blockIdx, block] of choices.entries()) {
-        const selections = (raceAsiChoices?.[blockIdx] ?? []).filter(Boolean)
-        if (selections.length > 0) {
-            // Show actual selections
-            for (const ab of selections) {
-                const abbr = ABILITY_ABBREVIATIONS[ab as keyof typeof ABILITY_ABBREVIATIONS] ?? ab.toUpperCase().slice(0, 3)
-                lines.push(`${abbr} +${block.amount}`)
-            }
-            const remaining = block.count - selections.length
-            if (remaining > 0) lines.push(`Choose ${remaining} more +${block.amount}`)
-        } else {
-            const fromStr = block.from.map((a) => ABILITY_ABBREVIATIONS[a] ?? a.toUpperCase().slice(0, 3)).join('/')
-            lines.push(`Choose ${block.count} × +${block.amount} from ${fromStr}`)
-        }
-    }
-    return lines
+  }
+  return lines;
 }
 
 function getLanguages(race: Race5e): string {
-    return extractProficiencyBlockNames(race.languageProficiencies ?? [])
-        .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-        .join(', ')
+  return extractProficiencyBlockNames(race.languageProficiencies ?? [])
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(', ');
 }
 
-function getRaceTraits(race: Race5e): { name: string; entries: any[] }[] {
-    const skip = new Set(['Age', 'Alignment', 'Size', 'Speed', 'Languages', 'Names'])
-    return (race.entries as any[] ?? [])
-        .filter(
-            (e) =>
-                typeof e === 'object' &&
-                e.type === 'entries' &&
-                e.name &&
-                !skip.has(e.name) &&
-                !e.name.includes('Names'),
-        )
-        .map((e: any) => ({ name: e.name as string, entries: e.entries ?? [] }))
+type RaceTraitEntry = {
+  type?: string;
+  name?: string;
+  entries?: unknown[];
+};
+
+function getRaceTraits(race: Race5e): { name: string; entries: unknown[] }[] {
+  const skip = new Set([
+    'Age',
+    'Alignment',
+    'Size',
+    'Speed',
+    'Languages',
+    'Names',
+  ]);
+  return ((race.entries as unknown[]) ?? [])
+    .filter((e) => {
+      const entry = e as RaceTraitEntry;
+      return (
+        typeof e === 'object' &&
+        entry.type === 'entries' &&
+        typeof entry.name === 'string' &&
+        !skip.has(entry.name) &&
+        !entry.name.includes('Names')
+      );
+    })
+    .map((e) => {
+      const entry = e as RaceTraitEntry;
+      return { name: entry.name ?? '', entries: entry.entries ?? [] };
+    });
 }
 
-/**
- * Merge a subrace onto its parent race so inherited fields are never blank.
- * - ability: subrace replaces parent when overwrite.ability is true, otherwise additive
- * - size / speed / languageProficiencies: fall back to parent when subrace omits them
- * - all other fields: subrace wins (more specific)
- */
 function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
-    const replacesAbility = (subrace as any).overwrite?.ability === true
-    const mergedAbility = subrace.ability && (subrace.ability as any[]).length > 0
-        ? replacesAbility
-            ? subrace.ability
-            : [...(parent.ability ?? []), ...(subrace.ability as any[])]
-        : (parent.ability ?? [])
-    return {
-        ...subrace,
-        ability: mergedAbility,
-        size: subrace.size ?? parent.size,
-        speed: subrace.speed ?? parent.speed,
-        languageProficiencies: subrace.languageProficiencies ?? parent.languageProficiencies,
-    } as Race5e
+  const replacesAbility =
+    (subrace as Race5e & { overwrite?: { ability?: boolean } }).overwrite
+      ?.ability === true;
+  const mergedAbility =
+    subrace.ability && subrace.ability.length > 0
+      ? replacesAbility
+        ? subrace.ability
+        : [...(parent.ability ?? []), ...subrace.ability]
+      : (parent.ability ?? []);
+  return {
+    ...subrace,
+    ability: mergedAbility,
+    size: subrace.size ?? parent.size,
+    speed: subrace.speed ?? parent.speed,
+    languageProficiencies:
+      subrace.languageProficiencies ?? parent.languageProficiencies,
+  } as Race5e;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Page
-// ─────────────────────────────────────────────────────────────────────────────
 
 export function BuildRacePage() {
-    const character = useCharacterStore((s) => s.activeCharacter)
-    const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-    const { races } = useFilteredGameData()
-    const { applyRaceSelection, applySubraceChange } = useProvenance()
-    const [detailCollapsed, setDetailCollapsed] = useState(false)
-    const [raceSearch, setRaceSearch] = useState('')
-    const selectedRaceRef = useRef<HTMLDivElement | null>(null)
-    const isInitialLoadRef = useRef(true)
-    const previousSearchRef = useRef('')
+  const character = useCharacterStore((s) => s.activeCharacter);
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter);
+  const { races } = useFilteredGameData();
+  const { applyRaceSelection, applySubraceChange } = useProvenance();
+  const [detailCollapsed, setDetailCollapsed] = useState(false);
+  const [raceSearch, setRaceSearch] = useState('');
+  const selectedRaceRef = useRef<HTMLDivElement | null>(null);
+  const isInitialLoadRef = useRef(true);
+  const previousSearchRef = useRef('');
 
-    const filteredRaces = useMemo(() => {
-        const q = raceSearch.trim().toLowerCase()
-        if (!q) return races
-        return races.filter((r) => r.name.toLowerCase().includes(q))
-    }, [races, raceSearch])
+  const filteredRaces = useMemo(() => {
+    const q = raceSearch.trim().toLowerCase();
+    if (!q) return races;
+    return races.filter((r) => r.name.toLowerCase().includes(q));
+  }, [races, raceSearch]);
 
-    if (!character) {
-        return <NoCharCard icon={<PersonSimple weight="duotone" />} noun="choose a race" />
+  useEffect(() => {
+    // Only scroll on initial mount or when search changes, not on selection change
+    const isSearchChanged = previousSearchRef.current !== raceSearch;
+    const shouldScroll = isInitialLoadRef.current || isSearchChanged;
+
+    if (shouldScroll && selectedRaceRef.current) {
+      selectedRaceRef.current.scrollIntoView({
+        behavior: 'auto',
+        block: 'start',
+        inline: 'nearest',
+      });
     }
 
-    const selectedRace = races.find((r) =>
-        matchesGameDataEntry(character.race, character.raceSource, r),
-    ) as Race5e | undefined
-    const subraces = (selectedRace?.subraces ?? []) as Race5e[]
-    const selectedSubrace = subraces.find((sr) => sr.name === character.subrace && (sr.source ?? '') === (character.subraceSource ?? ''))
-    const displayRace = selectedSubrace && selectedRace
-        ? mergeRaceWithSubrace(selectedRace, selectedSubrace)
-        : (selectedSubrace ?? selectedRace)
-    const selectedRaceKey = selectedRace ? `${selectedRace.name}|${selectedRace.source ?? ''}` : null
+    isInitialLoadRef.current = false;
+    previousSearchRef.current = raceSearch;
+  }, [raceSearch]);
 
-    useEffect(() => {
-        // Only scroll on initial mount or when search changes, not on selection change
-        const isSearchChanged = previousSearchRef.current !== raceSearch
-        const shouldScroll = isInitialLoadRef.current || isSearchChanged
-
-        if (shouldScroll && selectedRaceRef.current) {
-            selectedRaceRef.current.scrollIntoView({
-                behavior: 'auto',
-                block: 'start',
-                inline: 'nearest',
-            })
-        }
-
-        isInitialLoadRef.current = false
-        previousSearchRef.current = raceSearch
-    }, [raceSearch])
-
+  if (!character) {
     return (
-        <div className="h-full flex flex-col">
-            <div className="px-6 pt-6 pb-4">
-                <div className="max-w-7xl mx-auto">
-                    <h1 className="font-display text-2xl font-bold flex items-center gap-3">
-                        <PersonSimple className="h-6 w-6 text-accent" weight="duotone" />
-                        Race
-                    </h1>
-                </div>
-            </div>
+      <NoCharCard
+        icon={<PersonSimple weight="duotone" />}
+        noun="choose a race"
+      />
+    );
+  }
 
-            <div className="flex-1 overflow-hidden px-6 pb-6">
-                <div className="max-w-7xl mx-auto h-full">
-                    <Card className="h-full overflow-hidden flex flex-col">
-                        <div className="relative flex flex-row flex-1 overflow-hidden min-h-0 -my-6">
-                            <button
-                                onClick={() => setDetailCollapsed((c) => !c)}
-                                title={detailCollapsed ? 'Expand details panel' : 'Collapse details panel'}
-                                className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all"
-                            >
-                                {detailCollapsed ? (
-                                    <CaretLeft className="h-3.5 w-3.5" />
-                                ) : (
-                                    <CaretRight className="h-3.5 w-3.5" />
-                                )}
-                            </button>
+  const selectedRace = races.find((r) =>
+    matchesGameDataEntry(character.race, character.raceSource, r),
+  ) as Race5e | undefined;
+  const subraces = (selectedRace?.subraces ?? []) as Race5e[];
+  const selectedSubrace = subraces.find(
+    (sr) =>
+      sr.name === character.subrace &&
+      (sr.source ?? '') === (character.subraceSource ?? ''),
+  );
+  const displayRace =
+    selectedSubrace && selectedRace
+      ? mergeRaceWithSubrace(selectedRace, selectedSubrace)
+      : (selectedSubrace ?? selectedRace);
+  const selectedRaceKey = selectedRace
+    ? `${selectedRace.name}|${selectedRace.source ?? ''}`
+    : null;
 
-                            <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-                                <div className="p-4 border-b border-border flex flex-col gap-2">
-                                    <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                                        Races ({filteredRaces.length}{raceSearch ? ` of ${races.length}` : ''})
-                                    </span>
-                                    <Input
-                                        placeholder="Search races…"
-                                        value={raceSearch}
-                                        onChange={(e) => setRaceSearch(e.target.value)}
-                                        className="h-8 text-sm"
-                                    />
-                                </div>
-                                <ScrollArea className="flex-1 overflow-hidden">
-                                    <div className="p-4 space-y-1 pr-8">
-                                        {filteredRaces.map((race) => {
-                                            const raceKey = `${race.name}|${race.source ?? ''}`
-                                            const isSelected = selectedRaceKey === raceKey
-                                            const namedSubraces = (race.subraces ?? [] as Race5e[]).filter((sr: any) => sr.name) as Race5e[]
-                                            const hasSubraces = namedSubraces.length > 0
-                                            return (
-                                                <div
-                                                    key={raceKey}
-                                                    ref={isSelected ? selectedRaceRef : null}
-                                                    role="button"
-                                                    tabIndex={0}
-                                                    onClick={(e) => {
-                                                        if ((e.target as HTMLElement).closest('[data-radix-select-trigger],[data-radix-select-content]')) return
-                                                        updateCharacter(character.id, {
-                                                            race: race.name,
-                                                            raceSource: race.source ?? undefined,
-                                                            subrace: undefined,
-                                                            subraceSource: undefined,
-                                                        })
-                                                        applyRaceSelection(race as any, undefined)
-                                                        if (detailCollapsed) setDetailCollapsed(false)
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter' || e.key === ' ') {
-                                                            updateCharacter(character.id, {
-                                                                race: race.name,
-                                                                raceSource: race.source ?? undefined,
-                                                                subrace: undefined,
-                                                                subraceSource: undefined,
-                                                            })
-                                                            applyRaceSelection(race as any, undefined)
-                                                            if (detailCollapsed) setDetailCollapsed(false)
-                                                        }
-                                                    }}
-                                                    className={cn(
-                                                        'w-full text-left p-3 rounded-lg border transition-colors cursor-pointer hover:border-accent flex items-center justify-between gap-2',
-                                                        isSelected ? 'border-accent bg-accent/10' : 'border-border bg-card',
-                                                    )}
-                                                >
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <div
-                                                            className={cn(
-                                                                'h-3.5 w-3.5 rounded-full border-2 flex-shrink-0',
-                                                                isSelected ? 'bg-accent border-accent' : 'border-muted-foreground',
-                                                            )}
-                                                        />
-                                                        <span className="font-medium text-sm truncate">{race.name}</span>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                                                        {isSelected && hasSubraces ? (
-                                                            <Select
-                                                                value={character.subrace ? `${character.subrace}|${character.subraceSource ?? ''}` : ''}
-                                                                onValueChange={(v) => {
-                                                                    const [subraceNameOrFull, ...sourceParts] = v.split('|')
-                                                                    const subraceSource = sourceParts.length > 0 ? sourceParts.join('|') : undefined
-                                                                    const subraceNameFromKey = subraceNameOrFull
-                                                                    const sr = namedSubraces.find(
-                                                                        (s) =>
-                                                                            s.name === subraceNameFromKey &&
-                                                                            ((subraceSource ?? '') === ((s as any).source ?? '')),
-                                                                    )
-                                                                    updateCharacter(character.id, {
-                                                                        subrace: subraceNameFromKey,
-                                                                        subraceSource: subraceSource ?? undefined,
-                                                                    })
-                                                                    applySubraceChange(race.name, race.source ?? undefined, sr as any)
-                                                                }}
-                                                            >
-                                                                <SelectTrigger className="h-7 text-xs min-w-[120px] max-w-[180px]">
-                                                                    <SelectValue placeholder="Subrace…" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {namedSubraces.map((sr) => (
-                                                                        <SelectItem
-                                                                            key={`${sr.name}|${(sr as any).source ?? ''}`}
-                                                                            value={`${sr.name}|${(sr as any).source ?? ''}`}
-                                                                            className="text-xs"
-                                                                        >
-                                                                            {sr.name}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        ) : (
-                                                            <>
-                                                                {hasSubraces && (
-                                                                    <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                                                                        {namedSubraces.length} subraces
-                                                                    </Badge>
-                                                                )}
-                                                                <Badge variant="outline" className="text-xs">{race.source}</Badge>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                </ScrollArea>
-                            </div>
-
-                            <div
-                                className={cn(
-                                    'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
-                                    detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'w-1/2 min-w-[320px]',
-                                )}
-                            >
-                                <div className="p-4 border-b border-border">
-                                    <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                                        Details
-                                    </span>
-                                </div>
-                                <ScrollArea className="flex-1 overflow-hidden">
-                                    <div className="p-4">
-                                        {displayRace ? (
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <h2 className="text-2xl font-display font-bold">{displayRace.name}</h2>
-                                                    <Badge variant="outline" className="mt-2">{displayRace.source}</Badge>
-                                                </div>
-
-                                                <Separator />
-
-                                                <div className="grid grid-cols-3 gap-3">
-                                                    <InfoTile title="Ability Bonuses">
-                                                        {getASILines(displayRace, character.raceAsiChoices).length > 0 ? (
-                                                            getASILines(displayRace, character.raceAsiChoices).map((t, i) => (
-                                                                <div key={i} className="text-sm font-mono">{t}</div>
-                                                            ))
-                                                        ) : (
-                                                            <span className="text-muted-foreground text-sm">—</span>
-                                                        )}
-                                                    </InfoTile>
-                                                    <InfoTile title="Size">
-                                                        <span className="text-sm font-mono">{displayRace.size?.join(', ') ?? '—'}</span>
-                                                    </InfoTile>
-                                                    <InfoTile title="Speed">
-                                                        <span className="text-sm font-mono">{getSpeedText(displayRace)}</span>
-                                                    </InfoTile>
-                                                </div>
-
-                                                <InfoTile title="Languages">
-                                                    <span className="text-sm">{getLanguages(displayRace) || '—'}</span>
-                                                </InfoTile>
-
-                                                {getRaceTraits(displayRace).length > 0 && (
-                                                    <div>
-                                                        <h4 className="text-xs font-bold text-accent uppercase tracking-wider mb-3">Traits</h4>
-                                                        <div className="space-y-3">
-                                                            {getRaceTraits(displayRace).map((trait, i) => (
-                                                                <div key={i}>
-                                                                    <div className="font-semibold text-sm mb-1">{trait.name}</div>
-                                                                    <div
-                                                                        className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
-                                                                        dangerouslySetInnerHTML={{
-                                                                            __html: trait.entries.map((e: any) => renderEntry(e)).join(''),
-                                                                        }}
-                                                                    />
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {(displayRace.entries ?? []).filter((e: any) => typeof e === 'string').map((e: any, i: number) => (
-                                                    <div
-                                                        key={i}
-                                                        className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1"
-                                                        dangerouslySetInnerHTML={{ __html: renderEntry(e) }}
-                                                    />
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-                                                Select a race to view details
-                                            </div>
-                                        )}
-                                    </div>
-                                </ScrollArea>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            </div>
+  return (
+    <div className="h-full flex flex-col">
+      <div className="px-6 pt-6 pb-4">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="font-display text-2xl font-bold flex items-center gap-3">
+            <PersonSimple className="h-6 w-6 text-accent" weight="duotone" />
+            Race
+          </h1>
         </div>
-    )
+      </div>
+
+      <div className="flex-1 overflow-hidden px-6 pb-6">
+        <div className="max-w-7xl mx-auto h-full">
+          <Card className="h-full overflow-hidden flex flex-col">
+            <div className="relative flex flex-row flex-1 overflow-hidden min-h-0 -my-6">
+              <button
+                type="button"
+                onClick={() => setDetailCollapsed((c) => !c)}
+                title={
+                  detailCollapsed
+                    ? 'Expand details panel'
+                    : 'Collapse details panel'
+                }
+                className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all"
+              >
+                {detailCollapsed ? (
+                  <CaretLeft className="h-3.5 w-3.5" />
+                ) : (
+                  <CaretRight className="h-3.5 w-3.5" />
+                )}
+              </button>
+
+              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+                <div className="p-4 border-b border-border flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Races ({filteredRaces.length}
+                    {raceSearch ? ` of ${races.length}` : ''})
+                  </span>
+                  <Input
+                    placeholder="Search races…"
+                    value={raceSearch}
+                    onChange={(e) => setRaceSearch(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+                <ScrollArea className="flex-1 overflow-hidden">
+                  <div className="p-4 space-y-1 pr-8">
+                    {filteredRaces.map((race) => {
+                      const raceKey = `${race.name}|${race.source ?? ''}`;
+                      const isSelected = selectedRaceKey === raceKey;
+                      const namedSubraces = (
+                        race.subraces ?? ([] as Race5e[])
+                      ).filter((sr) => sr.name) as Race5e[];
+                      const hasSubraces = namedSubraces.length > 0;
+                      return (
+                        <div
+                          key={raceKey}
+                          ref={isSelected ? selectedRaceRef : null}
+                          className={cn(
+                            'w-full p-3 rounded-lg border transition-colors hover:border-accent flex items-center justify-between gap-2',
+                            isSelected
+                              ? 'border-accent bg-accent/10'
+                              : 'border-border bg-card',
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateCharacter(character.id, {
+                                race: race.name,
+                                raceSource: race.source ?? undefined,
+                                subrace: undefined,
+                                subraceSource: undefined,
+                              });
+                              applyRaceSelection(race, undefined);
+                              if (detailCollapsed) setDetailCollapsed(false);
+                            }}
+                            className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                          >
+                            <div
+                              className={cn(
+                                'h-3.5 w-3.5 rounded-full border-2 flex-shrink-0',
+                                isSelected
+                                  ? 'bg-accent border-accent'
+                                  : 'border-muted-foreground',
+                              )}
+                            />
+                            <span className="font-medium text-sm truncate">
+                              {race.name}
+                            </span>
+                          </button>
+
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {isSelected && hasSubraces ? (
+                              <Select
+                                value={
+                                  character.subrace
+                                    ? `${character.subrace}|${character.subraceSource ?? ''}`
+                                    : ''
+                                }
+                                onValueChange={(v) => {
+                                  const [subraceNameOrFull, ...sourceParts] =
+                                    v.split('|');
+                                  const subraceSource =
+                                    sourceParts.length > 0
+                                      ? sourceParts.join('|')
+                                      : undefined;
+                                  const subraceNameFromKey = subraceNameOrFull;
+                                  const sr = namedSubraces.find(
+                                    (s) =>
+                                      s.name === subraceNameFromKey &&
+                                      (subraceSource ?? '') ===
+                                        (s.source ?? ''),
+                                  );
+                                  updateCharacter(character.id, {
+                                    subrace: subraceNameFromKey,
+                                    subraceSource: subraceSource ?? undefined,
+                                  });
+                                  applySubraceChange(
+                                    race.name,
+                                    race.source ?? undefined,
+                                    sr,
+                                  );
+                                }}
+                              >
+                                <SelectTrigger className="h-7 text-xs min-w-[120px] max-w-[180px]">
+                                  <SelectValue placeholder="Subrace…" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {namedSubraces.map((sr) => (
+                                    <SelectItem
+                                      key={`${sr.name}|${sr.source ?? ''}`}
+                                      value={`${sr.name}|${sr.source ?? ''}`}
+                                      className="text-xs"
+                                    >
+                                      {sr.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <>
+                                {hasSubraces && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs px-1.5 py-0"
+                                  >
+                                    {namedSubraces.length} subraces
+                                  </Badge>
+                                )}
+                                <Badge variant="outline" className="text-xs">
+                                  {race.source}
+                                </Badge>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              <div
+                className={cn(
+                  'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
+                  detailCollapsed
+                    ? 'w-0 min-w-0 opacity-0 pointer-events-none'
+                    : 'w-1/2 min-w-[320px]',
+                )}
+              >
+                <div className="p-4 border-b border-border">
+                  <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    Details
+                  </span>
+                </div>
+                <ScrollArea className="flex-1 overflow-hidden">
+                  <div className="p-4">
+                    {displayRace ? (
+                      <div className="space-y-4">
+                        <div>
+                          <h2 className="text-2xl font-display font-bold">
+                            {displayRace.name}
+                          </h2>
+                          <Badge variant="outline" className="mt-2">
+                            {displayRace.source}
+                          </Badge>
+                        </div>
+
+                        <Separator />
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <InfoTile title="Ability Bonuses">
+                            {getASILines(displayRace, character.raceAsiChoices)
+                              .length > 0 ? (
+                              getASILines(
+                                displayRace,
+                                character.raceAsiChoices,
+                              ).map((t) => (
+                                <div key={t} className="text-sm font-mono">
+                                  {t}
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-muted-foreground text-sm">
+                                —
+                              </span>
+                            )}
+                          </InfoTile>
+                          <InfoTile title="Size">
+                            <span className="text-sm font-mono">
+                              {displayRace.size?.join(', ') ?? '—'}
+                            </span>
+                          </InfoTile>
+                          <InfoTile title="Speed">
+                            <span className="text-sm font-mono">
+                              {getSpeedText(displayRace)}
+                            </span>
+                          </InfoTile>
+                        </div>
+
+                        <InfoTile title="Languages">
+                          <span className="text-sm">
+                            {getLanguages(displayRace) || '—'}
+                          </span>
+                        </InfoTile>
+
+                        {getRaceTraits(displayRace).length > 0 && (
+                          <div>
+                            <h4 className="text-xs font-bold text-accent uppercase tracking-wider mb-3">
+                              Traits
+                            </h4>
+                            <div className="space-y-3">
+                              {getRaceTraits(displayRace).map((trait) => (
+                                <div
+                                  key={`${trait.name}|${trait.entries?.length ?? 0}`}
+                                >
+                                  <div className="font-semibold text-sm mb-1">
+                                    {trait.name}
+                                  </div>
+                                  <div
+                                    className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
+                                    dangerouslySetInnerHTML={{
+                                      __html: trait.entries
+                                        .map((e) => renderEntry(e))
+                                        .join(''),
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {(displayRace.entries ?? [])
+                          .filter((e) => typeof e === 'string')
+                          .map((e) => (
+                            <div
+                              key={e as string}
+                              className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1"
+                              dangerouslySetInnerHTML={{
+                                __html: renderEntry(e),
+                              }}
+                            />
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+                        Select a race to view details
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
 }

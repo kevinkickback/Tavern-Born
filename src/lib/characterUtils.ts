@@ -1,18 +1,16 @@
-// Character utility functions — pure, no React/Zustand dependencies.
-// Ported from fizbanes-forge/src/app/Character.js and src/main/pdf/FieldMapping.js.
-
+import type { Class5e } from '@/types/5etools';
+import type {
+  AbilityBonuses,
+  AbilityScores,
+} from './calculations/abilityScores';
 import {
-  MAX_CHARACTER_LEVEL,
-  getProficiencyBonus,
   getAbilityModifier,
-  parseHitDice,
   getASILevelsFromClass,
   getHitDiceFromClass,
+  getProficiencyBonus,
+  MAX_CHARACTER_LEVEL,
+  parseHitDice,
 } from './calculations/gameRules';
-import type { Class5e } from '@/types/5etools';
-import { AbilityName, AbilityBonuses, AbilityScores } from './calculations/abilityScores';
-
-// ── Progression types ────────────────────────────────────────────────────────
 
 /** A single class entry within a character's multiclass progression. */
 export interface ClassEntry {
@@ -27,21 +25,22 @@ export interface Progression {
   classes: ClassEntry[];
 }
 
-// ── Level utilities ──────────────────────────────────────────────────────────
-
 /** Total character level summed across all class entries. */
-export function getTotalLevel(progression: Progression | undefined | null): number {
+export function getTotalLevel(
+  progression: Progression | undefined | null,
+): number {
   if (!progression?.classes?.length) return 1;
   return progression.classes.reduce((sum, c) => sum + (c.levels || 0), 0);
 }
 
 /** The primary (first) class entry, or null for a brand-new character. */
-export function getPrimaryClass(progression: Progression | undefined | null): ClassEntry | null {
+export function getPrimaryClass(
+  progression: Progression | undefined | null,
+): ClassEntry | null {
   if (!progression?.classes?.length) return null;
   return progression.classes[0];
 }
 
-/** Return the ClassEntry for a given class name, or null if not found. */
 export function getClassEntry(
   progression: Progression | undefined | null,
   className: string,
@@ -49,18 +48,18 @@ export function getClassEntry(
   return progression?.classes?.find((c) => c.name === className) ?? null;
 }
 
-export function hasClass(progression: Progression | undefined | null, className: string): boolean {
+export function hasClass(
+  progression: Progression | undefined | null,
+  className: string,
+): boolean {
   return getClassEntry(progression, className) !== null;
 }
 
-/** Proficiency bonus derived from total level. */
 export function getCharacterProficiencyBonus(
   progression: Progression | undefined | null,
 ): number {
   return getProficiencyBonus(getTotalLevel(progression));
 }
-
-// ── ASI / feat utilities ─────────────────────────────────────────────────────
 
 /**
  * Count how many ASI choices are available across all classes for the levels earned.
@@ -87,8 +86,6 @@ export function countAvailableASIs(
   }
   return count;
 }
-
-// ── HP utilities ─────────────────────────────────────────────────────────────
 
 /**
  * Calculate maximum hit points for a character.
@@ -131,21 +128,22 @@ export function calculateMaxHP(
   return Math.max(1, total);
 }
 
-/** Shorthand: given raw scores + bonuses compute max HP. */
 export function calculateMaxHPFromScores(
   progression: Progression | undefined | null,
   scores: AbilityScores,
   bonuses: AbilityBonuses,
   options?: { averageHp?: boolean; classesData?: Class5e[] },
 ): number {
-  const conTotal = scores.constitution + (bonuses.constitution ?? []).reduce((s, b) => s + b.value, 0);
+  const conTotal =
+    scores.constitution +
+    (bonuses.constitution ?? []).reduce((s, b) => s + b.value, 0);
   const conMod = getAbilityModifier(Math.min(conTotal, 20));
   return calculateMaxHP(progression, conMod, options);
 }
 
-// ── Level validation ─────────────────────────────────────────────────────────
-
-export function isMaxLevel(progression: Progression | undefined | null): boolean {
+export function isMaxLevel(
+  progression: Progression | undefined | null,
+): boolean {
   return getTotalLevel(progression) >= MAX_CHARACTER_LEVEL;
 }
 
@@ -156,8 +154,6 @@ export function canGainLevel(
 ): boolean {
   return getTotalLevel(progression) + additionalLevels <= MAX_CHARACTER_LEVEL;
 }
-
-// ── Game data matching ───────────────────────────────────────────────────────
 
 /**
  * Match a stored character field (name + optional source) against a game data entry.

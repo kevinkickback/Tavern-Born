@@ -1,11 +1,11 @@
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/ui/button';
 
 interface WizardFooterProps {
-  currentStep: number
-  totalSteps: number
-  onBack: () => void
-  onNext: () => void
-  onCancel: () => void
+  currentStep: number;
+  totalSteps: number;
+  onBack: () => void;
+  onNext: () => void;
+  onCancel: () => void;
 }
 
 export function WizardFooter({
@@ -17,19 +17,12 @@ export function WizardFooter({
 }: WizardFooterProps) {
   return (
     <div className="border-t border-border px-8 py-4 flex items-center justify-between bg-muted/20 flex-shrink-0">
-      <Button
-        variant="outline"
-        onClick={onCancel}
-      >
+      <Button variant="outline" onClick={onCancel}>
         Cancel
       </Button>
       <div className="flex gap-3">
         {currentStep > 1 && (
-          <Button
-            variant="secondary"
-            onClick={onBack}
-            className="min-w-24"
-          >
+          <Button variant="secondary" onClick={onBack} className="min-w-24">
             Back
           </Button>
         )}
@@ -41,5 +34,5 @@ export function WizardFooter({
         </Button>
       </div>
     </div>
-  )
+  );
 }
