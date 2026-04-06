@@ -8,9 +8,33 @@ export type CasterProgression =
   | 'artificer'
   | 'none';
 
-// Each row is [level-1 slots, level-2 slots, …, level-9 slots].
-// Missing entries are 0 / not present.
-const STANDARD_SPELL_SLOTS: number[][] = [
+/**
+ * Canonical map of caster progression keys to their full display names.
+ * Mirrors `Parser.SP_CASTER_PROGRESSION_TO_FULL` from the 5etools source,
+ * extended with 'artificer' and 'none' for our internal CasterProgression type.
+ */
+export const CASTER_PROGRESSION_TO_FULL: Readonly<
+  Record<CasterProgression, string>
+> = {
+  full: 'Full',
+  '1/2': 'Half',
+  '1/3': 'One-Third',
+  pact: 'Pact Magic',
+  artificer: 'Artificer',
+  none: 'None',
+};
+
+/** Convert a caster progression key to its full display name. */
+export function casterProgressionToFull(progression: string): string {
+  return (
+    CASTER_PROGRESSION_TO_FULL[progression as CasterProgression] ?? progression
+  );
+}
+
+// Fallback-only table used when class spell progression data is unavailable.
+// Canonical values should come from parsed class data (`rowsSpellProgression`).
+// Each row is [level-1 slots, level-2 slots, ..., level-9 slots].
+const FALLBACK_STANDARD_SPELL_SLOTS: number[][] = [
   /* lv 0  */ [],
   /* lv 1  */ [2],
   /* lv 2  */ [3],
@@ -34,16 +58,19 @@ const STANDARD_SPELL_SLOTS: number[][] = [
   /* lv 20 */ [4, 3, 3, 3, 3, 2, 2, 2, 1],
 ];
 
-const PACT_SLOT_COUNT = [
+const FALLBACK_PACT_SLOT_COUNT = [
   0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4,
 ];
-const PACT_SLOT_LEVEL = [
+const FALLBACK_PACT_SLOT_LEVEL = [
   0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
 ];
 
 // Used only as a last-resort fallback when class data is not loaded.
-// Prefer Class5e.casterProgression read from the actual data files.
-export const CLASS_CASTER_PROGRESSION: Record<string, CasterProgression> = {
+// Prefer Class5e.casterProgression read from parsed data files.
+export const FALLBACK_CLASS_CASTER_PROGRESSION: Record<
+  string,
+  CasterProgression
+> = {
   Bard: 'full',
   Cleric: 'full',
   Druid: 'full',
@@ -67,10 +94,23 @@ export interface SpellSlotLevel {
 
 export type SpellSlotsResult = Partial<Record<number, SpellSlotLevel>>;
 
+function validateFallbackProgression(
+  className: string,
+  parsedCasterProgression?: string,
+): void {
+  if (!parsedCasterProgression) return;
+  const fallback = FALLBACK_CLASS_CASTER_PROGRESSION[className];
+  if (fallback && fallback !== parsedCasterProgression) {
+    console.warn(
+      `[spellSlots] Fallback caster progression mismatch for ${className}: fallback=${fallback}, parsed=${parsedCasterProgression}`,
+    );
+  }
+}
+
 /** Return the standard (non-pact) spell slot maximums for a given `casterLevel`. */
 export function getStandardSpellSlots(casterLevel: number): SpellSlotsResult {
   if (casterLevel < 1 || casterLevel > 20) return {};
-  const row = STANDARD_SPELL_SLOTS[casterLevel] ?? [];
+  const row = FALLBACK_STANDARD_SPELL_SLOTS[casterLevel] ?? [];
   const result: SpellSlotsResult = {};
   for (let sl = 1; sl <= 9; sl++) {
     const count = row[sl - 1];
@@ -82,8 +122,8 @@ export function getStandardSpellSlots(casterLevel: number): SpellSlotsResult {
 /** Return pact magic slot maximums for a Warlock of the given `level`. */
 export function getPactMagicSlots(level: number): SpellSlotsResult {
   if (level < 1 || level > 20) return {};
-  const count = PACT_SLOT_COUNT[level];
-  const slotLevel = PACT_SLOT_LEVEL[level];
+  const count = FALLBACK_PACT_SLOT_COUNT[level];
+  const slotLevel = FALLBACK_PACT_SLOT_LEVEL[level];
   if (!count) return {};
   return { [slotLevel]: { max: count, used: 0, isPactMagic: true } };
 }
@@ -101,19 +141,51 @@ export function getSpellSlotsFromClassData(
   classData: Class5e,
   level: number,
 ): SpellSlotsResult | null {
-  const tableGroup = classData.classTableGroups?.find(
-    (g: { rowsSpellProgression?: unknown[] }) =>
-      Array.isArray(g.rowsSpellProgression),
-  );
-  if (!tableGroup) return null;
+  const row =
+    classData.spellSlotProgression?.[level - 1] ??
+    classData.classTableGroups?.find(
+      (g: { rowsSpellProgression?: unknown[] }) =>
+        Array.isArray(g.rowsSpellProgression),
+    )?.rowsSpellProgression?.[level - 1];
+  if (!Array.isArray(row)) return null;
 
-  const row: number[] = tableGroup.rowsSpellProgression[level - 1] ?? [];
   const result: SpellSlotsResult = {};
   for (let sl = 1; sl <= row.length; sl++) {
     const count = row[sl - 1];
     if (count && count > 0) result[sl] = { max: count, used: 0 };
   }
   return result;
+}
+
+export function getMaxSpellLevelForClassLevel(
+  classData: Class5e,
+  level: number,
+): number {
+  const spellSlots = getSpellSlotsFromClassData(classData, level);
+  if (spellSlots) {
+    return Object.keys(spellSlots)
+      .map((key) => Number.parseInt(key, 10))
+      .filter((value) => !Number.isNaN(value))
+      .reduce((max, value) => Math.max(max, value), 0);
+  }
+
+  if (classData.casterProgression === 'pact') {
+    const pactSlots = getPactMagicSlots(level);
+    return Object.keys(pactSlots)
+      .map((key) => Number.parseInt(key, 10))
+      .filter((value) => !Number.isNaN(value))
+      .reduce((max, value) => Math.max(max, value), 0);
+  }
+
+  const fallbackSlots = calculateSpellSlots(
+    classData.name,
+    level,
+    classData.casterProgression,
+  );
+  return Object.keys(fallbackSlots)
+    .map((key) => Number.parseInt(key, 10))
+    .filter((value) => !Number.isNaN(value))
+    .reduce((max, value) => Math.max(max, value), 0);
 }
 
 /**
@@ -130,9 +202,11 @@ export function calculateSpellSlots(
   level: number,
   casterProgression?: string,
 ): SpellSlotsResult {
+  validateFallbackProgression(className, casterProgression);
+
   const progression: CasterProgression =
     (casterProgression as CasterProgression) ??
-    CLASS_CASTER_PROGRESSION[className] ??
+    FALLBACK_CLASS_CASTER_PROGRESSION[className] ??
     'none';
 
   if (progression === 'none') return {};
@@ -155,9 +229,11 @@ export function isSpellcaster(
   className: string,
   casterProgression?: string,
 ): boolean {
+  validateFallbackProgression(className, casterProgression);
+
   const prog =
     (casterProgression as CasterProgression) ??
-    CLASS_CASTER_PROGRESSION[className];
+    FALLBACK_CLASS_CASTER_PROGRESSION[className];
   return !!prog && prog !== 'none';
 }
 

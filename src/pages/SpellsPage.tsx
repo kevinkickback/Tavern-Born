@@ -59,6 +59,11 @@ export function SpellsPage() {
 
   const classLower = character?.class?.toLowerCase() ?? '';
 
+  const spellByName = useMemo(
+    () => new Map((spells as Spell5e[]).map((s) => [s.name, s])),
+    [spells],
+  );
+
   const filteredSpells = useMemo(
     () =>
       (spells as Spell5e[]).filter((s) => {
@@ -348,7 +353,7 @@ export function SpellsPage() {
         classFilter={classLower}
         onConfirm={(names) => {
           for (const name of names) {
-            const spell = (spells as Spell5e[]).find((s) => s.name === name);
+            const spell = spellByName.get(name);
             if (spell?.level === 0) addCantrip(name);
             else addSpellKnown(name);
             applyManualSpellGrant(name);

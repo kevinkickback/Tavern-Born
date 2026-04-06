@@ -74,7 +74,6 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
       wisdom: 10,
       charisma: 10,
     },
-    proficiencyBonus: 2,
     proficiencies: {
       armor: [],
       weapons: [],

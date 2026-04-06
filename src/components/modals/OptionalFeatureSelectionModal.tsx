@@ -3,6 +3,7 @@ import { memo, useCallback, useMemo } from 'react';
 import {
   type ActiveFilters,
   type CategoryLimit,
+  type FilterSection,
   SelectionModal,
 } from '@/components/modals/SelectionModal';
 import { Badge } from '@/components/ui/badge';
@@ -148,11 +149,36 @@ export function OptionalFeatureSelectionModal({
     return map;
   }, [dedupedFeatures, characterSnapshot, className]);
 
+  const hasUnmetPrerequisites = useMemo(
+    () => [...prereqMap.values()].some((p) => !p.met),
+    [prereqMap],
+  );
+
   const categories: CategoryLimit<OptionalFeatureOption>[] = useMemo(
     () => [
       { key: 'all', label: 'selections', max: maxSelections, test: () => true },
     ],
     [maxSelections],
+  );
+
+  const filterSections: FilterSection[] = useMemo(
+    () =>
+      hasUnmetPrerequisites
+        ? [
+            {
+              key: 'prereq',
+              label: 'Prerequisites',
+              type: 'switches',
+              options: [
+                {
+                  value: 'showUnmet',
+                  label: 'Show options with unmet prerequisites',
+                },
+              ],
+            },
+          ]
+        : [],
+    [hasUnmetPrerequisites],
   );
 
   // Override SelectionModal's default guard: block if prereqs not met.
@@ -174,11 +200,22 @@ export function OptionalFeatureSelectionModal({
   );
 
   const matchItem = useCallback(
-    (item: OptionalFeatureOption, search: string, _filters: ActiveFilters) => {
-      if (!search) return true;
-      return item.name.toLowerCase().includes(search.toLowerCase());
+    (
+      item: OptionalFeatureOption,
+      search: string,
+      activeFilters: ActiveFilters,
+    ) => {
+      if (search && !item.name.toLowerCase().includes(search.toLowerCase())) {
+        return false;
+      }
+      const showUnmet = activeFilters.prereq?.has('showUnmet') ?? false;
+      if (!showUnmet) {
+        const prereq = prereqMap.get(item.name);
+        if (prereq && !prereq.met) return false;
+      }
+      return true;
     },
-    [],
+    [prereqMap],
   );
 
   const renderCard = useCallback(
@@ -205,6 +242,7 @@ export function OptionalFeatureSelectionModal({
       getItemId={(f) => f.name}
       renderCard={renderCard}
       matchItem={matchItem}
+      filterSections={filterSections}
       categories={categories}
       canSelect={canSelect}
       initialSelectedIds={initialSelectedNames}

@@ -61,6 +61,21 @@ export function renderEntry(entry: unknown): string {
         ? entryObj.entries.map(renderEntry).join(' ')
         : '';
     }
+
+    if (entryObj.type === 'refSubclassFeature') {
+      // Inline subclass feature reference. BuildClassPage resolves and filters these
+      // against the selected subclass before rendering; this is a defensive fallback
+      // for any unresolved refs that reach the renderer directly.
+      const featureName =
+        typeof entryObj.subclassFeature === 'string'
+          ? (entryObj.subclassFeature.split('|')[0] ?? '')
+          : typeof (entryObj as { name?: unknown }).name === 'string'
+            ? (entryObj as { name: string }).name
+            : '';
+      return featureName
+        ? `<em class="text-muted-foreground text-sm">${featureName}</em>`
+        : '';
+    }
   }
 
   return '';

@@ -43,6 +43,7 @@ export interface BackgroundFilters {
 
 export interface FeatFilters {
   sources?: string[];
+  categories?: string[];
   hasPrerequisite?: boolean;
   grantsAbilityScore?: boolean;
 }
@@ -107,7 +108,10 @@ export class DataFilter {
 
     if (filters.spellcaster !== undefined) {
       filtered = filtered.filter((c) => {
-        const isSpellcaster = !!c.spellcastingAbility || !!c.casterProgression;
+        const isSpellcaster =
+          typeof c.isSpellcaster === 'boolean'
+            ? c.isSpellcaster
+            : !!c.spellcastingAbility || !!c.casterProgression;
         return filters.spellcaster ? isSpellcaster : !isSpellcaster;
       });
     }
@@ -224,6 +228,13 @@ export class DataFilter {
 
     if (filters.sources && filters.sources.length > 0) {
       filtered = filtered.filter((f) => filters.sources?.includes(f.source));
+    }
+
+    if (filters.categories && filters.categories.length > 0) {
+      filtered = filtered.filter((f) => {
+        if (!f.category) return false;
+        return filters.categories?.includes(f.category);
+      });
     }
 
     if (filters.hasPrerequisite !== undefined) {
@@ -349,4 +360,14 @@ export function extractUniqueRarities(items: Item5e[]): string[] {
     if (item.rarity) rarities.add(item.rarity);
   });
   return Array.from(rarities).sort();
+}
+
+export function extractUniqueFeatCategories(feats: Feat5e[]): string[] {
+  const categories = new Set<string>();
+  feats.forEach((feat) => {
+    if (typeof feat.category === 'string' && feat.category.length > 0) {
+      categories.add(feat.category);
+    }
+  });
+  return Array.from(categories).sort();
 }

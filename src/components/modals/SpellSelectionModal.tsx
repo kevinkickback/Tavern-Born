@@ -271,10 +271,12 @@ export function SpellSelectionModal({
 }: SpellSelectionModalProps) {
   const getItemId = (spell: Spell5e) => `${spell.name}|${spell.source ?? ''}`;
 
-  const initialSelectedIds = initialSelectedNames.map((name) => {
-    const found = spells.find((s) => s.name === name);
-    return found ? getItemId(found) : name;
-  });
+  const spellIdsByName = new Map(
+    spells.map((spell) => [spell.name, getItemId(spell)]),
+  );
+  const initialSelectedIds = initialSelectedNames.map(
+    (name) => spellIdsByName.get(name) ?? name,
+  );
 
   const filterSections = [
     buildLevelFilter(allowedLevels),

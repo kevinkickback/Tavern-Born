@@ -32,7 +32,6 @@ export interface Character {
   classProgression?: CharacterClassEntry[];
 
   abilityScores: AbilityScores;
-  proficiencyBonus: number;
 
   proficiencies: Proficiencies;
   features: Feature[];

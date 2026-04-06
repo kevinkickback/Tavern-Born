@@ -1,5 +1,7 @@
+export * from './classData';
 export * from './dataLoader';
 export * from './filters';
+export * from './lookups';
 export * from './parsers';
 export * from './schemas';
 export * from './urlUtils';

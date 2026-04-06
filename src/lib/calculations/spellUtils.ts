@@ -156,6 +156,13 @@ export function ordinalSuffix(n: number): string {
 }
 
 /** E.g. 0 → "Cantrip", 1 → "1st-level", 2 → "2nd-level" */
+
+/** E.g. 1 → "1st", 2 → "2nd", 3 → "3rd", 11 → "11th" */
+export function getOrdinalForm(n: number): string {
+  return `${n}${ordinalSuffix(n)}`;
+}
+
+/** E.g. 0 → "Cantrip", 1 → "1st-level", 2 → "2nd-level" */
 export function formatSpellLevel(level: number): string {
   if (level === 0) return 'Cantrip';
   return `${level}${ordinalSuffix(level)}-level`;

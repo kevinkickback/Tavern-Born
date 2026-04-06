@@ -109,8 +109,10 @@ export function SubclassSelectionModal({
   const initialSelectedIds = useMemo(
     () => {
       if (!selectedName) return [];
-      const sc = subclasses.find((s) => s.name === selectedName);
-      return sc ? [`${sc.name}|${sc.source ?? ''}`] : [];
+      const selectedId = subclasses
+        .map((subclass) => `${subclass.name}|${subclass.source ?? ''}`)
+        .find((id) => id.startsWith(`${selectedName}|`));
+      return selectedId ? [selectedId] : [];
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectedName, subclasses],

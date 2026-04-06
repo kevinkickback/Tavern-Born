@@ -7,6 +7,8 @@ import {
   SelectionModal,
 } from '@/components/modals/SelectionModal';
 import { Badge } from '@/components/ui/badge';
+import { featCategoryToFull } from '@/lib/5etools/classData';
+import { extractUniqueFeatCategories } from '@/lib/5etools/filters';
 import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
@@ -42,6 +44,10 @@ const FeatCard = memo(function FeatCard({
 }: FeatCardProps) {
   const firstEntry = feat.entries?.[0];
   const descHtml = firstEntry ? cachedRender(firstEntry) : '';
+  const categoryLabel =
+    typeof feat.category === 'string' && feat.category.length > 0
+      ? featCategoryToFull(feat.category)
+      : null;
 
   return (
     <div className="p-3.5">
@@ -61,6 +67,14 @@ const FeatCard = memo(function FeatCard({
               className="text-xs px-1.5 py-0 h-5 text-muted-foreground"
             >
               {feat.source}
+            </Badge>
+          )}
+          {categoryLabel && (
+            <Badge
+              variant="outline"
+              className="text-xs px-1.5 py-0 h-5 text-muted-foreground"
+            >
+              {categoryLabel}
             </Badge>
           )}
           {isSelected && (
@@ -111,6 +125,8 @@ export interface FeatSelectionModalProps {
   initialSpecialIds?: string[];
   /** Character snapshot used for prerequisite validation. */
   characterSnapshot: PrereqCharacterSnapshot;
+  /** Optional initial filter state when opening (e.g. show unmet prereqs in class-driven pickers). */
+  initialFilters?: ActiveFilters;
   /** When false, hides the "Ignore selection limit" switch (e.g. on BuildClassPage). Defaults to true. */
   allowIgnoreLimit?: boolean;
   onConfirm: (selectedFeats: Feat5e[]) => void;
@@ -124,9 +140,19 @@ export function FeatSelectionModal({
   initialSelectedIds = [],
   initialSpecialIds = [],
   characterSnapshot,
+  initialFilters,
   allowIgnoreLimit = true,
   onConfirm,
 }: FeatSelectionModalProps) {
+  const featCategoryOptions = useMemo(() => {
+    return extractUniqueFeatCategories(feats)
+      .map((code) => ({
+        value: code,
+        label: featCategoryToFull(code),
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [feats]);
+
   // Build prereq map once; keyed by `name|source`
   const prereqMap = useMemo(() => {
     const map = new Map<string, { met: boolean; reasons: string[] }>();
@@ -142,6 +168,11 @@ export function FeatSelectionModal({
     }
     return map;
   }, [feats, characterSnapshot]);
+
+  const hasUnmetPrerequisites = useMemo(
+    () => [...prereqMap.values()].some((p) => !p.met),
+    [prereqMap],
+  );
 
   // Tracks whether the "ignore selection limit" switch is active.
   // Updated inside matchItem (which receives activeFilters) and read by canSelect.
@@ -163,16 +194,34 @@ export function FeatSelectionModal({
             },
           ]
         : []),
-      {
-        key: 'prereq',
-        label: 'Prerequisites',
-        type: 'switches',
-        options: [
-          { value: 'showUnmet', label: 'Show feats with unmet prerequisites' },
-        ],
-      },
+      ...(featCategoryOptions.length > 1
+        ? [
+            {
+              key: 'featCategory',
+              label: 'Categories',
+              type: 'checkboxes' as const,
+              options: featCategoryOptions,
+              columns: 1 as const,
+            },
+          ]
+        : []),
+      ...(hasUnmetPrerequisites
+        ? [
+            {
+              key: 'prereq',
+              label: 'Prerequisites',
+              type: 'switches' as const,
+              options: [
+                {
+                  value: 'showUnmet',
+                  label: 'Show feats with unmet prerequisites',
+                },
+              ],
+            },
+          ]
+        : []),
     ],
-    [allowIgnoreLimit],
+    [allowIgnoreLimit, featCategoryOptions, hasUnmetPrerequisites],
   );
 
   const categories: CategoryLimit<Feat5e>[] = useMemo(
@@ -198,6 +247,12 @@ export function FeatSelectionModal({
       ignoreLimitRef.current = activeFilters.limit?.has('ignoreLimit') ?? false;
       if (search && !item.name.toLowerCase().includes(search.toLowerCase()))
         return false;
+      const selectedCategories = activeFilters.featCategory;
+      if (selectedCategories && selectedCategories.size > 0) {
+        if (!item.category || !selectedCategories.has(item.category)) {
+          return false;
+        }
+      }
       const showUnmet = activeFilters.prereq?.has('showUnmet') ?? false;
       if (!showUnmet) {
         const prereq = prereqMap.get(`${item.name}|${item.source ?? ''}`);
@@ -254,6 +309,7 @@ export function FeatSelectionModal({
       categories={categories}
       canSelect={canSelect}
       initialSelectedIds={initialSelectedIds}
+      initialFilters={initialFilters}
       onConfirm={(_ids, items) => onConfirm(items)}
     />
   );

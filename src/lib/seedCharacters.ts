@@ -19,7 +19,6 @@ export const DEV_SEED_CHARACTERS: Character[] = [
       wisdom: 13,
       charisma: 10,
     },
-    proficiencyBonus: 3,
     proficiencies: {
       armor: [],
       weapons: [
@@ -204,7 +203,6 @@ export const DEV_SEED_CHARACTERS: Character[] = [
       wisdom: 12,
       charisma: 10,
     },
-    proficiencyBonus: 2,
     proficiencies: {
       armor: ['Light Armor', 'Medium Armor', 'Heavy Armor', 'Shields'],
       weapons: ['Simple Weapons', 'Martial Weapons'],
@@ -376,7 +374,6 @@ export const DEV_SEED_CHARACTERS: Character[] = [
       wisdom: 10,
       charisma: 11,
     },
-    proficiencyBonus: 2,
     proficiencies: {
       armor: ['Light Armor'],
       weapons: [

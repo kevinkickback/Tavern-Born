@@ -32,6 +32,34 @@ interface Raw5ePrereq {
   patron?: string;
 }
 
+/** Canonical 5etools pact prerequisite text normalizer (Parser.prereqPactToFull). */
+export function prereqPactToFull(pact: string): string {
+  if (pact === 'Chain') return 'Pact of the Chain';
+  if (pact === 'Tome') return 'Pact of the Tome';
+  if (pact === 'Blade') return 'Pact of the Blade';
+  if (pact === 'Talisman') return 'Pact of the Talisman';
+  return pact;
+}
+
+/** Canonical 5etools spell prerequisite text normalizer (Parser.prereqSpellToFull). */
+export function prereqSpellToFull(spell: string): string {
+  const [namePart] = spell.split('|');
+  const [spellName, suffix] = namePart.split('#');
+  if (!suffix) return spellName;
+  if (suffix === 'c') return `${spellName} cantrip`;
+  if (suffix === 'x') return 'Hex spell or a warlock feature that curses';
+  return spellName;
+}
+
+function parseSpellPrereqRef(ref: string): {
+  name: string;
+  suffix?: string;
+} {
+  const [namePart] = ref.split('|');
+  const [name, suffix] = namePart.split('#');
+  return { name, suffix };
+}
+
 export interface CheckPrereqOptions {
   /**
    * When set, level checks compare against this specific class's level
@@ -157,6 +185,9 @@ export function checkPrerequisite(
     const required = Array.isArray(prereq.spell)
       ? prereq.spell
       : [prereq.spell];
+    const knownCantrips = new Set(
+      (character.spells?.cantrips ?? []).map((s) => s.toLowerCase()),
+    );
     const knownNames = new Set(
       [
         ...(character.spells?.cantrips ?? []),
@@ -164,26 +195,37 @@ export function checkPrerequisite(
         ...(character.spells?.preparedSpells ?? []),
       ].map((s) => s.toLowerCase()),
     );
+    const hasCurseFeature =
+      character.features?.some((f) => f.name.toLowerCase().includes('curse')) ??
+      false;
 
     const missing = required.filter((ref) => {
-      // 5etools spell refs: "SpellName|Source" or "SpellName#anchor|Source"
-      const name = ref.split('#')[0].split('|')[0].toLowerCase();
+      const parsed = parseSpellPrereqRef(ref);
+      const name = parsed.name.toLowerCase();
+
+      if (parsed.suffix === 'c') {
+        return !knownCantrips.has(name);
+      }
+
+      if (parsed.suffix === 'x') {
+        return !(knownNames.has('hex') || hasCurseFeature);
+      }
+
       return !knownNames.has(name);
     });
 
     if (missing.length > 0) {
-      const names = missing
-        .map((r) => r.split('#')[0].split('|')[0])
-        .join(', ');
+      const names = missing.map((r) => prereqSpellToFull(r)).join(', ');
       return { met: false, reason: `Requires spell: ${names}` };
     }
   }
   if (prereq.pact) {
+    const requiredPact = prereqPactToFull(prereq.pact);
     const hasPact = character.features?.some((f) =>
-      f.name.toLowerCase().includes(prereq.pact?.toLowerCase()),
+      f.name.toLowerCase().includes(requiredPact.toLowerCase()),
     );
     if (!hasPact) {
-      return { met: false, reason: `Requires ${prereq.pact}` };
+      return { met: false, reason: `Requires ${requiredPact}` };
     }
   }
 
