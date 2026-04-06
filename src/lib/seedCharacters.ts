@@ -182,7 +182,7 @@ export const DEV_SEED_CHARACTERS: Character[] = [
       backstory:
         'Born in the high elven city of Silverymoon, Thendrin showed an early aptitude for the arcane arts. After a century of study, he left the city to seek ancient magical lore lost during the Spellplague.',
     },
-    portrait: '/assets/images/characters/placeholder_char_card0.jpg',
+    portrait: '/assets/images/characters/placeholder_char_card2.jpg',
     createdAt: '2026-01-01T00:00:00.000Z',
     lastModified: '2026-01-01T00:00:00.000Z',
   },

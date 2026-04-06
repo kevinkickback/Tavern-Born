@@ -1,3 +1,5 @@
+import type { PortraitTransform } from '@/types/character';
+
 export interface WizardStep {
   id: number;
   label: string;
@@ -18,6 +20,7 @@ export interface CharacterWizardData {
   abilityScoreMethod: string;
   abilityScores: Record<string, number>;
   portrait: string;
+  portraitTransform: PortraitTransform;
   rulesMode: string;
   allowedSources: string[];
   raceAsiChoices: string[][];

@@ -33,6 +33,7 @@ Key scripts in package.json:
 	- src/pages/feats/model/selection.ts
 - Compendium entry shaping and filtering in src/lib/compendiumEntries.ts
 - Integration workflows: home page, startup modals, level-up modal (tests/integration/*)
+- Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
 - Basic E2E startup/navigation smoke
 
 ## High-Priority Gaps

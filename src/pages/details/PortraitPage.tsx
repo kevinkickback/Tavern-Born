@@ -1,38 +1,18 @@
-import {
-  ArrowsIn,
-  ArrowsOut,
-  Crop,
-  Image,
-  Images,
-  MagnifyingGlassMinus,
-  MagnifyingGlassPlus,
-  Upload,
-  X,
-} from '@phosphor-icons/react';
+import { Crop, Image, Images, Upload, X } from '@phosphor-icons/react';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { PortraitCardPreview } from '@/components/character/PortraitCardPreview';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import {
+  DEFAULT_PORTRAIT_TRANSFORM,
+  PLACEHOLDER_PORTRAITS,
+} from '@/lib/portraitConstants';
 import { cn } from '@/lib/utils';
 import { useCharacterStore } from '@/store/characterStore';
-
-const PLACEHOLDER_PORTRAITS = [
-  '/assets/images/characters/placeholder_char_card.jpg',
-  '/assets/images/characters/placeholder_char_card0.jpg',
-  '/assets/images/characters/placeholder_char_card2.jpg',
-  '/assets/images/characters/placeholder_char_card3.jpg',
-  '/assets/images/characters/placeholder_char_card4.jpg',
-  '/assets/images/characters/placeholder_char_card5.jpg',
-  '/assets/images/characters/placeholder_char_card6.jpg',
-  '/assets/images/characters/placeholder_char_card7.jpg',
-  '/assets/images/characters/placeholder_char_card8.jpg',
-  '/assets/images/characters/placeholder_char_card9.jpg',
-  '/assets/images/characters/placeholder_char_card10.jpg',
-  '/assets/images/characters/placeholder_char_card11.jpg',
-];
 
 export function PortraitPage() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter);
@@ -40,27 +20,60 @@ export function PortraitPage() {
     (state) => state.updateActiveCharacter,
   );
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(100);
-  const [panX, setPanX] = useState(0);
-  const [panY, setPanY] = useState(0);
-  const [rotation, setRotation] = useState(0);
+  const [zoom, setZoom] = useState(DEFAULT_PORTRAIT_TRANSFORM.zoom);
+  const [panX, setPanX] = useState(DEFAULT_PORTRAIT_TRANSFORM.panX);
+  const [panY, setPanY] = useState(DEFAULT_PORTRAIT_TRANSFORM.panY);
+  const [rotation, setRotation] = useState(DEFAULT_PORTRAIT_TRANSFORM.rotation);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const portraitUploadId = useId();
+
+  const applyTransformDraft = useCallback(
+    (
+      updates: Partial<{
+        zoom: number;
+        panX: number;
+        panY: number;
+        rotation: number;
+      }>,
+    ) => {
+      const nextZoom = updates.zoom ?? zoom;
+      const nextPanX = updates.panX ?? panX;
+      const nextPanY = updates.panY ?? panY;
+      const nextRotation = updates.rotation ?? rotation;
+
+      setZoom(nextZoom);
+      setPanX(nextPanX);
+      setPanY(nextPanY);
+      setRotation(nextRotation);
+
+      updateActiveCharacter({
+        portraitTransform: {
+          zoom: nextZoom,
+          panX: nextPanX,
+          panY: nextPanY,
+          rotation: nextRotation,
+        },
+      });
+    },
+    [panX, panY, rotation, updateActiveCharacter, zoom],
+  );
+
   const resetTransforms = useCallback(() => {
-    setZoom(100);
-    setPanX(0);
-    setPanY(0);
-    setRotation(0);
-  }, []);
+    applyTransformDraft(DEFAULT_PORTRAIT_TRANSFORM);
+  }, [applyTransformDraft]);
 
   useEffect(() => {
     setImagePreview(activeCharacter?.portrait ?? null);
-    resetTransforms();
+    const transform = activeCharacter?.portraitTransform;
+    setZoom(transform?.zoom ?? DEFAULT_PORTRAIT_TRANSFORM.zoom);
+    setPanX(transform?.panX ?? DEFAULT_PORTRAIT_TRANSFORM.panX);
+    setPanY(transform?.panY ?? DEFAULT_PORTRAIT_TRANSFORM.panY);
+    setRotation(transform?.rotation ?? DEFAULT_PORTRAIT_TRANSFORM.rotation);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [activeCharacter?.portrait, resetTransforms]);
+  }, [activeCharacter?.portrait, activeCharacter?.portraitTransform]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -91,31 +104,6 @@ export function PortraitPage() {
     toast.info('Portrait cleared');
   };
 
-  const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 10, 200));
-  };
-
-  const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 10, 50));
-  };
-
-  const handleFitToView = () => {
-    setZoom(100);
-    setPanX(0);
-    setPanY(0);
-  };
-
-  const handleRotate = () => {
-    setRotation((prev) => (prev + 90) % 360);
-  };
-
-  const getTransformStyle = () => {
-    return {
-      transform: `scale(${zoom / 100}) translate(${panX}px, ${panY}px) rotate(${rotation}deg)`,
-      transition: 'transform 0.2s ease-out',
-    };
-  };
-
   if (!activeCharacter) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -142,24 +130,18 @@ export function PortraitPage() {
           <div className="w-full lg:w-1/2 space-y-3">
             <Label className="flex items-center gap-2">
               <Image className="h-5 w-5" />
-              Preview
+              Card Preview
             </Label>
-            <div className="aspect-[3/4] w-full bg-muted rounded-lg border-2 border-dashed border-border flex items-center justify-center overflow-hidden">
-              {imagePreview ? (
-                <div className="w-full h-full flex items-center justify-center overflow-hidden">
-                  <img
-                    src={imagePreview}
-                    alt="Character portrait"
-                    className="max-w-full max-h-full object-contain"
-                    style={getTransformStyle()}
-                  />
-                </div>
-              ) : (
-                <div className="text-center text-muted-foreground">
-                  <Image className="h-16 w-16 mx-auto mb-2 opacity-50" />
-                  <p>No portrait uploaded</p>
-                </div>
-              )}
+            <div className="rounded-xl border-2 border-dashed border-border p-2 sm:p-3">
+              <PortraitCardPreview
+                image={imagePreview}
+                name={activeCharacter.name}
+                level={activeCharacter.level}
+                race={activeCharacter.race}
+                characterClass={activeCharacter.class}
+                lastModified={activeCharacter.lastModified}
+                transform={{ zoom, panX, panY, rotation }}
+              />
             </div>
           </div>
 
@@ -249,35 +231,15 @@ export function PortraitPage() {
                   </div>
                   <Slider
                     value={[zoom]}
-                    onValueChange={(value) => setZoom(value[0])}
+                    onValueChange={(value) =>
+                      applyTransformDraft({ zoom: value[0] })
+                    }
                     min={50}
-                    max={200}
+                    max={400}
                     step={5}
                     disabled={!imagePreview}
                     className="w-full"
                   />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleZoomOut}
-                      disabled={!imagePreview}
-                      className="w-full"
-                    >
-                      <MagnifyingGlassMinus className="h-4 w-4 sm:mr-1" />
-                      <span className="hidden sm:inline">Out</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleZoomIn}
-                      disabled={!imagePreview}
-                      className="w-full"
-                    >
-                      <MagnifyingGlassPlus className="h-4 w-4 sm:mr-1" />
-                      <span className="hidden sm:inline">In</span>
-                    </Button>
-                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -287,7 +249,9 @@ export function PortraitPage() {
                   </div>
                   <Slider
                     value={[panX]}
-                    onValueChange={(value) => setPanX(value[0])}
+                    onValueChange={(value) =>
+                      applyTransformDraft({ panX: value[0] })
+                    }
                     min={-200}
                     max={200}
                     step={5}
@@ -303,7 +267,9 @@ export function PortraitPage() {
                   </div>
                   <Slider
                     value={[panY]}
-                    onValueChange={(value) => setPanY(value[0])}
+                    onValueChange={(value) =>
+                      applyTransformDraft({ panY: value[0] })
+                    }
                     min={-200}
                     max={200}
                     step={5}
@@ -312,33 +278,13 @@ export function PortraitPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      Rotation
-                    </span>
-                    <span className="text-sm font-medium">{rotation}°</span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRotate}
-                    disabled={!imagePreview}
-                    className="w-full"
-                  >
-                    <ArrowsOut className="h-4 w-4 mr-2" />
-                    Rotate 90°
-                  </Button>
-                </div>
-
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={handleFitToView}
+                  onClick={resetTransforms}
                   disabled={!imagePreview}
                   className="w-full"
                 >
-                  <ArrowsIn className="h-4 w-4 mr-2" />
                   Reset View
                 </Button>
               </div>

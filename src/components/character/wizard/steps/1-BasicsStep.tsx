@@ -1,5 +1,7 @@
-import { Images, Upload, User } from '@phosphor-icons/react';
+import { Crop, Images, Upload, User } from '@phosphor-icons/react';
 import { useId, useRef } from 'react';
+import { PortraitCardPreview } from '@/components/character/PortraitCardPreview';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -9,48 +11,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import {
+  DEFAULT_PORTRAIT_TRANSFORM,
+  PLACEHOLDER_PORTRAITS,
+} from '@/lib/portraitConstants';
 import { cn } from '@/lib/utils';
 import type { StepProps } from '../types';
-
-const PLACEHOLDER_PORTRAITS = [
-  '/assets/images/characters/placeholder_char_card.jpg',
-  '/assets/images/characters/placeholder_char_card0.jpg',
-  '/assets/images/characters/placeholder_char_card2.jpg',
-  '/assets/images/characters/placeholder_char_card3.jpg',
-  '/assets/images/characters/placeholder_char_card4.jpg',
-  '/assets/images/characters/placeholder_char_card5.jpg',
-  '/assets/images/characters/placeholder_char_card6.jpg',
-  '/assets/images/characters/placeholder_char_card7.jpg',
-  '/assets/images/characters/placeholder_char_card8.jpg',
-  '/assets/images/characters/placeholder_char_card9.jpg',
-  '/assets/images/characters/placeholder_char_card10.jpg',
-  '/assets/images/characters/placeholder_char_card11.jpg',
-];
 
 export function BasicsStep({
   data,
   onChange,
   invalidFields = new Set(),
 }: StepProps) {
+  const defaultTransform = DEFAULT_PORTRAIT_TRANSFORM;
+  const portraitTransform = data.portraitTransform ?? defaultTransform;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const characterNameId = useId();
   const genderId = useId();
 
   const hasError = (field: string) => invalidFields.has(field);
 
+  const applyPortraitTransform = (
+    updates: Partial<typeof portraitTransform>,
+  ) => {
+    onChange({
+      portraitTransform: {
+        ...portraitTransform,
+        ...updates,
+      },
+    });
+  };
+
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => {
-      onChange({ portrait: reader.result as string });
+      onChange({
+        portrait: reader.result as string,
+        portraitTransform: { ...defaultTransform },
+      });
     };
     reader.readAsDataURL(file);
   };
 
   return (
-    <div className="flex flex-col h-full gap-4">
-      <div className="grid grid-cols-2 gap-4 shrink-0">
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 shrink-0">
         <div className="rounded-lg border border-border bg-muted/20 p-4">
           <Label
             htmlFor={characterNameId}
@@ -93,28 +101,109 @@ export function BasicsStep({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col rounded-lg border border-border bg-muted/20 p-4">
+      <div className="flex flex-col rounded-lg border border-border bg-muted/20 p-4">
         <Label className="flex items-center gap-2 mb-3">
           <Images className="h-4 w-4" />
           Portrait
         </Label>
-        <div className="flex gap-4 flex-1 min-h-0">
-          <div className="w-1/3 shrink-0 rounded-lg overflow-hidden border border-border bg-muted flex items-center justify-center aspect-[2/3] max-h-full">
-            {data.portrait ? (
-              <img
-                src={data.portrait}
-                alt="Selected portrait"
-                className="w-full h-full object-cover"
+        <div className="flex flex-col xl:flex-row gap-4">
+          <div className="w-full xl:w-[46%] shrink-0 flex flex-col gap-3">
+            <div className="rounded-lg border border-border bg-muted p-2 sm:p-3">
+              <PortraitCardPreview
+                image={data.portrait}
+                name={data.name}
+                level={1}
+                race="Race"
+                characterClass="Class"
+                gender={data.gender}
+                lastModified={new Date().toISOString()}
+                transform={portraitTransform}
+                className="mx-auto max-w-xl xl:max-w-none"
               />
-            ) : (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <User className="h-10 w-10 opacity-40" />
-                <span className="text-xs">No portrait</span>
+            </div>
+
+            <div className="rounded-lg border border-border bg-card/60 p-3">
+              <Label className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                <Crop className="h-3.5 w-3.5" />
+                Image Adjust
+              </Label>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Zoom</span>
+                    <span className="font-medium">
+                      {portraitTransform.zoom}%
+                    </span>
+                  </div>
+                  <Slider
+                    value={[portraitTransform.zoom]}
+                    onValueChange={(value) =>
+                      applyPortraitTransform({ zoom: value[0] })
+                    }
+                    min={50}
+                    max={400}
+                    step={5}
+                    disabled={!data.portrait}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Pan X</span>
+                    <span className="font-medium">
+                      {portraitTransform.panX}px
+                    </span>
+                  </div>
+                  <Slider
+                    value={[portraitTransform.panX]}
+                    onValueChange={(value) =>
+                      applyPortraitTransform({ panX: value[0] })
+                    }
+                    min={-240}
+                    max={240}
+                    step={5}
+                    disabled={!data.portrait}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Pan Y</span>
+                    <span className="font-medium">
+                      {portraitTransform.panY}px
+                    </span>
+                  </div>
+                  <Slider
+                    value={[portraitTransform.panY]}
+                    onValueChange={(value) =>
+                      applyPortraitTransform({ panY: value[0] })
+                    }
+                    min={-240}
+                    max={240}
+                    step={5}
+                    disabled={!data.portrait}
+                  />
+                </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  disabled={!data.portrait}
+                  onClick={() =>
+                    applyPortraitTransform({ ...defaultTransform })
+                  }
+                >
+                  Reset View
+                </Button>
               </div>
-            )}
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="grid grid-cols-5 gap-2">
+
+          <div className="w-full xl:flex-1 xl:min-h-0 xl:overflow-y-auto">
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -128,7 +217,12 @@ export function BasicsStep({
                 <button
                   key={url}
                   type="button"
-                  onClick={() => onChange({ portrait: url })}
+                  onClick={() =>
+                    onChange({
+                      portrait: url,
+                      portraitTransform: { ...defaultTransform },
+                    })
+                  }
                   className={cn(
                     'relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105',
                     data.portrait === url

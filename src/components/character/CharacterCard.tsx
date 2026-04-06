@@ -7,7 +7,6 @@ import {
   Users,
 } from '@phosphor-icons/react';
 import { memo } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -71,6 +70,11 @@ export const CharacterCard = memo(function CharacterCard({
     : isMedium
       ? 'text-[10px]'
       : 'text-xs';
+  const portraitTransform = character.portraitTransform;
+  const portraitZoom = (portraitTransform?.zoom ?? 100) / 100;
+  const portraitPanX = portraitTransform?.panX ?? 0;
+  const portraitPanY = portraitTransform?.panY ?? 0;
+  const portraitRotation = portraitTransform?.rotation ?? 0;
 
   const handleCardClick = () => {
     if (selectionMode) {
@@ -102,21 +106,22 @@ export const CharacterCard = memo(function CharacterCard({
       onClick={handleCardClick}
     >
       {character.portrait ? (
-        <div
-          className="absolute inset-0"
+        <img
+          src={character.portrait}
+          alt={`${character.name || 'Character'} portrait`}
+          className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full max-w-none select-none object-contain"
           style={{
-            backgroundImage: `url(${character.portrait})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'left center',
-            backgroundRepeat: 'no-repeat',
+            transform: `translate(calc(-50% + ${portraitPanX - 92}px), calc(-50% + ${portraitPanY}px)) scale(${portraitZoom}) rotate(${portraitRotation}deg)`,
           }}
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-muted to-background" />
       )}
 
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent from-[18%] via-card/54 via-[45%] to-card/94 to-[72%]" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background/35 via-transparent to-transparent" />
+      <div className="absolute inset-y-0 right-0 w-[84%] bg-gradient-to-l from-card/98 via-card/75 to-transparent" />
+      <div className="absolute inset-y-0 right-0 w-[64%] bg-gradient-to-l from-card/99 via-card/88 to-transparent" />
+      <div className="absolute inset-y-0 right-0 w-[30%] bg-gradient-to-l from-card via-card/99 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background/65 via-transparent to-transparent" />
 
       {selectionMode && (
         <button
@@ -131,17 +136,6 @@ export const CharacterCard = memo(function CharacterCard({
         </button>
       )}
 
-      {isActive && (
-        <div className="absolute top-3 right-3 z-10">
-          <Badge
-            variant="default"
-            className="shrink-0 bg-accent text-accent-foreground shadow-sm"
-          >
-            Active
-          </Badge>
-        </div>
-      )}
-
       <div
         className={cn(
           'absolute inset-y-0 right-0 z-[1] flex flex-col items-end text-right',
@@ -149,12 +143,7 @@ export const CharacterCard = memo(function CharacterCard({
           shellPadding,
         )}
       >
-        <div
-          className={cn(
-            'flex w-full justify-end',
-            isActive && (isSmall ? 'pr-16' : 'pr-20'),
-          )}
-        >
+        <div className="flex w-full justify-end">
           <div className="ml-auto flex max-w-full flex-col items-end">
             <div className="flex min-w-0 flex-col items-end">
               <h3

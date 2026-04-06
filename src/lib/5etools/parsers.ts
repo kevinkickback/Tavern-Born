@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import type { Language5e } from '@/types/5etools';
 import { SOURCE_FALLBACKS } from './sourceFallbacks';
 
 function _validateData<T>(
@@ -780,7 +781,7 @@ export function parseSenses(data: unknown): unknown[] {
   return [];
 }
 
-export function parseLanguages(data: unknown): unknown[] {
+export function parseLanguages(data: unknown): Language5e[] {
   const obj = asObject(data);
   if (obj.language) return asArray(obj.language);
   if (Array.isArray(data)) return data;
