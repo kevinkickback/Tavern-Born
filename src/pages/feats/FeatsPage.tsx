@@ -17,6 +17,10 @@ import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites';
+import {
+  collectKnownSpells,
+  ensureSpellProfiles,
+} from '@/lib/calculations/spellProfiles';
 import { renderEntry } from '@/lib/renderer';
 import { cn } from '@/lib/utils';
 import {
@@ -205,6 +209,9 @@ export function FeatsPage() {
   const usedASI = character?.feats?.length ?? 0;
   const specialFeatCount = character?.specialFeats?.length ?? 0;
   const remainingASI = totalASI - usedASI;
+  const profileSpells = character
+    ? collectKnownSpells(ensureSpellProfiles(character))
+    : { cantrips: [], spellsKnown: [], preparedSpells: [] };
 
   const characterSnapshot: PrereqCharacterSnapshot = {
     level: character?.level ?? 0,
@@ -220,9 +227,9 @@ export function FeatsPage() {
     },
     features: character?.features ?? [],
     spells: {
-      cantrips: character?.spells?.cantrips ?? [],
-      spellsKnown: character?.spells?.spellsKnown ?? [],
-      preparedSpells: character?.spells?.preparedSpells ?? [],
+      cantrips: profileSpells.cantrips,
+      spellsKnown: profileSpells.spellsKnown,
+      preparedSpells: profileSpells.preparedSpells,
     },
   };
 

@@ -16,6 +16,7 @@ Key scripts in package.json:
 ## Current Coverage Areas
 
 - Core calculations in src/lib/calculations/* (including spellUtils)
+- Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
 - Renderer output in src/lib/renderer.ts
@@ -38,7 +39,7 @@ Key scripts in package.json:
 
 ## High-Priority Gaps
 
-1. Multiclass spell slot blending edge cases.
+1. Broader spell-page integration coverage (profile switching, class limits, and always-prepared special profile interactions).
 2. Save/reload persistence E2E for character lifecycle.
 3. Broader provenance reconciliation coverage for all grant pathways.
 4. Ingestion integration tests using representative real-world 5etools structures.

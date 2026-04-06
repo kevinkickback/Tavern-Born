@@ -72,8 +72,28 @@ export function makeCharacterFixture(
     features: [],
     feats: [],
     spells: {
-      cantrips: [],
-      spellsKnown: [],
+      spellProfiles: [
+        {
+          id: 'class:Fighter|PHB',
+          type: 'class',
+          label: 'Fighter (Lv 1)',
+          className: 'Fighter',
+          classSource: 'PHB',
+          cantrips: [],
+          spellsKnown: [],
+          preparedSpells: [],
+          alwaysPrepared: false,
+        },
+        {
+          id: 'special:unrestricted',
+          type: 'special',
+          label: 'Special (Unrestricted)',
+          cantrips: [],
+          spellsKnown: [],
+          preparedSpells: [],
+          alwaysPrepared: true,
+        },
+      ],
       spellSlots: {
         level1: { max: 0, used: 0 },
         level2: { max: 0, used: 0 },
@@ -85,7 +105,6 @@ export function makeCharacterFixture(
         level8: { max: 0, used: 0 },
         level9: { max: 0, used: 0 },
       },
-      preparedSpells: [],
     },
     equipment: [],
     hitPoints: {

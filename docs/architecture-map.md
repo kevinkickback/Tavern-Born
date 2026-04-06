@@ -22,7 +22,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 5. Domain logic
 - Purpose: pure calculations and game rules.
-- Key files: src/lib/characterUtils.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/armorClass.ts.
+- Key files: src/lib/characterUtils.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/armorClass.ts.
 
 6. Provenance system
 - Purpose: track source of grants and reconcile when race/class/features change.
@@ -31,6 +31,9 @@ This document describes the current Tavern-Born runtime architecture and where r
 7. Hooks and view derivations
 - Purpose: thin wrappers from store state to UI-facing derived values.
 - Key files: src/hooks/character/*, src/hooks/data/*.
+
+Spellcasting note:
+- `src/hooks/character/useSpellSlots.ts` now derives spell list/detail data from profile-based spell state and multiclass slot breakdown helpers.
 
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.

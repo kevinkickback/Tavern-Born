@@ -6,6 +6,7 @@ import {
   SelectionModal,
 } from '@/components/modals/SelectionModal';
 import { Badge } from '@/components/ui/badge';
+import { isSpellOnClassList } from '@/lib/calculations/spellProfiles';
 import {
   formatCastingTime,
   formatComponents,
@@ -44,8 +45,8 @@ export interface SpellSelectionModalProps {
   onOpenChange: (open: boolean) => void;
   title?: string;
   spells: Spell5e[];
-  /** Names already learned — hidden from the list so the user can't re-add them. */
-  ownedNames?: Set<string>;
+  /** Names already selected in another profile or slot and therefore unavailable here. */
+  lockedNames?: Set<string>;
   /** Per-level selection limits expressed as CategoryLimit objects. Optional. */
   categories?: CategoryLimit<Spell5e>[];
   /** Pre-selected spell names when the dialog opens. */
@@ -54,8 +55,9 @@ export interface SpellSelectionModalProps {
   initialFilters?: ActiveFilters;
   /** When set, level filter options NOT in this set are disabled (greyed out). */
   allowedLevels?: Set<string>;
-  /** Optional class filter — show only spells on that class list (lowercase). */
-  classFilter?: string;
+  /** Optional class filter — show only spells on that class list. */
+  className?: string;
+  classSource?: string;
   onConfirm: (names: string[]) => void;
 }
 
@@ -116,23 +118,12 @@ function matchSpell(
   spell: Spell5e,
   search: string,
   activeFilters: ActiveFilters,
-  ownedNames: Set<string>,
-  classFilter: string,
+  className: string | undefined,
+  classSource: string | undefined,
   strictLevels: boolean,
 ): boolean {
-  // Hide already-owned spells.
-  if (ownedNames.has(spell.name)) return false;
-
-  // Class filter: if provided, ensure the spell is on that class list.
-  if (classFilter) {
-    const fromList = spell.classes?.fromClassList ?? [];
-    if (
-      fromList.length > 0 &&
-      !fromList.some(
-        (c: { name?: string }) => c.name?.toLowerCase() === classFilter,
-      )
-    )
-      return false;
+  if (className && !isSpellOnClassList(spell, className, classSource)) {
+    return false;
   }
 
   // Name search.
@@ -172,11 +163,13 @@ function matchSpell(
 interface SpellCardProps {
   spell: Spell5e;
   isSelected: boolean;
+  isLocked: boolean;
 }
 
 const SpellCard = memo(function SpellCard({
   spell,
   isSelected,
+  isLocked,
 }: SpellCardProps) {
   const isRitual = !!spell.meta?.ritual;
   const isConcentration = spell.duration.some((d) => d.concentration);
@@ -214,6 +207,11 @@ const SpellCard = memo(function SpellCard({
           {isSelected && (
             <Badge className="text-xs px-1.5 py-0 h-5 bg-accent text-accent-foreground">
               ✓
+            </Badge>
+          )}
+          {!isSelected && isLocked && (
+            <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5">
+              Added Elsewhere
             </Badge>
           )}
         </div>
@@ -261,12 +259,13 @@ export function SpellSelectionModal({
   onOpenChange,
   title = 'Add Spells',
   spells,
-  ownedNames = new Set(),
+  lockedNames = new Set(),
   categories,
   initialSelectedNames = [],
   initialFilters,
   allowedLevels,
-  classFilter = '',
+  className,
+  classSource,
   onConfirm,
 }: SpellSelectionModalProps) {
   const getItemId = (spell: Spell5e) => `${spell.name}|${spell.source ?? ''}`;
@@ -284,6 +283,31 @@ export function SpellSelectionModal({
     TYPE_FILTER,
   ];
 
+  const canSelect = (
+    spell: Spell5e,
+    selectedIds: Set<string>,
+    allItems: Spell5e[],
+  ) => {
+    const id = getItemId(spell);
+    if (selectedIds.has(id)) return true;
+    if (lockedNames.has(spell.name)) return false;
+
+    for (const category of categories ?? []) {
+      if (category.max === Number.POSITIVE_INFINITY || !category.test(spell)) {
+        continue;
+      }
+
+      const count = allItems.filter(
+        (item) => category.test(item) && selectedIds.has(getItemId(item)),
+      ).length;
+      if (count >= category.max) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   return (
     <SelectionModal<Spell5e>
       open={open}
@@ -292,15 +316,20 @@ export function SpellSelectionModal({
       items={spells}
       getItemId={getItemId}
       renderCard={(spell, isSelected) => (
-        <SpellCard spell={spell} isSelected={isSelected} />
+        <SpellCard
+          spell={spell}
+          isSelected={isSelected}
+          isLocked={!isSelected && lockedNames.has(spell.name)}
+        />
       )}
+      canSelect={canSelect}
       matchItem={(spell, search, activeFilters) =>
         matchSpell(
           spell,
           search,
           activeFilters,
-          ownedNames,
-          classFilter,
+          className,
+          classSource,
           !!allowedLevels,
         )
       }

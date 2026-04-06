@@ -11,6 +11,12 @@ import {
   type OptionalFeatureLike,
 } from '@/lib/5etools/classData';
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites';
+import {
+  buildClassProfileLabel,
+  buildClassSpellLevelKey,
+  ensureSpellProfiles,
+  getKnownSpellNames,
+} from '@/lib/calculations/spellProfiles';
 import { getOrdinalForm } from '@/lib/calculations/spellUtils';
 import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog';
 import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelectionDialog';
@@ -75,6 +81,7 @@ interface BuildClassModalsProps {
     classSource: string | undefined,
     spellName: string,
   ) => void;
+  onRemoveSpellProvenance: (spellName: string) => void;
   onUpdateCharacter: (patch: Partial<Character>) => void;
 
   subclassPickerOpen: boolean;
@@ -124,6 +131,7 @@ export function BuildClassModals({
   viewingClass,
   viewingClassSource,
   onApplySpellSelection,
+  onRemoveSpellProvenance,
   onUpdateCharacter,
   subclassPickerOpen,
   onSubclassPickerOpenChange,
@@ -172,10 +180,23 @@ export function BuildClassModals({
           const gain = spellChoicesByLevel.get(spellPickerLevel);
           if (!gain) return null;
 
-          const ownedNames = new Set([
-            ...(character.spells?.cantrips ?? []),
-            ...(character.spells?.spellsKnown ?? []),
-          ]);
+          const classProfileId = `class:${viewingClass ?? ''}|${viewingClassSource ?? ''}`;
+          const profiles = ensureSpellProfiles(character);
+          const classProfile = profiles.find(
+            (profile) => profile.id === classProfileId,
+          );
+          const levelKey = buildClassSpellLevelKey(
+            viewingClass,
+            viewingClassSource,
+            spellPickerLevel,
+          );
+          const initialSelectedNames =
+            character.spellsByLevel?.[levelKey] ?? [];
+          const lockedNames = new Set(
+            [...getKnownSpellNames(profiles)].filter(
+              (name) => !initialSelectedNames.includes(name),
+            ),
+          );
 
           const categories: CategoryLimit<Spell5e>[] = [];
           if (gain.cantrips > 0) {
@@ -222,7 +243,6 @@ export function BuildClassModals({
             school: new Set(),
             type: new Set(),
           };
-          const levelKey = `${viewingClass}:${spellPickerLevel}`;
 
           return (
             <SpellSelectionModal
@@ -232,41 +252,88 @@ export function BuildClassModals({
               }}
               title={title}
               spells={classSpells}
-              ownedNames={ownedNames}
+              initialSelectedNames={initialSelectedNames}
+              lockedNames={lockedNames}
               categories={categories}
               initialFilters={initialFilters}
               allowedLevels={allowedLevels}
               onConfirm={(names) => {
-                const newCantrips = names.filter(
+                const previousLevelNames =
+                  character.spellsByLevel?.[levelKey] ?? [];
+                const previousLevelSet = new Set(previousLevelNames);
+                const nextLevelSet = new Set(names);
+
+                const nextSpellsByLevel = {
+                  ...(character.spellsByLevel ?? {}),
+                  [levelKey]: names,
+                };
+                const classLevelPrefix = `${viewingClass ?? ''}|${viewingClassSource ?? ''}:`;
+                const classSelectedNames = Object.entries(nextSpellsByLevel)
+                  .filter(([key]) => key.startsWith(classLevelPrefix))
+                  .flatMap(([, selected]) => selected ?? []);
+                const uniqueClassSelectedNames = [
+                  ...new Set(classSelectedNames),
+                ];
+                const nextProfileCantrips = uniqueClassSelectedNames.filter(
                   (name) => spellByName.get(name)?.level === 0,
                 );
-                const newKnown = names.filter(
+                const nextProfileKnown = uniqueClassSelectedNames.filter(
                   (name) => spellByName.get(name)?.level !== 0,
                 );
+
+                const mappedProfiles = profiles.map((profile) => {
+                  if (profile.id !== classProfileId) return profile;
+                  return {
+                    ...profile,
+                    cantrips: nextProfileCantrips,
+                    spellsKnown: nextProfileKnown,
+                    preparedSpells: profile.preparedSpells.filter((spellName) =>
+                      nextProfileKnown.includes(spellName),
+                    ),
+                  };
+                });
+                const hasProfile = mappedProfiles.some(
+                  (profile) => profile.id === classProfileId,
+                );
+                const nextProfiles = hasProfile
+                  ? mappedProfiles
+                  : [
+                      ...mappedProfiles,
+                      {
+                        id: classProfileId,
+                        type: 'class' as const,
+                        label:
+                          classProfile?.label ??
+                          buildClassProfileLabel({
+                            name: viewingClass ?? 'Class Spells',
+                            source: viewingClassSource,
+                            levels:
+                              character.classProgression?.find(
+                                (entry) =>
+                                  entry.name === viewingClass &&
+                                  (entry.source ?? '') ===
+                                    (viewingClassSource ?? ''),
+                              )?.levels ?? 1,
+                          }),
+                        className: viewingClass,
+                        classSource: viewingClassSource,
+                        cantrips: nextProfileCantrips,
+                        spellsKnown: nextProfileKnown,
+                        preparedSpells: [],
+                        alwaysPrepared: false,
+                      },
+                    ];
 
                 onUpdateCharacter({
                   spells: {
                     ...character.spells,
-                    cantrips: [
-                      ...new Set([
-                        ...(character.spells?.cantrips ?? []),
-                        ...newCantrips,
-                      ]),
-                    ],
-                    spellsKnown: [
-                      ...new Set([
-                        ...(character.spells?.spellsKnown ?? []),
-                        ...newKnown,
-                      ]),
-                    ],
+                    spellProfiles: nextProfiles,
                   },
-                  spellsByLevel: {
-                    ...(character.spellsByLevel ?? {}),
-                    [levelKey]: names,
-                  },
+                  spellsByLevel: nextSpellsByLevel,
                 });
 
                 for (const name of names) {
+                  if (previousLevelSet.has(name)) continue;
                   if (viewingClass) {
                     onApplySpellSelection(
                       viewingClass,
@@ -274,6 +341,20 @@ export function BuildClassModals({
                       name,
                     );
                   }
+                }
+
+                const remainingKnownNames = new Set(
+                  nextProfiles.flatMap((profile) => [
+                    ...profile.cantrips,
+                    ...profile.spellsKnown,
+                  ]),
+                );
+
+                for (const name of previousLevelNames) {
+                  if (nextLevelSet.has(name) || remainingKnownNames.has(name)) {
+                    continue;
+                  }
+                  onRemoveSpellProvenance(name);
                 }
                 onSpellPickerLevelChange(null);
               }}

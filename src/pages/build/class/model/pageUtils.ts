@@ -1,6 +1,11 @@
 import { getEntityLookupKey } from '@/lib/5etools/lookups';
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules';
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites';
+import {
+  collectKnownSpells,
+  ensureSpellProfiles,
+  isSpellOnClassList,
+} from '@/lib/calculations/spellProfiles';
 import type { Class5e } from '@/types/5etools';
 import type { Character, CharacterClassEntry } from '@/types/character';
 
@@ -143,6 +148,10 @@ export function buildCharacterSnapshot({
   classProgression,
   viewingClass,
 }: BuildCharacterSnapshotParams): PrereqCharacterSnapshot {
+  const profileSpells = character
+    ? collectKnownSpells(ensureSpellProfiles(character))
+    : null;
+
   return {
     level: character?.level ?? 0,
     class: viewingClass,
@@ -150,9 +159,9 @@ export function buildCharacterSnapshot({
     abilityScores: character?.abilityScores,
     features: character?.features ?? [],
     spells: {
-      cantrips: character?.spells?.cantrips ?? [],
-      spellsKnown: character?.spells?.spellsKnown ?? [],
-      preparedSpells: character?.spells?.preparedSpells ?? [],
+      cantrips: profileSpells?.cantrips ?? [],
+      spellsKnown: profileSpells?.spellsKnown ?? [],
+      preparedSpells: profileSpells?.preparedSpells ?? [],
     },
     ...(classProgression.length > 0
       ? {
@@ -245,16 +254,13 @@ export function buildFeatModalFeats<
 }
 
 export function filterClassSpells<
-  T extends { classes?: { fromClassList?: Array<{ name?: string }> } },
->(spells: T[], viewingClass?: string): T[] {
-  const classLower = viewingClass?.toLowerCase();
-  if (!classLower) return spells;
+  T extends {
+    classes?: { fromClassList?: Array<{ name?: string; source?: string }> };
+  },
+>(spells: T[], viewingClass?: string, viewingClassSource?: string): T[] {
+  if (!viewingClass) return spells;
 
-  return spells.filter((spell) => {
-    const fromClassList = spell.classes?.fromClassList ?? [];
-    return (
-      fromClassList.length === 0 ||
-      fromClassList.some((entry) => entry.name?.toLowerCase() === classLower)
-    );
-  });
+  return spells.filter((spell) =>
+    isSpellOnClassList(spell, viewingClass, viewingClassSource),
+  );
 }

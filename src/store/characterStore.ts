@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { SPECIAL_SPELL_PROFILE_LABEL } from '@/lib/calculations/spellProfiles';
 import type { ProvenanceLedger } from '@/lib/provenance/types';
 import { createIdbStorage } from '@/lib/storage/idb-storage';
 import type { Character } from '@/types/character';
@@ -84,8 +85,17 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
     features: [],
     feats: [],
     spells: {
-      cantrips: [],
-      spellsKnown: [],
+      spellProfiles: [
+        {
+          id: 'special:unrestricted',
+          type: 'special',
+          label: SPECIAL_SPELL_PROFILE_LABEL,
+          cantrips: [],
+          spellsKnown: [],
+          preparedSpells: [],
+          alwaysPrepared: true,
+        },
+      ],
       spellSlots: {
         level1: { max: 0, used: 0 },
         level2: { max: 0, used: 0 },
@@ -97,7 +107,6 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
         level8: { max: 0, used: 0 },
         level9: { max: 0, used: 0 },
       },
-      preparedSpells: [],
     },
     equipment: [],
     hitPoints: {

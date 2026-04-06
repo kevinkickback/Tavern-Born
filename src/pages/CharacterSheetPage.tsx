@@ -103,7 +103,7 @@ export function CharacterSheetPage() {
   const { skills, passivePerception } = useSkills();
   const { savingThrows } = useSavingThrows();
   const { calculatedAC } = useArmorClass();
-  const { level, proficiencyBonus, proficiencyBonusString, initiativeString } =
+  const { level, proficiencyBonusString, initiativeString } =
     useCharacterLevel();
   const {
     slots,
@@ -111,23 +111,20 @@ export function CharacterSheetPage() {
     cantrips,
     spellsKnown,
     preparedSpells,
-    spellcastingAbility,
+    spellcastingDetails,
   } = useSpellSlots();
 
+  const primarySpellcasting = spellcastingDetails[0];
+  const spellcastingAbility = primarySpellcasting?.spellcastingAbility;
+
   const spellSaveDC = useMemo(() => {
-    if (!spellcastingAbility || !character) return null;
-    const abilityMod = getAbilityModifier(
-      character.abilityScores[spellcastingAbility as AbilityName] ?? 10,
-    );
-    return 8 + proficiencyBonus + abilityMod;
-  }, [spellcastingAbility, character, proficiencyBonus]);
+    return primarySpellcasting?.spellSaveDC ?? null;
+  }, [primarySpellcasting]);
   const spellAttackBonus = useMemo(() => {
-    if (!spellcastingAbility || !character) return null;
-    const abilityMod = getAbilityModifier(
-      character.abilityScores[spellcastingAbility as AbilityName] ?? 10,
-    );
-    return formatModifier(proficiencyBonus + abilityMod);
-  }, [spellcastingAbility, character, proficiencyBonus]);
+    if (primarySpellcasting?.spellAttackBonus === null) return null;
+    if (primarySpellcasting?.spellAttackBonus === undefined) return null;
+    return formatModifier(primarySpellcasting.spellAttackBonus);
+  }, [primarySpellcasting]);
 
   const _skillsByAbility = useMemo(() => {
     const map = new Map<string, typeof skills>();
