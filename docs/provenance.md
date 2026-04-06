@@ -19,6 +19,9 @@ Without provenance, changing race/class/background can leave stale proficiencies
 - src/lib/provenance/applyBackgroundGrants.ts
 - src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts
 - src/lib/provenance/index.ts
+- src/hooks/character/useProvenanceMutations.ts
+- src/hooks/character/useProvenanceRows.ts
+- src/hooks/character/useProvenance.ts
 
 ## Ledger Model
 
@@ -36,6 +39,8 @@ The character carries a provenance ledger with source-tagged grant maps for:
 2. Apply grants to character fields.
 3. Register source tags in ledger for every applied grant.
 4. Save via character store mutation APIs.
+
+Mutation hooks should stay separate from row-derivation hooks: grant/reconciliation callbacks belong in the mutation layer, while UI-facing source rows and collapse-state helpers belong in the derived-view layer.
 
 ## Reconciliation Pattern
 

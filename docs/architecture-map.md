@@ -26,7 +26,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 6. Provenance system
 - Purpose: track source of grants and reconcile when race/class/features change.
-- Key files: src/lib/provenance/types.ts, src/lib/provenance/ledger.ts, src/lib/provenance/reconciliation.ts, src/lib/provenance/normalization.ts, src/lib/provenance/sourceLabels.ts, src/lib/provenance/summaries.ts, src/lib/provenance/applyRaceGrants.ts, src/lib/provenance/applyClassGrants.ts, src/lib/provenance/applyBackgroundGrants.ts, src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts, src/lib/provenance/index.ts.
+- Key files: src/lib/provenance/types.ts, src/lib/provenance/ledger.ts, src/lib/provenance/reconciliation.ts, src/lib/provenance/normalization.ts, src/lib/provenance/sourceLabels.ts, src/lib/provenance/summaries.ts, src/lib/provenance/applyRaceGrants.ts, src/lib/provenance/applyClassGrants.ts, src/lib/provenance/applyBackgroundGrants.ts, src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts, src/lib/provenance/index.ts, src/lib/provenance/sectionRows.ts, src/hooks/character/useProvenance.ts, src/hooks/character/useProvenanceMutations.ts, src/hooks/character/useProvenanceRows.ts.
 
 7. Hooks and view derivations
 - Purpose: thin wrappers from store state to UI-facing derived values.
@@ -34,7 +34,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.
-- Key files: src/pages/*, src/components/*.
+- Key files: src/pages/*, src/components/*, src/pages/build/ability-scores/model/data.ts, src/pages/build/class/model/pageUtils.ts, src/pages/build/class/model/asi.ts, src/pages/build/class/model/mutations.ts, src/pages/build/class/model/levelsUtils.ts, src/pages/build/proficiencies/model/data.ts, src/pages/build/proficiencies/model/types.ts, src/pages/build/background/model/data.ts, src/pages/build/ability-scores/components/MethodPanels.tsx, src/pages/build/ability-scores/components/DetailsPanel.tsx, src/pages/build/ability-scores/components/RacialBonusesPanel.tsx, src/pages/build/class/components/AsiSection.tsx, src/pages/build/class/components/SpellSection.tsx, src/pages/build/class/components/SubclassSection.tsx, src/pages/build/class/components/PassiveFeatureList.tsx, src/pages/build/class/components/ProgressionChoiceCard.tsx, src/pages/build/proficiencies/components/DetailsPanel.tsx, src/pages/build/proficiencies/components/TabsPanel.tsx, src/pages/build/background/components/DetailsPanel.tsx, src/pages/compendium/CompendiumPage.tsx, src/pages/compendium/CompendiumEntryDetails.tsx, src/lib/compendiumEntries.ts.
 
 ## Routing Overview
 
@@ -62,6 +62,7 @@ Primary definition: src/App.tsx.
 - New ingestion lookup: src/lib/5etools/lookups.ts plus hook-level usage.
 - New state field or mutation lifecycle: relevant store in src/store/*.ts.
 - New route-level user flow: src/pages/* with extracted component logic under src/components/*.
+- Page-specific pure helper logic for a single route: colocate under that route folder (for example src/pages/build/class/model/*, src/pages/feats/model/*, or src/pages/compendium/*) and keep it framework-free when possible.
 
 ## Drift Watch
 

@@ -7,7 +7,7 @@ import {
   countTotalAsiAcrossClasses,
   countTotalFeatSlots,
   filterClassSpells,
-} from '@/pages/build/buildClassPageUtils';
+} from '@/pages/build/class/model/pageUtils';
 import type { Class5e } from '@/types/5etools';
 import type { Character } from '@/types/character';
 import { makeCharacterFixture } from '../fixtures/characterFixtures';

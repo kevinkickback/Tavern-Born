@@ -12,8 +12,8 @@ import {
 } from '@/lib/5etools/classData';
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites';
 import { getOrdinalForm } from '@/lib/calculations/spellUtils';
-import { AsiPickerDialog } from '@/pages/build/components/AsiPickerDialog';
-import { ClassSelectionDialog } from '@/pages/build/components/ClassSelectionDialog';
+import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog';
+import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelectionDialog';
 import type { Class5e, Feat5e, Spell5e } from '@/types/5etools';
 import type { AsiChoice, Character } from '@/types/character';
 

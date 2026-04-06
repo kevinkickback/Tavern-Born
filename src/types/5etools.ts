@@ -168,10 +168,25 @@ export interface Feat5e {
   source: string;
   page?: number;
   category?: string;
-  prerequisite?: string[];
+  prerequisite?: Raw5ePrereq[];
   ability?: AbilityBonus[];
   entries?: unknown[];
   [key: string]: unknown;
+}
+
+export type Raw5eAbilityPrereq = string | { ability: string; score?: number };
+export type Raw5eRacePrereq = string | { name: string };
+export type Raw5eClassPrereq = string | { name: string };
+
+export interface Raw5ePrereq {
+  level?: number | { level: number };
+  ability?: Raw5eAbilityPrereq[];
+  race?: Raw5eRacePrereq[];
+  class?: Raw5eClassPrereq[];
+  spellcasting?: boolean;
+  spell?: string | string[];
+  pact?: string;
+  patron?: string;
 }
 
 export interface Item5e {

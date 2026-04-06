@@ -19,9 +19,13 @@ import {
 } from '@/lib/calculations/prerequisites';
 import { renderEntry } from '@/lib/renderer';
 import { cn } from '@/lib/utils';
+import {
+  buildFeatModalFeats,
+  partitionSelectedFeats,
+} from '@/pages/feats/model/selection';
 import { useCharacterStore } from '@/store/characterStore';
-import type { Feat5e } from '@/types/5etools';
-import { NoCharCard } from './_shared';
+import type { Feat5e, Raw5ePrereq } from '@/types/5etools';
+import { NoCharCard } from '../_shared';
 
 const _cache = new WeakMap<object, string>();
 function cachedRender(entry: unknown): string {
@@ -59,7 +63,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
     () =>
       featData
         ? checkAllPrerequisites(
-            featData as { prerequisite?: unknown[] },
+            featData as { prerequisite?: Raw5ePrereq[] },
             characterSnapshot,
           )
         : { met: true, failures: [] },
@@ -222,20 +226,13 @@ export function FeatsPage() {
     },
   };
 
-  // Merge saved feats back in case they came from a now-disallowed source.
-  // Include both normal and special feats in the modal's browse list.
   const modalFeats = useMemo(() => {
     const available = (feats as Feat5e[]).filter(isNormallySelectableFeat);
-    const availableIds = new Set(
-      available.map((f) => `${f.name}|${f.source ?? ''}`),
-    );
-    const savedNotInList = [
-      ...(character?.feats ?? []),
-      ...(character?.specialFeats ?? []),
-    ]
-      .filter((f) => !availableIds.has(`${f.name}|${f.source ?? ''}`))
-      .map((f) => ({ name: f.name, source: f.source, entries: [] }) as Feat5e);
-    return [...available, ...savedNotInList];
+    return buildFeatModalFeats({
+      availableFeats: available,
+      selectedFeats: character?.feats ?? [],
+      selectedSpecialFeats: character?.specialFeats ?? [],
+    });
   }, [feats, character?.feats, character?.specialFeats]);
 
   // Both normal and special feats are pre-selected when the modal opens.
@@ -252,40 +249,16 @@ export function FeatsPage() {
   const handleModalConfirm = useCallback(
     (selectedFeats: Feat5e[]) => {
       if (!character) return;
-      const prevSpecialKeys = new Set(
-        (character.specialFeats ?? []).map((f) => `${f.name}|${f.source}`),
-      );
-      const prevNormalKeys = new Set(
-        (character.feats ?? []).map((f) => `${f.name}|${f.source}`),
-      );
-
-      // Feats previously classified as special stay special if still selected.
-      const keptSpecial: Feat5e[] = [];
-      const rest: Feat5e[] = [];
-      for (const feat of selectedFeats) {
-        if (prevSpecialKeys.has(`${feat.name}|${feat.source ?? ''}`)) {
-          keptSpecial.push(feat);
-        } else {
-          rest.push(feat);
-        }
-      }
-
-      // Fill normal slots: previously-normal feats first (stability), then brand-new.
-      // Feats beyond totalASI overflow into special.
-      const prevNormal = rest.filter((f) =>
-        prevNormalKeys.has(`${f.name}|${f.source ?? ''}`),
-      );
-      const brandNew = rest.filter(
-        (f) => !prevNormalKeys.has(`${f.name}|${f.source ?? ''}`),
-      );
-      const fillOrder = [...prevNormal, ...brandNew];
-      const normalFeats = fillOrder.slice(0, totalASI);
-      const overflow = fillOrder.slice(totalASI);
-      const newSpecialFeats = [...keptSpecial, ...overflow];
+      const { normalFeats, specialFeats } = partitionSelectedFeats({
+        selectedFeats,
+        existingNormalFeats: character.feats ?? [],
+        existingSpecialFeats: character.specialFeats ?? [],
+        totalNormalSlots: totalASI,
+      });
 
       replaceFeatSelections(normalFeats);
       updateCharacter(character.id, {
-        specialFeats: newSpecialFeats.map((f) => {
+        specialFeats: specialFeats.map((f) => {
           const existing = (character.specialFeats ?? []).find(
             (sf) => sf.name === f.name && sf.source === (f.source ?? ''),
           );
@@ -305,6 +278,7 @@ export function FeatsPage() {
 
   const handleRemoveFeat = useCallback(
     (featName: string) => {
+      if (!character) return;
       const remaining = (character.feats ?? [])
         .filter((f) => f.name !== featName)
         .map((f) => ({ name: f.name, source: f.source }) as Feat5e);
@@ -315,6 +289,7 @@ export function FeatsPage() {
 
   const handleRemoveSpecialFeat = useCallback(
     (featName: string) => {
+      if (!character) return;
       updateCharacter(character.id, {
         specialFeats: (character.specialFeats ?? []).filter(
           (f) => f.name !== featName,
@@ -325,7 +300,7 @@ export function FeatsPage() {
   );
 
   if (!character) {
-    return <NoCharCard />;
+    return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />;
   }
 
   return (

@@ -30,7 +30,7 @@ This guide is the fastest path to make safe changes in Tavern-Born.
 16. src/lib/provenance/ledger.ts
 17. src/lib/provenance/applyRaceGrants.ts
 18. src/hooks/character/useAbilityScores.ts
-19. src/pages/build/BuildRacePage.tsx
+19. src/pages/build/race/RacePage.tsx
 20. Local development guidelines
 
 ## First-Change Checklist

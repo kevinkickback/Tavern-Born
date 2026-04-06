@@ -41,7 +41,7 @@
         "noPrecisionLoss": "on"
       },
       "security": {
-        "noDangerouslySetInnerHtml": "on"
+        "noDangerouslySetInnerHtml": "off"
       },
       "style": {
         "noNonNullAssertion": "on",

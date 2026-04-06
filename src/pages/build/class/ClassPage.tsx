@@ -18,11 +18,26 @@ import {
   resolveSubclassFeatureRefs,
 } from '@/lib/5etools/classData';
 import { getEntityLookupKey } from '@/lib/5etools/lookups';
-import { normalizeAbilityName } from '@/lib/calculations/abilityScores';
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules';
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites';
 import { getOrdinalForm } from '@/lib/calculations/spellUtils';
 import { NoCharCard } from '@/pages/_shared';
+import {
+  BuildClassDetailsPanel,
+  type ClassFeatureDisplay,
+  type SelectedFeatureState,
+} from '@/pages/build/class/components/DetailsPanel';
+import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel';
+import { BuildClassModals } from '@/pages/build/class/components/Modals';
+import {
+  applyClassAsiChoice,
+  resetClassAsiChoice,
+} from '@/pages/build/class/model/asi';
+import type { ClassFeatProgression } from '@/pages/build/class/model/levelsUtils';
+import {
+  buildClassSelectionPatch,
+  buildSubclassSelectionPatch,
+} from '@/pages/build/class/model/mutations';
 import {
   buildCharacterSnapshot,
   buildClassProgression,
@@ -31,17 +46,9 @@ import {
   countTotalAsiAcrossClasses,
   countTotalFeatSlots,
   filterClassSpells,
-} from '@/pages/build/buildClassPageUtils';
-import {
-  BuildClassDetailsPanel,
-  type ClassFeatureDisplay,
-  type SelectedFeatureState,
-} from '@/pages/build/components/BuildClassDetailsPanel';
-import { BuildClassLevelsPanel } from '@/pages/build/components/BuildClassLevelsPanel';
-import { BuildClassModals } from '@/pages/build/components/BuildClassModals';
+} from '@/pages/build/class/model/pageUtils';
 import { useCharacterStore } from '@/store/characterStore';
 import type { Class5e, Feat5e, Spell5e } from '@/types/5etools';
-import type { AbilityScores, AsiChoice } from '@/types/character';
 
 interface SubclassOption {
   name: string;
@@ -49,12 +56,6 @@ interface SubclassOption {
   shortName?: string;
   entries?: unknown[];
   levelFeatures?: { level: number; features: ClassFeatureDisplay[] }[];
-}
-
-interface ClassFeatProgression {
-  name?: string;
-  category: string[];
-  progression: number[] | Record<string, number>;
 }
 
 export function BuildClassPage() {
@@ -126,43 +127,15 @@ export function BuildClassPage() {
 
   const handleClassChange = (className: string, classSource?: string) => {
     if (!character) return;
-    const cls = classSource
-      ? classLookup[getEntityLookupKey(className, classSource)]
-      : fallbackClassByName.get(className);
-    if (cls) applyClassSelection(cls, undefined);
-    updateCharacter(character.id, {
-      class: className,
-      classSource: classSource ?? undefined,
-      subclass: undefined,
-      proficiencies: {
-        ...character.proficiencies,
-        armor: [
-          ...new Set([
-            ...character.proficiencies.armor,
-            ...(cls?.startingProficiencies?.armor ?? []),
-          ]),
-        ],
-        weapons: [
-          ...new Set([
-            ...character.proficiencies.weapons,
-            ...(cls?.startingProficiencies?.weapons ?? []),
-          ]),
-        ],
-        tools: [
-          ...new Set([
-            ...character.proficiencies.tools,
-            ...(cls?.startingProficiencies?.tools ?? []),
-          ]),
-        ],
-      },
-      spells: {
-        ...character.spells,
-        spellcastingAbility: cls?.spellcastingAbility
-          ? (normalizeAbilityName(cls.spellcastingAbility) ??
-            cls.spellcastingAbility.toLowerCase())
-          : character.spells?.spellcastingAbility,
-      },
+    const { classEntity: cls, patch } = buildClassSelectionPatch({
+      character,
+      className,
+      classSource,
+      classLookup,
+      fallbackClassByName,
     });
+    if (cls) applyClassSelection(cls, undefined);
+    updateCharacter(character.id, patch);
     setSelectedFeature(null);
     setClassPickerOpen(false);
     setClassPickerSearch('');
@@ -302,26 +275,14 @@ export function BuildClassPage() {
   const handleSubclassSelect = (sc: SubclassOption) => {
     if (!character) return;
     if (viewingClassData) applyClassSelection(viewingClassData, sc);
-    if (classProgression.length > 0 && viewingEntry) {
-      const newProg = classProgression.map((e) =>
-        e.name === viewingEntry.name &&
-        (e.source ?? '') === (viewingEntry.source ?? '')
-          ? { ...e, subclass: sc.name, subclassSource: sc.source ?? undefined }
-          : e,
-      );
-      const updates: Record<string, unknown> = { classProgression: newProg };
-      // Keep top-level character.subclass in sync for the primary class.
-      if (viewingEntry.name === character.class) {
-        updates.subclass = sc.name;
-        updates.subclassSource = sc.source ?? undefined;
-      }
-      updateCharacter(character.id, updates);
-    } else {
-      updateCharacter(character.id, {
-        subclass: sc.name,
-        subclassSource: sc.source ?? undefined,
-      });
-    }
+    const patch = buildSubclassSelectionPatch({
+      character,
+      classProgression,
+      viewingEntry,
+      subclassName: sc.name,
+      subclassSource: sc.source,
+    });
+    updateCharacter(character.id, patch);
     setSelectedFeature({
       name: sc.name,
       source: sc.source,
@@ -379,51 +340,32 @@ export function BuildClassPage() {
     abilityChanges: Record<string, 1 | 2>,
   ) => {
     if (!character) return;
-    const existing = appliedAsiChoicesForClass.find((ac) => ac.level === level);
-    const updatedScores = { ...character.abilityScores } as AbilityScores;
-    // Revert the old ASI if re-applying
-    if (existing) {
-      for (const [ability, bonus] of Object.entries(existing.abilityChanges)) {
-        updatedScores[ability as keyof AbilityScores] =
-          (updatedScores[ability as keyof AbilityScores] ?? 10) - bonus;
-      }
-    }
-    for (const [ability, bonus] of Object.entries(abilityChanges)) {
-      updatedScores[ability as keyof AbilityScores] =
-        (updatedScores[ability as keyof AbilityScores] ?? 10) + bonus;
-    }
-    const updatedChoices: AsiChoice[] = [
-      ...(character.asiChoices ?? []).filter(
-        (ac) => !(ac.level === level && ac.className === viewingClass),
-      ),
-      {
-        id: `asi-${viewingClass}-${level}`,
-        level,
-        className: viewingClass,
-        abilityChanges,
-      },
-    ];
+    const next = applyClassAsiChoice({
+      characterAbilityScores: character.abilityScores,
+      currentAsiChoices: character.asiChoices ?? [],
+      className: viewingClass,
+      level,
+      abilityChanges,
+    });
     updateCharacter(character.id, {
-      abilityScores: updatedScores,
-      asiChoices: updatedChoices,
+      abilityScores: next.abilityScores,
+      asiChoices: next.asiChoices,
     });
     setAsiPickerLevel(null);
   };
 
   const handleAsiReset = (level: number) => {
     if (!character) return;
-    const existing = appliedAsiChoicesForClass.find((ac) => ac.level === level);
-    if (!existing) return;
-    const updatedScores = { ...character.abilityScores } as AbilityScores;
-    for (const [ability, bonus] of Object.entries(existing.abilityChanges)) {
-      updatedScores[ability as keyof AbilityScores] =
-        (updatedScores[ability as keyof AbilityScores] ?? 10) - bonus;
-    }
+    const next = resetClassAsiChoice({
+      characterAbilityScores: character.abilityScores,
+      currentAsiChoices: character.asiChoices ?? [],
+      className: viewingClass,
+      level,
+    });
+    if (!next) return;
     updateCharacter(character.id, {
-      abilityScores: updatedScores,
-      asiChoices: (character.asiChoices ?? []).filter(
-        (ac) => !(ac.level === level && ac.className === viewingClass),
-      ),
+      abilityScores: next.abilityScores,
+      asiChoices: next.asiChoices,
     });
     const levelKey = `${level}|${viewingClass}`;
     setAsiModeByLevel((prev) => {

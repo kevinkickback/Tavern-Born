@@ -20,7 +20,7 @@ import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules';
 import { cn } from '@/lib/utils';
 import { useCharacterStore } from '@/store/characterStore';
 import type { Item5e } from '@/types/5etools';
-import { NoCharCard } from './_shared';
+import { NoCharCard } from '../_shared';
 
 export function EquipmentPage() {
   const character = useCharacterStore((s) => s.activeCharacter);
