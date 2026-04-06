@@ -59,36 +59,28 @@ export function getHitDiceFromClass(cls: Class5e | undefined | null): number {
 }
 
 /**
- * Parse ASI levels from a Class5e classFeatures array.
- * Feature strings have format "Feature Name|ClassName|Source|Level".
- * Falls back to the standard [4,8,12,16,19] if no ASI features are found.
+ * Read ASI levels from parsed class feature references.
+ * Falls back to the standard [4,8,12,16,19] if parsed refs are unavailable.
  */
 export function getASILevelsFromClass(
   cls: Class5e | undefined | null,
 ): number[] {
-  if (!cls?.classFeatures) return [4, 8, 12, 16, 19];
-  const levels: number[] = [];
-  for (const feat of cls.classFeatures) {
-    if (typeof feat === 'string') {
-      const parts = feat.split('|');
-      if (
-        parts[0]?.toLowerCase().includes('ability score improvement') &&
-        parts[3]
-      ) {
-        const lvl = Number.parseInt(parts[3], 10);
-        if (!Number.isNaN(lvl) && !levels.includes(lvl)) levels.push(lvl);
-      }
-    } else if (feat && typeof feat === 'object' && 'name' in feat) {
-      const f = feat as { name?: string; level?: number };
-      if (
-        f.name?.toLowerCase().includes('ability score improvement') &&
-        f.level
-      ) {
-        if (!levels.includes(f.level)) levels.push(f.level);
-      }
+  if (cls?.classFeatureRefs && cls.classFeatureRefs.length > 0) {
+    const levels = cls.classFeatureRefs
+      .filter(
+        (ref) =>
+          ref.name.toLowerCase().includes('ability score improvement') &&
+          typeof ref.level === 'number',
+      )
+      .map((ref) => ref.level as number)
+      .filter((level, index, arr) => arr.indexOf(level) === index);
+
+    if (levels.length > 0) {
+      return levels.sort((a, b) => a - b);
     }
   }
-  return levels.length > 0 ? levels.sort((a, b) => a - b) : [4, 8, 12, 16, 19];
+
+  return [4, 8, 12, 16, 19];
 }
 
 const ABILITY_ABBREV_TO_FULL: Record<string, string> = {
@@ -99,6 +91,48 @@ const ABILITY_ABBREV_TO_FULL: Record<string, string> = {
   wis: 'wisdom',
   cha: 'charisma',
 };
+
+const ABILITY_ABV_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const;
+
+const ABILITY_ABV_TO_TITLE: Record<string, string> = {
+  str: 'Strength',
+  dex: 'Dexterity',
+  con: 'Constitution',
+  int: 'Intelligence',
+  wis: 'Wisdom',
+  cha: 'Charisma',
+};
+
+function normalizeReqKeyToAbilityAbv(key: string): string | null {
+  const lower = key.toLowerCase();
+  if (ABILITY_ABV_TO_TITLE[lower]) return lower;
+  const fromFull = Object.entries(ABILITY_ABBREV_TO_FULL).find(
+    ([, full]) => full === lower,
+  );
+  return fromFull?.[0] ?? null;
+}
+
+function sortedAbilityReqEntries(
+  group: Record<string, number>,
+): Array<[string, number]> {
+  return Object.entries(group)
+    .map(([k, v]) => [normalizeReqKeyToAbilityAbv(k), v] as const)
+    .filter((entry): entry is [string, number] => !!entry[0])
+    .sort(
+      (a, b) =>
+        ABILITY_ABV_ORDER.indexOf(a[0] as (typeof ABILITY_ABV_ORDER)[number]) -
+        ABILITY_ABV_ORDER.indexOf(b[0] as (typeof ABILITY_ABV_ORDER)[number]),
+    );
+}
+
+function formatAbilityRequirementGroup(
+  group: Record<string, number>,
+  joiner = ', ',
+): string {
+  return sortedAbilityReqEntries(group)
+    .map(([abv, min]) => `${ABILITY_ABV_TO_TITLE[abv]} ${min}`)
+    .join(joiner);
+}
 
 /**
  * Check whether the given ability scores meet the multiclassing requirements
@@ -116,41 +150,48 @@ export function checkMulticlassRequirements(
     const full = ABILITY_ABBREV_TO_FULL[ab.toLowerCase()] ?? ab.toLowerCase();
     return scores[full] ?? scores[ab.toLowerCase()] ?? 0;
   };
-  const formatGroup = (group: Record<string, number>) =>
-    Object.entries(group)
-      .map(([ab, min]) => `${ab.toUpperCase()} ${min}+`)
-      .join(' & ');
+
   const checkGroup = (group: Record<string, number>) =>
-    Object.entries(group).every(([ab, min]) => getScore(ab) >= min);
+    sortedAbilityReqEntries(group).every(([ab, min]) => getScore(ab) >= min);
 
-  if (Array.isArray(reqs.or)) {
-    return {
-      meetsRequirements: reqs.or.some(checkGroup),
-      requirementText: (reqs.or as Array<Record<string, number>>)
-        .map(formatGroup)
-        .join(' or '),
-    };
-  }
+  const baseGroup = Object.fromEntries(
+    Object.entries(reqs).filter(
+      ([k, v]) =>
+        k !== 'or' && typeof v === 'number' && normalizeReqKeyToAbilityAbv(k),
+    ),
+  ) as Record<string, number>;
 
-  const entries = Object.entries(reqs).filter(([k]) => k !== 'or') as [
-    string,
-    number,
-  ][];
+  const hasBaseReqs = Object.keys(baseGroup).length > 0;
+  const hasOrReqs = Array.isArray(reqs.or) && reqs.or.length > 0;
+
+  const baseMet = hasBaseReqs ? checkGroup(baseGroup) : true;
+  const orMet = hasOrReqs
+    ? (reqs.or as Array<Record<string, number>>).some(checkGroup)
+    : true;
+
+  const orPart = hasOrReqs
+    ? (reqs.or as Array<Record<string, number>>)
+        .map((group) => formatAbilityRequirementGroup(group, ' or '))
+        .filter(Boolean)
+        .join('; ')
+    : '';
+
+  const basePart = hasBaseReqs ? formatAbilityRequirementGroup(baseGroup) : '';
+
+  const requirementText = [orPart, basePart].filter(Boolean).join('; ');
+
   return {
-    meetsRequirements: entries.every(([ab, min]) => getScore(ab) >= min),
-    requirementText: entries
-      .map(([ab, min]) => `${ab.toUpperCase()} ${min}+`)
-      .join(' & '),
+    meetsRequirements: baseMet && orMet,
+    requirementText,
   };
 }
 
-const PROFICIENCY_BONUS_TABLE = [
-  2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6,
-];
-
 export function getProficiencyBonus(totalLevel: number): number {
-  const idx = Math.min(Math.max(totalLevel, 1), MAX_CHARACTER_LEVEL) - 1;
-  return PROFICIENCY_BONUS_TABLE[idx];
+  const clampedLevel = Math.min(
+    Math.max(Math.floor(totalLevel), 1),
+    MAX_CHARACTER_LEVEL,
+  );
+  return Math.floor((clampedLevel - 1) / 4) + 2;
 }
 
 export function getAbilityModifier(score: number): number {

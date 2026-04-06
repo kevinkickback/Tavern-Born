@@ -1,0 +1,68 @@
+# Provenance System
+
+The provenance layer tracks where character grants came from and supports clean reconciliation when source choices change.
+
+## Why Provenance Exists
+
+Without provenance, changing race/class/background can leave stale proficiencies, features, or spell grants behind. Provenance prevents this by tagging grants with source metadata.
+
+## Core Files
+
+- src/lib/provenance/types.ts
+- src/lib/provenance/ledger.ts
+- src/lib/provenance/reconciliation.ts
+- src/lib/provenance/normalization.ts
+- src/lib/provenance/sourceLabels.ts
+- src/lib/provenance/summaries.ts
+- src/lib/provenance/applyRaceGrants.ts
+- src/lib/provenance/applyClassGrants.ts
+- src/lib/provenance/applyBackgroundGrants.ts
+- src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts
+- src/lib/provenance/index.ts
+
+## Ledger Model
+
+The character carries a provenance ledger with source-tagged grant maps for:
+- proficiencies (armor, weapons, tools, languages, skills, saving throws)
+- features
+- feats
+- spells
+- equipment
+- choices
+
+## Grant Application Pattern
+
+1. Resolve selected source entity (race/class/background/feat/etc).
+2. Apply grants to character fields.
+3. Register source tags in ledger for every applied grant.
+4. Save via character store mutation APIs.
+
+## Reconciliation Pattern
+
+When source entity changes:
+1. Remove prior grants associated with old source tags.
+2. Clear stale source-linked choices.
+3. Apply grants from new source.
+4. Verify resulting character and ledger are aligned.
+
+## Invariants
+
+- Every non-user-manual grant should be traceable to a source tag.
+- Reconciliation should be additive/subtractive by source, not by brittle string matching alone.
+- UI summaries should read from ledger data rather than duplicate source logic.
+
+## Common Pitfalls
+
+- Adding new grant paths without updating reconciliation.
+- Applying grants directly to character without ledger tags.
+- Forgetting tests for source replacement edge cases.
+
+## Testing Guidance
+
+Add or update tests in:
+- tests/lib/provenance/ledger.test.ts
+- tests/lib/provenance/reconciliation.test.ts
+
+Recommended additions:
+- Mixed grant replacement scenarios across race/class/background/feat combinations.
+- Duplicate grant handling where multiple sources grant same proficiency.

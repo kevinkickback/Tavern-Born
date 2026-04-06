@@ -7,6 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useProvenance } from '@/hooks/character/useProvenance';
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
+import { useClass } from '@/hooks/data/useGameData';
+import {
+  featCategoryToFull,
+  isNormallySelectableFeat,
+} from '@/lib/5etools/classData';
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules';
 import {
   checkAllPrerequisites,
@@ -45,6 +50,10 @@ const FeatDetailCard = memo(function FeatDetailCard({
   isSpecial,
 }: FeatDetailCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const categoryLabel =
+    typeof featData?.category === 'string' && featData.category.length > 0
+      ? featCategoryToFull(featData.category)
+      : null;
 
   const { met, failures } = useMemo(
     () =>
@@ -87,6 +96,14 @@ const FeatDetailCard = memo(function FeatDetailCard({
                 className="text-xs px-1.5 py-0 h-5 text-muted-foreground"
               >
                 {feat.source}
+              </Badge>
+            )}
+            {categoryLabel && (
+              <Badge
+                variant="outline"
+                className="text-xs px-1.5 py-0 h-5 text-muted-foreground"
+              >
+                {categoryLabel}
               </Badge>
             )}
             {isSpecial && (
@@ -167,11 +184,14 @@ const FeatDetailCard = memo(function FeatDetailCard({
 export function FeatsPage() {
   const character = useCharacterStore((s) => s.activeCharacter);
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
-  const { feats, classes } = useFilteredGameData();
+  const { feats } = useFilteredGameData();
   const { replaceFeatSelections, getSourcesRowsBySection } = useProvenance();
   const [modalOpen, setModalOpen] = useState(false);
 
-  const primaryClassData = classes.find((c) => c.name === character?.class);
+  const primaryClassData = useClass(
+    character?.class ?? '',
+    character?.classSource,
+  );
   const asiLevels = getASILevelsFromClass(primaryClassData);
   const earnedASILevels = asiLevels.filter((l) => l <= (character?.level ?? 0));
   const appliedAsiCount = (character?.asiChoices ?? []).filter((ac) =>
@@ -205,7 +225,7 @@ export function FeatsPage() {
   // Merge saved feats back in case they came from a now-disallowed source.
   // Include both normal and special feats in the modal's browse list.
   const modalFeats = useMemo(() => {
-    const available = feats as Feat5e[];
+    const available = (feats as Feat5e[]).filter(isNormallySelectableFeat);
     const availableIds = new Set(
       available.map((f) => `${f.name}|${f.source ?? ''}`),
     );

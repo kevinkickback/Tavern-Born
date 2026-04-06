@@ -34,7 +34,6 @@ import { Switch } from '@/components/ui/switch';
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
 import {
   checkMulticlassRequirements,
-  getProficiencyBonus,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules';
 import { cn } from '@/lib/utils';
@@ -97,6 +96,9 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
         already: classProgression.some((e) => e.name === cls.name),
       };
     });
+  const multiclassOptionByName = new Map(
+    multiclassOptions.map((option) => [option.cls.name, option.cls]),
+  );
 
   function syncUpdate(newProgression: CharacterClassEntry[]) {
     const newTotal = newProgression.reduce((s, e) => s + e.levels, 0);
@@ -105,7 +107,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       level: newTotal,
       class: newProgression[0]?.name ?? character?.class,
       classSource: newProgression[0]?.source ?? character?.classSource,
-      proficiencyBonus: getProficiencyBonus(newTotal),
     });
   }
 
@@ -132,10 +133,9 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       toast.warning(`Character is already level ${MAX_CHARACTER_LEVEL}.`);
       return;
     }
+    const selectedClass = multiclassOptionByName.get(multiclassSelection);
     const { meetsRequirements } = checkMulticlassRequirements(
-      (classes.find(
-        (c: Class5e) => c.name === multiclassSelection,
-      ) as Class5e) ?? { name: multiclassSelection, source: '' },
+      selectedClass ?? { name: multiclassSelection, source: '' },
       character.abilityScores,
     );
     if (!ignoreRestrictions && !meetsRequirements) {
@@ -144,12 +144,9 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       );
       return;
     }
-    const found = classes.find(
-      (c: Class5e) => c.name === multiclassSelection,
-    ) as Class5e | undefined;
     const newEntry: CharacterClassEntry = {
       name: multiclassSelection,
-      source: found?.source,
+      source: selectedClass?.source,
       levels: 1,
     };
     syncUpdate([...classProgression, newEntry]);

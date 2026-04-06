@@ -40,9 +40,14 @@ export interface Class5e {
   startingEquipment?: unknown;
   classTableGroups?: unknown[];
   classFeatures?: string[] | ClassFeature[];
+  classFeatureRefs?: ClassFeatureReference[];
+  subclasses?: Subclass5e[];
   spellcastingAbility?: string;
   casterProgression?: string;
+  isSpellcaster?: boolean;
+  spellSlotProgression?: number[][];
   preparedSpells?: string;
+  optionalfeatureProgression?: OptFeatureProg[];
   [key: string]: unknown;
 }
 
@@ -55,6 +60,76 @@ export interface ClassFeature {
   className?: string;
   classSource?: string;
   [key: string]: unknown;
+}
+
+export interface ClassFeatureReference {
+  ref: string;
+  name: string;
+  source?: string;
+  className: string;
+  classSource?: string;
+  level?: number;
+  gainSubclassFeature?: boolean;
+  feature?: ClassFeature;
+}
+
+export interface Subclass5e {
+  name: string;
+  shortName: string;
+  source: string;
+  className: string;
+  classSource?: string;
+  entries?: unknown[];
+  subclassFeatures?: string[] | SubclassFeature[];
+  subclassFeatureRefs?: SubclassFeatureReference[];
+  levelFeatures?: Array<{ level: number; features: SubclassFeature[] }>;
+  [key: string]: unknown;
+}
+
+export interface SubclassFeature {
+  name: string;
+  source: string;
+  page?: number;
+  level?: number;
+  entries?: unknown[];
+  className?: string;
+  classSource?: string;
+  subclassShortName?: string;
+  subclassSource?: string;
+  [key: string]: unknown;
+}
+
+export interface SubclassFeatureReference {
+  ref: string;
+  name: string;
+  source?: string;
+  className: string;
+  classSource?: string;
+  subclassShortName: string;
+  subclassSource?: string;
+  level?: number;
+  feature?: SubclassFeature;
+}
+
+export interface OptFeatureProg {
+  name: string;
+  featureType: string[];
+  progression: number[] | Record<string, number>;
+}
+
+export interface OptionalFeatureLike {
+  name: string;
+  source?: string;
+  featureType?: string | string[];
+  entries?: unknown[];
+}
+
+export interface GameDataLookups {
+  classesByKey: Record<string, Class5e>;
+  classFeaturesByKey: Record<string, ClassFeature>;
+  spellsByKey: Record<string, Spell5e>;
+  optionalFeaturesByKey: Record<string, unknown>;
+  subclassesByKey: Record<string, Subclass5e>;
 }
 
 export interface Background5e {
@@ -92,6 +167,7 @@ export interface Feat5e {
   name: string;
   source: string;
   page?: number;
+  category?: string;
   prerequisite?: string[];
   ability?: AbilityBonus[];
   entries?: unknown[];
@@ -232,4 +308,5 @@ export interface GameData {
   optionalfeatures: unknown[];
   variantrules: unknown[];
   sources: SourceBook[];
+  lookups?: GameDataLookups;
 }

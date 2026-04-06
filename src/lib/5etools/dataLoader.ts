@@ -1,4 +1,5 @@
 import type { DataSourceConfig, GameData } from '@/types/5etools';
+import { buildGameDataLookups } from './lookups';
 import {
   buildSourcesList,
   parseActions,
@@ -24,6 +25,15 @@ export interface DataLoaderOptions {
   signal?: AbortSignal;
 }
 
+interface IndexedFileEntry {
+  file: string;
+  source?: string;
+}
+
+interface ExtractIndexFilesOptions {
+  treatObjectKeysAsSources?: boolean;
+}
+
 export class FiveEToolsDataLoader {
   private baseUrl: string;
   private isRemote: boolean;
@@ -41,6 +51,10 @@ export class FiveEToolsDataLoader {
       { key: 'classIndex', file: 'class/index.json' },
       { key: 'backgrounds', file: 'backgrounds.json' },
       { key: 'spellIndex', file: 'spells/index.json' },
+      {
+        key: 'spellSourceLookup',
+        file: 'generated/gendata-spell-source-lookup.json',
+      },
       { key: 'feats', file: 'feats.json' },
       { key: 'items', file: 'items.json' },
       { key: 'itemsBase', file: 'items-base.json' },
@@ -81,6 +95,7 @@ export class FiveEToolsDataLoader {
     let adventuresData: unknown = null;
     let classIndexData: unknown = null;
     let spellIndexData: unknown = null;
+    let spellSourceLookupData: unknown = null;
 
     for (let i = 0; i < resources.length; i++) {
       const resource = resources[i];
@@ -108,6 +123,9 @@ export class FiveEToolsDataLoader {
             break;
           case 'spellIndex':
             spellIndexData = data;
+            break;
+          case 'spellSourceLookup':
+            spellSourceLookupData = data;
             break;
           case 'races':
             gameData.races = parseRaces(data) as GameData['races'];
@@ -206,7 +224,13 @@ export class FiveEToolsDataLoader {
     }
 
     if (spellIndexData) {
-      await this.loadSpellData(spellIndexData, gameData, sourcesSet, options);
+      await this.loadSpellData(
+        spellIndexData,
+        gameData,
+        sourcesSet,
+        options,
+        spellSourceLookupData,
+      );
     }
 
     gameData.sources = buildSourcesList(
@@ -214,6 +238,7 @@ export class FiveEToolsDataLoader {
       booksData,
       adventuresData,
     );
+    gameData.lookups = buildGameDataLookups(gameData);
 
     if (options?.onProgress) {
       options.onProgress(resources.length, resources.length, 'Complete');
@@ -228,7 +253,9 @@ export class FiveEToolsDataLoader {
     sourcesSet: Set<string>,
     options?: DataLoaderOptions,
   ): Promise<void> {
-    const classFiles = this.extractClassFiles(indexData);
+    const classFiles = this.extractIndexFiles(indexData, {
+      treatObjectKeysAsSources: false,
+    });
 
     const allClasses: GameData['classes'] = [];
     const allClassFeatures: GameData['classFeatures'] = [];
@@ -236,23 +263,29 @@ export class FiveEToolsDataLoader {
     for (const classFile of classFiles) {
       try {
         const classData = await this.loadResource(
-          `class/${classFile}`,
+          `class/${classFile.file}`,
           options?.signal,
         );
 
-        const parsedClasses = parseClasses(classData);
+        const parsedClasses = this.filterByIndexedSource(
+          parseClasses(classData),
+          classFile.source,
+        );
         allClasses.push(...parsedClasses);
         parsedClasses.forEach((item) => {
           this.addItemSource(item, sourcesSet);
         });
 
-        const parsedFeatures = parseClassFeatures(classData);
+        const parsedFeatures = this.filterByIndexedSource(
+          parseClassFeatures(classData),
+          classFile.source,
+        );
         allClassFeatures.push(...parsedFeatures);
         parsedFeatures.forEach((item) => {
           this.addItemSource(item, sourcesSet);
         });
       } catch (error) {
-        console.warn(`Failed to load class file ${classFile}:`, error);
+        console.warn(`Failed to load class file ${classFile.file}:`, error);
       }
     }
 
@@ -265,81 +298,98 @@ export class FiveEToolsDataLoader {
     gameData: GameData,
     sourcesSet: Set<string>,
     options?: DataLoaderOptions,
+    spellSourceLookupData?: unknown,
   ): Promise<void> {
-    const spellFiles = this.extractSpellFiles(indexData);
+    const spellFiles = this.extractIndexFiles(indexData);
 
     const allSpells: GameData['spells'] = [];
 
     for (const spellFile of spellFiles) {
       try {
         const spellData = await this.loadResource(
-          `spells/${spellFile}`,
+          `spells/${spellFile.file}`,
           options?.signal,
         );
 
-        const parsedSpells = parseSpells(spellData);
+        const parsedSpells = this.filterByIndexedSource(
+          parseSpells(spellData, {
+            sourceLookup: this.asSpellSourceLookup(spellSourceLookupData),
+          }),
+          spellFile.source,
+        );
         allSpells.push(...parsedSpells);
         parsedSpells.forEach((item) => {
           this.addItemSource(item, sourcesSet);
         });
       } catch (error) {
-        console.warn(`Failed to load spell file ${spellFile}:`, error);
+        console.warn(`Failed to load spell file ${spellFile.file}:`, error);
       }
     }
 
     gameData.spells = allSpells;
   }
 
-  private extractClassFiles(indexData: unknown): string[] {
-    const files: string[] = [];
+  private extractIndexFiles(
+    indexData: unknown,
+    options?: ExtractIndexFilesOptions,
+  ): IndexedFileEntry[] {
+    const files: IndexedFileEntry[] = [];
+    const seen = new Set<string>();
+    const treatObjectKeysAsSources =
+      options?.treatObjectKeysAsSources !== false;
+
+    const addEntry = (file: string, source?: string) => {
+      const cleanFile = file.trim();
+      if (!cleanFile) return;
+      const key = `${cleanFile}|${source ?? ''}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      files.push({ file: cleanFile, source });
+    };
 
     if (Array.isArray(indexData)) {
       indexData.forEach((item) => {
-        if (typeof item === 'string') {
-          files.push(item);
-        }
+        if (typeof item === 'string') addEntry(item);
       });
-    } else if (typeof indexData === 'object' && indexData !== null) {
-      Object.values(indexData).forEach((value) => {
-        if (typeof value === 'string') {
-          files.push(value);
-        } else if (Array.isArray(value)) {
-          value.forEach((item) => {
-            if (typeof item === 'string') {
-              files.push(item);
-            }
-          });
-        }
-      });
+      return files;
     }
+
+    if (typeof indexData !== 'object' || indexData === null) return files;
+
+    Object.entries(indexData).forEach(([source, value]) => {
+      if (typeof value === 'string') {
+        addEntry(value, treatObjectKeysAsSources ? source : undefined);
+        return;
+      }
+
+      if (Array.isArray(value)) {
+        value.forEach((item) => {
+          if (typeof item === 'string') {
+            addEntry(item, treatObjectKeysAsSources ? source : undefined);
+          }
+        });
+      }
+    });
 
     return files;
   }
 
-  private extractSpellFiles(indexData: unknown): string[] {
-    const files: string[] = [];
+  private asSpellSourceLookup(
+    data: unknown,
+  ): Record<string, Record<string, unknown>> | undefined {
+    if (!data || typeof data !== 'object') return undefined;
+    return data as Record<string, Record<string, unknown>>;
+  }
 
-    if (Array.isArray(indexData)) {
-      indexData.forEach((item) => {
-        if (typeof item === 'string') {
-          files.push(item);
-        }
-      });
-    } else if (typeof indexData === 'object' && indexData !== null) {
-      Object.values(indexData).forEach((value) => {
-        if (typeof value === 'string') {
-          files.push(value);
-        } else if (Array.isArray(value)) {
-          value.forEach((item) => {
-            if (typeof item === 'string') {
-              files.push(item);
-            }
-          });
-        }
-      });
-    }
-
-    return files;
+  private filterByIndexedSource(items: unknown[], source?: string): unknown[] {
+    if (!source) return items;
+    const sourceLower = source.toLowerCase();
+    return items.filter((item) => {
+      if (typeof item !== 'object' || item === null) return false;
+      const itemSource = (item as { source?: unknown }).source;
+      if (typeof itemSource !== 'string') return true;
+      return itemSource.toLowerCase() === sourceLower;
+    });
   }
 
   private async loadResource(

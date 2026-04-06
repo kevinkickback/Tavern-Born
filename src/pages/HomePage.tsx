@@ -253,7 +253,7 @@ export function HomePage() {
                 </Button>
 
                 {toolbarOpen && (
-                  <div className="absolute right-0 top-full z-10 mt-2 flex flex-col gap-2 rounded-lg border bg-background/95 px-1.5 py-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:right-full lg:top-1/2 lg:mt-0 lg:mr-3 lg:flex-row lg:flex-nowrap lg:items-center lg:-translate-y-1/2 lg:px-2 lg:py-2">
+                  <div className="absolute right-0 top-full z-50 mt-2 flex flex-col gap-2 rounded-lg border bg-background/95 px-1.5 py-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 xl:right-full xl:top-1/2 xl:mt-0 xl:mr-3 xl:flex-row xl:flex-nowrap xl:items-center xl:-translate-y-1/2 xl:px-2 xl:py-2">
                     <div className="flex h-8 items-center gap-2 rounded-md border bg-card px-2">
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
                         Sort
@@ -283,7 +283,7 @@ export function HomePage() {
                       </Select>
                     </div>
 
-                    <div className="hidden h-8 w-px bg-border" />
+                    <div className="hidden xl:block h-8 w-px bg-border" />
 
                     <div className="flex h-8 items-center gap-2 rounded-md border bg-card px-2">
                       <span className="text-xs text-muted-foreground whitespace-nowrap">

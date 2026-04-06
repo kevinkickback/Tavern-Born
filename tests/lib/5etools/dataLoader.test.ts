@@ -1,0 +1,222 @@
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader';
+
+function makeJsonResponse(jsonData: unknown, ok = true) {
+  return new Response(JSON.stringify(jsonData), {
+    status: ok ? 200 : 404,
+    headers: { 'content-type': 'application/json' },
+  });
+}
+
+describe('5etools/dataLoader', () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  test('loads classes from class files and filters spells by index source while enriching lookup data', async () => {
+    const payloadByFile: Record<string, unknown> = {
+      'books.json': {
+        book: [{ id: 'PHB', name: 'Players Handbook', group: 'core' }],
+      },
+      'adventures.json': { adventure: [] },
+      'races.json': { race: [{ name: 'Human', source: 'PHB' }] },
+      'class/index.json': {
+        PHB: 'class-phb.json',
+      },
+      'class/class-phb.json': {
+        class: [
+          { name: 'Wizard', source: 'PHB' },
+          { name: 'Wrong Source Class', source: 'XPHB' },
+        ],
+        classFeature: [
+          {
+            name: 'Spellcasting',
+            source: 'PHB',
+            className: 'Wizard',
+            classSource: 'PHB',
+            level: 1,
+          },
+          {
+            name: 'Wrong Feature',
+            source: 'XPHB',
+            className: 'Wrong Source Class',
+            classSource: 'XPHB',
+            level: 1,
+          },
+        ],
+      },
+      'backgrounds.json': { background: [{ name: 'Acolyte', source: 'PHB' }] },
+      'spells/index.json': {
+        PHB: 'spells-phb.json',
+      },
+      'spells/spells-phb.json': {
+        spell: [
+          { name: 'Magic Missile', source: 'PHB', level: 1, school: 'E' },
+          { name: 'Wrong Spell', source: 'XPHB', level: 1, school: 'E' },
+        ],
+      },
+      'generated/gendata-spell-source-lookup.json': {
+        phb: {
+          'magic missile': {
+            class: {
+              PHB: { Wizard: true },
+            },
+            subclass: {
+              PHB: {
+                Wizard: {
+                  PHB: {
+                    Evoker: { name: 'School of Evocation' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      'feats.json': { feat: [{ name: 'Alert', source: 'PHB' }] },
+      'items.json': { item: [{ name: 'Rope', source: 'PHB', type: 'G' }] },
+      'items-base.json': {
+        baseitem: [{ name: 'Longsword', source: 'PHB', type: 'M' }],
+      },
+      'actions.json': { action: [{ name: 'Attack', source: 'PHB' }] },
+      'conditionsdiseases.json': {
+        condition: [{ name: 'Blinded', source: 'PHB' }],
+      },
+      'deities.json': { deity: [{ name: 'Pelor', source: 'PHB' }] },
+      'skills.json': { skill: [{ name: 'Arcana', source: 'PHB' }] },
+      'senses.json': { sense: [{ name: 'Darkvision', source: 'PHB' }] },
+      'languages.json': { language: [{ name: 'Common', source: 'PHB' }] },
+      'magicvariants.json': { magicvariant: [] },
+      'optionalfeatures.json': { optionalfeature: [] },
+      'variantrules.json': { variantrule: [] },
+    };
+
+    globalThis.fetch = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      const entry = Object.entries(payloadByFile).find(([name]) =>
+        url.endsWith(`/data/${name}`),
+      );
+      if (!entry) return makeJsonResponse({}, false);
+      return makeJsonResponse(entry[1], true);
+    }) as unknown as typeof fetch;
+
+    const loader = new FiveEToolsDataLoader({
+      type: 'remote',
+      path: 'https://example.com/5etools-src/main',
+      isValid: true,
+    });
+
+    const gameData = await loader.loadAllData();
+
+    expect(gameData.classes.map((it) => it.name)).toEqual([
+      'Wizard',
+      'Wrong Source Class',
+    ]);
+    expect(gameData.classFeatures.map((it) => it.name)).toEqual([
+      'Spellcasting',
+      'Wrong Feature',
+    ]);
+
+    expect(gameData.spells.map((it) => it.name)).toEqual(['Magic Missile']);
+    expect(gameData.spells[0]?.classes?.fromClassList).toEqual(
+      expect.arrayContaining([{ name: 'Wizard', source: 'PHB' }]),
+    );
+    expect(gameData.spells[0]?.classes?.fromSubclass).toEqual(
+      expect.arrayContaining([
+        {
+          class: { name: 'Wizard', source: 'PHB' },
+          subclass: {
+            name: 'School of Evocation',
+            shortName: 'Evoker',
+            source: 'PHB',
+          },
+        },
+      ]),
+    );
+  });
+
+  test('loads classes from slug-keyed class index entries without source filtering them out', async () => {
+    const payloadByFile: Record<string, unknown> = {
+      'books.json': {
+        book: [{ id: 'PHB', name: 'Players Handbook', group: 'core' }],
+      },
+      'adventures.json': { adventure: [] },
+      'races.json': { race: [] },
+      'class/index.json': {
+        wizard: 'class-wizard.json',
+        fighter: 'class-fighter.json',
+      },
+      'class/class-wizard.json': {
+        class: [{ name: 'Wizard', source: 'PHB' }],
+        classFeature: [
+          {
+            name: 'Spellcasting',
+            source: 'PHB',
+            className: 'Wizard',
+            classSource: 'PHB',
+            level: 1,
+          },
+        ],
+      },
+      'class/class-fighter.json': {
+        class: [{ name: 'Fighter', source: 'PHB' }],
+        classFeature: [
+          {
+            name: 'Fighting Style',
+            source: 'PHB',
+            className: 'Fighter',
+            classSource: 'PHB',
+            level: 1,
+          },
+        ],
+      },
+      'backgrounds.json': { background: [] },
+      'spells/index.json': {},
+      'generated/gendata-spell-source-lookup.json': {},
+      'feats.json': { feat: [] },
+      'items.json': { item: [] },
+      'items-base.json': { baseitem: [] },
+      'actions.json': { action: [] },
+      'conditionsdiseases.json': { condition: [] },
+      'deities.json': { deity: [] },
+      'skills.json': { skill: [] },
+      'senses.json': { sense: [] },
+      'languages.json': { language: [] },
+      'magicvariants.json': { magicvariant: [] },
+      'optionalfeatures.json': { optionalfeature: [] },
+      'variantrules.json': { variantrule: [] },
+    };
+
+    globalThis.fetch = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      const entry = Object.entries(payloadByFile).find(([name]) =>
+        url.endsWith(`/data/${name}`),
+      );
+      if (!entry) return makeJsonResponse({}, false);
+      return makeJsonResponse(entry[1], true);
+    }) as unknown as typeof fetch;
+
+    const loader = new FiveEToolsDataLoader({
+      type: 'remote',
+      path: 'https://example.com/5etools-src/main',
+      isValid: true,
+    });
+
+    const gameData = await loader.loadAllData();
+
+    expect(gameData.classes.map((it) => it.name)).toEqual([
+      'Wizard',
+      'Fighter',
+    ]);
+    expect(gameData.classFeatures.map((it) => it.name)).toEqual([
+      'Spellcasting',
+      'Fighting Style',
+    ]);
+  });
+});

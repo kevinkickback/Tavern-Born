@@ -112,7 +112,8 @@ export function calculateMaxHP(
 
   for (const entry of classes) {
     const cls = classesData?.find((c) => c.name === entry.name);
-    const die = parseHitDice(entry.hitDice) || getHitDiceFromClass(cls);
+    const entryDie = entry.hitDice ? parseHitDice(entry.hitDice) : null;
+    const die = entryDie ?? getHitDiceFromClass(cls);
     const avgRoll = averageHp ? Math.floor(die / 2) + 1 : die;
 
     for (let lvl = 1; lvl <= (entry.levels || 0); lvl++) {

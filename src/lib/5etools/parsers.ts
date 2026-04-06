@@ -36,6 +36,462 @@ function asArray(data: unknown): unknown[] {
   return Array.isArray(data) ? data : [];
 }
 
+type SpellSourceLookup = Record<string, Record<string, unknown>>;
+
+function normalizeKey(value: unknown): string {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function getSpellLookupEntry(
+  sourceLookup: SpellSourceLookup,
+  spell: ParsedObject,
+): ParsedObject | null {
+  const source = normalizeKey(spell.source);
+  const name = normalizeKey(spell.name);
+  if (!source || !name) return null;
+
+  const bySource = sourceLookup[source];
+  if (!bySource || typeof bySource !== 'object') return null;
+
+  const entry = bySource[name];
+  return typeof entry === 'object' && entry !== null
+    ? (entry as ParsedObject)
+    : null;
+}
+
+function mergeSpellClassList(
+  spell: ParsedObject,
+  lookupEntry: ParsedObject,
+): void {
+  const classLookup = asObject(lookupEntry.class);
+  if (!Object.keys(classLookup).length) return;
+
+  const classes = asObject(spell.classes);
+  const fromClassList = asArray(classes.fromClassList);
+  const seen = new Set(
+    fromClassList
+      .map((it) => asObject(it))
+      .map((it) => `${normalizeKey(it.name)}|${normalizeKey(it.source)}`),
+  );
+
+  for (const [source, classNameTo] of Object.entries(classLookup)) {
+    const classNameMap = asObject(classNameTo);
+    for (const [name, val] of Object.entries(classNameMap)) {
+      const key = `${normalizeKey(name)}|${normalizeKey(source)}`;
+      if (seen.has(key)) continue;
+
+      const toAdd: ParsedObject = { name, source };
+      if (val && typeof val === 'object') {
+        const valObj = asObject(val);
+        if (typeof valObj.definedInSource === 'string') {
+          toAdd.definedInSource = valObj.definedInSource;
+        }
+        if (Array.isArray(valObj.definedInSources)) {
+          toAdd.definedInSources = valObj.definedInSources;
+        }
+      }
+
+      fromClassList.push(toAdd);
+      seen.add(key);
+    }
+  }
+
+  classes.fromClassList = fromClassList;
+  spell.classes = classes;
+}
+
+function mergeSpellSubclassList(
+  spell: ParsedObject,
+  lookupEntry: ParsedObject,
+): void {
+  const subclassLookup = asObject(lookupEntry.subclass);
+  if (!Object.keys(subclassLookup).length) return;
+
+  const classes = asObject(spell.classes);
+  const fromSubclass = asArray(classes.fromSubclass);
+  const seen = new Set(
+    fromSubclass
+      .map((it) => asObject(it))
+      .map((it) => {
+        const classObj = asObject(it.class);
+        const subclassObj = asObject(it.subclass);
+        return `${normalizeKey(classObj.name)}|${normalizeKey(classObj.source)}|${normalizeKey(subclassObj.shortName ?? subclassObj.name)}|${normalizeKey(subclassObj.source)}`;
+      }),
+  );
+
+  for (const [classSource, classNameTo] of Object.entries(subclassLookup)) {
+    const classNameMap = asObject(classNameTo);
+    for (const [className, subclassSourceTo] of Object.entries(classNameMap)) {
+      const subclassSourceMap = asObject(subclassSourceTo);
+      for (const [subclassSource, shortNameTo] of Object.entries(
+        subclassSourceMap,
+      )) {
+        const shortNameMap = asObject(shortNameTo);
+        for (const [shortName, value] of Object.entries(shortNameMap)) {
+          const valueObj = asObject(value);
+          const fullName =
+            typeof valueObj.name === 'string' ? valueObj.name : shortName;
+          const key = `${normalizeKey(className)}|${normalizeKey(classSource)}|${normalizeKey(shortName)}|${normalizeKey(subclassSource)}`;
+          if (seen.has(key)) continue;
+
+          fromSubclass.push({
+            class: { name: className, source: classSource },
+            subclass: {
+              name: fullName,
+              shortName,
+              source: subclassSource,
+            },
+          });
+          seen.add(key);
+        }
+      }
+    }
+  }
+
+  classes.fromSubclass = fromSubclass;
+  spell.classes = classes;
+}
+
+function enrichSpellFromLookup(
+  spell: ParsedObject,
+  sourceLookup?: SpellSourceLookup,
+): ParsedObject {
+  if (!sourceLookup) return spell;
+
+  const lookupEntry = getSpellLookupEntry(sourceLookup, spell);
+  if (!lookupEntry) return spell;
+
+  const out = { ...spell };
+  mergeSpellClassList(out, lookupEntry);
+  mergeSpellSubclassList(out, lookupEntry);
+  return out;
+}
+
+function getClassFeatureIndex(
+  classFeatureRecords: unknown[],
+): Map<string, ParsedObject> {
+  const index = new Map<string, ParsedObject>();
+
+  for (const record of classFeatureRecords) {
+    const feature = asObject(record);
+    const name = normalizeKey(feature.name);
+    const source = normalizeKey(feature.source);
+    if (!name || !source) continue;
+
+    const key = `${name}|${source}`;
+    if (!index.has(key)) {
+      index.set(key, feature);
+    }
+  }
+
+  return index;
+}
+
+function getClassSpellSlotProgression(
+  classObj: ParsedObject,
+): number[][] | undefined {
+  const groups = asArray(classObj.classTableGroups);
+  for (const group of groups) {
+    const rows = asObject(group).rowsSpellProgression;
+    if (!Array.isArray(rows)) continue;
+    return rows.filter(Array.isArray) as number[][];
+  }
+
+  return undefined;
+}
+
+function getIsSpellcasterClass(classObj: ParsedObject): boolean {
+  if (typeof classObj.isSpellcaster === 'boolean') {
+    return classObj.isSpellcaster;
+  }
+
+  if (typeof classObj.spellcastingAbility === 'string') return true;
+
+  const casterProgression = normalizeKey(classObj.casterProgression);
+  if (casterProgression && casterProgression !== 'none') return true;
+
+  return !!getClassSpellSlotProgression(classObj);
+}
+
+function resolveClassFeatureRecord(
+  ref: ParsedObject,
+  featureIndex: Map<string, ParsedObject>,
+  classFeatureRecords: unknown[],
+): ParsedObject | undefined {
+  const name = normalizeKey(ref.name);
+  const source = normalizeKey(ref.source);
+
+  if (name && source) {
+    const exact = featureIndex.get(`${name}|${source}`);
+    if (exact) return exact;
+  }
+
+  const className = normalizeKey(ref.className);
+  const classSource = normalizeKey(ref.classSource);
+  const level = typeof ref.level === 'number' ? ref.level : undefined;
+
+  for (const record of classFeatureRecords) {
+    const feature = asObject(record);
+    if (normalizeKey(feature.name) !== name) continue;
+    if (className && normalizeKey(feature.className) !== className) continue;
+    if (classSource && normalizeKey(feature.classSource) !== classSource)
+      continue;
+    if (level !== undefined && feature.level !== level) continue;
+    if (
+      source &&
+      typeof feature.source === 'string' &&
+      normalizeKey(feature.source) !== source
+    )
+      continue;
+    return feature;
+  }
+
+  if (!source) {
+    for (const record of classFeatureRecords) {
+      const feature = asObject(record);
+      if (normalizeKey(feature.name) !== name) continue;
+      if (className && normalizeKey(feature.className) !== className) continue;
+      if (classSource && normalizeKey(feature.classSource) !== classSource)
+        continue;
+      if (level !== undefined && feature.level !== level) continue;
+      return feature;
+    }
+  }
+
+  return undefined;
+}
+
+function parseClassFeatureReference(
+  rawRef: unknown,
+  classObj: ParsedObject,
+  featureIndex: Map<string, ParsedObject>,
+  classFeatureRecords: unknown[],
+): ParsedObject | null {
+  const refObj =
+    typeof rawRef === 'object' && rawRef !== null ? asObject(rawRef) : {};
+  const refText =
+    typeof rawRef === 'string'
+      ? rawRef
+      : typeof refObj.classFeature === 'string'
+        ? refObj.classFeature
+        : null;
+
+  if (!refText) return null;
+
+  const parts = refText.split('|');
+  const level = Number.parseInt(parts[3] ?? '', 10);
+  const parsedRef: ParsedObject = {
+    ref: refText,
+    name: parts[0] ?? '',
+    className: parts[1] || classObj.name || '',
+    classSource: parts[2] || classObj.source,
+    source: parts[4] || parts[2] || classObj.source,
+    gainSubclassFeature: refObj.gainSubclassFeature === true,
+  };
+
+  if (!Number.isNaN(level)) {
+    parsedRef.level = level;
+  }
+
+  const feature = resolveClassFeatureRecord(
+    parsedRef,
+    featureIndex,
+    classFeatureRecords,
+  );
+  if (!feature) return parsedRef;
+
+  return {
+    ...parsedRef,
+    source:
+      typeof feature.source === 'string' && feature.source.length > 0
+        ? feature.source
+        : parsedRef.source,
+    classSource:
+      typeof feature.classSource === 'string' && feature.classSource.length > 0
+        ? feature.classSource
+        : parsedRef.classSource,
+    level: typeof feature.level === 'number' ? feature.level : parsedRef.level,
+    feature,
+  };
+}
+
+function parseClassFeatureReferences(
+  classObj: ParsedObject,
+  classFeatureRecords: unknown[],
+  featureIndex: Map<string, ParsedObject>,
+): ParsedObject[] {
+  const refs = asArray(classObj.classFeatures);
+  return refs
+    .map((ref) =>
+      parseClassFeatureReference(
+        ref,
+        classObj,
+        featureIndex,
+        classFeatureRecords,
+      ),
+    )
+    .filter((ref): ref is ParsedObject => ref !== null);
+}
+
+function resolveSubclassFeatureRecord(
+  ref: ParsedObject,
+  subclassFeatureRecords: unknown[],
+): ParsedObject | undefined {
+  const name = normalizeKey(ref.name);
+  const source = normalizeKey(ref.source);
+  const className = normalizeKey(ref.className);
+  const classSource = normalizeKey(ref.classSource);
+  const subclassShortName = normalizeKey(ref.subclassShortName);
+  const subclassSource = normalizeKey(ref.subclassSource);
+  const level = typeof ref.level === 'number' ? ref.level : undefined;
+
+  for (const record of subclassFeatureRecords) {
+    const feature = asObject(record);
+    if (normalizeKey(feature.name) !== name) continue;
+    if (className && normalizeKey(feature.className) !== className) continue;
+    if (
+      classSource &&
+      typeof feature.classSource === 'string' &&
+      normalizeKey(feature.classSource) !== classSource
+    )
+      continue;
+    if (
+      subclassShortName &&
+      typeof feature.subclassShortName === 'string' &&
+      normalizeKey(feature.subclassShortName) !== subclassShortName
+    )
+      continue;
+    if (
+      subclassSource &&
+      typeof feature.subclassSource === 'string' &&
+      normalizeKey(feature.subclassSource) !== subclassSource
+    )
+      continue;
+    if (level !== undefined && feature.level !== level) continue;
+    if (
+      source &&
+      typeof feature.source === 'string' &&
+      normalizeKey(feature.source) !== source
+    )
+      continue;
+    return feature;
+  }
+
+  if (!source) {
+    for (const record of subclassFeatureRecords) {
+      const feature = asObject(record);
+      if (normalizeKey(feature.name) !== name) continue;
+      if (className && normalizeKey(feature.className) !== className) continue;
+      if (
+        classSource &&
+        typeof feature.classSource === 'string' &&
+        normalizeKey(feature.classSource) !== classSource
+      )
+        continue;
+      if (
+        subclassShortName &&
+        typeof feature.subclassShortName === 'string' &&
+        normalizeKey(feature.subclassShortName) !== subclassShortName
+      )
+        continue;
+      if (
+        subclassSource &&
+        typeof feature.subclassSource === 'string' &&
+        normalizeKey(feature.subclassSource) !== subclassSource
+      )
+        continue;
+      if (level !== undefined && feature.level !== level) continue;
+      return feature;
+    }
+  }
+
+  return undefined;
+}
+
+function parseSubclassFeatureReference(
+  rawRef: unknown,
+  subclassObj: ParsedObject,
+  subclassFeatureRecords: unknown[],
+): ParsedObject | null {
+  if (typeof rawRef !== 'string') return null;
+
+  const parts = rawRef.split('|');
+  const level = Number.parseInt(parts[5] ?? '', 10);
+  const parsedRef: ParsedObject = {
+    ref: rawRef,
+    name: parts[0] ?? '',
+    className: parts[1] || subclassObj.className || '',
+    classSource: parts[2] || subclassObj.classSource,
+    subclassShortName:
+      parts[3] || subclassObj.shortName || subclassObj.subclassShortName || '',
+    subclassSource: parts[4] || subclassObj.source,
+    source: parts[6] || subclassObj.source,
+  };
+
+  if (!Number.isNaN(level)) {
+    parsedRef.level = level;
+  }
+
+  const feature = resolveSubclassFeatureRecord(
+    parsedRef,
+    subclassFeatureRecords,
+  );
+  if (!feature) return parsedRef;
+
+  return {
+    ...parsedRef,
+    source:
+      typeof feature.source === 'string' && feature.source.length > 0
+        ? feature.source
+        : parsedRef.source,
+    classSource:
+      typeof feature.classSource === 'string' && feature.classSource.length > 0
+        ? feature.classSource
+        : parsedRef.classSource,
+    subclassSource:
+      typeof feature.subclassSource === 'string' &&
+      feature.subclassSource.length > 0
+        ? feature.subclassSource
+        : parsedRef.subclassSource,
+    level: typeof feature.level === 'number' ? feature.level : parsedRef.level,
+    feature,
+  };
+}
+
+function parseSubclassFeatureReferences(
+  subclassObj: ParsedObject,
+  subclassFeatureRecords: unknown[],
+): ParsedObject[] {
+  return asArray(subclassObj.subclassFeatures)
+    .map((ref) =>
+      parseSubclassFeatureReference(ref, subclassObj, subclassFeatureRecords),
+    )
+    .filter((ref): ref is ParsedObject => ref !== null);
+}
+
+function groupSubclassFeaturesByLevel(
+  refs: ParsedObject[],
+): Array<{ level: number; features: ParsedObject[] }> {
+  const groups = new Map<number, ParsedObject[]>();
+
+  for (const ref of refs) {
+    const feature = asObject(ref.feature);
+    const level =
+      typeof feature.level === 'number'
+        ? feature.level
+        : typeof ref.level === 'number'
+          ? ref.level
+          : undefined;
+    if (level === undefined || !Object.keys(feature).length) continue;
+    if (!groups.has(level)) groups.set(level, []);
+    groups.get(level)?.push(feature);
+  }
+
+  return Array.from(groups.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([level, features]) => ({ level, features }));
+}
+
 export function parseRaces(data: unknown): unknown[] {
   const obj = asObject(data);
   const races: unknown[] = obj.race
@@ -86,8 +542,8 @@ export function parseClasses(data: unknown): unknown[] {
       ? [...data]
       : [];
   const subclassEntries: unknown[] = asArray(obj.subclass);
-
-  if (subclassEntries.length === 0) return classes;
+  const classFeatureRecords: unknown[] = asArray(obj.classFeature);
+  const classFeatureIndex = getClassFeatureIndex(classFeatureRecords);
 
   // Build maps for intro entries and per-level features from subclassFeature records.
   // XPHB-style subclasses have an intro record whose name === shortName (e.g. "Abjurer").
@@ -148,16 +604,40 @@ export function parseClasses(data: unknown): unknown[] {
     const fullNameKey = `${String(scObj.name ?? '')}|${className}|${classSource ?? ''}`;
     const entries =
       introEntriesMap.get(introKey) ?? fullNameIntroMap.get(fullNameKey) ?? [];
-    const levelFeatures = levelFeaturesMap.get(introKey) ?? [];
-    subclassMap.get(parentKey)?.push({ ...scObj, entries, levelFeatures });
+    const subclassFeatureRefs = parseSubclassFeatureReferences(
+      scObj,
+      subclassFeatureRecords,
+    );
+    const levelFeatures =
+      groupSubclassFeaturesByLevel(subclassFeatureRefs).length > 0
+        ? groupSubclassFeaturesByLevel(subclassFeatureRefs)
+        : (levelFeaturesMap.get(introKey) ?? []);
+    subclassMap.get(parentKey)?.push({
+      ...scObj,
+      entries,
+      subclassFeatureRefs,
+      levelFeatures,
+    });
   }
 
   return classes.map((cls) => {
     const clsObj = asObject(cls);
     const key = `${String(clsObj.name ?? '')}|${String(clsObj.source ?? '')}`;
     const nested = subclassMap.get(key);
-    if (!nested || nested.length === 0) return cls;
-    return { ...clsObj, subclasses: nested };
+    const classFeatureRefs = parseClassFeatureReferences(
+      clsObj,
+      classFeatureRecords,
+      classFeatureIndex,
+    );
+    const spellSlotProgression = getClassSpellSlotProgression(clsObj);
+
+    return {
+      ...clsObj,
+      subclasses: nested ?? [],
+      classFeatureRefs,
+      isSpellcaster: getIsSpellcasterClass(clsObj),
+      spellSlotProgression,
+    };
   });
 }
 
@@ -168,11 +648,19 @@ export function parseBackgrounds(data: unknown): unknown[] {
   return [];
 }
 
-export function parseSpells(data: unknown): unknown[] {
+export function parseSpells(
+  data: unknown,
+  options?: { sourceLookup?: SpellSourceLookup },
+): unknown[] {
   const obj = asObject(data);
-  if (obj.spell) return asArray(obj.spell);
-  if (Array.isArray(data)) return data;
-  return [];
+  const spells = obj.spell
+    ? asArray(obj.spell)
+    : Array.isArray(data)
+      ? data
+      : [];
+  return spells.map((spell) =>
+    enrichSpellFromLookup(asObject(spell), options?.sourceLookup),
+  );
 }
 
 export function parseFeats(data: unknown): unknown[] {
@@ -194,11 +682,65 @@ export function parseItems(data: unknown): unknown[] {
   return items;
 }
 
+function resolveInlineSubclassFeatureRef(
+  entry: ParsedObject,
+  subclassFeatureRecords: unknown[],
+): ParsedObject {
+  const refStr =
+    typeof entry.subclassFeature === 'string' ? entry.subclassFeature : '';
+  if (!refStr) return entry;
+  const parts = refStr.split('|');
+  const parsedRef: ParsedObject = {
+    name: parts[0] ?? '',
+    className: parts[1] ?? '',
+    classSource: parts[2] ?? '',
+    subclassShortName: parts[3] ?? '',
+    subclassSource: parts[4] ?? '',
+    source: parts[4] ?? '',
+  };
+  const level = Number.parseInt(parts[5] ?? '', 10);
+  if (!Number.isNaN(level)) parsedRef.level = level;
+  const feature = resolveSubclassFeatureRecord(
+    parsedRef,
+    subclassFeatureRecords,
+  );
+  if (!feature) return entry;
+  return { ...entry, feature };
+}
+
+function enrichEntriesSubclassRefs(
+  entries: unknown[],
+  subclassFeatureRecords: unknown[],
+): unknown[] {
+  return entries.map((e) => {
+    if (typeof e !== 'object' || e === null) return e;
+    const obj = e as ParsedObject;
+    if (obj.type === 'refSubclassFeature') {
+      return resolveInlineSubclassFeatureRef(obj, subclassFeatureRecords);
+    }
+    if (Array.isArray(obj.entries)) {
+      return {
+        ...obj,
+        entries: enrichEntriesSubclassRefs(obj.entries, subclassFeatureRecords),
+      };
+    }
+    return e;
+  });
+}
+
 export function parseClassFeatures(data: unknown): unknown[] {
   const obj = asObject(data);
-  if (obj.classFeature) return asArray(obj.classFeature);
-  if (Array.isArray(data)) return data;
-  return [];
+  const subclassFeatureRecords = asArray(obj.subclassFeature);
+  const features = asArray(obj.classFeature);
+  if (!subclassFeatureRecords.length) return features;
+  return features.map((feature) => {
+    const f = asObject(feature);
+    if (!Array.isArray(f.entries)) return feature;
+    return {
+      ...f,
+      entries: enrichEntriesSubclassRefs(f.entries, subclassFeatureRecords),
+    };
+  });
 }
 
 export function parseActions(data: unknown): unknown[] {

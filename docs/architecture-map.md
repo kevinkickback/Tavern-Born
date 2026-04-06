@@ -1,0 +1,73 @@
+# Architecture Map
+
+This document describes the current Tavern-Born runtime architecture and where responsibilities live.
+
+## Layered Architecture
+
+1. Electron host layer
+- Purpose: native window lifecycle, secure IPC bridge, filesystem access for local data source.
+- Key files: electron/main.ts, electron/preload.ts.
+
+2. Application shell and routing
+- Purpose: route composition, global providers, app-level overlays.
+- Key files: src/main.tsx, src/App.tsx, src/components/layout/AppLayout.tsx.
+
+3. State and persistence
+- Purpose: app state ownership and IndexedDB persistence.
+- Key files: src/store/characterStore.ts, src/store/gameDataStore.ts, src/lib/storage/idb-storage.ts, src/lib/storage/dataCache.ts, src/lib/storage/collapseState.ts.
+
+4. Data ingestion and indexing
+- Purpose: load and parse 5etools data from local or remote source, then build lookups.
+- Key files: src/lib/5etools/dataLoader.ts, src/lib/5etools/parsers.ts, src/lib/5etools/classData.ts, src/lib/5etools/validator.ts, src/lib/5etools/schemas.ts, src/lib/5etools/lookups.ts, src/lib/5etools/filters.ts, src/lib/5etools/urlUtils.ts, src/lib/5etools/sourceFallbacks.ts, src/lib/5etools/index.ts.
+
+5. Domain logic
+- Purpose: pure calculations and game rules.
+- Key files: src/lib/characterUtils.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/armorClass.ts.
+
+6. Provenance system
+- Purpose: track source of grants and reconcile when race/class/features change.
+- Key files: src/lib/provenance/types.ts, src/lib/provenance/ledger.ts, src/lib/provenance/reconciliation.ts, src/lib/provenance/normalization.ts, src/lib/provenance/sourceLabels.ts, src/lib/provenance/summaries.ts, src/lib/provenance/applyRaceGrants.ts, src/lib/provenance/applyClassGrants.ts, src/lib/provenance/applyBackgroundGrants.ts, src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts, src/lib/provenance/index.ts.
+
+7. Hooks and view derivations
+- Purpose: thin wrappers from store state to UI-facing derived values.
+- Key files: src/hooks/character/*, src/hooks/data/*.
+
+8. Pages and UI composition
+- Purpose: user workflows and route-level behavior.
+- Key files: src/pages/*, src/components/*.
+
+## Routing Overview
+
+- /: HomePage
+- /build/*: Race, Class, Background, Proficiencies, Ability Scores
+- /feats, /spells, /equipment
+- /details/*: Portrait, Characteristics, Appearance, Allies/Organizations, History
+- /character-sheet, /compendium, /settings
+
+Primary definition: src/App.tsx.
+
+## Boundary Rules
+
+- Never edit data/ directly. Source fixups belong in src/lib/5etools/sourceFallbacks.ts.
+- Components and pages should not import JSON data directly.
+- Business rules belong in src/lib as pure functions.
+- Hooks should orchestrate state and derivation, not own canonical rules.
+- Character writes flow through updateCharacter(id, patch) in src/store/characterStore.ts.
+- 5etools entity list keys must use name|source.
+
+## Where To Put New Code
+
+- New game rule or stat logic: src/lib/calculations or src/lib/characterUtils.ts.
+- New parser behavior: src/lib/5etools/parsers.ts plus validator/schemas updates.
+- New ingestion lookup: src/lib/5etools/lookups.ts plus hook-level usage.
+- New state field or mutation lifecycle: relevant store in src/store/*.ts.
+- New route-level user flow: src/pages/* with extracted component logic under src/components/*.
+
+## Drift Watch
+
+Revisit this file when any of these happen:
+
+- New store or persistence mechanism
+- Significant route structure changes
+- New ingestion stage or parser contract
+- Provenance model changes

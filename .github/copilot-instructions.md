@@ -6,18 +6,38 @@
 
 ## Non-Negotiables
 
+### 0. Docs routing for large-codebase navigation
+Use this repo doc set to gather focused context before making non-trivial changes.
+
+- Start at `docs/README.md` for the docs index.
+- Read `docs/architecture-map.md` when unsure where code belongs.
+- Read `docs/data-flow.md` before changing startup/loading/persistence behavior.
+- Read `docs/data-ingestion.md` before changing anything in `src/lib/5etools/`.
+- Read `docs/state-management.md` before changing stores or mutation flows.
+- Read `docs/provenance.md` before changing grant/reconciliation behavior.
+- Read `docs/testing-map.md` before adding or modifying tests.
+- Read `docs/codebase-tour.md` for fast concern-to-folder routing.
+
+For behavior changes, update the corresponding docs file in the same change.
+
 ### 1. Never edit `data/`
 `data/` holds 5etools JSON files managed externally. Put all fixups in source (e.g. `src/lib/5etools/sourceFallbacks.ts`).
 
-### 2. Never hardcode game data
-Do not hardcode values that exist in the JSON files — multiclass requirements, spell slots, hit dice, proficiency tables, class features, prerequisites, spell schools, item types, etc. Always parse them from the data. If a value isn't parsed yet, write the parser.
+### 2. Prefer parsed game data; hardcoded values are fallback-only
+Canonical 5etools game values must come from parsed data, not source constants.
 
-### 3. List keys must be `name|source`
-Names are not unique across sources. All lists from 5etools data use a composite key:
+- Do not hardcode canonical values that already exist in JSON (multiclass requirements, spell slots, hit dice, proficiency progression, class features, prerequisites, spell schools, item types, etc.).
+- If parsing is missing, implement the parser instead of introducing new canonical constants.
+- Emergency fallback constants are allowed only when data is unavailable at runtime and must be clearly marked as fallback, validated against parsed data when available, and easy to remove.
+
+### 3. 5etools list keys must be `name|source`
+Names are not unique across sources. Any rendered list item backed by 5etools entities must use the composite key:
 ```tsx
 // ✅ items.map((i) => <SelectItem key={`${i.name}|${i.source ?? ''}`} value={i.name} />)
 // ❌ items.map((i) => <SelectItem key={i.name} value={i.name} />)
 ```
+
+For non-5etools local UI arrays (purely synthetic items), stable non-entity keys are acceptable.
 
 ### 4. No game data access in components
 All data access goes through hooks — never import JSON directly in a component:
@@ -41,30 +61,38 @@ All business logic (modifiers, costs, slots, bonuses, prereq checks, AC, HP) goe
 
 Hooks in `src/hooks/` are thin wrappers connecting these functions to state.
 
-### 6. Derive, don't store
-Never persist computed values on the character object — derive them on demand:
+### 6. Derive, don't store (except mutable runtime state)
+Do not persist pure derived values on the character object; derive them on demand:
 ```tsx
 // ✅ const profBonus = getProficiencyBonus(getTotalLevel(character.classProgression))
 // ❌ character.proficiencyBonus  ← stale
 ```
-Computed: proficiency bonus, ability modifiers, AC, HP, spell slots, skill/save modifiers.
+
+Do persist mutable gameplay state that cannot be recomputed from static inputs alone (for example: current HP, temporary HP, spell slot usage, per-rest counters, user overrides).
+
+Purely derived values should remain derived: proficiency bonus, ability modifiers, passive totals, computed AC when not overridden, and other deterministic calculations.
 
 ### 7. All character mutations through the store
 All writes go through `updateCharacter(id, patch)` from `useCharacterStore`. Never mutate state directly.
 
-### 8. UI stack — no exceptions
+### 8. UI stack
 - **Modals/overlays**: Radix `Dialog`, `Tooltip`, `Select`, `DropdownMenu`
 - **Notifications**: `toast()` from Sonner — no `alert()` or custom toasts
-- **Styles**: Tailwind only. No `style=` attributes, no `.style.*`, no inline `<style>`. Use `cn()` for conditionals. For dynamic CSS values (e.g. background-image URL), use CSSOM via a `data-*` attribute.
+- **Styles**: Tailwind first. Avoid inline styles for static presentation.
+	- Allowed `style` usage: dynamic runtime values that cannot be represented cleanly with Tailwind classes alone (for example CSS variables for Radix primitives, transform values, runtime widths/heights, dynamic background images).
+	- Not allowed: replacing ordinary static class-based styling with inline style objects.
+	- Use `cn()` for conditional classes.
 
 ### 9. Always use `renderEntry` for 5etools content
 Never render raw JSON to the user. All entry content goes through `renderEntry()` / `FormattedTextRenderer` from `src/lib/renderer.ts`.
 
 ### 10. Content pages use max-width container
-Settings, Compendium, and all Details sub-nav pages wrap cards in:
+Settings, Compendium, and all Details sub-nav pages should use a centered `max-w-7xl` container and full-width card content by default:
 ```tsx
 <div className="max-w-7xl mx-auto w-full"><Card className="w-full">...</Card></div>
 ```
+
+Equivalent wrapper structure is acceptable if it preserves the same layout behavior.
 Exceptions: character cards, sidebar, Portrait page (full-bleed).
 
 ### 11. Lint and fix after every change

@@ -304,7 +304,6 @@ export const characterSchema = z.object({
   level: levelSchema,
   experiencePoints: z.number().int().min(0).default(0),
   abilityScores: abilityScoresSchema,
-  proficiencyBonus: z.number().int().min(2).max(6).optional(),
   allowedSources: z.array(z.string()).default(['PHB']),
   variantRules: variantRulesSchema.optional(),
   asiChoices: z.array(asiChoiceSchema).optional(),
