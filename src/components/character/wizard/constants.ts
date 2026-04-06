@@ -40,6 +40,12 @@ export const INITIAL_CHARACTER_DATA = {
     charisma: 8,
   },
   portrait: '',
+  portraitTransform: {
+    zoom: 150,
+    panX: 25,
+    panY: 25,
+    rotation: 0,
+  },
   rulesMode: 'strict',
   allowedSources: [] as string[],
   raceAsiChoices: [] as string[][],

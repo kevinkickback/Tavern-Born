@@ -152,6 +152,7 @@ export function CharacterCreationWizard({
       background: characterData.background,
       backgroundSource: characterData.backgroundSource || undefined,
       portrait: characterData.portrait,
+      portraitTransform: characterData.portraitTransform,
       allowedSources: characterData.allowedSources,
       abilityScores: characterData.abilityScores as unknown as AbilityScores,
       variantRules: {

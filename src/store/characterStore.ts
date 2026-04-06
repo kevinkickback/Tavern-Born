@@ -118,6 +118,12 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
     },
     skills: {},
     details: {},
+    portraitTransform: {
+      zoom: 100,
+      panX: 0,
+      panY: 0,
+      rotation: 0,
+    },
     createdAt: now,
     lastModified: now,
     provenance: emptyProvenance(),

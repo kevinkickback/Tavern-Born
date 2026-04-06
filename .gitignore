@@ -7,14 +7,14 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Project data
-data
+/data
 
 # Node modules
-node_modules
+/node_modules
 
 # build output
-dist
-dist-electron
+/dist
+/dist-electron
 
 # Editor directories and files
 .vscode/*
@@ -29,5 +29,5 @@ dist-electron
 **/agent-eval-report*
 
 # Temp folders
-temp/
-.tmp/
+/temp/
+/.tmp/

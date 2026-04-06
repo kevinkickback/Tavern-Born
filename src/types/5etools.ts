@@ -297,6 +297,14 @@ export interface SourceBook {
   hasCharacterOptions?: boolean;
 }
 
+export interface Language5e {
+  name: string;
+  source?: string;
+  type?: string;
+  entries?: unknown[];
+  [key: string]: unknown;
+}
+
 export interface DataSourceConfig {
   type: 'local' | 'remote';
   path: string;
@@ -318,7 +326,7 @@ export interface GameData {
   deities: unknown[];
   skills: unknown[];
   senses: unknown[];
-  languages: unknown[];
+  languages: Language5e[];
   magicvariants: unknown[];
   optionalfeatures: unknown[];
   variantrules: unknown[];

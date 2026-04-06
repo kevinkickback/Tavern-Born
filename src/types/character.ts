@@ -51,6 +51,7 @@ export interface Character {
 
   details: CharacterDetails;
   portrait?: string;
+  portraitTransform?: PortraitTransform;
 
   allowedSources?: string[];
   variantRules?: VariantRules;
@@ -69,6 +70,13 @@ export interface Character {
 
   createdAt: string;
   lastModified: string;
+}
+
+export interface PortraitTransform {
+  zoom: number;
+  panX: number;
+  panY: number;
+  rotation: number;
 }
 
 export interface VariantRules {
