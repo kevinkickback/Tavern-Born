@@ -1,3 +1,4 @@
+import type { Raw5ePrereq } from '@/types/5etools';
 import type { AbilityName } from './abilityScores';
 
 export interface PrereqCharacterSnapshot {
@@ -15,21 +16,6 @@ export interface PrereqCharacterSnapshot {
   progression?: {
     classes?: Array<{ name: string; levels: number; source?: string }>;
   };
-}
-
-type AbilityReq = string | { ability: string; score?: number };
-type RaceReq = string | { name: string };
-type ClassReq = string | { name: string };
-
-interface Raw5ePrereq {
-  level?: number | { level: number };
-  ability?: AbilityReq[];
-  race?: RaceReq[];
-  class?: ClassReq[];
-  spellcasting?: boolean;
-  spell?: string | string[];
-  pact?: string;
-  patron?: string;
 }
 
 /** Canonical 5etools pact prerequisite text normalizer (Parser.prereqPactToFull). */

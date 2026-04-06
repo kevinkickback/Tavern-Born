@@ -20,7 +20,18 @@ Key scripts in package.json:
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
 - Renderer output in src/lib/renderer.ts
 - Provenance ledger/reconciliation modules
+- Provenance section row routing helper in src/lib/provenance/sectionRows.ts
+- Provenance composed hooks in src/hooks/character/useProvenance*.ts
 - Zustand stores in src/store/*
+- Build flow extracted helpers:
+	- src/pages/build/ability-scores/model/data.ts
+	- src/pages/build/class/model/asi.ts
+	- src/pages/build/class/model/mutations.ts
+	- src/pages/build/proficiencies/model/data.ts
+	- src/pages/build/class/model/levelsUtils.ts
+- Feat selection helpers:
+	- src/pages/feats/model/selection.ts
+- Compendium entry shaping and filtering in src/lib/compendiumEntries.ts
 - Integration workflows: home page, startup modals, level-up modal (tests/integration/*)
 - Basic E2E startup/navigation smoke
 

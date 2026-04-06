@@ -6,6 +6,15 @@
 
 ## Non-Negotiables
 
+### General engineering standard
+Use industry best practices for every engineering decision unless a repository instruction in this file explicitly requires something different.
+
+- Prefer the simplest design that keeps responsibilities separated and behavior explicit.
+- Preserve type safety and data integrity over convenience.
+- Prefer small, composable units over large multi-purpose files.
+- Keep public APIs stable during refactors unless the change requires an intentional contract update.
+- Favor maintainability, testability, and clear ownership boundaries when choosing between valid implementations.
+
 ### 0. Docs routing for large-codebase navigation
 Use this repo doc set to gather focused context before making non-trivial changes.
 

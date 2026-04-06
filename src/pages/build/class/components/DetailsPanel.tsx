@@ -119,7 +119,6 @@ export function BuildClassDetailsPanel({
                                     : JSON.stringify(entry)
                                 }
                                 className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
-                                // biome-ignore lint/security/noDangerouslySetInnerHtml: renderEntry returns sanitized 5etools HTML.
                                 dangerouslySetInnerHTML={{
                                   __html: renderEntry(entry) ?? '',
                                 }}
@@ -138,7 +137,6 @@ export function BuildClassDetailsPanel({
                     typeof entry === 'string' ? entry : JSON.stringify(entry)
                   }
                   className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: renderEntry returns sanitized 5etools HTML.
                   dangerouslySetInnerHTML={{ __html: renderEntry(entry) ?? '' }}
                 />
               ))
@@ -203,7 +201,6 @@ export function BuildClassDetailsPanel({
               <InfoTile title="Armor Proficiencies">
                 <span
                   className="text-sm [&_a]:text-accent [&_a]:no-underline"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: renderEntry returns sanitized 5etools HTML.
                   dangerouslySetInnerHTML={{
                     __html:
                       viewingClassData.startingProficiencies?.armor
@@ -221,7 +218,6 @@ export function BuildClassDetailsPanel({
               <InfoTile title="Weapon Proficiencies">
                 <span
                   className="text-sm [&_a]:text-accent [&_a]:no-underline"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: renderEntry returns sanitized 5etools HTML.
                   dangerouslySetInnerHTML={{
                     __html:
                       viewingClassData.startingProficiencies?.weapons
@@ -239,7 +235,6 @@ export function BuildClassDetailsPanel({
               <InfoTile title="Tool Proficiencies">
                 <span
                   className="text-sm [&_a]:text-accent [&_a]:no-underline"
-                  // biome-ignore lint/security/noDangerouslySetInnerHtml: renderEntry returns sanitized 5etools HTML.
                   dangerouslySetInnerHTML={{
                     __html:
                       viewingClassData.startingProficiencies?.tools
@@ -278,7 +273,6 @@ export function BuildClassDetailsPanel({
                           : JSON.stringify(entry)
                       }
                       className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold"
-                      // biome-ignore lint/security/noDangerouslySetInnerHtml: renderEntry returns sanitized 5etools HTML.
                       dangerouslySetInnerHTML={{
                         __html: renderEntry(entry) ?? '',
                       }}

@@ -27,7 +27,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
 import { cn } from '@/lib/utils';
 import { useCharacterStore } from '@/store/characterStore';
 import type { Spell5e } from '@/types/5etools';
-import { NoCharCard } from './_shared';
+import { NoCharCard } from '../_shared';
 
 export function SpellsPage() {
   const character = useCharacterStore((s) => s.activeCharacter);

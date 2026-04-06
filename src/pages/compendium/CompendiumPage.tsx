@@ -24,9 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { renderEntry } from '@/lib/renderer';
+import {
+  buildCompendiumEntries,
+  type CompendiumEntry,
+  filterCompendiumEntries,
+} from '@/lib/compendiumEntries';
 import { cn } from '@/lib/utils';
+import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails';
 import { useGameDataStore } from '@/store/gameDataStore';
 
 const ENTRY_TYPES = [
@@ -43,14 +47,6 @@ const ENTRY_TYPES = [
   'Deity',
 ] as const;
 
-interface CompendiumEntry {
-  name: string;
-  type: string;
-  source: string;
-  description?: string;
-  data: Record<string, unknown>;
-}
-
 const MAX_DISPLAY = 200;
 
 export function CompendiumPage() {
@@ -64,185 +60,10 @@ export function CompendiumPage() {
   );
   const [detailCollapsed, setDetailCollapsed] = useState(false);
 
-  const allEntries = useMemo(() => {
-    if (!gameData) return [];
-
-    const entries: CompendiumEntry[] = [];
-    const asObj = (value: unknown): Record<string, unknown> =>
-      typeof value === 'object' && value !== null
-        ? (value as Record<string, unknown>)
-        : {};
-
-    if (gameData.races) {
-      Object.values(gameData.races).forEach((race) => {
-        const raceObj = asObj(race);
-        const entriesList = Array.isArray(raceObj.entries)
-          ? raceObj.entries
-          : [];
-        entries.push({
-          name: String(raceObj.name ?? ''),
-          type: 'Race',
-          source: String(raceObj.source ?? 'Unknown'),
-          description: String(entriesList[0] ?? ''),
-          data: raceObj,
-        });
-      });
-    }
-
-    if (gameData.classes) {
-      Object.values(gameData.classes).forEach((cls) => {
-        const clsObj = asObj(cls);
-        const fluffEntries = Array.isArray(asObj(clsObj.fluff).entries)
-          ? (asObj(clsObj.fluff).entries as unknown[])
-          : [];
-        entries.push({
-          name: String(clsObj.name ?? ''),
-          type: 'Class',
-          source: String(clsObj.source ?? 'Unknown'),
-          description: String(fluffEntries[0] ?? ''),
-          data: clsObj,
-        });
-      });
-    }
-
-    if (gameData.spells) {
-      Object.values(gameData.spells).forEach((spell) => {
-        const spellObj = asObj(spell);
-        entries.push({
-          name: String(spellObj.name ?? ''),
-          type: 'Spell',
-          source: String(spellObj.source ?? 'Unknown'),
-          description: `Level ${String(spellObj.level ?? '?')} ${String(spellObj.school ?? '')}`,
-          data: spellObj,
-        });
-      });
-    }
-
-    if (gameData.items) {
-      gameData.items.forEach((item) => {
-        const itemObj = asObj(item);
-        const itemEntries = Array.isArray(itemObj.entries)
-          ? itemObj.entries
-          : [];
-        entries.push({
-          name: String(itemObj.name ?? ''),
-          type: 'Item',
-          source: String(itemObj.source ?? 'Unknown'),
-          description: String(itemEntries[0] ?? itemObj.type ?? ''),
-          data: itemObj,
-        });
-      });
-    }
-
-    if (gameData.backgrounds) {
-      Object.values(gameData.backgrounds).forEach((bg) => {
-        const bgObj = asObj(bg);
-        const bgEntries = Array.isArray(bgObj.entries) ? bgObj.entries : [];
-        entries.push({
-          name: String(bgObj.name ?? ''),
-          type: 'Background',
-          source: String(bgObj.source ?? 'Unknown'),
-          description: String(bgEntries[0] ?? ''),
-          data: bgObj,
-        });
-      });
-    }
-
-    if (gameData.feats) {
-      Object.values(gameData.feats).forEach((feat) => {
-        const featObj = asObj(feat);
-        const featEntries = Array.isArray(featObj.entries)
-          ? featObj.entries
-          : [];
-        entries.push({
-          name: String(featObj.name ?? ''),
-          type: 'Feat',
-          source: String(featObj.source ?? 'Unknown'),
-          description: String(featEntries[0] ?? ''),
-          data: featObj,
-        });
-      });
-    }
-
-    if (gameData.skills) {
-      Object.values(gameData.skills).forEach((skill) => {
-        const skillObj = asObj(skill);
-        const skillEntries = Array.isArray(skillObj.entries)
-          ? skillObj.entries
-          : [];
-        entries.push({
-          name: String(skillObj.name ?? ''),
-          type: 'Skill',
-          source: String(skillObj.source ?? 'Unknown'),
-          description: String(skillEntries[0] ?? ''),
-          data: skillObj,
-        });
-      });
-    }
-
-    if (gameData.actions) {
-      gameData.actions.forEach((action) => {
-        const actionObj = asObj(action);
-        const actionEntries = Array.isArray(actionObj.entries)
-          ? actionObj.entries
-          : [];
-        entries.push({
-          name: String(actionObj.name ?? ''),
-          type: 'Action',
-          source: String(actionObj.source ?? 'Unknown'),
-          description: String(actionEntries[0] ?? ''),
-          data: actionObj,
-        });
-      });
-    }
-
-    if (gameData.conditions) {
-      gameData.conditions.forEach((cond) => {
-        const condObj = asObj(cond);
-        const condEntries = Array.isArray(condObj.entries)
-          ? condObj.entries
-          : [];
-        entries.push({
-          name: String(condObj.name ?? ''),
-          type: 'Condition',
-          source: String(condObj.source ?? 'Unknown'),
-          description: String(condEntries[0] ?? ''),
-          data: condObj,
-        });
-      });
-    }
-
-    if (gameData.languages) {
-      Object.values(gameData.languages).forEach((lang) => {
-        const langObj = asObj(lang);
-        const langEntries = Array.isArray(langObj.entries)
-          ? langObj.entries
-          : [];
-        entries.push({
-          name: String(langObj.name ?? ''),
-          type: 'Language',
-          source: String(langObj.source ?? 'Unknown'),
-          description: String(langEntries[0] ?? langObj.type ?? ''),
-          data: langObj,
-        });
-      });
-    }
-
-    if (gameData.deities) {
-      gameData.deities.forEach((deity) => {
-        const deityObj = asObj(deity);
-        entries.push({
-          name: String(deityObj.name ?? ''),
-          type: 'Deity',
-          source: String(deityObj.source ?? 'Unknown'),
-          description: String(deityObj.title ?? deityObj.alignment ?? ''),
-          data: deityObj,
-        });
-      });
-    }
-
-    return entries;
-  }, [gameData]);
+  const allEntries = useMemo(
+    () => buildCompendiumEntries(gameData),
+    [gameData],
+  );
 
   const allSources = useMemo(
     () => Array.from(new Set(allEntries.map((e) => e.source))).sort(),
@@ -280,29 +101,16 @@ export function CompendiumPage() {
     setActiveSources(new Set());
   };
 
-  const filteredEntries = useMemo(() => {
-    let filtered = allEntries;
-
-    if (activeTypes.size > 0) {
-      filtered = filtered.filter((entry) => activeTypes.has(entry.type));
-    }
-
-    if (activeSources.size > 0) {
-      filtered = filtered.filter((entry) => activeSources.has(entry.source));
-    }
-
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (entry) =>
-          entry.name.toLowerCase().includes(query) ||
-          entry.type.toLowerCase().includes(query) ||
-          entry.source.toLowerCase().includes(query),
-      );
-    }
-
-    return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  }, [allEntries, searchQuery, activeTypes, activeSources]);
+  const filteredEntries = useMemo(
+    () =>
+      filterCompendiumEntries(
+        allEntries,
+        searchQuery,
+        activeTypes,
+        activeSources,
+      ),
+    [allEntries, searchQuery, activeTypes, activeSources],
+  );
 
   const displayedEntries = filteredEntries.slice(0, MAX_DISPLAY);
   const hasMore = filteredEntries.length > MAX_DISPLAY;
@@ -549,103 +357,7 @@ export function CompendiumPage() {
                 <ScrollArea className="flex-1 overflow-hidden">
                   <div className="p-4">
                     {selectedEntry ? (
-                      <div className="space-y-4">
-                        <div>
-                          <h2 className="text-2xl font-display font-bold mb-2">
-                            {selectedEntry.name}
-                          </h2>
-                          <div className="flex gap-2 mb-4">
-                            <Badge>{selectedEntry.type}</Badge>
-                            <Badge variant="outline">
-                              {selectedEntry.source}
-                            </Badge>
-                          </div>
-                        </div>
-
-                        <Separator />
-
-                        <div className="space-y-3">
-                          {selectedEntry.type === 'Spell' && (
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm p-4 bg-muted/50 rounded-lg">
-                              <div>
-                                <span className="text-muted-foreground">
-                                  Level:{' '}
-                                </span>
-                                <span className="font-medium">
-                                  {selectedEntry.data.level === 0
-                                    ? 'Cantrip'
-                                    : `Level ${selectedEntry.data.level}`}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">
-                                  School:{' '}
-                                </span>
-                                <span className="font-medium capitalize">
-                                  {selectedEntry.data.school}
-                                </span>
-                              </div>
-                              {selectedEntry.data.time?.[0] && (
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    Casting Time:{' '}
-                                  </span>
-                                  <span className="font-medium">
-                                    {selectedEntry.data.time[0].number}{' '}
-                                    {selectedEntry.data.time[0].unit}
-                                  </span>
-                                </div>
-                              )}
-                              {selectedEntry.data.range?.distance && (
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    Range:{' '}
-                                  </span>
-                                  <span className="font-medium">
-                                    {selectedEntry.data.range.distance.amount ??
-                                      selectedEntry.data.range.distance
-                                        .type}{' '}
-                                    {selectedEntry.data.range.distance.amount !=
-                                    null
-                                      ? selectedEntry.data.range.distance.type
-                                      : ''}
-                                  </span>
-                                </div>
-                              )}
-                              {selectedEntry.data.duration?.[0] && (
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    Duration:{' '}
-                                  </span>
-                                  <span className="font-medium capitalize">
-                                    {selectedEntry.data.duration[0].type}
-                                    {selectedEntry.data.duration[0].duration
-                                      ? ` ${selectedEntry.data.duration[0].duration.amount} ${selectedEntry.data.duration[0].duration.type}`
-                                      : ''}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          {(selectedEntry.data.entries ?? []).length > 0 ? (
-                            (
-                              (selectedEntry.data.entries as unknown[]) ?? []
-                            ).map((entry) => (
-                              <div
-                                key={`${selectedEntry.name}|${selectedEntry.source}|${typeof entry === 'string' ? entry : JSON.stringify(entry)}`}
-                                className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
-                                dangerouslySetInnerHTML={{
-                                  __html: renderEntry(entry),
-                                }}
-                              />
-                            ))
-                          ) : (
-                            <p className="text-sm text-muted-foreground italic">
-                              No description available for this entry.
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                      <CompendiumEntryDetails selectedEntry={selectedEntry} />
                     ) : (
                       <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
                         Select an entry to view details

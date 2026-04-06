@@ -11,39 +11,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { useProvenance } from '@/hooks/character/useProvenance';
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
-import { extractProficiencyBlockNames } from '@/lib/5etools/parsers';
 import { matchesGameDataEntry } from '@/lib/characterUtils';
-import { renderEntry } from '@/lib/renderer';
 import { cn } from '@/lib/utils';
-import { InfoTile, NoCharCard } from '@/pages/_shared';
+import { NoCharCard } from '@/pages/_shared';
+import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel';
+import {
+  getBackgroundEquipmentPackages,
+  getBackgroundLanguageNames,
+  getBackgroundSkillNames,
+  getBackgroundToolNames,
+} from '@/pages/build/background/model/data';
 import { useCharacterStore } from '@/store/characterStore';
 import type { Background5e } from '@/types/5etools';
-
-type BackgroundEntry = {
-  type?: string;
-  name?: string;
-  entries?: unknown[];
-};
-
-function getBgEntries(
-  bg: Background5e,
-): { name?: string; entries: unknown[] }[] {
-  return ((bg.entries as unknown[]) ?? [])
-    .filter((e) => {
-      const entry = e as BackgroundEntry;
-      return typeof e === 'object' && entry.type === 'entries';
-    })
-    .map((e) => {
-      const entry = e as BackgroundEntry;
-      return {
-        name: entry.name,
-        entries: entry.entries ?? [],
-      };
-    });
-}
 
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter);
@@ -108,32 +89,10 @@ export function BuildBackgroundPage() {
     if (detailCollapsed) setDetailCollapsed(false);
   };
 
-  const skills = selectedBg
-    ? extractProficiencyBlockNames(selectedBg.skillProficiencies ?? [])
-    : [];
-  const langs = selectedBg
-    ? extractProficiencyBlockNames(selectedBg.languageProficiencies ?? [])
-    : [];
-  const tools = selectedBg
-    ? extractProficiencyBlockNames(selectedBg.toolProficiencies ?? [])
-    : [];
-
-  const equipmentPackages: { label: string; entries: unknown[] }[] = [];
-  for (const block of selectedBg?.startingEquipment ?? []) {
-    if (Array.isArray(block)) continue;
-    const equipBlock = block as { A?: unknown[]; B?: unknown[] };
-    if (typeof block === 'object' && equipBlock.A) {
-      equipmentPackages.push({
-        label: 'Option A',
-        entries: equipBlock.A ?? [],
-      });
-      if (equipBlock.B)
-        equipmentPackages.push({
-          label: 'Option B',
-          entries: equipBlock.B ?? [],
-        });
-    }
-  }
+  const skills = getBackgroundSkillNames(selectedBg);
+  const langs = getBackgroundLanguageNames(selectedBg);
+  const tools = getBackgroundToolNames(selectedBg);
+  const equipmentPackages = getBackgroundEquipmentPackages(selectedBg);
 
   return (
     <div className="h-full flex flex-col">
@@ -253,126 +212,13 @@ export function BuildBackgroundPage() {
                   </div>
                 </ScrollArea>
               </div>{' '}
-              <div
-                className={cn(
-                  'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
-                  detailCollapsed
-                    ? 'w-0 min-w-0 opacity-0 pointer-events-none'
-                    : 'w-1/2 min-w-[320px]',
-                )}
-              >
-                <div className="p-4 border-b border-border">
-                  <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Details
-                  </span>
-                </div>
-                <ScrollArea className="flex-1 overflow-hidden">
-                  <div className="p-4">
-                    {selectedBg ? (
-                      <div className="space-y-4">
-                        <div>
-                          <h2 className="text-2xl font-display font-bold">
-                            {selectedBg.name}
-                          </h2>
-                          <Badge variant="outline" className="mt-2">
-                            {selectedBg.source}
-                          </Badge>
-                        </div>
-                        <Separator />
-                        <div className="grid grid-cols-1 gap-3">
-                          <InfoTile title="Skill Proficiencies">
-                            {skills.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {skills.map((s) => (
-                                  <Badge
-                                    key={s}
-                                    variant="secondary"
-                                    className="capitalize text-xs"
-                                  >
-                                    {s}
-                                  </Badge>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">
-                                —
-                              </span>
-                            )}
-                          </InfoTile>
-                          <div className="grid grid-cols-2 gap-3">
-                            <InfoTile title="Languages">
-                              {langs.length > 0 ? (
-                                <div className="flex flex-wrap gap-1">
-                                  {langs.map((l) => (
-                                    <Badge
-                                      key={l}
-                                      variant="secondary"
-                                      className="capitalize text-xs"
-                                    >
-                                      {l}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">
-                                  —
-                                </span>
-                              )}
-                            </InfoTile>
-                            <InfoTile title="Tool Proficiencies">
-                              {tools.length > 0 ? (
-                                <div className="flex flex-wrap gap-1">
-                                  {tools.map((t) => (
-                                    <Badge
-                                      key={t}
-                                      variant="secondary"
-                                      className="capitalize text-xs"
-                                    >
-                                      {t}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">
-                                  —
-                                </span>
-                              )}
-                            </InfoTile>
-                          </div>
-                        </div>{' '}
-                        {getBgEntries(selectedBg).map((section) => (
-                          <div
-                            key={
-                              section.name ?? JSON.stringify(section.entries)
-                            }
-                          >
-                            {section.name && (
-                              <h4 className="text-xs font-bold text-accent uppercase tracking-wider mb-2 mt-3">
-                                {section.name}
-                              </h4>
-                            )}
-                            {section.entries.map((e) => (
-                              <div
-                                key={
-                                  typeof e === 'string' ? e : JSON.stringify(e)
-                                }
-                                className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
-                                dangerouslySetInnerHTML={{
-                                  __html: renderEntry(e),
-                                }}
-                              />
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-                        Select a background to view details
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
+              <BuildBackgroundDetailsPanel
+                detailCollapsed={detailCollapsed}
+                selectedBackground={selectedBg}
+                skillNames={skills}
+                languageNames={langs}
+                toolNames={tools}
+              />
             </div>
           </Card>
         </div>

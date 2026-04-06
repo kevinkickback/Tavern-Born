@@ -15,6 +15,7 @@ Character state and lifecycle:
 - src/types/character.ts
 - src/types/characterSchema.ts
 - src/hooks/character/*
+- src/lib/provenance/sectionRows.ts
 
 UI utilities:
 - src/hooks/ui/useMobile.ts
@@ -49,6 +50,38 @@ Game rules and derived calculations:
 Provenance and source attribution:
 - src/lib/provenance/*
 - src/components/provenance/*
+- src/hooks/character/useProvenance.ts
+- src/hooks/character/useProvenanceMutations.ts
+- src/hooks/character/useProvenanceRows.ts
+- src/lib/provenance/sectionRows.ts
+
+Build flow orchestration helpers:
+- src/pages/build/ability-scores/model/data.ts
+- src/pages/build/class/model/pageUtils.ts
+- src/pages/build/class/model/mutations.ts
+- src/pages/build/class/model/asi.ts
+- src/pages/build/proficiencies/model/data.ts
+- src/pages/build/proficiencies/model/types.ts
+- src/pages/build/background/model/data.ts
+- src/pages/build/class/model/levelsUtils.ts
+- src/pages/build/ability-scores/components/MethodPanels.tsx
+- src/pages/build/ability-scores/components/DetailsPanel.tsx
+- src/pages/build/ability-scores/components/RacialBonusesPanel.tsx
+- src/pages/build/class/components/AsiSection.tsx
+- src/pages/build/class/components/SpellSection.tsx
+- src/pages/build/class/components/SubclassSection.tsx
+- src/pages/build/class/components/PassiveFeatureList.tsx
+- src/pages/build/class/components/ProgressionChoiceCard.tsx — shared card for classFeat and optFeature progression gains (choose/edit + chosen pills)
+- src/pages/build/proficiencies/components/DetailsPanel.tsx
+- src/pages/build/proficiencies/components/TabsPanel.tsx
+- src/pages/build/background/components/DetailsPanel.tsx
+
+Compendium normalization and detail rendering:
+- src/lib/compendiumEntries.ts
+- src/pages/compendium/CompendiumEntryDetails.tsx
+
+Feat page selection helpers:
+- src/pages/feats/model/selection.ts
 
 5etools rich text rendering:
 - src/lib/renderer.ts
