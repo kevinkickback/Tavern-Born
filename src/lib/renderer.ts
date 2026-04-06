@@ -85,6 +85,9 @@ export function renderTags(text: string): string {
   if (!text) return '';
 
   let result = text;
+  const toAttr = (value: string) => value.replace(/"/g, '&quot;');
+  const pickDisplay = (name: string, display?: string) =>
+    display?.trim() ? display : name;
 
   result = result.replace(
     /{@dice ([^}]+)}/g,
@@ -104,60 +107,134 @@ export function renderTags(text: string): string {
   );
 
   result = result.replace(
-    /{@creature ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-accent font-medium italic cursor-help" title="Creature: $1">$1</span>',
+    /{@creature ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'MM');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-accent font-medium italic cursor-help" title="Creature: ${safeName}" data-hover-type="creature" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@spell ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-primary font-medium italic cursor-help" title="Spell: $1">$1</span>',
+    /{@spell ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-primary font-medium italic cursor-help" title="Spell: ${safeName}" data-hover-type="spell" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@item ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-accent font-medium italic cursor-help" title="Item: $1">$1</span>',
+    /{@item ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'DMG');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-accent font-medium italic cursor-help" title="Item: ${safeName}" data-hover-type="item" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@condition ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-destructive font-medium italic cursor-help" title="Condition: $1">$1</span>',
+    /{@condition ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-destructive font-medium italic cursor-help" title="Condition: ${safeName}" data-hover-type="condition" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@sense ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-primary font-medium italic cursor-help" title="Sense: $1">$1</span>',
+    /{@sense ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-primary font-medium italic cursor-help" title="Sense: ${safeName}" data-hover-type="sense" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@skill ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-primary font-medium italic cursor-help" title="Skill: $1">$1</span>',
+    /{@skill ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-primary font-medium italic cursor-help" title="Skill: ${safeName}" data-hover-type="skill" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@action ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-accent font-medium italic cursor-help" title="Action: $1">$1</span>',
+    /{@action ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-accent font-medium italic cursor-help" title="Action: ${safeName}" data-hover-type="action" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
     /{@atk ([^}]+)}/g,
     '<span class="text-primary font-medium italic">$1</span>',
   );
   result = result.replace(
-    /{@feat ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-accent font-medium italic cursor-help" title="Feat: $1">$1</span>',
+    /{@feat ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-accent font-medium italic cursor-help" title="Feat: ${safeName}" data-hover-type="feat" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@background ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-secondary font-medium italic cursor-help" title="Background: $1">$1</span>',
+    /{@background ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-secondary font-medium italic cursor-help" title="Background: ${safeName}" data-hover-type="background" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@race ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-secondary font-medium italic cursor-help" title="Race: $1">$1</span>',
+    /{@race ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-secondary font-medium italic cursor-help" title="Race: ${safeName}" data-hover-type="race" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@class ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-secondary font-medium italic cursor-help" title="Class: $1">$1</span>',
+    /{@class ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-secondary font-medium italic cursor-help" title="Class: ${safeName}" data-hover-type="class" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@deity ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-accent font-medium italic cursor-help" title="Deity: $1">$1</span>',
+    /{@deity ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-accent font-medium italic cursor-help" title="Deity: ${safeName}" data-hover-type="deity" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@language ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-muted-foreground font-medium italic cursor-help" title="Language: $1">$1</span>',
+    /{@language ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-muted-foreground font-medium italic cursor-help" title="Language: ${safeName}" data-hover-type="language" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
+  );
+  result = result.replace(
+    /{@optfeature ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-accent font-medium italic cursor-help" title="Optional Feature: ${safeName}" data-hover-type="optionalfeature" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
 
   result = result.replace(/{@h}/g, '<em class="text-primary">Hit:</em>');
@@ -218,28 +295,58 @@ export function renderTags(text: string): string {
     '<span class="text-muted-foreground italic" title="Adventure">$1</span>',
   );
   result = result.replace(
-    /{@variantrule ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-accent font-medium italic cursor-help" title="Variant Rule: $1">$1</span>',
+    /{@variantrule ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'DMG');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-accent font-medium italic cursor-help" title="Variant Rule: ${safeName}" data-hover-type="variantrule" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@trap ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-destructive font-medium italic cursor-help" title="Trap: $1">$1</span>',
+    /{@trap ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'DMG');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-destructive font-medium italic cursor-help" title="Trap: ${safeName}" data-hover-type="trap" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@hazard ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-destructive font-medium italic cursor-help" title="Hazard: $1">$1</span>',
+    /{@hazard ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'DMG');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-destructive font-medium italic cursor-help" title="Hazard: ${safeName}" data-hover-type="hazard" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@vehicle ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-secondary font-medium italic cursor-help" title="Vehicle: $1">$1</span>',
+    /{@vehicle ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'GoS');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-secondary font-medium italic cursor-help" title="Vehicle: ${safeName}" data-hover-type="vehicle" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@object ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-secondary font-medium italic cursor-help" title="Object: $1">$1</span>',
+    /{@object ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'DMG');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-secondary font-medium italic cursor-help" title="Object: ${safeName}" data-hover-type="object" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@reward ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-accent font-medium italic cursor-help" title="Reward: $1">$1</span>',
+    /{@reward ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'DMG');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-accent font-medium italic cursor-help" title="Reward: ${safeName}" data-hover-type="reward" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
     /{@area ([^|}]+)(?:\|[^}]*)?}/g,
@@ -270,12 +377,22 @@ export function renderTags(text: string): string {
     '<span class="text-xs font-mono bg-secondary/20 px-1 rounded" title="Item Property: $1">$1</span>',
   );
   result = result.replace(
-    /{@status ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-destructive font-medium italic cursor-help" title="Status: $1">$1</span>',
+    /{@status ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'PHB');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-destructive font-medium italic cursor-help" title="Status: ${safeName}" data-hover-type="status" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
   result = result.replace(
-    /{@table ([^|}]+)(?:\|[^}]*)?}/g,
-    '<span class="text-muted-foreground font-medium" title="Table: $1">$1</span>',
+    /{@table ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
+    (_m, name: string, source?: string, display?: string) => {
+      const safeName = toAttr(name);
+      const safeSource = toAttr(source || 'DMG');
+      const safeDisplay = pickDisplay(name, display);
+      return `<span class="text-muted-foreground font-medium cursor-help" title="Table: ${safeName}" data-hover-type="table" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+    },
   );
 
   // Catch-all: strip any remaining unrecognized tags, showing just the display text

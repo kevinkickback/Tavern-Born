@@ -1,5 +1,4 @@
 import { getEntityLookupKey } from '@/lib/5etools/lookups';
-import { normalizeAbilityName } from '@/lib/calculations/abilityScores';
 import type { Class5e } from '@/types/5etools';
 import type { Character, CharacterClassEntry } from '@/types/character';
 
@@ -54,10 +53,6 @@ export function buildClassSelectionPatch({
       },
       spells: {
         ...character.spells,
-        spellcastingAbility: classEntity?.spellcastingAbility
-          ? (normalizeAbilityName(classEntity.spellcastingAbility) ??
-            classEntity.spellcastingAbility.toLowerCase())
-          : character.spells?.spellcastingAbility,
       },
     },
   };

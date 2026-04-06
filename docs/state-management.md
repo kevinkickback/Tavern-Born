@@ -34,6 +34,7 @@ This document defines state ownership, mutation rules, and persistence behavior.
 Stored examples (mutable runtime):
 - current HP, temporary HP
 - spell slot usage
+- spell profile selections (class profiles + special unrestricted profile)
 - user-entered detail fields and choices
 
 Derived examples (do not store as canonical):
@@ -52,6 +53,14 @@ Derived examples (do not store as canonical):
 
 - Startup logic must wait for hasHydrated before cache/source branching.
 - Avoid invoking data init assumptions before zustand rehydrate completes.
+
+## Spell State Model
+
+- Canonical spell state is now profile-based under `character.spells.spellProfiles`.
+- Class profiles are keyed by `class:<name>|<source>` and hold class-owned cantrips/spells/prepared flags.
+- The unrestricted profile is `special:unrestricted` and is always prepared by definition.
+- Spell slots remain persisted in `character.spells.spellSlots` as mutable runtime usage state.
+- This is a hard cutover model; legacy flat spell arrays are no longer the canonical source of truth.
 
 ## Implementation Checklist for State Changes
 

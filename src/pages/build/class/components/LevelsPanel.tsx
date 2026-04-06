@@ -15,6 +15,7 @@ import {
   type OptionalFeatureLike,
   optFeatureTypeToFull,
 } from '@/lib/5etools/classData';
+import { buildClassSpellLevelKey } from '@/lib/calculations/spellProfiles';
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools';
 import type {
   AsiChoice,
@@ -59,6 +60,7 @@ interface BuildClassLevelsPanelProps {
   viewingSubclassData?: Subclass5e;
   detailCollapsed: boolean;
   viewingClass: string;
+  viewingClassSource?: string;
   viewingClassLevel: number;
   selectedNames: Set<string>;
   optFeatures: OptionalFeatureLike[];
@@ -111,6 +113,7 @@ export function BuildClassLevelsPanel({
   viewingSubclassData,
   detailCollapsed,
   viewingClass,
+  viewingClassSource,
   viewingClassLevel,
   selectedNames,
   optFeatures,
@@ -395,7 +398,11 @@ export function BuildClassLevelsPanel({
                             spellGain={spellGain}
                             chosenNames={
                               character.spellsByLevel?.[
-                                `${viewingClass}:${lv}`
+                                buildClassSpellLevelKey(
+                                  viewingClass,
+                                  viewingClassSource,
+                                  lv,
+                                )
                               ] ?? []
                             }
                             spellByName={spellByName}

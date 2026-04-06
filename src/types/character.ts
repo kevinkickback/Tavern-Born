@@ -129,13 +129,24 @@ export interface AsiChoice {
 }
 
 export interface SpellSelection {
-  spellcastingAbility?: string;
-  spellSaveDC?: number;
-  spellAttackBonus?: number;
+  spellProfiles: SpellProfile[];
+  spellSlots: SpellSlots;
+}
+
+export type SpellProfileType = 'class' | 'special';
+
+export interface SpellProfile {
+  /** Stable profile key: class profiles use `class:<name>|<source>`, special uses `special:unrestricted`. */
+  id: string;
+  type: SpellProfileType;
+  label: string;
+  className?: string;
+  classSource?: string;
   cantrips: string[];
   spellsKnown: string[];
-  spellSlots: SpellSlots;
   preparedSpells: string[];
+  /** Special unrestricted profile is always prepared. */
+  alwaysPrepared?: boolean;
 }
 
 export interface SpellSlots {

@@ -1,60 +1,17 @@
 import { useCallback, useMemo } from 'react';
-import { useClass } from '@/hooks/data/useGameData';
+import { useClasses, useClassLookup } from '@/hooks/data/useGameData';
 import {
-  calculateSpellSlots,
-  getSpellSlotsFromClassData,
-  isSpellcaster,
-  mergeSpellSlots,
-  type SpellSlotsResult,
-} from '@/lib/calculations/spellSlots';
+  buildSpellcastingClassDetails,
+  calculateCharacterSpellSlots,
+  collectKnownSpells,
+  ensureSpellProfiles,
+  numericToStored,
+  SPECIAL_SPELL_PROFILE_ID,
+  type SpellcastingClassDetail,
+} from '@/lib/calculations/spellProfiles';
 import { useCharacterStore } from '@/store/characterStore';
-import type { SpellSlots } from '@/types/character';
-
-// Map from SpellSlots named keys to numeric spell levels
-const SLOT_LEVEL_KEYS: (keyof SpellSlots)[] = [
-  'level1',
-  'level2',
-  'level3',
-  'level4',
-  'level5',
-  'level6',
-  'level7',
-  'level8',
-  'level9',
-];
-
-function storedToNumericUsed(spellSlots: SpellSlots): Record<number, number> {
-  const out: Record<number, number> = {};
-  SLOT_LEVEL_KEYS.forEach((key, idx) => {
-    out[idx + 1] = spellSlots[key]?.used ?? 0;
-  });
-  return out;
-}
-
-function numericToStored(
-  calculated: SpellSlotsResult,
-  usedMap: Record<number, number>,
-): SpellSlots {
-  const base: SpellSlots = {
-    level1: { max: 0, used: 0 },
-    level2: { max: 0, used: 0 },
-    level3: { max: 0, used: 0 },
-    level4: { max: 0, used: 0 },
-    level5: { max: 0, used: 0 },
-    level6: { max: 0, used: 0 },
-    level7: { max: 0, used: 0 },
-    level8: { max: 0, used: 0 },
-    level9: { max: 0, used: 0 },
-  };
-  for (let sl = 1; sl <= 9; sl++) {
-    const key = `level${sl}` as keyof SpellSlots;
-    const calc = calculated[sl];
-    if (calc) {
-      base[key] = { max: calc.max, used: Math.min(usedMap[sl] ?? 0, calc.max) };
-    }
-  }
-  return base;
-}
+import type { Class5e } from '@/types/5etools';
+import type { SpellProfile, SpellSlots } from '@/types/character';
 
 export interface SpellSlotInfo {
   level: number;
@@ -65,80 +22,203 @@ export interface SpellSlotInfo {
 }
 
 export interface SpellSlotsState {
-  /** Calculated and merged slot array — only non-zero levels are present. */
   slots: SpellSlotInfo[];
+  sharedSlots: SpellSlotInfo[];
+  pactSlots: SpellSlotInfo[];
   isSpellcaster: boolean;
-  spellcastingAbility?: string;
   cantrips: string[];
   spellsKnown: string[];
   preparedSpells: string[];
+  spellProfiles: SpellProfile[];
+  spellcastingDetails: SpellcastingClassDetail[];
   useSlot: (spellLevel: number) => void;
   restoreSlot: (spellLevel: number) => void;
-  /** Restore all slots (long rest). */
   longRest: () => void;
-  addCantrip: (name: string) => void;
-  removeCantrip: (name: string) => void;
-  addSpellKnown: (name: string) => void;
-  removeSpellKnown: (name: string) => void;
-  togglePrepared: (name: string) => void;
+  syncProfiles: () => void;
+  addCantrip: (name: string, profileId?: string) => void;
+  removeCantrip: (name: string, profileId?: string) => void;
+  addSpellKnown: (name: string, profileId?: string) => void;
+  removeSpellKnown: (name: string, profileId?: string) => void;
+  addSpellToProfile: (
+    profileId: string,
+    name: string,
+    kind: 'cantrip' | 'spell',
+  ) => void;
+  setProfileSpells: (
+    profileId: string,
+    cantrips: string[],
+    spellsKnown: string[],
+  ) => void;
+  removeSpellFromProfile: (
+    profileId: string,
+    name: string,
+    kind: 'cantrip' | 'spell',
+  ) => void;
+  togglePrepared: (profileId: string, name: string) => void;
   syncSlots: () => void;
+}
+
+function toClassProfileId(name: string, source?: string): string {
+  return `class:${name}|${source ?? ''}`;
+}
+
+function toSlotRows(
+  rows: Partial<
+    Record<number, { max: number; used: number; isPactMagic?: boolean }>
+  >,
+): SpellSlotInfo[] {
+  return Object.entries(rows)
+    .map(([levelText, slot]) => ({
+      level: Number(levelText),
+      max: slot?.max ?? 0,
+      used: slot?.used ?? 0,
+      available: (slot?.max ?? 0) - (slot?.used ?? 0),
+      isPactMagic: slot?.isPactMagic,
+    }))
+    .filter((slot) => slot.max > 0)
+    .sort((a, b) => a.level - b.level);
+}
+
+function getDefaultProfileId(profiles: SpellProfile[]): string {
+  const firstClass = profiles.find((profile) => profile.type === 'class');
+  return firstClass?.id ?? SPECIAL_SPELL_PROFILE_ID;
+}
+
+function upsertProfileSpell(
+  profiles: SpellProfile[],
+  profileId: string,
+  name: string,
+  kind: 'cantrip' | 'spell',
+): SpellProfile[] {
+  return profiles.map((profile) => {
+    if (profile.id !== profileId) return profile;
+
+    if (kind === 'cantrip') {
+      if (profile.cantrips.includes(name)) return profile;
+      return { ...profile, cantrips: [...profile.cantrips, name] };
+    }
+
+    if (profile.spellsKnown.includes(name)) return profile;
+    return { ...profile, spellsKnown: [...profile.spellsKnown, name] };
+  });
+}
+
+function removeProfileSpell(
+  profiles: SpellProfile[],
+  profileId: string,
+  name: string,
+  kind: 'cantrip' | 'spell',
+): SpellProfile[] {
+  return profiles.map((profile) => {
+    if (profile.id !== profileId) return profile;
+
+    if (kind === 'cantrip') {
+      return {
+        ...profile,
+        cantrips: profile.cantrips.filter((spellName) => spellName !== name),
+        preparedSpells: profile.preparedSpells.filter(
+          (spellName) => spellName !== name,
+        ),
+      };
+    }
+
+    return {
+      ...profile,
+      spellsKnown: profile.spellsKnown.filter(
+        (spellName) => spellName !== name,
+      ),
+      preparedSpells: profile.preparedSpells.filter(
+        (spellName) => spellName !== name,
+      ),
+    };
+  });
+}
+
+function replaceProfileSpells(
+  profiles: SpellProfile[],
+  profileId: string,
+  cantrips: string[],
+  spellsKnown: string[],
+): SpellProfile[] {
+  return profiles.map((profile) => {
+    if (profile.id !== profileId) return profile;
+
+    return {
+      ...profile,
+      cantrips: [...new Set(cantrips)],
+      spellsKnown: [...new Set(spellsKnown)],
+      preparedSpells: profile.alwaysPrepared
+        ? []
+        : profile.preparedSpells.filter((name) => spellsKnown.includes(name)),
+    };
+  });
 }
 
 export function useSpellSlots(): SpellSlotsState {
   const character = useCharacterStore((s) => s.activeCharacter);
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
+  const classes = useClasses();
+  const classLookup = useClassLookup();
 
-  const classData = useClass(character?.class ?? '');
-
-  const calculatedSlots = useMemo(() => {
-    if (!character) return {};
-    // Prefer the data-driven read (handles artificer, half-casters, any homebrew).
-    // Falls back to calculateSpellSlots for pact magic (Warlock) and unknown classes.
-    if (classData) {
-      const fromData = getSpellSlotsFromClassData(classData, character.level);
-      if (fromData !== null) return fromData;
+  const classesById = useMemo(() => {
+    const map = new Map<string, Class5e>();
+    for (const cls of classes) {
+      map.set(toClassProfileId(cls.name, cls.source), cls);
+      if (!map.has(toClassProfileId(cls.name))) {
+        map.set(toClassProfileId(cls.name), cls);
+      }
     }
-    return calculateSpellSlots(
-      character.class ?? '',
-      character.level ?? 1,
-      classData?.casterProgression,
-    );
-  }, [character?.class, character?.level, classData, character]);
+    for (const cls of Object.values(classLookup)) {
+      if (!cls) continue;
+      map.set(toClassProfileId(cls.name, cls.source), cls);
+      if (!map.has(toClassProfileId(cls.name))) {
+        map.set(toClassProfileId(cls.name), cls);
+      }
+    }
+    return map;
+  }, [classes, classLookup]);
 
-  const storedUsed = useMemo(
-    () =>
-      storedToNumericUsed(
-        character?.spells?.spellSlots ?? {
-          level1: { max: 0, used: 0 },
-          level2: { max: 0, used: 0 },
-          level3: { max: 0, used: 0 },
-          level4: { max: 0, used: 0 },
-          level5: { max: 0, used: 0 },
-          level6: { max: 0, used: 0 },
-          level7: { max: 0, used: 0 },
-          level8: { max: 0, used: 0 },
-          level9: { max: 0, used: 0 },
-        },
-      ),
-    [character?.spells?.spellSlots],
+  const spellProfiles = useMemo(() => {
+    if (!character) return [];
+    return ensureSpellProfiles(character);
+  }, [character]);
+
+  const slotsBreakdown = useMemo(() => {
+    if (!character) {
+      return {
+        shared: {},
+        pact: {},
+        mergedSharedWithUsage: {},
+        mergedPactWithUsage: {},
+      };
+    }
+    return calculateCharacterSpellSlots(character, classesById);
+  }, [character, classesById]);
+
+  const sharedSlots = useMemo(
+    () => toSlotRows(slotsBreakdown.mergedSharedWithUsage),
+    [slotsBreakdown.mergedSharedWithUsage],
   );
 
-  const merged = useMemo(
-    () => mergeSpellSlots(calculatedSlots, storedUsed),
-    [calculatedSlots, storedUsed],
+  const pactSlots = useMemo(
+    () => toSlotRows(slotsBreakdown.mergedPactWithUsage),
+    [slotsBreakdown.mergedPactWithUsage],
   );
 
-  const slots: SpellSlotInfo[] = useMemo(() => {
-    return Object.entries(merged)
-      .map(([lvl, s]) => ({
-        level: Number(lvl),
-        max: s?.max,
-        used: s?.used,
-        available: s?.max - s?.used,
-        isPactMagic: s?.isPactMagic,
-      }))
-      .sort((a, b) => a.level - b.level);
-  }, [merged]);
+  const slots = useMemo(
+    () => [...sharedSlots, ...pactSlots].sort((a, b) => a.level - b.level),
+    [sharedSlots, pactSlots],
+  );
+
+  const known = useMemo(
+    () => collectKnownSpells(spellProfiles),
+    [spellProfiles],
+  );
+
+  const spellcastingDetails = useMemo(() => {
+    if (!character) return [];
+    return buildSpellcastingClassDetails(character, classesById);
+  }, [character, classesById]);
 
   const patchSpells = useCallback(
     (patch: Partial<NonNullable<typeof character>['spells']>) => {
@@ -149,6 +229,11 @@ export function useSpellSlots(): SpellSlotsState {
     },
     [character, updateCharacter],
   );
+
+  const syncProfiles = useCallback(() => {
+    if (!character) return;
+    patchSpells({ spellProfiles: ensureSpellProfiles(character) });
+  }, [character, patchSpells]);
 
   const useSlot = useCallback(
     (spellLevel: number) => {
@@ -186,82 +271,143 @@ export function useSpellSlots(): SpellSlotsState {
 
   const longRest = useCallback(() => {
     if (!character) return;
-    patchSpells({ spellSlots: numericToStored(calculatedSlots, {}) });
-  }, [character, patchSpells, calculatedSlots]);
+    patchSpells({ spellSlots: numericToStored(slotsBreakdown.shared, {}) });
+  }, [character, patchSpells, slotsBreakdown.shared]);
 
   const syncSlots = useCallback(() => {
     if (!character) return;
-    patchSpells({ spellSlots: numericToStored(calculatedSlots, storedUsed) });
-  }, [character, patchSpells, calculatedSlots, storedUsed]);
+    patchSpells({
+      spellSlots: numericToStored(
+        {
+          ...slotsBreakdown.shared,
+          ...slotsBreakdown.pact,
+        },
+        {
+          1: character.spells.spellSlots.level1.used,
+          2: character.spells.spellSlots.level2.used,
+          3: character.spells.spellSlots.level3.used,
+          4: character.spells.spellSlots.level4.used,
+          5: character.spells.spellSlots.level5.used,
+          6: character.spells.spellSlots.level6.used,
+          7: character.spells.spellSlots.level7.used,
+          8: character.spells.spellSlots.level8.used,
+          9: character.spells.spellSlots.level9.used,
+        },
+      ),
+    });
+  }, [character, patchSpells, slotsBreakdown.pact, slotsBreakdown.shared]);
 
-  const addCantrip = useCallback(
-    (name: string) => {
+  const addSpellToProfile = useCallback(
+    (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
       if (!character) return;
-      if (character.spells.cantrips.includes(name)) return;
-      patchSpells({ cantrips: [...character.spells.cantrips, name] });
+      const baseProfiles = ensureSpellProfiles(character);
+      patchSpells({
+        spellProfiles: upsertProfileSpell(baseProfiles, profileId, name, kind),
+      });
     },
     [character, patchSpells],
+  );
+
+  const setProfileSpells = useCallback(
+    (profileId: string, cantrips: string[], spellsKnown: string[]) => {
+      if (!character) return;
+      const baseProfiles = ensureSpellProfiles(character);
+      patchSpells({
+        spellProfiles: replaceProfileSpells(
+          baseProfiles,
+          profileId,
+          cantrips,
+          spellsKnown,
+        ),
+      });
+    },
+    [character, patchSpells],
+  );
+
+  const removeSpellFromProfile = useCallback(
+    (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
+      if (!character) return;
+      const baseProfiles = ensureSpellProfiles(character);
+      patchSpells({
+        spellProfiles: removeProfileSpell(baseProfiles, profileId, name, kind),
+      });
+    },
+    [character, patchSpells],
+  );
+
+  const addCantrip = useCallback(
+    (name: string, profileId?: string) => {
+      const targetId = profileId ?? getDefaultProfileId(spellProfiles);
+      addSpellToProfile(targetId, name, 'cantrip');
+    },
+    [addSpellToProfile, spellProfiles],
   );
 
   const removeCantrip = useCallback(
-    (name: string) => {
-      if (!character) return;
-      patchSpells({
-        cantrips: character.spells.cantrips.filter((c) => c !== name),
-      });
+    (name: string, profileId?: string) => {
+      const targetId = profileId ?? getDefaultProfileId(spellProfiles);
+      removeSpellFromProfile(targetId, name, 'cantrip');
     },
-    [character, patchSpells],
+    [removeSpellFromProfile, spellProfiles],
   );
 
   const addSpellKnown = useCallback(
-    (name: string) => {
-      if (!character) return;
-      if (character.spells.spellsKnown.includes(name)) return;
-      patchSpells({ spellsKnown: [...character.spells.spellsKnown, name] });
+    (name: string, profileId?: string) => {
+      const targetId = profileId ?? getDefaultProfileId(spellProfiles);
+      addSpellToProfile(targetId, name, 'spell');
     },
-    [character, patchSpells],
+    [addSpellToProfile, spellProfiles],
   );
 
   const removeSpellKnown = useCallback(
-    (name: string) => {
-      if (!character) return;
-      patchSpells({
-        spellsKnown: character.spells.spellsKnown.filter((s) => s !== name),
-      });
+    (name: string, profileId?: string) => {
+      const targetId = profileId ?? getDefaultProfileId(spellProfiles);
+      removeSpellFromProfile(targetId, name, 'spell');
     },
-    [character, patchSpells],
+    [removeSpellFromProfile, spellProfiles],
   );
 
   const togglePrepared = useCallback(
-    (name: string) => {
+    (profileId: string, name: string) => {
       if (!character) return;
-      const current = character.spells.preparedSpells;
-      patchSpells({
-        preparedSpells: current.includes(name)
-          ? current.filter((s) => s !== name)
-          : [...current, name],
+      const nextProfiles = ensureSpellProfiles(character).map((profile) => {
+        if (profile.id !== profileId || profile.alwaysPrepared) return profile;
+
+        const isPrepared = profile.preparedSpells.includes(name);
+        return {
+          ...profile,
+          preparedSpells: isPrepared
+            ? profile.preparedSpells.filter((spellName) => spellName !== name)
+            : [...profile.preparedSpells, name],
+        };
       });
+
+      patchSpells({ spellProfiles: nextProfiles });
     },
     [character, patchSpells],
   );
 
   return {
     slots,
-    isSpellcaster: isSpellcaster(
-      character?.class ?? '',
-      classData?.casterProgression,
-    ),
-    spellcastingAbility: character?.spells?.spellcastingAbility,
-    cantrips: character?.spells?.cantrips ?? [],
-    spellsKnown: character?.spells?.spellsKnown ?? [],
-    preparedSpells: character?.spells?.preparedSpells ?? [],
+    sharedSlots,
+    pactSlots,
+    isSpellcaster: spellcastingDetails.length > 0,
+    cantrips: known.cantrips,
+    spellsKnown: known.spellsKnown,
+    preparedSpells: known.preparedSpells,
+    spellProfiles,
+    spellcastingDetails,
     useSlot,
     restoreSlot,
     longRest,
+    syncProfiles,
     addCantrip,
     removeCantrip,
     addSpellKnown,
     removeSpellKnown,
+    addSpellToProfile,
+    setProfileSpells,
+    removeSpellFromProfile,
     togglePrepared,
     syncSlots,
   };

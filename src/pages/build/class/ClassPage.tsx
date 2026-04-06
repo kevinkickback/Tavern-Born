@@ -69,6 +69,7 @@ export function BuildClassPage() {
     applyClassSelection,
     applyOptionalFeatureSelection,
     applySpellSelection,
+    removeSpellProvenance,
     replaceFeatSelections,
   } = useProvenance();
   const [selectedClassTab, setSelectedClassTab] = useState('');
@@ -402,8 +403,9 @@ export function BuildClassPage() {
   // Reduces array from ~1255 to ~100-200 before it reaches the modal,
   // cutting both filter cost and initial card render count.
   const classSpells = useMemo(
-    () => filterClassSpells(spells as Spell5e[], viewingClass),
-    [spells, viewingClass],
+    () =>
+      filterClassSpells(spells as Spell5e[], viewingClass, viewingClassSource),
+    [spells, viewingClass, viewingClassSource],
   );
 
   if (!character) {
@@ -468,6 +470,7 @@ export function BuildClassPage() {
                 viewingSubclassData={viewingSubclassData}
                 detailCollapsed={detailCollapsed}
                 viewingClass={viewingClass ?? ''}
+                viewingClassSource={viewingClassSource}
                 viewingClassLevel={viewingClassLevel}
                 selectedNames={selectedNames}
                 optFeatures={optFeatures}
@@ -525,6 +528,7 @@ export function BuildClassPage() {
         viewingClass={viewingClass}
         viewingClassSource={viewingClassSource}
         onApplySpellSelection={applySpellSelection}
+        onRemoveSpellProvenance={removeSpellProvenance}
         onUpdateCharacter={(patch) => updateCharacter(character.id, patch)}
         subclassPickerOpen={subclassPickerOpen}
         onSubclassPickerOpenChange={setSubclassPickerOpen}
