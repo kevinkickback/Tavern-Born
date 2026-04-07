@@ -2,8 +2,55 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { SPECIAL_SPELL_PROFILE_LABEL } from '@/lib/calculations/spellProfiles';
 import type { ProvenanceLedger } from '@/lib/provenance/types';
+import {
+  CURRENT_SCHEMA_VERSION,
+  migrateCharacter,
+  semverToMigrationVersion,
+} from '@/lib/schema/migrations';
 import { createIdbStorage } from '@/lib/storage/idb-storage';
 import type { Character } from '@/types/character';
+import {
+  characterPersistenceSchema,
+  spellSelectionSchema,
+} from '@/types/characterSchema';
+
+/**
+ * Validate spell data structure and return error message if invalid.
+ * Returns null if valid, or error message string if invalid.
+ */
+export function validateCharacterSpells(character: unknown): string | null {
+  if (!character || typeof character !== 'object') {
+    return 'Invalid character data';
+  }
+
+  const char = character as Record<string, unknown>;
+  if (!char.spells) {
+    return 'Character missing spells field';
+  }
+
+  // Use Zod validation
+  const result = spellSelectionSchema.safeParse(char.spells);
+  if (!result.success) {
+    const errors = result.error.errors
+      .map((e) => `${e.path.join('.')}: ${e.message}`)
+      .join('; ');
+    return `Invalid spell structure: ${errors}`;
+  }
+
+  return null; // Valid
+}
+
+function formatValidationErrors(character: unknown): string {
+  const result = characterPersistenceSchema.safeParse(character);
+  if (result.success) return '';
+  return result.error.errors
+    .map((e) => `${e.path.join('.')}: ${e.message}`)
+    .join('; ');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
 
 const generateId = () => {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -140,6 +187,110 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
   };
 };
 
+function coerceCharacterShape(character: unknown): Character | null {
+  if (!isRecord(character)) return null;
+  const baseline = createEmptyCharacter();
+  const raw = character as Partial<Character> & Record<string, unknown>;
+
+  const rawSpells = isRecord(raw.spells) ? raw.spells : {};
+  const rawSpellSlots = isRecord(rawSpells.spellSlots)
+    ? rawSpells.spellSlots
+    : {};
+
+  return {
+    ...baseline,
+    ...raw,
+    abilityScores: {
+      ...baseline.abilityScores,
+      ...(isRecord(raw.abilityScores) ? raw.abilityScores : {}),
+    },
+    proficiencies: {
+      ...baseline.proficiencies,
+      ...(isRecord(raw.proficiencies) ? raw.proficiencies : {}),
+    },
+    spells: {
+      spellProfiles: Array.isArray(rawSpells.spellProfiles)
+        ? rawSpells.spellProfiles
+        : baseline.spells.spellProfiles,
+      spellSlots: {
+        ...baseline.spells.spellSlots,
+        ...rawSpellSlots,
+      },
+    },
+    hitPoints: {
+      ...baseline.hitPoints,
+      ...(isRecord(raw.hitPoints) ? raw.hitPoints : {}),
+    },
+    savingThrows: {
+      ...baseline.savingThrows,
+      ...(isRecord(raw.savingThrows) ? raw.savingThrows : {}),
+    },
+    details: {
+      ...baseline.details,
+      ...(isRecord(raw.details) ? raw.details : {}),
+    },
+    portraitTransform: {
+      ...baseline.portraitTransform,
+      ...(isRecord(raw.portraitTransform) ? raw.portraitTransform : {}),
+    },
+  };
+}
+
+function parseCharacterData(character: unknown): {
+  data: Character | null;
+  error: string | null;
+} {
+  // Run schema migrations before coercion so that old-format characters are
+  // upgraded to the current schema version before Zod validation.
+  let migrated = character;
+  if (isRecord(character)) {
+    const storedVersion = semverToMigrationVersion(
+      (character as Record<string, unknown>).version,
+    );
+    if (storedVersion < CURRENT_SCHEMA_VERSION) {
+      try {
+        migrated = migrateCharacter(character, storedVersion);
+      } catch (err) {
+        console.error('Character migration failed:', err);
+        return {
+          data: null,
+          error: `Migration failed: ${err instanceof Error ? err.message : String(err)}`,
+        };
+      }
+    }
+  }
+
+  const coerced = coerceCharacterShape(migrated);
+  if (!coerced) {
+    return { data: null, error: 'Invalid character payload' };
+  }
+
+  const result = characterPersistenceSchema.safeParse(coerced);
+  if (!result.success) {
+    return {
+      data: null,
+      error: result.error.errors
+        .map((e) => `${e.path.join('.')}: ${e.message}`)
+        .join('; '),
+    };
+  }
+
+  return {
+    data: normalizeCharacterProvenance(result.data as Character),
+    error: null,
+  };
+}
+
+export function validateCharacterData(character: unknown): string | null {
+  const parsed = parseCharacterData(character);
+  if (parsed.error) return `Invalid character structure: ${parsed.error}`;
+
+  const spellError = validateCharacterSpells(parsed.data);
+  if (spellError) return spellError;
+
+  return null;
+}
+
 export const useCharacterStore = create<CharacterState>()(
   persist(
     (set, get) => ({
@@ -170,12 +321,25 @@ export const useCharacterStore = create<CharacterState>()(
         );
       },
 
-      setCharacters: (characters) => set({ characters }),
+      setCharacters: (characters) =>
+        set(() => {
+          const validated = characters
+            .map((character) => parseCharacterData(character))
+            .filter((result) => result.data)
+            .map((result) => result.data as Character);
+          return { characters: validated };
+        }),
 
       addCharacter: (character) =>
-        set((state) => ({
-          characters: [...state.characters, character],
-        })),
+        set((state) => {
+          const parsed = parseCharacterData(character);
+          if (!parsed.data) {
+            throw new Error(parsed.error ?? formatValidationErrors(character));
+          }
+          return {
+            characters: [...state.characters, parsed.data],
+          };
+        }),
 
       updateCharacter: (id, updates) =>
         set((state) => {
@@ -183,19 +347,28 @@ export const useCharacterStore = create<CharacterState>()(
 
           // Active character updates are treated as in-memory draft changes.
           if (state.activeCharacterId === id && state.activeCharacter) {
+            const next = {
+              ...state.activeCharacter,
+              ...updates,
+              lastModified: now,
+            };
+            const parsed = parseCharacterData(next);
+            if (!parsed.data) return {};
             return {
-              activeCharacter: {
-                ...state.activeCharacter,
-                ...updates,
-                lastModified: now,
-              },
+              activeCharacter: parsed.data,
             };
           }
 
           // Fallback for non-active records: update persisted collection directly.
-          const characters = state.characters.map((char) =>
-            char.id === id ? { ...char, ...updates, lastModified: now } : char,
-          );
+          const characters = state.characters.map((char) => {
+            if (char.id !== id) return char;
+            const parsed = parseCharacterData({
+              ...char,
+              ...updates,
+              lastModified: now,
+            });
+            return parsed.data ?? char;
+          });
           return { characters };
         }),
 
@@ -205,12 +378,15 @@ export const useCharacterStore = create<CharacterState>()(
             return {};
           }
 
+          const parsed = parseCharacterData({
+            ...state.activeCharacter,
+            ...updates,
+            lastModified: new Date().toISOString(),
+          });
+          if (!parsed.data) return {};
+
           return {
-            activeCharacter: {
-              ...state.activeCharacter,
-              ...updates,
-              lastModified: new Date().toISOString(),
-            },
+            activeCharacter: parsed.data,
           };
         }),
 
@@ -220,15 +396,18 @@ export const useCharacterStore = create<CharacterState>()(
             return {};
           }
 
-          return {
-            activeCharacter: {
-              ...state.activeCharacter,
-              details: {
-                ...state.activeCharacter.details,
-                ...updates,
-              },
-              lastModified: new Date().toISOString(),
+          const parsed = parseCharacterData({
+            ...state.activeCharacter,
+            details: {
+              ...state.activeCharacter.details,
+              ...updates,
             },
+            lastModified: new Date().toISOString(),
+          });
+          if (!parsed.data) return {};
+
+          return {
+            activeCharacter: parsed.data,
           };
         }),
 
@@ -270,24 +449,29 @@ export const useCharacterStore = create<CharacterState>()(
             ...state.activeCharacter,
             lastModified: now,
           };
+          const parsed = parseCharacterData(savedCharacter);
+          if (!parsed.data) {
+            return {};
+          }
+          const validatedCharacter = parsed.data;
 
           const existingIndex = state.characters.findIndex(
-            (char) => char.id === savedCharacter.id,
+            (char) => char.id === validatedCharacter.id,
           );
 
           if (existingIndex === -1) {
             return {
-              characters: [...state.characters, savedCharacter],
-              activeCharacter: savedCharacter,
+              characters: [...state.characters, validatedCharacter],
+              activeCharacter: validatedCharacter,
             };
           }
 
           const characters = [...state.characters];
-          characters[existingIndex] = savedCharacter;
+          characters[existingIndex] = validatedCharacter;
 
           return {
             characters,
-            activeCharacter: savedCharacter,
+            activeCharacter: validatedCharacter,
           };
         }),
     }),
@@ -296,15 +480,22 @@ export const useCharacterStore = create<CharacterState>()(
       storage: createIdbStorage(),
       partialize: (state) => ({
         characters: state.characters,
-        activeCharacterId: state.activeCharacterId,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
+          const validatedCharacters = state.characters
+            .map((character) => parseCharacterData(character))
+            .filter((result) => result.data)
+            .map((result) => result.data as Character);
+          state.characters = validatedCharacters;
+
           // Rehydrate activeCharacter from activeCharacterId after loading
           const activeFound = state.activeCharacterId
-            ? state.characters.find((c) => c.id === state.activeCharacterId) ||
-              null
+            ? validatedCharacters.find(
+                (c) => c.id === state.activeCharacterId,
+              ) || null
             : null;
+          state.activeCharacterId = activeFound ? activeFound.id : null;
           state.activeCharacter = activeFound
             ? normalizeCharacterProvenance(activeFound)
             : null;

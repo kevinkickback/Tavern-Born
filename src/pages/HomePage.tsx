@@ -205,10 +205,23 @@ export function HomePage() {
       try {
         const text = await file.text();
         const character = JSON.parse(text);
+
+        // Validate full character structure before importing
+        const { validateCharacterData } = await import(
+          '@/store/characterStore'
+        );
+        const validationError = validateCharacterData(character);
+        if (validationError) {
+          toast.error(`Invalid character: ${validationError}`);
+          return;
+        }
+
         useCharacterStore.getState().addCharacter(character);
         toast.success('Character imported successfully');
-      } catch (_error) {
-        toast.error('Failed to import character file');
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unknown error';
+        toast.error(`Failed to import character: ${message}`);
       }
     };
     input.click();

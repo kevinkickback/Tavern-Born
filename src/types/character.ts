@@ -37,8 +37,6 @@ export interface Character {
   features: Feature[];
   feats: Feat[];
   spells: SpellSelection;
-  /** Spells chosen at each class level during character building. Key is "${className}:${classLevel}". */
-  spellsByLevel?: Record<string, string[]>;
   equipment: Equipment[];
 
   hitPoints: HitPoints;
@@ -57,6 +55,18 @@ export interface Character {
   variantRules?: VariantRules;
   /** Per-block ability score increase choices for races with choosable bonuses (Tasha's variant). */
   raceAsiChoices?: string[][];
+
+  /**
+   * Which weighted-choice block from the background's ability array the player chose.
+   * 0 = +2/+1 method (default), 1 = +1/+1/+1 method.
+   */
+  backgroundAsiBlockIndex?: number;
+
+  /**
+   * Ordered ability selections for the chosen background ability block.
+   * selections[i] receives weights[i] bonus from the selected block.
+   */
+  backgroundAsiChoices?: string[];
 
   /** Per-level ASI slot choices that were used for ability score increases (not feats). */
   asiChoices?: AsiChoice[];

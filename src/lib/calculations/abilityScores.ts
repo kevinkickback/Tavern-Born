@@ -214,6 +214,71 @@ export function normalizeAbilityName(input: string): AbilityName | null {
   return map[input.toLowerCase().trim()] ?? null;
 }
 
+/** A single weighted-choice block from a 2024 background ability entry. */
+export interface BackgroundAbilityBlock {
+  /** Abilities the player may pick from. */
+  from: AbilityName[];
+  /**
+   * Bonus amounts indexed by selection slot.
+   * selections[i] receives weights[i] points.
+   * e.g. [2, 1] → first pick gets +2, second gets +1.
+   * e.g. [1, 1, 1] → three picks each get +1.
+   */
+  weights: number[];
+}
+
+export interface BackgroundAbilityData {
+  blocks: BackgroundAbilityBlock[];
+}
+
+/**
+ * Parse the `ability` field on a 2024 (XPHB) background into structured block data.
+ * XPHB backgrounds carry two alternative assignment methods as separate blocks.
+ */
+export function getBackgroundAbilityData(
+  bg?: { ability?: unknown[] } | null,
+): BackgroundAbilityData {
+  const blocks: BackgroundAbilityBlock[] = [];
+  for (const entry of bg?.ability ?? []) {
+    const block = entry as {
+      choose?: { weighted?: { from?: string[]; weights?: number[] } };
+    };
+    if (block.choose?.weighted) {
+      const { from = [], weights = [] } = block.choose.weighted;
+      const normalized = from
+        .map((a) => normalizeAbilityName(a))
+        .filter((a): a is AbilityName => a !== null);
+      if (normalized.length > 0 && weights.length > 0) {
+        blocks.push({ from: normalized, weights });
+      }
+    }
+  }
+  return { blocks };
+}
+
+/**
+ * Compute the bonus totals for a chosen background ability block + selections.
+ * selections[i] is the ability chosen for weights[i].
+ * Duplicates are ignored (same ability cannot receive multiple weight slots).
+ */
+export function buildBackgroundBonuses(
+  data: BackgroundAbilityData,
+  blockIndex: number,
+  choices: string[],
+): Partial<Record<AbilityName, number>> {
+  const block = data.blocks[blockIndex];
+  if (!block) return {};
+  const seen = new Set<AbilityName>();
+  const bonuses: Partial<Record<AbilityName, number>> = {};
+  for (let i = 0; i < block.weights.length; i++) {
+    const ability = normalizeAbilityName(choices[i] ?? '');
+    if (!ability || seen.has(ability)) continue;
+    seen.add(ability);
+    bonuses[ability] = (bonuses[ability] ?? 0) + block.weights[i];
+  }
+  return bonuses;
+}
+
 /**
  * Extract fixed bonuses and choosable bonuses from 5etools race/subrace ability arrays.
  */

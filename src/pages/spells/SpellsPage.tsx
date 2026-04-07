@@ -37,6 +37,7 @@ import { formatModifier } from '@/lib/calculations/abilityScores';
 import {
   getKnownSpellNames,
   getProfileKnownNames,
+  inferClassSpellAttributionLevels,
 } from '@/lib/calculations/spellProfiles';
 import {
   formatCastingTime,
@@ -46,11 +47,12 @@ import {
   formatSpellLevel,
   getSchoolName,
 } from '@/lib/calculations/spellUtils';
+import { normalizeKey } from '@/lib/provenance/normalization';
 import { renderEntry } from '@/lib/renderer';
 import { cn } from '@/lib/utils';
 import { useCharacterStore } from '@/store/characterStore';
 import { useGameDataStore } from '@/store/gameDataStore';
-import type { Spell5e } from '@/types/5etools';
+import type { Class5e, Spell5e } from '@/types/5etools';
 import { NoCharCard } from '../_shared';
 
 interface SpellListItem {
@@ -217,21 +219,21 @@ function getRecursiveTooltipData(
   }
 
   const mapByKind: Record<string, Map<string, TooltipEntityLike> | undefined> =
-  {
-    items: lookup.items,
-    feats: lookup.feats,
-    races: lookup.races,
-    classes: lookup.classes,
-    backgrounds: lookup.backgrounds,
-    optionalfeatures: lookup.optionalfeatures,
-    actions: lookup.actions,
-    conditions: lookup.conditions,
-    deities: lookup.deities,
-    skills: lookup.skills,
-    senses: lookup.senses,
-    variantrules: lookup.variantrules,
-    languages: lookup.languages,
-  };
+    {
+      items: lookup.items,
+      feats: lookup.feats,
+      races: lookup.races,
+      classes: lookup.classes,
+      backgrounds: lookup.backgrounds,
+      optionalfeatures: lookup.optionalfeatures,
+      actions: lookup.actions,
+      conditions: lookup.conditions,
+      deities: lookup.deities,
+      skills: lookup.skills,
+      senses: lookup.senses,
+      variantrules: lookup.variantrules,
+      languages: lookup.languages,
+    };
 
   const normalizedKind = normalizeKind(reference.kind);
   const entityMap = mapByKind[normalizedKind];
@@ -286,7 +288,12 @@ function getRecursiveHintPosition(
   }
 
   // Get the container's viewport-relative position
-  const containerRect = container?.getBoundingClientRect() || { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+  const containerRect = container?.getBoundingClientRect() || {
+    left: 0,
+    top: 0,
+    right: window.innerWidth,
+    bottom: window.innerHeight,
+  };
 
   // Convert element coordinates to be relative to container
   const elementRelX = rect.left - containerRect.left;
@@ -302,7 +309,10 @@ function getRecursiveHintPosition(
   const leftCandidate = elementRelX - tooltipWidthEstimate - gap;
 
   let x = rightCandidate;
-  if (rightCandidate + tooltipWidthEstimate > containerWidth && leftCandidate >= 0) {
+  if (
+    rightCandidate + tooltipWidthEstimate > containerWidth &&
+    leftCandidate >= 0
+  ) {
     x = leftCandidate;
   } else if (rightCandidate + tooltipWidthEstimate > containerWidth) {
     x = Math.max(0, containerWidth - tooltipWidthEstimate - 4);
@@ -339,7 +349,12 @@ export function SpellsPage() {
     backgrounds,
     optionalfeatures,
   } = useFilteredGameData();
-  const { applyManualSpellGrant, removeSpellProvenance } = useProvenance();
+  const {
+    ledger,
+    applyManualSpellGrant,
+    applyInferredClassSpellSelection,
+    removeSpellProvenance,
+  } = useProvenance();
   const {
     spellProfiles,
     spellcastingDetails,
@@ -366,6 +381,14 @@ export function SpellsPage() {
     }
     return map;
   }, [allSpells]);
+
+  const classByProfileId = useMemo(() => {
+    const map = new Map<string, Class5e>();
+    for (const cls of classes as Class5e[]) {
+      map.set(`class:${cls.name}|${cls.source ?? ''}`, cls);
+    }
+    return map;
+  }, [classes]);
 
   const recursiveLookup = useMemo<RecursiveLookup>(
     () => ({
@@ -488,35 +511,44 @@ export function SpellsPage() {
 
   const selectionSourceByProfileAndSpell = useMemo(() => {
     const map = new Map<string, string>();
-    const byClassKey = new Map(
-      spellProfiles
-        .filter((profile) => profile.type === 'class')
-        .map((profile) => [
-          `${profile.className ?? ''}|${profile.classSource ?? ''}`,
-          profile.id,
-        ]),
-    );
-    const spellsByLevel = character?.spellsByLevel ?? {};
+    for (const profile of spellProfiles) {
+      for (const spellName of [...profile.cantrips, ...profile.spellsKnown]) {
+        const key = `${profile.id}|${spellName}`;
+        const tags = ledger.spells[normalizeKey(spellName)] ?? [];
 
-    for (const [key, names] of Object.entries(spellsByLevel)) {
-      const [classKey, levelText] = key.split(':');
-      if (!classKey || !levelText) continue;
-      const profileId = byClassKey.get(classKey);
-      if (!profileId) continue;
+        if (profile.type === 'class' && profile.className) {
+          const classTag = tags.find(
+            (tag) =>
+              tag.sourceType === 'class' &&
+              tag.sourceName === profile.className &&
+              (tag.sourceRef ?? '') === (profile.classSource ?? ''),
+          );
+          if (!classTag) continue;
 
-      const [className] = classKey.split('|');
-      const level = Number.parseInt(levelText, 10);
-      if (!Number.isFinite(level)) continue;
+          if (classTag.spellGrantedAtLevel) {
+            const suffix =
+              classTag.spellAttributionMode === 'inferred-lowest-eligible'
+                ? 'Inferred Choice'
+                : 'Choice';
+            map.set(
+              key,
+              `${profile.className} Lv. ${classTag.spellGrantedAtLevel} ${suffix}`,
+            );
+            continue;
+          }
 
-      for (const spellName of names ?? []) {
-        const mapKey = `${profileId}|${spellName}`;
-        if (map.has(mapKey)) continue;
-        map.set(mapKey, `Source: Level ${level} ${className} progression`);
+          map.set(key, `${profile.className} Choice`);
+          continue;
+        }
+
+        if (tags.some((tag) => tag.sourceType === 'manual')) {
+          map.set(key, 'User Choice');
+        }
       }
     }
 
     return map;
-  }, [character?.spellsByLevel, spellProfiles]);
+  }, [ledger.spells, spellProfiles]);
 
   const modalConfig = useMemo(() => {
     if (!activeProfile) return null;
@@ -574,15 +606,35 @@ export function SpellsPage() {
       };
     }
 
+    const selectedCantripCount = initialSelectedNames.filter(
+      (spellName) => spellByName.get(getEntityKey(spellName))?.level === 0,
+    ).length;
+    const selectedSpellCount = initialSelectedNames.filter(
+      (spellName) => spellByName.get(getEntityKey(spellName))?.level !== 0,
+    ).length;
+
     const cantripLimit = detail?.cantripLimit ?? null;
     const knownSpellLimit = detail?.knownSpellLimit ?? null;
+    const effectiveCantripLimit =
+      cantripLimit === null
+        ? selectedCantripCount > 0
+          ? selectedCantripCount
+          : null
+        : Math.max(cantripLimit, selectedCantripCount);
+    const effectiveSpellLimit = detail?.isPreparedCaster
+      ? knownSpellLimit === null
+        ? selectedSpellCount > 0
+          ? selectedSpellCount
+          : null
+        : Math.max(knownSpellLimit, selectedSpellCount)
+      : knownSpellLimit;
 
-    if (cantripLimit !== null) {
+    if (effectiveCantripLimit !== null) {
       allowedLevels.add('0');
       categories.push({
         key: 'cantrips',
         label: 'cantrips',
-        max: cantripLimit,
+        max: effectiveCantripLimit,
         test: (spell: Spell5e) => spell.level === 0,
       });
     }
@@ -592,11 +644,11 @@ export function SpellsPage() {
       allowedLevels.add(String(level));
     }
 
-    if (knownSpellLimit !== null) {
+    if (effectiveSpellLimit !== null) {
       categories.push({
         key: 'spells',
         label: 'spells',
-        max: knownSpellLimit,
+        max: effectiveSpellLimit,
         test: (spell: Spell5e) => spell.level > 0,
       });
     } else if (maxSpellLevel > 0) {
@@ -624,7 +676,7 @@ export function SpellsPage() {
       initialSelectedNames,
       lockedNames,
     };
-  }, [activeProfile, detailsByProfileId, spellProfiles]);
+  }, [activeProfile, detailsByProfileId, spellByName, spellProfiles]);
 
   const hasWarlockClass = useMemo(
     () =>
@@ -736,9 +788,17 @@ export function SpellsPage() {
                   const detail = detailsByProfileId.get(profile.id);
 
                   const preparedCount = items.filter(
-                    (item) => item.prepared,
+                    (item) =>
+                      item.kind === 'spell' &&
+                      !item.alwaysPrepared &&
+                      item.prepared,
                   ).length;
-                  const preparedTotal = items.length;
+                  const preparableSpells = items.filter(
+                    (item) => item.kind === 'spell' && !item.alwaysPrepared,
+                  );
+                  const preparedTotal = detail?.isPreparedCaster
+                    ? (detail.knownSpellLimit ?? preparableSpells.length)
+                    : preparableSpells.length;
                   const levels = [
                     ...new Set(items.map((item) => item.level)),
                   ].sort((a, b) => a - b);
@@ -793,7 +853,9 @@ export function SpellsPage() {
                                       item.kind === 'spell' &&
                                       !item.alwaysPrepared &&
                                       !!item.isPreparedCaster;
-                                    const spell = spellByName.get(getEntityKey(item.name));
+                                    const spell = spellByName.get(
+                                      getEntityKey(item.name),
+                                    );
 
                                     return (
                                       <div
@@ -1007,6 +1069,7 @@ export function SpellsPage() {
               : undefined
           }
           onConfirm={(names) => {
+            const activeDetail = detailsByProfileId.get(activeProfile.id);
             const previousKnownNames = getProfileKnownNames(activeProfile);
             const otherKnownNames = new Set(
               spellProfiles
@@ -1017,17 +1080,94 @@ export function SpellsPage() {
                 ]),
             );
             const nextCantrips = names.filter(
-              (spellName) => spellByName.get(getEntityKey(spellName))?.level === 0,
+              (spellName) =>
+                spellByName.get(getEntityKey(spellName))?.level === 0,
             );
             const nextSpellsKnown = names.filter(
-              (spellName) => spellByName.get(getEntityKey(spellName))?.level !== 0,
+              (spellName) =>
+                spellByName.get(getEntityKey(spellName))?.level !== 0,
             );
 
             setProfileSpells(activeProfile.id, nextCantrips, nextSpellsKnown);
 
-            for (const spellName of names) {
-              if (previousKnownNames.has(spellName)) continue;
-              applyManualSpellGrant(spellName);
+            const newlyAddedNames = names.filter(
+              (spellName) => !previousKnownNames.has(spellName),
+            );
+
+            if (
+              activeProfile.type === 'class' &&
+              activeProfile.className &&
+              activeDetail &&
+              activeDetail.classLevel > 0
+            ) {
+              const classData = classByProfileId.get(activeProfile.id);
+              const existingAttributions = [...previousKnownNames]
+                .map((spellName) => {
+                  const tags = ledger.spells[normalizeKey(spellName)] ?? [];
+                  const classTag = tags.find(
+                    (tag) =>
+                      tag.sourceType === 'class' &&
+                      tag.sourceName === activeProfile.className &&
+                      (tag.sourceRef ?? '') ===
+                        (activeProfile.classSource ?? '') &&
+                      !!tag.spellGrantedAtLevel,
+                  );
+                  if (!classTag?.spellGrantedAtLevel) return null;
+                  return {
+                    spellName,
+                    grantedAtLevel: classTag.spellGrantedAtLevel,
+                  };
+                })
+                .filter(
+                  (
+                    entry,
+                  ): entry is { spellName: string; grantedAtLevel: number } =>
+                    !!entry,
+                );
+
+              const spellLevelByName = new Map<string, number>();
+              for (const spellName of new Set([
+                ...previousKnownNames,
+                ...names,
+              ])) {
+                spellLevelByName.set(
+                  spellName,
+                  spellByName.get(getEntityKey(spellName))?.level ?? 1,
+                );
+              }
+
+              const inferred = inferClassSpellAttributionLevels({
+                classData,
+                classLevel: activeDetail.classLevel,
+                newSpellNames: newlyAddedNames,
+                spellLevelByName,
+                existingAttributions,
+              });
+
+              const inferredByName = new Map(
+                inferred.map((entry) => [
+                  entry.spellName,
+                  entry.grantedAtLevel,
+                ]),
+              );
+
+              for (const spellName of newlyAddedNames) {
+                const inferredLevel = inferredByName.get(spellName);
+                if (!inferredLevel) {
+                  applyManualSpellGrant(spellName);
+                  continue;
+                }
+                applyInferredClassSpellSelection(
+                  activeProfile.className,
+                  activeProfile.classSource,
+                  spellName,
+                  inferredLevel,
+                );
+              }
+            } else {
+              for (const spellName of newlyAddedNames) {
+                applyManualSpellGrant(spellName);
+              }
             }
 
             for (const spellName of previousKnownNames) {
@@ -1219,16 +1359,17 @@ function SpellNameTooltip({
               ))}
             </div>
 
-            <div className="px-3 py-1.5 border-t border-border text-right italic text-xs text-muted-foreground">
-              {spell.source}
-              {spell.page ? ` p. ${spell.page}` : ''}
-            </div>
-
-            {sourceContext ? (
-              <div className="px-3 py-1.5 text-xs bg-accent/10 text-accent border-t border-accent/30">
-                {sourceContext}
+            <div className="px-3 py-1.5 border-t border-border text-xs text-muted-foreground">
+              <div className="flex items-start justify-between gap-3">
+                <div className="text-accent text-left">
+                  {sourceContext ? `Source: ${sourceContext}` : ''}
+                </div>
+                <div className="italic text-right">
+                  {spell.source}
+                  {spell.page ? ` p. ${spell.page}` : ''}
+                </div>
               </div>
-            ) : null}
+            </div>
 
             {recursiveHint ? (
               <div

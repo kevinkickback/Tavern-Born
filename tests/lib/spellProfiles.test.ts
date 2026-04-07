@@ -1,16 +1,28 @@
 import { describe, expect, test } from 'vitest';
 import {
   buildClassSpellLevelKey,
+  buildClassSpellSelectionsByLevel,
   buildSpellcastingClassDetails,
   calculateCharacterSpellSlots,
   collectKnownSpells,
   ensureSpellProfiles,
+  evaluatePreparedSpellsFormula,
+  getPreparedSpellLimit,
+  inferClassSpellAttributionLevels,
   isSpellOnClassList,
   SPECIAL_SPELL_PROFILE_ID,
   SPECIAL_SPELL_PROFILE_LABEL,
 } from '@/lib/calculations/spellProfiles';
 import { makeCharacterFixture } from '../fixtures/characterFixtures';
 import { makeClassFixture } from '../fixtures/gameDataFixtures';
+
+function makeBaseProvenance() {
+  const provenance = makeCharacterFixture().provenance;
+  if (!provenance) {
+    throw new Error('Expected fixture provenance to be defined');
+  }
+  return provenance;
+}
 
 describe('spellProfiles', () => {
   test('ensureSpellProfiles creates class profiles and special unrestricted profile', () => {
@@ -238,5 +250,348 @@ describe('spellProfiles', () => {
     expect(details[0].spellSaveDC).toBe(14);
     expect(details[0].spellAttackBonus).toBe(6);
     expect(details[0].isPreparedCaster).toBe(false);
+  });
+
+  test('inferClassSpellAttributionLevels assigns to lowest eligible level with capacity', () => {
+    const wizard = makeClassFixture({
+      name: 'Wizard',
+      source: 'PHB',
+      spellcastingAbility: 'int',
+      cantripProgression: [3, 3, 3, 4, 4],
+      spellsKnownProgressionFixed: [6, 2, 2, 2, 2],
+      casterProgression: 'full',
+    });
+
+    const spellLevelByName = new Map<string, number>([
+      ['Scorching Ray', 2],
+      ['Misty Step', 2],
+      ['Counterspell', 3],
+    ]);
+
+    const assignments = inferClassSpellAttributionLevels({
+      classData: wizard,
+      classLevel: 5,
+      newSpellNames: ['Scorching Ray', 'Misty Step', 'Counterspell'],
+      spellLevelByName,
+      existingAttributions: [
+        { spellName: 'Magic Missile', grantedAtLevel: 1 },
+        { spellName: 'Shield', grantedAtLevel: 1 },
+        { spellName: 'Sleep', grantedAtLevel: 1 },
+        { spellName: 'Find Familiar', grantedAtLevel: 1 },
+        { spellName: 'Identify', grantedAtLevel: 1 },
+        { spellName: 'Detect Magic', grantedAtLevel: 1 },
+      ],
+    });
+
+    expect(assignments).toEqual([
+      { spellName: 'Misty Step', grantedAtLevel: 3 },
+      { spellName: 'Scorching Ray', grantedAtLevel: 3 },
+      { spellName: 'Counterspell', grantedAtLevel: 5 },
+    ]);
+  });
+
+  test('inferClassSpellAttributionLevels uses cantrip capacity independently', () => {
+    const wizard = makeClassFixture({
+      name: 'Wizard',
+      source: 'PHB',
+      spellcastingAbility: 'int',
+      cantripProgression: [3, 3, 3, 4],
+      spellsKnownProgressionFixed: [6, 2, 2, 2],
+      casterProgression: 'full',
+    });
+
+    const spellLevelByName = new Map<string, number>([
+      ['Light', 0],
+      ['Fire Bolt', 0],
+      ['Mage Hand', 0],
+      ['Prestidigitation', 0],
+    ]);
+
+    const assignments = inferClassSpellAttributionLevels({
+      classData: wizard,
+      classLevel: 4,
+      newSpellNames: ['Light'],
+      spellLevelByName,
+      existingAttributions: [
+        { spellName: 'Fire Bolt', grantedAtLevel: 1 },
+        { spellName: 'Mage Hand', grantedAtLevel: 1 },
+        { spellName: 'Prestidigitation', grantedAtLevel: 1 },
+      ],
+    });
+
+    expect(assignments).toEqual([{ spellName: 'Light', grantedAtLevel: 4 }]);
+  });
+
+  test('buildClassSpellSelectionsByLevel reconstructs class-level picks from provenance attribution', () => {
+    const baseProvenance = makeBaseProvenance();
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classSource: 'PHB',
+      level: 5,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
+      spells: {
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard (Lv 5)',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: ['Fire Bolt'],
+            spellsKnown: ['Magic Missile', 'Fireball'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+          {
+            id: SPECIAL_SPELL_PROFILE_ID,
+            type: 'special',
+            label: SPECIAL_SPELL_PROFILE_LABEL,
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
+        spellSlots: makeCharacterFixture().spells.spellSlots,
+      },
+      provenance: {
+        ...baseProvenance,
+        spells: {
+          'fire bolt': [
+            {
+              sourceType: 'class',
+              sourceName: 'Wizard',
+              sourceRef: 'PHB',
+              grantType: 'choice',
+              label: 'Wizard',
+              spellGrantedAtLevel: 1,
+              spellAttributionMode: 'exact',
+            },
+          ],
+          'magic missile': [
+            {
+              sourceType: 'class',
+              sourceName: 'Wizard',
+              sourceRef: 'PHB',
+              grantType: 'choice',
+              label: 'Wizard',
+              spellGrantedAtLevel: 1,
+              spellAttributionMode: 'exact',
+            },
+          ],
+          fireball: [
+            {
+              sourceType: 'class',
+              sourceName: 'Wizard',
+              sourceRef: 'PHB',
+              grantType: 'choice',
+              label: 'Wizard',
+              spellGrantedAtLevel: 5,
+              spellAttributionMode: 'inferred-lowest-eligible',
+            },
+          ],
+        },
+      },
+    });
+
+    const byLevel = buildClassSpellSelectionsByLevel({
+      character,
+      className: 'Wizard',
+      classSource: 'PHB',
+    });
+
+    expect(byLevel.get(1)).toEqual(['Fire Bolt', 'Magic Missile']);
+    expect(byLevel.get(5)).toEqual(['Fireball']);
+  });
+
+  test('buildClassSpellSelectionsByLevel excludes class-profile spells without provenance level attribution', () => {
+    const baseProvenance = makeBaseProvenance();
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classSource: 'PHB',
+      level: 3,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
+      spells: {
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard (Lv 3)',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: ['Mage Hand'],
+            spellsKnown: ['Shield'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+          {
+            id: SPECIAL_SPELL_PROFILE_ID,
+            type: 'special',
+            label: SPECIAL_SPELL_PROFILE_LABEL,
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
+        spellSlots: makeCharacterFixture().spells.spellSlots,
+      },
+      provenance: {
+        ...baseProvenance,
+        spells: {
+          'mage hand': [
+            {
+              sourceType: 'class',
+              sourceName: 'Wizard',
+              sourceRef: 'PHB',
+              grantType: 'choice',
+              label: 'Wizard',
+            },
+          ],
+          shield: [
+            {
+              sourceType: 'class',
+              sourceName: 'Wizard',
+              sourceRef: 'PHB',
+              grantType: 'choice',
+              label: 'Wizard',
+            },
+          ],
+        },
+      },
+    });
+
+    const byLevel = buildClassSpellSelectionsByLevel({
+      character,
+      className: 'Wizard',
+      classSource: 'PHB',
+    });
+
+    expect(Array.from(byLevel.entries())).toEqual([]);
+  });
+
+  test('evaluatePreparedSpellsFormula evaluates wizard formula with level + INT modifier', () => {
+    const result = evaluatePreparedSpellsFormula('<$level$> + <$int_mod$>', 5, {
+      strength: 0,
+      dexterity: 0,
+      constitution: 0,
+      intelligence: 1,
+      wisdom: 0,
+      charisma: 0,
+    });
+
+    expect(result).toBe(6);
+  });
+
+  test('evaluatePreparedSpellsFormula handles negative modifiers', () => {
+    const result = evaluatePreparedSpellsFormula('<$level$> + <$int_mod$>', 3, {
+      strength: -1,
+      dexterity: -1,
+      constitution: -1,
+      intelligence: -2,
+      wisdom: -1,
+      charisma: -1,
+    });
+
+    expect(result).toBe(1);
+  });
+
+  test('evaluatePreparedSpellsFormula returns null for invalid formula', () => {
+    const result = evaluatePreparedSpellsFormula('invalid formula', 5, {
+      strength: 0,
+      dexterity: 0,
+      constitution: 0,
+      intelligence: 1,
+      wisdom: 0,
+      charisma: 0,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  test('getPreparedSpellLimit calculates wizard prepared spells from formula', () => {
+    const wizard = makeClassFixture({
+      name: 'Wizard',
+      source: 'PHB',
+      casterProgression: 'full',
+      spellcastingAbility: 'int',
+      preparedSpells: '<$level$> + <$int_mod$>',
+    });
+
+    const result = getPreparedSpellLimit(wizard, 5, 1);
+
+    expect(result).toBe(6);
+  });
+
+  test('getPreparedSpellLimit returns null when class has no spellcasting', () => {
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'PHB',
+    });
+
+    const result = getPreparedSpellLimit(fighter, 5, 1);
+
+    expect(result).toBeNull();
+  });
+
+  test('buildSpellcastingClassDetails uses prepared spell formula for prepared casters', () => {
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classSource: 'PHB',
+      level: 5,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
+      abilityScores: {
+        strength: 8,
+        dexterity: 14,
+        constitution: 12,
+        intelligence: 18,
+        wisdom: 13,
+        charisma: 10,
+      },
+      spells: {
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard (Lv 5)',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+          {
+            id: SPECIAL_SPELL_PROFILE_ID,
+            type: 'special',
+            label: 'Special (Unrestricted)',
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
+        spellSlots: makeCharacterFixture().spells.spellSlots,
+      },
+    });
+
+    const classesById = new Map([
+      [
+        'class:Wizard|PHB',
+        makeClassFixture({
+          name: 'Wizard',
+          source: 'PHB',
+          casterProgression: 'full',
+          spellcastingAbility: 'int',
+          preparedSpells: '<$level$> + <$int_mod$>',
+          spellsKnownProgression: [6, 8, 10, 12, 14],
+        }),
+      ],
+    ]);
+
+    const details = buildSpellcastingClassDetails(character, classesById);
+    expect(details).toHaveLength(1);
+    expect(details[0].isPreparedCaster).toBe(true);
+    expect(details[0].knownSpellLimit).toBe(9);
   });
 });

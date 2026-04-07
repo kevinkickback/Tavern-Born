@@ -24,9 +24,17 @@ This document defines state ownership, mutation rules, and persistence behavior.
 
 ## Character Mutation Contract
 
-- All character writes must flow through updateCharacter(id, patch).
-- Active character changes are draft updates until saveActiveCharacter is called.
-- Non-active character updates patch persisted collection directly.
+The character store exposes three write paths. Use the correct one for the context:
+
+| Method | When to use |
+|---|---|
+| `updateCharacter(id, patch)` | Any component that holds an explicit character `id` (e.g. character list, class page, level-up modal). The standard and preferred path for most writes. |
+| `updateActiveCharacter(patch)` | Components that are always scoped to the active character and don't have an explicit id (e.g. PortraitPage, detail sub-pages). Convenience wrapper around `updateCharacter` that fills in `activeCharacterId`. |
+| `updateActiveCharacterDetails(patch)` | Same as above, but restricted to the `character.details` sub-object. Use in detail-editing pages (CharacteristicsPage, HistoryPage, AppearancePage, AlliesOrganizationsPage). |
+
+Rules that apply to all three paths:
+- Active character changes are draft updates until `saveActiveCharacter()` is called.
+- Non-active character updates patch the persisted collection directly.
 - No direct object mutation outside store reducers.
 
 ## Derived vs Stored Values
@@ -60,7 +68,10 @@ Derived examples (do not store as canonical):
 - Class profiles are keyed by `class:<name>|<source>` and hold class-owned cantrips/spells/prepared flags.
 - The unrestricted profile is `special:unrestricted` and is always prepared by definition.
 - Spell slots remain persisted in `character.spells.spellSlots` as mutable runtime usage state.
-- This is a hard cutover model; legacy flat spell arrays are no longer the canonical source of truth.
+- Class-level spell source attribution is tracked in provenance spell source tags.
+- Attribution may be exact (class page level picker) or inferred (spells page lowest-eligible assignment).
+- Class-page per-level spell displays are derived from provenance attribution metadata.
+- This is a hard cutover model; legacy spell arrays and `spellsByLevel` are not used.
 
 ## Implementation Checklist for State Changes
 

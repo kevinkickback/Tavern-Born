@@ -27,11 +27,31 @@ Without provenance, changing race/class/background can leave stale proficiencies
 
 The character carries a provenance ledger with source-tagged grant maps for:
 - proficiencies (armor, weapons, tools, languages, skills, saving throws)
+- abilityBonuses (array of `{ability, value, sourceTag}` entries)
 - features
 - feats
 - spells
 - equipment
 - choices
+
+## Background Ability Score Choices (XPHB 2024)
+
+XPHB 2024 backgrounds carry two alternative ability score blocks (field `ability[]`):
+- Block 0 (`weights: [2, 1]`): pick 2 abilities; first selection gets +2, second gets +1.
+- Block 1 (`weights: [1, 1, 1]`): pick 3 abilities; each gets +1.
+
+Character fields:
+- `backgroundAsiBlockIndex?: number` — which block the player chose (0 = +2/+1, 1 = +1/+1/+1).
+- `backgroundAsiChoices?: string[]` — ordered selections; index `i` maps to `weights[i]`.
+
+The mutation `applyBackgroundAbilityChoices(bg, blockIndex, choices)` in `useProvenanceMutations`:
+1. Removes all existing background `abilityBonuses` entries from the ledger.
+2. Writes new `abilityBonuses` entries via `addAbilityBonus` (one per choice/weight pair).
+3. Persists `backgroundAsiBlockIndex` and `backgroundAsiChoices` on the character.
+
+When a background is swapped, `reconcileBackgroundChange` → `removeGrantsBySource('background', ...)` clears all background ability bonuses and resets `backgroundAsiBlockIndex`/`backgroundAsiChoices`.
+
+The UI for choosing ability blocks and slots lives in `src/pages/build/background/BackgroundPage.tsx`. The bonuses are included in `displayBonuses` on `AbilityScoresPage` via `buildBackgroundBonuses` from `src/lib/calculations/abilityScores.ts`.
 
 ## Grant Application Pattern
 
@@ -55,6 +75,10 @@ When source entity changes:
 - Every non-user-manual grant should be traceable to a source tag.
 - Reconciliation should be additive/subtractive by source, not by brittle string matching alone.
 - UI summaries should read from ledger data rather than duplicate source logic.
+- Spell grants may include optional class-level attribution metadata:
+	- exact: selected from class-page level picker
+	- inferred-lowest-eligible: selected from spells page and attributed to the lowest eligible class level with remaining gain capacity
+- Inferred spell attribution is descriptive metadata, not a canonical source of spell ownership.
 
 ## Common Pitfalls
 

@@ -87,18 +87,20 @@ export function BuildAbilityScoresPointBuyPanel({
             score < POINT_BUY_MAX && pointBuyRemaining >= nextCost - cost;
 
           return (
-            <button
-              type="button"
+            <div
               key={ability}
               className={cn(
-                'w-full max-w-[320px] mx-auto border rounded-lg p-4 bg-card/50 cursor-pointer transition-colors',
+                'w-full max-w-[320px] mx-auto border rounded-lg p-4 bg-card/50 rounded-lg border transition-colors',
                 selectedAbility === ability
                   ? 'border-accent bg-accent/10'
                   : 'border-border hover:border-accent/60',
               )}
-              onClick={() => onSelectAbility(ability)}
             >
-              <div className="flex items-center justify-between mb-2">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => onSelectAbility(ability)}
+              >
                 <div className="text-sm font-bold text-accent uppercase tracking-wider">
                   {ABILITY_ABBREVIATIONS[ability]}
                 </div>
@@ -108,13 +110,17 @@ export function BuildAbilityScoresPointBuyPanel({
                     {racial}
                   </div>
                 )}
-              </div>
-              <div className="text-center mb-2">
+              </button>
+              <button
+                type="button"
+                className="w-full text-center mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => onSelectAbility(ability)}
+              >
                 <div className="text-3xl font-bold font-mono leading-none">
                   {total}
                 </div>
                 <div className="text-xl font-semibold mt-1">{modifier}</div>
-              </div>
+              </button>
               <div className="flex items-center justify-center gap-2">
                 <Button
                   variant="outline"
@@ -149,7 +155,7 @@ export function BuildAbilityScoresPointBuyPanel({
                   +
                 </Button>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -181,10 +187,12 @@ export function BuildAbilityScoresStandardArrayPanel({
       return;
     }
 
-    const fallback = { ...DEFAULT_STANDARD_ARRAY_ASSIGNMENT };
-    setAssignments(fallback);
-    setAllScores(fallback);
-  }, [scores, setAllScores]);
+    // Scores aren't a valid standard array assignment — update local UI state
+    // only; do NOT overwrite the character store, as the user may have arrived
+    // here from a different method (e.g. custom/point-buy) or the panel just
+    // mounted for the first time.
+    setAssignments({ ...DEFAULT_STANDARD_ARRAY_ASSIGNMENT });
+  }, [scores]);
 
   const assign = (ability: AbilityName, raw: string) => {
     const value = Number(raw);
@@ -223,18 +231,20 @@ export function BuildAbilityScoresStandardArrayPanel({
               : '—';
 
           return (
-            <button
-              type="button"
+            <div
               key={ability}
               className={cn(
-                'w-full max-w-[320px] mx-auto border rounded-lg p-4 bg-card/50 cursor-pointer transition-colors',
+                'w-full max-w-[320px] mx-auto border rounded-lg p-4 bg-card/50 rounded-lg border transition-colors',
                 selectedAbility === ability
                   ? 'border-accent bg-accent/10'
                   : 'border-border hover:border-accent/60',
               )}
-              onClick={() => onSelectAbility(ability)}
             >
-              <div className="flex items-center justify-between mb-2">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => onSelectAbility(ability)}
+              >
                 <div className="text-sm font-bold text-accent uppercase tracking-wider">
                   {ABILITY_ABBREVIATIONS[ability]}
                 </div>
@@ -244,13 +254,17 @@ export function BuildAbilityScoresStandardArrayPanel({
                     {racial}
                   </div>
                 )}
-              </div>
-              <div className="text-center mb-2">
+              </button>
+              <button
+                type="button"
+                className="w-full text-center mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => onSelectAbility(ability)}
+              >
                 <div className="text-3xl font-bold font-mono leading-none">
                   {total ?? '—'}
                 </div>
                 <div className="text-xl font-semibold mt-1">{modifier}</div>
-              </div>
+              </button>
               <div className="flex justify-center">
                 <Select
                   value={base !== undefined ? String(base) : ''}
@@ -272,7 +286,7 @@ export function BuildAbilityScoresStandardArrayPanel({
                   </SelectContent>
                 </Select>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -300,18 +314,20 @@ export function BuildAbilityScoresCustomScoresPanel({
         const modifier = formatModifier(getAbilityModifier(total));
 
         return (
-          <button
-            type="button"
+          <div
             key={ability}
             className={cn(
-              'w-full max-w-[320px] mx-auto border rounded-lg p-4 bg-card/50 cursor-pointer transition-colors',
+              'w-full max-w-[320px] mx-auto border rounded-lg p-4 bg-card/50 rounded-lg border transition-colors',
               selectedAbility === ability
                 ? 'border-accent bg-accent/10'
                 : 'border-border hover:border-accent/60',
             )}
-            onClick={() => onSelectAbility(ability)}
           >
-            <div className="flex items-center justify-between mb-2">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => onSelectAbility(ability)}
+            >
               <div className="text-sm font-bold text-accent uppercase tracking-wider">
                 {ABILITY_ABBREVIATIONS[ability]}
               </div>
@@ -321,13 +337,17 @@ export function BuildAbilityScoresCustomScoresPanel({
                   {racial}
                 </div>
               )}
-            </div>
-            <div className="text-center mb-2">
+            </button>
+            <button
+              type="button"
+              className="w-full text-center mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => onSelectAbility(ability)}
+            >
               <div className="text-3xl font-bold font-mono leading-none">
                 {total}
               </div>
               <div className="text-xl font-semibold mt-1">{modifier}</div>
-            </div>
+            </button>
             <div className="flex items-center justify-center gap-3">
               <Input
                 type="number"
@@ -344,7 +364,7 @@ export function BuildAbilityScoresCustomScoresPanel({
                 }}
               />
             </div>
-          </button>
+          </div>
         );
       })}
     </div>

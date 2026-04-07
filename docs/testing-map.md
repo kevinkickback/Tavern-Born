@@ -24,6 +24,8 @@ Key scripts in package.json:
 - Provenance section row routing helper in src/lib/provenance/sectionRows.ts
 - Provenance composed hooks in src/hooks/character/useProvenance*.ts
 - Zustand stores in src/store/*
+- Character persistence schema validation in tests/lib/characterSchema.test.ts
+- Character payload validation and rehydrate safety in tests/store/characterStore.test.ts
 - Build flow extracted helpers:
 	- src/pages/build/ability-scores/model/data.ts
 	- src/pages/build/class/model/asi.ts
@@ -34,16 +36,34 @@ Key scripts in package.json:
 	- src/pages/feats/model/selection.ts
 - Compendium entry shaping and filtering in src/lib/compendiumEntries.ts
 - Integration workflows: home page, startup modals, level-up modal (tests/integration/*)
+- Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
 - Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
+- Spell hook behavior coverage in tests/hooks/useSpellSlots.test.tsx (add/remove spells, profile management, prepared toggles)
+- Schema migrations in src/lib/schema/migrations.ts with dedicated unit coverage in tests/lib/migrations.test.ts
+- Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)
+- Spell page E2E no-character scenarios in tests/e2e/spells.spec.ts
 - Basic E2E startup/navigation smoke
+- Spell page no-character E2E baseline in tests/e2e/spells.spec.ts
 
 ## High-Priority Gaps
 
-1. Broader spell-page integration coverage (profile switching, class limits, and always-prepared special profile interactions).
-2. Save/reload persistence E2E for character lifecycle.
-3. Broader provenance reconciliation coverage for all grant pathways.
-4. Ingestion integration tests using representative real-world 5etools structures.
-5. Error-path tests for malformed JSON and missing resource files.
+1. **Character-lifecycle E2E**: Full create → edit → save → reload → verify persistence flow.
+2. **Spell workflows with active character E2E**: Profile switching, add/remove flows, prepared toggles with real character state.
+3. **Broader provenance reconciliation**: Coverage for all grant pathways and multiclass profile interactions.
+4. **Ingestion integration**: Real-world 5etools structure validation and error-path testing.
+5. **Error-path tests**: Malformed JSON, missing resources, corrupted character recovery.
+
+## Test Coverage by Layer
+
+| Layer | Actual | Aspirational | Notes |
+|-------|--------|--------------|-------|
+| Calculations (lib) | ✅ Excellent | ✅ Complete | 34+ unit tests, all passing |
+| Stores | ✅ Good | ✅ Good | Validation, rehydrate safety tested |
+| Hooks (char) | ✅ Good | ⚠️ Growing | Spell hooks expanded; more coverage needed for UI-dependent hooks |
+| Spell workflows | ✅ Good | ⚠️ Growing | Unit/integration coverage is strong; active-character E2E is the next expansion area |
+| Provenance | ✅ Good | ⚠️ Needs expansion | Core logic tested; multiclass reconciliation gaps remain |
+| Pages/Components | ⚠️ Minimal | ⚠️ Minimal | Mostly snapshot/smoke tested; full interaction E2E planned |
+| Schema migrations | ✅ Good | ✅ Good | Dedicated unit coverage in tests/lib/migrations.test.ts |
 
 ## Practical Test Patterns
 

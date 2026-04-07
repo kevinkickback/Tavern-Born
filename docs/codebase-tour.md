@@ -13,7 +13,8 @@ App shell and routing:
 Character state and lifecycle:
 - src/store/characterStore.ts
 - src/types/character.ts
-- src/types/characterSchema.ts
+- src/types/characterSchema.ts — Zod validation schema for character imports and persistence validation (separate from TypeScript types)
+- src/lib/schema/migrations.ts — Schema versioning and migration system for backward compatibility
 - src/hooks/character/*
 - src/lib/provenance/sectionRows.ts
 

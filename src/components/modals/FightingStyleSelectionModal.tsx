@@ -80,14 +80,24 @@ export function FightingStyleSelectionModal({
   selectedName,
   onConfirm,
 }: FightingStyleSelectionModalProps) {
+  // Map the stored bare name to the composite name|source key used as the item id.
+  const selectedId = selectedName
+    ? (() => {
+        const match = styles.find((s) => s.name === selectedName);
+        return match
+          ? `${match.name}|${match.source ?? ''}`
+          : `${selectedName}|`;
+      })()
+    : undefined;
+
   return (
     <SelectionModal
       open={open}
       onOpenChange={onOpenChange}
       title={title}
       items={styles}
-      getItemId={(s) => s.name}
-      initialSelectedIds={selectedName ? [selectedName] : []}
+      getItemId={(s) => `${s.name}|${s.source ?? ''}`}
+      initialSelectedIds={selectedId ? [selectedId] : []}
       matchItem={(item, search) => {
         if (search && !item.name.toLowerCase().includes(search.toLowerCase()))
           return false;

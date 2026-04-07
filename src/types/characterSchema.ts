@@ -167,6 +167,138 @@ export const itemFilterSchema = z.object({
 export const variantRulesSchema = z.object({
   optionalClassFeatures: z.boolean().default(false),
   averageHitPoints: z.boolean().default(true),
+  abilityScoreMethod: z
+    .enum(['point-buy', 'standard-array', 'custom'])
+    .optional(),
+});
+
+export const characterClassEntrySchema = z.object({
+  name: z.string().min(1),
+  source: z.string().optional(),
+  levels: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+  subclass: z.string().optional(),
+  subclassSource: z.string().optional(),
+});
+
+export const featureSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  source: z.string().min(1),
+  description: z.string(),
+  level: z.number().int().optional(),
+});
+
+export const featSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  source: z.string().min(1),
+  description: z.string(),
+  prerequisites: z.string().optional(),
+});
+
+export const equipmentSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  type: z.string().min(1),
+  quantity: z.number().int().min(0),
+  equipped: z.boolean(),
+  attuned: z.boolean().optional(),
+  description: z.string().optional(),
+  weight: z.number().optional(),
+  value: z.number().optional(),
+  rarity: z.string().optional(),
+  source: z.string().optional(),
+  reqAttune: z.boolean().optional(),
+  ac: z.number().optional(),
+  armorType: z.enum(['light', 'medium', 'heavy', 'shield']).optional(),
+});
+
+export const hitPointsSchema = z.object({
+  max: z.number().int().min(0),
+  current: z.number().int().min(0),
+  temporary: z.number().int().min(0),
+});
+
+const savingThrowEntrySchema = z.object({
+  proficient: z.boolean(),
+  bonus: z.number().int(),
+});
+
+export const savingThrowsSchema = z.object({
+  strength: savingThrowEntrySchema,
+  dexterity: savingThrowEntrySchema,
+  constitution: savingThrowEntrySchema,
+  intelligence: savingThrowEntrySchema,
+  wisdom: savingThrowEntrySchema,
+  charisma: savingThrowEntrySchema,
+});
+
+export const skillsSchema = z.record(
+  z.object({
+    proficient: z.boolean(),
+    expertise: z.boolean(),
+    bonus: z.number().int(),
+  }),
+);
+
+export const portraitTransformSchema = z.object({
+  zoom: z.number(),
+  panX: z.number(),
+  panY: z.number(),
+  rotation: z.number(),
+});
+
+export const allySchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  relationship: z.string(),
+  description: z.string(),
+});
+
+export const characterDetailsSchema = z.object({
+  gender: z.string().optional(),
+  alignment: z.string().optional(),
+  faith: z.string().optional(),
+  lifestyle: z.string().optional(),
+  personalityTraits: z.string().optional(),
+  personality: z.string().optional(),
+  ideals: z.string().optional(),
+  bonds: z.string().optional(),
+  flaws: z.string().optional(),
+  goals: z.string().optional(),
+  fears: z.string().optional(),
+  age: z.number().int().optional(),
+  height: z.string().optional(),
+  weight: z.string().optional(),
+  eyes: z.string().optional(),
+  skin: z.string().optional(),
+  hair: z.string().optional(),
+  distinguishingMarks: z.string().optional(),
+  physicalDescription: z.string().optional(),
+  appearance: z.string().optional(),
+  clothingStyle: z.string().optional(),
+  mannerisms: z.string().optional(),
+  faction: z.string().optional(),
+  rank: z.string().optional(),
+  factionNotes: z.string().optional(),
+  patron: z.string().optional(),
+  patronDetails: z.string().optional(),
+  nemesis: z.string().optional(),
+  allies: z.array(allySchema).optional(),
+  origin: z.string().optional(),
+  family: z.string().optional(),
+  definingMoment: z.string().optional(),
+  lifeEvents: z.string().optional(),
+  backstory: z.string().optional(),
+  alliesAndOrganizations: z.string().optional(),
+});
+
+export const proficienciesSchema = z.object({
+  armor: z.array(z.string()),
+  weapons: z.array(z.string()),
+  tools: z.array(z.string()),
+  languages: z.array(z.string()),
+  savingThrows: z.array(z.string()),
 });
 
 export const sourceTypeSchema = z.enum([
@@ -206,6 +338,10 @@ export const sourceTagSchema = z.object({
   sourceName: z.string(),
   sourceRef: z.string().optional(),
   grantType: grantTypeSchema,
+  spellGrantedAtLevel: z.number().int().min(1).optional(),
+  spellAttributionMode: z
+    .enum(['exact', 'inferred-lowest-eligible'])
+    .optional(),
   label: z.string(),
 });
 
@@ -285,6 +421,86 @@ export const wizardStep6Schema = z.object({
   abilityScores: abilityScoresSchema.optional(),
 });
 
+export const spellSlotLevelSchema = z
+  .object({
+    max: z.number().int().min(0),
+    used: z.number().int().min(0),
+  })
+  .refine((sl) => sl.used <= sl.max, {
+    message: 'Spell slots used cannot exceed max',
+    path: ['used'],
+  });
+
+export const spellSlotsSchema = z.object({
+  level1: spellSlotLevelSchema,
+  level2: spellSlotLevelSchema,
+  level3: spellSlotLevelSchema,
+  level4: spellSlotLevelSchema,
+  level5: spellSlotLevelSchema,
+  level6: spellSlotLevelSchema,
+  level7: spellSlotLevelSchema,
+  level8: spellSlotLevelSchema,
+  level9: spellSlotLevelSchema,
+});
+
+export const spellProfileSchema = z
+  .object({
+    id: z.string().min(1, 'Spell profile ID is required'),
+    type: z.enum(['class', 'special']),
+    label: z.string().min(1, 'Spell profile label is required'),
+    className: z.string().optional(),
+    classSource: z.string().optional(),
+    cantrips: z.array(z.string()).default([]),
+    spellsKnown: z.array(z.string()).default([]),
+    preparedSpells: z.array(z.string()).default([]),
+    alwaysPrepared: z.boolean().optional(),
+  })
+  .refine(
+    (profile) => {
+      if (profile.type === 'class' && !profile.className) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'Class-type spell profiles must have className',
+      path: ['className'],
+    },
+  );
+
+export const spellSelectionSchema = z
+  .object({
+    spellProfiles: z
+      .array(spellProfileSchema)
+      .min(1, 'At least one spell profile must exist'),
+    spellSlots: spellSlotsSchema,
+  })
+  .refine(
+    (selection) => {
+      const hasUnrestricted = selection.spellProfiles.some(
+        (p) => p.id === 'special:unrestricted',
+      );
+      return hasUnrestricted;
+    },
+    {
+      message: 'Spell selection must include special:unrestricted profile',
+      path: ['spellProfiles'],
+    },
+  )
+  .refine(
+    (selection) => {
+      const unrestricted = selection.spellProfiles.find(
+        (p) => p.id === 'special:unrestricted',
+      );
+      return unrestricted?.alwaysPrepared === true;
+    },
+    {
+      message:
+        'special:unrestricted spell profile must have alwaysPrepared set to true',
+      path: ['spellProfiles'],
+    },
+  );
+
 /** Full character schema for file import / data integrity checks. */
 export const asiChoiceSchema = z.object({
   id: z.string(),
@@ -295,25 +511,56 @@ export const asiChoiceSchema = z.object({
 
 export const characterSchema = z.object({
   id: z.string().min(1),
-  version: z.string().optional(),
+  version: z.string().default('1.0.0'),
   name: z.string().min(1).max(100),
   race: z.string(),
+  raceSource: z.string().optional(),
   subrace: z.string().optional(),
+  subraceSource: z.string().optional(),
   class: z.string(),
+  classSource: z.string().optional(),
+  subclass: z.string().optional(),
+  subclassSource: z.string().optional(),
   background: z.string(),
+  backgroundSource: z.string().optional(),
   level: levelSchema,
   experiencePoints: z.number().int().min(0).default(0),
+  classProgression: z.array(characterClassEntrySchema).optional(),
   abilityScores: abilityScoresSchema,
+  proficiencies: proficienciesSchema,
+  features: z.array(featureSchema),
+  feats: z.array(featSchema),
   allowedSources: z.array(z.string()).default(['PHB']),
   variantRules: variantRulesSchema.optional(),
+  raceAsiChoices: z.array(z.array(z.string())).optional(),
+  backgroundAsiBlockIndex: z.number().int().nonnegative().optional(),
+  backgroundAsiChoices: z.array(z.string()).optional(),
+  spells: spellSelectionSchema,
+  equipment: z.array(equipmentSchema),
+  hitPoints: hitPointsSchema,
+  armorClass: z.number().int(),
+  initiative: z.number().int(),
+  speed: z.number().int(),
+  savingThrows: savingThrowsSchema,
+  skills: skillsSchema,
+  details: characterDetailsSchema,
+  portrait: z.string().optional(),
+  portraitTransform: portraitTransformSchema.optional(),
   asiChoices: z.array(asiChoiceSchema).optional(),
+  specialFeats: z.array(featSchema).optional(),
   provenance: provenanceLedgerSchema.optional(),
   createdAt: z.string(),
   lastModified: z.string(),
 });
+
+export const characterPersistenceSchema = characterSchema;
 
 export type AbilityName = z.infer<typeof abilityNameSchema>;
 export type AbilityScores = z.infer<typeof abilityScoresSchema>;
 export type AbilityScoreMethod = z.infer<typeof abilityScoreMethodSchema>;
 export type ProficiencyType = z.infer<typeof proficiencyTypeSchema>;
 export type CharacterImport = z.infer<typeof characterSchema>;
+export type SpellSlotLevel = z.infer<typeof spellSlotLevelSchema>;
+export type SpellSlots = z.infer<typeof spellSlotsSchema>;
+export type SpellProfile = z.infer<typeof spellProfileSchema>;
+export type SpellSelection = z.infer<typeof spellSelectionSchema>;

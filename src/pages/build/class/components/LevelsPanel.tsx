@@ -15,7 +15,7 @@ import {
   type OptionalFeatureLike,
   optFeatureTypeToFull,
 } from '@/lib/5etools/classData';
-import { buildClassSpellLevelKey } from '@/lib/calculations/spellProfiles';
+import { buildClassSpellSelectionsByLevel } from '@/lib/calculations/spellProfiles';
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools';
 import type {
   AsiChoice,
@@ -138,6 +138,12 @@ export function BuildClassLevelsPanel({
   onClearFeatSelectionsForAsi,
   getOrdinalForm,
 }: BuildClassLevelsPanelProps) {
+  const spellSelectionsByLevel = buildClassSpellSelectionsByLevel({
+    character,
+    className: viewingClass,
+    classSource: viewingClassSource,
+  });
+
   return (
     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
       <div className="p-4 border-b border-border flex-shrink-0">
@@ -396,15 +402,7 @@ export function BuildClassLevelsPanel({
                           <BuildClassSpellSection
                             level={lv}
                             spellGain={spellGain}
-                            chosenNames={
-                              character.spellsByLevel?.[
-                                buildClassSpellLevelKey(
-                                  viewingClass,
-                                  viewingClassSource,
-                                  lv,
-                                )
-                              ] ?? []
-                            }
+                            chosenNames={spellSelectionsByLevel.get(lv) ?? []}
                             spellByName={spellByName}
                             detailCollapsed={detailCollapsed}
                             onOpenSpellPicker={onOpenSpellPicker}

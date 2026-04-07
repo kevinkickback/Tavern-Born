@@ -17,19 +17,26 @@ import {
 interface UseProvenanceRowsParams {
   ledger: ProvenanceLedger;
   raceAsiChoices?: string[][];
+  backgroundAsiChoices?: string[];
 }
 
 export function useProvenanceRows({
   ledger,
   raceAsiChoices,
+  backgroundAsiChoices,
 }: UseProvenanceRowsParams) {
   const proficiencyRows = useMemo(
     () => getAllProficiencyRows(ledger),
     [ledger],
   );
   const abilityBonusRows = useMemo(
-    () => getAbilityBonusRows(ledger, raceAsiChoices ?? undefined),
-    [ledger, raceAsiChoices],
+    () =>
+      getAbilityBonusRows(
+        ledger,
+        raceAsiChoices ?? undefined,
+        backgroundAsiChoices ?? undefined,
+      ),
+    [ledger, raceAsiChoices, backgroundAsiChoices],
   );
   const featRows = useMemo(() => getFeatRows(ledger), [ledger]);
   const featureRows = useMemo(() => getFeatureRows(ledger), [ledger]);

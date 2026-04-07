@@ -1,6 +1,50 @@
+import DOMPurify from 'dompurify';
+
+function sanitizeRenderedHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: [
+      'a',
+      'b',
+      'br',
+      'caption',
+      'code',
+      'em',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'i',
+      'li',
+      'ol',
+      'p',
+      'pre',
+      'span',
+      'strong',
+      'sup',
+      'table',
+      'tbody',
+      'td',
+      'th',
+      'thead',
+      'tr',
+      'ul',
+    ],
+    ALLOWED_ATTR: [
+      'class',
+      'data-hover-name',
+      'data-hover-source',
+      'data-hover-type',
+      'href',
+      'target',
+      'title',
+    ],
+    ALLOW_DATA_ATTR: false,
+  });
+}
+
 export function renderEntry(entry: unknown): string {
   if (typeof entry === 'string') {
-    return renderTags(entry);
+    return sanitizeRenderedHtml(renderTags(entry));
   }
 
   if (typeof entry === 'object' && entry !== null) {
@@ -21,14 +65,14 @@ export function renderEntry(entry: unknown): string {
       if (entryObj.entries) {
         result += entryObj.entries.map(renderEntry).join(' ');
       }
-      return result;
+      return sanitizeRenderedHtml(result);
     }
 
     if (entryObj.type === 'list') {
       const items = (entryObj.items ?? [])
         .map((item) => `<li>${renderEntry(item)}</li>`)
         .join('');
-      return `<ul>${items}</ul>`;
+      return sanitizeRenderedHtml(`<ul>${items}</ul>`);
     }
 
     if (entryObj.type === 'table') {
@@ -53,13 +97,15 @@ export function renderEntry(entry: unknown): string {
           return `<tr>${cells}</tr>`;
         })
         .join('');
-      return `<table class="w-full border-collapse my-3">${caption}${thead}<tbody>${tbody}</tbody></table>`;
+      return sanitizeRenderedHtml(
+        `<table class="w-full border-collapse my-3">${caption}${thead}<tbody>${tbody}</tbody></table>`,
+      );
     }
 
     if (entryObj.type === 'inset') {
-      return entryObj.entries
-        ? entryObj.entries.map(renderEntry).join(' ')
-        : '';
+      return sanitizeRenderedHtml(
+        entryObj.entries ? entryObj.entries.map(renderEntry).join(' ') : '',
+      );
     }
 
     if (entryObj.type === 'refSubclassFeature') {
@@ -72,13 +118,15 @@ export function renderEntry(entry: unknown): string {
           : typeof (entryObj as { name?: unknown }).name === 'string'
             ? (entryObj as { name: string }).name
             : '';
-      return featureName
-        ? `<em class="text-muted-foreground text-sm">${featureName}</em>`
-        : '';
+      return sanitizeRenderedHtml(
+        featureName
+          ? `<em class="text-muted-foreground text-sm">${featureName}</em>`
+          : '',
+      );
     }
   }
 
-  return '';
+  return sanitizeRenderedHtml('');
 }
 
 export function renderTags(text: string): string {
@@ -362,7 +410,15 @@ export function renderTags(text: string): string {
   );
   result = result.replace(
     /{@link ([^|}]+)\|([^}]+)}/g,
-    '<a href="$2" class="text-primary underline cursor-pointer">$1</a>',
+    (_match, label: string, url: string) => {
+      // Only allow safe schemes — reject javascript:, data:, etc.
+      const trimmed = url.trim();
+      if (!trimmed.startsWith('https://') && !trimmed.startsWith('http://')) {
+        return label; // strip unsafe link, keep display text
+      }
+      const safeUrl = trimmed.replace(/"/g, '%22').replace(/'/g, '%27');
+      return `<a href="${safeUrl}" class="text-primary underline cursor-pointer">${label}</a>`;
+    },
   );
   result = result.replace(
     /{@5etools ([^|}]+)(?:\|[^}]*)?}/g,
@@ -403,7 +459,7 @@ export function renderTags(text: string): string {
 
   result = `<p>${result}</p>`;
 
-  return result;
+  return sanitizeRenderedHtml(result);
 }
 
 export function extractPlainText(entry: unknown): string {

@@ -36,6 +36,7 @@ import {
   checkMulticlassRequirements,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules';
+import { reconcileClassChange } from '@/lib/provenance/reconciliation';
 import { cn } from '@/lib/utils';
 import { useCharacterStore } from '@/store/characterStore';
 import type { Class5e } from '@/types/5etools';
@@ -102,11 +103,32 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
   function syncUpdate(newProgression: CharacterClassEntry[]) {
     const newTotal = newProgression.reduce((s, e) => s + e.levels, 0);
+
+    // Reconcile provenance for any class entries that were fully removed.
+    // This prevents orphaned grants (proficiencies, features, spells) from
+    // lingering after a multiclass entry is dropped.
+    const removedEntries = classProgression.filter(
+      (old) => !newProgression.some((n) => n.name === old.name),
+    );
+    let updatedProvenance = character?.provenance;
+    if (removedEntries.length > 0 && updatedProvenance) {
+      for (const removed of removedEntries) {
+        updatedProvenance = reconcileClassChange(
+          updatedProvenance,
+          removed.name,
+          undefined,
+        );
+      }
+    }
+
     updateCharacter(character?.id, {
       classProgression: newProgression,
       level: newTotal,
       class: newProgression[0]?.name ?? character?.class,
       classSource: newProgression[0]?.source ?? character?.classSource,
+      ...(updatedProvenance && updatedProvenance !== character?.provenance
+        ? { provenance: updatedProvenance }
+        : {}),
     });
   }
 
