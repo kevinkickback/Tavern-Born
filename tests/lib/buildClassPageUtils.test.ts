@@ -166,11 +166,31 @@ describe('buildClassPageUtils', () => {
   test('buildCharacterSnapshot includes progression and spell details', () => {
     const character = makeCharacterFixture({
       class: 'Wizard',
+      classSource: 'PHB',
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
       spells: {
-        cantrips: ['Fire Bolt'],
-        spellsKnown: ['Shield'],
-        preparedSpells: ['Magic Missile'],
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard (Lv 3)',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: ['Fire Bolt'],
+            spellsKnown: ['Shield'],
+            preparedSpells: ['Magic Missile'],
+            alwaysPrepared: false,
+          },
+          {
+            id: 'special:unrestricted',
+            type: 'special',
+            label: 'Special (Unrestricted)',
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
         spellSlots: {
           level1: { max: 4, used: 0 },
           level2: { max: 2, used: 0 },
@@ -240,7 +260,7 @@ describe('buildClassPageUtils', () => {
     ]);
   });
 
-  test('filterClassSpells keeps unscoped spells and matching class spells', () => {
+  test('filterClassSpells keeps only matching class spells', () => {
     const spells = [
       {
         name: 'Magic Missile',
@@ -258,6 +278,6 @@ describe('buildClassPageUtils', () => {
 
     expect(
       filterClassSpells(spells, 'Wizard').map((spell) => spell.name),
-    ).toEqual(['Magic Missile', 'Universal Spell']);
+    ).toEqual(['Magic Missile']);
   });
 });

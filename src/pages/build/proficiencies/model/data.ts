@@ -59,8 +59,27 @@ function addUniqueByNorm(list: string[], value: unknown): string[] {
 }
 
 export function hasProfInArray(arr: string[], name: string): boolean {
-  const norm = normalizeKey(name);
-  return arr.some((value) => normalizeKey(value) === norm);
+  const toVariants = (value: string): string[] => {
+    const key = normalizeKey(value);
+    const variants = new Set<string>([key]);
+    if (key.endsWith('ies') && key.length > 3) {
+      variants.add(`${key.slice(0, -3)}y`);
+    }
+    if (key.endsWith('es') && key.length > 2) {
+      variants.add(key.slice(0, -2));
+    }
+    if (key.endsWith('s') && key.length > 1) {
+      variants.add(key.slice(0, -1));
+    }
+    variants.add(`${key}s`);
+    variants.add(`${key}es`);
+    return Array.from(variants);
+  };
+
+  const target = new Set(toVariants(name));
+  return arr.some((value) =>
+    toVariants(value).some((variant) => target.has(variant)),
+  );
 }
 
 export function buildSkillDescriptions(

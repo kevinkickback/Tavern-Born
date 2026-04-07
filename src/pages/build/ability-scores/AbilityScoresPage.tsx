@@ -9,6 +9,8 @@ import { useProvenance } from '@/hooks/character/useProvenance';
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
 import {
   type AbilityName,
+  buildBackgroundBonuses,
+  getBackgroundAbilityData,
   getRaceAbilityData,
 } from '@/lib/calculations/abilityScores';
 import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills';
@@ -20,12 +22,10 @@ import {
   BuildAbilityScoresPointBuyPanel,
   BuildAbilityScoresStandardArrayPanel,
 } from '@/pages/build/ability-scores/components/MethodPanels';
-import { BuildAbilityScoresRacialBonusesPanel } from '@/pages/build/ability-scores/components/RacialBonusesPanel';
 import {
   buildRacialBonuses,
   buildSkillDetailsMap,
   selectSkillDetails,
-  updateRaceAsiChoices,
 } from '@/pages/build/ability-scores/model/data';
 import { useCharacterStore } from '@/store/characterStore';
 import { useGameDataStore } from '@/store/gameDataStore';
@@ -35,7 +35,7 @@ export function BuildAbilityScoresPage() {
   const character = useCharacterStore((s) => s.activeCharacter);
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
   const gameData = useGameDataStore((s) => s.gameData);
-  const { races } = useFilteredGameData();
+  const { races, backgrounds } = useFilteredGameData();
   const { scores, setScore, setAllScores, pointBuyTotal, pointBuyRemaining } =
     useAbilityScores();
   const { getSourcesRowsBySection } = useProvenance();
@@ -56,11 +56,93 @@ export function BuildAbilityScoresPage() {
   ) as Race5e | undefined;
   const raceAsiData = getRaceAbilityData(selectedRace, subraceData);
   const raceAsiChoices: string[][] = character?.raceAsiChoices ?? [];
+  const hasDataDrivenRacialBonuses =
+    raceAsiData.fixed.length > 0 || raceAsiData.choices.length > 0;
+
+  const selectedBg = backgrounds.find((b) =>
+    matchesGameDataEntry(character?.background, character?.backgroundSource, b),
+  );
+  const bgAsiData = getBackgroundAbilityData(selectedBg);
+  const backgroundBonuses = useMemo(
+    () =>
+      buildBackgroundBonuses(
+        bgAsiData,
+        character?.backgroundAsiBlockIndex ?? 0,
+        character?.backgroundAsiChoices ?? [],
+      ),
+    [
+      bgAsiData,
+      character?.backgroundAsiBlockIndex,
+      character?.backgroundAsiChoices,
+    ],
+  );
+
+  const provenanceRacialBonuses = useMemo(() => {
+    const bonuses: Partial<Record<AbilityName, number>> = {};
+    const records = character?.provenance?.abilityBonuses ?? [];
+    for (const record of records) {
+      const tag = record.sourceTag;
+      const isRelevantSource =
+        (tag.sourceType === 'race' &&
+          tag.sourceName === character?.race &&
+          (tag.sourceRef ?? '') === (character?.raceSource ?? '')) ||
+        (tag.sourceType === 'subrace' &&
+          tag.sourceName === (character?.subrace ?? '') &&
+          (tag.sourceRef ?? '') === (character?.subraceSource ?? ''));
+
+      if (!isRelevantSource) continue;
+      const ability = record.ability as AbilityName;
+      bonuses[ability] = (bonuses[ability] ?? 0) + record.value;
+    }
+    return bonuses;
+  }, [
+    character?.provenance?.abilityBonuses,
+    character?.race,
+    character?.raceSource,
+    character?.subrace,
+    character?.subraceSource,
+  ]);
 
   const racialBonuses = useMemo(
-    () => buildRacialBonuses(raceAsiData, raceAsiChoices),
-    [raceAsiChoices, raceAsiData],
+    () =>
+      hasDataDrivenRacialBonuses
+        ? buildRacialBonuses(raceAsiData, raceAsiChoices)
+        : provenanceRacialBonuses,
+    [
+      hasDataDrivenRacialBonuses,
+      provenanceRacialBonuses,
+      raceAsiChoices,
+      raceAsiData,
+    ],
   );
+
+  const asiBonuses = useMemo(() => {
+    const bonuses: Partial<Record<AbilityName, number>> = {};
+    for (const choice of character?.asiChoices ?? []) {
+      for (const [abilityName, amount] of Object.entries(
+        choice.abilityChanges,
+      )) {
+        const ability = abilityName as AbilityName;
+        bonuses[ability] = (bonuses[ability] ?? 0) + amount;
+      }
+    }
+    return bonuses;
+  }, [character?.asiChoices]);
+
+  const displayBonuses = useMemo(() => {
+    const merged: Partial<Record<AbilityName, number>> = {};
+    for (const ability of Object.keys(racialBonuses) as AbilityName[]) {
+      merged[ability] = (merged[ability] ?? 0) + (racialBonuses[ability] ?? 0);
+    }
+    for (const ability of Object.keys(backgroundBonuses) as AbilityName[]) {
+      merged[ability] =
+        (merged[ability] ?? 0) + (backgroundBonuses[ability] ?? 0);
+    }
+    for (const ability of Object.keys(asiBonuses) as AbilityName[]) {
+      merged[ability] = (merged[ability] ?? 0) + (asiBonuses[ability] ?? 0);
+    }
+    return merged;
+  }, [asiBonuses, backgroundBonuses, racialBonuses]);
 
   const skillDetailsMap = useMemo(
     () => buildSkillDetailsMap(gameData?.skills),
@@ -122,7 +204,20 @@ export function BuildAbilityScoresPage() {
               <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
                 <ScrollArea className="flex-1 overflow-hidden">
                   <div className="p-4">
-                    <Tabs defaultValue={method}>
+                    <Tabs
+                      value={method}
+                      onValueChange={(v) =>
+                        updateCharacter(character.id, {
+                          variantRules: {
+                            ...character.variantRules,
+                            abilityScoreMethod: v as
+                              | 'point-buy'
+                              | 'standard-array'
+                              | 'custom',
+                          },
+                        })
+                      }
+                    >
                       <TabsList className="mb-6">
                         <TabsTrigger value="point-buy">Point Buy</TabsTrigger>
                         <TabsTrigger value="standard-array">
@@ -134,7 +229,7 @@ export function BuildAbilityScoresPage() {
                       <TabsContent value="point-buy">
                         <BuildAbilityScoresPointBuyPanel
                           scores={scores}
-                          racialBonuses={racialBonuses}
+                          racialBonuses={displayBonuses}
                           pointBuyTotal={pointBuyTotal}
                           pointBuyRemaining={pointBuyRemaining}
                           setScore={setScore}
@@ -146,7 +241,7 @@ export function BuildAbilityScoresPage() {
                       <TabsContent value="standard-array">
                         <BuildAbilityScoresStandardArrayPanel
                           scores={scores}
-                          racialBonuses={racialBonuses}
+                          racialBonuses={displayBonuses}
                           setAllScores={setAllScores}
                           selectedAbility={selectedAbility}
                           onSelectAbility={setSelectedAbility}
@@ -156,36 +251,20 @@ export function BuildAbilityScoresPage() {
                       <TabsContent value="custom">
                         <BuildAbilityScoresCustomScoresPanel
                           scores={scores}
-                          racialBonuses={racialBonuses}
+                          racialBonuses={displayBonuses}
                           setScore={setScore}
                           selectedAbility={selectedAbility}
                           onSelectAbility={setSelectedAbility}
                         />
                       </TabsContent>
                     </Tabs>
-
-                    <BuildAbilityScoresRacialBonusesPanel
-                      raceAsiData={raceAsiData}
-                      raceAsiChoices={raceAsiChoices}
-                      onUpdateChoice={(blockIdx, slotIdx, value) => {
-                        const nextChoices = updateRaceAsiChoices(
-                          raceAsiChoices,
-                          blockIdx,
-                          slotIdx,
-                          value,
-                        );
-                        updateCharacter(character.id, {
-                          raceAsiChoices: nextChoices,
-                        });
-                      }}
-                    />
                   </div>
                 </ScrollArea>
 
                 <div className="px-4 pb-4 border-t border-border">
                   <SourcesAccordion
                     sectionId="build-ability-scores"
-                    title="Racial & Bonus Sources"
+                    title="Sources"
                     rows={getSourcesRowsBySection('build-ability-scores')}
                     emptyText="No ability bonus sources recorded. Select a race to get started."
                   />

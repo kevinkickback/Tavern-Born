@@ -36,6 +36,7 @@ export function useProvenance() {
   const rows = useProvenanceRows({
     ledger,
     raceAsiChoices: character?.raceAsiChoices,
+    backgroundAsiChoices: character?.backgroundAsiChoices,
   });
 
   return {

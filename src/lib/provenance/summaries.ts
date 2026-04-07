@@ -25,6 +25,16 @@ function formatTags(tags: SourceTag[]): string {
   return getSourceTypes(tags).map(formatSourceType).join(', ');
 }
 
+function formatAbilityBonusAttribution(tag: SourceTag): string {
+  if (
+    tag.label.toLowerCase() === 'asi' ||
+    tag.sourceName.toLowerCase() === 'ability score improvement'
+  ) {
+    return 'ASI';
+  }
+  return formatSourceType(tag.sourceType);
+}
+
 function rowsFromMap(
   map: Record<string, SourceTag[]>,
   category: string,
@@ -113,21 +123,23 @@ export function getAllProficiencyRows(ledger: ProvenanceLedger): {
 export function getAbilityBonusRows(
   ledger: ProvenanceLedger,
   raceAsiChoices?: string[][],
+  backgroundAsiChoices?: string[],
 ): SourceRow[] {
   const rows: SourceRow[] = ledger.abilityBonuses.map((r) => ({
     itemName: `${r.ability.toUpperCase().slice(0, 3).toUpperCase()} +${r.value}`,
     category: 'Ability Bonuses',
-    attribution: formatSourceType(r.sourceTag.sourceType),
+    attribution: formatAbilityBonusAttribution(r.sourceTag),
     sourceTypes: [r.sourceTag.sourceType],
     isPending: false,
   }));
 
   // abilityBonuses choice records in ledger order — index matches raceAsiChoices blockIdx
-  const abiChoices = ledger.choices.filter(
-    (c) => c.domain === 'abilityBonuses',
+  const raceAbiChoices = ledger.choices.filter(
+    (c) =>
+      c.domain === 'abilityBonuses' && c.sourceTag.sourceType !== 'background',
   );
 
-  const pending = abiChoices
+  const pending = raceAbiChoices
     .filter((c) => c.status === 'pending' || c.status === 'partially-resolved')
     .flatMap((c, idx) => {
       const source = formatSourceType(c.sourceTag.sourceType);
@@ -159,6 +171,30 @@ export function getAbilityBonusRows(
         },
       ];
     });
+
+  // Background ability bonus pending row (no choices yet)
+  const bgAbiChoices = ledger.choices.filter(
+    (c) =>
+      c.domain === 'abilityBonuses' && c.sourceTag.sourceType === 'background',
+  );
+  if (bgAbiChoices.length > 0 && !backgroundAsiChoices?.some(Boolean)) {
+    for (const c of bgAbiChoices) {
+      const pool =
+        c.optionPool.length > 0
+          ? ` from ${c.optionPool.map((a) => a.toUpperCase().slice(0, 3)).join('/')}`
+          : '';
+      pending.push({
+        itemName: `choose ${c.chooseCount} ability bonus${pool}`,
+        category: 'Ability Bonuses',
+        attribution: 'background',
+        sourceTypes: ['background'],
+        isPending: true,
+      });
+    }
+  }
+
+  // Background ASI resolved rows come from ledger.abilityBonuses (background-tagged) which are
+  // already included in the rows array above — no extra work needed once choices are applied.
 
   return [...rows, ...pending];
 }

@@ -185,9 +185,41 @@ export function applyClassSpellGrant(
   classSource: string | undefined,
   spellName: string,
   grantType: 'fixed' | 'choice',
+  options?: {
+    spellGrantedAtLevel?: number;
+    spellAttributionMode?: 'exact' | 'inferred-lowest-eligible';
+  },
 ): ProvenanceLedger {
-  const tag = makeSourceTag('class', className, grantType, classSource);
-  return addGrant(ledger, 'spells', spellName, tag);
+  const normSpell = normalizeKey(spellName);
+  const existingTags = ledger.spells[normSpell] ?? [];
+  const retained = existingTags.filter(
+    (tag) =>
+      !(
+        tag.sourceType === 'class' &&
+        tag.sourceName === className &&
+        (tag.sourceRef ?? '') === (classSource ?? '')
+      ),
+  );
+
+  const nextSpells =
+    retained.length > 0
+      ? { ...ledger.spells, [normSpell]: retained }
+      : Object.fromEntries(
+          Object.entries(ledger.spells).filter(([key]) => key !== normSpell),
+        );
+
+  const nextLedger = { ...ledger, spells: nextSpells };
+  const tag = {
+    ...makeSourceTag('class', className, grantType, classSource),
+    ...(options?.spellGrantedAtLevel
+      ? { spellGrantedAtLevel: options.spellGrantedAtLevel }
+      : {}),
+    ...(options?.spellAttributionMode
+      ? { spellAttributionMode: options.spellAttributionMode }
+      : {}),
+  };
+
+  return addGrant(nextLedger, 'spells', spellName, tag);
 }
 
 /**

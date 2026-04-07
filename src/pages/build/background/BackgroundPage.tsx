@@ -13,6 +13,11 @@ import {
 } from '@/components/ui/select';
 import { useProvenance } from '@/hooks/character/useProvenance';
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
+import {
+  ABILITY_ABBREVIATIONS,
+  type AbilityName,
+  getBackgroundAbilityData,
+} from '@/lib/calculations/abilityScores';
 import { matchesGameDataEntry } from '@/lib/characterUtils';
 import { cn } from '@/lib/utils';
 import { NoCharCard } from '@/pages/_shared';
@@ -32,7 +37,8 @@ export function BuildBackgroundPage() {
   const { backgrounds } = useFilteredGameData();
   const [detailCollapsed, setDetailCollapsed] = useState(false);
   const [bgSearch, setBgSearch] = useState('');
-  const { applyBackgroundSelection } = useProvenance();
+  const { applyBackgroundSelection, applyBackgroundAbilityChoices } =
+    useProvenance();
   const selectedBackgroundRef = useRef<HTMLDivElement | null>(null);
   const isInitialLoadRef = useRef(true);
   const previousSearchRef = useRef('');
@@ -93,6 +99,9 @@ export function BuildBackgroundPage() {
   const langs = getBackgroundLanguageNames(selectedBg);
   const tools = getBackgroundToolNames(selectedBg);
   const equipmentPackages = getBackgroundEquipmentPackages(selectedBg);
+  const bgAsiData = getBackgroundAbilityData(selectedBg);
+  const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0;
+  const bgChoices = character.backgroundAsiChoices ?? [];
 
   return (
     <div className="h-full flex flex-col">
@@ -211,6 +220,111 @@ export function BuildBackgroundPage() {
                     })}
                   </div>
                 </ScrollArea>
+                {selectedBg && bgAsiData.blocks.length > 0 && (
+                  <div className="border-t border-border p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Ability Score Improvements
+                      </span>
+                      {bgAsiData.blocks.length > 1 && (
+                        <div className="flex rounded-md border border-border overflow-hidden text-xs">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              applyBackgroundAbilityChoices(selectedBg, 0, [])
+                            }
+                            className={cn(
+                              'px-2 py-1 transition-colors',
+                              bgBlockIndex === 0
+                                ? 'bg-accent text-accent-foreground'
+                                : 'hover:bg-muted',
+                            )}
+                          >
+                            +2 / +1
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              applyBackgroundAbilityChoices(selectedBg, 1, [])
+                            }
+                            className={cn(
+                              'px-2 py-1 border-l border-border transition-colors',
+                              bgBlockIndex === 1
+                                ? 'bg-accent text-accent-foreground'
+                                : 'hover:bg-muted',
+                            )}
+                          >
+                            +1 / +1 / +1
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {(() => {
+                        const block =
+                          bgAsiData.blocks[bgBlockIndex] ?? bgAsiData.blocks[0];
+                        const slotLabels = ['first', 'second', 'third'];
+                        const slots = block.weights.map((weight, i) => ({
+                          weight,
+                          key: slotLabels[i] ?? `slot${i + 1}`,
+                          index: i,
+                        }));
+                        return slots.map(
+                          ({ weight, key, index: slotIndex }) => {
+                            const currentChoice =
+                              (bgChoices[slotIndex] as
+                                | AbilityName
+                                | undefined) ?? '';
+                            return (
+                              <div
+                                key={key}
+                                className="flex items-center gap-2"
+                              >
+                                <span className="text-xs font-semibold text-primary w-6 text-right shrink-0">
+                                  +{weight}
+                                </span>
+                                <Select
+                                  value={currentChoice}
+                                  onValueChange={(val) => {
+                                    const newChoices = Array.from<string>({
+                                      length: block.weights.length,
+                                    }).map((_, i) => bgChoices[i] ?? '');
+                                    newChoices[slotIndex] = val;
+                                    applyBackgroundAbilityChoices(
+                                      selectedBg,
+                                      bgBlockIndex,
+                                      newChoices,
+                                    );
+                                  }}
+                                >
+                                  <SelectTrigger className="h-7 text-xs flex-1">
+                                    <SelectValue placeholder="Choose ability…" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {block.from.map((ability) => (
+                                      <SelectItem
+                                        key={ability}
+                                        value={ability}
+                                        disabled={
+                                          bgChoices.includes(ability) &&
+                                          currentChoice !== ability
+                                        }
+                                      >
+                                        {ABILITY_ABBREVIATIONS[ability]} —{' '}
+                                        {ability.charAt(0).toUpperCase() +
+                                          ability.slice(1)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            );
+                          },
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>{' '}
               <BuildBackgroundDetailsPanel
                 detailCollapsed={detailCollapsed}

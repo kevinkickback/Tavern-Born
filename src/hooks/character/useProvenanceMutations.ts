@@ -1,6 +1,11 @@
 import { useCallback } from 'react';
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers';
 import {
+  getBackgroundAbilityData,
+  normalizeAbilityName,
+} from '@/lib/calculations/abilityScores';
+import {
+  addAbilityBonus,
   addGrant,
   applyBackgroundGrants,
   applyClassGrants,
@@ -257,7 +262,12 @@ export function useProvenanceMutations({
   );
 
   const applySpellSelection = useCallback(
-    (className: string, classSource: string | undefined, spellName: string) => {
+    (
+      className: string,
+      classSource: string | undefined,
+      spellName: string,
+      grantedAtLevel?: number,
+    ) => {
       if (!character) return;
       const newLedger = applyClassSpellGrant(
         ledger,
@@ -265,6 +275,34 @@ export function useProvenanceMutations({
         classSource,
         spellName,
         'choice',
+        {
+          ...(grantedAtLevel ? { spellGrantedAtLevel: grantedAtLevel } : {}),
+          spellAttributionMode: grantedAtLevel ? 'exact' : undefined,
+        },
+      );
+      patch(newLedger);
+    },
+    [character, ledger, patch],
+  );
+
+  const applyInferredClassSpellSelection = useCallback(
+    (
+      className: string,
+      classSource: string | undefined,
+      spellName: string,
+      grantedAtLevel: number,
+    ) => {
+      if (!character) return;
+      const newLedger = applyClassSpellGrant(
+        ledger,
+        className,
+        classSource,
+        spellName,
+        'choice',
+        {
+          spellGrantedAtLevel: grantedAtLevel,
+          spellAttributionMode: 'inferred-lowest-eligible',
+        },
       );
       patch(newLedger);
     },
@@ -575,12 +613,65 @@ export function useProvenanceMutations({
     [character, ledger, updateCharacter],
   );
 
+  /**
+   * Apply (or update) the player's background ability score choices.
+   * Replaces any existing background ability bonus records in the ledger.
+   * Writes new records derived from the chosen block + ordered selections.
+   */
+  const applyBackgroundAbilityChoices = useCallback(
+    (
+      bg: { name: string; source?: string; ability?: unknown[] },
+      blockIndex: number,
+      choices: string[],
+    ) => {
+      if (!character) return;
+      const bgData = getBackgroundAbilityData(bg);
+      const block = bgData.blocks[blockIndex];
+      if (!block) return;
+
+      // Remove stale background ability bonus records
+      const cleanedBonuses = ledger.abilityBonuses.filter(
+        (r) =>
+          !(
+            r.sourceTag.sourceType === 'background' &&
+            r.sourceTag.sourceName === bg.name
+          ),
+      );
+      let newLedger: ProvenanceLedger = {
+        ...ledger,
+        abilityBonuses: cleanedBonuses,
+      };
+
+      const bgTag = makeSourceTag('background', bg.name, 'choice', bg.source);
+      const seen = new Set<string>();
+      for (let i = 0; i < block.weights.length; i++) {
+        const ability = normalizeAbilityName(choices[i] ?? '');
+        if (!ability || seen.has(ability)) continue;
+        seen.add(ability);
+        newLedger = addAbilityBonus(newLedger, {
+          ability,
+          value: block.weights[i],
+          sourceTag: bgTag,
+        });
+      }
+
+      updateCharacter(character.id, {
+        provenance: newLedger,
+        backgroundAsiBlockIndex: blockIndex,
+        backgroundAsiChoices: choices,
+      });
+    },
+    [character, ledger, updateCharacter],
+  );
+
   return {
     applyRaceSelection,
     applySubraceChange,
     applyClassSelection,
     applyBackgroundSelection,
+    applyBackgroundAbilityChoices,
     applySpellSelection,
+    applyInferredClassSpellSelection,
     applyFeatSelection,
     removeFeatProvenance,
     replaceFeatSelections,

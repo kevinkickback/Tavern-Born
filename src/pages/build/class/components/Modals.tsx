@@ -13,7 +13,7 @@ import {
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites';
 import {
   buildClassProfileLabel,
-  buildClassSpellLevelKey,
+  buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
   getKnownSpellNames,
 } from '@/lib/calculations/spellProfiles';
@@ -80,6 +80,7 @@ interface BuildClassModalsProps {
     className: string,
     classSource: string | undefined,
     spellName: string,
+    grantedAtLevel?: number,
   ) => void;
   onRemoveSpellProvenance: (spellName: string) => void;
   onUpdateCharacter: (patch: Partial<Character>) => void;
@@ -185,13 +186,13 @@ export function BuildClassModals({
           const classProfile = profiles.find(
             (profile) => profile.id === classProfileId,
           );
-          const levelKey = buildClassSpellLevelKey(
-            viewingClass,
-            viewingClassSource,
-            spellPickerLevel,
-          );
+          const selectionsByLevel = buildClassSpellSelectionsByLevel({
+            character,
+            className: viewingClass,
+            classSource: viewingClassSource,
+          });
           const initialSelectedNames =
-            character.spellsByLevel?.[levelKey] ?? [];
+            selectionsByLevel.get(spellPickerLevel) ?? [];
           const lockedNames = new Set(
             [...getKnownSpellNames(profiles)].filter(
               (name) => !initialSelectedNames.includes(name),
@@ -259,18 +260,20 @@ export function BuildClassModals({
               allowedLevels={allowedLevels}
               onConfirm={(names) => {
                 const previousLevelNames =
-                  character.spellsByLevel?.[levelKey] ?? [];
+                  selectionsByLevel.get(spellPickerLevel) ?? [];
                 const previousLevelSet = new Set(previousLevelNames);
                 const nextLevelSet = new Set(names);
 
-                const nextSpellsByLevel = {
-                  ...(character.spellsByLevel ?? {}),
-                  [levelKey]: names,
-                };
-                const classLevelPrefix = `${viewingClass ?? ''}|${viewingClassSource ?? ''}:`;
-                const classSelectedNames = Object.entries(nextSpellsByLevel)
-                  .filter(([key]) => key.startsWith(classLevelPrefix))
-                  .flatMap(([, selected]) => selected ?? []);
+                const nextSelectionsByLevel = new Map(selectionsByLevel);
+                if (names.length > 0) {
+                  nextSelectionsByLevel.set(spellPickerLevel, names);
+                } else {
+                  nextSelectionsByLevel.delete(spellPickerLevel);
+                }
+
+                const classSelectedNames = Array.from(
+                  nextSelectionsByLevel.values(),
+                ).flatMap((selected) => selected ?? []);
                 const uniqueClassSelectedNames = [
                   ...new Set(classSelectedNames),
                 ];
@@ -329,7 +332,6 @@ export function BuildClassModals({
                     ...character.spells,
                     spellProfiles: nextProfiles,
                   },
-                  spellsByLevel: nextSpellsByLevel,
                 });
 
                 for (const name of names) {
@@ -339,6 +341,7 @@ export function BuildClassModals({
                       viewingClass,
                       viewingClassSource,
                       name,
+                      spellPickerLevel,
                     );
                   }
                 }

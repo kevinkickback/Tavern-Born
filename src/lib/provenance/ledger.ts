@@ -60,7 +60,8 @@ function tagPresent(list: SourceTag[], tag: SourceTag): boolean {
     (t) =>
       t.sourceType === tag.sourceType &&
       t.sourceName === tag.sourceName &&
-      t.grantType === tag.grantType,
+      t.grantType === tag.grantType &&
+      t.sourceRef === tag.sourceRef,
   );
 }
 

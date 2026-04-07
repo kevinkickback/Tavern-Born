@@ -119,6 +119,11 @@ const FeatureCard = memo(function FeatureCard({
   );
 });
 
+/** Derive a stable composite key for a feature that respects source. */
+function featureKey(f: OptionalFeatureOption): string {
+  return `${f.name}|${f.source ?? ''}`;
+}
+
 export function OptionalFeatureSelectionModal({
   open,
   onOpenChange,
@@ -130,21 +135,31 @@ export function OptionalFeatureSelectionModal({
   className,
   onConfirm,
 }: OptionalFeatureSelectionModalProps) {
-  // Deduplicate by name (same feature may appear across multiple sources).
+  // Deduplicate by name|source composite key.
   const dedupedFeatures = useMemo(() => {
     const seen = new Map<string, OptionalFeatureOption>();
     for (const f of features) {
-      if (!seen.has(f.name)) seen.set(f.name, f);
+      const key = featureKey(f);
+      if (!seen.has(key)) seen.set(key, f);
     }
     return Array.from(seen.values());
   }, [features]);
+
+  // Map incoming bare names → composite keys for SelectionModal's initialSelectedIds.
+  // When a stored name matches exactly one dedupedFeature, use its composite key.
+  const initialSelectedIds = useMemo(() => {
+    return initialSelectedNames.map((name) => {
+      const match = dedupedFeatures.find((f) => f.name === name);
+      return match ? featureKey(match) : `${name}|`;
+    });
+  }, [initialSelectedNames, dedupedFeatures]);
 
   // Run all prerequisite checks up-front so each card doesn't recompute.
   const prereqMap = useMemo(() => {
     const map = new Map<string, { met: boolean; reasons: string[] }>();
     for (const f of dedupedFeatures) {
       const result = checkAllPrerequisites(f, characterSnapshot, { className });
-      map.set(f.name, { met: result.met, reasons: result.failures });
+      map.set(featureKey(f), { met: result.met, reasons: result.failures });
     }
     return map;
   }, [dedupedFeatures, characterSnapshot, className]);
@@ -188,11 +203,13 @@ export function OptionalFeatureSelectionModal({
       selectedIds: Set<string>,
       allItems: OptionalFeatureOption[],
     ) => {
-      const prereq = prereqMap.get(item.name);
+      const prereq = prereqMap.get(featureKey(item));
       if (prereq && !prereq.met) return false;
       // Also enforce the category limit (replaces defaultCanSelect).
-      const selected = allItems.filter((i) => selectedIds.has(i.name)).length;
-      if (selected >= maxSelections && !selectedIds.has(item.name))
+      const selected = allItems.filter((i) =>
+        selectedIds.has(featureKey(i)),
+      ).length;
+      if (selected >= maxSelections && !selectedIds.has(featureKey(item)))
         return false;
       return true;
     },
@@ -210,7 +227,7 @@ export function OptionalFeatureSelectionModal({
       }
       const showUnmet = activeFilters.prereq?.has('showUnmet') ?? false;
       if (!showUnmet) {
-        const prereq = prereqMap.get(item.name);
+        const prereq = prereqMap.get(featureKey(item));
         if (prereq && !prereq.met) return false;
       }
       return true;
@@ -220,7 +237,10 @@ export function OptionalFeatureSelectionModal({
 
   const renderCard = useCallback(
     (item: OptionalFeatureOption, isSelected: boolean) => {
-      const prereq = prereqMap.get(item.name) ?? { met: true, reasons: [] };
+      const prereq = prereqMap.get(featureKey(item)) ?? {
+        met: true,
+        reasons: [],
+      };
       return (
         <FeatureCard
           feature={item}
@@ -239,13 +259,13 @@ export function OptionalFeatureSelectionModal({
       onOpenChange={onOpenChange}
       title={title}
       items={dedupedFeatures}
-      getItemId={(f) => f.name}
+      getItemId={featureKey}
       renderCard={renderCard}
       matchItem={matchItem}
       filterSections={filterSections}
       categories={categories}
       canSelect={canSelect}
-      initialSelectedIds={initialSelectedNames}
+      initialSelectedIds={initialSelectedIds}
       onConfirm={(_ids, items) => onConfirm(items.map((f) => f.name))}
     />
   );

@@ -5,13 +5,12 @@ import {
   calculateCharacterSpellSlots,
   collectKnownSpells,
   ensureSpellProfiles,
-  numericToStored,
   SPECIAL_SPELL_PROFILE_ID,
   type SpellcastingClassDetail,
 } from '@/lib/calculations/spellProfiles';
 import { useCharacterStore } from '@/store/characterStore';
 import type { Class5e } from '@/types/5etools';
-import type { SpellProfile, SpellSlots } from '@/types/character';
+import type { SpellProfile } from '@/types/character';
 
 export interface SpellSlotInfo {
   level: number;
@@ -31,9 +30,6 @@ export interface SpellSlotsState {
   preparedSpells: string[];
   spellProfiles: SpellProfile[];
   spellcastingDetails: SpellcastingClassDetail[];
-  useSlot: (spellLevel: number) => void;
-  restoreSlot: (spellLevel: number) => void;
-  longRest: () => void;
   syncProfiles: () => void;
   addCantrip: (name: string, profileId?: string) => void;
   removeCantrip: (name: string, profileId?: string) => void;
@@ -55,7 +51,6 @@ export interface SpellSlotsState {
     kind: 'cantrip' | 'spell',
   ) => void;
   togglePrepared: (profileId: string, name: string) => void;
-  syncSlots: () => void;
 }
 
 function toClassProfileId(name: string, source?: string): string {
@@ -220,6 +215,16 @@ export function useSpellSlots(): SpellSlotsState {
     return buildSpellcastingClassDetails(character, classesById);
   }, [character, classesById]);
 
+  const spellcastingDetailByProfileId = useMemo(
+    () =>
+      new Map(
+        spellcastingDetails.map(
+          (detail) => [detail.profileId, detail] as const,
+        ),
+      ),
+    [spellcastingDetails],
+  );
+
   const patchSpells = useCallback(
     (patch: Partial<NonNullable<typeof character>['spells']>) => {
       if (!character) return;
@@ -234,68 +239,6 @@ export function useSpellSlots(): SpellSlotsState {
     if (!character) return;
     patchSpells({ spellProfiles: ensureSpellProfiles(character) });
   }, [character, patchSpells]);
-
-  const useSlot = useCallback(
-    (spellLevel: number) => {
-      if (!character) return;
-      const current =
-        character.spells.spellSlots[`level${spellLevel}` as keyof SpellSlots];
-      if (!current || current.used >= current.max) return;
-      const key = `level${spellLevel}` as keyof SpellSlots;
-      patchSpells({
-        spellSlots: {
-          ...character.spells.spellSlots,
-          [key]: { ...current, used: current.used + 1 },
-        },
-      });
-    },
-    [character, patchSpells],
-  );
-
-  const restoreSlot = useCallback(
-    (spellLevel: number) => {
-      if (!character) return;
-      const current =
-        character.spells.spellSlots[`level${spellLevel}` as keyof SpellSlots];
-      if (!current || current.used === 0) return;
-      const key = `level${spellLevel}` as keyof SpellSlots;
-      patchSpells({
-        spellSlots: {
-          ...character.spells.spellSlots,
-          [key]: { ...current, used: current.used - 1 },
-        },
-      });
-    },
-    [character, patchSpells],
-  );
-
-  const longRest = useCallback(() => {
-    if (!character) return;
-    patchSpells({ spellSlots: numericToStored(slotsBreakdown.shared, {}) });
-  }, [character, patchSpells, slotsBreakdown.shared]);
-
-  const syncSlots = useCallback(() => {
-    if (!character) return;
-    patchSpells({
-      spellSlots: numericToStored(
-        {
-          ...slotsBreakdown.shared,
-          ...slotsBreakdown.pact,
-        },
-        {
-          1: character.spells.spellSlots.level1.used,
-          2: character.spells.spellSlots.level2.used,
-          3: character.spells.spellSlots.level3.used,
-          4: character.spells.spellSlots.level4.used,
-          5: character.spells.spellSlots.level5.used,
-          6: character.spells.spellSlots.level6.used,
-          7: character.spells.spellSlots.level7.used,
-          8: character.spells.spellSlots.level8.used,
-          9: character.spells.spellSlots.level9.used,
-        },
-      ),
-    });
-  }, [character, patchSpells, slotsBreakdown.pact, slotsBreakdown.shared]);
 
   const addSpellToProfile = useCallback(
     (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
@@ -374,6 +317,20 @@ export function useSpellSlots(): SpellSlotsState {
         if (profile.id !== profileId || profile.alwaysPrepared) return profile;
 
         const isPrepared = profile.preparedSpells.includes(name);
+        const detail = spellcastingDetailByProfileId.get(profileId);
+        const preparedLimit =
+          detail?.isPreparedCaster === true
+            ? (detail.knownSpellLimit ?? null)
+            : null;
+
+        if (
+          !isPrepared &&
+          preparedLimit !== null &&
+          profile.preparedSpells.length >= preparedLimit
+        ) {
+          return profile;
+        }
+
         return {
           ...profile,
           preparedSpells: isPrepared
@@ -384,7 +341,7 @@ export function useSpellSlots(): SpellSlotsState {
 
       patchSpells({ spellProfiles: nextProfiles });
     },
-    [character, patchSpells],
+    [character, patchSpells, spellcastingDetailByProfileId],
   );
 
   return {
@@ -397,9 +354,6 @@ export function useSpellSlots(): SpellSlotsState {
     preparedSpells: known.preparedSpells,
     spellProfiles,
     spellcastingDetails,
-    useSlot,
-    restoreSlot,
-    longRest,
     syncProfiles,
     addCantrip,
     removeCantrip,
@@ -409,6 +363,5 @@ export function useSpellSlots(): SpellSlotsState {
     setProfileSpells,
     removeSpellFromProfile,
     togglePrepared,
-    syncSlots,
   };
 }

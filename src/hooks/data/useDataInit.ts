@@ -24,12 +24,37 @@ export function useDataInit() {
   const setCharacters = useCharacterStore((s) => s.setCharacters);
 
   const initialized = useRef(false);
+  const seedsRefreshed = useRef(false);
 
   useEffect(() => {
-    if (import.meta.env.DEV && characters.length === 0) {
+    // Wait until persisted characters are loaded before applying seed refresh.
+    if (!hasHydrated || !import.meta.env.DEV || seedsRefreshed.current) return;
+    seedsRefreshed.current = true;
+    if (characters.length === 0) {
       setCharacters(DEV_SEED_CHARACTERS);
+      return;
     }
-  }, [characters.length, setCharacters]);
+    // Refresh any existing seed characters whose data may have changed.
+    const seedIds = new Set(DEV_SEED_CHARACTERS.map((c) => c.id));
+    const hasStaleSeed = characters.some((c) => seedIds.has(c.id));
+    if (hasStaleSeed) {
+      const nonSeeds = characters.filter((c) => !seedIds.has(c.id));
+      setCharacters([...DEV_SEED_CHARACTERS, ...nonSeeds]);
+    }
+  }, [hasHydrated, characters, setCharacters]);
+
+  useEffect(() => {
+    // When a local data source config is restored from persisted storage,
+    // notify the main process so it can enforce path-containment on file reads.
+    if (
+      hasHydrated &&
+      dataSourceConfig?.type === 'local' &&
+      dataSourceConfig.path &&
+      window.electronAPI?.setLocalDataPath
+    ) {
+      window.electronAPI.setLocalDataPath(dataSourceConfig.path);
+    }
+  }, [hasHydrated, dataSourceConfig]);
 
   useEffect(() => {
     // Wait for Zustand to finish reading from IDB.

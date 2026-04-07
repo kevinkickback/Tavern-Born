@@ -1,3 +1,4 @@
+import { getClassSpellGainAtLevel } from '@/lib/5etools/classData';
 import {
   type AbilityName,
   normalizeAbilityName,
@@ -15,6 +16,7 @@ import {
   type SpellSlotsResult,
 } from '@/lib/calculations/spellSlots';
 import { getTotalLevel } from '@/lib/characterUtils';
+import { normalizeKey } from '@/lib/provenance/normalization';
 import type { Class5e } from '@/types/5etools';
 import type {
   AbilityScores,
@@ -52,6 +54,189 @@ export function buildClassSpellLevelKey(
   level: number,
 ): string {
   return `${className ?? ''}|${classSource ?? ''}:${level}`;
+}
+
+export function buildClassSpellSelectionsByLevel(params: {
+  character: Character;
+  className?: string;
+  classSource?: string;
+}): Map<number, string[]> {
+  const { character, className, classSource } = params;
+  const selections = new Map<number, string[]>();
+  if (!className) return selections;
+
+  const profileId = `class:${className}|${classSource ?? ''}`;
+  const classProfile = ensureSpellProfiles(character).find(
+    (profile) => profile.id === profileId,
+  );
+  if (!classProfile) return selections;
+
+  const classKnownNames = new Set([
+    ...classProfile.cantrips,
+    ...classProfile.spellsKnown,
+  ]);
+  if (classKnownNames.size === 0) return selections;
+
+  const addAtLevel = (level: number, spellName: string) => {
+    const existing = selections.get(level) ?? [];
+    if (existing.includes(spellName)) return;
+    selections.set(level, [...existing, spellName]);
+  };
+
+  for (const spellName of classKnownNames) {
+    const tags = character.provenance?.spells?.[normalizeKey(spellName)] ?? [];
+    const classTag = tags.find(
+      (tag) =>
+        tag.sourceType === 'class' &&
+        tag.sourceName === className &&
+        (tag.sourceRef ?? '') === (classSource ?? '') &&
+        !!tag.spellGrantedAtLevel,
+    );
+    if (!classTag?.spellGrantedAtLevel) continue;
+
+    for (const [level, names] of selections.entries()) {
+      if (!names.includes(spellName)) continue;
+      const filtered = names.filter((name) => name !== spellName);
+      if (filtered.length > 0) {
+        selections.set(level, filtered);
+      } else {
+        selections.delete(level);
+      }
+    }
+    addAtLevel(classTag.spellGrantedAtLevel, spellName);
+  }
+
+  return selections;
+}
+
+export interface ExistingSpellAttribution {
+  spellName: string;
+  grantedAtLevel: number;
+}
+
+export interface InferredSpellAttribution {
+  spellName: string;
+  grantedAtLevel: number;
+}
+
+/**
+ * Assign newly-selected spells to the lowest eligible class level that still has
+ * remaining spell-gain capacity. This is intentionally approximate and used for
+ * spells page attribution only.
+ */
+export function inferClassSpellAttributionLevels(params: {
+  classData: Class5e | undefined;
+  classLevel: number;
+  newSpellNames: string[];
+  spellLevelByName: Map<string, number>;
+  existingAttributions: ExistingSpellAttribution[];
+}): InferredSpellAttribution[] {
+  const {
+    classData,
+    classLevel,
+    newSpellNames,
+    spellLevelByName,
+    existingAttributions,
+  } = params;
+
+  if (!classData || classLevel <= 0 || newSpellNames.length === 0) {
+    return [];
+  }
+
+  const spellCapacity = new Map<number, number>();
+  const cantripCapacity = new Map<number, number>();
+  const maxSpellLevelByClassLevel = new Map<number, number>();
+
+  for (let level = 1; level <= classLevel; level++) {
+    const gain = getClassSpellGainAtLevel(classData, level);
+    spellCapacity.set(level, gain.spells);
+    cantripCapacity.set(level, gain.cantrips);
+    maxSpellLevelByClassLevel.set(level, gain.maxSpellLevel);
+  }
+
+  const usedSpellSlots = new Map<number, number>();
+  const usedCantripSlots = new Map<number, number>();
+
+  for (const attribution of existingAttributions) {
+    const attributedSpellLevel =
+      spellLevelByName.get(attribution.spellName) ?? 1;
+    if (attributedSpellLevel === 0) {
+      usedCantripSlots.set(
+        attribution.grantedAtLevel,
+        (usedCantripSlots.get(attribution.grantedAtLevel) ?? 0) + 1,
+      );
+      continue;
+    }
+
+    usedSpellSlots.set(
+      attribution.grantedAtLevel,
+      (usedSpellSlots.get(attribution.grantedAtLevel) ?? 0) + 1,
+    );
+  }
+
+  const assignments: InferredSpellAttribution[] = [];
+  const pending = [...newSpellNames].sort((a, b) => {
+    const levelDelta =
+      (spellLevelByName.get(a) ?? 1) - (spellLevelByName.get(b) ?? 1);
+    if (levelDelta !== 0) return levelDelta;
+    return a.localeCompare(b);
+  });
+
+  for (const spellName of pending) {
+    const spellLevel = spellLevelByName.get(spellName) ?? 1;
+    const eligibleLevels: number[] = [];
+
+    for (let level = 1; level <= classLevel; level++) {
+      const cap =
+        spellLevel === 0
+          ? (cantripCapacity.get(level) ?? 0)
+          : (spellCapacity.get(level) ?? 0);
+      if (cap <= 0) continue;
+
+      if (
+        spellLevel > 0 &&
+        spellLevel > (maxSpellLevelByClassLevel.get(level) ?? 0)
+      ) {
+        continue;
+      }
+
+      eligibleLevels.push(level);
+    }
+
+    const fallbackLevel = eligibleLevels[0] ?? classLevel;
+    let selectedLevel = fallbackLevel;
+
+    for (const level of eligibleLevels) {
+      const used =
+        spellLevel === 0
+          ? (usedCantripSlots.get(level) ?? 0)
+          : (usedSpellSlots.get(level) ?? 0);
+      const cap =
+        spellLevel === 0
+          ? (cantripCapacity.get(level) ?? 0)
+          : (spellCapacity.get(level) ?? 0);
+      if (used < cap) {
+        selectedLevel = level;
+        break;
+      }
+    }
+
+    if (spellLevel === 0) {
+      usedCantripSlots.set(
+        selectedLevel,
+        (usedCantripSlots.get(selectedLevel) ?? 0) + 1,
+      );
+    } else {
+      usedSpellSlots.set(
+        selectedLevel,
+        (usedSpellSlots.get(selectedLevel) ?? 0) + 1,
+      );
+    }
+
+    assignments.push({ spellName, grantedAtLevel: selectedLevel });
+  }
+
+  return assignments;
 }
 
 export function isSpellOnClassList(
@@ -257,13 +442,182 @@ export function getKnownSpellLimit(
   classData: Class5e | undefined,
   level: number,
 ): number | null {
-  const fixed = getProgressionArray(classData?.spellsKnownProgressionFixed);
-  if (fixed) return fixed[level - 1] ?? fixed[fixed.length - 1] ?? null;
+  if (!classData?.spellcastingAbility) return null;
+  let total = 0;
+  for (let i = 1; i <= level; i++) {
+    total += getClassSpellGainAtLevel(classData, i).spells;
+  }
+  return total > 0 ? total : null;
+}
 
-  const known = getProgressionArray(classData?.spellsKnownProgression);
-  if (known) return known[level - 1] ?? known[known.length - 1] ?? null;
+/**
+ * Evaluate a simple arithmetic expression containing only numbers, +, -, *, /,
+ * parentheses, and the functions floor/ceil/round. Rejects any input that would
+ * require dynamic code execution. Throws on rejected or malformed input.
+ *
+ * This replaces `new Function()` for evaluating 5etools prepared-spell formulas
+ * whose tokens have already been substituted with numeric values.
+ */
+function safeEvalArithmetic(expr: string): number {
+  // Strip all whitespace before validation/parsing
+  const cleaned = expr.replace(/\s+/g, '');
+
+  // Whitelist check: only digits, decimal point, operators, parens, and the
+  // three allowed function names. Anything else is rejected.
+  const withoutFns = cleaned.replace(/floor|ceil|round/g, '');
+  if (!/^[\d.+\-*/()]+$/.test(withoutFns)) {
+    throw new Error(`Rejected non-arithmetic expression: ${expr}`);
+  }
+
+  let pos = 0;
+
+  function parseExpr(): number {
+    let left = parseTerm();
+    while (
+      pos < cleaned.length &&
+      (cleaned[pos] === '+' || cleaned[pos] === '-')
+    ) {
+      const op = cleaned[pos++];
+      const right = parseTerm();
+      left = op === '+' ? left + right : left - right;
+    }
+    return left;
+  }
+
+  function parseTerm(): number {
+    let left = parseFactor();
+    while (
+      pos < cleaned.length &&
+      (cleaned[pos] === '*' || cleaned[pos] === '/')
+    ) {
+      const op = cleaned[pos++];
+      const right = parseFactor();
+      left = op === '*' ? left * right : left / right;
+    }
+    return left;
+  }
+
+  function parseFactor(): number {
+    // floor(...) / ceil(...) / round(...)
+    for (const fn of ['floor', 'ceil', 'round'] as const) {
+      if (cleaned.startsWith(fn, pos)) {
+        pos += fn.length;
+        if (cleaned[pos] !== '(') throw new Error(`Expected '(' after ${fn}`);
+        pos++; // consume '('
+        const inner = parseExpr();
+        if (cleaned[pos] !== ')')
+          throw new Error(`Expected ')' after ${fn}(...)`);
+        pos++; // consume ')'
+        return Math[fn](inner);
+      }
+    }
+
+    // Parenthesised expression
+    if (cleaned[pos] === '(') {
+      pos++; // consume '('
+      const val = parseExpr();
+      if (cleaned[pos] !== ')') throw new Error("Expected closing ')'");
+      pos++; // consume ')'
+      return val;
+    }
+
+    // Unary minus
+    if (cleaned[pos] === '-') {
+      pos++;
+      return -parseFactor();
+    }
+
+    // Number literal (integer or decimal)
+    const start = pos;
+    while (pos < cleaned.length && /[\d.]/.test(cleaned[pos])) pos++;
+    if (pos === start) {
+      throw new Error(`Unexpected token at position ${pos}: '${cleaned[pos]}'`);
+    }
+    return parseFloat(cleaned.slice(start, pos));
+  }
+
+  const result = parseExpr();
+  if (pos !== cleaned.length) {
+    throw new Error(`Unexpected trailing input: '${cleaned.slice(pos)}'`);
+  }
+  return result;
+}
+
+/**
+ * Parse and evaluate a 5etools prepared spells formula.
+ * Examples: "<$level$> + <$int_mod$>", "<$level$>"
+ * Returns the calculated limit, or null if formula is invalid or missing.
+ */
+export function evaluatePreparedSpellsFormula(
+  formula: string | undefined,
+  characterLevel: number,
+  abilityModifiers: Record<string, number>,
+): number | null {
+  if (!formula || typeof formula !== 'string') return null;
+
+  try {
+    // Replace formula tokens with values
+    const result = formula
+      .replace(/<\$level\$>/g, String(characterLevel))
+      .replace(/<\$int_mod\$>/g, String(abilityModifiers.intelligence ?? 0))
+      .replace(/<\$wis_mod\$>/g, String(abilityModifiers.wisdom ?? 0))
+      .replace(/<\$cha_mod\$>/g, String(abilityModifiers.charisma ?? 0))
+      .replace(/<\$str_mod\$>/g, String(abilityModifiers.strength ?? 0))
+      .replace(/<\$dex_mod\$>/g, String(abilityModifiers.dexterity ?? 0))
+      .replace(/<\$con_mod\$>/g, String(abilityModifiers.constitution ?? 0));
+
+    // Safe arithmetic evaluation — no dynamic code execution.
+    const evalResult = safeEvalArithmetic(result);
+
+    if (typeof evalResult === 'number' && Number.isFinite(evalResult)) {
+      return Math.max(0, Math.floor(evalResult));
+    }
+  } catch {
+    // Fall through to return null
+  }
 
   return null;
+}
+
+/**
+ * Get the prepared spell limit for a character with a specific class.
+ * Uses the 5etools preparedSpells formula if available, otherwise returns null.
+ */
+export function getPreparedSpellLimit(
+  classData: Class5e | undefined,
+  characterLevel: number,
+  spellcastingAbilityModifier: number | null,
+): number | null {
+  if (!classData?.spellcastingAbility || !classData.preparedSpells) {
+    return null;
+  }
+
+  if (spellcastingAbilityModifier === null) {
+    return null;
+  }
+
+  // Build a map of all ability modifiers - we'll use the primary ability modifier
+  // and default others to 0 for formula evaluation
+  const abilityModifiers: Record<string, number> = {
+    strength: 0,
+    dexterity: 0,
+    constitution: 0,
+    intelligence: 0,
+    wisdom: 0,
+    charisma: 0,
+  };
+
+  // Set the specific spellcasting ability modifier
+  const normalizedAbility = normalizeAbilityName(classData.spellcastingAbility);
+  if (normalizedAbility) {
+    abilityModifiers[normalizedAbility] = spellcastingAbilityModifier;
+  }
+
+  return evaluatePreparedSpellsFormula(
+    classData.preparedSpells,
+    characterLevel,
+    abilityModifiers,
+  );
 }
 
 export function getClassMaxSpellLevel(
@@ -375,7 +729,10 @@ export function buildSpellcastingClassDetails(
         spellSaveDC: saveDc,
         spellAttackBonus: attack,
         maxSpellLevel: getClassMaxSpellLevel(classData, entry.levels),
-        knownSpellLimit: getKnownSpellLimit(classData, entry.levels),
+        knownSpellLimit:
+          isPreparedCaster(classData) && classData?.preparedSpells
+            ? getPreparedSpellLimit(classData, entry.levels, mod)
+            : getKnownSpellLimit(classData, entry.levels),
         cantripLimit: getCantripLimit(classData, entry.levels),
         isPreparedCaster: isPreparedCaster(classData),
       } as SpellcastingClassDetail;

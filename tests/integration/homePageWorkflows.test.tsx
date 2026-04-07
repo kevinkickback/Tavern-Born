@@ -17,6 +17,7 @@ vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
     info: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -132,5 +133,95 @@ describe('home page integration workflows', () => {
 
     expect(screen.getByText('Discard unsaved changes?')).toBeTruthy();
     expect(useCharacterStore.getState().activeCharacterId).toBe('c1');
+  });
+
+  test('imports a valid character file', async () => {
+    const user = userEvent.setup();
+    useCharacterStore.setState({
+      characters: [
+        makeCharacterFixture({ id: 'existing-1', name: 'Existing' }),
+      ],
+      activeCharacterId: null,
+      activeCharacter: null,
+    });
+
+    const originalCreateElement = document.createElement.bind(document);
+    const fileInput = {
+      type: '',
+      accept: '',
+      onchange: null as ((e: Event) => void | Promise<void>) | null,
+      click: vi.fn(),
+    };
+
+    vi.spyOn(document, 'createElement').mockImplementation(((
+      tagName: string,
+    ) => {
+      if (tagName === 'input') {
+        return fileInput as unknown as HTMLInputElement;
+      }
+      return originalCreateElement(tagName);
+    }) as typeof document.createElement);
+
+    render(<HomePage />);
+
+    await user.click(screen.getByRole('button', { name: 'Import Character' }));
+    expect(fileInput.click).toHaveBeenCalled();
+
+    const file = new File(
+      [JSON.stringify(makeCharacterFixture())],
+      'hero.json',
+      {
+        type: 'application/json',
+      },
+    );
+
+    await fileInput.onchange?.({
+      target: { files: [file] },
+    } as unknown as Event);
+
+    expect(useCharacterStore.getState().characters).toHaveLength(2);
+  });
+
+  test('rejects invalid character file on import', async () => {
+    const user = userEvent.setup();
+    useCharacterStore.setState({
+      characters: [
+        makeCharacterFixture({ id: 'existing-1', name: 'Existing' }),
+      ],
+      activeCharacterId: null,
+      activeCharacter: null,
+    });
+
+    const originalCreateElement = document.createElement.bind(document);
+    const fileInput = {
+      type: '',
+      accept: '',
+      onchange: null as ((e: Event) => void | Promise<void>) | null,
+      click: vi.fn(),
+    };
+
+    vi.spyOn(document, 'createElement').mockImplementation(((
+      tagName: string,
+    ) => {
+      if (tagName === 'input') {
+        return fileInput as unknown as HTMLInputElement;
+      }
+      return originalCreateElement(tagName);
+    }) as typeof document.createElement);
+
+    render(<HomePage />);
+
+    await user.click(screen.getByRole('button', { name: 'Import Character' }));
+    expect(fileInput.click).toHaveBeenCalled();
+
+    const invalidFile = new File([JSON.stringify({ foo: 'bar' })], 'bad.json', {
+      type: 'application/json',
+    });
+
+    await fileInput.onchange?.({
+      target: { files: [invalidFile] },
+    } as unknown as Event);
+
+    expect(useCharacterStore.getState().characters).toHaveLength(1);
   });
 });

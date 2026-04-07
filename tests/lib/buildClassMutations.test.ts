@@ -16,9 +16,28 @@ describe('buildClassMutations', () => {
         savingThrows: [],
       },
       spells: {
-        cantrips: [],
-        spellsKnown: [],
-        preparedSpells: [],
+        spellProfiles: [
+          {
+            id: 'class:Fighter|PHB',
+            type: 'class',
+            label: 'Fighter (Lv 1)',
+            className: 'Fighter',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+          {
+            id: 'special:unrestricted',
+            type: 'special',
+            label: 'Special (Unrestricted)',
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
         spellSlots: {
           level1: { max: 0, used: 0 },
           level2: { max: 0, used: 0 },
@@ -66,7 +85,7 @@ describe('buildClassMutations', () => {
       "Thieves' Tools",
       "Smith's Tools",
     ]);
-    expect(patch.spells?.spellcastingAbility).toBe('charisma');
+    expect(patch.spells).toEqual(character.spells);
   });
 
   test('buildSubclassSelectionPatch updates matching class progression entry and top-level subclass for primary class', () => {

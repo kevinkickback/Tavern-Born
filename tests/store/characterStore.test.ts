@@ -12,6 +12,7 @@ import {
   emptyProvenance,
   normalizeCharacterProvenance,
   useCharacterStore,
+  validateCharacterData,
 } from '@/store/characterStore';
 import { makeCharacterFixture } from '../fixtures/characterFixtures';
 
@@ -31,6 +32,17 @@ describe('characterStore', () => {
     const normalized = normalizeCharacterProvenance(withoutProvenance);
 
     expect(normalized.provenance).toEqual(emptyProvenance());
+  });
+
+  test('validateCharacterData accepts full character payload', () => {
+    const fixture = makeCharacterFixture();
+    expect(validateCharacterData(fixture)).toBeNull();
+  });
+
+  test('validateCharacterData rejects malformed payload', () => {
+    expect(validateCharacterData({ foo: 'bar' })).toContain(
+      'Invalid character structure',
+    );
   });
 
   test('createNewCharacter adds a character and returns it', () => {
