@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CURRENT_SCHEMA_VERSION,
+  downgradeCharacter,
   getMigrationSummary,
   migrateCharacter,
   semverToMigrationVersion,
@@ -94,5 +95,44 @@ describe('getMigrationSummary', () => {
     expect(typeof summary).toBe('string');
     expect(summary.length).toBeGreaterThan(0);
     expect(summary).toContain('v0 -> v1');
+  });
+});
+
+describe('downgradeCharacter', () => {
+  it('downgrades current schema character to version 0 shape', () => {
+    const migrated = migrateCharacter(
+      {
+        id: 'downgrade-id',
+        name: 'Downgrade Hero',
+        version: 0,
+        race: 'Elf',
+      },
+      0,
+    );
+
+    const downgraded = downgradeCharacter(migrated, 0) as Record<
+      string,
+      unknown
+    >;
+
+    expect(downgraded.id).toBe('downgrade-id');
+    expect(downgraded.name).toBe('Downgrade Hero');
+    expect(downgraded.version).toBeUndefined();
+  });
+
+  it('throws for invalid downgrade target versions', () => {
+    const migrated = migrateCharacter(
+      {
+        id: 'downgrade-id',
+        name: 'Downgrade Hero',
+        version: 0,
+      },
+      0,
+    );
+
+    expect(() => downgradeCharacter(migrated, -1)).toThrow(/invalid target/i);
+    expect(() => downgradeCharacter(migrated, CURRENT_SCHEMA_VERSION)).toThrow(
+      /invalid target/i,
+    );
   });
 });

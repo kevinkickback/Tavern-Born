@@ -19,6 +19,37 @@ export function normalizeKey(name: string): string {
   return stripItemTag(String(name)).toLowerCase().trim();
 }
 
+/**
+ * Normalize generic tool-choice placeholders into canonical labels used by
+ * choice records, so equivalent 5etools keys collapse to one option.
+ */
+export function normalizeGenericToolChoice(value: string): string | null {
+  const key = normalizeKey(value);
+  if (
+    key.includes('musical instrument') ||
+    key === 'anymusicalinstrument' ||
+    key === 'instrumentmusical'
+  ) {
+    return 'musical instrument';
+  }
+  if (
+    key.includes("artisan's tool") ||
+    key.includes('artisans tool') ||
+    key === 'anyartisanstool' ||
+    key === 'anyartisantool'
+  ) {
+    return "artisan's tools";
+  }
+  if (
+    key.includes('gaming set') ||
+    key === 'anygamingset' ||
+    key === 'setgaming'
+  ) {
+    return 'gaming set';
+  }
+  return null;
+}
+
 /** Convert a normalized key back to a display name. */
 export function toDisplayName(key: string): string {
   return key

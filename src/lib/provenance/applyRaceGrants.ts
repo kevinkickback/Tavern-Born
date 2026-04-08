@@ -1,5 +1,5 @@
 import { addAbilityBonus, addChoicePlaceholder, addGrant } from './ledger';
-import { normalizeKey } from './normalization';
+import { normalizeGenericToolChoice, normalizeKey } from './normalization';
 import { makeSourceTag } from './sourceLabels';
 import type { ChoiceRecord, ProvenanceLedger } from './types';
 
@@ -7,33 +7,6 @@ type ProfBlock = Record<
   string,
   boolean | { choose?: { from: string[]; count: number } } | number
 >;
-
-function normalizeGenericToolChoice(value: string): string | null {
-  const key = normalizeKey(value);
-  if (
-    key.includes('musical instrument') ||
-    key === 'anymusicalinstrument' ||
-    key === 'instrumentmusical'
-  ) {
-    return 'musical instrument';
-  }
-  if (
-    key.includes("artisan's tool") ||
-    key.includes('artisans tool') ||
-    key === 'anyartisanstool' ||
-    key === 'anyartisantool'
-  ) {
-    return "artisan's tools";
-  }
-  if (
-    key.includes('gaming set') ||
-    key === 'anygamingset' ||
-    key === 'setgaming'
-  ) {
-    return 'gaming set';
-  }
-  return null;
-}
 
 function applyProfBlocks(
   ledger: ProvenanceLedger,

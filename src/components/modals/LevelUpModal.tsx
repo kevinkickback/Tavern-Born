@@ -59,8 +59,8 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
   if (!character) return null;
 
-  // If classProgression exists and is non-empty, use it as the source of truth.
-  // Otherwise fall back to the legacy single-class fields for backward compatibility.
+  // classProgression is the authoritative progression model; top-level
+  // class/level fields remain mirrored summary fields for existing UI surfaces.
   const classProgression: CharacterClassEntry[] = character.classProgression
     ?.length
     ? character.classProgression
@@ -101,7 +101,11 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     multiclassOptions.map((option) => [option.cls.name, option.cls]),
   );
 
-  function syncUpdate(newProgression: CharacterClassEntry[]) {
+  function syncUpdate(
+    char: typeof character,
+    newProgression: CharacterClassEntry[],
+  ) {
+    if (!char) return;
     const newTotal = newProgression.reduce((s, e) => s + e.levels, 0);
 
     // Reconcile provenance for any class entries that were fully removed.
@@ -110,7 +114,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     const removedEntries = classProgression.filter(
       (old) => !newProgression.some((n) => n.name === old.name),
     );
-    let updatedProvenance = character?.provenance;
+    let updatedProvenance = char.provenance;
     if (removedEntries.length > 0 && updatedProvenance) {
       for (const removed of removedEntries) {
         updatedProvenance = reconcileClassChange(
@@ -121,12 +125,12 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       }
     }
 
-    updateCharacter(character?.id, {
+    updateCharacter(char.id, {
       classProgression: newProgression,
       level: newTotal,
-      class: newProgression[0]?.name ?? character?.class,
-      classSource: newProgression[0]?.source ?? character?.classSource,
-      ...(updatedProvenance && updatedProvenance !== character?.provenance
+      class: newProgression[0]?.name ?? char.class,
+      classSource: newProgression[0]?.source ?? char.classSource,
+      ...(updatedProvenance && updatedProvenance !== char.provenance
         ? { provenance: updatedProvenance }
         : {}),
     });
@@ -140,7 +144,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     const newProgression = classProgression.map((e, i) =>
       i === index ? { ...e, levels: e.levels + 1 } : e,
     );
-    syncUpdate(newProgression);
+    syncUpdate(character, newProgression);
     toast.success(
       `${classProgression[index].name} is now level ${classProgression[index].levels + 1}.`,
     );
@@ -171,7 +175,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       source: selectedClass?.source,
       levels: 1,
     };
-    syncUpdate([...classProgression, newEntry]);
+    syncUpdate(character, [...classProgression, newEntry]);
     toast.success(`Added ${multiclassSelection} (level 1).`);
     setMulticlassSelection('');
   };
@@ -191,7 +195,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     if (newProgression[lastIdx].levels <= 0) {
       newProgression = newProgression.slice(0, -1);
     }
-    syncUpdate(newProgression);
+    syncUpdate(character, newProgression);
     toast.success(`Removed a level from ${removedClass}.`);
     setConfirmRemoveOpen(false);
   };

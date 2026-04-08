@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+/**
+ * 5etools JSON has broad and evolving nested shapes across books and sources.
+ * We validate identity and high-value fields strictly, while keeping many
+ * nested content fields as z.any() so ingestion remains resilient to upstream
+ * format drift without blocking app startup.
+ */
+
 export const RaceSchema = z
   .object({
     name: z.string(),

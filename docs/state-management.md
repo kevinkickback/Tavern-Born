@@ -18,6 +18,7 @@ This document defines state ownership, mutation rules, and persistence behavior.
 ## Persistence
 
 - Both stores persist with zustand/persist using IndexedDB adapter in src/lib/storage/idb-storage.ts.
+- Character store persistence includes `characters` only; startup always begins with no active character selected.
 - gameData payload itself is cached separately in src/lib/storage/dataCache.ts.
 - gameDataStore persist payload intentionally keeps config/timestamps lightweight.
 - UI collapse/expand state (accordion sections, sidebar panels) is persisted per-section key in src/lib/storage/collapseState.ts via localStorage.
@@ -44,6 +45,8 @@ Stored examples (mutable runtime):
 - spell slot usage
 - spell profile selections (class profiles + special unrestricted profile)
 - user-entered detail fields and choices
+- inventory currency counters (`cp`, `sp`, `ep`, `gp`, `pp`)
+- selected background equipment option (`backgroundEquipmentChoice`)
 
 Derived examples (do not store as canonical):
 - proficiency bonus
@@ -51,16 +54,59 @@ Derived examples (do not store as canonical):
 - passive values
 - computed AC when not explicitly overridden
 
+## Proficiency State Model
+
+- `character.proficiencies` is the canonical persisted list model for armor, weapons, tools, skills, languages, and saving throw proficiencies.
+- `character.proficiencies.skills` is required and stores the set of proficient skill names.
+- `character.skills` stores per-skill runtime detail (`proficient`, `expertise`, `bonus`) and must stay synchronized with `character.proficiencies.skills`.
+- Current code should write both structures together when skill proficiencies change. Missing `proficiencies.skills` is invalid current-schema data and is not silently repaired at runtime.
+
 ## Unsaved Changes and App Close Safety
 
-- hasUnsavedChanges compares active draft against persisted record (excluding timestamp-only changes).
+- hasUnsavedChanges is backed by a store-maintained dirty flag and updated when active draft mutations occur.
+- The dirty flag comparison excludes timestamp-only differences (`lastModified`).
 - src/main.tsx syncs unsaved state to Electron.
 - electron/main.ts shows close confirmation when unsaved edits exist.
+
+## lastModified Timestamp Management
+
+**Design Pattern:** `lastModified` is updated in every character mutation but excluded from unsaved-change comparisons.
+
+### Why This Works
+
+`lastModified` serves **UI and UX** purposes only:
+- Display on character cards (HomePage, PortraitCardPreview)
+- Sort character lists by recent activity
+- Show last-edit timestamp in the character sheet UI
+
+It does **not** affect save/restore behavior because:
+1. All character mutations call one of: `updateCharacter()`, `updateActiveCharacter()`, `updateActiveCharacterDetails()`, or `saveActiveCharacter()`.
+2. Each of these **always** sets `lastModified = new Date().toISOString()`.
+3. The `hasUnsavedChanges()` comparison intentionally **strips** `lastModified` before comparing:
+   ```ts
+   const { lastModified: _activeLastModified, ...activeComparable } = activeCharacter;
+   const { lastModified: _savedLastModified, ...savedComparable } = persistedCharacter;
+   return JSON.stringify(activeComparable) !== JSON.stringify(savedComparable);
+   ```
+4. This ensures that only **actual data changes** trigger the unsaved flag, not just timestamp drift.
+
+### Implications for Future Changes
+
+If you're modifying character mutations, be aware:
+- Don't skip setting `lastModified` — the UI relies on it for sorting/display.
+- Don't use `lastModified` to detect whether a character has unsaved changes — use `hasUnsavedChanges()` instead.
+- If you add a new mutation path that bypasses the existing three, ensure it also sets `lastModified`.
 
 ## Hydration and Init Ordering
 
 - Startup logic must wait for hasHydrated before cache/source branching.
 - Avoid invoking data init assumptions before zustand rehydrate completes.
+
+## Class Progression Model
+
+- `character.classProgression` is the authoritative class progression structure for level math, multiclassing, and spell/feature derivation.
+- Top-level `character.class`, `character.classSource`, and `character.level` remain persisted mirrors used for summary display and compatibility with existing UI surfaces.
+- New code should derive progression-sensitive behavior from `classProgression`, not from the mirrored top-level fields.
 
 ## Spell State Model
 
@@ -71,6 +117,7 @@ Derived examples (do not store as canonical):
 - Class-level spell source attribution is tracked in provenance spell source tags.
 - Attribution may be exact (class page level picker) or inferred (spells page lowest-eligible assignment).
 - Class-page per-level spell displays are derived from provenance attribution metadata.
+- Multiclass slot derivation follows 5e caster progression rules, including Artificer using ceiling half-caster contribution.
 - This is a hard cutover model; legacy spell arrays and `spellsByLevel` are not used.
 
 ## Implementation Checklist for State Changes
@@ -81,3 +128,86 @@ When adding new character state:
 3. Decide if field is persisted or derived.
 4. Expose and consume through hooks when needed.
 5. Add store/unit/integration tests.
+
+## Character Schema Versioning and Migrations
+
+**File:** `src/lib/schema/migrations.ts`
+
+The migration system allows character data to be evolved safely across app versions while maintaining backwards compatibility.
+
+### Schema Version Policy
+
+Increment `CURRENT_SCHEMA_VERSION` and create a new migration when:
+
+| Change Type | Example | Requires Migration? |
+|---|---|---|
+| **Breaking structural change** | Rename/remove/restructure required field | ✅ Yes — must handle old format |
+| **New required field** | Add `spellProfiles` (v0 → v1) | ✅ Yes — must provide default or derive |
+| **New optional field** | Add optional `customData?: string` | ❌ No — code handles undefined |
+| **UI/display-only change** | Change `lastModified` format | ❌ No — doesn't affect app logic |
+| **Additive field** | Add new proficiency category | ❌ No — existing data works as-is |
+| **Internal restructure with same semantics** | Split one field into sub-object layers | ✅ Yes — must translate between formats |
+
+### Creating a New Migration
+
+1. **Increment version** in `src/lib/schema/migrations.ts`:
+   ```ts
+   export const CURRENT_SCHEMA_VERSION = 2; // was 1
+   ```
+
+2. **Register the migration**:
+   ```ts
+   registerMigration({
+     fromVersion: 1,
+     toVersion: 2,
+     description: 'Add spellProfiles and sunset legacy spellsByLevel array',
+     up: (character) => {
+       const c = character as Record<string, unknown>;
+       // Transform old structure to new structure
+       return {
+         ...c,
+         spells: {
+           spellProfiles: buildInitialProfiles(c),
+           spellSlots: c.spellSlots,
+           // legacy array no longer present
+         },
+       } as Character;
+     },
+     down: (character) => {
+       // Reverse transformation for export/rollback
+       const c = character as Record<string, unknown>;
+       return {
+         ...c,
+         spells: {
+           spellsByLevel: c.spells?.spellProfiles ?? {},
+           spellSlots: c.spells?.spellSlots,
+         },
+       };
+     },
+   });
+   ```
+
+3. **Update type definitions** as needed:
+   - `src/types/character.ts` — defines new structure
+   - `src/types/characterSchema.ts` — Zod schema for validation
+   - Make sure old data is considered invalid by the new schema (enforces migration)
+
+4. **Ensure `migrateCharacter()` is called on load**:
+   - Character import flow: `src/pages/HomePage.tsx:206`
+   - Hydration from IndexedDB: automatic via `characterPersistenceSchema`
+
+5. **Add tests** — see `tests/lib/schema/` for examples
+
+### Migration Invariants
+
+- **All migrations are chained**: app always starts at v0 (legacy) and runs all intermediate steps to reach current.
+- **No skipping versions**: if v0→v1 and v2→v3 exist but v1→v2 is missing, the chain breaks and migration fails.
+- **Both directions matter**: `up()` is used for import, `down()` is used for export/rollback.
+- **Result must be valid**: migration output runs through schema validation; invalid results throw.
+
+### Anti-Patterns
+
+❌ Don't make breaking changes without incrementing the version  
+❌ Don't assume old data structure on import — always migrate  
+❌ Don't forget the `down()` path — breaks export/compatibility  
+❌ Don't skip intermediate versions — will cause migration chain failures

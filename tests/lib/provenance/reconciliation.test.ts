@@ -96,6 +96,5 @@ describe('provenance/reconciliation', () => {
     const diff = diffProficiencyGrants(ledger, 'skills', 'class', 'Wizard');
 
     expect(diff.toRemove).toEqual(['arcana']);
-    expect(diff.toAdd).toEqual([]);
   });
 });

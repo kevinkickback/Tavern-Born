@@ -26,6 +26,14 @@ function asObj(value: unknown): Record<string, unknown> {
     : {};
 }
 
+function asCollection(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'object' && value !== null) {
+    return Object.values(value);
+  }
+  return [];
+}
+
 export function buildCompendiumEntries(
   gameData: CompendiumGameData | null | undefined,
 ): CompendiumEntry[] {
@@ -34,7 +42,7 @@ export function buildCompendiumEntries(
   const entries: CompendiumEntry[] = [];
 
   if (gameData.races) {
-    Object.values(gameData.races).forEach((race) => {
+    asCollection(gameData.races).forEach((race) => {
       const raceObj = asObj(race);
       const entriesList = Array.isArray(raceObj.entries) ? raceObj.entries : [];
       entries.push({
@@ -48,7 +56,7 @@ export function buildCompendiumEntries(
   }
 
   if (gameData.classes) {
-    Object.values(gameData.classes).forEach((cls) => {
+    asCollection(gameData.classes).forEach((cls) => {
       const clsObj = asObj(cls);
       const fluffEntries = Array.isArray(asObj(clsObj.fluff).entries)
         ? (asObj(clsObj.fluff).entries as unknown[])
@@ -64,7 +72,7 @@ export function buildCompendiumEntries(
   }
 
   if (gameData.spells) {
-    Object.values(gameData.spells).forEach((spell) => {
+    asCollection(gameData.spells).forEach((spell) => {
       const spellObj = asObj(spell);
       entries.push({
         name: String(spellObj.name ?? ''),
@@ -91,7 +99,7 @@ export function buildCompendiumEntries(
   }
 
   if (gameData.backgrounds) {
-    Object.values(gameData.backgrounds).forEach((bg) => {
+    asCollection(gameData.backgrounds).forEach((bg) => {
       const bgObj = asObj(bg);
       const bgEntries = Array.isArray(bgObj.entries) ? bgObj.entries : [];
       entries.push({

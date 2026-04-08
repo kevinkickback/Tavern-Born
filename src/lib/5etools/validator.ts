@@ -1,3 +1,4 @@
+import type { ZodTypeAny } from 'zod';
 import type { DataSourceConfig } from '@/types/5etools';
 import {
   ActionDataSchema,
@@ -24,7 +25,7 @@ interface ValidationResult {
 interface FileValidationConfig {
   name: string;
   path: string;
-  schema?: unknown;
+  schema?: ZodTypeAny;
 }
 
 const REQUIRED_FILES: FileValidationConfig[] = [
@@ -95,7 +96,9 @@ async function validateLocalFile(
     // file.name is relative to the data folder (e.g. 'books.json', 'class/index.json')
     const sep = basePath.includes('\\') ? '\\' : '/';
     const fullPath = `${basePath}${sep}${file.name.replace(/\//g, sep)}`;
-    const data = await window.electronAPI.readLocalJson(fullPath);
+    const readLocalJson = window.electronAPI?.readLocalJson;
+    if (!readLocalJson) return false;
+    const data = await readLocalJson(fullPath);
     if (!data || typeof data !== 'object') return false;
     if (file.schema) {
       try {
@@ -156,14 +159,7 @@ async function validateFileStructure(
   }
 }
 
-function buildFileUrl(
-  basePath: string,
-  filePath: string,
-  isRemote: boolean,
-): string {
-  if (isRemote) {
-    return `${basePath}${basePath.endsWith('/') ? '' : '/'}${filePath}`;
-  }
+function buildFileUrl(basePath: string, filePath: string): string {
   return `${basePath}${basePath.endsWith('/') ? '' : '/'}${filePath}`;
 }
 
@@ -225,14 +221,14 @@ export async function validateDataSource(
       if (config.type === 'local') {
         isValid = await validateLocalFile(normalizedPath, file);
       } else {
-        const url = buildFileUrl(normalizedPath, file.path, true);
+        const url = buildFileUrl(normalizedPath, file.path);
         isValid = await validateFileStructure(url, file);
       }
       if (isValid) foundResources.push(file.name);
       return { file: file.name, isValid };
     });
 
-    const _validationResults = await Promise.all(validationPromises);
+    await Promise.all(validationPromises);
 
     if (foundResources.length === 0) {
       return {

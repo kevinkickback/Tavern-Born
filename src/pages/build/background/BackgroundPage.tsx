@@ -82,15 +82,20 @@ export function BuildBackgroundPage() {
     ? `${selectedBg.name}|${selectedBg.source ?? ''}`
     : null;
 
-  const handleBackground = (name: string, bgSource?: string) => {
+  const handleBackground = (
+    name: string,
+    bgSource?: string,
+    preferredEquipmentOption: 'a' | 'b' = 'a',
+  ) => {
     const bg = backgrounds.find((b) =>
       matchesGameDataEntry(name, bgSource, b),
     ) as Background5e | undefined;
     if (!bg) return;
-    applyBackgroundSelection(bg);
+    applyBackgroundSelection(bg, preferredEquipmentOption);
     updateCharacter(character.id, {
       background: name,
       backgroundSource: bgSource ?? undefined,
+      backgroundEquipmentChoice: preferredEquipmentOption,
     });
     if (detailCollapsed) setDetailCollapsed(false);
   };
@@ -102,6 +107,7 @@ export function BuildBackgroundPage() {
   const bgAsiData = getBackgroundAbilityData(selectedBg);
   const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0;
   const bgChoices = character.backgroundAsiChoices ?? [];
+  const selectedEquipmentChoice = character.backgroundEquipmentChoice ?? 'a';
 
   return (
     <div className="h-full flex flex-col">
@@ -154,9 +160,23 @@ export function BuildBackgroundPage() {
                       const bgKey = `${bg.name}|${bg.source ?? ''}`;
                       const isSelected = selectedBackgroundKey === bgKey;
                       const hasEquip = (bg.startingEquipment ?? []).some(
-                        (b) =>
-                          typeof b === 'object' &&
-                          Boolean((b as { A?: unknown }).A),
+                        (b) => {
+                          if (typeof b !== 'object' || b === null) {
+                            return false;
+                          }
+                          const equipmentBlock = b as {
+                            A?: unknown;
+                            B?: unknown;
+                            a?: unknown;
+                            b?: unknown;
+                          };
+                          return Boolean(
+                            equipmentBlock.A ??
+                              equipmentBlock.B ??
+                              equipmentBlock.a ??
+                              equipmentBlock.b,
+                          );
+                        },
                       );
                       return (
                         <div
@@ -193,15 +213,29 @@ export function BuildBackgroundPage() {
                             {isSelected &&
                             hasEquip &&
                             equipmentPackages.length > 1 ? (
-                              <Select defaultValue="A">
+                              <Select
+                                value={selectedEquipmentChoice}
+                                onValueChange={(value) => {
+                                  if (!selectedBg) return;
+                                  const selectedOption: 'a' | 'b' =
+                                    value === 'b' ? 'b' : 'a';
+                                  applyBackgroundSelection(
+                                    selectedBg,
+                                    selectedOption,
+                                  );
+                                  updateCharacter(character.id, {
+                                    backgroundEquipmentChoice: selectedOption,
+                                  });
+                                }}
+                              >
                                 <SelectTrigger className="h-7 text-xs min-w-[110px] max-w-[160px]">
                                   <SelectValue placeholder="Equipment…" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {equipmentPackages.map((pkg) => (
                                     <SelectItem
-                                      key={pkg.label}
-                                      value={pkg.label}
+                                      key={pkg.key}
+                                      value={pkg.key}
                                       className="text-xs"
                                     >
                                       {pkg.label}

@@ -159,7 +159,13 @@ export function DataSourceConfigurator() {
 
   const handleSelectFolder = async () => {
     try {
-      const folderPath = await window.electronAPI.selectFolder();
+      const selectFolder = window.electronAPI?.selectFolder;
+      if (!selectFolder) {
+        toast.error('Folder picker is only available in the desktop app');
+        return;
+      }
+
+      const folderPath = await selectFolder();
       if (!folderPath) return;
 
       setSourcePath(folderPath);

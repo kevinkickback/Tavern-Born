@@ -115,6 +115,7 @@ app.on('ready', () => {
               ? "connect-src 'self' ws://localhost:* https:"
               : "connect-src 'self' https:",
             "worker-src 'self' blob:",
+            "frame-src 'none'",
             "object-src 'none'",
             "base-uri 'self'",
             "form-action 'self'",

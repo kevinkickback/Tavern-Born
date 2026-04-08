@@ -9,12 +9,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  buildItemLookup,
+  resolveBackgroundStartingEquipment,
+  resolveClassStartingEquipment,
+} from '@/lib/5etools/startingEquipment';
+import {
   addGrant,
   applyBackgroundGrants,
   applyClassGrants,
   applyRaceGrants,
   makeSourceTag,
 } from '@/lib/provenance';
+import { stripItemTag } from '@/lib/provenance/normalization';
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore';
 import { useGameDataStore } from '@/store/gameDataStore';
 import type { Background5e, Class5e, Race5e } from '@/types/5etools';
@@ -129,14 +135,30 @@ export function CharacterCreationWizard({
     );
 
     const classProficiencies = classObj?.startingProficiencies ?? {};
-    const proficiencies = {
-      armor: classProficiencies.armor ?? [],
-      weapons: classProficiencies.weapons ?? [],
-      tools: (classProficiencies.tools ?? []).filter(
-        (t: string) =>
-          !t.toLowerCase().includes('choose') &&
-          !t.toLowerCase().includes('any'),
+    const itemLookup = buildItemLookup(gameData?.items ?? []);
+    const startingEquipment = [
+      ...resolveClassStartingEquipment(classObj?.startingEquipment, itemLookup),
+      ...resolveBackgroundStartingEquipment(
+        bgObj?.startingEquipment,
+        itemLookup,
       ),
+    ];
+    const proficiencies = {
+      armor: (classProficiencies.armor ?? [])
+        .filter((a): a is string => typeof a === 'string')
+        .map(stripItemTag),
+      weapons: (classProficiencies.weapons ?? [])
+        .filter((w): w is string => typeof w === 'string')
+        .map(stripItemTag),
+      tools: (classProficiencies.tools ?? [])
+        .filter(
+          (t: unknown): t is string =>
+            typeof t === 'string' &&
+            !t.toLowerCase().includes('choose') &&
+            !t.toLowerCase().includes('any'),
+        )
+        .map(stripItemTag),
+      skills: [],
       languages: ['Common'],
       savingThrows: [],
     };
@@ -168,6 +190,12 @@ export function CharacterCreationWizard({
       },
       provenance,
       proficiencies,
+      equipment: startingEquipment.map((item, index) => ({
+        id: `starter-${index}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        equipped: false,
+        attuned: false,
+        ...item,
+      })),
       raceAsiChoices: characterData.raceAsiChoices,
     });
 
