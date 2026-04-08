@@ -1,673 +1,228 @@
 import {
-  Backpack,
-  BookOpen,
-  Check,
-  Heart,
-  Lightning,
-  MagicWand,
-  Scroll,
-  Shield,
-  Star,
+  ArrowsClockwise,
+  DownloadSimple,
+  FilePdf,
+  Sparkle,
 } from '@phosphor-icons/react';
-import { useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { PdfCanvasPreview } from '@/components/PdfCanvasPreview';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAbilityScores } from '@/hooks/character/useAbilityScores';
-import { useArmorClass } from '@/hooks/character/useArmorClass';
-import { useCharacterLevel } from '@/hooks/character/useCharacterLevel';
-import { useHitPoints } from '@/hooks/character/useHitPoints';
-import { useSavingThrows } from '@/hooks/character/useSavingThrows';
-import { useSkills } from '@/hooks/character/useSkills';
-import { useSpellSlots } from '@/hooks/character/useSpellSlots';
-import type { AbilityName } from '@/lib/calculations/abilityScores';
 import {
-  ABILITY_ABBREVIATIONS,
-  ABILITY_NAMES,
-  formatModifier,
-} from '@/lib/calculations/abilityScores';
-import { getAbilityModifier } from '@/lib/calculations/gameRules';
-import { SKILL_TO_ABILITY } from '@/lib/calculations/skills';
-import { cn } from '@/lib/utils';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  CHARACTER_SHEET_TEMPLATES,
+  type CharacterSheetTemplateId,
+  DEFAULT_CHARACTER_SHEET_TEMPLATE,
+  generateFilledCharacterSheetPdf,
+  getCharacterSheetTemplate,
+} from '@/lib/pdf/characterSheetPdf';
 import { useCharacterStore } from '@/store/characterStore';
 import { NoCharCard } from './_shared';
 
-function StatBox({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center border border-border rounded-lg p-3 bg-card/50 min-w-0">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">
-        {label}
-      </span>
-      <span className="text-2xl font-bold text-foreground leading-none">
-        {value}
-      </span>
-      {sub && (
-        <span className="text-xs text-muted-foreground mt-0.5">{sub}</span>
-      )}
-    </div>
-  );
-}
-
-function AbilityBlock({
-  ability,
-  score,
-  modifier,
-}: {
-  ability: string;
-  score: number;
-  modifier: string;
-}) {
-  return (
-    <div className="flex flex-col items-center border border-border rounded-lg p-3 bg-card/50">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-accent mb-1">
-        {ability}
-      </span>
-      <span className="text-2xl font-bold leading-none">{score}</span>
-      <span className="text-sm text-muted-foreground mt-1">{modifier}</span>
-    </div>
-  );
-}
-
-function ProfDot({
-  proficient,
-  expertise,
-}: {
-  proficient: boolean;
-  expertise?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        'inline-block w-3 h-3 rounded-full border border-current flex-shrink-0',
-        expertise
-          ? 'bg-accent border-accent'
-          : proficient
-            ? 'bg-foreground'
-            : 'bg-transparent',
-      )}
-    />
-  );
+function getSafeFileName(name: string): string {
+  return name.trim().replace(/[^a-zA-Z0-9_-]+/g, '_') || 'character';
 }
 
 export function CharacterSheetPage() {
   const character = useCharacterStore((s) => s.activeCharacter);
-  const { scores, modifierStrings } = useAbilityScores();
-  const { hitPoints, calculatedMaxHP, hitDie } = useHitPoints();
-  const { skills, passivePerception } = useSkills();
-  const { savingThrows } = useSavingThrows();
-  const { calculatedAC } = useArmorClass();
-  const { level, proficiencyBonusString, initiativeString } =
-    useCharacterLevel();
-  const {
-    slots,
-    isSpellcaster,
-    cantrips,
-    spellsKnown,
-    preparedSpells,
-    spellcastingDetails,
-  } = useSpellSlots();
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const [selectedTemplateId, setSelectedTemplateId] =
+    useState<CharacterSheetTemplateId>(DEFAULT_CHARACTER_SHEET_TEMPLATE.id);
 
-  const primarySpellcasting = spellcastingDetails[0];
-  const spellcastingAbility = primarySpellcasting?.spellcastingAbility;
+  const selectedTemplate = useMemo(
+    () => getCharacterSheetTemplate(selectedTemplateId),
+    [selectedTemplateId],
+  );
 
-  const spellSaveDC = useMemo(() => {
-    return primarySpellcasting?.spellSaveDC ?? null;
-  }, [primarySpellcasting]);
-  const spellAttackBonus = useMemo(() => {
-    if (primarySpellcasting?.spellAttackBonus === null) return null;
-    if (primarySpellcasting?.spellAttackBonus === undefined) return null;
-    return formatModifier(primarySpellcasting.spellAttackBonus);
-  }, [primarySpellcasting]);
+  const characterName = character?.name?.trim() || 'Unnamed Character';
+  const downloadName = useMemo(
+    () => `${getSafeFileName(characterName)}_character_sheet.pdf`,
+    [characterName],
+  );
 
-  const _skillsByAbility = useMemo(() => {
-    const map = new Map<string, typeof skills>();
-    for (const skill of skills) {
-      const ability = SKILL_TO_ABILITY[skill.name] ?? 'strength';
-      if (!map.has(ability)) map.set(ability, []);
-      map.get(ability)?.push(skill);
+  useEffect(() => {
+    let canceled = false;
+
+    const buildPreview = async () => {
+      if (!character) {
+        setPdfBytes(null);
+        setErrorMessage(null);
+        return;
+      }
+
+      try {
+        setIsGenerating(true);
+        setErrorMessage(null);
+
+        const templateUrl = `${selectedTemplate.assetPath}?r=${refreshNonce}`;
+        const response = await fetch(templateUrl);
+        if (!response.ok) {
+          throw new Error(
+            `Unable to load PDF template (${response.status} ${response.statusText})`,
+          );
+        }
+
+        const templateBytes = new Uint8Array(await response.arrayBuffer());
+        const filledBytes = await generateFilledCharacterSheetPdf(
+          character,
+          templateBytes,
+          selectedTemplateId,
+        );
+
+        if (canceled) return;
+
+        setPdfBytes(filledBytes);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Failed to generate character sheet PDF.';
+        if (!canceled) {
+          setErrorMessage(message);
+          setPdfBytes(null);
+        }
+      } finally {
+        if (!canceled) {
+          setIsGenerating(false);
+        }
+      }
+    };
+
+    buildPreview();
+
+    return () => {
+      canceled = true;
+    };
+  }, [character, refreshNonce, selectedTemplate, selectedTemplateId]);
+
+  const handleDownload = () => {
+    if (!pdfBytes) {
+      toast.error('Generate a preview before downloading the sheet.');
+      return;
     }
-    return map;
-  }, [skills]);
+
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = downloadName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    toast.success('Character sheet PDF downloaded.');
+  };
 
   if (!character) {
     return (
       <NoCharCard
-        icon={<Scroll weight="duotone" />}
-        noun="view a character sheet"
+        icon={<FilePdf weight="duotone" />}
+        noun="generate a character sheet PDF"
       />
     );
   }
 
-  const hitDieValue = hitDie;
-  const speed = character.speed ?? 30;
-  const _conMod = getAbilityModifier(character.abilityScores.constitution);
-
-  const proficiencyList = [
-    ...(character.proficiencies.armor.length
-      ? [`Armor: ${character.proficiencies.armor.join(', ')}`]
-      : []),
-    ...(character.proficiencies.weapons.length
-      ? [`Weapons: ${character.proficiencies.weapons.join(', ')}`]
-      : []),
-    ...(character.proficiencies.tools.length
-      ? [`Tools: ${character.proficiencies.tools.join(', ')}`]
-      : []),
-  ];
-
-  const xpToNext: Record<number, number> = {
-    1: 300,
-    2: 900,
-    3: 2700,
-    4: 6500,
-    5: 14000,
-    6: 23000,
-    7: 34000,
-    8: 48000,
-    9: 64000,
-    10: 85000,
-    11: 100000,
-    12: 120000,
-    13: 140000,
-    14: 165000,
-    15: 195000,
-    16: 225000,
-    17: 265000,
-    18: 305000,
-    19: 355000,
-    20: 0,
-  };
-
   return (
     <div className="max-w-7xl mx-auto w-full space-y-4 pb-8">
       <Card className="w-full">
-        <CardContent className="pt-5 pb-4">
-          <div className="flex flex-wrap items-start gap-4">
-            <div className="flex-1 min-w-0">
-              <h1 className="font-display text-3xl font-bold text-foreground truncate">
-                {character.name || 'Unnamed Character'}
-              </h1>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {character.race && (
-                  <Badge variant="secondary">
-                    {character.subrace
-                      ? `${character.subrace} (${character.race})`
-                      : character.race}
-                  </Badge>
-                )}
-                {character.class && (
-                  <Badge variant="secondary">
-                    {character.class}
-                    {character.subclass ? ` • ${character.subclass}` : ''}
-                  </Badge>
-                )}
-                {character.background && (
-                  <Badge variant="outline">{character.background}</Badge>
-                )}
-                {character.details?.alignment && (
-                  <Badge variant="outline">{character.details.alignment}</Badge>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-accent">{level}</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Level
-                </div>
-              </div>
-              {level < 20 && (
-                <div className="text-center text-xs text-muted-foreground">
-                  <div>
-                    {(character.experiencePoints ?? 0).toLocaleString()} XP
-                  </div>
-                  <div className="text-[10px]">
-                    / {(xpToNext[level] ?? 0).toLocaleString()}
-                  </div>
-                </div>
-              )}
-            </div>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-lg sm:text-xl">
+            <FilePdf className="h-6 w-6 text-accent" weight="duotone" />
+            Character Sheet PDF
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Auto-filled preview for {characterName}. This uses the selected
+            {` ${selectedTemplate.name} `}
+            template.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-muted-foreground">Template</span>
+            <Select
+              value={selectedTemplateId}
+              onValueChange={(value) =>
+                setSelectedTemplateId(value as CharacterSheetTemplateId)
+              }
+            >
+              <SelectTrigger className="w-[260px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CHARACTER_SHEET_TEMPLATES.map((template) => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setRefreshNonce((n) => n + 1)}
+              disabled={isGenerating}
+            >
+              <ArrowsClockwise className="h-4 w-4" weight="bold" />
+              Regenerate
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDownload}
+              disabled={isGenerating || !pdfBytes}
+            >
+              <DownloadSimple className="h-4 w-4" weight="bold" />
+              Download PDF
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
-        <StatBox label="Armor Class" value={calculatedAC} />
-        <StatBox
-          label="Hit Points"
-          value={`${hitPoints.current} / ${calculatedMaxHP}`}
-          sub={hitPoints.temporary ? `+${hitPoints.temporary} temp` : undefined}
-        />
-        <StatBox label="Initiative" value={initiativeString} />
-        <StatBox label="Speed" value={`${speed} ft`} />
-        <StatBox label="Prof Bonus" value={proficiencyBonusString} />
-        <StatBox label="Hit Die" value={`d${hitDieValue}`} sub={`×${level}`} />
-        <StatBox label="Passive Perc" value={passivePerception} />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Col 1 — Ability Scores + Saving Throws */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Ability Scores
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-2">
-                {ABILITY_NAMES.map((ability) => (
-                  <AbilityBlock
-                    key={ability}
-                    ability={ABILITY_ABBREVIATIONS[ability]}
-                    score={scores[ability]}
-                    modifier={modifierStrings[ability]}
-                  />
-                ))}
+      <Card className="w-full overflow-hidden">
+        <CardContent className="p-0">
+          {isGenerating && (
+            <div className="flex h-[70vh] items-center justify-center bg-muted/30">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Sparkle className="h-4 w-4 animate-pulse" weight="duotone" />
+                Generating PDF preview...
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                <Shield className="h-4 w-4 text-accent" weight="duotone" />
-                Saving Throws
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1.5">
-                {savingThrows.map((st) => (
-                  <div
-                    key={st.ability}
-                    className="flex items-center gap-2.5 py-0.5"
-                  >
-                    <ProfDot proficient={st.proficient} />
-                    <span className="text-sm font-mono w-10 text-right flex-shrink-0 text-foreground">
-                      {formatModifier(st.modifier)}
-                    </span>
-                    <span className="text-sm text-foreground capitalize">
-                      {st.ability}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                <Heart className="h-4 w-4 text-destructive" weight="duotone" />
-                Death Saves
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {(['Successes', 'Failures'] as const).map((label) => (
-                  <div key={label} className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground w-20">
-                      {label}
-                    </span>
-                    <div className="flex gap-2">
-                      {[0, 1, 2].map((i) => (
-                        <span
-                          key={i}
-                          className="w-5 h-5 rounded-full border-2 border-border bg-card/50"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Col 2 — Skills */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-              <Star className="h-4 w-4 text-accent" weight="duotone" />
-              Skills
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              {skills.map((skill) => (
-                <div
-                  key={skill.name}
-                  className="flex items-center gap-2.5 py-0.5"
-                >
-                  <ProfDot
-                    proficient={skill.proficient}
-                    expertise={skill.expertise}
-                  />
-                  <span className="text-sm font-mono w-8 text-right flex-shrink-0 text-foreground">
-                    {formatModifier(skill.modifier)}
-                  </span>
-                  <span className="text-sm text-foreground capitalize flex-1">
-                    {skill.name}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground uppercase">
-                    {ABILITY_ABBREVIATIONS[skill.ability as AbilityName] ??
-                      skill.ability.slice(0, 3).toUpperCase()}
-                  </span>
-                </div>
-              ))}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Col 3 — Proficiencies, Languages, Personality */}
-        <div className="space-y-4">
-          {(proficiencyList.length > 0 ||
-            character.proficiencies.languages.length > 0) && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-accent" weight="duotone" />
-                  Proficiencies &amp; Languages
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {proficiencyList.map((line) => (
-                  <p key={line} className="text-sm text-foreground">
-                    {line}
-                  </p>
-                ))}
-                {character.proficiencies.languages.length > 0 && (
-                  <p className="text-sm text-foreground">
-                    <span className="font-semibold">Languages: </span>
-                    {character.proficiencies.languages
-                      .map((l) => l.charAt(0).toUpperCase() + l.slice(1))
-                      .join(', ')}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
           )}
 
-          {character.details?.personalityTraits ||
-          character.details?.personality ? (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  Personality
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-foreground">
-                {(character.details.personalityTraits ||
-                  character.details.personality) && (
-                  <p>
-                    <span className="font-semibold text-muted-foreground">
-                      Traits:{' '}
-                    </span>
-                    {character.details.personalityTraits ??
-                      character.details.personality}
-                  </p>
-                )}
-                {character.details.ideals && (
-                  <p>
-                    <span className="font-semibold text-muted-foreground">
-                      Ideals:{' '}
-                    </span>
-                    {character.details.ideals}
-                  </p>
-                )}
-                {character.details.bonds && (
-                  <p>
-                    <span className="font-semibold text-muted-foreground">
-                      Bonds:{' '}
-                    </span>
-                    {character.details.bonds}
-                  </p>
-                )}
-                {character.details.flaws && (
-                  <p>
-                    <span className="font-semibold text-muted-foreground">
-                      Flaws:{' '}
-                    </span>
-                    {character.details.flaws}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
-      </div>
-
-      {character.features.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Lightning className="h-5 w-5 text-accent" weight="duotone" />
-              Features &amp; Traits
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {character.features.map((f) => (
-                <div
-                  key={f.id}
-                  className="border border-border rounded-lg p-3 bg-card/30"
+          {!isGenerating && errorMessage && (
+            <div className="flex h-[70vh] items-center justify-center px-6">
+              <div className="max-w-md space-y-3 text-center">
+                <p className="text-sm text-destructive">{errorMessage}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setRefreshNonce((n) => n + 1)}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-foreground">
-                      {f.name}
-                    </p>
-                    {f.source && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] py-0 flex-shrink-0"
-                      >
-                        {f.source}
-                      </Badge>
-                    )}
-                  </div>
-                  {f.description && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
-                      {f.description}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      {(character.feats?.length ?? 0) > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Star className="h-5 w-5 text-accent" weight="duotone" />
-              Feats
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {character.feats.map((f) => (
-                <div
-                  key={f.id}
-                  className="border border-border rounded-lg p-3 bg-card/30"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-foreground">
-                      {f.name}
-                    </p>
-                    {f.source && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] py-0 flex-shrink-0"
-                      >
-                        {f.source}
-                      </Badge>
-                    )}
-                  </div>
-                  {f.description && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-3">
-                      {f.description}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      {character.equipment.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Backpack className="h-5 w-5 text-accent" weight="duotone" />
-              Equipment
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {character.equipment.map((item) => (
-                <div
-                  key={item.id}
-                  className={cn(
-                    'border rounded-lg px-3 py-2 text-sm',
-                    item.equipped
-                      ? 'border-accent/40 bg-accent/5'
-                      : 'border-border bg-card/30 opacity-60',
-                  )}
-                >
-                  <div className="flex items-center gap-1.5">
-                    {item.equipped && (
-                      <Check className="h-3 w-3 text-accent flex-shrink-0" />
-                    )}
-                    <span className="font-medium truncate">{item.name}</span>
-                  </div>
-                  <div className="flex gap-2 mt-0.5">
-                    {item.quantity > 1 && (
-                      <span className="text-xs text-muted-foreground">
-                        ×{item.quantity}
-                      </span>
-                    )}
-                    {item.rarity && item.rarity !== 'none' && (
-                      <span className="text-xs text-muted-foreground capitalize">
-                        {item.rarity}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      {isSpellcaster && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <MagicWand className="h-5 w-5 text-accent" weight="duotone" />
-              Spellcasting
-              {spellcastingAbility && (
-                <Badge variant="secondary" className="ml-1 text-xs">
-                  {ABILITY_ABBREVIATIONS[spellcastingAbility as AbilityName] ??
-                    spellcastingAbility.toUpperCase()}
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Spell attack / save */}
-            <div className="flex gap-4">
-              {spellSaveDC !== null && (
-                <div className="text-center border border-border rounded-lg px-4 py-2">
-                  <div className="text-xl font-bold">{spellSaveDC}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Spell Save DC
-                  </div>
-                </div>
-              )}
-              {spellAttackBonus !== null && (
-                <div className="text-center border border-border rounded-lg px-4 py-2">
-                  <div className="text-xl font-bold">{spellAttackBonus}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Spell Attack
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Spell slots */}
-            {slots.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                  Spell Slots
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {slots.map((slot) => (
-                    <div
-                      key={slot.level}
-                      className={cn(
-                        'border rounded-lg px-3 py-1.5 text-center min-w-[56px]',
-                        slot.available === 0
-                          ? 'border-border opacity-50'
-                          : 'border-accent/40 bg-accent/5',
-                      )}
-                    >
-                      <div className="text-sm font-bold">
-                        {slot.available}/{slot.max}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {slot.isPactMagic ? 'Pact' : `Level ${slot.level}`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                  Try Again
+                </Button>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Cantrips */}
-            {cantrips.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                  Cantrips
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {cantrips.map((name) => (
-                    <Badge key={name} variant="secondary" className="text-xs">
-                      {name}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Prepared / Known spells */}
-            {(preparedSpells.length > 0 || spellsKnown.length > 0) && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                  {preparedSpells.length > 0
-                    ? 'Prepared Spells'
-                    : 'Spells Known'}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(preparedSpells.length > 0
-                    ? preparedSpells
-                    : spellsKnown
-                  ).map((name) => (
-                    <Badge key={name} variant="outline" className="text-xs">
-                      {name}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+          {!isGenerating && !errorMessage && pdfBytes && (
+            <PdfCanvasPreview pdfBytes={pdfBytes} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

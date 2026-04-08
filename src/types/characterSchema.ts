@@ -213,6 +213,14 @@ export const equipmentSchema = z.object({
   armorType: z.enum(['light', 'medium', 'heavy', 'shield']).optional(),
 });
 
+export const currencySchema = z.object({
+  cp: z.number().int().nonnegative(),
+  sp: z.number().int().nonnegative(),
+  ep: z.number().int().nonnegative(),
+  gp: z.number().int().nonnegative(),
+  pp: z.number().int().nonnegative(),
+});
+
 export const hitPointsSchema = z.object({
   max: z.number().int().min(0),
   current: z.number().int().min(0),
@@ -297,6 +305,7 @@ export const proficienciesSchema = z.object({
   armor: z.array(z.string()),
   weapons: z.array(z.string()),
   tools: z.array(z.string()),
+  skills: z.array(z.string()),
   languages: z.array(z.string()),
   savingThrows: z.array(z.string()),
 });
@@ -523,6 +532,9 @@ export const characterSchema = z.object({
   subclassSource: z.string().optional(),
   background: z.string(),
   backgroundSource: z.string().optional(),
+  currency: currencySchema
+    .default({ cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 })
+    .optional(),
   level: levelSchema,
   experiencePoints: z.number().int().min(0).default(0),
   classProgression: z.array(characterClassEntrySchema).optional(),
@@ -534,7 +546,9 @@ export const characterSchema = z.object({
   variantRules: variantRulesSchema.optional(),
   raceAsiChoices: z.array(z.array(z.string())).optional(),
   backgroundAsiBlockIndex: z.number().int().nonnegative().optional(),
+  backgroundEquipmentChoice: z.enum(['a', 'b']).optional(),
   backgroundAsiChoices: z.array(z.string()).optional(),
+  backgroundCurrencyGrant: currencySchema.optional(),
   spells: spellSelectionSchema,
   equipment: z.array(equipmentSchema),
   hitPoints: hitPointsSchema,
@@ -555,7 +569,7 @@ export const characterSchema = z.object({
 
 export const characterPersistenceSchema = characterSchema;
 
-export type AbilityName = z.infer<typeof abilityNameSchema>;
+export type AbilityName = import('./character').AbilityName;
 export type AbilityScores = z.infer<typeof abilityScoresSchema>;
 export type AbilityScoreMethod = z.infer<typeof abilityScoreMethodSchema>;
 export type ProficiencyType = z.infer<typeof proficiencyTypeSchema>;

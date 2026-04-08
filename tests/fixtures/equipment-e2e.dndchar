@@ -1,0 +1,120 @@
+{
+  "id": "equipment-e2e-char",
+  "version": "1.0.0",
+  "name": "Equipment E2E Hero",
+  "race": "Human",
+  "class": "Fighter",
+  "classSource": "PHB",
+  "background": "Soldier",
+  "level": 1,
+  "experiencePoints": 0,
+  "classProgression": [
+    {
+      "name": "Fighter",
+      "levels": 1,
+      "source": "PHB"
+    }
+  ],
+  "abilityScores": {
+    "strength": 10,
+    "dexterity": 10,
+    "constitution": 10,
+    "intelligence": 10,
+    "wisdom": 10,
+    "charisma": 10
+  },
+  "proficiencies": {
+    "armor": [],
+    "weapons": [],
+    "tools": [],
+    "skills": [],
+    "languages": [],
+    "savingThrows": []
+  },
+  "features": [],
+  "feats": [],
+  "spells": {
+    "spellProfiles": [
+      {
+        "id": "class:Fighter|PHB",
+        "type": "class",
+        "label": "Fighter (Lv 1)",
+        "className": "Fighter",
+        "classSource": "PHB",
+        "cantrips": [],
+        "spellsKnown": [],
+        "preparedSpells": [],
+        "alwaysPrepared": false
+      },
+      {
+        "id": "special:unrestricted",
+        "type": "special",
+        "label": "Special (Unrestricted)",
+        "cantrips": [],
+        "spellsKnown": [],
+        "preparedSpells": [],
+        "alwaysPrepared": true
+      }
+    ],
+    "spellSlots": {
+      "level1": { "max": 0, "used": 0 },
+      "level2": { "max": 0, "used": 0 },
+      "level3": { "max": 0, "used": 0 },
+      "level4": { "max": 0, "used": 0 },
+      "level5": { "max": 0, "used": 0 },
+      "level6": { "max": 0, "used": 0 },
+      "level7": { "max": 0, "used": 0 },
+      "level8": { "max": 0, "used": 0 },
+      "level9": { "max": 0, "used": 0 }
+    }
+  },
+  "equipment": [
+    {
+      "id": "equipment-e2e-item-1",
+      "name": "Ring of Testing",
+      "type": "RG",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "weight": 5,
+      "source": "TST",
+      "reqAttune": true
+    }
+  ],
+  "hitPoints": {
+    "max": 10,
+    "current": 10,
+    "temporary": 0
+  },
+  "armorClass": 10,
+  "initiative": 0,
+  "speed": 30,
+  "savingThrows": {
+    "strength": { "proficient": false, "bonus": 0 },
+    "dexterity": { "proficient": false, "bonus": 0 },
+    "constitution": { "proficient": false, "bonus": 0 },
+    "intelligence": { "proficient": false, "bonus": 0 },
+    "wisdom": { "proficient": false, "bonus": 0 },
+    "charisma": { "proficient": false, "bonus": 0 }
+  },
+  "skills": {},
+  "details": {},
+  "provenance": {
+    "proficiencies": {
+      "armor": {},
+      "weapons": {},
+      "tools": {},
+      "languages": {},
+      "skills": {},
+      "savingThrows": {}
+    },
+    "abilityBonuses": [],
+    "features": {},
+    "feats": {},
+    "spells": {},
+    "equipment": {},
+    "choices": []
+  },
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "lastModified": "2026-01-01T00:00:00.000Z"
+}

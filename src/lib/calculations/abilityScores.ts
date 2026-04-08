@@ -1,3 +1,4 @@
+import type { AbilityName, AbilityScores } from '@/types/character';
 import {
   ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MAX,
@@ -9,13 +10,7 @@ import {
   STANDARD_ARRAY,
 } from './gameRules';
 
-export type AbilityName =
-  | 'strength'
-  | 'dexterity'
-  | 'constitution'
-  | 'intelligence'
-  | 'wisdom'
-  | 'charisma';
+export type { AbilityName, AbilityScores } from '@/types/character';
 
 export const ABILITY_NAMES: readonly AbilityName[] = [
   'strength',
@@ -34,8 +29,6 @@ export const ABILITY_ABBREVIATIONS: Readonly<Record<AbilityName, string>> = {
   wisdom: 'WIS',
   charisma: 'CHA',
 };
-
-export type AbilityScores = Record<AbilityName, number>;
 
 /** A bonus applied to an ability from a named source (race, feat, ASI, etc.). */
 export interface AbilityBonus {

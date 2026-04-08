@@ -45,6 +45,22 @@ describe('characterStore', () => {
     );
   });
 
+  test('validateCharacterData rejects payloads missing proficiencies.skills', () => {
+    const fixture = makeCharacterFixture();
+    const invalid = {
+      ...fixture,
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        languages: [],
+        savingThrows: [],
+      },
+    };
+
+    expect(validateCharacterData(invalid)).toContain('proficiencies.skills');
+  });
+
   test('createNewCharacter adds a character and returns it', () => {
     const created = useCharacterStore
       .getState()
@@ -156,7 +172,7 @@ describe('characterStore', () => {
     expect(state.activeCharacter).toBeNull();
   });
 
-  test('persist rehydrate callback rebuilds and normalizes active character', () => {
+  test('persist rehydrate callback leaves active character unselected', () => {
     const persisted = makeCharacterFixture({ id: 'c8', name: 'Persisted' });
     delete persisted.provenance;
 
@@ -190,9 +206,36 @@ describe('characterStore', () => {
 
     onRehydrate?.(rehydrateState);
 
-    expect(rehydrateState.activeCharacter?.id).toBe('c8');
-    expect(rehydrateState.activeCharacter?.provenance).toEqual(
-      emptyProvenance(),
-    );
+    expect(rehydrateState.characters[0]?.provenance).toEqual(emptyProvenance());
+    expect(rehydrateState.activeCharacterId).toBeNull();
+    expect(rehydrateState.activeCharacter).toBeNull();
+  });
+
+  test('persist partialize stores only characters', () => {
+    const fixture = makeCharacterFixture({ id: 'persist-id', name: 'Persist' });
+    useCharacterStore.setState({
+      characters: [fixture],
+      activeCharacterId: fixture.id,
+      activeCharacter: fixture,
+    });
+
+    const storeWithPersist = useCharacterStore as unknown as {
+      persist: {
+        getOptions: () => {
+          partialize?: (state: { characters: (typeof fixture)[] }) => {
+            characters: (typeof fixture)[];
+          };
+        };
+      };
+      getState: () => {
+        characters: (typeof fixture)[];
+      };
+    };
+
+    const partialize = storeWithPersist.persist.getOptions().partialize;
+    expect(partialize).toBeTypeOf('function');
+
+    const persisted = partialize?.(storeWithPersist.getState());
+    expect(persisted).toEqual({ characters: [fixture] });
   });
 });

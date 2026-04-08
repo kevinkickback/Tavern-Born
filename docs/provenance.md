@@ -70,6 +70,11 @@ When source entity changes:
 3. Apply grants from new source.
 4. Verify resulting character and ledger are aligned.
 
+Background equipment and currency behavior:
+- `applyBackgroundSelection(bg, preferredOption)` applies background starting equipment using the selected option key (`a` or `b`).
+- Items are tracked in provenance `equipment` as before.
+- Currency granted by background equipment entries is persisted on `character.currency` and tracked via `character.backgroundCurrencyGrant` for safe subtraction during reconciliation.
+
 ## Invariants
 
 - Every non-user-manual grant should be traceable to a source tag.

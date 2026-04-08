@@ -16,6 +16,7 @@ type MapDomain =
   | 'feats'
   | 'spells'
   | 'equipment';
+type NonProficiencyMapDomain = Exclude<MapDomain, ProficiencyDomain>;
 
 const PROFICIENCY_DOMAINS = new Set<string>([
   'armor',
@@ -35,10 +36,23 @@ function getMap(
   domain: MapDomain,
 ): Record<string, SourceTag[]> {
   if (isProficiencyDomain(domain)) return ledger.proficiencies[domain];
-  return (ledger as Record<string, unknown>)[domain] as Record<
-    string,
-    SourceTag[]
-  >;
+  return getNonProficiencyMap(ledger, domain);
+}
+
+function getNonProficiencyMap(
+  ledger: ProvenanceLedger,
+  domain: NonProficiencyMapDomain,
+): Record<string, SourceTag[]> {
+  switch (domain) {
+    case 'features':
+      return ledger.features;
+    case 'feats':
+      return ledger.feats;
+    case 'spells':
+      return ledger.spells;
+    case 'equipment':
+      return ledger.equipment;
+  }
 }
 
 function setMap(
@@ -52,7 +66,24 @@ function setMap(
       proficiencies: { ...ledger.proficiencies, [domain]: map },
     };
   }
-  return { ...ledger, [domain]: map };
+  return setNonProficiencyMap(ledger, domain, map);
+}
+
+function setNonProficiencyMap(
+  ledger: ProvenanceLedger,
+  domain: NonProficiencyMapDomain,
+  map: Record<string, SourceTag[]>,
+): ProvenanceLedger {
+  switch (domain) {
+    case 'features':
+      return { ...ledger, features: map };
+    case 'feats':
+      return { ...ledger, feats: map };
+    case 'spells':
+      return { ...ledger, spells: map };
+    case 'equipment':
+      return { ...ledger, equipment: map };
+  }
 }
 
 function tagPresent(list: SourceTag[], tag: SourceTag): boolean {

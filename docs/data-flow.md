@@ -12,15 +12,16 @@ Entry points:
 Flow:
 1. App mounts and calls useDataInit().
 2. Hook waits for gameDataStore hydration from IndexedDB (hasHydrated).
-3. Hook reads data source config from gameDataStore and cache snapshot from dataCache.
-4. Decision branch:
+3. In development, seed character injection only runs when `VITE_ENABLE_DEV_SEEDS=true`.
+4. Hook reads data source config from gameDataStore and cache snapshot from dataCache.
+5. Decision branch:
 - No cache and no source: set cacheStatus to unconfigured.
 - Cache and source, same source, fresh cache: serve cache immediately.
 - Cache and source, same source, stale cache: serve cache and trigger background refresh.
 - Cache and source, different source: fetch fresh and replace cache.
 - Cache without source: serve offline cache and warn.
 - Source without cache: fetch fresh.
-5. On successful fetch, parsed gameData is written to cache and store.
+6. On successful fetch, parsed gameData is written to cache and store.
 
 ## 2) Game Data Ingestion Pipeline
 
@@ -47,16 +48,17 @@ Entry points:
 - src/pages/build/* and feature pages
 
 Flow:
-1. User activates a character, which hydrates activeCharacter from characters by id.
-2. UI hooks derive display and computed values from activeCharacter.
-3. Edits call updateCharacter(id, patch).
-4. If id is activeCharacter, patch applies to in-memory draft.
-5. saveActiveCharacter persists draft into characters array.
-6. Persist middleware writes updated state to IndexedDB.
+1. App starts with no active character selected.
+2. User activates a character, which hydrates activeCharacter from characters by id.
+3. UI hooks derive display and computed values from activeCharacter.
+4. Edits call updateCharacter(id, patch).
+5. If id is activeCharacter, patch applies to in-memory draft.
+6. saveActiveCharacter persists draft into characters array.
+7. Persist middleware writes updated state to IndexedDB.
 
 Validation behavior:
 - Imported files are validated with full character-shape checks before addCharacter.
-- Character store mutations coerce legacy payloads to the current runtime shape and validate against characterPersistenceSchema.
+- Character store mutations apply minimal structural coercion and then validate against `characterPersistenceSchema`; payloads missing required canonical fields such as `proficiencies.skills` are rejected.
 - Rehydrated characters from IndexedDB are validated and normalized; invalid records are dropped.
 - Spell payloads are additionally checked against spellSelectionSchema for structural integrity.
 
@@ -73,9 +75,14 @@ Entry points:
 
 Flow:
 1. Selection changes (race/class/background/feat/optional feature) trigger grant application helpers.
-2. Helpers mutate both character fields and provenance ledger tags.
+2. Helpers mutate both materialized character fields and provenance ledger tags.
 3. Reconciliation removes prior-source grants when a source entity is changed.
 4. Resulting character sheet stays aligned with source-attributed grants.
+
+Background equipment detail:
+- Background starting equipment is resolved from 5etools `startingEquipment` blocks using a persisted option key (`backgroundEquipmentChoice`, default `a` / Option A).
+- The resolver applies both materialized items and numeric currency grants found in the same entries (`value` and `containsValue`).
+- On background change (or option swap), previously granted background currency is removed first, then the new grant is applied.
 
 ## 5) Content Rendering Flow
 
@@ -100,6 +107,9 @@ Flow:
 3. Migration registry applies up-migrations to bring character from its version to CURRENT_SCHEMA_VERSION.
 4. If migration chain is broken or migration fails, character is rejected and logged.
 5. Migrations are registered with up() and down() handlers for forward/backward compatibility.
+
+Current implementation note:
+- `downgradeCharacter()` is intentionally infrastructure-only today (rollback/export support) and has no runtime callers in the app flow.
 
 Versioning strategy:
 - Schema version is incremented only on **breaking changes** (added required fields, removed fields, restructured data).

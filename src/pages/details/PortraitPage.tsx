@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules';
 import {
   DEFAULT_PORTRAIT_TRANSFORM,
   PLACEHOLDER_PORTRAITS,
@@ -78,7 +79,7 @@ export function PortraitPage() {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > MAX_PORTRAIT_SIZE) {
         toast.error('File size must be less than 5MB');
         return;
       }

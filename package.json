@@ -52,6 +52,8 @@
     "dompurify": "^3.3.3",
     "idb-keyval": "^6.2.2",
     "lucide-react": "^0.484.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.10.38",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-error-boundary": "^6.0.0",

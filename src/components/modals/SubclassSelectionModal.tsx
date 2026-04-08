@@ -114,6 +114,7 @@ export function SubclassSelectionModal({
         .find((id) => id.startsWith(`${selectedName}|`));
       return selectedId ? [selectedId] : [];
     },
+    // Keep the memo keyed to selection inputs only; mapper/callback allocations are deterministic.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectedName, subclasses],
   );

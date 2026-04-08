@@ -19,6 +19,46 @@ describe('5etools/dataLoader', () => {
     globalThis.fetch = originalFetch;
   });
 
+  test('buildUrl always resolves to data path in remote mode', () => {
+    const loader = new FiveEToolsDataLoader({
+      type: 'remote',
+      path: 'https://example.com/5etools-src/main',
+      isValid: true,
+    });
+
+    const buildUrl = (filename: string) =>
+      (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(
+        filename,
+      );
+
+    expect(buildUrl('class/class-wizard.json')).toBe(
+      'https://example.com/5etools-src/main/data/class/class-wizard.json',
+    );
+    expect(buildUrl('spells/spells-phb.json')).toBe(
+      'https://example.com/5etools-src/main/data/spells/spells-phb.json',
+    );
+    expect(buildUrl('books.json')).toBe(
+      'https://example.com/5etools-src/main/data/books.json',
+    );
+  });
+
+  test('buildUrl does not inject data prefix in local mode', () => {
+    const loader = new FiveEToolsDataLoader({
+      type: 'local',
+      path: 'C:\\5etools',
+      isValid: true,
+    });
+
+    const buildUrl = (filename: string) =>
+      (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(
+        filename,
+      );
+
+    expect(buildUrl('class/class-wizard.json')).toBe(
+      'C:\\5etools/class/class-wizard.json',
+    );
+  });
+
   test('loads classes from class files and filters spells by index source while enriching lookup data', async () => {
     const payloadByFile: Record<string, unknown> = {
       'books.json': {

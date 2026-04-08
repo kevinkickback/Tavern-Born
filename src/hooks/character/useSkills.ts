@@ -85,15 +85,23 @@ export function useSkills(): SkillsState {
         bonus: 0,
       };
       const proficient = !current.proficient;
+      const nextSkills = {
+        ...activeCharacter.skills,
+        [key]: {
+          ...current,
+          proficient,
+          expertise: proficient ? current.expertise : false,
+        },
+      };
+      const nextProficientSkills = ALL_SKILLS.filter(
+        (name) => nextSkills[name]?.proficient,
+      );
       // Clearing expertise when removing proficiency
       updateCharacter(activeCharacter.id, {
-        skills: {
-          ...activeCharacter.skills,
-          [key]: {
-            ...current,
-            proficient,
-            expertise: proficient ? current.expertise : false,
-          },
+        skills: nextSkills,
+        proficiencies: {
+          ...activeCharacter.proficiencies,
+          skills: nextProficientSkills,
         },
       });
     },

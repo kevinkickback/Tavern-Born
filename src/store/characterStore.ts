@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { SPECIAL_SPELL_PROFILE_LABEL } from '@/lib/calculations/spellProfiles';
+import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants';
 import type { ProvenanceLedger } from '@/lib/provenance/types';
 import {
   CURRENT_SCHEMA_VERSION,
@@ -53,7 +54,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const generateId = () => {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 };
 
 export function emptyProvenance(): ProvenanceLedger {
@@ -83,10 +84,25 @@ export function normalizeCharacterProvenance(character: Character): Character {
   return { ...character, provenance: emptyProvenance() };
 }
 
+function isUnsavedComparedToPersisted(
+  activeCharacter: Character | null,
+  persistedCharacter: Character | undefined,
+): boolean {
+  if (!activeCharacter || !persistedCharacter) return false;
+
+  const { lastModified: _activeLastModified, ...activeComparable } =
+    activeCharacter;
+  const { lastModified: _savedLastModified, ...savedComparable } =
+    persistedCharacter;
+
+  return JSON.stringify(activeComparable) !== JSON.stringify(savedComparable);
+}
+
 interface CharacterState {
   characters: Character[];
   activeCharacterId: string | null;
   activeCharacter: Character | null;
+  hasUnsavedChangesFlag: boolean;
   hasUnsavedChanges: () => boolean;
 
   setCharacters: (characters: Character[]) => void;
@@ -112,6 +128,13 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
     race: '',
     class: '',
     background: '',
+    currency: {
+      cp: 0,
+      sp: 0,
+      ep: 0,
+      gp: 0,
+      pp: 0,
+    },
     level: 1,
     experiencePoints: 0,
     abilityScores: {
@@ -126,6 +149,7 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
       armor: [],
       weapons: [],
       tools: [],
+      skills: [],
       languages: [],
       savingThrows: [],
     },
@@ -174,12 +198,7 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
     },
     skills: {},
     details: {},
-    portraitTransform: {
-      zoom: 100,
-      panX: 0,
-      panY: 0,
-      rotation: 0,
-    },
+    portraitTransform: { ...DEFAULT_PORTRAIT_TRANSFORM },
     createdAt: now,
     lastModified: now,
     provenance: emptyProvenance(),
@@ -192,8 +211,10 @@ function coerceCharacterShape(character: unknown): Character | null {
   const baseline = createEmptyCharacter();
   const raw = character as Partial<Character> & Record<string, unknown>;
 
-  const rawSpells = isRecord(raw.spells) ? raw.spells : {};
-  const rawSpellSlots = isRecord(rawSpells.spellSlots)
+  const rawSpells: Record<string, unknown> = isRecord(raw.spells)
+    ? raw.spells
+    : {};
+  const rawSpellSlots: Record<string, unknown> = isRecord(rawSpells.spellSlots)
     ? rawSpells.spellSlots
     : {};
 
@@ -204,10 +225,9 @@ function coerceCharacterShape(character: unknown): Character | null {
       ...baseline.abilityScores,
       ...(isRecord(raw.abilityScores) ? raw.abilityScores : {}),
     },
-    proficiencies: {
-      ...baseline.proficiencies,
-      ...(isRecord(raw.proficiencies) ? raw.proficiencies : {}),
-    },
+    proficiencies: isRecord(raw.proficiencies)
+      ? (raw.proficiencies as Character['proficiencies'])
+      : baseline.proficiencies,
     spells: {
       spellProfiles: Array.isArray(rawSpells.spellProfiles)
         ? rawSpells.spellProfiles
@@ -225,14 +245,16 @@ function coerceCharacterShape(character: unknown): Character | null {
       ...baseline.savingThrows,
       ...(isRecord(raw.savingThrows) ? raw.savingThrows : {}),
     },
+    skills: isRecord(raw.skills)
+      ? (raw.skills as Character['skills'])
+      : baseline.skills,
     details: {
       ...baseline.details,
       ...(isRecord(raw.details) ? raw.details : {}),
     },
-    portraitTransform: {
-      ...baseline.portraitTransform,
-      ...(isRecord(raw.portraitTransform) ? raw.portraitTransform : {}),
-    },
+    portraitTransform: isRecord(raw.portraitTransform)
+      ? { ...DEFAULT_PORTRAIT_TRANSFORM, ...raw.portraitTransform }
+      : { ...DEFAULT_PORTRAIT_TRANSFORM },
   };
 }
 
@@ -297,37 +319,42 @@ export const useCharacterStore = create<CharacterState>()(
       characters: [],
       activeCharacterId: null,
       activeCharacter: null,
+      hasUnsavedChangesFlag: false,
 
       hasUnsavedChanges: () => {
-        const { characters, activeCharacter, activeCharacterId } = get();
-        if (!activeCharacter || !activeCharacterId) {
-          return false;
-        }
-
+        const {
+          hasUnsavedChangesFlag,
+          characters,
+          activeCharacter,
+          activeCharacterId,
+        } = get();
+        if (hasUnsavedChangesFlag) return true;
+        if (!activeCharacter || !activeCharacterId) return false;
         const persistedCharacter = characters.find(
           (character) => character.id === activeCharacterId,
         );
-        if (!persistedCharacter) {
-          return false;
-        }
-
-        const { lastModified: _activeLastModified, ...activeComparable } =
-          activeCharacter;
-        const { lastModified: _savedLastModified, ...savedComparable } =
-          normalizeCharacterProvenance(persistedCharacter);
-
-        return (
-          JSON.stringify(activeComparable) !== JSON.stringify(savedComparable)
+        return isUnsavedComparedToPersisted(
+          activeCharacter,
+          persistedCharacter,
         );
       },
 
       setCharacters: (characters) =>
-        set(() => {
+        set((state) => {
           const validated = characters
             .map((character) => parseCharacterData(character))
             .filter((result) => result.data)
             .map((result) => result.data as Character);
-          return { characters: validated };
+          const persistedCharacter = state.activeCharacterId
+            ? validated.find((c) => c.id === state.activeCharacterId)
+            : undefined;
+          return {
+            characters: validated,
+            hasUnsavedChangesFlag: isUnsavedComparedToPersisted(
+              state.activeCharacter,
+              persistedCharacter,
+            ),
+          };
         }),
 
       addCharacter: (character) =>
@@ -354,8 +381,15 @@ export const useCharacterStore = create<CharacterState>()(
             };
             const parsed = parseCharacterData(next);
             if (!parsed.data) return {};
+            const persistedCharacter = state.characters.find(
+              (character) => character.id === id,
+            );
             return {
               activeCharacter: parsed.data,
+              hasUnsavedChangesFlag: isUnsavedComparedToPersisted(
+                parsed.data,
+                persistedCharacter,
+              ),
             };
           }
 
@@ -369,7 +403,10 @@ export const useCharacterStore = create<CharacterState>()(
             });
             return parsed.data ?? char;
           });
-          return { characters };
+          return {
+            characters,
+            hasUnsavedChangesFlag: state.hasUnsavedChangesFlag,
+          };
         }),
 
       updateActiveCharacter: (updates) =>
@@ -385,8 +422,16 @@ export const useCharacterStore = create<CharacterState>()(
           });
           if (!parsed.data) return {};
 
+          const persistedCharacter = state.activeCharacterId
+            ? state.characters.find((c) => c.id === state.activeCharacterId)
+            : undefined;
+
           return {
             activeCharacter: parsed.data,
+            hasUnsavedChangesFlag: isUnsavedComparedToPersisted(
+              parsed.data,
+              persistedCharacter,
+            ),
           };
         }),
 
@@ -406,19 +451,31 @@ export const useCharacterStore = create<CharacterState>()(
           });
           if (!parsed.data) return {};
 
+          const persistedCharacter = state.activeCharacterId
+            ? state.characters.find((c) => c.id === state.activeCharacterId)
+            : undefined;
+
           return {
             activeCharacter: parsed.data,
+            hasUnsavedChangesFlag: isUnsavedComparedToPersisted(
+              parsed.data,
+              persistedCharacter,
+            ),
           };
         }),
 
       deleteCharacter: (id) =>
-        set((state) => ({
-          characters: state.characters.filter((char) => char.id !== id),
-          activeCharacterId:
-            state.activeCharacterId === id ? null : state.activeCharacterId,
-          activeCharacter:
-            state.activeCharacterId === id ? null : state.activeCharacter,
-        })),
+        set((state) => {
+          const deletingActive = state.activeCharacterId === id;
+          return {
+            characters: state.characters.filter((char) => char.id !== id),
+            activeCharacterId: deletingActive ? null : state.activeCharacterId,
+            activeCharacter: deletingActive ? null : state.activeCharacter,
+            hasUnsavedChangesFlag: deletingActive
+              ? false
+              : state.hasUnsavedChangesFlag,
+          };
+        }),
 
       setActiveCharacter: (id) =>
         set((state) => {
@@ -429,6 +486,7 @@ export const useCharacterStore = create<CharacterState>()(
           return {
             activeCharacterId: id,
             activeCharacter: character,
+            hasUnsavedChangesFlag: false,
           };
         }),
 
@@ -463,6 +521,7 @@ export const useCharacterStore = create<CharacterState>()(
             return {
               characters: [...state.characters, validatedCharacter],
               activeCharacter: validatedCharacter,
+              hasUnsavedChangesFlag: false,
             };
           }
 
@@ -472,6 +531,7 @@ export const useCharacterStore = create<CharacterState>()(
           return {
             characters,
             activeCharacter: validatedCharacter,
+            hasUnsavedChangesFlag: false,
           };
         }),
     }),
@@ -489,16 +549,11 @@ export const useCharacterStore = create<CharacterState>()(
             .map((result) => result.data as Character);
           state.characters = validatedCharacters;
 
-          // Rehydrate activeCharacter from activeCharacterId after loading
-          const activeFound = state.activeCharacterId
-            ? validatedCharacters.find(
-                (c) => c.id === state.activeCharacterId,
-              ) || null
-            : null;
-          state.activeCharacterId = activeFound ? activeFound.id : null;
-          state.activeCharacter = activeFound
-            ? normalizeCharacterProvenance(activeFound)
-            : null;
+          // Always start without an active selection. Users explicitly pick
+          // the character they want to work on from Home.
+          state.activeCharacterId = null;
+          state.activeCharacter = null;
+          state.hasUnsavedChangesFlag = false;
         }
       },
     },

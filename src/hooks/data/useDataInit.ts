@@ -11,6 +11,11 @@ import {
 import { useCharacterStore } from '@/store/characterStore';
 import { useGameDataStore } from '@/store/gameDataStore';
 
+const shouldInjectDevSeeds =
+  import.meta.env.DEV &&
+  (import.meta.env as Record<string, string | boolean | undefined>)
+    .VITE_ENABLE_DEV_SEEDS === 'true';
+
 export function useDataInit() {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated);
   const gameData = useGameDataStore((s) => s.gameData);
@@ -28,7 +33,9 @@ export function useDataInit() {
 
   useEffect(() => {
     // Wait until persisted characters are loaded before applying seed refresh.
-    if (!hasHydrated || !import.meta.env.DEV || seedsRefreshed.current) return;
+    if (!hasHydrated || !shouldInjectDevSeeds || seedsRefreshed.current) {
+      return;
+    }
     seedsRefreshed.current = true;
     if (characters.length === 0) {
       setCharacters(DEV_SEED_CHARACTERS);

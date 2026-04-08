@@ -13,21 +13,9 @@ import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites';
-import { renderEntry } from '@/lib/renderer';
+import { renderEntryCached } from '@/lib/entryRenderCache';
 import { cn } from '@/lib/utils';
 import type { Feat5e } from '@/types/5etools';
-
-const _cache = new WeakMap<object, string>();
-
-function cachedRender(entry: unknown): string {
-  if (!entry) return '';
-  if (typeof entry !== 'object') return renderEntry(entry);
-  const hit = _cache.get(entry as object);
-  if (hit !== undefined) return hit;
-  const html = renderEntry(entry);
-  _cache.set(entry as object, html);
-  return html;
-}
 
 interface FeatCardProps {
   feat: Feat5e;
@@ -43,7 +31,7 @@ const FeatCard = memo(function FeatCard({
   prereqReasons,
 }: FeatCardProps) {
   const firstEntry = feat.entries?.[0];
-  const descHtml = firstEntry ? cachedRender(firstEntry) : '';
+  const descHtml = firstEntry ? renderEntryCached(firstEntry) : '';
   const categoryLabel =
     typeof feat.category === 'string' && feat.category.length > 0
       ? featCategoryToFull(feat.category)
@@ -235,6 +223,7 @@ export function FeatSelectionModal({
         test: () => true,
       },
     ],
+    // `specialIdsRef.current` is mutable by design; depending on it would cause noisy recomputation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [maxSelections],
   );

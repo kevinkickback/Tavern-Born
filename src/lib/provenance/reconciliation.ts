@@ -68,7 +68,7 @@ export function diffProficiencyGrants(
   domain: keyof import('./types').ProficiencyProvenance,
   sourceType: string,
   sourceName: string,
-): { toRemove: string[]; toAdd: string[] } {
+): { toRemove: string[] } {
   const map = ledger.proficiencies[domain];
 
   // Keys that are exclusively attributed to this source (removing safe)
@@ -82,5 +82,5 @@ export function diffProficiencyGrants(
     )
     .map(([key]) => key);
 
-  return { toRemove, toAdd: [] };
+  return { toRemove };
 }

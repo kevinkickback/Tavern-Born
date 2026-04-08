@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useCharacterStore } from '@/store/characterStore';
-import type { Proficiencies } from '@/types/character';
+import type { Proficiencies, Skills } from '@/types/character';
 
 export type ProficiencyCategory = keyof Proficiencies;
 
@@ -63,14 +63,59 @@ export function useProficiencies(): ProficienciesState {
   const character = useCharacterStore((s) => s.activeCharacter);
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
 
+  const mergeSkillState = useCallback(
+    (current: Skills, proficiencies: string[]) => {
+      const normalized = new Set(
+        proficiencies.map((name) => name.toLowerCase()),
+      );
+      const next: Skills = {};
+
+      for (const [name, entry] of Object.entries(current)) {
+        const isProficient = normalized.has(name.toLowerCase());
+        next[name] = {
+          ...entry,
+          proficient: isProficient,
+          expertise: isProficient ? entry.expertise : false,
+        };
+      }
+
+      for (const name of normalized) {
+        if (next[name]) continue;
+        next[name] = {
+          proficient: true,
+          expertise: false,
+          bonus: 0,
+        };
+      }
+
+      return next;
+    },
+    [],
+  );
+
   const patch = useCallback(
     (category: ProficiencyCategory, names: string[]) => {
       if (!character) return;
+
+      if (category === 'skills') {
+        const normalized = [
+          ...new Set(names.map((name) => name.toLowerCase())),
+        ];
+        updateCharacter(character.id, {
+          proficiencies: {
+            ...character.proficiencies,
+            skills: normalized,
+          },
+          skills: mergeSkillState(character.skills ?? {}, normalized),
+        });
+        return;
+      }
+
       updateCharacter(character.id, {
         proficiencies: { ...character.proficiencies, [category]: names },
       });
     },
-    [character, updateCharacter],
+    [character, mergeSkillState, updateCharacter],
   );
 
   const hasProficiency = useCallback(
@@ -140,12 +185,16 @@ export function useProficiencies(): ProficienciesState {
       updateCharacter(character.id, {
         proficiencies: {
           ...character.proficiencies,
-          ...(skills.length && {}),
+          skills: merged(character.proficiencies.skills ?? [], skills),
           languages: merged(character.proficiencies.languages, languages),
         },
+        skills: mergeSkillState(
+          character.skills ?? {},
+          merged(character.proficiencies.skills ?? [], skills),
+        ),
       });
     },
-    [character, updateCharacter],
+    [character, mergeSkillState, updateCharacter],
   );
 
   const applyClassProficiencies = useCallback(
@@ -198,12 +247,17 @@ export function useProficiencies(): ProficienciesState {
       updateCharacter(character.id, {
         proficiencies: {
           ...character.proficiencies,
+          skills: merged(character.proficiencies.skills ?? [], skills),
           languages: merged(character.proficiencies.languages, languages),
           tools: merged(character.proficiencies.tools, tools),
         },
+        skills: mergeSkillState(
+          character.skills ?? {},
+          merged(character.proficiencies.skills ?? [], skills),
+        ),
       });
     },
-    [character, updateCharacter],
+    [character, mergeSkillState, updateCharacter],
   );
 
   const proficiencies: Proficiencies = useMemo(
@@ -212,6 +266,7 @@ export function useProficiencies(): ProficienciesState {
         armor: [],
         weapons: [],
         tools: [],
+        skills: [],
         languages: [],
         savingThrows: [],
       },

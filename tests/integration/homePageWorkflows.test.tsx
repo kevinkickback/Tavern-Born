@@ -182,6 +182,57 @@ describe('home page integration workflows', () => {
     expect(useCharacterStore.getState().characters).toHaveLength(2);
   });
 
+  test('imports and migrates a legacy-version character file', async () => {
+    const user = userEvent.setup();
+    useCharacterStore.setState({
+      characters: [
+        makeCharacterFixture({ id: 'existing-1', name: 'Existing' }),
+      ],
+      activeCharacterId: null,
+      activeCharacter: null,
+    });
+
+    const originalCreateElement = document.createElement.bind(document);
+    const fileInput = {
+      type: '',
+      accept: '',
+      onchange: null as ((e: Event) => void | Promise<void>) | null,
+      click: vi.fn(),
+    };
+
+    vi.spyOn(document, 'createElement').mockImplementation(((
+      tagName: string,
+    ) => {
+      if (tagName === 'input') {
+        return fileInput as unknown as HTMLInputElement;
+      }
+      return originalCreateElement(tagName);
+    }) as typeof document.createElement);
+
+    render(<HomePage />);
+
+    await user.click(screen.getByRole('button', { name: 'Import Character' }));
+    expect(fileInput.click).toHaveBeenCalled();
+
+    const legacyCharacter = makeCharacterFixture();
+    legacyCharacter.version = '0.0.0';
+
+    const file = new File([JSON.stringify(legacyCharacter)], 'legacy.dndchar', {
+      type: 'application/json',
+    });
+
+    await fileInput.onchange?.({
+      target: { files: [file] },
+    } as unknown as Event);
+
+    const imported = useCharacterStore
+      .getState()
+      .characters.find((c) => c.id === legacyCharacter.id);
+
+    expect(imported).toBeTruthy();
+    expect(imported?.version).toBe('1.0.0');
+  });
+
   test('rejects invalid character file on import', async () => {
     const user = userEvent.setup();
     useCharacterStore.setState({

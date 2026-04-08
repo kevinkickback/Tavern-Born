@@ -301,6 +301,7 @@ function StandardArrayPanel({
       setAssignments(fallback);
       setAllScores(fallback);
     }
+    // Intentionally ignore `assignments` to avoid resetting user edits on each local assignment change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scores, setAllScores]);
 

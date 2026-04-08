@@ -1,8 +1,10 @@
-import { FloppyDisk, TrendUp } from '@phosphor-icons/react';
-import { useState } from 'react';
+import { FloppyDisk, Heart, Shield, TrendUp } from '@phosphor-icons/react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { LevelUpModal } from '@/components/modals/LevelUpModal';
 import { Button } from '@/components/ui/button';
+import { useArmorClass } from '@/hooks/character/useArmorClass';
+import { useHitPoints } from '@/hooks/character/useHitPoints';
 import { useCharacterStore } from '@/store/characterStore';
 
 export function AppHeader() {
@@ -14,6 +16,36 @@ export function AppHeader() {
     (state) => state.saveActiveCharacter,
   );
   const [levelUpOpen, setLevelUpOpen] = useState(false);
+  const { storedAC } = useArmorClass();
+  const { hitPoints, calculatedMaxHP } = useHitPoints();
+
+  const classSummary = useMemo(() => {
+    if (!activeCharacter) {
+      return '';
+    }
+
+    const progression = activeCharacter.classProgression?.length
+      ? activeCharacter.classProgression
+      : [
+          {
+            name: activeCharacter.class,
+            levels: Math.max(activeCharacter.level || 1, 1),
+          },
+        ];
+
+    const classes = progression
+      .map((entry) => `${entry.name} ${entry.levels}`)
+      .join(' - ');
+
+    return `${activeCharacter.race} - ${classes}`;
+  }, [activeCharacter]);
+
+  const displayedMaxHP = useMemo(() => {
+    if (!activeCharacter) {
+      return 0;
+    }
+    return hitPoints.max > 0 ? hitPoints.max : calculatedMaxHP;
+  }, [activeCharacter, hitPoints.max, calculatedMaxHP]);
 
   const handleSave = () => {
     if (!activeCharacter) {
@@ -38,16 +70,40 @@ export function AppHeader() {
           </h1>
         </div>
 
-        <div className="flex flex-col items-center">
+        <div className="flex items-center gap-3">
           {activeCharacter ? (
             <>
-              <h2 className="font-display text-lg font-bold">
-                {activeCharacter.name}
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Level {activeCharacter.level} {activeCharacter.race}{' '}
-                {activeCharacter.class}
-              </p>
+              <div className="flex items-center gap-2">
+                <div
+                  className="relative h-10 w-10 text-muted-foreground"
+                  data-testid="header-ac-badge"
+                >
+                  <Shield weight="fill" className="h-10 w-10" />
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-card-foreground leading-none">
+                    {storedAC}
+                  </span>
+                </div>
+                <div
+                  className="relative h-10 w-10 text-muted-foreground"
+                  data-testid="header-hp-badge"
+                >
+                  <Heart weight="fill" className="h-10 w-10" />
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-card-foreground leading-none">
+                    {displayedMaxHP}
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <h2 className="font-display text-lg font-bold">
+                  {activeCharacter.name}
+                </h2>
+                <p
+                  className="text-xs text-muted-foreground max-w-[34rem] truncate"
+                  title={classSummary}
+                >
+                  {classSummary}
+                </p>
+              </div>
             </>
           ) : (
             <p className="text-sm text-muted-foreground">No Character Loaded</p>

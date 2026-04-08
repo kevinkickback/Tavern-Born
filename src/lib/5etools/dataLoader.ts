@@ -97,127 +97,133 @@ export class FiveEToolsDataLoader {
     let spellIndexData: unknown = null;
     let spellSourceLookupData: unknown = null;
 
-    for (let i = 0; i < resources.length; i++) {
-      const resource = resources[i];
-
-      if (options?.onProgress) {
-        options.onProgress(i, resources.length, resource.file);
-      }
-
-      if (options?.signal?.aborted) {
-        throw new Error('Data loading aborted');
-      }
-
-      try {
-        const data = await this.loadResource(resource.file, options?.signal);
-
-        switch (resource.key) {
-          case 'books':
-            booksData = data;
-            break;
-          case 'adventures':
-            adventuresData = data;
-            break;
-          case 'classIndex':
-            classIndexData = data;
-            break;
-          case 'spellIndex':
-            spellIndexData = data;
-            break;
-          case 'spellSourceLookup':
-            spellSourceLookupData = data;
-            break;
-          case 'races':
-            gameData.races = parseRaces(data) as GameData['races'];
-            gameData.races.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'backgrounds':
-            gameData.backgrounds = parseBackgrounds(
-              data,
-            ) as GameData['backgrounds'];
-            gameData.backgrounds.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'feats':
-            gameData.feats = parseFeats(data) as GameData['feats'];
-            gameData.feats.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'items':
-            gameData.items = parseItems(data) as GameData['items'];
-            gameData.items.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'itemsBase':
-            gameData.itemsBase = parseItems(data) as GameData['itemsBase'];
-            gameData.itemsBase.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'actions':
-            gameData.actions = parseActions(data);
-            gameData.actions.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'conditions':
-            gameData.conditions = parseConditions(data);
-            gameData.conditions.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'deities':
-            gameData.deities = parseDeities(data);
-            gameData.deities.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'skills':
-            gameData.skills = parseSkills(data);
-            gameData.skills.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'senses':
-            gameData.senses = parseSenses(data);
-            gameData.senses.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'languages':
-            gameData.languages = parseLanguages(data);
-            gameData.languages.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'magicvariants':
-            gameData.magicvariants = parseMagicVariants(data);
-            gameData.magicvariants.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'optionalfeatures':
-            gameData.optionalfeatures = parseOptionalFeatures(data);
-            gameData.optionalfeatures.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
-          case 'variantrules':
-            gameData.variantrules = parseVariantRules(data);
-            gameData.variantrules.forEach((item) => {
-              this.addItemSource(item, sourcesSet);
-            });
-            break;
+    let completedResources = 0;
+    await Promise.all(
+      resources.map(async (resource) => {
+        if (options?.signal?.aborted) {
+          throw new Error('Data loading aborted');
         }
-      } catch (error) {
-        console.warn(`Failed to load ${resource.file}:`, error);
-      }
-    }
+
+        try {
+          const data = await this.loadResource(resource.file, options?.signal);
+
+          switch (resource.key) {
+            case 'books':
+              booksData = data;
+              break;
+            case 'adventures':
+              adventuresData = data;
+              break;
+            case 'classIndex':
+              classIndexData = data;
+              break;
+            case 'spellIndex':
+              spellIndexData = data;
+              break;
+            case 'spellSourceLookup':
+              spellSourceLookupData = data;
+              break;
+            case 'races':
+              gameData.races = parseRaces(data) as GameData['races'];
+              gameData.races.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'backgrounds':
+              gameData.backgrounds = parseBackgrounds(
+                data,
+              ) as GameData['backgrounds'];
+              gameData.backgrounds.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'feats':
+              gameData.feats = parseFeats(data) as GameData['feats'];
+              gameData.feats.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'items':
+              gameData.items = parseItems(data) as GameData['items'];
+              gameData.items.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'itemsBase':
+              gameData.itemsBase = parseItems(data) as GameData['itemsBase'];
+              gameData.itemsBase.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'actions':
+              gameData.actions = parseActions(data);
+              gameData.actions.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'conditions':
+              gameData.conditions = parseConditions(data);
+              gameData.conditions.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'deities':
+              gameData.deities = parseDeities(data);
+              gameData.deities.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'skills':
+              gameData.skills = parseSkills(data);
+              gameData.skills.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'senses':
+              gameData.senses = parseSenses(data);
+              gameData.senses.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'languages':
+              gameData.languages = parseLanguages(data);
+              gameData.languages.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'magicvariants':
+              gameData.magicvariants = parseMagicVariants(data);
+              gameData.magicvariants.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'optionalfeatures':
+              gameData.optionalfeatures = parseOptionalFeatures(data);
+              gameData.optionalfeatures.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+            case 'variantrules':
+              gameData.variantrules = parseVariantRules(data);
+              gameData.variantrules.forEach((item) => {
+                this.addItemSource(item, sourcesSet);
+              });
+              break;
+          }
+        } catch (error) {
+          console.warn(`Failed to load ${resource.file}:`, error);
+        } finally {
+          completedResources += 1;
+          if (options?.onProgress) {
+            options.onProgress(
+              completedResources,
+              resources.length,
+              resource.file,
+            );
+          }
+        }
+      }),
+    );
 
     if (classIndexData) {
       await this.loadClassData(classIndexData, gameData, sourcesSet, options);
@@ -260,34 +266,47 @@ export class FiveEToolsDataLoader {
     const allClasses: GameData['classes'] = [];
     const allClassFeatures: GameData['classFeatures'] = [];
 
-    for (const classFile of classFiles) {
-      try {
-        const classData = await this.loadResource(
-          `class/${classFile.file}`,
-          options?.signal,
-        );
+    const classResults = await Promise.all(
+      classFiles.map(async (classFile) => {
+        try {
+          const classData = await this.loadResource(
+            `class/${classFile.file}`,
+            options?.signal,
+          );
 
-        const parsedClasses = this.filterByIndexedSource(
-          parseClasses(classData),
-          classFile.source,
-        );
-        allClasses.push(...parsedClasses);
-        parsedClasses.forEach((item) => {
-          this.addItemSource(item, sourcesSet);
-        });
+          const parsedClasses = this.filterByIndexedSource(
+            parseClasses(classData) as GameData['classes'],
+            classFile.source,
+          );
+          const parsedFeatures = this.filterByIndexedSource(
+            parseClassFeatures(classData) as GameData['classFeatures'],
+            classFile.source,
+          );
 
-        const parsedFeatures = this.filterByIndexedSource(
-          parseClassFeatures(classData),
-          classFile.source,
-        );
-        allClassFeatures.push(...parsedFeatures);
-        parsedFeatures.forEach((item) => {
-          this.addItemSource(item, sourcesSet);
-        });
-      } catch (error) {
-        console.warn(`Failed to load class file ${classFile.file}:`, error);
-      }
-    }
+          return {
+            classes: parsedClasses,
+            features: parsedFeatures,
+          };
+        } catch (error) {
+          console.warn(`Failed to load class file ${classFile.file}:`, error);
+          return {
+            classes: [] as GameData['classes'],
+            features: [] as GameData['classFeatures'],
+          };
+        }
+      }),
+    );
+
+    classResults.forEach((result) => {
+      allClasses.push(...result.classes);
+      allClassFeatures.push(...result.features);
+      result.classes.forEach((item) => {
+        this.addItemSource(item, sourcesSet);
+      });
+      result.features.forEach((item) => {
+        this.addItemSource(item, sourcesSet);
+      });
+    });
 
     gameData.classes = allClasses;
     gameData.classFeatures = allClassFeatures;
@@ -304,27 +323,34 @@ export class FiveEToolsDataLoader {
 
     const allSpells: GameData['spells'] = [];
 
-    for (const spellFile of spellFiles) {
-      try {
-        const spellData = await this.loadResource(
-          `spells/${spellFile.file}`,
-          options?.signal,
-        );
+    const spellResults = await Promise.all(
+      spellFiles.map(async (spellFile) => {
+        try {
+          const spellData = await this.loadResource(
+            `spells/${spellFile.file}`,
+            options?.signal,
+          );
 
-        const parsedSpells = this.filterByIndexedSource(
-          parseSpells(spellData, {
-            sourceLookup: this.asSpellSourceLookup(spellSourceLookupData),
-          }),
-          spellFile.source,
-        );
-        allSpells.push(...parsedSpells);
-        parsedSpells.forEach((item) => {
-          this.addItemSource(item, sourcesSet);
-        });
-      } catch (error) {
-        console.warn(`Failed to load spell file ${spellFile.file}:`, error);
-      }
-    }
+          const parsedSpells = this.filterByIndexedSource(
+            parseSpells(spellData, {
+              sourceLookup: this.asSpellSourceLookup(spellSourceLookupData),
+            }) as GameData['spells'],
+            spellFile.source,
+          );
+          return parsedSpells;
+        } catch (error) {
+          console.warn(`Failed to load spell file ${spellFile.file}:`, error);
+          return [] as GameData['spells'];
+        }
+      }),
+    );
+
+    spellResults.forEach((parsedSpells) => {
+      allSpells.push(...parsedSpells);
+      parsedSpells.forEach((item) => {
+        this.addItemSource(item, sourcesSet);
+      });
+    });
 
     gameData.spells = allSpells;
   }
@@ -381,7 +407,7 @@ export class FiveEToolsDataLoader {
     return data as Record<string, Record<string, unknown>>;
   }
 
-  private filterByIndexedSource(items: unknown[], source?: string): unknown[] {
+  private filterByIndexedSource<T>(items: T[], source?: string): T[] {
     if (!source) return items;
     const sourceLower = source.toLowerCase();
     return items.filter((item) => {
@@ -399,7 +425,11 @@ export class FiveEToolsDataLoader {
     if (!this.isRemote) {
       const sep = this.baseUrl.includes('\\') ? '\\' : '/';
       const fullPath = `${this.baseUrl}${sep}${filename.replace(/\//g, sep)}`;
-      return window.electronAPI.readLocalJson(fullPath);
+      const readLocalJson = window.electronAPI?.readLocalJson;
+      if (!readLocalJson) {
+        throw new Error('Local data loading requires Electron runtime');
+      }
+      return readLocalJson(fullPath);
     }
 
     const url = this.buildUrl(filename);
@@ -411,17 +441,10 @@ export class FiveEToolsDataLoader {
   }
 
   private buildUrl(filename: string): string {
-    if (this.isRemote) {
-      if (
-        filename.startsWith('class/') ||
-        filename.startsWith('books/') ||
-        filename.startsWith('spells/')
-      ) {
-        return `${this.baseUrl}${this.baseUrl.endsWith('/') ? '' : '/'}data/${filename}`;
-      }
-      return `${this.baseUrl}${this.baseUrl.endsWith('/') ? '' : '/'}data/${filename}`;
+    if (!this.isRemote) {
+      return `${this.baseUrl}${this.baseUrl.endsWith('/') ? '' : '/'}${filename}`;
     }
-    return `${this.baseUrl}${this.baseUrl.endsWith('/') ? '' : '/'}${filename}`;
+    return `${this.baseUrl}${this.baseUrl.endsWith('/') ? '' : '/'}data/${filename}`;
   }
 
   private addItemSource(item: unknown, sourcesSet: Set<string>) {

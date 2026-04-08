@@ -21,7 +21,7 @@ import {
   collectKnownSpells,
   ensureSpellProfiles,
 } from '@/lib/calculations/spellProfiles';
-import { renderEntry } from '@/lib/renderer';
+import { renderEntryCached } from '@/lib/entryRenderCache';
 import { cn } from '@/lib/utils';
 import {
   buildFeatModalFeats,
@@ -30,17 +30,6 @@ import {
 import { useCharacterStore } from '@/store/characterStore';
 import type { Feat5e, Raw5ePrereq } from '@/types/5etools';
 import { NoCharCard } from '../_shared';
-
-const _cache = new WeakMap<object, string>();
-function cachedRender(entry: unknown): string {
-  if (!entry) return '';
-  if (typeof entry !== 'object') return renderEntry(entry);
-  const hit = _cache.get(entry as object);
-  if (hit !== undefined) return hit;
-  const html = renderEntry(entry);
-  _cache.set(entry as object, html);
-  return html;
-}
 
 interface FeatDetailCardProps {
   feat: { id: string; name: string; source: string };
@@ -79,9 +68,10 @@ const FeatDetailCard = memo(function FeatDetailCard({
   const descHtml = useMemo(
     () =>
       visibleEntries
-        .map((e) => cachedRender(e))
+        .map((e) => renderEntryCached(e))
         .filter(Boolean)
         .join('<br/>'),
+    // `renderEntryCached` is a stable shared utility; include only entry visibility changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [visibleEntries],
   );

@@ -2,6 +2,14 @@ import type { ProvenanceLedger } from '@/lib/provenance/types';
 
 export type { ProvenanceLedger };
 
+export type AbilityName =
+  | 'strength'
+  | 'dexterity'
+  | 'constitution'
+  | 'intelligence'
+  | 'wisdom'
+  | 'charisma';
+
 export interface CharacterClassEntry {
   name: string;
   source?: string;
@@ -25,6 +33,7 @@ export interface Character {
   subclassSource?: string;
   background: string;
   backgroundSource?: string;
+  currency?: Currency;
   /** Total character level — always mirrors sum of classProgression[*].levels when classProgression is present */
   level: number;
   experiencePoints: number;
@@ -62,6 +71,12 @@ export interface Character {
    */
   backgroundAsiBlockIndex?: number;
 
+  /** Preferred background starting-equipment option key. */
+  backgroundEquipmentChoice?: 'a' | 'b';
+
+  /** Last currency grant applied from background starting equipment. */
+  backgroundCurrencyGrant?: Currency;
+
   /**
    * Ordered ability selections for the chosen background ability block.
    * selections[i] receives weights[i] bonus from the selected block.
@@ -95,19 +110,13 @@ export interface VariantRules {
   abilityScoreMethod?: 'point-buy' | 'standard-array' | 'custom';
 }
 
-export interface AbilityScores {
-  strength: number;
-  dexterity: number;
-  constitution: number;
-  intelligence: number;
-  wisdom: number;
-  charisma: number;
-}
+export type AbilityScores = Record<AbilityName, number>;
 
 export interface Proficiencies {
   armor: string[];
   weapons: string[];
   tools: string[];
+  skills: string[];
   languages: string[];
   savingThrows: string[];
 }
@@ -189,6 +198,14 @@ export interface Equipment {
   ac?: number;
   /** Resolved armour category (derived from type on import). */
   armorType?: 'light' | 'medium' | 'heavy' | 'shield';
+}
+
+export interface Currency {
+  cp: number;
+  sp: number;
+  ep: number;
+  gp: number;
+  pp: number;
 }
 
 export interface HitPoints {

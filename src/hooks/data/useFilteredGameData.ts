@@ -16,6 +16,7 @@ export function useFilteredGameData() {
         spells: [],
         feats: [],
         items: [],
+        itemsBase: [],
         classFeatures: [],
         optionalfeatures: [],
         sources: [],
@@ -45,6 +46,9 @@ export function useFilteredGameData() {
         sources: allowedSources,
       }),
       items: DataFilter.filterItems(gameData.items, {
+        sources: allowedSources,
+      }),
+      itemsBase: DataFilter.filterItems(gameData.itemsBase ?? [], {
         sources: allowedSources,
       }),
       classFeatures: gameData.classFeatures.filter((cf) =>

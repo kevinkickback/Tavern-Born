@@ -43,21 +43,34 @@ export function getBackgroundToolNames(background?: Background5e): string[] {
 
 export function getBackgroundEquipmentPackages(
   background?: Background5e,
-): { label: string; entries: unknown[] }[] {
-  const packages: { label: string; entries: unknown[] }[] = [];
+): { key: 'a' | 'b'; label: string; entries: unknown[] }[] {
+  const packages: { key: 'a' | 'b'; label: string; entries: unknown[] }[] = [];
 
   for (const block of background?.startingEquipment ?? []) {
     if (Array.isArray(block)) continue;
-    const equipmentBlock = block as { A?: unknown[]; B?: unknown[] };
-    if (typeof block === 'object' && equipmentBlock.A) {
+    const equipmentBlock = block as {
+      A?: unknown[];
+      B?: unknown[];
+      a?: unknown[];
+      b?: unknown[];
+    };
+    if (typeof block === 'object') {
+      const optionA = equipmentBlock.A ?? equipmentBlock.a;
+      const optionB = equipmentBlock.B ?? equipmentBlock.b;
+
+      if (!optionA) continue;
+
       packages.push({
+        key: 'a',
         label: 'Option A',
-        entries: equipmentBlock.A ?? [],
+        entries: optionA,
       });
-      if (equipmentBlock.B) {
+
+      if (optionB) {
         packages.push({
+          key: 'b',
           label: 'Option B',
-          entries: equipmentBlock.B ?? [],
+          entries: optionB,
         });
       }
     }

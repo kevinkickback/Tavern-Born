@@ -1,34 +1,15 @@
+import {
+  buildItemLookup,
+  resolveClassStartingEquipment,
+} from '@/lib/5etools/startingEquipment';
 import { addChoicePlaceholder, addGrant } from './ledger';
-import { normalizeKey, stripItemTag } from './normalization';
+import {
+  normalizeGenericToolChoice,
+  normalizeKey,
+  stripItemTag,
+} from './normalization';
 import { makeSourceTag } from './sourceLabels';
 import type { ChoiceRecord, ProvenanceLedger } from './types';
-
-function normalizeGenericToolChoice(value: string): string | null {
-  const key = normalizeKey(value);
-  if (
-    key.includes('musical instrument') ||
-    key === 'anymusicalinstrument' ||
-    key === 'instrumentmusical'
-  ) {
-    return 'musical instrument';
-  }
-  if (
-    key.includes("artisan's tool") ||
-    key.includes('artisans tool') ||
-    key === 'anyartisanstool' ||
-    key === 'anyartisantool'
-  ) {
-    return "artisan's tools";
-  }
-  if (
-    key.includes('gaming set') ||
-    key === 'anygamingset' ||
-    key === 'setgaming'
-  ) {
-    return 'gaming set';
-  }
-  return null;
-}
 
 function isNarrativeChoiceTool(value: string): boolean {
   const key = normalizeKey(value);
@@ -48,6 +29,7 @@ export function applyClassGrants(
   cls: {
     name: string;
     source?: string;
+    startingEquipment?: unknown;
     proficiency?: string[];
     startingProficiencies?: {
       armor?: string[];
@@ -163,6 +145,14 @@ export function applyClassGrants(
   // Saving throw proficiencies (from cls.proficiency: e.g. ['str', 'con'])
   for (const abbr of cls.proficiency ?? []) {
     result = addGrant(result, 'savingThrows', abbr.toLowerCase(), clsTag);
+  }
+
+  // Starting equipment defaults (choice option A from each block).
+  for (const item of resolveClassStartingEquipment(
+    cls.startingEquipment,
+    buildItemLookup([]),
+  )) {
+    result = addGrant(result, 'equipment', item.name, clsTag);
   }
 
   // Subclass attribution (just tag it; features/spells come via modal confirms)

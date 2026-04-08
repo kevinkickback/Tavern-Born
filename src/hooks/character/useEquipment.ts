@@ -10,10 +10,18 @@ import {
 } from '@/lib/calculations/gameRules';
 import { useCharacterStore } from '@/store/characterStore';
 import type { Item5e } from '@/types/5etools';
-import type { Equipment } from '@/types/character';
+import type { Currency, Equipment } from '@/types/character';
 
 const generateId = () =>
   `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+const DEFAULT_CURRENCY: Currency = {
+  cp: 0,
+  sp: 0,
+  ep: 0,
+  gp: 0,
+  pp: 0,
+};
 
 export interface EquipmentState {
   equipment: Equipment[];
@@ -25,6 +33,8 @@ export interface EquipmentState {
   attunedCount: number;
   /** AC derived from currently equipped armour + DEX. */
   derivedAC: number;
+  currency: Currency;
+  totalCurrencyCopper: number;
   addItem: (
     item: Partial<Equipment> & Pick<Equipment, 'name' | 'type'>,
   ) => void;
@@ -33,6 +43,7 @@ export interface EquipmentState {
   updateItem: (id: string, patch: Partial<Equipment>) => void;
   toggleEquip: (id: string) => void;
   toggleAttune: (id: string) => void;
+  updateCurrency: (denomination: keyof Currency, amount: number) => void;
 }
 
 export function useEquipment(): EquipmentState {
@@ -40,6 +51,7 @@ export function useEquipment(): EquipmentState {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
 
   const equipment = character?.equipment ?? [];
+  const currency = character?.currency ?? DEFAULT_CURRENCY;
 
   const dexMod = useMemo(
     () => getAbilityModifier(character?.abilityScores.dexterity ?? 10),
@@ -66,12 +78,25 @@ export function useEquipment(): EquipmentState {
     [equipment, dexMod],
   );
 
+  const totalCurrencyCopper = useMemo(
+    () =>
+      currency.cp +
+      currency.sp * 10 +
+      currency.ep * 50 +
+      currency.gp * 100 +
+      currency.pp * 1000,
+    [currency],
+  );
+
   const patchEquipment = useCallback(
     (list: Equipment[]) => {
       if (!character) return;
-      updateCharacter(character.id, { equipment: list });
+      updateCharacter(character.id, {
+        equipment: list,
+        armorClass: computeArmorClass(list, dexMod),
+      });
     },
-    [character, updateCharacter],
+    [character, updateCharacter, dexMod],
   );
 
   const addItem = useCallback(
@@ -156,6 +181,23 @@ export function useEquipment(): EquipmentState {
     [character, equipment, attunedCount, patchEquipment],
   );
 
+  const updateCurrency = useCallback(
+    (denomination: keyof Currency, amount: number) => {
+      if (!character) return;
+      const safeAmount = Math.max(0, Math.trunc(amount));
+      const currentCurrency =
+        useCharacterStore.getState().activeCharacter?.currency ??
+        DEFAULT_CURRENCY;
+      updateCharacter(character.id, {
+        currency: {
+          ...currentCurrency,
+          [denomination]: safeAmount,
+        },
+      });
+    },
+    [character, updateCharacter],
+  );
+
   return {
     equipment,
     totalWeight,
@@ -163,11 +205,14 @@ export function useEquipment(): EquipmentState {
     isEncumbered: totalWeight > carryCapacity,
     attunedCount,
     derivedAC,
+    currency,
+    totalCurrencyCopper,
     addItem,
     addFromGameData,
     removeItem,
     updateItem,
     toggleEquip,
     toggleAttune,
+    updateCurrency,
   };
 }

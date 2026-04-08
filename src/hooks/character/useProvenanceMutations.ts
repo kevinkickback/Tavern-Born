@@ -1,6 +1,10 @@
 import { useCallback } from 'react';
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers';
 import {
+  resolveBackgroundStartingEquipmentPackage,
+  resolveClassStartingEquipment,
+} from '@/lib/5etools/startingEquipment';
+import {
   getBackgroundAbilityData,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores';
@@ -23,18 +27,93 @@ import {
 } from '@/lib/provenance';
 import { normalizeKey, stripItemTag } from '@/lib/provenance/normalization';
 import type { ChoiceDomain, ProvenanceLedger } from '@/lib/provenance/types';
+import type { Item5e } from '@/types/5etools';
 import type { Character } from '@/types/character';
+
+const CURRENCY_KEYS = ['cp', 'sp', 'ep', 'gp', 'pp'] as const;
 
 interface UseProvenanceMutationsParams {
   character: Character | null;
   ledger: ProvenanceLedger;
+  itemLookup: Map<string, Item5e>;
   patch: (newLedger: ProvenanceLedger) => void;
   updateCharacter: (id: string, updates: Partial<Character>) => void;
+}
+
+const SAVING_THROW_NAME_BY_KEY: Record<string, string> = {
+  str: 'strength',
+  dex: 'dexterity',
+  con: 'constitution',
+  int: 'intelligence',
+  wis: 'wisdom',
+  cha: 'charisma',
+};
+
+function normalizeSavingThrowName(name: string): string {
+  const normalized = normalizeKey(name);
+  return SAVING_THROW_NAME_BY_KEY[normalized] ?? normalized;
+}
+
+function generateEquipmentId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function removeSourceGrantedEquipment(
+  equipment: Character['equipment'],
+  sourceNames: string[],
+): Character['equipment'] {
+  if (sourceNames.length === 0) return equipment;
+  return equipment.filter(
+    (item) => !sourceNames.includes(normalizeKey(item.name)),
+  );
+}
+
+function upsertGrantedEquipment(
+  equipment: Character['equipment'],
+  granted: Array<
+    Omit<Character['equipment'][number], 'id' | 'equipped' | 'attuned'>
+  >,
+): Character['equipment'] {
+  const next = [...equipment];
+
+  for (const item of granted) {
+    const existingIndex = next.findIndex(
+      (eq) =>
+        normalizeKey(eq.name) === normalizeKey(item.name) &&
+        normalizeKey(eq.source ?? '') === normalizeKey(item.source ?? ''),
+    );
+
+    if (existingIndex === -1) {
+      next.push({
+        id: generateEquipmentId(),
+        equipped: false,
+        attuned: false,
+        ...item,
+      });
+      continue;
+    }
+
+    const existing = next[existingIndex];
+    next[existingIndex] = {
+      ...existing,
+      quantity: existing.quantity + item.quantity,
+      type: existing.type || item.type,
+      ac: existing.ac ?? item.ac,
+      armorType: existing.armorType ?? item.armorType,
+      weight: existing.weight ?? item.weight,
+      value: existing.value ?? item.value,
+      rarity: existing.rarity ?? item.rarity,
+      reqAttune: existing.reqAttune ?? item.reqAttune,
+    };
+  }
+
+  return next;
 }
 
 export function useProvenanceMutations({
   character,
   ledger,
+  itemLookup,
   patch,
   updateCharacter,
 }: UseProvenanceMutationsParams) {
@@ -57,15 +136,100 @@ export function useProvenanceMutations({
       },
     ) => {
       if (!character) return;
-      let newLedger = reconcileRaceChange(
-        ledger,
-        character.race || undefined,
-        character.subrace || undefined,
-      );
+      const oldRaceName = character.race || undefined;
+      const oldSubraceName = character.subrace || undefined;
+      let newLedger = reconcileRaceChange(ledger, oldRaceName, oldSubraceName);
       newLedger = applyRaceGrants(race, subrace, newLedger);
-      patch(newLedger);
+
+      let nextProficiencies = { ...character.proficiencies };
+      const nextSkills = { ...(character.skills ?? {}) };
+
+      for (const [sourceType, sourceName] of [
+        ['race', oldRaceName],
+        ['subrace', oldSubraceName],
+      ] as const) {
+        if (!sourceName) continue;
+        for (const domain of ['skills', 'languages'] as const) {
+          const { toRemove } = diffProficiencyGrants(
+            ledger,
+            domain,
+            sourceType,
+            sourceName,
+          );
+          if (toRemove.length === 0) continue;
+
+          nextProficiencies = {
+            ...nextProficiencies,
+            [domain]: nextProficiencies[domain].filter(
+              (name) => !toRemove.includes(normalizeKey(name)),
+            ),
+          };
+
+          if (domain === 'skills') {
+            for (const removed of toRemove) {
+              const existing = nextSkills[removed];
+              nextSkills[removed] = {
+                proficient: false,
+                expertise: false,
+                bonus: existing?.bonus ?? 0,
+              };
+            }
+          }
+        }
+      }
+
+      const raceSkills = extractProficiencyBlockNames(
+        race.skillProficiencies ?? [],
+        { includeAnyStandard: false },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '));
+      const raceLanguages = extractProficiencyBlockNames(
+        race.languageProficiencies ?? [],
+        { includeAnyStandard: false },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '));
+      const subraceSkills = extractProficiencyBlockNames(
+        subrace?.skillProficiencies ?? [],
+        { includeAnyStandard: false },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '));
+      const subraceLanguages = extractProficiencyBlockNames(
+        subrace?.languageProficiencies ?? [],
+        { includeAnyStandard: false },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '));
+
+      nextProficiencies = {
+        ...nextProficiencies,
+        skills: [
+          ...new Set([
+            ...nextProficiencies.skills,
+            ...raceSkills.map(normalizeKey),
+            ...subraceSkills.map(normalizeKey),
+          ]),
+        ],
+        languages: [
+          ...new Set([
+            ...nextProficiencies.languages,
+            ...raceLanguages,
+            ...subraceLanguages,
+          ]),
+        ],
+      };
+
+      for (const skillName of [...raceSkills, ...subraceSkills]) {
+        const normalized = normalizeKey(skillName);
+        const existing = nextSkills[normalized];
+        nextSkills[normalized] = {
+          proficient: true,
+          expertise: existing?.expertise ?? false,
+          bonus: existing?.bonus ?? 0,
+        };
+      }
+
+      updateCharacter(character.id, {
+        provenance: newLedger,
+        proficiencies: nextProficiencies,
+        skills: nextSkills,
+      });
     },
-    [character, ledger, patch],
+    [character, ledger, updateCharacter],
   );
 
   const applySubraceChange = useCallback(
@@ -82,10 +246,8 @@ export function useProvenanceMutations({
       },
     ) => {
       if (!character) return;
-      let newLedger = reconcileSubraceChange(
-        ledger,
-        character.subrace || undefined,
-      );
+      const oldSubraceName = character.subrace || undefined;
+      let newLedger = reconcileSubraceChange(ledger, oldSubraceName);
       if (subrace) {
         newLedger = applyRaceGrants(
           {
@@ -99,9 +261,79 @@ export function useProvenanceMutations({
           newLedger,
         );
       }
-      patch(newLedger);
+
+      let nextProficiencies = { ...character.proficiencies };
+      const nextSkills = { ...(character.skills ?? {}) };
+
+      if (oldSubraceName) {
+        for (const domain of ['skills', 'languages'] as const) {
+          const { toRemove } = diffProficiencyGrants(
+            ledger,
+            domain,
+            'subrace',
+            oldSubraceName,
+          );
+          if (toRemove.length === 0) continue;
+
+          nextProficiencies = {
+            ...nextProficiencies,
+            [domain]: nextProficiencies[domain].filter(
+              (name) => !toRemove.includes(normalizeKey(name)),
+            ),
+          };
+
+          if (domain === 'skills') {
+            for (const removed of toRemove) {
+              const existing = nextSkills[removed];
+              nextSkills[removed] = {
+                proficient: false,
+                expertise: false,
+                bonus: existing?.bonus ?? 0,
+              };
+            }
+          }
+        }
+      }
+
+      const subraceSkills = extractProficiencyBlockNames(
+        subrace?.skillProficiencies ?? [],
+        { includeAnyStandard: false },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '));
+      const subraceLanguages = extractProficiencyBlockNames(
+        subrace?.languageProficiencies ?? [],
+        { includeAnyStandard: false },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '));
+
+      nextProficiencies = {
+        ...nextProficiencies,
+        skills: [
+          ...new Set([
+            ...nextProficiencies.skills,
+            ...subraceSkills.map(normalizeKey),
+          ]),
+        ],
+        languages: [
+          ...new Set([...nextProficiencies.languages, ...subraceLanguages]),
+        ],
+      };
+
+      for (const skillName of subraceSkills) {
+        const normalized = normalizeKey(skillName);
+        const existing = nextSkills[normalized];
+        nextSkills[normalized] = {
+          proficient: true,
+          expertise: existing?.expertise ?? false,
+          bonus: existing?.bonus ?? 0,
+        };
+      }
+
+      updateCharacter(character.id, {
+        provenance: newLedger,
+        proficiencies: nextProficiencies,
+        skills: nextSkills,
+      });
     },
-    [character, ledger, patch],
+    [character, ledger, updateCharacter],
   );
 
   const applyClassSelection = useCallback(
@@ -137,6 +369,8 @@ export function useProvenanceMutations({
 
       const updates: Partial<typeof character> = { provenance: newLedger };
       let newProfs = { ...character.proficiencies };
+      const newSkills = { ...(character.skills ?? {}) };
+      let newEquipment = [...(character.equipment ?? [])];
 
       if (oldClassName) {
         const domains = ['armor', 'weapons', 'tools', 'savingThrows'] as const;
@@ -147,18 +381,43 @@ export function useProvenanceMutations({
             'class',
             oldClassName,
           );
-          if (domain === 'savingThrows') continue;
           if (toRemove.length > 0) {
-            const cased =
-              character.proficiencies[domain as 'armor' | 'weapons' | 'tools'];
-            newProfs = {
-              ...newProfs,
-              [domain]: cased.filter(
-                (name) => !toRemove.includes(normalizeKey(name)),
-              ),
-            };
+            if (domain === 'savingThrows') {
+              newProfs = {
+                ...newProfs,
+                savingThrows: newProfs.savingThrows.filter(
+                  (name) => !toRemove.includes(normalizeSavingThrowName(name)),
+                ),
+              };
+            } else {
+              const cased =
+                character.proficiencies[
+                  domain as 'armor' | 'weapons' | 'tools'
+                ];
+              newProfs = {
+                ...newProfs,
+                [domain]: cased.filter(
+                  (name) => !toRemove.includes(normalizeKey(name)),
+                ),
+              };
+            }
           }
         }
+
+        const classEquipmentToRemove = Object.entries(ledger.equipment)
+          .filter(
+            ([, tags]) =>
+              tags.length > 0 &&
+              tags.every(
+                (tag) =>
+                  tag.sourceType === 'class' && tag.sourceName === oldClassName,
+              ),
+          )
+          .map(([name]) => name);
+        newEquipment = removeSourceGrantedEquipment(
+          newEquipment,
+          classEquipmentToRemove,
+        );
       }
 
       const profs = cls.startingProficiencies ?? {};
@@ -197,22 +456,38 @@ export function useProvenanceMutations({
             ...toolsFromBlocks,
           ]),
         ],
+        savingThrows: [
+          ...new Set([
+            ...newProfs.savingThrows,
+            ...(cls.proficiency ?? []).map(normalizeSavingThrowName),
+          ]),
+        ],
       };
       updates.proficiencies = newProfs;
+      updates.skills = newSkills;
+      const classEquipment = resolveClassStartingEquipment(
+        cls.startingEquipment,
+        itemLookup,
+      );
+      updates.equipment = upsertGrantedEquipment(newEquipment, classEquipment);
 
       updateCharacter(character.id, updates);
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, updateCharacter, itemLookup],
   );
 
   const applyBackgroundSelection = useCallback(
-    (bg: {
-      name: string;
-      source?: string;
-      skillProficiencies?: unknown[];
-      languageProficiencies?: unknown[];
-      toolProficiencies?: unknown[];
-    }) => {
+    (
+      bg: {
+        name: string;
+        source?: string;
+        skillProficiencies?: unknown[];
+        languageProficiencies?: unknown[];
+        toolProficiencies?: unknown[];
+        startingEquipment?: unknown;
+      },
+      preferredOption: 'a' | 'b' = 'a',
+    ) => {
       if (!character) return;
       const oldBgName = character.background || undefined;
 
@@ -220,8 +495,10 @@ export function useProvenanceMutations({
       newLedger = applyBackgroundGrants(bg, newLedger);
 
       let newProfs = { ...character.proficiencies };
+      const newSkills = { ...(character.skills ?? {}) };
+      let newEquipment = [...(character.equipment ?? [])];
       if (oldBgName) {
-        for (const domain of ['languages', 'tools'] as const) {
+        for (const domain of ['skills', 'languages', 'tools'] as const) {
           const { toRemove } = diffProficiencyGrants(
             ledger,
             domain,
@@ -229,6 +506,23 @@ export function useProvenanceMutations({
             oldBgName,
           );
           if (toRemove.length > 0) {
+            if (domain === 'skills') {
+              newProfs = {
+                ...newProfs,
+                skills: (newProfs.skills ?? []).filter(
+                  (name) => !toRemove.includes(normalizeKey(name)),
+                ),
+              };
+              for (const removed of toRemove) {
+                const existing = newSkills[removed];
+                newSkills[removed] = {
+                  proficient: false,
+                  expertise: false,
+                  bonus: existing?.bonus ?? 0,
+                };
+              }
+              continue;
+            }
             newProfs = {
               ...newProfs,
               [domain]: newProfs[domain].filter(
@@ -237,8 +531,28 @@ export function useProvenanceMutations({
             };
           }
         }
+
+        const backgroundEquipmentToRemove = Object.entries(ledger.equipment)
+          .filter(
+            ([, tags]) =>
+              tags.length > 0 &&
+              tags.every(
+                (tag) =>
+                  tag.sourceType === 'background' &&
+                  tag.sourceName === oldBgName,
+              ),
+          )
+          .map(([name]) => name);
+        newEquipment = removeSourceGrantedEquipment(
+          newEquipment,
+          backgroundEquipmentToRemove,
+        );
       }
 
+      const skills: string[] = extractProficiencyBlockNames(
+        bg.skillProficiencies ?? [],
+        { includeAnyStandard: false },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '));
       const languages: string[] = extractProficiencyBlockNames(
         bg.languageProficiencies ?? [],
         { includeAnyStandard: false },
@@ -249,16 +563,64 @@ export function useProvenanceMutations({
       );
       newProfs = {
         ...newProfs,
+        skills: [...new Set([...(newProfs.skills ?? []), ...skills])],
         languages: [...new Set([...newProfs.languages, ...languages])],
         tools: [...new Set([...newProfs.tools, ...tools])],
       };
 
+      for (const skillName of skills) {
+        const norm = normalizeKey(skillName);
+        const existing = newSkills[norm];
+        newSkills[norm] = {
+          proficient: true,
+          expertise: existing?.expertise ?? false,
+          bonus: existing?.bonus ?? 0,
+        };
+      }
+
+      const resolvedBackgroundPackage =
+        resolveBackgroundStartingEquipmentPackage(
+          bg.startingEquipment,
+          itemLookup,
+          preferredOption,
+        );
+
+      const previousBackgroundCurrency = character.backgroundCurrencyGrant;
+      const nextCurrency = {
+        cp: character.currency?.cp ?? 0,
+        sp: character.currency?.sp ?? 0,
+        ep: character.currency?.ep ?? 0,
+        gp: character.currency?.gp ?? 0,
+        pp: character.currency?.pp ?? 0,
+      };
+
+      if (previousBackgroundCurrency) {
+        for (const key of CURRENCY_KEYS) {
+          nextCurrency[key] = Math.max(
+            0,
+            nextCurrency[key] - (previousBackgroundCurrency[key] ?? 0),
+          );
+        }
+      }
+
+      for (const key of CURRENCY_KEYS) {
+        nextCurrency[key] += resolvedBackgroundPackage.currency[key] ?? 0;
+      }
+
       updateCharacter(character.id, {
         provenance: newLedger,
         proficiencies: newProfs,
+        skills: newSkills,
+        equipment: upsertGrantedEquipment(
+          newEquipment,
+          resolvedBackgroundPackage.items,
+        ),
+        currency: nextCurrency,
+        backgroundCurrencyGrant: resolvedBackgroundPackage.currency,
+        backgroundEquipmentChoice: preferredOption,
       });
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, updateCharacter, itemLookup],
   );
 
   const applySpellSelection = useCallback(
@@ -503,8 +865,18 @@ export function useProvenanceMutations({
         newLedger = addGrant(newLedger, domain, itemName, tag);
 
         if (domain === 'skills') {
+          const nextSkillProficiencies = [
+            ...new Set([
+              ...(character.proficiencies.skills ?? []),
+              normalizeKey(itemName),
+            ]),
+          ];
           updateCharacter(character.id, {
             provenance: newLedger,
+            proficiencies: {
+              ...character.proficiencies,
+              skills: nextSkillProficiencies,
+            },
             skills: {
               ...(character.skills ?? {}),
               [normKey]: {
@@ -581,8 +953,15 @@ export function useProvenanceMutations({
         }
 
         if (domain === 'skills') {
+          const nextSkillProficiencies = (
+            character.proficiencies.skills ?? []
+          ).filter((proficiency) => normalizeKey(proficiency) !== normKey);
           updateCharacter(character.id, {
             provenance: newLedger,
+            proficiencies: {
+              ...character.proficiencies,
+              skills: nextSkillProficiencies,
+            },
             skills: {
               ...(character.skills ?? {}),
               [normKey]: {
