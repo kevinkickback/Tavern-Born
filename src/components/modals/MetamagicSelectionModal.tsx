@@ -2,19 +2,8 @@ import { memo } from 'react';
 import { SelectionModal } from '@/components/modals/SelectionModal';
 import { Badge } from '@/components/ui/badge';
 import type { OptionalFeatureLike } from '@/lib/5etools/classData';
-import { renderEntry } from '@/lib/renderer';
+import { renderEntryCached } from '@/lib/entryRenderCache';
 import { cn } from '@/lib/utils';
-
-const _entryCache = new WeakMap<object, string>();
-function cachedEntry(entry: unknown): string {
-  if (!entry) return '';
-  if (typeof entry !== 'object') return renderEntry(entry);
-  const hit = _entryCache.get(entry as object);
-  if (hit !== undefined) return hit;
-  const html = renderEntry(entry);
-  _entryCache.set(entry as object, html);
-  return html;
-}
 
 interface MetamagicCardProps {
   metamagic: OptionalFeatureLike;
@@ -26,7 +15,7 @@ const MetamagicCard = memo(function MetamagicCard({
   isSelected,
 }: MetamagicCardProps) {
   const firstEntry = metamagic.entries?.[0];
-  const descHtml = firstEntry ? cachedEntry(firstEntry) : '';
+  const descHtml = firstEntry ? renderEntryCached(firstEntry) : '';
 
   return (
     <div className="p-3.5">

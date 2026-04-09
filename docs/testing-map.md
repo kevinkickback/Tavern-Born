@@ -44,14 +44,14 @@ Key scripts in package.json:
 - Spell page E2E no-character scenarios in tests/e2e/spells.spec.ts
 - Basic E2E startup/navigation smoke
 - Spell page no-character E2E baseline in tests/e2e/spells.spec.ts
+- Character lifecycle E2E (import -> portrait edit -> save -> reload) in tests/e2e/lifecycle.spec.ts
+- Active-character spell workflow E2E (profile switching, add/remove, prepared toggle) in tests/e2e/spells-active.spec.ts
 
 ## High-Priority Gaps
 
-1. **Character-lifecycle E2E**: Full create → edit → save → reload → verify persistence flow.
-2. **Spell workflows with active character E2E**: Profile switching, add/remove flows, prepared toggles with real character state.
-3. **Broader provenance reconciliation**: Coverage for all grant pathways and multiclass profile interactions.
-4. **Ingestion integration**: Real-world 5etools structure validation and error-path testing.
-5. **Error-path tests**: Malformed JSON, missing resources, corrupted character recovery.
+1. **Broader provenance reconciliation**: Coverage for all grant pathways and multiclass profile interactions.
+2. **Ingestion integration**: Real-world 5etools structure validation and error-path testing.
+3. **Error-path tests**: Malformed JSON, missing resources, corrupted character recovery.
 
 ## Test Coverage by Layer
 
@@ -60,7 +60,7 @@ Key scripts in package.json:
 | Calculations (lib) | ✅ Excellent | ✅ Complete | 34+ unit tests, all passing |
 | Stores | ✅ Good | ✅ Good | Validation, rehydrate safety tested |
 | Hooks (char) | ✅ Good | ⚠️ Growing | Spell hooks expanded; more coverage needed for UI-dependent hooks |
-| Spell workflows | ✅ Good | ⚠️ Growing | Unit/integration coverage is strong; active-character E2E is the next expansion area |
+| Spell workflows | ✅ Good | ✅ Good | Unit/integration + active-character E2E coverage now in place |
 | Provenance | ✅ Good | ⚠️ Needs expansion | Core logic tested; multiclass reconciliation gaps remain |
 | Pages/Components | ⚠️ Minimal | ⚠️ Minimal | Mostly snapshot/smoke tested; full interaction E2E planned |
 | Schema migrations | ✅ Good | ✅ Good | Dedicated unit coverage in tests/lib/migrations.test.ts |
@@ -82,6 +82,7 @@ Hooks and derived state tests:
 E2E tests:
 - Start with create -> edit -> save -> reload -> verify state.
 - Add stale-cache startup flow checks where feasible.
+- Handle startup data-source prompts deterministically by seeding cache/config in test setup when no source is configured.
 
 ## Definition of Done for New Features
 

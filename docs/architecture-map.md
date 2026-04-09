@@ -42,6 +42,7 @@ Spellcasting note:
 Character sheet PDF note:
 - Route src/pages/CharacterSheetPage.tsx renders the PDF preview/download workflow.
 - PDF mapping and filling logic lives in src/lib/pdf/characterSheetPdf.ts, with template-aware mapping for both 2014 and 2024 sheets.
+- PDF form editing is powered by `@cantoo/pdf-lib` (maintained fork of pdf-lib) to keep browser-side AcroForm fill/edit behavior stable.
 - The 2014 pipeline also strips MPMB interactive chrome (buttons, ammo tracker widgets, calculation scripts, attack-mod placeholder state) before save/render.
 
 ## Routing Overview

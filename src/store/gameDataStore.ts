@@ -8,6 +8,9 @@ import {
 import { createIdbStorage } from '@/lib/storage/idb-storage';
 import type { DataSourceConfig, GameData } from '@/types/5etools';
 
+let activeLoadController: AbortController | null = null;
+let activeLoadRequestId = 0;
+
 interface LoadProgress {
   current: number;
   total: number;
@@ -77,18 +80,31 @@ export const useGameDataStore = create<GameDataState>()(
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
       loadGameData: async (config, background = false) => {
+        const requestId = ++activeLoadRequestId;
+        activeLoadController?.abort();
+        const controller = new AbortController();
+        activeLoadController = controller;
+
         if (background) {
           set({ isBackgroundRefreshing: true, error: null });
         } else {
           set({ isLoading: true, error: null, loadProgress: null });
         }
+
         try {
           const data = await loadDataFromSource(config, {
             onProgress: background
               ? undefined
               : (current, total, resource) =>
                   set({ loadProgress: { current, total, resource } }),
+            signal: controller.signal,
           });
+
+          // Ignore stale results from superseded requests.
+          if (requestId !== activeLoadRequestId) {
+            return;
+          }
+
           const now = new Date().toISOString();
           // Persist parsed data to IDB cache so next launch is instant.
           await writeGameDataCache(data, config);
@@ -102,6 +118,23 @@ export const useGameDataStore = create<GameDataState>()(
             cacheStatus: 'fetched',
           });
         } catch (error) {
+          // Ignore stale request failures and intentional aborts.
+          if (requestId !== activeLoadRequestId) {
+            return;
+          }
+
+          const isAbortError =
+            (error instanceof DOMException && error.name === 'AbortError') ||
+            (error instanceof Error && error.name === 'AbortError');
+          if (isAbortError) {
+            set({
+              isLoading: false,
+              isBackgroundRefreshing: false,
+              loadProgress: null,
+            });
+            return;
+          }
+
           set({
             error:
               error instanceof Error
@@ -111,6 +144,10 @@ export const useGameDataStore = create<GameDataState>()(
             isBackgroundRefreshing: false,
             loadProgress: null,
           });
+        } finally {
+          if (activeLoadController === controller) {
+            activeLoadController = null;
+          }
         }
       },
 
@@ -122,6 +159,8 @@ export const useGameDataStore = create<GameDataState>()(
       },
 
       clearGameData: () => {
+        activeLoadController?.abort();
+        activeLoadController = null;
         // Fire-and-forget IDB cache clear.
         clearGameDataCache().catch(console.error);
         set({

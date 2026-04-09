@@ -67,10 +67,24 @@ function resetCharacterStore() {
   });
 }
 
+function mockDynamicFileInput() {
+  const originalCreateElement = document.createElement.bind(document);
+  const realInput = originalCreateElement('input') as HTMLInputElement;
+  realInput.click = vi.fn();
+
+  vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+    if (tagName === 'input') {
+      return realInput;
+    }
+    return originalCreateElement(tagName);
+  }) as typeof document.createElement);
+
+  return realInput;
+}
+
 describe('home page integration workflows', () => {
   beforeEach(() => {
     resetCharacterStore();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -110,7 +124,31 @@ describe('home page integration workflows', () => {
 
     await user.click(screen.getByRole('button', { name: /delete \(1\)/i }));
 
-    expect(window.confirm).toHaveBeenCalled();
+    expect(screen.getByText('Delete selected characters?')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Delete Selected' }));
+
+    expect(useCharacterStore.getState().characters.map((c) => c.id)).toEqual([
+      'c2',
+    ]);
+  });
+
+  test('supports single-character deletion through AlertDialog', async () => {
+    const user = userEvent.setup();
+    const c1 = makeCharacterFixture({ id: 'c1', name: 'Alpha' });
+    const c2 = makeCharacterFixture({ id: 'c2', name: 'Bravo' });
+
+    useCharacterStore.setState({
+      characters: [c1, c2],
+      activeCharacterId: null,
+      activeCharacter: null,
+    });
+
+    render(<HomePage />);
+
+    await user.click(screen.getByRole('button', { name: 'delete-c1' }));
+    expect(screen.getByText('Delete character?')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Delete Character' }));
+
     expect(useCharacterStore.getState().characters.map((c) => c.id)).toEqual([
       'c2',
     ]);
@@ -145,22 +183,7 @@ describe('home page integration workflows', () => {
       activeCharacter: null,
     });
 
-    const originalCreateElement = document.createElement.bind(document);
-    const fileInput = {
-      type: '',
-      accept: '',
-      onchange: null as ((e: Event) => void | Promise<void>) | null,
-      click: vi.fn(),
-    };
-
-    vi.spyOn(document, 'createElement').mockImplementation(((
-      tagName: string,
-    ) => {
-      if (tagName === 'input') {
-        return fileInput as unknown as HTMLInputElement;
-      }
-      return originalCreateElement(tagName);
-    }) as typeof document.createElement);
+    const fileInput = mockDynamicFileInput();
 
     render(<HomePage />);
 
@@ -175,9 +198,12 @@ describe('home page integration workflows', () => {
       },
     );
 
-    await fileInput.onchange?.({
-      target: { files: [file] },
-    } as unknown as Event);
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      get: () => [file],
+    });
+
+    await fileInput.onchange?.({ target: fileInput } as unknown as Event);
 
     expect(useCharacterStore.getState().characters).toHaveLength(2);
   });
@@ -192,22 +218,7 @@ describe('home page integration workflows', () => {
       activeCharacter: null,
     });
 
-    const originalCreateElement = document.createElement.bind(document);
-    const fileInput = {
-      type: '',
-      accept: '',
-      onchange: null as ((e: Event) => void | Promise<void>) | null,
-      click: vi.fn(),
-    };
-
-    vi.spyOn(document, 'createElement').mockImplementation(((
-      tagName: string,
-    ) => {
-      if (tagName === 'input') {
-        return fileInput as unknown as HTMLInputElement;
-      }
-      return originalCreateElement(tagName);
-    }) as typeof document.createElement);
+    const fileInput = mockDynamicFileInput();
 
     render(<HomePage />);
 
@@ -221,9 +232,12 @@ describe('home page integration workflows', () => {
       type: 'application/json',
     });
 
-    await fileInput.onchange?.({
-      target: { files: [file] },
-    } as unknown as Event);
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      get: () => [file],
+    });
+
+    await fileInput.onchange?.({ target: fileInput } as unknown as Event);
 
     const imported = useCharacterStore
       .getState()
@@ -243,22 +257,7 @@ describe('home page integration workflows', () => {
       activeCharacter: null,
     });
 
-    const originalCreateElement = document.createElement.bind(document);
-    const fileInput = {
-      type: '',
-      accept: '',
-      onchange: null as ((e: Event) => void | Promise<void>) | null,
-      click: vi.fn(),
-    };
-
-    vi.spyOn(document, 'createElement').mockImplementation(((
-      tagName: string,
-    ) => {
-      if (tagName === 'input') {
-        return fileInput as unknown as HTMLInputElement;
-      }
-      return originalCreateElement(tagName);
-    }) as typeof document.createElement);
+    const fileInput = mockDynamicFileInput();
 
     render(<HomePage />);
 
@@ -269,10 +268,35 @@ describe('home page integration workflows', () => {
       type: 'application/json',
     });
 
-    await fileInput.onchange?.({
-      target: { files: [invalidFile] },
-    } as unknown as Event);
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      get: () => [invalidFile],
+    });
+
+    await fileInput.onchange?.({ target: fileInput } as unknown as Event);
 
     expect(useCharacterStore.getState().characters).toHaveLength(1);
+  });
+
+  test('configures file input for character import', async () => {
+    const user = userEvent.setup();
+    const fileInput = mockDynamicFileInput();
+
+    useCharacterStore.setState({
+      characters: [
+        makeCharacterFixture({ id: 'existing-1', name: 'Existing' }),
+      ],
+      activeCharacterId: null,
+      activeCharacter: null,
+    });
+
+    render(<HomePage />);
+
+    await user.click(screen.getByRole('button', { name: 'Import Character' }));
+
+    expect(fileInput.type).toBe('file');
+    expect(fileInput.accept).toBe('.dndchar,.json');
+    expect(typeof fileInput.onchange).toBe('function');
+    expect(fileInput.click).toHaveBeenCalled();
   });
 });

@@ -39,6 +39,7 @@ Flow:
 Important behavior:
 - Class index handling differs from spell index behavior; class index keys are slugs, not sources.
 - Composite key lookups use name|source and are expected by downstream hooks.
+- Game data loads are cancellation-aware: a new load aborts any in-flight request, and stale responses are ignored via request-id guards.
 
 ## 3) Character Edit and Save Lifecycle
 

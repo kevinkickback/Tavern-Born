@@ -1,5 +1,5 @@
 import { CaretLeft, CaretRight, Sword } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { useProvenance } from '@/hooks/character/useProvenance';
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
@@ -25,7 +25,6 @@ import { NoCharCard } from '@/pages/_shared';
 import {
   BuildClassDetailsPanel,
   type ClassFeatureDisplay,
-  type SelectedFeatureState,
 } from '@/pages/build/class/components/DetailsPanel';
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel';
 import { BuildClassModals } from '@/pages/build/class/components/Modals';
@@ -47,6 +46,7 @@ import {
   countTotalFeatSlots,
   filterClassSpells,
 } from '@/pages/build/class/model/pageUtils';
+import { useClassPageState } from '@/pages/build/class/useClassPageState';
 import { useCharacterStore } from '@/store/characterStore';
 import type { Class5e, Feat5e, Spell5e } from '@/types/5etools';
 
@@ -72,29 +72,35 @@ export function BuildClassPage() {
     removeSpellProvenance,
     replaceFeatSelections,
   } = useProvenance();
-  const [selectedClassTab, setSelectedClassTab] = useState('');
-  const [classPickerOpen, setClassPickerOpen] = useState(false);
-  const [classPickerSearch, setClassPickerSearch] = useState('');
-  const [subclassPickerOpen, setSubclassPickerOpen] = useState(false);
-  const [spellPickerLevel, setSpellPickerLevel] = useState<number | null>(null);
-  const [detailCollapsed, setDetailCollapsed] = useState(false);
-  const [selectedFeature, setSelectedFeature] =
-    useState<SelectedFeatureState | null>(null);
-  const [optPickerState, setOptPickerState] = useState<{
-    progName: string;
-    featureTypes: string[];
-    total: number;
-  } | null>(null);
-  const [featPickerOpen, setFeatPickerOpen] = useState(false);
-  const [classFeatPickerState, setClassFeatPickerState] = useState<{
-    progName: string;
-    categories: string[];
-    total: number;
-  } | null>(null);
-  const [asiPickerLevel, setAsiPickerLevel] = useState<number | null>(null);
-  const [asiModeByLevel, setAsiModeByLevel] = useState<
-    Record<string, 'asi' | 'feat'>
-  >({});
+  const {
+    selectedClassTab,
+    classPickerOpen,
+    classPickerSearch,
+    subclassPickerOpen,
+    spellPickerLevel,
+    detailCollapsed,
+    selectedFeature,
+    optPickerState,
+    featPickerOpen,
+    classFeatPickerState,
+    asiPickerLevel,
+    asiModeByLevel,
+    setClassPickerOpen,
+    setClassPickerSearch,
+    setSubclassPickerOpen,
+    setSpellPickerLevel,
+    setDetailCollapsed,
+    setSelectedFeature,
+    setOptPickerState,
+    setFeatPickerOpen,
+    setClassFeatPickerState,
+    setAsiPickerLevel,
+    handleSelectClassTab,
+    handleClassSelectionApplied,
+    handleSubclassSelectionApplied,
+    setAsiMode,
+    clearAsiMode,
+  } = useClassPageState();
   const classProgression = buildClassProgression(character);
 
   const viewingEntry =
@@ -137,9 +143,7 @@ export function BuildClassPage() {
     });
     if (cls) applyClassSelection(cls, undefined);
     updateCharacter(character.id, patch);
-    setSelectedFeature(null);
-    setClassPickerOpen(false);
-    setClassPickerSearch('');
+    handleClassSelectionApplied();
   };
   const allClassFeatures = useMemo(() => {
     if (!viewingClass) return [];
@@ -284,14 +288,12 @@ export function BuildClassPage() {
       subclassSource: sc.source,
     });
     updateCharacter(character.id, patch);
-    setSelectedFeature({
+    handleSubclassSelectionApplied({
       name: sc.name,
       source: sc.source,
       entries: resolveSubclassFeatureRefs(sc.entries ?? [], sc.shortName),
       levelFeatures: sc.levelFeatures,
     });
-    setSubclassPickerOpen(false);
-    if (detailCollapsed) setDetailCollapsed(false);
   };
   const characterSnapshot: PrereqCharacterSnapshot = buildCharacterSnapshot({
     character,
@@ -369,11 +371,7 @@ export function BuildClassPage() {
       asiChoices: next.asiChoices,
     });
     const levelKey = `${level}|${viewingClass}`;
-    setAsiModeByLevel((prev) => {
-      const next = { ...prev };
-      delete next[levelKey];
-      return next;
-    });
+    clearAsiMode(levelKey);
   };
 
   // Merged feat list for the picker: available + any saved feats outside allowed sources
@@ -451,10 +449,7 @@ export function BuildClassPage() {
               <BuildClassLevelsPanel
                 classProgression={classProgression}
                 selectedClassTab={selectedClassTab}
-                onSelectClassTab={(value) => {
-                  setSelectedClassTab(value);
-                  setSelectedFeature(null);
-                }}
+                onSelectClassTab={handleSelectClassTab}
                 character={character}
                 levelsToShow={levelsToShow}
                 subclassLevel={subclassLevel}
@@ -491,12 +486,7 @@ export function BuildClassPage() {
                 onSelectFeature={setSelectedFeature}
                 onExpandDetails={() => setDetailCollapsed(false)}
                 onAsiReset={handleAsiReset}
-                onSetAsiModeByLevel={(levelKey, mode) =>
-                  setAsiModeByLevel((prev) => ({
-                    ...prev,
-                    [levelKey]: mode,
-                  }))
-                }
+                onSetAsiModeByLevel={setAsiMode}
                 onClearFeatSelectionsForAsi={() => replaceFeatSelections([])}
                 getOrdinalForm={getOrdinalForm}
               />

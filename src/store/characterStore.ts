@@ -53,9 +53,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
-const generateId = () => {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-};
+const generateId = () => crypto.randomUUID();
 
 export function emptyProvenance(): ProvenanceLedger {
   const emptyMap = () =>
@@ -380,7 +378,13 @@ export const useCharacterStore = create<CharacterState>()(
               lastModified: now,
             };
             const parsed = parseCharacterData(next);
-            if (!parsed.data) return {};
+            if (!parsed.data) {
+              console.error('updateCharacter validation failed:', {
+                id,
+                error: parsed.error,
+              });
+              return {};
+            }
             const persistedCharacter = state.characters.find(
               (character) => character.id === id,
             );
@@ -509,6 +513,10 @@ export const useCharacterStore = create<CharacterState>()(
           };
           const parsed = parseCharacterData(savedCharacter);
           if (!parsed.data) {
+            console.error('saveActiveCharacter validation failed:', {
+              id: state.activeCharacter.id,
+              error: parsed.error,
+            });
             return {};
           }
           const validatedCharacter = parsed.data;
@@ -547,6 +555,9 @@ export const useCharacterStore = create<CharacterState>()(
             .map((character) => parseCharacterData(character))
             .filter((result) => result.data)
             .map((result) => result.data as Character);
+
+          // Persist passes a mutable state snapshot into this callback.
+          // Direct assignment here is intentional and scoped to hydration only.
           state.characters = validatedCharacters;
 
           // Always start without an active selection. Users explicitly pick

@@ -1,4 +1,4 @@
-import { PDFDocument, PDFName, PDFNumber } from 'pdf-lib';
+import { PDFDocument, PDFName, PDFNumber } from '@cantoo/pdf-lib';
 import {
   type AbilityName,
   formatModifier,

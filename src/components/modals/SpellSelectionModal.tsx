@@ -16,23 +16,9 @@ import {
   getSchoolName,
   SPELL_SCHOOL_NAMES,
 } from '@/lib/calculations/spellUtils';
-import { renderEntry } from '@/lib/renderer';
+import { renderEntryCached } from '@/lib/entryRenderCache';
 import { cn } from '@/lib/utils';
 import type { Spell5e } from '@/types/5etools';
-
-// 5etools entry objects are stable references from the game data store, so
-// we can cache their HTML output to avoid re-running renderEntry on every
-// modal open / remount.
-const _entryCache = new WeakMap<object, string>();
-function cachedEntry(entry: unknown): string {
-  if (!entry) return '';
-  if (typeof entry !== 'object') return renderEntry(entry);
-  const hit = _entryCache.get(entry as object);
-  if (hit !== undefined) return hit;
-  const html = renderEntry(entry);
-  _entryCache.set(entry as object, html);
-  return html;
-}
 
 export interface SpellLevelLimit {
   /** 0 = cantrip; 1–9 = spell level */
@@ -114,6 +100,14 @@ const TYPE_FILTER: FilterSection = {
   ],
 };
 
+function isRitualSpell(spell: Spell5e): boolean {
+  const meta = spell.meta;
+  if (!meta || typeof meta !== 'object') {
+    return false;
+  }
+  return !!(meta as { ritual?: unknown }).ritual;
+}
+
 function matchSpell(
   spell: Spell5e,
   search: string,
@@ -147,7 +141,7 @@ function matchSpell(
     return false;
 
   const typeSet = activeFilters.type;
-  if (typeSet?.has('ritual') && !spell.meta?.ritual) return false;
+  if (typeSet?.has('ritual') && !isRitualSpell(spell)) return false;
   if (
     typeSet?.has('concentration') &&
     !spell.duration.some((d) => d.concentration)
@@ -171,10 +165,10 @@ const SpellCard = memo(function SpellCard({
   isSelected,
   isLocked,
 }: SpellCardProps) {
-  const isRitual = !!spell.meta?.ritual;
+  const isRitual = isRitualSpell(spell);
   const isConcentration = spell.duration.some((d) => d.concentration);
   const firstEntry = spell.entries?.[0];
-  const descHtml = cachedEntry(firstEntry);
+  const descHtml = renderEntryCached(firstEntry);
 
   return (
     <div className="p-3.5">
