@@ -1,30 +1,5 @@
-import {
-  BookOpen,
-  Check,
-  MagicWand,
-  Plus,
-  PushPin,
-  Trash,
-  X,
-} from '@phosphor-icons/react';
+import { MagicWand, PushPin, X } from '@phosphor-icons/react';
 import { useMemo, useState } from 'react';
-import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
@@ -33,7 +8,6 @@ import {
 import { useProvenance } from '@/hooks/character/useProvenance';
 import { useSpellSlots } from '@/hooks/character/useSpellSlots';
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
-import { formatModifier } from '@/lib/calculations/abilityScores';
 import { buildSpellModalConfig } from '@/lib/calculations/spellModalConfig';
 import {
   getProfileKnownNames,
@@ -50,23 +24,15 @@ import {
 import { normalizeKey } from '@/lib/provenance/normalization';
 import { renderEntry } from '@/lib/renderer';
 import { cn } from '@/lib/utils';
+import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard';
+import {
+  type SpellListItem,
+  SpellProfileManager,
+} from '@/pages/spells/components/SpellProfileManager';
 import { useCharacterStore } from '@/store/characterStore';
 import { useGameDataStore } from '@/store/gameDataStore';
 import type { Class5e, Spell5e } from '@/types/5etools';
 import { NoCharCard } from '../_shared';
-
-interface SpellListItem {
-  profileId: string;
-  profileLabel: string;
-  className?: string;
-  classSource?: string;
-  alwaysPrepared?: boolean;
-  isPreparedCaster?: boolean;
-  name: string;
-  level: number;
-  kind: 'cantrip' | 'spell';
-  prepared: boolean;
-}
 
 interface TooltipEntityLike {
   name?: string;
@@ -595,478 +561,155 @@ export function SpellsPage() {
     ? activeProfile.cantrips.length + activeProfile.spellsKnown.length
     : 0;
 
+  const handleOpenSpellModal = () => {
+    if (!activeProfileId && spellProfiles[0]) {
+      setActiveProfileId(spellProfiles[0].id);
+    }
+    setSpellModalOpen(true);
+  };
+
+  const handleConfirmProfileSpells = (names: string[]) => {
+    if (!activeProfile) {
+      return;
+    }
+
+    const activeDetail = detailsByProfileId.get(activeProfile.id);
+    const previousKnownNames = getProfileKnownNames(activeProfile);
+    const otherKnownNames = new Set(
+      spellProfiles
+        .filter((profile) => profile.id !== activeProfile.id)
+        .flatMap((profile) => [...profile.cantrips, ...profile.spellsKnown]),
+    );
+    const nextCantrips = names.filter(
+      (spellName) => spellByName.get(getEntityKey(spellName))?.level === 0,
+    );
+    const nextSpellsKnown = names.filter(
+      (spellName) => spellByName.get(getEntityKey(spellName))?.level !== 0,
+    );
+
+    setProfileSpells(activeProfile.id, nextCantrips, nextSpellsKnown);
+
+    const newlyAddedNames = names.filter(
+      (spellName) => !previousKnownNames.has(spellName),
+    );
+
+    if (
+      activeProfile.type === 'class' &&
+      activeProfile.className &&
+      activeDetail &&
+      activeDetail.classLevel > 0
+    ) {
+      const classData = classByProfileId.get(activeProfile.id);
+      const existingAttributions = [...previousKnownNames]
+        .map((spellName) => {
+          const tags = ledger.spells[normalizeKey(spellName)] ?? [];
+          const classTag = tags.find(
+            (tag) =>
+              tag.sourceType === 'class' &&
+              tag.sourceName === activeProfile.className &&
+              (tag.sourceRef ?? '') === (activeProfile.classSource ?? '') &&
+              !!tag.spellGrantedAtLevel,
+          );
+          if (!classTag?.spellGrantedAtLevel) return null;
+          return {
+            spellName,
+            grantedAtLevel: classTag.spellGrantedAtLevel,
+          };
+        })
+        .filter(
+          (entry): entry is { spellName: string; grantedAtLevel: number } =>
+            !!entry,
+        );
+
+      const spellLevelByName = new Map<string, number>();
+      for (const spellName of new Set([...previousKnownNames, ...names])) {
+        spellLevelByName.set(
+          spellName,
+          spellByName.get(getEntityKey(spellName))?.level ?? 1,
+        );
+      }
+
+      const inferred = inferClassSpellAttributionLevels({
+        classData,
+        classLevel: activeDetail.classLevel,
+        newSpellNames: newlyAddedNames,
+        spellLevelByName,
+        existingAttributions,
+      });
+
+      const inferredByName = new Map(
+        inferred.map((entry) => [entry.spellName, entry.grantedAtLevel]),
+      );
+
+      for (const spellName of newlyAddedNames) {
+        const inferredLevel = inferredByName.get(spellName);
+        if (!inferredLevel) {
+          applyManualSpellGrant(spellName);
+          continue;
+        }
+        applyInferredClassSpellSelection(
+          activeProfile.className,
+          activeProfile.classSource,
+          spellName,
+          inferredLevel,
+        );
+      }
+    } else {
+      for (const spellName of newlyAddedNames) {
+        applyManualSpellGrant(spellName);
+      }
+    }
+
+    for (const spellName of previousKnownNames) {
+      if (names.includes(spellName) || otherKnownNames.has(spellName)) {
+        continue;
+      }
+      removeSpellProvenance(spellName);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto w-full space-y-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="font-display text-2xl font-bold flex items-center gap-2">
-          <MagicWand className="h-6 w-6 text-accent" weight="duotone" />
-          Spells
-        </h1>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-2 min-w-[320px]">
-            <span className="text-xs text-muted-foreground min-w-[56px] shrink-0">
-              Add to:
-            </span>
-            <Select
-              value={activeProfileId || activeProfile?.id || ''}
-              onValueChange={setActiveProfileId}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Choose profile" />
-              </SelectTrigger>
-              <SelectContent>
-                {spellProfiles.map((profile) => (
-                  <SelectItem key={profile.id} value={profile.id}>
-                    {profile.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button
-            size="sm"
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-            onClick={() => {
-              if (!activeProfileId && spellProfiles[0]) {
-                setActiveProfileId(spellProfiles[0].id);
-              }
-              setSpellModalOpen(true);
-            }}
-          >
-            <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Add Spells
-          </Button>
-        </div>
-      </div>
-
       <div className="space-y-6">
-        <Card className="w-full flex flex-col">
-          <CardHeader>
-            <CardTitle className="font-display text-xl flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-accent" weight="duotone" />
-              Spell List
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1">
-            {groupedItems.size === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No spells assigned yet.
-              </p>
-            ) : (
-              <Accordion
-                type="multiple"
-                defaultValue={spellProfiles
-                  .map((profile) => profile.id)
-                  .filter(
-                    (profileId) =>
-                      (groupedItems.get(profileId)?.length ?? 0) > 0,
-                  )}
-                className="space-y-3 max-h-[620px] overflow-y-auto pr-1"
-              >
-                {spellProfiles.map((profile) => {
-                  const items = groupedItems.get(profile.id) ?? [];
-                  if (items.length === 0) return null;
-                  const detail = detailsByProfileId.get(profile.id);
-
-                  const preparedCount = items.filter(
-                    (item) =>
-                      item.kind === 'spell' &&
-                      !item.alwaysPrepared &&
-                      item.prepared,
-                  ).length;
-                  const preparableSpells = items.filter(
-                    (item) => item.kind === 'spell' && !item.alwaysPrepared,
-                  );
-                  const preparedTotal = detail?.isPreparedCaster
-                    ? (detail.knownSpellLimit ?? preparableSpells.length)
-                    : preparableSpells.length;
-                  const levels = [
-                    ...new Set(items.map((item) => item.level)),
-                  ].sort((a, b) => a - b);
-
-                  return (
-                    <AccordionItem
-                      key={profile.id}
-                      value={profile.id}
-                      className="rounded-lg border border-border bg-card overflow-hidden"
-                    >
-                      <AccordionTrigger className="px-3 py-2 bg-muted/30 hover:no-underline">
-                        <div className="flex items-center gap-2 text-left w-full min-w-0">
-                          <span className="font-medium text-sm">
-                            {profile.label}
-                          </span>
-                          {profile.alwaysPrepared ? (
-                            <Badge variant="secondary" className="text-xs">
-                              Always Prepared
-                            </Badge>
-                          ) : null}
-                          <div className="ml-auto flex items-center gap-2 pr-1">
-                            {detail?.isPreparedCaster ? (
-                              <Badge variant="outline" className="text-xs">
-                                Prepared: {preparedCount}/{preparedTotal}
-                              </Badge>
-                            ) : null}
-                            <Badge variant="outline" className="text-xs">
-                              Total: {items.length}
-                            </Badge>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-0">
-                        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-px bg-border/60">
-                          {levels.map((level) => {
-                            const levelItems = items.filter(
-                              (item) => item.level === level,
-                            );
-                            return (
-                              <div
-                                key={`${profile.id}|level|${level}`}
-                                className="bg-card"
-                              >
-                                <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted/15 border-b border-border/60">
-                                  {level === 0
-                                    ? 'Cantrips'
-                                    : `${formatSpellLevel(level)}s`}
-                                </div>
-                                <div className="divide-y divide-border/60">
-                                  {levelItems.map((item) => {
-                                    const canPrepare =
-                                      item.kind === 'spell' &&
-                                      !item.alwaysPrepared &&
-                                      !!item.isPreparedCaster;
-                                    const spell = spellByName.get(
-                                      getEntityKey(item.name),
-                                    );
-
-                                    return (
-                                      <div
-                                        key={`${item.profileId}|${item.kind}|${item.name}`}
-                                        className="px-3 py-2 flex items-center justify-between gap-3"
-                                      >
-                                        <div className="min-w-0">
-                                          <SpellNameTooltip
-                                            name={item.name}
-                                            spell={spell}
-                                            recursiveLookup={recursiveLookup}
-                                            sourceContext={selectionSourceByProfileAndSpell.get(
-                                              `${item.profileId}|${item.name}`,
-                                            )}
-                                          />
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          {item.alwaysPrepared ? (
-                                            <Badge className="text-xs bg-accent text-accent-foreground">
-                                              <Check className="h-3 w-3 mr-1" />
-                                              Prepared
-                                            </Badge>
-                                          ) : canPrepare ? (
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                togglePrepared(
-                                                  item.profileId,
-                                                  item.name,
-                                                )
-                                              }
-                                              className={cn(
-                                                'h-4 w-4 rounded-full border-2 transition-colors',
-                                                item.prepared
-                                                  ? 'bg-accent border-accent'
-                                                  : 'border-muted-foreground',
-                                              )}
-                                              title={
-                                                item.prepared
-                                                  ? 'Prepared'
-                                                  : 'Not prepared'
-                                              }
-                                            />
-                                          ) : null}
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                            onClick={() =>
-                                              handleRemoveSpell(item)
-                                            }
-                                          >
-                                            <Trash className="h-3.5 w-3.5" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="font-display text-xl flex items-center gap-2">
-              <MagicWand className="h-5 w-5 text-accent" weight="duotone" />
-              Spellcasting Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!isSpellcaster ? (
-              <p className="text-sm text-muted-foreground">
-                This character has no spellcasting classes yet.
-              </p>
-            ) : (
-              <>
-                <div className="grid gap-3 max-w-3xl xl:grid-cols-2">
-                  {spellcastingDetails.map((detail) => (
-                    <div
-                      key={detail.profileId}
-                      className="rounded-lg border border-border p-3"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <p className="font-medium text-sm">
-                            {detail.className}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Level {detail.classLevel} {detail.casterProgression}
-                          </p>
-                        </div>
-                        {detail.spellcastingAbility ? (
-                          <Badge
-                            variant="secondary"
-                            className="text-xs uppercase"
-                          >
-                            {detail.spellcastingAbility}
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-                        <div className="rounded border border-border px-2 py-1.5">
-                          <div className="text-muted-foreground">
-                            Spell Save DC
-                          </div>
-                          <div className="font-semibold text-sm">
-                            {detail.spellSaveDC ?? '-'}
-                          </div>
-                        </div>
-                        <div className="rounded border border-border px-2 py-1.5">
-                          <div className="text-muted-foreground">
-                            Spell Attack
-                          </div>
-                          <div className="font-semibold text-sm">
-                            {detail.spellAttackBonus !== null
-                              ? formatModifier(detail.spellAttackBonus)
-                              : '-'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="rounded-lg border border-border p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                    {hasMultipleSpellcastingClasses
-                      ? 'Shared Spell Slots'
-                      : 'Spell Slots'}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {sharedSlots.length === 0 ? (
-                      <span className="text-xs text-muted-foreground">
-                        No shared slots
-                      </span>
-                    ) : (
-                      sharedSlots.map((slot) => (
-                        <div
-                          key={`shared-${slot.level}`}
-                          className="border rounded-lg px-3 py-1.5 text-center min-w-[64px] border-accent/40 bg-accent/5"
-                        >
-                          <div className="text-sm font-bold">{slot.max}</div>
-                          <div className="text-[10px] text-muted-foreground">
-                            Level {slot.level}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {hasWarlockClass ? (
-                  <div className="rounded-lg border border-border p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                      Pact Magic Slots
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {pactSlots.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">
-                          No pact slots
-                        </span>
-                      ) : (
-                        pactSlots.map((slot) => (
-                          <div
-                            key={`pact-${slot.level}`}
-                            className="border rounded-lg px-3 py-1.5 text-center min-w-[64px] border-warning/40 bg-warning/10"
-                          >
-                            <div className="text-sm font-bold">
-                              {slot.available}/{slot.max}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground">
-                              Level {slot.level}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {activeProfile && modalConfig ? (
-        <SpellSelectionModal
-          open={spellModalOpen}
-          onOpenChange={setSpellModalOpen}
-          title={modalConfig.title}
-          spells={allSpells}
-          initialSelectedNames={modalConfig.initialSelectedNames}
-          lockedNames={modalConfig.lockedNames}
-          className={modalConfig.className}
-          classSource={modalConfig.classSource}
-          allowedLevels={modalConfig.allowedLevels}
-          initialFilters={modalConfig.initialFilters}
-          categories={
-            modalConfig.categories && modalConfig.categories.length > 0
-              ? modalConfig.categories
-              : undefined
+        <SpellProfileManager
+          spellProfiles={spellProfiles}
+          detailsByProfileId={detailsByProfileId}
+          groupedItems={groupedItems}
+          selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}
+          activeProfileId={activeProfileId}
+          onActiveProfileChange={setActiveProfileId}
+          activeProfile={activeProfile}
+          activeProfileKnownCount={activeProfileKnownCount}
+          spellModalOpen={spellModalOpen}
+          onSpellModalOpenChange={setSpellModalOpen}
+          modalConfig={modalConfig}
+          allSpells={allSpells}
+          getSpellByName={(spellName) =>
+            spellByName.get(getEntityKey(spellName))
           }
-          onConfirm={(names) => {
-            const activeDetail = detailsByProfileId.get(activeProfile.id);
-            const previousKnownNames = getProfileKnownNames(activeProfile);
-            const otherKnownNames = new Set(
-              spellProfiles
-                .filter((profile) => profile.id !== activeProfile.id)
-                .flatMap((profile) => [
-                  ...profile.cantrips,
-                  ...profile.spellsKnown,
-                ]),
-            );
-            const nextCantrips = names.filter(
-              (spellName) =>
-                spellByName.get(getEntityKey(spellName))?.level === 0,
-            );
-            const nextSpellsKnown = names.filter(
-              (spellName) =>
-                spellByName.get(getEntityKey(spellName))?.level !== 0,
-            );
-
-            setProfileSpells(activeProfile.id, nextCantrips, nextSpellsKnown);
-
-            const newlyAddedNames = names.filter(
-              (spellName) => !previousKnownNames.has(spellName),
-            );
-
-            if (
-              activeProfile.type === 'class' &&
-              activeProfile.className &&
-              activeDetail &&
-              activeDetail.classLevel > 0
-            ) {
-              const classData = classByProfileId.get(activeProfile.id);
-              const existingAttributions = [...previousKnownNames]
-                .map((spellName) => {
-                  const tags = ledger.spells[normalizeKey(spellName)] ?? [];
-                  const classTag = tags.find(
-                    (tag) =>
-                      tag.sourceType === 'class' &&
-                      tag.sourceName === activeProfile.className &&
-                      (tag.sourceRef ?? '') ===
-                        (activeProfile.classSource ?? '') &&
-                      !!tag.spellGrantedAtLevel,
-                  );
-                  if (!classTag?.spellGrantedAtLevel) return null;
-                  return {
-                    spellName,
-                    grantedAtLevel: classTag.spellGrantedAtLevel,
-                  };
-                })
-                .filter(
-                  (
-                    entry,
-                  ): entry is { spellName: string; grantedAtLevel: number } =>
-                    !!entry,
-                );
-
-              const spellLevelByName = new Map<string, number>();
-              for (const spellName of new Set([
-                ...previousKnownNames,
-                ...names,
-              ])) {
-                spellLevelByName.set(
-                  spellName,
-                  spellByName.get(getEntityKey(spellName))?.level ?? 1,
-                );
-              }
-
-              const inferred = inferClassSpellAttributionLevels({
-                classData,
-                classLevel: activeDetail.classLevel,
-                newSpellNames: newlyAddedNames,
-                spellLevelByName,
-                existingAttributions,
-              });
-
-              const inferredByName = new Map(
-                inferred.map((entry) => [
-                  entry.spellName,
-                  entry.grantedAtLevel,
-                ]),
-              );
-
-              for (const spellName of newlyAddedNames) {
-                const inferredLevel = inferredByName.get(spellName);
-                if (!inferredLevel) {
-                  applyManualSpellGrant(spellName);
-                  continue;
-                }
-                applyInferredClassSpellSelection(
-                  activeProfile.className,
-                  activeProfile.classSource,
-                  spellName,
-                  inferredLevel,
-                );
-              }
-            } else {
-              for (const spellName of newlyAddedNames) {
-                applyManualSpellGrant(spellName);
-              }
-            }
-
-            for (const spellName of previousKnownNames) {
-              if (names.includes(spellName) || otherKnownNames.has(spellName)) {
-                continue;
-              }
-              removeSpellProvenance(spellName);
-            }
-          }}
+          onOpenModal={handleOpenSpellModal}
+          onTogglePrepared={togglePrepared}
+          onRemoveSpell={handleRemoveSpell}
+          onConfirmSpells={handleConfirmProfileSpells}
+          renderSpellName={({ item, spell, sourceContext }) => (
+            <SpellNameTooltip
+              name={item.name}
+              spell={spell}
+              recursiveLookup={recursiveLookup}
+              sourceContext={sourceContext}
+            />
+          )}
         />
-      ) : null}
 
-      {activeProfile ? (
-        <p className="text-xs text-muted-foreground">
-          Adding to {activeProfile.label} ({activeProfileKnownCount} known
-          total)
-        </p>
-      ) : null}
+        <SpellcastingDetailsCard
+          isSpellcaster={isSpellcaster}
+          spellcastingDetails={spellcastingDetails}
+          hasMultipleSpellcastingClasses={hasMultipleSpellcastingClasses}
+          hasWarlockClass={hasWarlockClass}
+          sharedSlots={sharedSlots}
+          pactSlots={pactSlots}
+        />
+      </div>
     </div>
   );
 }

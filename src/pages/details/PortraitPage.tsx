@@ -79,6 +79,10 @@ export function PortraitPage() {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload an image file');
+        return;
+      }
       if (file.size > MAX_PORTRAIT_SIZE) {
         toast.error('File size must be less than 5MB');
         return;

@@ -7,8 +7,8 @@
 **A comprehensive Dungeons & Dragons 5th Edition character creator**
 
 [![Electron](https://img.shields.io/badge/Electron-Latest-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?logo=bootstrap&logoColor=white)](https://getbootstrap.com/)
-[![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](license.txt)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![5etools](https://img.shields.io/badge/Data-5etools-orange)](https://wiki.tercept.net/en/home)
 
 </div>
@@ -21,56 +21,6 @@
 - **Equipment & inventory** — Item management with encumbrance tracking
 - **Multiple ability score methods** — Point Buy, Standard Array, Rolling, or Manual Entry
 - **Character details** — Portraits, backstory, and physical characteristics
-
-## 📸 Screenshots
-
-<details>
-<summary>📋 Home - Character List</summary>
-
-![Character List](docs/screenshots/home.png)
-*Manage all your characters in one place with sorting options*
-
-</details>
-
-<details>
-<summary>🧙 Character Creation Wizard</summary>
-
-![Character Creation](docs/screenshots/character-creation.png)
-*Step-by-step character creation with source filtering*
-
-</details>
-
-<details>
-<summary>🏗️ Character Builder</summary>
-
-![Character Builder](docs/screenshots/build.png)
-*Edit race, class, background, ability scores, and proficiencies*
-
-</details>
-
-<details>
-<summary>📈 Level Up</summary>
-
-![Level Up](docs/screenshots/level-up.png)
-*Level-up wizard with class features, ASI/feats, and spell selection*
-
-</details>
-
-<details>
-<summary>📊 Proficiencies</summary>
-
-![Proficiencies](docs/screenshots/proficiencies.png)
-*Track armor, weapon, tool, skill, and language proficiencies*
-
-</details>
-
-<details>
-<summary>🎆 Spell Selection</summary>
-
-![Spell Selection](docs/screenshots/spell-selection.png)
-*Browse and add spells with filtering by level, school, and class*
-
-</details>
 
 ## 🚀 Getting Started
 
@@ -87,7 +37,7 @@
 git clone https://github.com/kevinkickback/Tavern-Born.git
 cd Tavern-Born
 npm install
-npm start
+npm run dev
 ```
 
 ## 📊 Data Files
@@ -99,7 +49,7 @@ This application uses the [5etools](https://wiki.tercept.net/en/home) data forma
 
 ## 📄 License
 
-This project is licensed under the GNU General Public License v3.0 - see the [license.txt](license.txt) file for details.
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Runtime Config
 

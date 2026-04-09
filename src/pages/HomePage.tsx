@@ -56,6 +56,11 @@ export function HomePage() {
     null,
   );
   const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false);
+  const [pendingDeleteCharacterId, setPendingDeleteCharacterId] = useState<
+    string | null
+  >(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>(
@@ -124,18 +129,24 @@ export function HomePage() {
     setConfirmSwitchOpen(false);
   };
 
-  const handleDeleteCharacter = useCallback(
-    (id: string) => {
-      if (confirm('Are you sure you want to delete this character?')) {
-        deleteCharacter(id);
-        toast.success('Character deleted');
-        setSelectedCharacterIds((prev) =>
-          prev.filter((selectedId) => selectedId !== id),
-        );
-      }
-    },
-    [deleteCharacter],
-  );
+  const handleDeleteCharacter = useCallback((id: string) => {
+    setPendingDeleteCharacterId(id);
+    setConfirmDeleteOpen(true);
+  }, []);
+
+  const confirmDeleteCharacter = useCallback(() => {
+    if (!pendingDeleteCharacterId) {
+      return;
+    }
+
+    deleteCharacter(pendingDeleteCharacterId);
+    toast.success('Character deleted');
+    setSelectedCharacterIds((prev) =>
+      prev.filter((selectedId) => selectedId !== pendingDeleteCharacterId),
+    );
+    setPendingDeleteCharacterId(null);
+    setConfirmDeleteOpen(false);
+  }, [deleteCharacter, pendingDeleteCharacterId]);
 
   const handleToggleCharacterSelection = (id: string) => {
     setSelectedCharacterIds((prev) =>
@@ -160,19 +171,18 @@ export function HomePage() {
       return;
     }
 
-    if (
-      !confirm(`Delete ${selectedCharacterIds.length} selected character(s)?`)
-    ) {
-      return;
-    }
+    setConfirmBulkDeleteOpen(true);
+  };
 
+  const confirmDeleteSelected = useCallback(() => {
     selectedCharacterIds.forEach((id) => {
       deleteCharacter(id);
     });
     setSelectedCharacterIds([]);
     setSelectionMode(false);
+    setConfirmBulkDeleteOpen(false);
     toast.success('Selected characters deleted');
-  };
+  }, [deleteCharacter, selectedCharacterIds]);
 
   const handleToggleSelectionMode = () => {
     setSelectionMode((prev) => {
@@ -426,6 +436,58 @@ export function HomePage() {
             </AlertDialogCancel>
             <AlertDialogAction onClick={confirmSwitchCharacter}>
               Discard & Switch
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={confirmDeleteOpen}
+        onOpenChange={(open) => {
+          setConfirmDeleteOpen(open);
+          if (!open) {
+            setPendingDeleteCharacterId(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete character?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDeleteCharacter}
+            >
+              Delete Character
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={confirmBulkDeleteOpen}
+        onOpenChange={setConfirmBulkDeleteOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete selected characters?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete {selectedCharacterIds.length} selected character(s)? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDeleteSelected}
+            >
+              Delete Selected
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

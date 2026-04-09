@@ -11,24 +11,15 @@ import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites';
-import { renderEntry } from '@/lib/renderer';
+import { renderEntryCached } from '@/lib/entryRenderCache';
 import { cn } from '@/lib/utils';
-
-const _entryCache = new WeakMap<object, string>();
-function cachedEntry(entry: unknown): string {
-  if (!entry) return '';
-  if (typeof entry !== 'object') return renderEntry(entry);
-  const hit = _entryCache.get(entry as object);
-  if (hit !== undefined) return hit;
-  const html = renderEntry(entry);
-  _entryCache.set(entry as object, html);
-  return html;
-}
+import type { Raw5ePrereq } from '@/types/5etools';
 
 type OptionalFeatureOption = {
   name: string;
   source?: string;
   entries?: unknown[];
+  prerequisite?: Raw5ePrereq[];
   [extra: string]: unknown;
 };
 
@@ -64,7 +55,7 @@ const FeatureCard = memo(function FeatureCard({
   prereqReasons,
 }: FeatureCardProps) {
   const firstEntry = feature.entries?.[0];
-  const descHtml = firstEntry ? cachedEntry(firstEntry) : '';
+  const descHtml = firstEntry ? renderEntryCached(firstEntry) : '';
 
   return (
     <div className="p-3.5">

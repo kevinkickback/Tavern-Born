@@ -1,7 +1,37 @@
 import DOMPurify from 'dompurify';
 
+// Keep renderer styling classes flexible, while rejecting unrelated class names
+// from external content.
+const ALLOWED_RENDERER_CLASS_PATTERNS = [
+  /^(?:inline-flex|items-center|rounded|italic|underline|uppercase)$/,
+  /^(?:cursor-help|cursor-pointer)$/,
+  /^(?:border|border-collapse|border-border)$/,
+  /^(?:font-medium|font-mono|font-semibold)$/,
+  /^(?:tracking-wide|decoration-dotted)$/,
+  /^w-full$/,
+  /^text-left$/,
+  /^text-(?:xs|sm|foreground|muted-foreground|accent|accent-foreground|primary|primary-foreground|secondary|secondary-foreground|destructive|destructive-foreground)$/,
+  /^bg-(?:accent|destructive|primary|secondary)(?:\/\d+)?$/,
+  /^bg-muted$/,
+  /^[mp][trblxy]?-(?:\d+(?:\.\d+)?)$/,
+];
+
+function isAllowedRendererClassToken(token: string): boolean {
+  return ALLOWED_RENDERER_CLASS_PATTERNS.some((pattern) => pattern.test(token));
+}
+
+function sanitizeRendererClasses(html: string): string {
+  return html.replace(/\sclass="([^"]*)"/g, (_match, classList: string) => {
+    const filtered = classList
+      .split(/\s+/)
+      .filter((token) => isAllowedRendererClassToken(token));
+
+    return filtered.length > 0 ? ` class="${filtered.join(' ')}"` : '';
+  });
+}
+
 function sanitizeRenderedHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
+  const sanitized = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       'a',
       'b',
@@ -40,6 +70,8 @@ function sanitizeRenderedHtml(html: string): string {
     ],
     ALLOW_DATA_ATTR: false,
   });
+
+  return sanitizeRendererClasses(sanitized);
 }
 
 export function renderEntry(entry: unknown): string {
@@ -136,6 +168,185 @@ export function renderTags(text: string): string {
   const toAttr = (value: string) => value.replace(/"/g, '&quot;');
   const pickDisplay = (name: string, display?: string) =>
     display?.trim() ? display : name;
+  const renderEntityTag = (
+    tagName: string,
+    defaultSource: string,
+    cssClass: string,
+    hoverType: string,
+    titlePrefix: string,
+  ) => {
+    const pattern = new RegExp(
+      `\\{@${tagName} ([^|}]+)(?:\\|([^|}]*))?(?:\\|([^}]*))?}`,
+      'g',
+    );
+    return (input: string) =>
+      input.replace(
+        pattern,
+        (_m, name: string, source?: string, display?: string) => {
+          const safeName = toAttr(name);
+          const safeSource = toAttr(source || defaultSource);
+          const safeDisplay = pickDisplay(name, display);
+          return `<span class="${cssClass}" title="${titlePrefix}: ${safeName}" data-hover-type="${hoverType}" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
+        },
+      );
+  };
+
+  const entityTagRenderers = [
+    renderEntityTag(
+      'creature',
+      'MM',
+      'text-accent font-medium italic cursor-help',
+      'creature',
+      'Creature',
+    ),
+    renderEntityTag(
+      'spell',
+      'PHB',
+      'text-primary font-medium italic cursor-help',
+      'spell',
+      'Spell',
+    ),
+    renderEntityTag(
+      'item',
+      'DMG',
+      'text-accent font-medium italic cursor-help',
+      'item',
+      'Item',
+    ),
+    renderEntityTag(
+      'condition',
+      'PHB',
+      'text-destructive font-medium italic cursor-help',
+      'condition',
+      'Condition',
+    ),
+    renderEntityTag(
+      'sense',
+      'PHB',
+      'text-primary font-medium italic cursor-help',
+      'sense',
+      'Sense',
+    ),
+    renderEntityTag(
+      'skill',
+      'PHB',
+      'text-primary font-medium italic cursor-help',
+      'skill',
+      'Skill',
+    ),
+    renderEntityTag(
+      'action',
+      'PHB',
+      'text-accent font-medium italic cursor-help',
+      'action',
+      'Action',
+    ),
+    renderEntityTag(
+      'feat',
+      'PHB',
+      'text-accent font-medium italic cursor-help',
+      'feat',
+      'Feat',
+    ),
+    renderEntityTag(
+      'background',
+      'PHB',
+      'text-secondary font-medium italic cursor-help',
+      'background',
+      'Background',
+    ),
+    renderEntityTag(
+      'race',
+      'PHB',
+      'text-secondary font-medium italic cursor-help',
+      'race',
+      'Race',
+    ),
+    renderEntityTag(
+      'class',
+      'PHB',
+      'text-secondary font-medium italic cursor-help',
+      'class',
+      'Class',
+    ),
+    renderEntityTag(
+      'deity',
+      'PHB',
+      'text-accent font-medium italic cursor-help',
+      'deity',
+      'Deity',
+    ),
+    renderEntityTag(
+      'language',
+      'PHB',
+      'text-muted-foreground font-medium italic cursor-help',
+      'language',
+      'Language',
+    ),
+    renderEntityTag(
+      'optfeature',
+      'PHB',
+      'text-accent font-medium italic cursor-help',
+      'optionalfeature',
+      'Optional Feature',
+    ),
+    renderEntityTag(
+      'variantrule',
+      'DMG',
+      'text-accent font-medium italic cursor-help',
+      'variantrule',
+      'Variant Rule',
+    ),
+    renderEntityTag(
+      'trap',
+      'DMG',
+      'text-destructive font-medium italic cursor-help',
+      'trap',
+      'Trap',
+    ),
+    renderEntityTag(
+      'hazard',
+      'DMG',
+      'text-destructive font-medium italic cursor-help',
+      'hazard',
+      'Hazard',
+    ),
+    renderEntityTag(
+      'vehicle',
+      'GoS',
+      'text-secondary font-medium italic cursor-help',
+      'vehicle',
+      'Vehicle',
+    ),
+    renderEntityTag(
+      'object',
+      'DMG',
+      'text-secondary font-medium italic cursor-help',
+      'object',
+      'Object',
+    ),
+    renderEntityTag(
+      'reward',
+      'DMG',
+      'text-accent font-medium italic cursor-help',
+      'reward',
+      'Reward',
+    ),
+    renderEntityTag(
+      'status',
+      'PHB',
+      'text-destructive font-medium italic cursor-help',
+      'status',
+      'Status',
+    ),
+    renderEntityTag(
+      'table',
+      'DMG',
+      'text-muted-foreground font-medium cursor-help',
+      'table',
+      'Table',
+    ),
+  ];
 
   result = result.replace(
     /{@dice ([^}]+)}/g,
@@ -153,136 +364,13 @@ export function renderTags(text: string): string {
     /{@dc ([^}]+)}/g,
     '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-primary/20 text-primary-foreground">DC $1</span>',
   );
+  for (const replaceTag of entityTagRenderers) {
+    result = replaceTag(result);
+  }
 
-  result = result.replace(
-    /{@creature ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'MM');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-accent font-medium italic cursor-help" title="Creature: ${safeName}" data-hover-type="creature" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@spell ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-primary font-medium italic cursor-help" title="Spell: ${safeName}" data-hover-type="spell" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@item ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'DMG');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-accent font-medium italic cursor-help" title="Item: ${safeName}" data-hover-type="item" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@condition ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-destructive font-medium italic cursor-help" title="Condition: ${safeName}" data-hover-type="condition" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@sense ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-primary font-medium italic cursor-help" title="Sense: ${safeName}" data-hover-type="sense" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@skill ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-primary font-medium italic cursor-help" title="Skill: ${safeName}" data-hover-type="skill" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@action ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-accent font-medium italic cursor-help" title="Action: ${safeName}" data-hover-type="action" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
   result = result.replace(
     /{@atk ([^}]+)}/g,
     '<span class="text-primary font-medium italic">$1</span>',
-  );
-  result = result.replace(
-    /{@feat ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-accent font-medium italic cursor-help" title="Feat: ${safeName}" data-hover-type="feat" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@background ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-secondary font-medium italic cursor-help" title="Background: ${safeName}" data-hover-type="background" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@race ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-secondary font-medium italic cursor-help" title="Race: ${safeName}" data-hover-type="race" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@class ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-secondary font-medium italic cursor-help" title="Class: ${safeName}" data-hover-type="class" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@deity ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-accent font-medium italic cursor-help" title="Deity: ${safeName}" data-hover-type="deity" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@language ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-muted-foreground font-medium italic cursor-help" title="Language: ${safeName}" data-hover-type="language" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@optfeature ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-accent font-medium italic cursor-help" title="Optional Feature: ${safeName}" data-hover-type="optionalfeature" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
   );
 
   result = result.replace(/{@h}/g, '<em class="text-primary">Hit:</em>');
@@ -343,60 +431,6 @@ export function renderTags(text: string): string {
     '<span class="text-muted-foreground italic" title="Adventure">$1</span>',
   );
   result = result.replace(
-    /{@variantrule ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'DMG');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-accent font-medium italic cursor-help" title="Variant Rule: ${safeName}" data-hover-type="variantrule" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@trap ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'DMG');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-destructive font-medium italic cursor-help" title="Trap: ${safeName}" data-hover-type="trap" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@hazard ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'DMG');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-destructive font-medium italic cursor-help" title="Hazard: ${safeName}" data-hover-type="hazard" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@vehicle ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'GoS');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-secondary font-medium italic cursor-help" title="Vehicle: ${safeName}" data-hover-type="vehicle" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@object ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'DMG');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-secondary font-medium italic cursor-help" title="Object: ${safeName}" data-hover-type="object" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@reward ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'DMG');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-accent font-medium italic cursor-help" title="Reward: ${safeName}" data-hover-type="reward" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
     /{@area ([^|}]+)(?:\|[^}]*)?}/g,
     '<span class="text-muted-foreground font-medium" title="Area: $1">$1</span>',
   );
@@ -431,24 +465,6 @@ export function renderTags(text: string): string {
   result = result.replace(
     /{@itemProperty ([^|}]+)(?:\|[^}]*)?}/g,
     '<span class="text-xs font-mono bg-secondary/20 px-1 rounded" title="Item Property: $1">$1</span>',
-  );
-  result = result.replace(
-    /{@status ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'PHB');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-destructive font-medium italic cursor-help" title="Status: ${safeName}" data-hover-type="status" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
-  );
-  result = result.replace(
-    /{@table ([^|}]+)(?:\|([^|}]*))?(?:\|([^}]*))?}/g,
-    (_m, name: string, source?: string, display?: string) => {
-      const safeName = toAttr(name);
-      const safeSource = toAttr(source || 'DMG');
-      const safeDisplay = pickDisplay(name, display);
-      return `<span class="text-muted-foreground font-medium cursor-help" title="Table: ${safeName}" data-hover-type="table" data-hover-name="${safeName}" data-hover-source="${safeSource}">${safeDisplay}</span>`;
-    },
   );
 
   // Catch-all: strip any remaining unrecognized tags, showing just the display text
