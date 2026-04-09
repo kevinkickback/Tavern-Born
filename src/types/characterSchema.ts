@@ -170,6 +170,9 @@ export const variantRulesSchema = z.object({
   abilityScoreMethod: z
     .enum(['point-buy', 'standard-array', 'custom'])
     .optional(),
+  bladesingerAnyRace: z.boolean().default(false),
+  battleragerAnyRace: z.boolean().default(false),
+  firearmsAllowed: z.boolean().default(false),
 });
 
 export const characterClassEntrySchema = z.object({
@@ -211,6 +214,12 @@ export const equipmentSchema = z.object({
   reqAttune: z.boolean().optional(),
   ac: z.number().optional(),
   armorType: z.enum(['light', 'medium', 'heavy', 'shield']).optional(),
+  weaponCategory: z.string().optional(),
+  dmg1: z.string().optional(),
+  dmg2: z.string().optional(),
+  dmgType: z.string().optional(),
+  properties: z.array(z.string()).optional(),
+  range: z.string().optional(),
 });
 
 export const currencySchema = z.object({
@@ -264,6 +273,7 @@ export const allySchema = z.object({
 });
 
 export const characterDetailsSchema = z.object({
+  playerName: z.string().max(100).optional(),
   gender: z.string().optional(),
   alignment: z.string().optional(),
   faith: z.string().optional(),
@@ -549,12 +559,24 @@ export const characterSchema = z.object({
   backgroundEquipmentChoice: z.enum(['a', 'b']).optional(),
   backgroundAsiChoices: z.array(z.string()).optional(),
   backgroundCurrencyGrant: currencySchema.optional(),
+  classEquipmentChoices: z.record(z.enum(['a', 'b', 'A', 'B'])).optional(),
   spells: spellSelectionSchema,
   equipment: z.array(equipmentSchema),
+  visions: z
+    .array(
+      z.object({
+        type: z.string().min(1),
+        range: z.number().int().positive().optional(),
+      }),
+    )
+    .optional(),
   hitPoints: hitPointsSchema,
   armorClass: z.number().int(),
   initiative: z.number().int(),
   speed: z.number().int(),
+  damageResistances: z.array(z.string()).optional(),
+  damageImmunities: z.array(z.string()).optional(),
+  conditionImmunities: z.array(z.string()).optional(),
   savingThrows: savingThrowsSchema,
   skills: skillsSchema,
   details: characterDetailsSchema,

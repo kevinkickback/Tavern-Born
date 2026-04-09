@@ -62,6 +62,15 @@ export class DataFilter {
 
     if (filters.sources && filters.sources.length > 0) {
       filtered = filtered.filter((r) => filters.sources?.includes(r.source));
+      filtered = filtered.map((r) => {
+        if (!r.subraces || r.subraces.length === 0) return r;
+        const filteredSubraces = r.subraces.filter((sr) =>
+          filters.sources?.includes(
+            (sr as { source?: string }).source ?? r.source,
+          ),
+        );
+        return { ...r, subraces: filteredSubraces };
+      });
     }
 
     if (filters.sizes && filters.sizes.length > 0) {

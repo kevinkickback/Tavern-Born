@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
+import { attachWindowStatePersistence, loadWindowState } from './windowState';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,10 +19,15 @@ let allowedLocalDataPath: string | null = null;
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 
-function createWindow(): void {
+async function createWindow(): Promise<void> {
+  const windowState = await loadWindowState();
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: windowState.width,
+    height: windowState.height,
+    center: windowState.x === undefined || windowState.y === undefined,
+    ...(windowState.x !== undefined ? { x: windowState.x } : {}),
+    ...(windowState.y !== undefined ? { y: windowState.y } : {}),
     minWidth: 900,
     minHeight: 600,
     webPreferences: {
@@ -38,6 +44,12 @@ function createWindow(): void {
     autoHideMenuBar: true,
     title: 'Tavern Born',
   });
+
+  if (windowState.isMaximized) {
+    mainWindow.maximize();
+  }
+
+  attachWindowStatePersistence(mainWindow);
 
   // Show window once content is ready to avoid white flash
   mainWindow.once('ready-to-show', () => {
@@ -133,7 +145,7 @@ app.on('ready', () => {
     },
   );
 
-  createWindow();
+  void createWindow();
 
   ipcMain.handle('dialog:selectFolder', async () => {
     const result = await dialog.showOpenDialog(mainWindow ?? undefined, {
@@ -187,7 +199,7 @@ app.on('ready', () => {
 // macOS: Re-create window when dock icon is clicked
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+    void createWindow();
   }
 });
 

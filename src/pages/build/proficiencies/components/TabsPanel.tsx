@@ -129,11 +129,40 @@ export function BuildProficienciesTabsPanel({
     'musical instrument',
     "artisan's tools",
     'gaming set',
+    'tool',
   ]);
 
-  const visibleToolPills = availableTools.filter((toolName) => {
+  const selectedToolNames = Array.from(
+    new Set(
+      ledger.choices
+        .filter((choice) => choice.domain === 'tools')
+        .flatMap((choice) => choice.selected),
+    ),
+  );
+
+  const toolCandidates = Array.from(
+    new Set([
+      ...availableTools,
+      ...currentProficiencies.tools,
+      ...selectedToolNames,
+    ]),
+  ).sort((a, b) => a.localeCompare(b));
+
+  const hasUnresolvedChoiceForKind = (kind: string): boolean =>
+    ledger.choices.some(
+      (choice) =>
+        choice.domain === 'tools' &&
+        choice.selected.length < choice.chooseCount &&
+        choice.optionPool.some((poolEntry) => {
+          const poolKind = normalizeGenericToolKind(poolEntry);
+          return poolKind === kind;
+        }),
+    );
+
+  const visibleToolPills = toolCandidates.filter((toolName) => {
     const kind = normalizeGenericToolKind(toolName);
-    return !kind || !genericToolKinds.has(kind);
+    if (!kind || !genericToolKinds.has(kind)) return true;
+    return hasUnresolvedChoiceForKind(kind);
   });
 
   return (
@@ -461,6 +490,8 @@ export function BuildProficienciesTabsPanel({
           {availableTools.length > 0 ? (
             visibleToolPills.map((toolName) => {
               const normTool = normalizeKey(toolName);
+              const genericKind = normalizeGenericToolKind(toolName);
+              const isGenericKind = Boolean(genericKind);
               const isSelected = hasProfInArray(
                 currentProficiencies.tools,
                 toolName,
@@ -493,6 +524,16 @@ export function BuildProficienciesTabsPanel({
                   key={toolName}
                   type="button"
                   onClick={() => {
+                    if (isGenericKind) {
+                      onFocusChange({
+                        type: 'item',
+                        category: 'Tool',
+                        name: toolName,
+                      });
+                      onExpandDetails();
+                      return;
+                    }
+
                     if (canDeselect)
                       onResolveChoiceSelection('tools', toolName, false);
                     else if (canSelect)
@@ -506,13 +547,15 @@ export function BuildProficienciesTabsPanel({
                   }}
                   className={cn(
                     'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2',
-                    isChoiceSelected
-                      ? choiceSelectedClass
-                      : isSelected
-                        ? fixedSelectedClass
-                        : canSelect
-                          ? 'border-border bg-card text-foreground hover:border-accent cursor-pointer'
-                          : 'border-border bg-card text-muted-foreground opacity-50',
+                    isGenericKind
+                      ? 'border-border border-dashed bg-card text-foreground/80 cursor-default'
+                      : isChoiceSelected
+                        ? choiceSelectedClass
+                        : isSelected
+                          ? fixedSelectedClass
+                          : canSelect
+                            ? 'border-border bg-card text-foreground hover:border-accent cursor-pointer'
+                            : 'border-border bg-card text-muted-foreground opacity-50',
                     focused?.type === 'item' &&
                       focused.name === toolName &&
                       'ring-2 ring-accent/70 ring-offset-2',

@@ -75,6 +75,31 @@ function normalizeChoiceBlock(block: unknown): EquipmentChoiceBlock | null {
   return block as EquipmentChoiceBlock;
 }
 
+function getClassDefaultEquipmentBlocks(startingEquipment: unknown): unknown[] {
+  if (!startingEquipment || typeof startingEquipment !== 'object') return [];
+  return (startingEquipment as { defaultData?: unknown[] }).defaultData ?? [];
+}
+
+export function hasClassStartingEquipmentChoice(
+  startingEquipment: unknown,
+): boolean {
+  return getClassDefaultEquipmentBlocks(startingEquipment).some((block) => {
+    const normalized = normalizeChoiceBlock(block);
+    if (!normalized) return false;
+    const aLen = (normalized.A ?? normalized.a ?? []).length;
+    const bLen = (normalized.B ?? normalized.b ?? []).length;
+    return aLen > 0 && bLen > 0;
+  });
+}
+
+export function getClassStartingEquipmentChoiceOptions(
+  startingEquipment: unknown,
+): Array<'A' | 'B'> {
+  return hasClassStartingEquipmentChoice(startingEquipment)
+    ? ['A', 'B']
+    : ['A'];
+}
+
 function resolveFromItemRef(
   itemRef: string,
   itemLookup: Map<string, Item5e>,
@@ -105,6 +130,12 @@ function resolveFromItemRef(
     reqAttune: Boolean(item.reqAttune),
     ac: item.ac,
     armorType: armorType === 'none' ? undefined : armorType,
+    weaponCategory: item.weaponCategory,
+    dmg1: item.dmg1,
+    dmg2: item.dmg2,
+    dmgType: item.dmgType,
+    properties: item.property,
+    range: item.range,
   };
 }
 
@@ -253,12 +284,7 @@ export function resolveClassStartingEquipment(
   startingEquipment: unknown,
   itemLookup: Map<string, Item5e>,
 ): EquipmentLike[] {
-  if (!startingEquipment || typeof startingEquipment !== 'object') {
-    return [];
-  }
-
-  const defaultData =
-    (startingEquipment as { defaultData?: unknown[] }).defaultData ?? [];
+  const defaultData = getClassDefaultEquipmentBlocks(startingEquipment);
   const items: EquipmentLike[] = [];
 
   for (const block of defaultData) {
@@ -274,6 +300,32 @@ export function resolveClassStartingEquipment(
   return mergeEquipment(items);
 }
 
+/**
+ * Resolve class starting equipment with optional choice preference.
+ * If no choice is provided, defaults to 'a'.
+ */
+export function resolveClassStartingEquipmentWithChoice(
+  startingEquipment: unknown,
+  itemLookup: Map<string, Item5e>,
+  choicePreference?: 'a' | 'b' | 'A' | 'B',
+): EquipmentLike[] {
+  const defaultData = getClassDefaultEquipmentBlocks(startingEquipment);
+  const items: EquipmentLike[] = [];
+  const normalizedChoice =
+    (choicePreference?.toLowerCase() as 'a' | 'b') || 'a';
+
+  for (const block of defaultData) {
+    const normalized = normalizeChoiceBlock(block);
+    if (!normalized) continue;
+    const resolved = resolveEntries(
+      collectChosenEntries(normalized, normalizedChoice),
+      itemLookup,
+    );
+    items.push(...resolved.items);
+  }
+
+  return mergeEquipment(items);
+}
 export function resolveBackgroundStartingEquipment(
   startingEquipment: unknown,
   itemLookup: Map<string, Item5e>,

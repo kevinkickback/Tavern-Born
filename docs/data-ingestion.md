@@ -55,6 +55,12 @@ Core modules:
 - data/spells/index.json still behaves as source-grouped index data.
 - Downstream UI should prefer lookups over repeated array scans when exact entity references are required.
 
+### Grouped Tool Choice Nuance
+
+- 5etools proficiency blocks can include grouped tool tokens (for example: `gaming set`, `anyMusicalInstrument`, `anyTool`) in addition to concrete tool names.
+- Parsing keeps these entries as source data, while provenance normalization maps grouped aliases to canonical labels.
+- Proficiencies UI expands grouped labels into concrete tool options from item data (`itemsBase` + `items`) and then records the concrete selected tool as the final proficiency grant.
+
 ## Spell-Class Association Enrichment
 
 Spells in 5etools carry metadata about which classes can use them. This system is implemented as a **single enrichment pipeline** with no competing sources of truth.

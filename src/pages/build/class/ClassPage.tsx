@@ -18,6 +18,7 @@ import {
   resolveSubclassFeatureRefs,
 } from '@/lib/5etools/classData';
 import { getEntityLookupKey } from '@/lib/5etools/lookups';
+import { getClassStartingEquipmentChoiceOptions } from '@/lib/5etools/startingEquipment';
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules';
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites';
 import { getOrdinalForm } from '@/lib/calculations/spellUtils';
@@ -67,6 +68,7 @@ export function BuildClassPage() {
   const optionalFeatureLookup = useOptionalFeatureLookup();
   const {
     applyClassSelection,
+    applyClassEquipmentChoice,
     applyOptionalFeatureSelection,
     applySpellSelection,
     removeSpellProvenance,
@@ -131,6 +133,21 @@ export function BuildClassPage() {
   const viewingClassData = viewingClassSource
     ? classLookup[getEntityLookupKey(viewingClass, viewingClassSource)]
     : fallbackClassByName.get(viewingClass ?? '');
+  const classEquipmentChoiceOptions = useMemo(
+    () =>
+      getClassStartingEquipmentChoiceOptions(
+        viewingClassData?.startingEquipment,
+      ),
+    [viewingClassData?.startingEquipment],
+  );
+  const classEquipmentChoiceKey =
+    viewingClass && viewingClassData
+      ? `${viewingClass}|${viewingClassData.source ?? ''}`
+      : '';
+  const selectedClassEquipmentChoice =
+    (classEquipmentChoiceKey
+      ? character?.classEquipmentChoices?.[classEquipmentChoiceKey]
+      : undefined) ?? 'A';
 
   const handleClassChange = (className: string, classSource?: string) => {
     if (!character) return;
@@ -226,8 +243,11 @@ export function BuildClassPage() {
     return map;
   }, [viewingClassData]);
   const optFeatureProgressions = useMemo(
-    () => viewingClassData?.optionalfeatureProgression ?? [],
-    [viewingClassData],
+    () =>
+      character?.variantRules?.optionalClassFeatures
+        ? (viewingClassData?.optionalfeatureProgression ?? [])
+        : [],
+    [viewingClassData, character?.variantRules?.optionalClassFeatures],
   );
   const classFeatProgressions = useMemo(
     () => (viewingClassData?.featProgression ?? []) as ClassFeatProgression[],
@@ -257,9 +277,43 @@ export function BuildClassPage() {
   const subclasses = useMemo(() => {
     const raw = (viewingClassData?.subclasses ?? []) as SubclassOption[];
     const allowedSources = character?.allowedSources;
-    if (!allowedSources || allowedSources.length === 0) return raw;
-    return raw.filter((sc) => allowedSources.includes(sc.source ?? ''));
-  }, [viewingClassData?.subclasses, character?.allowedSources]);
+    const characterRace = (character?.race ?? '').toLowerCase();
+
+    let filtered = raw;
+    if (allowedSources && allowedSources.length > 0) {
+      filtered = filtered.filter((sc) =>
+        allowedSources.includes(sc.source ?? ''),
+      );
+    }
+
+    const isElf =
+      characterRace.includes('elf') || characterRace.includes('half-elf');
+    if (
+      !character?.variantRules?.bladesingerAnyRace &&
+      !isElf &&
+      viewingClass === 'Wizard'
+    ) {
+      filtered = filtered.filter((sc) => sc.name !== 'Bladesinger');
+    }
+
+    const isDwarf = characterRace.includes('dwarf');
+    if (
+      !character?.variantRules?.battleragerAnyRace &&
+      !isDwarf &&
+      viewingClass === 'Barbarian'
+    ) {
+      filtered = filtered.filter((sc) => sc.name !== 'Battlerager');
+    }
+
+    return filtered;
+  }, [
+    viewingClassData?.subclasses,
+    character?.allowedSources,
+    character?.race,
+    character?.variantRules?.bladesingerAnyRace,
+    character?.variantRules?.battleragerAnyRace,
+    viewingClass,
+  ]);
 
   const subclassTitle =
     typeof viewingClassData?.subclassTitle === 'string'
@@ -467,6 +521,8 @@ export function BuildClassPage() {
                 viewingClass={viewingClass ?? ''}
                 viewingClassSource={viewingClassSource}
                 viewingClassLevel={viewingClassLevel}
+                classEquipmentChoiceOptions={classEquipmentChoiceOptions}
+                selectedClassEquipmentChoice={selectedClassEquipmentChoice}
                 selectedNames={selectedNames}
                 optFeatures={optFeatures}
                 featByCompositeId={featByCompositeId}
@@ -483,6 +539,10 @@ export function BuildClassPage() {
                 onOpenAsiPicker={setAsiPickerLevel}
                 onOpenOptPicker={setOptPickerState}
                 onOpenClassFeatPicker={setClassFeatPickerState}
+                onClassEquipmentChoiceChange={(choice) => {
+                  if (!viewingClassData) return;
+                  applyClassEquipmentChoice(viewingClassData, choice);
+                }}
                 onSelectFeature={setSelectedFeature}
                 onExpandDetails={() => setDetailCollapsed(false)}
                 onAsiReset={handleAsiReset}

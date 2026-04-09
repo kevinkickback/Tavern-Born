@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AbilityScoreCard } from '@/components/character/AbilityScoreCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
@@ -9,18 +10,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
   type AbilityName,
-  formatModifier,
   getRaceAbilityData,
   isValidStandardArrayAssignment,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores';
 import {
-  getAbilityModifier,
+  ABILITY_SCORE_MIN,
   POINT_BUY_BUDGET,
   POINT_BUY_COSTS,
   POINT_BUY_MAX,
@@ -49,46 +49,14 @@ const DEFAULT_POINT_BUY_SCORES: Record<AbilityName, number> = {
   charisma: 8,
 };
 
-function ScoreCard({
-  ability,
-  score,
-  racialBonus,
-  children,
-}: {
-  ability: AbilityName;
-  score: number;
-  racialBonus?: number;
-  children: React.ReactNode;
-}) {
-  const bonus = racialBonus ?? 0;
-  const total = score + bonus;
-  const mod = getAbilityModifier(total);
-  return (
-    <div className="border rounded-lg p-3 bg-card/50 border-border flex flex-col items-center justify-between min-h-0 max-h-[160px]">
-      <div className="text-xs font-bold text-accent uppercase tracking-wider">
-        {ABILITY_ABBREVIATIONS[ability]}
-      </div>
-      <div className="text-center">
-        <div className="text-3xl font-bold font-mono leading-none">{total}</div>
-        {bonus !== 0 && (
-          <div className="text-xs text-emerald-500 font-semibold leading-none mt-0.5">
-            {score} {bonus > 0 ? '+' : ''}
-            {bonus}
-          </div>
-        )}
-        <div
-          className={cn(
-            'text-base font-semibold mt-0.5',
-            mod >= 0 ? 'text-success' : 'text-destructive',
-          )}
-        >
-          {formatModifier(mod)}
-        </div>
-      </div>
-      <div>{children}</div>
-    </div>
-  );
-}
+const DEFAULT_CUSTOM_SCORES: Record<AbilityName, number> = {
+  strength: ABILITY_SCORE_MIN,
+  dexterity: ABILITY_SCORE_MIN,
+  constitution: ABILITY_SCORE_MIN,
+  intelligence: ABILITY_SCORE_MIN,
+  wisdom: ABILITY_SCORE_MIN,
+  charisma: ABILITY_SCORE_MIN,
+};
 
 function RaceAsiBonuses({
   data,
@@ -238,11 +206,11 @@ function PointBuyPanel({
           const canIncrease =
             score < POINT_BUY_MAX && remaining >= costNext - costNow;
           return (
-            <ScoreCard
+            <AbilityScoreCard
               key={ability}
               ability={ability}
               score={score}
-              racialBonus={racialBonuses[ability]}
+              bonus={racialBonuses[ability]}
             >
               <div className="flex items-center justify-center gap-2">
                 <Button
@@ -270,7 +238,7 @@ function PointBuyPanel({
                   +
                 </Button>
               </div>
-            </ScoreCard>
+            </AbilityScoreCard>
           );
         })}
       </div>
@@ -327,11 +295,11 @@ function StandardArrayPanel({
       {ABILITY_NAMES.map((ability) => {
         const base = assignments[ability];
         return (
-          <ScoreCard
+          <AbilityScoreCard
             key={ability}
             ability={ability}
             score={base ?? 8}
-            racialBonus={racialBonuses[ability]}
+            bonus={racialBonuses[ability]}
           >
             <div className="flex justify-center">
               <Select
@@ -350,7 +318,7 @@ function StandardArrayPanel({
                 </SelectContent>
               </Select>
             </div>
-          </ScoreCard>
+          </AbilityScoreCard>
         );
       })}
     </div>
@@ -369,13 +337,13 @@ function CustomPanel({
   return (
     <div className="flex-1 min-h-0 grid grid-cols-3 grid-rows-2 gap-3 max-h-[340px]">
       {ABILITY_NAMES.map((ability) => {
-        const val = scores[ability] ?? 10;
+        const val = scores[ability] ?? ABILITY_SCORE_MIN;
         return (
-          <ScoreCard
+          <AbilityScoreCard
             key={ability}
             ability={ability}
             score={val}
-            racialBonus={racialBonuses[ability]}
+            bonus={racialBonuses[ability]}
           >
             <div className="flex justify-center">
               <Input
@@ -392,7 +360,7 @@ function CustomPanel({
                 }
               />
             </div>
-          </ScoreCard>
+          </AbilityScoreCard>
         );
       })}
     </div>
@@ -401,11 +369,17 @@ function CustomPanel({
 
 export function AbilityScoresStep({ data, onChange }: StepProps) {
   const gameData = useGameDataStore((s) => s.gameData);
-  const scores = (data.abilityScores ?? DEFAULT_POINT_BUY_SCORES) as Record<
+  const method = (data.abilityScoreMethod ?? 'point-buy') as string;
+  const fallbackScores =
+    method === 'standard-array'
+      ? DEFAULT_STANDARD_SCORES
+      : method === 'custom'
+        ? DEFAULT_CUSTOM_SCORES
+        : DEFAULT_POINT_BUY_SCORES;
+  const scores = (data.abilityScores ?? fallbackScores) as Record<
     AbilityName,
     number
   >;
-  const method = (data.abilityScoreMethod ?? 'point-buy') as string;
 
   const raceObj = (gameData?.races ?? []).find(
     (r) =>
@@ -427,24 +401,9 @@ export function AbilityScoresStep({ data, onChange }: StepProps) {
     onChange({ abilityScores: { ...scores, [ability]: value } });
   };
 
-  const handleTabChange = (tab: string) => {
-    onChange({ abilityScoreMethod: tab });
-    if (tab === 'point-buy') setAllScores({ ...DEFAULT_POINT_BUY_SCORES });
-    if (tab === 'standard-array') setAllScores({ ...DEFAULT_STANDARD_SCORES });
-  };
-
   return (
     <div className="h-full flex flex-col">
-      <Tabs
-        value={method}
-        onValueChange={handleTabChange}
-        className="flex-1 min-h-0 gap-0"
-      >
-        <TabsList className="shrink-0 mb-3">
-          <TabsTrigger value="point-buy">Point Buy</TabsTrigger>
-          <TabsTrigger value="standard-array">Standard Array</TabsTrigger>
-          <TabsTrigger value="custom">Custom</TabsTrigger>
-        </TabsList>
+      <Tabs value={method} className="flex-1 min-h-0 gap-0">
         <TabsContent value="point-buy" className="min-h-0 flex flex-col">
           <PointBuyPanel
             scores={scores}

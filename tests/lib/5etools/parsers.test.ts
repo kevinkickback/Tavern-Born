@@ -19,6 +19,15 @@ describe('5etools/parsers', () => {
     expect(races[0]?.subraces?.map((s) => s.name)).toEqual(['High Elf']);
   });
 
+  test('parseRaces names unnamed base subraces as Default', () => {
+    const races = parseRaces({
+      race: [{ name: 'Human', source: 'PHB' }],
+      subrace: [{ raceName: 'Human', raceSource: 'PHB', source: 'PHB' }],
+    }) as Array<{ subraces?: Array<{ name: string }> }>;
+
+    expect(races[0]?.subraces?.map((s) => s.name)).toEqual(['Default']);
+  });
+
   test('parseClasses nests subclasses and resolves intro entries + level features', () => {
     const parsed = parseClasses({
       classFeature: [

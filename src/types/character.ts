@@ -47,12 +47,22 @@ export interface Character {
   feats: Feat[];
   spells: SpellSelection;
   equipment: Equipment[];
+  /** Vision types granted by race, class features, or magic items (e.g., darkvision, truesight). */
+  visions?: Array<{ type: string; range?: number }>;
 
   hitPoints: HitPoints;
   armorClass: number;
   initiative: number;
   speed: number;
 
+  /** Damage resistances granted by race or other sources. */
+  damageResistances?: string[];
+
+  /** Damage immunities granted by race or other sources. */
+  damageImmunities?: string[];
+
+  /** Condition immunities granted by race or other sources. */
+  conditionImmunities?: string[];
   savingThrows: SavingThrows;
   skills: Skills;
 
@@ -77,6 +87,8 @@ export interface Character {
   /** Last currency grant applied from background starting equipment. */
   backgroundCurrencyGrant?: Currency;
 
+  /** Equipment option choices for each class, keyed by "className|source". Maps to which choice was selected (a/b/A/B). */
+  classEquipmentChoices?: Record<string, 'a' | 'b' | 'A' | 'B'>;
   /**
    * Ordered ability selections for the chosen background ability block.
    * selections[i] receives weights[i] bonus from the selected block.
@@ -108,6 +120,9 @@ export interface VariantRules {
   optionalClassFeatures?: boolean;
   averageHitPoints?: boolean;
   abilityScoreMethod?: 'point-buy' | 'standard-array' | 'custom';
+  bladesingerAnyRace?: boolean;
+  battleragerAnyRace?: boolean;
+  firearmsAllowed?: boolean;
 }
 
 export type AbilityScores = Record<AbilityName, number>;
@@ -198,6 +213,18 @@ export interface Equipment {
   ac?: number;
   /** Resolved armour category (derived from type on import). */
   armorType?: 'light' | 'medium' | 'heavy' | 'shield';
+  /** Weapon category from 5etools (for example: simple/martial). */
+  weaponCategory?: string;
+  /** Primary weapon damage dice expression (for example: 1d8). */
+  dmg1?: string;
+  /** Alternate weapon damage dice expression (for example versatile damage). */
+  dmg2?: string;
+  /** Weapon damage type key (for example: slashing). */
+  dmgType?: string;
+  /** 5etools weapon property abbreviations (for example: F, T, RLD). */
+  properties?: string[];
+  /** Weapon range text. */
+  range?: string;
 }
 
 export interface Currency {
@@ -228,6 +255,7 @@ export interface Skills {
 }
 
 export interface CharacterDetails {
+  playerName?: string;
   gender?: string;
   alignment?: string;
   faith?: string;

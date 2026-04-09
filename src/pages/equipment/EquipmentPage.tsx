@@ -14,7 +14,30 @@ import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules';
 import { cn } from '@/lib/utils';
 import { useCharacterStore } from '@/store/characterStore';
 import type { Item5e } from '@/types/5etools';
+import type { Equipment } from '@/types/character';
 import { NoCharCard } from '../_shared';
+
+function toTitleCase(value: string): string {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function getDamageSummary(item: Equipment): string | null {
+  if (!item.dmg1) return null;
+  const damageType = item.dmgType ? ` ${toTitleCase(item.dmgType)}` : '';
+  if (item.dmg2) {
+    return `${item.dmg1}${damageType} (${item.dmg2} versatile)`;
+  }
+  return `${item.dmg1}${damageType}`;
+}
+
+function getPropertySummary(item: Equipment): string | null {
+  if (!item.properties || item.properties.length === 0) return null;
+  return item.properties.join(', ');
+}
 
 export function EquipmentPage() {
   const [addItemOpen, setAddItemOpen] = useState(false);
@@ -232,14 +255,31 @@ export function EquipmentPage() {
                             {item.armorType}
                           </Badge>
                         )}
+                        {item.weaponCategory && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs capitalize"
+                          >
+                            {item.weaponCategory}
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                         {item.weight !== undefined && (
                           <span>{item.weight} lb</span>
                         )}
                         {item.ac !== undefined && <span>AC {item.ac}</span>}
+                        {getDamageSummary(item) && (
+                          <span>DMG {getDamageSummary(item)}</span>
+                        )}
+                        {item.range && <span>Range {item.range}</span>}
                         <span>×{item.quantity}</span>
                       </div>
+                      {getPropertySummary(item) && (
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          Properties: {getPropertySummary(item)}
+                        </div>
+                      )}
                     </div>
 
                     {/* Quantity */}

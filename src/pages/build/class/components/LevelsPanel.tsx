@@ -8,6 +8,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   featCategoryToFull,
@@ -62,6 +69,8 @@ interface BuildClassLevelsPanelProps {
   viewingClass: string;
   viewingClassSource?: string;
   viewingClassLevel: number;
+  classEquipmentChoiceOptions: Array<'A' | 'B'>;
+  selectedClassEquipmentChoice: 'a' | 'b' | 'A' | 'B';
   selectedNames: Set<string>;
   optFeatures: OptionalFeatureLike[];
   featByCompositeId: Map<string, Feat5e>;
@@ -86,6 +95,7 @@ interface BuildClassLevelsPanelProps {
     categories: string[];
     total: number;
   }) => void;
+  onClassEquipmentChoiceChange: (choice: 'A' | 'B') => void;
   onSelectFeature: (feature: SelectedFeatureState) => void;
   onExpandDetails: () => void;
   onAsiReset: (level: number) => void;
@@ -115,6 +125,8 @@ export function BuildClassLevelsPanel({
   viewingClass,
   viewingClassSource,
   viewingClassLevel,
+  classEquipmentChoiceOptions,
+  selectedClassEquipmentChoice,
   selectedNames,
   optFeatures,
   featByCompositeId,
@@ -131,6 +143,7 @@ export function BuildClassLevelsPanel({
   onOpenAsiPicker,
   onOpenOptPicker,
   onOpenClassFeatPicker,
+  onClassEquipmentChoiceChange,
   onSelectFeature,
   onExpandDetails,
   onAsiReset,
@@ -429,6 +442,31 @@ export function BuildClassLevelsPanel({
           )}
         </div>
       </ScrollArea>
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          {character.class && classEquipmentChoiceOptions.length > 1 && (
+            <div className="w-[220px] flex-shrink-0">
+              <Select
+                value={selectedClassEquipmentChoice.toUpperCase()}
+                onValueChange={(value) =>
+                  onClassEquipmentChoiceChange(value as 'A' | 'B')
+                }
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Starting Equipment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classEquipmentChoiceOptions.map((choice) => (
+                    <SelectItem key={choice} value={choice} className="text-xs">
+                      Starting Equipment {choice}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

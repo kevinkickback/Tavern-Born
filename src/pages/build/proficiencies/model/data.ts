@@ -1,7 +1,11 @@
-import { normalizeKey } from '@/lib/provenance';
+import { normalizeGenericToolChoice, normalizeKey } from '@/lib/provenance';
 import type { ChoiceRecord } from '@/lib/provenance/types';
 
-type ToolGenericKind = 'musical instrument' | "artisan's tools" | 'gaming set';
+type ToolGenericKind =
+  | 'musical instrument'
+  | "artisan's tools"
+  | 'gaming set'
+  | 'tool';
 
 export type ToolChoiceSlot = {
   id: string;
@@ -20,29 +24,12 @@ interface BuildToolSubtypeParams {
 export function normalizeGenericToolKind(
   value: string,
 ): ToolGenericKind | null {
+  const generic = normalizeGenericToolChoice(value);
+  if (generic) return generic as ToolGenericKind;
+
   const key = normalizeKey(value);
-  if (
-    key.includes('musical instrument') ||
-    key === 'anymusicalinstrument' ||
-    key === 'instrumentmusical'
-  ) {
-    return 'musical instrument';
-  }
-  if (
-    key.includes("artisan's tool") ||
-    key.includes('artisans tool') ||
-    key === 'anyartisanstool' ||
-    key === 'anyartisantool'
-  ) {
-    return "artisan's tools";
-  }
-  if (
-    key.includes('gaming set') ||
-    key === 'anygamingset' ||
-    key === 'setgaming'
-  ) {
-    return 'gaming set';
-  }
+  if (key === 'anytool' || key === 'tool') return 'tool';
+
   return null;
 }
 
@@ -134,6 +121,7 @@ export function buildToolSubtypeOptionsByKind({
 }: BuildToolSubtypeParams): Record<ToolGenericKind, string[]> {
   const fromBase = itemsBase ?? [];
   const fromItems = items ?? [];
+  const allItems = [...fromBase, ...fromItems];
   const usableSources = allowedSources ?? [];
   const hasSourceFilter = usableSources.length > 0;
 
@@ -162,19 +150,32 @@ export function buildToolSubtypeOptionsByKind({
     return out.sort((a, b) => a.localeCompare(b));
   };
 
-  const baseItems = filterBySource(fromBase);
-  const allItems = filterBySource([...fromBase, ...fromItems]);
+  const scopedItems = filterBySource(allItems);
 
-  const instruments = collectByType(baseItems, 'INS');
-  const artisans = collectByType(baseItems, 'AT');
-  const gaming = collectByType(baseItems, 'GS');
+  const scopedInstruments = collectByType(scopedItems, 'INS');
+  const scopedArtisans = collectByType(scopedItems, 'AT');
+  const scopedGaming = collectByType(scopedItems, 'GS');
+
+  const allInstruments = collectByType(allItems, 'INS');
+  const allArtisans = collectByType(allItems, 'AT');
+  const allGaming = collectByType(allItems, 'GS');
+
+  const fromScopedOrAll = (scoped: string[], all: string[]) =>
+    scoped.length > 0 ? scoped : all;
+
+  const instruments = fromScopedOrAll(scopedInstruments, allInstruments);
+  const artisans = fromScopedOrAll(scopedArtisans, allArtisans);
+  const gaming = fromScopedOrAll(scopedGaming, allGaming);
+
+  const allTools = Array.from(
+    new Set([...instruments, ...artisans, ...gaming]),
+  ).sort((a, b) => a.localeCompare(b));
 
   return {
-    'musical instrument':
-      instruments.length > 0 ? instruments : collectByType(allItems, 'INS'),
-    "artisan's tools":
-      artisans.length > 0 ? artisans : collectByType(allItems, 'AT'),
-    'gaming set': gaming.length > 0 ? gaming : collectByType(allItems, 'GS'),
+    'musical instrument': instruments,
+    "artisan's tools": artisans,
+    'gaming set': gaming,
+    tool: allTools,
   };
 }
 

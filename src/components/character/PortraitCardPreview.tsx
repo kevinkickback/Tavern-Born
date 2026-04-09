@@ -1,10 +1,10 @@
 import {
   Clock,
+  Crown,
   Sword,
   Trash,
   Upload,
   User,
-  Users,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { PortraitTransform } from '@/types/character';
@@ -58,7 +58,8 @@ export function PortraitCardPreview({
       <div className="absolute inset-y-0 right-0 w-[84%] bg-gradient-to-l from-card/98 via-card/75 to-transparent" />
       <div className="absolute inset-y-0 right-0 w-[64%] bg-gradient-to-l from-card/99 via-card/88 to-transparent" />
       <div className="absolute inset-y-0 right-0 w-[30%] bg-gradient-to-l from-card via-card/99 to-transparent" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background/65 via-transparent to-transparent" />
+      <div className="absolute inset-x-0 top-0 h-[20%] bg-gradient-to-b from-background/60 via-background/15 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-t from-background/70 via-background/25 to-transparent" />
 
       <div className="absolute inset-y-0 right-0 z-[1] flex w-[63%] flex-col items-end p-3.5 text-right">
         <div className="ml-auto flex max-w-full flex-col items-end">
@@ -74,12 +75,12 @@ export function PortraitCardPreview({
             <div className="flex flex-col items-end gap-1.5">
               <div className="flex items-center gap-2 text-foreground/90">
                 <span className="font-semibold">Level {level}</span>
-                <User className="size-4 text-accent" weight="fill" />
+                <Crown className="size-4 text-accent" weight="fill" />
               </div>
               {race && (
                 <div className="flex items-center gap-2 text-foreground/90">
                   <span className="font-medium">{race}</span>
-                  <Users className="size-4 text-accent" weight="fill" />
+                  <User className="size-4 text-accent" weight="fill" />
                 </div>
               )}
               {characterClass && (

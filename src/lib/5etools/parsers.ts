@@ -531,7 +531,19 @@ export function parseRaces(data: unknown): unknown[] {
     const key = `${String(raceObj.name ?? '')}|${String(raceObj.source ?? '')}`;
     const nested = subraceMap.get(key);
     if (!nested || nested.length === 0) return race;
-    return { ...raceObj, subraces: nested };
+    return {
+      ...raceObj,
+      subraces: nested.map((subrace) => {
+        const subraceObj = asObject(subrace);
+        if (
+          typeof subraceObj.name === 'string' &&
+          subraceObj.name.trim().length > 0
+        ) {
+          return subraceObj;
+        }
+        return { ...subraceObj, name: 'Default' };
+      }),
+    };
   });
 }
 

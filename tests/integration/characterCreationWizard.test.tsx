@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants';
 import { useCharacterStore } from '@/store/characterStore';
 import { useGameDataStore } from '@/store/gameDataStore';
 import type { Background5e, Class5e, Race5e } from '@/types/5etools';
@@ -55,6 +56,18 @@ describe('character creation and proficiencies validation', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  test('wizard defaults start at minimum scores for non-standard methods', () => {
+    expect(INITIAL_CHARACTER_DATA.abilityScoreMethod).toBe('point-buy');
+    expect(INITIAL_CHARACTER_DATA.abilityScores).toEqual({
+      strength: 8,
+      dexterity: 8,
+      constitution: 8,
+      intelligence: 8,
+      wisdom: 8,
+      charisma: 8,
+    });
   });
 
   test('createNewCharacter with class proficiencies produces valid character with string proficiencies', () => {

@@ -68,6 +68,27 @@ function getLanguages(race: Race5e): string {
     .join(', ');
 }
 
+function getDarkvisionText(race: Race5e): string {
+  if (!race.darkvision || race.darkvision === 0) return '—';
+  return `${race.darkvision} ft.`;
+}
+
+function toTitleCase(value: string): string {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function getDamageTraitText(values?: string[]): string {
+  if (!values || values.length === 0) return '—';
+  return Array.from(new Set(values.map((v) => v.trim().toLowerCase())))
+    .filter(Boolean)
+    .map(toTitleCase)
+    .join(', ');
+}
+
 type RaceTraitEntry = {
   type?: string;
   name?: string;
@@ -104,20 +125,35 @@ function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
   const replacesAbility =
     (subrace as Race5e & { overwrite?: { ability?: boolean } }).overwrite
       ?.ability === true;
-  const mergedAbility =
-    subrace.ability && subrace.ability.length > 0
-      ? replacesAbility
-        ? subrace.ability
-        : [...(parent.ability ?? []), ...subrace.ability]
-      : (parent.ability ?? []);
   return {
+    ...parent,
     ...subrace,
-    ability: mergedAbility,
+    ability: replacesAbility
+      ? (subrace.ability ?? [])
+      : [...(parent.ability ?? []), ...(subrace.ability ?? [])],
+    entries: [...(parent.entries ?? []), ...(subrace.entries ?? [])],
     size: subrace.size ?? parent.size,
     speed: subrace.speed ?? parent.speed,
+    darkvision: subrace.darkvision ?? parent.darkvision,
     languageProficiencies:
       subrace.languageProficiencies ?? parent.languageProficiencies,
+    skillProficiencies: subrace.skillProficiencies ?? parent.skillProficiencies,
+    traitTags: [
+      ...new Set([...(parent.traitTags ?? []), ...(subrace.traitTags ?? [])]),
+    ],
+    resist: [...new Set([...(parent.resist ?? []), ...(subrace.resist ?? [])])],
+    immune: [...new Set([...(parent.immune ?? []), ...(subrace.immune ?? [])])],
+    conditionImmune: [
+      ...new Set([
+        ...(parent.conditionImmune ?? []),
+        ...(subrace.conditionImmune ?? []),
+      ]),
+    ],
   } as Race5e;
+}
+
+function getAvailableSubraces(race?: Race5e): Race5e[] {
+  return ((race?.subraces ?? []) as Race5e[]).filter((sr) => !!sr.name);
 }
 
 export function BuildRacePage() {
@@ -154,23 +190,14 @@ export function BuildRacePage() {
     previousSearchRef.current = raceSearch;
   }, [raceSearch]);
 
-  if (!character) {
-    return (
-      <NoCharCard
-        icon={<PersonSimple weight="duotone" />}
-        noun="choose a race"
-      />
-    );
-  }
-
   const selectedRace = races.find((r) =>
-    matchesGameDataEntry(character.race, character.raceSource, r),
+    matchesGameDataEntry(character?.race, character?.raceSource, r),
   ) as Race5e | undefined;
-  const subraces = (selectedRace?.subraces ?? []) as Race5e[];
+  const subraces = getAvailableSubraces(selectedRace);
   const selectedSubrace = subraces.find(
     (sr) =>
-      sr.name === character.subrace &&
-      (sr.source ?? '') === (character.subraceSource ?? ''),
+      sr.name === character?.subrace &&
+      (sr.source ?? '') === (character?.subraceSource ?? ''),
   );
   const displayRace =
     selectedSubrace && selectedRace
@@ -179,6 +206,49 @@ export function BuildRacePage() {
   const selectedRaceKey = selectedRace
     ? `${selectedRace.name}|${selectedRace.source ?? ''}`
     : null;
+
+  useEffect(() => {
+    if (!character) return;
+    if (!selectedRace) return;
+
+    if (subraces.length === 0) {
+      if (character.subrace || character.subraceSource) {
+        updateCharacter(character.id, {
+          subrace: undefined,
+          subraceSource: undefined,
+        });
+        applySubraceChange(selectedRace, undefined);
+      }
+      return;
+    }
+
+    if (selectedSubrace) return;
+
+    const firstSubrace = subraces[0];
+    if (!firstSubrace) return;
+
+    updateCharacter(character.id, {
+      subrace: firstSubrace.name,
+      subraceSource: firstSubrace.source ?? undefined,
+    });
+    applySubraceChange(selectedRace, firstSubrace);
+  }, [
+    applySubraceChange,
+    character,
+    selectedRace,
+    selectedSubrace,
+    subraces,
+    updateCharacter,
+  ]);
+
+  if (!character) {
+    return (
+      <NoCharCard
+        icon={<PersonSimple weight="duotone" />}
+        noun="choose a race"
+      />
+    );
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -230,9 +300,7 @@ export function BuildRacePage() {
                     {filteredRaces.map((race) => {
                       const raceKey = `${race.name}|${race.source ?? ''}`;
                       const isSelected = selectedRaceKey === raceKey;
-                      const namedSubraces = (
-                        race.subraces ?? ([] as Race5e[])
-                      ).filter((sr) => sr.name) as Race5e[];
+                      const namedSubraces = getAvailableSubraces(race);
                       const hasSubraces = namedSubraces.length > 0;
                       return (
                         <div
@@ -248,13 +316,15 @@ export function BuildRacePage() {
                           <button
                             type="button"
                             onClick={() => {
+                              const firstSubrace = namedSubraces[0];
                               updateCharacter(character.id, {
                                 race: race.name,
                                 raceSource: race.source ?? undefined,
-                                subrace: undefined,
-                                subraceSource: undefined,
+                                subrace: firstSubrace?.name,
+                                subraceSource:
+                                  firstSubrace?.source ?? undefined,
                               });
-                              applyRaceSelection(race, undefined);
+                              applyRaceSelection(race, firstSubrace);
                               if (detailCollapsed) setDetailCollapsed(false);
                             }}
                             className="flex items-center gap-2 min-w-0 flex-1 text-left"
@@ -292,17 +362,13 @@ export function BuildRacePage() {
                                     (s) =>
                                       s.name === subraceNameFromKey &&
                                       (subraceSource ?? '') ===
-                                        (s.source ?? ''),
+                                      (s.source ?? ''),
                                   );
                                   updateCharacter(character.id, {
                                     subrace: subraceNameFromKey,
                                     subraceSource: subraceSource ?? undefined,
                                   });
-                                  applySubraceChange(
-                                    race.name,
-                                    race.source ?? undefined,
-                                    sr,
-                                  );
+                                  applySubraceChange(race, sr);
                                 }}
                               >
                                 <SelectTrigger className="h-7 text-xs min-w-[120px] max-w-[180px]">
@@ -371,7 +437,7 @@ export function BuildRacePage() {
 
                         <Separator />
 
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-4 gap-3">
                           <InfoTile title="Ability Bonuses">
                             {getASILines(displayRace, character.raceAsiChoices)
                               .length > 0 ? (
@@ -399,6 +465,11 @@ export function BuildRacePage() {
                               {getSpeedText(displayRace)}
                             </span>
                           </InfoTile>
+                          <InfoTile title="Darkvision">
+                            <span className="text-sm font-mono">
+                              {getDarkvisionText(displayRace)}
+                            </span>
+                          </InfoTile>
                         </div>
 
                         <InfoTile title="Languages">
@@ -406,6 +477,24 @@ export function BuildRacePage() {
                             {getLanguages(displayRace) || '—'}
                           </span>
                         </InfoTile>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <InfoTile title="Damage Resistances">
+                            <span className="text-sm">
+                              {getDamageTraitText(displayRace.resist)}
+                            </span>
+                          </InfoTile>
+                          <InfoTile title="Damage Immunities">
+                            <span className="text-sm">
+                              {getDamageTraitText(displayRace.immune)}
+                            </span>
+                          </InfoTile>
+                          <InfoTile title="Condition Immunities">
+                            <span className="text-sm">
+                              {getDamageTraitText(displayRace.conditionImmune)}
+                            </span>
+                          </InfoTile>
+                        </div>
 
                         {getRaceTraits(displayRace).length > 0 && (
                           <div>

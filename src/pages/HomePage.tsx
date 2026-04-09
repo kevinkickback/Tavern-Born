@@ -29,6 +29,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import {
+  MAX_HOME_CARD_SIZE,
+  MIN_HOME_CARD_SIZE,
+  useAppPreferencesStore,
+} from '@/store/appPreferencesStore';
 import { useCharacterStore } from '@/store/characterStore';
 import type { Character } from '@/types/character';
 
@@ -51,6 +56,10 @@ export function HomePage() {
     (state) => state.setActiveCharacter,
   );
   const deleteCharacter = useCharacterStore((state) => state.deleteCharacter);
+  const cardSize = useAppPreferencesStore((state) => state.homeCardSize);
+  const setHomeCardSize = useAppPreferencesStore(
+    (state) => state.setHomeCardSize,
+  );
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(
     null,
@@ -66,7 +75,6 @@ export function HomePage() {
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>(
     [],
   );
-  const [cardSize, setCardSize] = useState(460);
   const [toolbarOpen, setToolbarOpen] = useState(false);
 
   const sortedCharacters = useMemo(() => {
@@ -314,11 +322,11 @@ export function HomePage() {
                       </span>
                       <div className="w-20">
                         <Slider
-                          min={360}
-                          max={560}
+                          min={MIN_HOME_CARD_SIZE}
+                          max={MAX_HOME_CARD_SIZE}
                           step={10}
                           value={[cardSize]}
-                          onValueChange={(value) => setCardSize(value[0])}
+                          onValueChange={(value) => setHomeCardSize(value[0])}
                         />
                       </div>
                     </div>

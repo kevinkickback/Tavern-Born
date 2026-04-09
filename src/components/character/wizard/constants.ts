@@ -21,6 +21,8 @@ export const WIZARD_STEPS: WizardStep[] = [
 
 export const INITIAL_CHARACTER_DATA = {
   name: '',
+  playerName: '',
+  age: null,
   gender: 'Female',
   race: '',
   raceSource: '',
@@ -32,11 +34,11 @@ export const INITIAL_CHARACTER_DATA = {
   backgroundSource: '',
   abilityScoreMethod: 'point-buy',
   abilityScores: {
-    strength: 15,
-    dexterity: 14,
-    constitution: 13,
-    intelligence: 12,
-    wisdom: 10,
+    strength: 8,
+    dexterity: 8,
+    constitution: 8,
+    intelligence: 8,
+    wisdom: 8,
     charisma: 8,
   },
   portrait: '',
@@ -52,5 +54,8 @@ export const INITIAL_CHARACTER_DATA = {
   variantRules: {
     optionalClassFeatures: false,
     averageHitPoints: false,
+    bladesingerAnyRace: false,
+    battleragerAnyRace: false,
+    firearmsAllowed: false,
   },
 };

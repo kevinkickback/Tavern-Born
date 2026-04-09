@@ -1,5 +1,5 @@
 import { Users } from '@phosphor-icons/react';
-import { useId } from 'react';
+import { useEffect, useId } from 'react';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -28,6 +28,37 @@ type RaceWithOverwrite = Race5e & {
   };
 };
 
+function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
+  const replacesAbility =
+    (subrace as RaceWithOverwrite).overwrite?.ability === true;
+
+  return {
+    ...parent,
+    ...subrace,
+    ability: replacesAbility
+      ? (subrace.ability ?? [])
+      : [...(parent.ability ?? []), ...(subrace.ability ?? [])],
+    entries: [...(parent.entries ?? []), ...(subrace.entries ?? [])],
+    size: subrace.size ?? parent.size,
+    speed: subrace.speed ?? parent.speed,
+    darkvision: subrace.darkvision ?? parent.darkvision,
+    languageProficiencies:
+      subrace.languageProficiencies ?? parent.languageProficiencies,
+    skillProficiencies: subrace.skillProficiencies ?? parent.skillProficiencies,
+    traitTags: [
+      ...new Set([...(parent.traitTags ?? []), ...(subrace.traitTags ?? [])]),
+    ],
+    resist: [...new Set([...(parent.resist ?? []), ...(subrace.resist ?? [])])],
+    immune: [...new Set([...(parent.immune ?? []), ...(subrace.immune ?? [])])],
+    conditionImmune: [
+      ...new Set([
+        ...(parent.conditionImmune ?? []),
+        ...(subrace.conditionImmune ?? []),
+      ]),
+    ],
+  } as Race5e;
+}
+
 export function RaceStep({ data, onChange, races }: RaceStepProps) {
   const raceSelectId = useId();
   const subraceSelectId = useId();
@@ -39,36 +70,59 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
   const selectedRace = data.race
     ? data.raceSource
       ? filteredRaces.find(
-          (r) => r.name === data.race && (r.source ?? '') === data.raceSource,
-        )
+        (r) => r.name === data.race && (r.source ?? '') === data.raceSource,
+      )
       : filteredRaces.find((r) => r.name === data.race)
     : undefined;
 
-  const subraces = (selectedRace?.subraces || []).filter((sr) => sr.name);
+  const getAvailableSubraces = (race?: Race5e) =>
+    (race?.subraces || []).filter((sr) => {
+      if (!sr.name) return false;
+      if (!data.allowedSources || data.allowedSources.length === 0) return true;
+      const src = (sr as { source?: string }).source ?? race?.source ?? '';
+      return data.allowedSources.includes(src);
+    });
+
+  const subraces = getAvailableSubraces(selectedRace);
   const selectedSubrace = subraces.find(
     (sr) =>
       sr.name === data.subrace &&
       (sr.source ?? '') === (data.subraceSource ?? ''),
   );
 
+  useEffect(() => {
+    if (!selectedRace) return;
+
+    if (subraces.length === 0) {
+      if (data.subrace || data.subraceSource) {
+        onChange({ subrace: '', subraceSource: '' });
+      }
+      return;
+    }
+
+    if (selectedSubrace) return;
+
+    const firstSubrace = subraces[0];
+    if (!firstSubrace) return;
+
+    onChange({
+      subrace: firstSubrace.name,
+      subraceSource: firstSubrace.source ?? '',
+    });
+  }, [
+    data.subrace,
+    data.subraceSource,
+    onChange,
+    selectedRace,
+    selectedSubrace,
+    subraces,
+  ]);
+
   // Subraces inherit parent's size/speed/languages if they don't define them;
   // ability: replace parent when overwrite.ability is true, otherwise additive.
   const displayRace =
     selectedSubrace && selectedRace
-      ? {
-          ...selectedSubrace,
-          ability: (selectedSubrace as RaceWithOverwrite).overwrite?.ability
-            ? (selectedSubrace.ability ?? [])
-            : [
-                ...(selectedRace.ability ?? []),
-                ...(selectedSubrace.ability ?? []),
-              ],
-          size: selectedSubrace.size ?? selectedRace.size,
-          speed: selectedSubrace.speed ?? selectedRace.speed,
-          languageProficiencies:
-            selectedSubrace.languageProficiencies ??
-            selectedRace.languageProficiencies,
-        }
+      ? mergeRaceWithSubrace(selectedRace, selectedSubrace)
       : selectedSubrace || selectedRace;
 
   const getAbilityScoreIncreases = () => {
@@ -225,11 +279,15 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                 const sepIdx = value.indexOf('|');
                 const raceName = sepIdx >= 0 ? value.slice(0, sepIdx) : value;
                 const raceSource = sepIdx >= 0 ? value.slice(sepIdx + 1) : '';
+                const race = filteredRaces.find(
+                  (r) => r.name === raceName && (r.source ?? '') === raceSource,
+                );
+                const firstSubrace = getAvailableSubraces(race)[0];
                 onChange({
                   race: raceName,
                   raceSource,
-                  subrace: '',
-                  subraceSource: '',
+                  subrace: firstSubrace?.name ?? '',
+                  subraceSource: firstSubrace?.source ?? '',
                 });
               }}
             >
