@@ -15,13 +15,21 @@ This document defines state ownership, mutation rules, and persistence behavior.
 - Owns: parsed gameData, source config, load progress, cache status, hydration flag.
 - Primary write API: loadGameData(config, background?).
 
+3. App preferences store
+- File: src/store/appPreferencesStore.ts
+- Owns: theme selection, home card size, and app-level refresh preferences.
+- Primary write API: store setter methods (`setThemeAccent`, `setThemeAppearance`, `setHomeCardSize`, `setAutoRefreshGameData`).
+
 ## Persistence
 
 - Both stores persist with zustand/persist using IndexedDB adapter in src/lib/storage/idb-storage.ts.
+- The app preferences store also persists with zustand/persist using the same IndexedDB adapter.
 - Character store persistence includes `characters` only; startup always begins with no active character selected.
 - gameData payload itself is cached separately in src/lib/storage/dataCache.ts.
 - gameDataStore persist payload intentionally keeps config/timestamps lightweight.
 - UI collapse/expand state (accordion sections, sidebar panels) is persisted per-section key in src/lib/storage/collapseState.ts via localStorage.
+- Theme root attributes are mirrored to localStorage for synchronous startup application before IndexedDB hydration completes.
+- Desktop window bounds are stored separately by the Electron main process in a JSON file under `app.getPath('userData')`.
 
 ## Character Mutation Contract
 
@@ -47,6 +55,8 @@ Stored examples (mutable runtime):
 - user-entered detail fields and choices
 - inventory currency counters (`cp`, `sp`, `ep`, `gp`, `pp`)
 - selected background equipment option (`backgroundEquipmentChoice`)
+- selected class equipment option per class source (`classEquipmentChoices`)
+- race-applied trait state (`visions`, `damageResistances`, `damageImmunities`, `conditionImmunities`)
 
 Derived examples (do not store as canonical):
 - proficiency bonus
@@ -67,6 +77,7 @@ Derived examples (do not store as canonical):
 - The dirty flag comparison excludes timestamp-only differences (`lastModified`).
 - src/main.tsx syncs unsaved state to Electron.
 - electron/main.ts shows close confirmation when unsaved edits exist.
+- App preferences and home-page layout changes do not participate in character dirty-state tracking.
 
 ## lastModified Timestamp Management
 

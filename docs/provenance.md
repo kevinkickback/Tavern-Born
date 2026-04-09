@@ -75,6 +75,21 @@ Background equipment and currency behavior:
 - Items are tracked in provenance `equipment` as before.
 - Currency granted by background equipment entries is persisted on `character.currency` and tracked via `character.backgroundCurrencyGrant` for safe subtraction during reconciliation.
 
+Class equipment choice behavior:
+- `applyClassSelection(cls, subclass)` now resolves starting equipment using the player's persisted class choice (`character.classEquipmentChoices["class|source"]`) and defaults to `A` when unset.
+- `applyClassEquipmentChoice(cls, choice)` updates both the inventory items and provenance equipment grants for the selected class source.
+- Class equipment provenance is replaced per class source to avoid stale grants when switching between `A` and `B` equipment packages.
+
+Race trait application behavior:
+- `applyRaceSelection(race, subrace)` and `applySubraceChange(race, subrace)` apply and reconcile `darkvision`, `resist`, `immune`, and `conditionImmune`.
+- Applied race traits are persisted on the character as `visions`, `damageResistances`, `damageImmunities`, and `conditionImmunities`.
+- Subrace values are merged with race values, and subrace darkvision overrides base race darkvision when present.
+
+Grouped tool choices:
+- Placeholder choices may carry grouped tool options (for example: `gaming set`, `musical instrument`, `artisan's tools`, `tool`).
+- Grouped entries are placeholders only; final grants are always concrete tool names selected by the user.
+- Resolving grouped tool choices updates both `ledger.choices` and `character.proficiencies.tools`; removing a choice-granted concrete tool reopens the underlying placeholder capacity.
+
 ## Invariants
 
 - Every non-user-manual grant should be traceable to a source tag.

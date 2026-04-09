@@ -8,6 +8,8 @@ export interface WizardStep {
 
 export interface CharacterWizardData {
   name: string;
+  playerName: string;
+  age: number | null;
   gender: string;
   race: string;
   raceSource: string;
@@ -27,6 +29,9 @@ export interface CharacterWizardData {
   variantRules: {
     optionalClassFeatures: boolean;
     averageHitPoints: boolean;
+    bladesingerAnyRace: boolean;
+    battleragerAnyRace: boolean;
+    firearmsAllowed: boolean;
   };
 }
 

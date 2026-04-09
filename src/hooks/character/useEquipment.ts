@@ -131,6 +131,12 @@ export function useEquipment(): EquipmentState {
         reqAttune: Boolean(item5e.reqAttune),
         ac: item5e.ac,
         armorType: armorType === 'none' ? undefined : armorType,
+        weaponCategory: item5e.weaponCategory,
+        dmg1: item5e.dmg1,
+        dmg2: item5e.dmg2,
+        dmgType: item5e.dmgType,
+        properties: item5e.property,
+        range: item5e.range,
         source: item5e.source,
       };
       patchEquipment([...equipment, newItem]);

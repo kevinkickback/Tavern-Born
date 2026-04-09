@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { normalizeKey } from '@/lib/provenance';
+import { normalizeGenericToolChoice, normalizeKey } from '@/lib/provenance';
 import { useCharacterStore } from '@/store/characterStore';
 import { useGameDataStore } from '@/store/gameDataStore';
 
@@ -15,17 +15,7 @@ export interface AvailableProficiencies {
 }
 
 function toGenericChoiceLabel(value: string): string {
-  const key = normalizeKey(value);
-  if (key.includes('musical instrument')) return 'musical instrument';
-  if (key.includes("artisan's tool") || key.includes('artisans tool'))
-    return "artisan's tools";
-  if (key.includes('gaming set')) return 'gaming set';
-  if (key === 'anyartisanstool' || key === 'anyartisantool')
-    return "artisan's tools";
-  if (key === 'anygamingset') return 'gaming set';
-  if (key === 'anymusicalinstrument') return 'musical instrument';
-  if (key === 'anytool') return 'tool';
-  return value;
+  return normalizeGenericToolChoice(value) ?? value;
 }
 
 function sanitizeProficiencyLabel(value: unknown): string | null {
@@ -99,8 +89,9 @@ function addUniqueWeapon(map: Map<string, string>, value: unknown): void {
 function addUniqueTool(map: Map<string, string>, value: unknown): void {
   const clean = sanitizeProficiencyLabel(value);
   if (!clean) return;
-  const canonical = canonicalizeToolName(clean);
-  if (!isConcreteToolName(canonical)) return;
+  const normalizedGeneric = normalizeGenericToolChoice(clean);
+  const canonical = normalizedGeneric ?? canonicalizeToolName(clean);
+  if (!normalizedGeneric && !isConcreteToolName(canonical)) return;
   const norm = normalizeKey(canonical);
   if (!map.has(norm)) map.set(norm, canonical);
 }

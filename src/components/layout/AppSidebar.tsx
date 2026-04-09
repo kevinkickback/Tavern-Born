@@ -23,6 +23,13 @@ interface NavItem {
   children?: NavItem[];
 }
 
+interface FooterAction {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
+}
+
 const navItems: NavItem[] = [
   {
     label: 'Home',
@@ -92,6 +99,28 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  const [activeFooterAction, setActiveFooterAction] = useState<string | null>(
+    null,
+  );
+
+  const footerActions: FooterAction[] = [
+    {
+      id: 'compendium',
+      label: 'Compendium',
+      icon: <BookOpen className="text-lg" />,
+      onClick: () => navigate('/compendium'),
+    },
+    {
+      id: 'notifications',
+      label: 'Notifications',
+      icon: <Bell className="text-lg" />,
+    },
+    {
+      id: 'theme',
+      label: 'Theme',
+      icon: <Moon className="text-lg" />,
+    },
+  ];
 
   const toggleSection = (label: string) => {
     setExpandedSections((prev) => (prev.includes(label) ? [] : [label]));
@@ -169,26 +198,47 @@ export function AppSidebar() {
           ))}
         </ul>
       </nav>
-      <div className="p-4 border-t border-border flex items-center justify-center gap-4">
-        <button
-          type="button"
-          onClick={() => navigate('/compendium')}
-          className="p-2 rounded-lg hover:bg-secondary transition-colors"
-        >
-          <BookOpen className="text-lg" />
-        </button>
-        <button
-          className="p-2 rounded-lg hover:bg-secondary transition-colors"
-          type="button"
-        >
-          <Bell className="text-lg" />
-        </button>
-        <button
-          className="p-2 rounded-lg hover:bg-secondary transition-colors"
-          type="button"
-        >
-          <Moon className="text-lg" />
-        </button>
+      <div className="border-t border-border p-4">
+        <div className="flex items-center justify-center overflow-hidden">
+          {footerActions.map((action) => {
+            const isExpanded = activeFooterAction === action.id;
+            const isCollapsed = activeFooterAction !== null && !isExpanded;
+
+            return (
+              <button
+                key={action.id}
+                type="button"
+                aria-label={action.label}
+                title={action.label}
+                onClick={action.onClick}
+                onMouseEnter={() => setActiveFooterAction(action.id)}
+                onMouseLeave={() => setActiveFooterAction(null)}
+                onFocus={() => setActiveFooterAction(action.id)}
+                onBlur={() => setActiveFooterAction(null)}
+                className={cn(
+                  'cursor-pointer flex h-10 items-center overflow-hidden rounded-xl text-sm font-medium transition-all duration-200 ease-out',
+                  isExpanded
+                    ? 'w-36 gap-2 bg-secondary px-3 text-secondary-foreground shadow-sm'
+                    : 'w-10 justify-center text-muted-foreground hover:bg-secondary/70 hover:text-secondary-foreground',
+                  isCollapsed &&
+                    'w-0 scale-90 px-0 opacity-0 pointer-events-none',
+                )}
+              >
+                <span className="shrink-0">{action.icon}</span>
+                <span
+                  className={cn(
+                    'whitespace-nowrap transition-all duration-200 ease-out',
+                    isExpanded
+                      ? 'max-w-24 translate-x-0 opacity-100'
+                      : 'max-w-0 -translate-x-2 opacity-0',
+                  )}
+                >
+                  {action.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </aside>
   );

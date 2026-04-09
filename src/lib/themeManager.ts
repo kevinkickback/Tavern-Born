@@ -15,6 +15,26 @@ const isAppearanceTheme = (value: string): value is AppearanceTheme => {
   return (APPEARANCE_THEMES as readonly string[]).includes(value);
 };
 
+export function getStoredAccentTheme(): AccentTheme {
+  try {
+    const storedAccent = localStorage.getItem(ACCENT_STORAGE_KEY);
+    return storedAccent && isAccentTheme(storedAccent) ? storedAccent : 'blue';
+  } catch {
+    return 'blue';
+  }
+}
+
+export function getStoredAppearanceTheme(): AppearanceTheme {
+  try {
+    const storedAppearance = localStorage.getItem(APPEARANCE_STORAGE_KEY);
+    return storedAppearance && isAppearanceTheme(storedAppearance)
+      ? storedAppearance
+      : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
 export function applyThemeRootAttributes(
   root: HTMLElement,
   accent: AccentTheme,
@@ -30,35 +50,34 @@ export function initThemeFromStorage() {
     return;
   }
 
-  const storedAccent = localStorage.getItem(ACCENT_STORAGE_KEY);
-  const storedAppearance = localStorage.getItem(APPEARANCE_STORAGE_KEY);
+  applyThemeRootAttributes(
+    root,
+    getStoredAccentTheme(),
+    getStoredAppearanceTheme(),
+  );
+}
 
-  const accent: AccentTheme =
-    storedAccent && isAccentTheme(storedAccent) ? storedAccent : 'blue';
-  const appearance: AppearanceTheme =
-    storedAppearance && isAppearanceTheme(storedAppearance)
-      ? storedAppearance
-      : 'light';
+export function setThemePreferences(
+  accent: AccentTheme,
+  appearance: AppearanceTheme,
+) {
+  const root = document.getElementById('root');
+  if (root) {
+    applyThemeRootAttributes(root, accent, appearance);
+  }
 
-  applyThemeRootAttributes(root, accent, appearance);
+  try {
+    localStorage.setItem(ACCENT_STORAGE_KEY, accent);
+    localStorage.setItem(APPEARANCE_STORAGE_KEY, appearance);
+  } catch {
+    // localStorage unavailable — noop
+  }
 }
 
 export function setAccentTheme(accent: AccentTheme) {
-  const root = document.getElementById('root');
-  if (!root) {
-    return;
-  }
-
-  root.setAttribute('data-accent', accent);
-  localStorage.setItem(ACCENT_STORAGE_KEY, accent);
+  setThemePreferences(accent, getStoredAppearanceTheme());
 }
 
 export function setAppearanceTheme(appearance: AppearanceTheme) {
-  const root = document.getElementById('root');
-  if (!root) {
-    return;
-  }
-
-  root.setAttribute('data-appearance', appearance);
-  localStorage.setItem(APPEARANCE_STORAGE_KEY, appearance);
+  setThemePreferences(getStoredAccentTheme(), appearance);
 }

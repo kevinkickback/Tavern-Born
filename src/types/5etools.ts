@@ -200,6 +200,7 @@ export interface Item5e {
   value?: number;
   entries?: unknown[];
   weaponCategory?: string;
+  firearm?: boolean;
   dmg1?: string;
   dmg2?: string;
   dmgType?: string;

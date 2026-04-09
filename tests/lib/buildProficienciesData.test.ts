@@ -69,6 +69,7 @@ describe('buildProficienciesData', () => {
       "artisan's tools",
     );
     expect(normalizeGenericToolKind('Any Gaming Set')).toBe('gaming set');
+    expect(normalizeGenericToolKind('anyTool')).toBe('tool');
     expect(normalizeGenericToolKind("Thieves' Tools")).toBeNull();
   });
 
@@ -86,6 +87,18 @@ describe('buildProficienciesData', () => {
     expect(byKind['musical instrument']).toEqual(['Lute']);
     expect(byKind["artisan's tools"]).toEqual(["Smith's Tools"]);
     expect(byKind['gaming set']).toEqual(['Dice Set']);
+  });
+
+  test('buildToolSubtypeOptionsByKind falls back to global items when allowed-source subset is empty', () => {
+    const byKind = buildToolSubtypeOptionsByKind({
+      itemsBase: [{ name: 'Lute', type: 'INS|PHB', source: 'PHB' }],
+      items: [{ name: 'Dragonchess Set', type: 'GS|XDMG', source: 'XDMG' }],
+      allowedSources: ['XPHB'],
+    });
+
+    expect(byKind['musical instrument']).toEqual(['Lute']);
+    expect(byKind['gaming set']).toEqual(['Dragonchess Set']);
+    expect(byKind.tool).toEqual(['Dragonchess Set', 'Lute']);
   });
 
   test('buildToolChoiceSlots expands remaining generic tool picks into slots', () => {
@@ -121,6 +134,44 @@ describe('buildProficienciesData', () => {
         label: 'musical instrument',
         sourceName: 'Bard',
         options: ['Lyre'],
+      },
+    ]);
+  });
+
+  test('buildToolChoiceSlots supports generic any-tool pools', () => {
+    const slots = buildToolChoiceSlots({
+      choices: [
+        {
+          id: 'choice-2',
+          domain: 'tools',
+          sourceTag: {
+            sourceType: 'background',
+            sourceName: 'Noble',
+            grantType: 'choice',
+            label: 'Noble',
+          },
+          chooseCount: 1,
+          optionPool: ['anyTool'],
+          selected: [],
+          status: 'pending',
+        },
+      ],
+      selectedTools: ['Dice Set'],
+      toolSubtypeOptionsByKind: {
+        'musical instrument': ['Lute'],
+        "artisan's tools": ["Smith's Tools"],
+        'gaming set': ['Dice Set'],
+        tool: ['Dice Set', 'Dragonchess Set', 'Lute', "Smith's Tools"],
+      },
+    });
+
+    expect(slots).toEqual([
+      {
+        id: 'choice-2:0',
+        choiceId: 'choice-2',
+        label: 'tool',
+        sourceName: 'Noble',
+        options: ['Dragonchess Set', 'Lute', "Smith's Tools"],
       },
     ]);
   });

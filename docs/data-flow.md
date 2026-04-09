@@ -17,11 +17,16 @@ Flow:
 5. Decision branch:
 - No cache and no source: set cacheStatus to unconfigured.
 - Cache and source, same source, fresh cache: serve cache immediately.
-- Cache and source, same source, stale cache: serve cache and trigger background refresh.
+- Cache and source, same source, stale cache: serve cache and trigger background refresh when auto-refresh is enabled.
 - Cache and source, different source: fetch fresh and replace cache.
 - Cache without source: serve offline cache and warn.
 - Source without cache: fetch fresh.
 6. On successful fetch, parsed gameData is written to cache and store.
+
+Startup preference behavior:
+- Theme is applied immediately from localStorage before React renders, then reconciled with the persisted app preferences store after IndexedDB hydration.
+- Home-page card size and auto-refresh behavior are read from the app preferences store.
+- When cached game data is stale and auto-refresh is disabled, startup serves stale cache without launching the background refresh.
 
 ## 2) Game Data Ingestion Pipeline
 
@@ -66,6 +71,20 @@ Validation behavior:
 Unsaved changes behavior:
 - src/main.tsx syncs hasUnsavedChanges into Electron.
 - electron/main.ts blocks close with a confirmation dialog when unsaved changes exist.
+- App preference changes do not flow through the character store and therefore never mark a character dirty.
+
+## 3b) Desktop Window State Restore
+
+Entry points:
+- electron/main.ts
+- electron/windowState.ts
+
+Flow:
+1. Electron startup reads saved bounds from a JSON file under the app user-data directory.
+2. Saved bounds are validated against current display work areas.
+3. If the saved position is off-screen, the app falls back to default placement while preserving the last usable size.
+4. Move/resize/close events write updated bounds back to disk.
+5. Maximized state is restored after the BrowserWindow is created.
 
 ## 4) Provenance Application and Reconciliation
 

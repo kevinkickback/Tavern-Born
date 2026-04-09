@@ -14,6 +14,11 @@ import {
   resolveClassStartingEquipment,
 } from '@/lib/5etools/startingEquipment';
 import {
+  ABILITY_SCORE_MIN,
+  POINT_BUY_MIN,
+  STANDARD_ARRAY,
+} from '@/lib/calculations/gameRules';
+import {
   addGrant,
   applyBackgroundGrants,
   applyClassGrants,
@@ -43,6 +48,45 @@ import { WizardNavigation } from './WizardNavigation';
 interface CharacterCreationWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+const ABILITY_ORDER = [
+  'strength',
+  'dexterity',
+  'constitution',
+  'intelligence',
+  'wisdom',
+  'charisma',
+] as const;
+
+function buildUniformAbilityScores(value: number): Record<string, number> {
+  return ABILITY_ORDER.reduce(
+    (acc, ability) => {
+      acc[ability] = value;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
+}
+
+function getDefaultAbilityScoresForMethod(
+  method: string,
+): Record<string, number> {
+  if (method === 'standard-array') {
+    return ABILITY_ORDER.reduce(
+      (acc, ability, index) => {
+        acc[ability] = STANDARD_ARRAY[index] ?? POINT_BUY_MIN;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+  }
+
+  if (method === 'custom') {
+    return buildUniformAbilityScores(ABILITY_SCORE_MIN);
+  }
+
+  return buildUniformAbilityScores(POINT_BUY_MIN);
 }
 
 export function CharacterCreationWizard({
@@ -108,7 +152,9 @@ export function CharacterCreationWizard({
         (!characterData.raceSource || r.source === characterData.raceSource),
     );
     const subraceObj = raceObj?.subraces?.find(
-      (sr: Race5e) => sr.name === characterData.subrace,
+      (sr: Race5e) =>
+        sr.name === characterData.subrace &&
+        (sr.source ?? '') === (characterData.subraceSource ?? ''),
     );
     const classObj = (gameData?.classes ?? []).find(
       (c: Class5e) =>
@@ -186,6 +232,8 @@ export function CharacterCreationWizard({
             | 'custom') || 'standard-array',
       },
       details: {
+        playerName: characterData.playerName,
+        age: characterData.age ?? undefined,
         gender: characterData.gender,
       },
       provenance,
@@ -205,10 +253,20 @@ export function CharacterCreationWizard({
   };
 
   const updateCharacterData = (updates: Partial<CharacterWizardData>) => {
-    setCharacterData({ ...characterData, ...updates });
+    const normalizedUpdates = { ...updates };
+    if (
+      typeof normalizedUpdates.abilityScoreMethod === 'string' &&
+      !normalizedUpdates.abilityScores
+    ) {
+      normalizedUpdates.abilityScores = getDefaultAbilityScoresForMethod(
+        normalizedUpdates.abilityScoreMethod,
+      );
+    }
+
+    setCharacterData({ ...characterData, ...normalizedUpdates });
     setValidationError(null);
     const newInvalidFields = new Set(invalidFields);
-    Object.keys(updates).forEach((key) => {
+    Object.keys(normalizedUpdates).forEach((key) => {
       newInvalidFields.delete(key);
     });
     setInvalidFields(newInvalidFields);
@@ -250,7 +308,7 @@ export function CharacterCreationWizard({
                 <RulesStep
                   data={characterData}
                   onChange={updateCharacterData}
-                  gameData={gameData}
+                  gameData={gameData ?? undefined}
                 />
               )}
               {currentStep === 3 && (

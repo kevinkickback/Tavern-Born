@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers';
 import {
   resolveBackgroundStartingEquipmentPackage,
-  resolveClassStartingEquipment,
+  resolveClassStartingEquipmentWithChoice,
 } from '@/lib/5etools/startingEquipment';
 import {
   getBackgroundAbilityData,
@@ -104,10 +104,58 @@ function upsertGrantedEquipment(
       value: existing.value ?? item.value,
       rarity: existing.rarity ?? item.rarity,
       reqAttune: existing.reqAttune ?? item.reqAttune,
+      weaponCategory: existing.weaponCategory ?? item.weaponCategory,
+      dmg1: existing.dmg1 ?? item.dmg1,
+      dmg2: existing.dmg2 ?? item.dmg2,
+      dmgType: existing.dmgType ?? item.dmgType,
+      properties: existing.properties ?? item.properties,
+      range: existing.range ?? item.range,
     };
   }
 
   return next;
+}
+
+function getClassChoiceKey(name: string, source?: string): string {
+  return `${name}|${source ?? ''}`;
+}
+
+function dedupeValues(values: string[] | undefined): string[] | undefined {
+  if (!values || values.length === 0) return undefined;
+  const deduped = Array.from(new Set(values.map(normalizeKey))).filter(Boolean);
+  return deduped.length > 0 ? deduped : undefined;
+}
+
+function replaceClassEquipmentGrants(
+  ledger: ProvenanceLedger,
+  className: string,
+  classSource: string | undefined,
+  equipmentNames: string[],
+): ProvenanceLedger {
+  const nextEquipment: Record<
+    string,
+    import('@/lib/provenance/types').SourceTag[]
+  > = {};
+
+  for (const [itemName, tags] of Object.entries(ledger.equipment)) {
+    const retained = tags.filter(
+      (tag) =>
+        !(
+          tag.sourceType === 'class' &&
+          tag.sourceName === className &&
+          (tag.sourceRef ?? '') === (classSource ?? '')
+        ),
+    );
+    if (retained.length > 0) nextEquipment[itemName] = retained;
+  }
+
+  let nextLedger: ProvenanceLedger = { ...ledger, equipment: nextEquipment };
+  const classTag = makeSourceTag('class', className, 'fixed', classSource);
+  for (const itemName of equipmentNames) {
+    nextLedger = addGrant(nextLedger, 'equipment', itemName, classTag);
+  }
+
+  return nextLedger;
 }
 
 export function useProvenanceMutations({
@@ -122,6 +170,10 @@ export function useProvenanceMutations({
       race: {
         name: string;
         source?: string;
+        darkvision?: number;
+        resist?: string[];
+        immune?: string[];
+        conditionImmune?: string[];
         skillProficiencies?: unknown[];
         languageProficiencies?: unknown[];
         ability?: unknown[];
@@ -129,6 +181,10 @@ export function useProvenanceMutations({
       subrace?: {
         name: string;
         source?: string;
+        darkvision?: number;
+        resist?: string[];
+        immune?: string[];
+        conditionImmune?: string[];
         skillProficiencies?: unknown[];
         languageProficiencies?: unknown[];
         ability?: unknown[];
@@ -223,10 +279,36 @@ export function useProvenanceMutations({
         };
       }
 
+      // Apply darkvision from race/subrace
+      const darkvisionRange = subrace?.darkvision ?? race.darkvision;
+      const nextVisions = (character.visions ?? []).filter(
+        (v) => v.type !== 'darkvision',
+      );
+      if (typeof darkvisionRange === 'number' && darkvisionRange > 0) {
+        nextVisions.push({ type: 'darkvision', range: darkvisionRange });
+      }
+
+      const damageResistances = dedupeValues([
+        ...(race.resist ?? []),
+        ...(subrace?.resist ?? []),
+      ]);
+      const damageImmunities = dedupeValues([
+        ...(race.immune ?? []),
+        ...(subrace?.immune ?? []),
+      ]);
+      const conditionImmunities = dedupeValues([
+        ...(race.conditionImmune ?? []),
+        ...(subrace?.conditionImmune ?? []),
+      ]);
+
       updateCharacter(character.id, {
         provenance: newLedger,
         proficiencies: nextProficiencies,
         skills: nextSkills,
+        visions: nextVisions.length > 0 ? nextVisions : undefined,
+        damageResistances,
+        damageImmunities,
+        conditionImmunities,
       });
     },
     [character, ledger, updateCharacter],
@@ -234,11 +316,21 @@ export function useProvenanceMutations({
 
   const applySubraceChange = useCallback(
     (
-      raceName: string,
-      raceSource: string | undefined,
+      race: {
+        name: string;
+        source?: string;
+        darkvision?: number;
+        resist?: string[];
+        immune?: string[];
+        conditionImmune?: string[];
+      },
       subrace?: {
         name: string;
         source?: string;
+        darkvision?: number;
+        resist?: string[];
+        immune?: string[];
+        conditionImmune?: string[];
         skillProficiencies?: unknown[];
         languageProficiencies?: unknown[];
         ability?: unknown[];
@@ -251,8 +343,8 @@ export function useProvenanceMutations({
       if (subrace) {
         newLedger = applyRaceGrants(
           {
-            name: raceName,
-            source: raceSource,
+            name: race.name,
+            source: race.source,
             skillProficiencies: [],
             languageProficiencies: [],
             ability: [],
@@ -327,10 +419,36 @@ export function useProvenanceMutations({
         };
       }
 
+      // Apply darkvision from subrace (overrides race darkvision)
+      const subraceVisions = (character.visions ?? []).filter(
+        (v) => v.type !== 'darkvision',
+      );
+      const darkvisionRange = subrace?.darkvision ?? race.darkvision;
+      if (typeof darkvisionRange === 'number' && darkvisionRange > 0) {
+        subraceVisions.push({ type: 'darkvision', range: darkvisionRange });
+      }
+
+      const damageResistances = dedupeValues([
+        ...(race.resist ?? []),
+        ...(subrace?.resist ?? []),
+      ]);
+      const damageImmunities = dedupeValues([
+        ...(race.immune ?? []),
+        ...(subrace?.immune ?? []),
+      ]);
+      const conditionImmunities = dedupeValues([
+        ...(race.conditionImmune ?? []),
+        ...(subrace?.conditionImmune ?? []),
+      ]);
+
       updateCharacter(character.id, {
         provenance: newLedger,
         proficiencies: nextProficiencies,
         skills: nextSkills,
+        visions: subraceVisions.length > 0 ? subraceVisions : undefined,
+        damageResistances,
+        damageImmunities,
+        conditionImmunities,
       });
     },
     [character, ledger, updateCharacter],
@@ -465,11 +583,26 @@ export function useProvenanceMutations({
       };
       updates.proficiencies = newProfs;
       updates.skills = newSkills;
-      const classEquipment = resolveClassStartingEquipment(
+      const classChoiceKey = getClassChoiceKey(cls.name, cls.source);
+      const selectedClassChoice =
+        character.classEquipmentChoices?.[classChoiceKey] ?? 'A';
+      const classEquipment = resolveClassStartingEquipmentWithChoice(
         cls.startingEquipment,
         itemLookup,
+        selectedClassChoice,
       );
+      newLedger = replaceClassEquipmentGrants(
+        newLedger,
+        cls.name,
+        cls.source,
+        classEquipment.map((item) => item.name),
+      );
+      updates.provenance = newLedger;
       updates.equipment = upsertGrantedEquipment(newEquipment, classEquipment);
+      updates.classEquipmentChoices = {
+        ...(character.classEquipmentChoices ?? {}),
+        [classChoiceKey]: selectedClassChoice,
+      };
 
       updateCharacter(character.id, updates);
     },
@@ -621,6 +754,60 @@ export function useProvenanceMutations({
       });
     },
     [character, ledger, updateCharacter, itemLookup],
+  );
+
+  const applyClassEquipmentChoice = useCallback(
+    (
+      cls: {
+        name: string;
+        source?: string;
+        startingEquipment?: unknown;
+      },
+      choice: 'A' | 'B',
+    ) => {
+      if (!character) return;
+
+      const classEquipmentToRemove = Object.entries(ledger.equipment)
+        .filter(([, tags]) =>
+          tags.some(
+            (tag) =>
+              tag.sourceType === 'class' &&
+              tag.sourceName === cls.name &&
+              (tag.sourceRef ?? '') === (cls.source ?? ''),
+          ),
+        )
+        .map(([name]) => name);
+
+      const nextEquipment = removeSourceGrantedEquipment(
+        [...(character.equipment ?? [])],
+        classEquipmentToRemove,
+      );
+      const resolvedClassEquipment = resolveClassStartingEquipmentWithChoice(
+        cls.startingEquipment,
+        itemLookup,
+        choice,
+      );
+      const nextLedger = replaceClassEquipmentGrants(
+        ledger,
+        cls.name,
+        cls.source,
+        resolvedClassEquipment.map((item) => item.name),
+      );
+      const classChoiceKey = getClassChoiceKey(cls.name, cls.source);
+
+      updateCharacter(character.id, {
+        provenance: nextLedger,
+        equipment: upsertGrantedEquipment(
+          nextEquipment,
+          resolvedClassEquipment,
+        ),
+        classEquipmentChoices: {
+          ...(character.classEquipmentChoices ?? {}),
+          [classChoiceKey]: choice,
+        },
+      });
+    },
+    [character, ledger, itemLookup, updateCharacter],
   );
 
   const applySpellSelection = useCallback(
@@ -1047,6 +1234,7 @@ export function useProvenanceMutations({
     applyRaceSelection,
     applySubraceChange,
     applyClassSelection,
+    applyClassEquipmentChoice,
     applyBackgroundSelection,
     applyBackgroundAbilityChoices,
     applySpellSelection,

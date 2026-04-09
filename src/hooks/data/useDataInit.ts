@@ -6,6 +6,7 @@ import {
   isCacheStale,
   readGameDataCache,
 } from '@/lib/storage/dataCache';
+import { useAppPreferencesStore } from '@/store/appPreferencesStore';
 
 // DEV character seeding — tree-shaken away in production builds.
 import { useCharacterStore } from '@/store/characterStore';
@@ -24,6 +25,9 @@ export function useDataInit() {
   const loadGameData = useGameDataStore((s) => s.loadGameData);
   const setGameData = useGameDataStore((s) => s.setGameData);
   const setCacheStatus = useGameDataStore((s) => s.setCacheStatus);
+  const autoRefreshGameData = useAppPreferencesStore(
+    (s) => s.autoRefreshGameData,
+  );
 
   const characters = useCharacterStore((s) => s.characters);
   const setCharacters = useCharacterStore((s) => s.setCharacters);
@@ -94,16 +98,26 @@ export function useDataInit() {
 
         if (stale) {
           // Same source but >24 h old — serve cache immediately for a fast
-          // start, then silently refresh in background.
+          // start, then refresh in background if the user has auto-refresh on.
           setGameData(cache.data);
           setCacheStatus('stale');
-          toast.info(
-            'Game data is out of date — refreshing in the background…',
-            {
-              duration: 5000,
-            },
-          );
-          loadGameData(config, true); // background=true, don't await
+
+          if (autoRefreshGameData) {
+            toast.info(
+              'Game data is out of date — refreshing in the background…',
+              {
+                duration: 5000,
+              },
+            );
+            loadGameData(config, true); // background=true, don't await
+          } else {
+            toast.info(
+              'Game data is out of date. Refresh it manually in Settings.',
+              {
+                duration: 5000,
+              },
+            );
+          }
           return;
         }
 
@@ -136,5 +150,6 @@ export function useDataInit() {
     loadGameData,
     setGameData,
     setCacheStatus,
+    autoRefreshGameData,
   ]);
 }

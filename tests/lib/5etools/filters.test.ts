@@ -183,3 +183,24 @@ describe('5etools/filters', () => {
     ).toEqual(['FS', 'G']);
   });
 });
+
+test('filterRaces removes subraces whose source is not in allowedSources', () => {
+  const elf = makeRaceFixture({
+    name: 'Elf',
+    source: 'PHB',
+    subraces: [
+      { name: 'High', source: 'PHB' } as Race5e,
+      { name: 'Wood', source: 'PHB' } as Race5e,
+      { name: 'Eladrin', source: 'MTF' } as Race5e,
+      { name: 'Sea', source: 'MTF' } as Race5e,
+      { name: 'Mark of Shadow', source: 'ERLW' } as Race5e,
+    ],
+  });
+
+  const [filtered] = DataFilter.filterRaces([elf], { sources: ['PHB'] });
+
+  expect(filtered.subraces?.map((sr) => (sr as Race5e).name)).toEqual([
+    'High',
+    'Wood',
+  ]);
+});

@@ -24,9 +24,18 @@ export function useFilteredGameData() {
     }
 
     const allowedSources = activeCharacter?.allowedSources;
+    const firearmsAllowed =
+      activeCharacter?.variantRules?.firearmsAllowed ?? false;
+
+    const filterFirearms = <T extends { firearm?: boolean }>(items: T[]) =>
+      firearmsAllowed ? items : items.filter((i) => !i.firearm);
 
     if (!allowedSources || allowedSources.length === 0) {
-      return gameData;
+      return {
+        ...gameData,
+        items: filterFirearms(gameData.items),
+        itemsBase: filterFirearms(gameData.itemsBase ?? []),
+      };
     }
 
     return {
@@ -45,12 +54,14 @@ export function useFilteredGameData() {
       feats: DataFilter.filterFeats(gameData.feats, {
         sources: allowedSources,
       }),
-      items: DataFilter.filterItems(gameData.items, {
-        sources: allowedSources,
-      }),
-      itemsBase: DataFilter.filterItems(gameData.itemsBase ?? [], {
-        sources: allowedSources,
-      }),
+      items: filterFirearms(
+        DataFilter.filterItems(gameData.items, { sources: allowedSources }),
+      ),
+      itemsBase: filterFirearms(
+        DataFilter.filterItems(gameData.itemsBase ?? [], {
+          sources: allowedSources,
+        }),
+      ),
       classFeatures: gameData.classFeatures.filter((cf) =>
         allowedSources.includes(cf.source),
       ),
@@ -60,7 +71,11 @@ export function useFilteredGameData() {
       ),
       sources: gameData.sources,
     };
-  }, [gameData, activeCharacter?.allowedSources]);
+  }, [
+    gameData,
+    activeCharacter?.allowedSources,
+    activeCharacter?.variantRules?.firearmsAllowed,
+  ]);
 
   return filteredData;
 }

@@ -32,6 +32,7 @@ Key scripts in package.json:
 	- src/pages/build/class/model/mutations.ts
 	- src/pages/build/proficiencies/model/data.ts
 	- src/pages/build/class/model/levelsUtils.ts
+	- Grouped tool-choice expansion coverage (gaming set/musical instrument/artisan's tools/any-tool)
 - Feat selection helpers:
 	- src/pages/feats/model/selection.ts
 - Compendium entry shaping and filtering in src/lib/compendiumEntries.ts
