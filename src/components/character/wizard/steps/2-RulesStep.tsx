@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { SOURCE_PRESETS, type SourcePreset } from '@/lib/sourcePresets';
 import { cn } from '@/lib/utils';
 import type { SourceBook } from '@/types/5etools';
 import type { StepProps } from '../types';
@@ -24,7 +25,12 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
   const bladesingerAnyRaceId = useId();
   const battleragerAnyRaceId = useId();
   const firearmsAllowedId = useId();
+  const preferNewerPrintingsId = useId();
   const sources = gameData?.sources || [];
+  const allowedSources = data.allowedSources || [];
+  const availableSourceSet = new Set(
+    sources.map((source) => source.abbreviation),
+  );
 
   const sourcesByGroup = sources.reduce<Record<string, SourceBook[]>>(
     (acc, source) => {
@@ -66,27 +72,11 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
     }
   };
 
-  const selectAllSources = () => {
-    onChange({ allowedSources: sources.map((s) => s.abbreviation) });
-  };
-
-  const selectRecommendedSources = () => {
-    const recommendedAbbrs = new Set([
-      'PHB',
-      'DMG',
-      'MM',
-      'XGE',
-      'TCE',
-      'VGM',
-      'MTF',
-      'SCAG',
-      'ERLW',
-      'EGW',
-    ]);
-    const recommended = sources
-      .filter((s) => recommendedAbbrs.has(s.abbreviation))
-      .map((s) => s.abbreviation);
-    onChange({ allowedSources: recommended });
+  const applySourcePreset = (preset: SourcePreset) => {
+    const presetSources = preset.abbreviations.filter((abbreviation) =>
+      availableSourceSet.has(abbreviation),
+    );
+    onChange({ allowedSources: presetSources });
   };
 
   const selectNoneSources = () => {
@@ -127,10 +117,35 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
     const phbSources = sources.filter(
       (s) => s.abbreviation === 'PHB' || s.abbreviation === 'XPHB',
     );
-    return !phbSources.some((s) =>
-      data.allowedSources?.includes(s.abbreviation),
+    return !phbSources.some((s) => allowedSources.includes(s.abbreviation));
+  };
+
+  const isPresetActive = (preset: SourcePreset) => {
+    const presetSources = preset.abbreviations.filter((abbreviation) =>
+      availableSourceSet.has(abbreviation),
+    );
+    if (presetSources.length !== allowedSources.length) {
+      return false;
+    }
+    return presetSources.every((abbreviation) =>
+      allowedSources.includes(abbreviation),
     );
   };
+
+  const presetSourceAbbreviations = new Set(
+    SOURCE_PRESETS.flatMap((preset) => preset.abbreviations),
+  );
+  const hasNonPresetSourcesSelected = allowedSources.some(
+    (abbreviation) => !presetSourceAbbreviations.has(abbreviation),
+  );
+  const expandedPreset = SOURCE_PRESETS.find(
+    (preset) => preset.id === 'expanded',
+  );
+  const isExpandedSelectionActive = expandedPreset
+    ? isPresetActive(expandedPreset)
+    : false;
+  const preferNewerPrintingsEnabled =
+    data.variantRules?.preferNewerPrintings ?? false;
 
   const AS_METHODS = [
     {
@@ -164,6 +179,8 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
       'By default Battlerager (Barbarian) is restricted to dwarves. Enable this to allow any race to take the Battlerager subclass.',
     firearmsAllowed:
       'Adds renaissance and futuristic firearms to the equipment list. These are optional rules from the DMG and setting books.',
+    preferNewerPrintings:
+      'When enabled, older printings are hidden when a newer reprint exists in your selected sources. This reduces duplicate races, classes, feats, and spells.',
   };
 
   return (
@@ -235,6 +252,11 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
                     key: 'firearmsAllowed' as const,
                     label: 'Firearms Allowed',
                   },
+                  {
+                    id: preferNewerPrintingsId,
+                    key: 'preferNewerPrintings' as const,
+                    label: 'Prefer Newer Printings',
+                  },
                 ] as const
               ).map(({ id, key, label }) => (
                 <div
@@ -283,36 +305,46 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
             <div className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-accent" weight="fill" />
               <h4 className="font-semibold text-lg">Allowed Sources</h4>
-              {(data.allowedSources?.length ?? 0) > 0 && (
+              {allowedSources.length > 0 && (
                 <span className="inline-flex items-center justify-center rounded-full bg-accent/15 text-accent text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
-                  {data.allowedSources?.length}
+                  {allowedSources.length}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <button
-                type="button"
-                onClick={selectAllSources}
-                className="text-accent hover:underline font-medium"
-              >
-                Select All
-              </button>
-              <span className="text-muted-foreground">|</span>
-              <button
-                type="button"
-                onClick={selectRecommendedSources}
-                className="text-accent hover:underline font-medium"
-              >
-                Recommended
-              </button>
-              <span className="text-muted-foreground">|</span>
-              <button
-                type="button"
-                onClick={selectNoneSources}
-                className="text-accent hover:underline font-medium"
-              >
-                None
-              </button>
+            <div className="flex items-center gap-2 text-sm flex-wrap justify-end">
+              {[
+                ...SOURCE_PRESETS.map((preset) => ({
+                  key: preset.id,
+                  label: preset.label,
+                  title: preset.description,
+                  onClick: () => applySourcePreset(preset),
+                  active: isPresetActive(preset),
+                })),
+                {
+                  key: 'none',
+                  label: 'None',
+                  title: 'Clear all selected sources',
+                  onClick: selectNoneSources,
+                  active: false,
+                },
+              ].map((action, index, allActions) => (
+                <div key={action.key} className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={action.onClick}
+                    className={cn(
+                      'font-medium text-accent hover:underline',
+                      action.active && 'underline',
+                    )}
+                    title={action.title}
+                  >
+                    {action.label}
+                  </button>
+                  {index < allActions.length - 1 && (
+                    <span className="text-muted-foreground">|</span>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -371,6 +403,28 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
                   );
                 })}
               </div>
+
+              {hasNonPresetSourcesSelected && (
+                <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
+                  <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                  <span>
+                    Non-recommended sources often contain DM-only or outdated
+                    content. These may clutter your options with material not
+                    intended for players.
+                  </span>
+                </div>
+              )}
+
+              {isExpandedSelectionActive && (
+                <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
+                  <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                  <span>
+                    {preferNewerPrintingsEnabled
+                      ? '2024 versions preferred — 2014 options only appear where no 2024 version exists. Disable "Prefer Newer Printings" to show both versions at all times.'
+                      : 'Both 2014 & 2024 options will be shown (creating duplicates). Enable "Prefer Newer Printings" to prefer 2024 versions when both are available.'}
+                  </span>
+                </div>
+              )}
 
               {isPhbRequired() && (
                 <div className="text-xs text-destructive flex items-center gap-1.5 flex-shrink-0 bg-destructive/10 border border-destructive/30 p-3 rounded-md">

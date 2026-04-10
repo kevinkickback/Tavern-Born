@@ -24,6 +24,7 @@ import {
   applyClassGrants,
   applyRaceGrants,
   makeSourceTag,
+  resolveRaceGrantFilterOptions,
 } from '@/lib/provenance';
 import { stripItemTag } from '@/lib/provenance/normalization';
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore';
@@ -169,7 +170,20 @@ export function CharacterCreationWizard({
     );
 
     let provenance = emptyProvenance();
-    if (raceObj) provenance = applyRaceGrants(raceObj, subraceObj, provenance);
+    if (raceObj) {
+      provenance = applyRaceGrants(
+        raceObj,
+        subraceObj,
+        provenance,
+        (domain, fromFilter) =>
+          resolveRaceGrantFilterOptions(domain, fromFilter, {
+            items: gameData?.items ?? [],
+            itemsBase: gameData?.itemsBase ?? [],
+            allowedSources: characterData.allowedSources,
+          }),
+        characterData.raceAsiBlockIndex,
+      );
+    }
     if (classObj)
       provenance = applyClassGrants(classObj, undefined, provenance);
     if (bgObj) provenance = applyBackgroundGrants(bgObj, provenance);
@@ -245,6 +259,7 @@ export function CharacterCreationWizard({
         ...item,
       })),
       raceAsiChoices: characterData.raceAsiChoices,
+      raceAsiBlockIndex: characterData.raceAsiBlockIndex,
     });
 
     setActiveCharacter(character.id);

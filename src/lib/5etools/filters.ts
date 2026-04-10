@@ -9,6 +9,7 @@ import type {
 
 export interface RaceFilters {
   sources?: string[];
+  suppressedKeys?: Set<string>;
   sizes?: string[];
   hasAbilityScore?: string[];
   hasDarkvision?: boolean;
@@ -16,6 +17,7 @@ export interface RaceFilters {
 
 export interface ClassFilters {
   sources?: string[];
+  suppressedKeys?: Set<string>;
   hasProficiency?: string[];
   spellcaster?: boolean;
   hitDice?: number[];
@@ -23,6 +25,7 @@ export interface ClassFilters {
 
 export interface SpellFilters {
   sources?: string[];
+  suppressedKeys?: Set<string>;
   levels?: number[];
   schools?: string[];
   classes?: string[];
@@ -37,12 +40,14 @@ export interface SpellFilters {
 
 export interface BackgroundFilters {
   sources?: string[];
+  suppressedKeys?: Set<string>;
   hasSkill?: string[];
   hasLanguage?: string[];
 }
 
 export interface FeatFilters {
   sources?: string[];
+  suppressedKeys?: Set<string>;
   categories?: string[];
   hasPrerequisite?: boolean;
   grantsAbilityScore?: boolean;
@@ -50,11 +55,23 @@ export interface FeatFilters {
 
 export interface ItemFilters {
   sources?: string[];
+  suppressedKeys?: Set<string>;
   types?: string[];
   rarities?: string[];
   weaponCategories?: string[];
   armorCategories?: string[];
 }
+
+const isSuppressed = (
+  name: string | undefined,
+  source: string | undefined,
+  suppressedKeys?: Set<string>,
+) => {
+  if (!name || !source || !suppressedKeys || suppressedKeys.size === 0) {
+    return false;
+  }
+  return suppressedKeys.has(`${name}|${source}`);
+};
 
 export class DataFilter {
   static filterRaces(races: Race5e[], filters: RaceFilters): Race5e[] {
@@ -71,6 +88,23 @@ export class DataFilter {
         );
         return { ...r, subraces: filteredSubraces };
       });
+    }
+
+    if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
+      filtered = filtered
+        .filter((r) => !isSuppressed(r.name, r.source, filters.suppressedKeys))
+        .map((r) => {
+          if (!r.subraces || r.subraces.length === 0) return r;
+          const visibleSubraces = r.subraces.filter((sr) => {
+            const subrace = sr as { name?: string; source?: string };
+            return !isSuppressed(
+              subrace.name,
+              subrace.source ?? r.source,
+              filters.suppressedKeys,
+            );
+          });
+          return { ...r, subraces: visibleSubraces };
+        });
     }
 
     if (filters.sizes && filters.sizes.length > 0) {
@@ -104,6 +138,12 @@ export class DataFilter {
 
     if (filters.sources && filters.sources.length > 0) {
       filtered = filtered.filter((c) => filters.sources?.includes(c.source));
+    }
+
+    if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
+      filtered = filtered.filter(
+        (c) => !isSuppressed(c.name, c.source, filters.suppressedKeys),
+      );
     }
 
     if (filters.hasProficiency && filters.hasProficiency.length > 0) {
@@ -140,6 +180,12 @@ export class DataFilter {
 
     if (filters.sources && filters.sources.length > 0) {
       filtered = filtered.filter((s) => filters.sources?.includes(s.source));
+    }
+
+    if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
+      filtered = filtered.filter(
+        (s) => !isSuppressed(s.name, s.source, filters.suppressedKeys),
+      );
     }
 
     if (filters.levels && filters.levels.length > 0) {
@@ -211,6 +257,12 @@ export class DataFilter {
       filtered = filtered.filter((b) => filters.sources?.includes(b.source));
     }
 
+    if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
+      filtered = filtered.filter(
+        (b) => !isSuppressed(b.name, b.source, filters.suppressedKeys),
+      );
+    }
+
     if (filters.hasSkill && filters.hasSkill.length > 0) {
       filtered = filtered.filter((b) => {
         if (!b.skillProficiencies) return false;
@@ -237,6 +289,12 @@ export class DataFilter {
 
     if (filters.sources && filters.sources.length > 0) {
       filtered = filtered.filter((f) => filters.sources?.includes(f.source));
+    }
+
+    if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
+      filtered = filtered.filter(
+        (f) => !isSuppressed(f.name, f.source, filters.suppressedKeys),
+      );
     }
 
     if (filters.categories && filters.categories.length > 0) {
@@ -268,6 +326,12 @@ export class DataFilter {
 
     if (filters.sources && filters.sources.length > 0) {
       filtered = filtered.filter((i) => filters.sources?.includes(i.source));
+    }
+
+    if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
+      filtered = filtered.filter(
+        (i) => !isSuppressed(i.name, i.source, filters.suppressedKeys),
+      );
     }
 
     if (filters.types && filters.types.length > 0) {

@@ -75,6 +75,9 @@ export interface Character {
   /** Per-block ability score increase choices for races with choosable bonuses (Tasha's variant). */
   raceAsiChoices?: string[][];
 
+  /** Selected ASI block for lineage races (0 = +2/+1, 1 = +1/+1/+1). */
+  raceAsiBlockIndex?: 0 | 1;
+
   /**
    * Which weighted-choice block from the background's ability array the player chose.
    * 0 = +2/+1 method (default), 1 = +1/+1/+1 method.
@@ -123,6 +126,7 @@ export interface VariantRules {
   bladesingerAnyRace?: boolean;
   battleragerAnyRace?: boolean;
   firearmsAllowed?: boolean;
+  preferNewerPrintings?: boolean;
 }
 
 export type AbilityScores = Record<AbilityName, number>;

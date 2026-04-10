@@ -24,8 +24,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { validateDataSource } from '@/lib/5etools';
+import { useAppPreferencesStore } from '@/store/appPreferencesStore';
 import { useGameDataStore } from '@/store/gameDataStore';
 
 type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid';
@@ -50,6 +52,13 @@ export function DataSourceConfigurator() {
     useState<ValidationStatus>('idle');
   const remotePathId = useId();
   const localPathId = useId();
+  const autoUpdateId = useId();
+  const autoRefreshGameData = useAppPreferencesStore(
+    (state) => state.autoRefreshGameData,
+  );
+  const setAutoRefreshGameData = useAppPreferencesStore(
+    (state) => state.setAutoRefreshGameData,
+  );
   const [validationResult, setValidationResult] = useState<{
     isValid: boolean;
     error?: string;
@@ -433,6 +442,23 @@ export function DataSourceConfigurator() {
               </div>
             </TabsContent>
           </Tabs>
+
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor={autoUpdateId} className="text-sm font-medium">
+                Auto Update
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Automatically refresh cached data when it's older than 24 hours.
+              </p>
+            </div>
+            <Switch
+              id={autoUpdateId}
+              checked={autoRefreshGameData}
+              onCheckedChange={setAutoRefreshGameData}
+              aria-label="Toggle automatic data refresh"
+            />
+          </div>
 
           <div className="flex gap-2">
             <Button

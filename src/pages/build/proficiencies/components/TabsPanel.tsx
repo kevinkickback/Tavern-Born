@@ -21,6 +21,7 @@ import { normalizeKey } from '@/lib/provenance';
 import { cn } from '@/lib/utils';
 import {
   hasProfInArray,
+  hasUnresolvedChoiceForKind,
   normalizeGenericToolKind,
   type ToolChoiceSlot,
 } from '@/pages/build/proficiencies/model/data';
@@ -44,7 +45,6 @@ interface BuildProficienciesTabsPanelProps {
   savingThrows: SavingThrowRow[];
   availableArmor: string[];
   availableWeapons: string[];
-  availableTools: string[];
   availableLanguages: string[];
   currentProficiencies: {
     armor: string[];
@@ -72,7 +72,12 @@ interface BuildProficienciesTabsPanelProps {
     'skills' | 'armor' | 'weapons' | 'tools' | 'languages',
     number
   >;
-  toolChoiceSlots: ToolChoiceSlot[];
+  dropdownToolSlots: ToolChoiceSlot[];
+  artisanToolSlots: ToolChoiceSlot[];
+  /** Pre-computed list of tool names to render as selectable pills. */
+  visibleToolCandidates: string[];
+  /** Map from normalised artisan tool name to the choiceId of the first slot that accepts it. */
+  artisanChoiceByNorm: Map<string, string>;
   focused: ProfFocus | null;
   onFocusChange: (focus: ProfFocus) => void;
   onExpandDetails: () => void;
@@ -108,12 +113,14 @@ export function BuildProficienciesTabsPanel({
   savingThrows,
   availableArmor,
   availableWeapons,
-  availableTools,
   availableLanguages,
   currentProficiencies,
   ledger,
   choiceCounts,
-  toolChoiceSlots,
+  dropdownToolSlots,
+  artisanToolSlots,
+  visibleToolCandidates,
+  artisanChoiceByNorm,
   focused,
   onFocusChange,
   onExpandDetails,
@@ -124,46 +131,6 @@ export function BuildProficienciesTabsPanel({
     'border-2 border-accent border-dashed bg-accent/10 text-accent-foreground hover:bg-accent/15';
   const fixedSelectedClass =
     'border-accent bg-accent/20 text-accent-foreground hover:bg-accent/30';
-
-  const genericToolKinds = new Set([
-    'musical instrument',
-    "artisan's tools",
-    'gaming set',
-    'tool',
-  ]);
-
-  const selectedToolNames = Array.from(
-    new Set(
-      ledger.choices
-        .filter((choice) => choice.domain === 'tools')
-        .flatMap((choice) => choice.selected),
-    ),
-  );
-
-  const toolCandidates = Array.from(
-    new Set([
-      ...availableTools,
-      ...currentProficiencies.tools,
-      ...selectedToolNames,
-    ]),
-  ).sort((a, b) => a.localeCompare(b));
-
-  const hasUnresolvedChoiceForKind = (kind: string): boolean =>
-    ledger.choices.some(
-      (choice) =>
-        choice.domain === 'tools' &&
-        choice.selected.length < choice.chooseCount &&
-        choice.optionPool.some((poolEntry) => {
-          const poolKind = normalizeGenericToolKind(poolEntry);
-          return poolKind === kind;
-        }),
-    );
-
-  const visibleToolPills = toolCandidates.filter((toolName) => {
-    const kind = normalizeGenericToolKind(toolName);
-    if (!kind || !genericToolKinds.has(kind)) return true;
-    return hasUnresolvedChoiceForKind(kind);
-  });
 
   return (
     <Tabs defaultValue="skills">
@@ -361,15 +328,43 @@ export function BuildProficienciesTabsPanel({
       <TabsContent value="armor">
         <div className="flex flex-wrap gap-2">
           {availableArmor.map((armorKey) => {
-            const isSelected = hasProfInArray(
-              currentProficiencies.armor,
-              armorKey,
+            const normArmor = normalizeKey(armorKey);
+            const hasLedgerGrant =
+              (ledger.proficiencies.armor[normArmor] ?? []).length > 0;
+            const isSelected =
+              hasProfInArray(currentProficiencies.armor, armorKey) ||
+              hasLedgerGrant;
+            const isFixed = (ledger.proficiencies.armor[normArmor] ?? []).some(
+              (tag) => tag.grantType === 'fixed',
             );
+            const isChoiceSelected = ledger.choices.some(
+              (choice) =>
+                choice.domain === 'armor' &&
+                choice.selected.some(
+                  (selected) => normalizeKey(selected) === normArmor,
+                ),
+            );
+            const canSelect =
+              !isSelected &&
+              ledger.choices.some(
+                (choice) =>
+                  choice.domain === 'armor' &&
+                  choice.selected.length < choice.chooseCount &&
+                  (choice.optionPool.length === 0 ||
+                    choice.optionPool.some(
+                      (poolEntry) => normalizeKey(poolEntry) === normArmor,
+                    )),
+              );
+            const canDeselect = isChoiceSelected && !isFixed;
             return (
               <button
                 key={armorKey}
                 type="button"
                 onClick={() => {
+                  if (canDeselect)
+                    onResolveChoiceSelection('armor', armorKey, false);
+                  else if (canSelect)
+                    onResolveChoiceSelection('armor', armorKey, true);
                   onFocusChange({
                     type: 'item',
                     category: 'Armor',
@@ -378,10 +373,14 @@ export function BuildProficienciesTabsPanel({
                   onExpandDetails();
                 }}
                 className={cn(
-                  'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2 cursor-default',
-                  isSelected
-                    ? 'border-accent bg-accent/20 text-accent-foreground'
-                    : 'border-border bg-card text-muted-foreground opacity-50',
+                  'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2',
+                  isChoiceSelected
+                    ? choiceSelectedClass
+                    : isSelected
+                      ? fixedSelectedClass
+                      : canSelect
+                        ? 'border-border bg-card text-foreground hover:border-accent cursor-pointer'
+                        : 'border-border bg-card text-muted-foreground opacity-50',
                   focused?.type === 'item' &&
                     focused.name === armorKey &&
                     'ring-2 ring-accent ring-offset-2',
@@ -402,15 +401,43 @@ export function BuildProficienciesTabsPanel({
       <TabsContent value="weapons">
         <div className="flex flex-wrap gap-2">
           {availableWeapons.map((weaponKey) => {
-            const isSelected = hasProfInArray(
-              currentProficiencies.weapons,
-              weaponKey,
+            const normWeapon = normalizeKey(weaponKey);
+            const hasLedgerGrant =
+              (ledger.proficiencies.weapons[normWeapon] ?? []).length > 0;
+            const isSelected =
+              hasProfInArray(currentProficiencies.weapons, weaponKey) ||
+              hasLedgerGrant;
+            const isFixed = (
+              ledger.proficiencies.weapons[normWeapon] ?? []
+            ).some((tag) => tag.grantType === 'fixed');
+            const isChoiceSelected = ledger.choices.some(
+              (choice) =>
+                choice.domain === 'weapons' &&
+                choice.selected.some(
+                  (selected) => normalizeKey(selected) === normWeapon,
+                ),
             );
+            const canSelect =
+              !isSelected &&
+              ledger.choices.some(
+                (choice) =>
+                  choice.domain === 'weapons' &&
+                  choice.selected.length < choice.chooseCount &&
+                  (choice.optionPool.length === 0 ||
+                    choice.optionPool.some(
+                      (poolEntry) => normalizeKey(poolEntry) === normWeapon,
+                    )),
+              );
+            const canDeselect = isChoiceSelected && !isFixed;
             return (
               <button
                 key={weaponKey}
                 type="button"
                 onClick={() => {
+                  if (canDeselect)
+                    onResolveChoiceSelection('weapons', weaponKey, false);
+                  else if (canSelect)
+                    onResolveChoiceSelection('weapons', weaponKey, true);
                   onFocusChange({
                     type: 'item',
                     category: 'Weapon',
@@ -419,10 +446,14 @@ export function BuildProficienciesTabsPanel({
                   onExpandDetails();
                 }}
                 className={cn(
-                  'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2 cursor-default',
-                  isSelected
-                    ? 'border-accent bg-accent/20 text-accent-foreground'
-                    : 'border-border bg-card text-muted-foreground opacity-50',
+                  'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2',
+                  isChoiceSelected
+                    ? choiceSelectedClass
+                    : isSelected
+                      ? fixedSelectedClass
+                      : canSelect
+                        ? 'border-border bg-card text-foreground hover:border-accent cursor-pointer'
+                        : 'border-border bg-card text-muted-foreground opacity-50',
                   focused?.type === 'item' &&
                     focused.name === weaponKey &&
                     'ring-2 ring-accent ring-offset-2',
@@ -442,9 +473,9 @@ export function BuildProficienciesTabsPanel({
 
       <TabsContent value="tools">
         <div className="flex flex-wrap gap-2">
-          {toolChoiceSlots.length > 0 && (
+          {dropdownToolSlots.length > 0 && (
             <div className="w-full space-y-2 mb-1">
-              {toolChoiceSlots.map((slot) => (
+              {dropdownToolSlots.map((slot) => (
                 <div
                   key={slot.id}
                   className="w-full max-w-lg rounded-lg border border-border bg-card p-2.5"
@@ -487,15 +518,19 @@ export function BuildProficienciesTabsPanel({
             </div>
           )}
 
-          {availableTools.length > 0 ? (
-            visibleToolPills.map((toolName) => {
+          {visibleToolCandidates.length > 0 ? (
+            visibleToolCandidates.map((toolName) => {
               const normTool = normalizeKey(toolName);
               const genericKind = normalizeGenericToolKind(toolName);
               const isGenericKind = Boolean(genericKind);
-              const isSelected = hasProfInArray(
-                currentProficiencies.tools,
-                toolName,
-              );
+              const hasOptionalChoiceForKind = genericKind
+                ? hasUnresolvedChoiceForKind(ledger.choices, genericKind)
+                : false;
+              const hasLedgerGrant =
+                (ledger.proficiencies.tools[normTool] ?? []).length > 0;
+              const isSelected =
+                hasProfInArray(currentProficiencies.tools, toolName) ||
+                hasLedgerGrant;
               const isFixed = (ledger.proficiencies.tools[normTool] ?? []).some(
                 (tag) => tag.grantType === 'fixed',
               );
@@ -506,9 +541,10 @@ export function BuildProficienciesTabsPanel({
                     (selected) => normalizeKey(selected) === normTool,
                   ),
               );
+              const artisanChoiceId = artisanChoiceByNorm.get(normTool);
               const canSelect =
                 !isSelected &&
-                ledger.choices.some(
+                (ledger.choices.some(
                   (choice) =>
                     choice.domain === 'tools' &&
                     choice.selected.length < choice.chooseCount &&
@@ -516,7 +552,11 @@ export function BuildProficienciesTabsPanel({
                       choice.optionPool.some(
                         (poolEntry) => normalizeKey(poolEntry) === normTool,
                       )),
-                );
+                ) ||
+                  // Artisan expansion: tool appears in an unfilled artisan slot
+                  artisanToolSlots.some((slot) =>
+                    slot.options.some((opt) => normalizeKey(opt) === normTool),
+                  ));
               const canDeselect = isChoiceSelected && !isFixed;
 
               return (
@@ -537,7 +577,12 @@ export function BuildProficienciesTabsPanel({
                     if (canDeselect)
                       onResolveChoiceSelection('tools', toolName, false);
                     else if (canSelect)
-                      onResolveChoiceSelection('tools', toolName, true);
+                      onResolveChoiceSelection(
+                        'tools',
+                        toolName,
+                        true,
+                        artisanChoiceId,
+                      );
                     onFocusChange({
                       type: 'item',
                       category: 'Tool',
@@ -548,7 +593,9 @@ export function BuildProficienciesTabsPanel({
                   className={cn(
                     'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2',
                     isGenericKind
-                      ? 'border-border border-dashed bg-card text-foreground/80 cursor-default'
+                      ? hasOptionalChoiceForKind
+                        ? 'border-border border-dashed bg-card text-foreground/80 cursor-default'
+                        : 'border-border border-dashed bg-card text-muted-foreground opacity-50 cursor-default'
                       : isChoiceSelected
                         ? choiceSelectedClass
                         : isSelected

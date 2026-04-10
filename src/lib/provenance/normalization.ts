@@ -48,6 +48,7 @@ export function normalizeGenericToolChoice(value: string): string | null {
     return 'gaming set';
   }
   if (
+    key === 'any' ||
     key === 'anytool' ||
     key === 'tool' ||
     key === 'toolproficiency' ||

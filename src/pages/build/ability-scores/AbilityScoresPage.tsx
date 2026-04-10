@@ -3,11 +3,19 @@ import { useMemo, useState } from 'react';
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAbilityScores } from '@/hooks/character/useAbilityScores';
 import { useProvenance } from '@/hooks/character/useProvenance';
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
 import {
+  ABILITY_ABBREVIATIONS,
   type AbilityName,
   buildBackgroundBonuses,
   getBackgroundAbilityData,
@@ -26,6 +34,7 @@ import {
   buildRacialBonuses,
   buildSkillDetailsMap,
   selectSkillDetails,
+  updateRaceAsiChoices,
 } from '@/pages/build/ability-scores/model/data';
 import { useCharacterStore } from '@/store/characterStore';
 import { useGameDataStore } from '@/store/gameDataStore';
@@ -38,7 +47,7 @@ export function BuildAbilityScoresPage() {
   const { races, backgrounds } = useFilteredGameData();
   const { scores, setScore, setAllScores, pointBuyTotal, pointBuyRemaining } =
     useAbilityScores();
-  const { getSourcesRowsBySection } = useProvenance();
+  const { getSourcesRowsBySection, applyRaceSelection } = useProvenance();
   const [detailCollapsed, setDetailCollapsed] = useState(false);
   const [selectedAbility, setSelectedAbility] =
     useState<AbilityName>('charisma');
@@ -54,8 +63,15 @@ export function BuildAbilityScoresPage() {
       sr.name === character?.subrace &&
       (sr.source ?? '') === (character?.subraceSource ?? ''),
   ) as Race5e | undefined;
-  const raceAsiData = getRaceAbilityData(selectedRace, subraceData);
+  const raceAsiBlockIndex = (character?.raceAsiBlockIndex ?? 0) as 0 | 1;
+  const raceAsiData = getRaceAbilityData(
+    selectedRace,
+    subraceData,
+    raceAsiBlockIndex,
+  );
   const raceAsiChoices: string[][] = character?.raceAsiChoices ?? [];
+  const isLineageRaceAsiFallback =
+    selectedRace?.lineage === true || typeof selectedRace?.lineage === 'string';
   const hasDataDrivenRacialBonuses =
     raceAsiData.fixed.length > 0 || raceAsiData.choices.length > 0;
 
@@ -204,6 +220,122 @@ export function BuildAbilityScoresPage() {
               <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
                 <ScrollArea className="flex-1 overflow-hidden">
                   <div className="p-4">
+                    {raceAsiData.choices.length > 0 && (
+                      <div className="mb-6 p-3 rounded-lg bg-muted/20 border border-border">
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                          Racial Ability Bonuses
+                        </div>
+                        {isLineageRaceAsiFallback && (
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              Lineage ASI Mode
+                            </span>
+                            <Select
+                              value={String(raceAsiBlockIndex)}
+                              onValueChange={(value) => {
+                                const nextIndex = (
+                                  Number(value) === 1 ? 1 : 0
+                                ) as 0 | 1;
+                                updateCharacter(character.id, {
+                                  raceAsiBlockIndex: nextIndex,
+                                  raceAsiChoices: [],
+                                });
+                                if (selectedRace) {
+                                  applyRaceSelection(
+                                    selectedRace,
+                                    subraceData,
+                                    nextIndex,
+                                  );
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-7 w-[250px] px-2 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0" className="text-xs">
+                                  +2 to one ability, +1 to another
+                                </SelectItem>
+                                <SelectItem value="1" className="text-xs">
+                                  +1 to three different abilities
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                          {raceAsiData.fixed.map((fb) => (
+                            <span
+                              key={`${fb.ability}|${fb.value}`}
+                              className="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded px-2 py-0.5 font-semibold"
+                            >
+                              {ABILITY_ABBREVIATIONS[fb.ability]} +{fb.value}
+                            </span>
+                          ))}
+                          {raceAsiData.choices.map((block, blockIdx) => {
+                            const selections = raceAsiChoices[blockIdx] ?? [];
+                            return Array.from(
+                              { length: block.count },
+                              (_, slotIdx) => {
+                                const selected = selections[slotIdx] ?? '';
+                                const takenByOthers = new Set([
+                                  ...selections.filter(
+                                    (s, si) => si !== slotIdx && s !== '',
+                                  ),
+                                  ...raceAsiData.choices.flatMap((_, bi) =>
+                                    bi !== blockIdx
+                                      ? (raceAsiChoices[bi] ?? []).filter(
+                                          (s) => s !== '',
+                                        )
+                                      : [],
+                                  ),
+                                ]);
+                                return (
+                                  <div
+                                    key={`${block.amount}|${blockIdx}|${slotIdx}`}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <span className="text-xs text-muted-foreground">
+                                      +{block.amount}
+                                    </span>
+                                    <Select
+                                      value={selected}
+                                      onValueChange={(v) => {
+                                        const next = updateRaceAsiChoices(
+                                          raceAsiChoices,
+                                          blockIdx,
+                                          slotIdx,
+                                          v,
+                                        );
+                                        updateCharacter(character.id, {
+                                          raceAsiChoices: next,
+                                        });
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-7 w-24 px-2 text-xs">
+                                        <SelectValue placeholder="Choose…" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {block.from.map((ab) => (
+                                          <SelectItem
+                                            key={ab}
+                                            value={ab}
+                                            disabled={takenByOthers.has(ab)}
+                                            className="text-xs"
+                                          >
+                                            {ABILITY_ABBREVIATIONS[ab]}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                );
+                              },
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                     <Tabs
                       value={method}
                       onValueChange={(v) =>

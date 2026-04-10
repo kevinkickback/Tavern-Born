@@ -150,4 +150,34 @@ describe('abilityScores', () => {
     expect(data.choices[1]?.count).toBe(1);
     expect(data.choices[1]?.source).toBe('subrace');
   });
+
+  test('getRaceAbilityData synthesizes lineage ASI blocks from selected mode', () => {
+    const lineageRace = {
+      lineage: 'VRGR',
+      ability: [] as TestRaceAbilityEntry[],
+    };
+
+    const plus2Plus1 = getRaceAbilityData(lineageRace, undefined, 0);
+    expect(plus2Plus1.choices).toHaveLength(2);
+    expect(plus2Plus1.choices[0]).toMatchObject({ count: 1, amount: 2 });
+    expect(plus2Plus1.choices[1]).toMatchObject({ count: 1, amount: 1 });
+
+    const plus1x3 = getRaceAbilityData(lineageRace, undefined, 1);
+    expect(plus1x3.choices).toHaveLength(1);
+    expect(plus1x3.choices[0]).toMatchObject({ count: 3, amount: 1 });
+
+    const customLineageRace = {
+      lineage: true,
+      ability: [{ choose: { amount: 2, count: 1, from: ['str'] } }],
+    };
+
+    const customLineage2Plus1 = getRaceAbilityData(
+      customLineageRace as unknown as Parameters<typeof getRaceAbilityData>[0],
+      undefined,
+      0,
+    );
+    expect(customLineage2Plus1.choices).toHaveLength(2);
+    expect(customLineage2Plus1.choices[0]).toMatchObject({ amount: 2 });
+    expect(customLineage2Plus1.choices[1]).toMatchObject({ amount: 1 });
+  });
 });

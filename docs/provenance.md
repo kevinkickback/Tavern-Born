@@ -85,6 +85,13 @@ Race trait application behavior:
 - Applied race traits are persisted on the character as `visions`, `damageResistances`, `damageImmunities`, and `conditionImmunities`.
 - Subrace values are merged with race values, and subrace darkvision overrides base race darkvision when present.
 
+Lineage race ASI behavior:
+- Some lineage races (for example VRGR-style entries) omit an explicit `ability` block in 5etools data.
+- In this case, the app synthesizes one of two Tasha-style ASI blocks based on `character.raceAsiBlockIndex`:
+	- `0`: +2 to one ability and +1 to a different ability
+	- `1`: +1 to three different abilities
+- Changing the lineage ASI mode clears `raceAsiChoices` and reapplies race provenance so pending ability-bonus placeholders stay in sync.
+
 Grouped tool choices:
 - Placeholder choices may carry grouped tool options (for example: `gaming set`, `musical instrument`, `artisan's tools`, `tool`).
 - Grouped entries are placeholders only; final grants are always concrete tool names selected by the user.

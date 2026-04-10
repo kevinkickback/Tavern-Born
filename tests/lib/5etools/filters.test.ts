@@ -61,6 +61,22 @@ describe('5etools/filters', () => {
     expect(filtered.map((c) => c.name)).toEqual(['Fighter']);
   });
 
+  test('filterClasses supports suppressedKeys override filtering', () => {
+    const classes = [
+      makeClassFixture({ name: 'Wizard', source: 'PHB' }),
+      makeClassFixture({ name: 'Wizard', source: 'XPHB' }),
+    ];
+
+    const filtered = DataFilter.filterClasses(classes, {
+      sources: ['PHB', 'XPHB'],
+      suppressedKeys: new Set(['Wizard|PHB']),
+    });
+
+    expect(filtered.map((c) => `${c.name}|${c.source}`)).toEqual([
+      'Wizard|XPHB',
+    ]);
+  });
+
   test('filterSpells applies class, concentration, and component filters', () => {
     const spells = [
       makeSpellFixture({

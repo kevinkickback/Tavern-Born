@@ -173,6 +173,7 @@ export const variantRulesSchema = z.object({
   bladesingerAnyRace: z.boolean().default(false),
   battleragerAnyRace: z.boolean().default(false),
   firearmsAllowed: z.boolean().default(false),
+  preferNewerPrintings: z.boolean().optional(),
 });
 
 export const characterClassEntrySchema = z.object({
@@ -555,6 +556,7 @@ export const characterSchema = z.object({
   allowedSources: z.array(z.string()).default(['PHB']),
   variantRules: variantRulesSchema.optional(),
   raceAsiChoices: z.array(z.array(z.string())).optional(),
+  raceAsiBlockIndex: z.union([z.literal(0), z.literal(1)]).optional(),
   backgroundAsiBlockIndex: z.number().int().nonnegative().optional(),
   backgroundEquipmentChoice: z.enum(['a', 'b']).optional(),
   backgroundAsiChoices: z.array(z.string()).optional(),

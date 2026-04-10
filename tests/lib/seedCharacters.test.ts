@@ -39,15 +39,13 @@ describe('seedCharacters', () => {
     );
     expect(c?.allowedSources).toEqual([
       'PHB',
-      'DMG',
-      'MM',
       'XGE',
       'TCE',
-      'VGM',
-      'MTF',
-      'SCAG',
+      'MPMM',
       'ERLW',
       'EGW',
+      'MOT',
+      'VRGR',
     ]);
     expect(
       c?.spells.spellProfiles.some((p) => p.id === 'class:Wizard|PHB'),

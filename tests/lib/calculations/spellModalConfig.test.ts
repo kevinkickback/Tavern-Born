@@ -82,4 +82,40 @@ describe('buildSpellModalConfig', () => {
     expect(result?.categories[0].max).toBe(3);
     expect(result?.categories[1].max).toBe(4);
   });
+
+  it('does not add leveled spell levels when effectiveSpellLimit is zero', () => {
+    const classProfile: SpellProfile = {
+      id: 'class:Artificer|TCE',
+      type: 'class',
+      label: 'Artificer',
+      className: 'Artificer',
+      classSource: 'TCE',
+      cantrips: [],
+      spellsKnown: [],
+      preparedSpells: [],
+    };
+
+    const result = buildSpellModalConfig({
+      activeProfile: classProfile,
+      spellProfiles: [classProfile],
+      detailsByProfileId: new Map([
+        [
+          classProfile.id,
+          {
+            cantripLimit: 2,
+            knownSpellLimit: 0,
+            isPreparedCaster: false,
+            maxSpellLevel: 1,
+          },
+        ],
+      ]),
+      spellByName: new Map<string, Spell5e>(),
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.allowedLevels.has('0')).toBe(true);
+    expect(result?.allowedLevels.has('1')).toBe(false);
+    expect(result?.categories).toHaveLength(1);
+    expect(result?.categories[0].key).toBe('cantrips');
+  });
 });

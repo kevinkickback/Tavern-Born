@@ -115,6 +115,25 @@ Flow:
 2. Renderer recursively formats structured content and inline tags.
 3. UI displays rendered output rather than raw JSON.
 
+## 5b) Source Preset and Reprint Filtering
+
+Entry points:
+- src/components/character/wizard/steps/2-RulesStep.tsx
+- src/hooks/data/useFilteredGameData.ts
+- src/lib/5etools/reprints.ts
+
+Flow:
+1. Wizard source presets apply a curated list of source abbreviations to `allowedSources`.
+2. `useFilteredGameData()` filters all entity collections by `allowedSources`.
+3. When `variantRules.preferNewerPrintings` is enabled, the hook builds a suppression set from 5etools `reprintedAs` metadata.
+4. DataFilter removes any entity whose `name|source` key is in the suppression set.
+5. Older printings remain available when newer reprints are not in the selected source list.
+
+Important behavior:
+- Reprint suppression is content-driven from parsed 5etools data, not a hardcoded override map.
+- Suppression is transitive across reprint chains (A -> B -> C), so selecting C suppresses A and B when present.
+- If no source filter is active, data remains unfiltered and suppression is not applied.
+
 ## 6) Character Schema Versioning and Migrations
 
 Entry points:

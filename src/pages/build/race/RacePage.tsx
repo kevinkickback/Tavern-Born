@@ -34,9 +34,17 @@ function getSpeedText(race: Race5e): string {
   return '—';
 }
 
-function getASILines(race: Race5e, raceAsiChoices?: string[][]): string[] {
+function getASILines(
+  race: Race5e,
+  raceAsiChoices?: string[][],
+  raceAsiBlockIndex: 0 | 1 = 0,
+): string[] {
   const lines: string[] = [];
-  const { fixed, choices } = getRaceAbilityData(race);
+  const { fixed, choices } = getRaceAbilityData(
+    race,
+    undefined,
+    raceAsiBlockIndex,
+  );
   for (const fb of fixed) {
     lines.push(`${ABILITY_ABBREVIATIONS[fb.ability]} +${fb.value}`);
   }
@@ -63,6 +71,10 @@ function getASILines(race: Race5e, raceAsiChoices?: string[][]): string[] {
 }
 
 function getLanguages(race: Race5e): string {
+  // MPMM-style lineage races: language is a free player pick
+  if (!race.languageProficiencies && typeof race.lineage === 'string') {
+    return 'Common, + 1 of your choice';
+  }
   return extractProficiencyBlockNames(race.languageProficiencies ?? [])
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join(', ');
@@ -157,7 +169,11 @@ function getAvailableSubraces(race?: Race5e): Race5e[] {
 }
 
 export function BuildRacePage() {
-  const character = useCharacterStore((s) => s.activeCharacter);
+  const character = useCharacterStore((s) => {
+    if (s.activeCharacter) return s.activeCharacter;
+    if (!s.activeCharacterId) return null;
+    return s.characters.find((c) => c.id === s.activeCharacterId) ?? null;
+  });
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
   const { races } = useFilteredGameData();
   const { applyRaceSelection, applySubraceChange } = useProvenance();
@@ -323,8 +339,10 @@ export function BuildRacePage() {
                                 subrace: firstSubrace?.name,
                                 subraceSource:
                                   firstSubrace?.source ?? undefined,
+                                raceAsiChoices: [],
+                                raceAsiBlockIndex: 0,
                               });
-                              applyRaceSelection(race, firstSubrace);
+                              applyRaceSelection(race, firstSubrace, 0);
                               if (detailCollapsed) setDetailCollapsed(false);
                             }}
                             className="flex items-center gap-2 min-w-0 flex-1 text-left"
@@ -362,11 +380,12 @@ export function BuildRacePage() {
                                     (s) =>
                                       s.name === subraceNameFromKey &&
                                       (subraceSource ?? '') ===
-                                      (s.source ?? ''),
+                                        (s.source ?? ''),
                                   );
                                   updateCharacter(character.id, {
                                     subrace: subraceNameFromKey,
                                     subraceSource: subraceSource ?? undefined,
+                                    raceAsiChoices: [],
                                   });
                                   applySubraceChange(race, sr);
                                 }}
@@ -439,11 +458,15 @@ export function BuildRacePage() {
 
                         <div className="grid grid-cols-4 gap-3">
                           <InfoTile title="Ability Bonuses">
-                            {getASILines(displayRace, character.raceAsiChoices)
-                              .length > 0 ? (
+                            {getASILines(
+                              displayRace,
+                              character.raceAsiChoices,
+                              (character.raceAsiBlockIndex ?? 0) as 0 | 1,
+                            ).length > 0 ? (
                               getASILines(
                                 displayRace,
                                 character.raceAsiChoices,
+                                (character.raceAsiBlockIndex ?? 0) as 0 | 1,
                               ).map((t) => (
                                 <div key={t} className="text-sm font-mono">
                                   {t}

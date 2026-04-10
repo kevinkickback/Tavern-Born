@@ -1,3 +1,4 @@
+import { buildSuppressedKeys } from '@/lib/5etools/reprints';
 import { cn } from '@/lib/utils';
 import type { Background5e } from '@/types/5etools';
 import type { StepProps } from '../types';
@@ -25,17 +26,25 @@ export function BackgroundStep({
   onChange,
   backgrounds,
 }: BackgroundStepProps) {
-  const filteredBackgrounds =
-    data.allowedSources && data.allowedSources.length > 0
-      ? backgrounds.filter((bg) => data.allowedSources.includes(bg.source))
+  const allowedSources = data.allowedSources ?? [];
+  const sourceFilteredBackgrounds =
+    allowedSources.length > 0
+      ? backgrounds.filter((bg) => allowedSources.includes(bg.source))
       : backgrounds;
+  const suppressedBackgroundKeys =
+    data.variantRules?.preferNewerPrintings && allowedSources.length > 0
+      ? buildSuppressedKeys(sourceFilteredBackgrounds, new Set(allowedSources))
+      : undefined;
+  const filteredBackgrounds = sourceFilteredBackgrounds.filter(
+    (bg) => !suppressedBackgroundKeys?.has(`${bg.name}|${bg.source}`),
+  );
 
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="shrink-0 pb-3 border-b border-border">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">Choose Your Background</h3>
-          {data.allowedSources && data.allowedSources.length > 0 && (
+          {allowedSources.length > 0 && (
             <span className="ml-auto text-xs text-muted-foreground">
               {filteredBackgrounds.length} available
             </span>
@@ -51,7 +60,7 @@ export function BackgroundStep({
         <div className="grid grid-cols-2 gap-4">
           {filteredBackgrounds.length === 0 ? (
             <div className="col-span-2 text-center py-8 text-muted-foreground">
-              {data.allowedSources && data.allowedSources.length > 0
+              {allowedSources.length > 0
                 ? 'No backgrounds available from selected sources. Try selecting more source books in the Rules step.'
                 : 'No backgrounds available. Please load game data in Settings.'}
             </div>

@@ -11,17 +11,30 @@ import { NoCharCard } from '@/pages/_shared';
 import { BuildProficienciesDetailsPanel } from '@/pages/build/proficiencies/components/DetailsPanel';
 import { BuildProficienciesTabsPanel } from '@/pages/build/proficiencies/components/TabsPanel';
 import {
+  buildArtisanChoiceMap,
+  buildArtisanToolNamesFromSlots,
   buildChoiceCounts,
+  buildOptionalToolNamesFromChoices,
   buildSkillDescriptions,
   buildToolChoiceSlots,
   buildToolSubtypeOptionsByKind,
+  buildVisibleToolCandidates,
+  getSelectedToolNames,
+  isArtisanToolSlot,
 } from '@/pages/build/proficiencies/model/data';
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types';
 import { useCharacterStore } from '@/store/characterStore';
 import { useGameDataStore } from '@/store/gameDataStore';
 
 export function BuildProficienciesPage() {
-  const character = useCharacterStore((s) => s.activeCharacter);
+  const character = useCharacterStore((state) => {
+    if (state.activeCharacter) return state.activeCharacter;
+    if (!state.activeCharacterId) return null;
+    return (
+      state.characters.find((entry) => entry.id === state.activeCharacterId) ??
+      null
+    );
+  });
   const gameData = useGameDataStore((s) => s.gameData);
   const { skills } = useSkills();
   const { savingThrows } = useSavingThrows();
@@ -60,6 +73,66 @@ export function BuildProficienciesPage() {
         toolSubtypeOptionsByKind,
       }),
     [character?.proficiencies.tools, ledger.choices, toolSubtypeOptionsByKind],
+  );
+
+  const artisanToolSlots = useMemo(
+    () => toolChoiceSlots.filter(isArtisanToolSlot),
+    [toolChoiceSlots],
+  );
+
+  const dropdownToolSlots = useMemo(
+    () => toolChoiceSlots.filter((s) => !isArtisanToolSlot(s)),
+    [toolChoiceSlots],
+  );
+
+  const artisanToolNames = useMemo(
+    () => buildArtisanToolNamesFromSlots(artisanToolSlots),
+    [artisanToolSlots],
+  );
+
+  const optionalToolNames = useMemo(
+    () =>
+      buildOptionalToolNamesFromChoices(
+        ledger.choices,
+        toolSubtypeOptionsByKind,
+      ),
+    [ledger.choices, toolSubtypeOptionsByKind],
+  );
+
+  const availableTools = useMemo(
+    () =>
+      availableProficiencies.tools.filter(
+        (t): t is string => typeof t === 'string',
+      ),
+    [availableProficiencies.tools],
+  );
+
+  const selectedToolNames = useMemo(
+    () => getSelectedToolNames(ledger.choices),
+    [ledger.choices],
+  );
+
+  const visibleToolCandidates = useMemo(
+    () =>
+      buildVisibleToolCandidates({
+        availableTools,
+        optionalToolNames,
+        artisanToolNames,
+        currentTools: character?.proficiencies.tools ?? [],
+        selectedToolNames,
+      }),
+    [
+      availableTools,
+      optionalToolNames,
+      artisanToolNames,
+      character?.proficiencies.tools,
+      selectedToolNames,
+    ],
+  );
+
+  const artisanChoiceByNorm = useMemo(
+    () => buildArtisanChoiceMap(artisanToolSlots),
+    [artisanToolSlots],
   );
 
   if (!character) {
@@ -117,10 +190,6 @@ export function BuildProficienciesPage() {
                         (weaponKey): weaponKey is string =>
                           typeof weaponKey === 'string',
                       )}
-                      availableTools={availableProficiencies.tools.filter(
-                        (toolName): toolName is string =>
-                          typeof toolName === 'string',
-                      )}
                       availableLanguages={availableProficiencies.languages.filter(
                         (langName): langName is string =>
                           typeof langName === 'string',
@@ -133,7 +202,10 @@ export function BuildProficienciesPage() {
                       }}
                       ledger={ledger}
                       choiceCounts={choiceCounts}
-                      toolChoiceSlots={toolChoiceSlots}
+                      dropdownToolSlots={dropdownToolSlots}
+                      artisanToolSlots={artisanToolSlots}
+                      visibleToolCandidates={visibleToolCandidates}
+                      artisanChoiceByNorm={artisanChoiceByNorm}
                       focused={focused}
                       onFocusChange={setFocused}
                       onExpandDetails={() => {

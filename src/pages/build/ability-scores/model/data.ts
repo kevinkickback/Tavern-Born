@@ -116,19 +116,30 @@ export function updateRaceAsiChoices(
   slotIdx: number,
   value: string,
 ): string[][] {
-  const blockSelections = [...(raceAsiChoices[blockIdx] ?? [])];
-  const conflictIdx = blockSelections.findIndex(
-    (selection, index) => index !== slotIdx && selection === value,
-  );
+  const nextChoices = raceAsiChoices.map((arr) => [...arr]);
+  while (nextChoices.length <= blockIdx) nextChoices.push([]);
 
-  if (conflictIdx >= 0) {
-    blockSelections[conflictIdx] = blockSelections[slotIdx] ?? '';
+  const blockSelections = [...(nextChoices[blockIdx] ?? [])];
+
+  // Swap intra-block conflict: give displaced slot the current slot's old value
+  const intraConflict = blockSelections.findIndex(
+    (s, i) => i !== slotIdx && s === value,
+  );
+  if (intraConflict >= 0) {
+    blockSelections[intraConflict] = blockSelections[slotIdx] ?? '';
+  }
+
+  // Clear cross-block conflict: same ability cannot appear in any other block
+  for (let bi = 0; bi < nextChoices.length; bi++) {
+    if (bi === blockIdx) continue;
+    const other = nextChoices[bi] ?? [];
+    for (let si = 0; si < other.length; si++) {
+      if (other[si] === value) other[si] = '';
+    }
+    nextChoices[bi] = other;
   }
 
   blockSelections[slotIdx] = value;
-
-  const nextChoices = [...raceAsiChoices];
-  while (nextChoices.length <= blockIdx) nextChoices.push([]);
   nextChoices[blockIdx] = blockSelections;
 
   return nextChoices;

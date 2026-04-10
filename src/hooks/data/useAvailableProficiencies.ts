@@ -1,5 +1,9 @@
 import { useMemo } from 'react';
-import { normalizeGenericToolChoice, normalizeKey } from '@/lib/provenance';
+import {
+  normalizeGenericToolChoice,
+  normalizeKey,
+  resolveRaceGrantFilterOptions,
+} from '@/lib/provenance';
 import { useCharacterStore } from '@/store/characterStore';
 import { useGameDataStore } from '@/store/gameDataStore';
 
@@ -120,13 +124,61 @@ function collectFromProfBlocks(
   }
 }
 
+function collectWeaponOrArmorFromProfBlocks(
+  blocks: Record<string, unknown>[] | undefined,
+  map: Map<string, string>,
+  domain: 'armor' | 'weapons',
+  context: Parameters<typeof resolveRaceGrantFilterOptions>[2],
+): void {
+  if (!Array.isArray(blocks)) return;
+  for (const block of blocks) {
+    if (!block || typeof block !== 'object') continue;
+    for (const [key, val] of Object.entries(block)) {
+      if (key === 'choose') {
+        const choose = val as
+          | { from?: unknown[]; fromFilter?: string }
+          | undefined;
+        if (Array.isArray(choose?.from)) {
+          for (const entry of choose.from) {
+            if (domain === 'weapons') addUniqueWeapon(map, entry);
+            else addUniqueNormalized(map, entry);
+          }
+        }
+        if (typeof choose?.fromFilter === 'string') {
+          for (const entry of resolveRaceGrantFilterOptions(
+            domain,
+            choose.fromFilter,
+            context,
+          )) {
+            if (domain === 'weapons') addUniqueWeapon(map, entry);
+            else addUniqueNormalized(map, entry);
+          }
+        }
+        continue;
+      }
+      if (val === true) {
+        if (domain === 'weapons') addUniqueWeapon(map, key);
+        else addUniqueNormalized(map, key);
+      }
+    }
+  }
+}
+
 /**
  * Returns all available proficiency options for each category from game data.
  * Never hardcoded — all sourced from 5etools data.
  */
 export function useAvailableProficiencies(): AvailableProficiencies {
   const gameData = useGameDataStore((state) => state.gameData);
-  const activeCharacter = useCharacterStore((state) => state.activeCharacter);
+  const activeCharacter = useCharacterStore((state) => {
+    if (state.activeCharacter) return state.activeCharacter;
+    if (!state.activeCharacterId) return null;
+    return (
+      state.characters.find(
+        (character) => character.id === state.activeCharacterId,
+      ) ?? null
+    );
+  });
 
   return useMemo(() => {
     const empty: AvailableProficiencies = {
@@ -161,11 +213,35 @@ export function useAvailableProficiencies(): AvailableProficiencies {
     const languages = (gameData.languages ?? []).filter((lang) =>
       isAllowedBySource(lang),
     );
+    const raceOptionContext = {
+      items: gameData.items ?? [],
+      itemsBase: gameData.itemsBase ?? [],
+      allowedSources,
+    };
 
     const armorMap = new Map<string, string>();
     for (const cls of classes) {
       for (const a of cls.startingProficiencies?.armor ?? []) {
         addUniqueNormalized(armorMap, a);
+      }
+    }
+    for (const race of races) {
+      collectWeaponOrArmorFromProfBlocks(
+        race.armorProficiencies as Record<string, unknown>[] | undefined,
+        armorMap,
+        'armor',
+        raceOptionContext,
+      );
+      for (const sr of (race.subraces ?? []).filter((subrace) =>
+        isAllowedBySource(subrace),
+      )) {
+        collectWeaponOrArmorFromProfBlocks(
+          (sr as { armorProficiencies?: Record<string, unknown>[] })
+            .armorProficiencies,
+          armorMap,
+          'armor',
+          raceOptionContext,
+        );
       }
     }
     const armor = Array.from(armorMap.values()).sort();
@@ -174,6 +250,25 @@ export function useAvailableProficiencies(): AvailableProficiencies {
     for (const cls of classes) {
       for (const w of cls.startingProficiencies?.weapons ?? []) {
         addUniqueWeapon(weaponMap, w);
+      }
+    }
+    for (const race of races) {
+      collectWeaponOrArmorFromProfBlocks(
+        race.weaponProficiencies as Record<string, unknown>[] | undefined,
+        weaponMap,
+        'weapons',
+        raceOptionContext,
+      );
+      for (const sr of (race.subraces ?? []).filter((subrace) =>
+        isAllowedBySource(subrace),
+      )) {
+        collectWeaponOrArmorFromProfBlocks(
+          (sr as { weaponProficiencies?: Record<string, unknown>[] })
+            .weaponProficiencies,
+          weaponMap,
+          'weapons',
+          raceOptionContext,
+        );
       }
     }
     const weapons = Array.from(weaponMap.values()).sort();
