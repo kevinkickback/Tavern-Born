@@ -132,18 +132,22 @@ export function buildSpellModalConfig(params: {
   }
 
   const maxSpellLevel = detail?.maxSpellLevel ?? 0;
-  for (let level = 1; level <= maxSpellLevel; level++) {
-    allowedLevels.add(String(level));
+  const canSelectLeveledSpells =
+    effectiveSpellLimit === null || effectiveSpellLimit > 0;
+  if (canSelectLeveledSpells) {
+    for (let level = 1; level <= maxSpellLevel; level++) {
+      allowedLevels.add(String(level));
+    }
   }
 
-  if (effectiveSpellLimit !== null) {
+  if (effectiveSpellLimit !== null && effectiveSpellLimit > 0) {
     categories.push({
       key: 'spells',
       label: 'spells',
       max: effectiveSpellLimit,
       test: (spell: Spell5e) => spell.level > 0,
     });
-  } else if (maxSpellLevel > 0) {
+  } else if (canSelectLeveledSpells && maxSpellLevel > 0) {
     categories.push({
       key: 'spells',
       label: 'spells',

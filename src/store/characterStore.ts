@@ -96,6 +96,17 @@ function isUnsavedComparedToPersisted(
   return JSON.stringify(activeComparable) !== JSON.stringify(savedComparable);
 }
 
+function resolveActiveCharacter(
+  characters: Character[],
+  activeCharacterId: string | null,
+): Character | null {
+  if (!activeCharacterId) return null;
+  const found = characters.find(
+    (character) => character.id === activeCharacterId,
+  );
+  return found ? normalizeCharacterProvenance(found) : null;
+}
+
 interface CharacterState {
   characters: Character[];
   activeCharacterId: string | null;
@@ -343,13 +354,18 @@ export const useCharacterStore = create<CharacterState>()(
             .map((character) => parseCharacterData(character))
             .filter((result) => result.data)
             .map((result) => result.data as Character);
+          const activeCharacter = resolveActiveCharacter(
+            validated,
+            state.activeCharacterId,
+          );
           const persistedCharacter = state.activeCharacterId
             ? validated.find((c) => c.id === state.activeCharacterId)
             : undefined;
           return {
             characters: validated,
+            activeCharacter,
             hasUnsavedChangesFlag: isUnsavedComparedToPersisted(
-              state.activeCharacter,
+              activeCharacter,
               persistedCharacter,
             ),
           };
@@ -548,6 +564,7 @@ export const useCharacterStore = create<CharacterState>()(
       storage: createIdbStorage(),
       partialize: (state) => ({
         characters: state.characters,
+        activeCharacterId: state.activeCharacterId,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -560,10 +577,10 @@ export const useCharacterStore = create<CharacterState>()(
           // Direct assignment here is intentional and scoped to hydration only.
           state.characters = validatedCharacters;
 
-          // Always start without an active selection. Users explicitly pick
-          // the character they want to work on from Home.
-          state.activeCharacterId = null;
-          state.activeCharacter = null;
+          state.activeCharacter = resolveActiveCharacter(
+            validatedCharacters,
+            state.activeCharacterId,
+          );
           state.hasUnsavedChangesFlag = false;
         }
       },

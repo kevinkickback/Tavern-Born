@@ -47,7 +47,8 @@ export function BuildClassSpellSection({
               {[
                 spellGain.cantrips > 0 &&
                   `${spellGain.cantrips} cantrip${spellGain.cantrips > 1 ? 's' : ''}`,
-                `${spellGain.spells} spell${spellGain.spells > 1 ? 's' : ''}${spellGain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(spellGain.maxSpellLevel)}-level)` : ''}`,
+                spellGain.spells > 0 &&
+                  `${spellGain.spells} spell${spellGain.spells > 1 ? 's' : ''}${spellGain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(spellGain.maxSpellLevel)}-level)` : ''}`,
               ]
                 .filter(Boolean)
                 .join(' · ')}

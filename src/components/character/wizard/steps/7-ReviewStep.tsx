@@ -64,7 +64,11 @@ export function ReviewStep({ data }: ReviewStepProps) {
       (!data.raceSource || r.source === data.raceSource),
   );
   const subraceObj = raceObj?.subraces?.find((sr) => sr.name === data.subrace);
-  const raceAsiData = getRaceAbilityData(raceObj, subraceObj);
+  const raceAsiData = getRaceAbilityData(
+    raceObj,
+    subraceObj,
+    data.raceAsiBlockIndex ?? 0,
+  );
   const racialBonuses: Partial<Record<AbilityName, number>> = {};
   for (const fb of raceAsiData.fixed) {
     racialBonuses[fb.ability] = (racialBonuses[fb.ability] ?? 0) + fb.value;

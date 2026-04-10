@@ -2,6 +2,7 @@ export interface Race5e {
   name: string;
   source: string;
   page?: number;
+  lineage?: string | boolean;
   size?: string[];
   speed?: number | { walk?: number };
   ability?: AbilityBonus[];
@@ -9,6 +10,11 @@ export interface Race5e {
   darkvision?: number;
   languageProficiencies?: LanguageProficiency[];
   skillProficiencies?: SkillProficiency[];
+  toolProficiencies?: ToolProficiency[];
+  weaponProficiencies?: Record<string, unknown>[];
+  armorProficiencies?: Record<string, unknown>[];
+  feats?: unknown[];
+  additionalSpells?: unknown[];
   resist?: string[];
   immune?: string[];
   conditionImmune?: string[];

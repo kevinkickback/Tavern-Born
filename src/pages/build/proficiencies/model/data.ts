@@ -179,6 +179,168 @@ export function buildToolSubtypeOptionsByKind({
   };
 }
 
+/** Returns true when a tool choice slot should be rendered as individual selectable pills. */
+export function isArtisanToolSlot(slot: ToolChoiceSlot): boolean {
+  return slot.label === "artisan's tools";
+}
+
+/**
+ * Collects flat, sorted artisan tool option names from artisan slots.
+ * Deduplicates by normalized key.
+ */
+export function buildArtisanToolNamesFromSlots(
+  artisanSlots: ToolChoiceSlot[],
+): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const slot of artisanSlots) {
+    for (const opt of slot.options) {
+      const norm = normalizeKey(opt);
+      if (!seen.has(norm)) {
+        seen.add(norm);
+        result.push(opt);
+      }
+    }
+  }
+  return result.sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * Expands tool choice pools into concrete tool names so optional choices remain
+ * visible even after a choice is filled.
+ */
+export function buildOptionalToolNamesFromChoices(
+  choices: ChoiceRecord[],
+  toolSubtypeOptionsByKind: Record<ToolGenericKind, string[]>,
+): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  const addName = (name: string) => {
+    const norm = normalizeKey(name);
+    if (!norm || seen.has(norm)) return;
+    seen.add(norm);
+    result.push(name);
+  };
+
+  for (const choice of choices) {
+    if (choice.domain !== 'tools') continue;
+    for (const token of choice.optionPool) {
+      const kind = normalizeGenericToolKind(token);
+      if (kind) {
+        for (const name of toolSubtypeOptionsByKind[kind] ?? []) {
+          addName(name);
+        }
+      } else {
+        addName(token);
+      }
+    }
+  }
+
+  return result.sort((a, b) => a.localeCompare(b));
+}
+
+/** Deduplicates strings by normalised key, preserving first occurrence order. */
+export function dedupeByNorm(items: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const item of items) {
+    const norm = normalizeKey(item);
+    if (!norm || seen.has(norm)) continue;
+    seen.add(norm);
+    result.push(item);
+  }
+  return result;
+}
+
+/**
+ * Returns `true` when there is at least one unfilled tool choice whose option
+ * pool contains the given generic kind.
+ */
+export function hasUnresolvedChoiceForKind(
+  choices: ChoiceRecord[],
+  kind: string,
+): boolean {
+  return choices.some(
+    (choice) =>
+      choice.domain === 'tools' &&
+      choice.selected.length < choice.chooseCount &&
+      choice.optionPool.some(
+        (poolEntry) => normalizeGenericToolKind(poolEntry) === kind,
+      ),
+  );
+}
+
+interface BuildVisibleToolCandidatesParams {
+  availableTools: string[];
+  optionalToolNames: string[];
+  artisanToolNames: string[];
+  currentTools: string[];
+  selectedToolNames: string[];
+}
+
+/**
+ * Assembles the sorted, deduplicated list of tool names visible as pills,
+ * filtering out abstract tokens and verbose placeholders.
+ */
+export function buildVisibleToolCandidates({
+  availableTools,
+  optionalToolNames,
+  artisanToolNames,
+  currentTools,
+  selectedToolNames,
+}: BuildVisibleToolCandidatesParams): string[] {
+  const toolCandidates = dedupeByNorm([
+    ...availableTools,
+    ...optionalToolNames,
+    ...artisanToolNames,
+    ...currentTools,
+    ...selectedToolNames,
+  ]).sort((a, b) => a.localeCompare(b));
+
+  return toolCandidates.filter((toolName) => {
+    const genericKind = normalizeGenericToolKind(toolName);
+    if (!genericKind) return true;
+    // Never render the abstract catch-all token as a pill.
+    if (genericKind === 'tool') return false;
+    // Keep only canonical generic labels (e.g. "gaming set"), not verbose placeholders.
+    return normalizeKey(toolName) === normalizeKey(genericKind);
+  });
+}
+
+/**
+ * Builds a Map from normalised artisan tool name to the choiceId of the first
+ * artisan slot that accepts it.
+ */
+export function buildArtisanChoiceMap(
+  artisanSlots: ToolChoiceSlot[],
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const slot of artisanSlots) {
+    for (const opt of slot.options) {
+      const norm = normalizeKey(opt);
+      if (!map.has(norm)) {
+        map.set(norm, slot.choiceId);
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * Collects distinct tool names that have been selected across all tool choice
+ * records.
+ */
+export function getSelectedToolNames(choices: ChoiceRecord[]): string[] {
+  return Array.from(
+    new Set(
+      choices
+        .filter((choice) => choice.domain === 'tools')
+        .flatMap((choice) => choice.selected),
+    ),
+  );
+}
+
 interface BuildToolChoiceSlotsParams {
   choices: ChoiceRecord[];
   selectedTools: string[];

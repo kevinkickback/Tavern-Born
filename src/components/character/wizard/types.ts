@@ -26,12 +26,14 @@ export interface CharacterWizardData {
   rulesMode: string;
   allowedSources: string[];
   raceAsiChoices: string[][];
+  raceAsiBlockIndex: 0 | 1;
   variantRules: {
     optionalClassFeatures: boolean;
     averageHitPoints: boolean;
     bladesingerAnyRace: boolean;
     battleragerAnyRace: boolean;
     firearmsAllowed: boolean;
+    preferNewerPrintings: boolean;
   };
 }
 

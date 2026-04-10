@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
@@ -62,27 +62,42 @@ function RaceAsiBonuses({
   data,
   onChange,
   raceAsiData,
+  isLineageRaceAsiFallback,
 }: {
   data: StepProps['data'];
   onChange: StepProps['onChange'];
   raceAsiData: ReturnType<typeof getRaceAbilityData>;
+  isLineageRaceAsiFallback: boolean;
 }) {
   const { fixed, choices } = raceAsiData;
   if (fixed.length === 0 && choices.length === 0) return null;
 
   const raceAsiChoices: string[][] = data.raceAsiChoices ?? [];
+  const raceAsiBlockIndex = (data.raceAsiBlockIndex ?? 0) as 0 | 1;
 
   const updateChoice = (blockIdx: number, slotIdx: number, ability: string) => {
-    const blockSelections = [...(raceAsiChoices[blockIdx] ?? [])];
+    const newChoices = raceAsiChoices.map((arr) => [...arr]);
+    while (newChoices.length <= blockIdx) newChoices.push([]);
+    const blockSelections = [...(newChoices[blockIdx] ?? [])];
+
     // Swap: if another slot in this block already has this ability, give it the current slot's value
-    const conflictIdx = blockSelections.findIndex(
+    const intraConflict = blockSelections.findIndex(
       (s, si) => si !== slotIdx && s === ability,
     );
-    if (conflictIdx >= 0)
-      blockSelections[conflictIdx] = blockSelections[slotIdx] ?? '';
+    if (intraConflict >= 0)
+      blockSelections[intraConflict] = blockSelections[slotIdx] ?? '';
+
+    // Clear cross-block conflict: same ability cannot appear in any other block
+    for (let bi = 0; bi < newChoices.length; bi++) {
+      if (bi === blockIdx) continue;
+      const other = newChoices[bi] ?? [];
+      for (let si = 0; si < other.length; si++) {
+        if (other[si] === ability) other[si] = '';
+      }
+      newChoices[bi] = other;
+    }
+
     blockSelections[slotIdx] = ability;
-    const newChoices = [...raceAsiChoices];
-    while (newChoices.length <= blockIdx) newChoices.push([]);
     newChoices[blockIdx] = blockSelections;
     onChange({ raceAsiChoices: newChoices });
   };
@@ -92,6 +107,39 @@ function RaceAsiBonuses({
       <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
         Racial Bonuses
       </div>
+      {isLineageRaceAsiFallback && (
+        <div className="mb-2 rounded-md border border-border bg-card/50 p-2.5">
+          <div className="flex flex-col gap-2">
+            <div className="min-w-0">
+              <div className="text-xs font-semibold">Lineage ASI Mode</div>
+              <div className="text-[11px] text-muted-foreground">
+                {raceAsiBlockIndex === 1
+                  ? '+1 to three different abilities'
+                  : '+2 to one ability, +1 to another'}
+              </div>
+            </div>
+            <Tabs
+              value={String(raceAsiBlockIndex)}
+              onValueChange={(value) => {
+                const nextIndex = (Number(value) === 1 ? 1 : 0) as 0 | 1;
+                onChange({
+                  raceAsiBlockIndex: nextIndex,
+                  raceAsiChoices: [],
+                });
+              }}
+            >
+              <TabsList className="h-7 w-full max-w-[280px]">
+                <TabsTrigger value="0" className="text-[11px] px-2">
+                  +2/+1 (2 abilities)
+                </TabsTrigger>
+                <TabsTrigger value="1" className="text-[11px] px-2">
+                  +1/+1/+1 (3 abilities)
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap gap-2">
         {fixed.map((fb) => (
           <span
@@ -105,10 +153,15 @@ function RaceAsiBonuses({
           const selections = raceAsiChoices[blockIdx] ?? [];
           return Array.from({ length: block.count }, (_, slotIdx) => {
             const selected = selections[slotIdx] ?? '';
-            // Disable abilities already chosen in another slot of the same block
-            const takenByOthers = new Set(
-              selections.filter((s, si) => si !== slotIdx && s !== ''),
-            );
+            // Disable abilities chosen in any other slot of this block OR any slot of another block
+            const takenByOthers = new Set([
+              ...selections.filter((s, si) => si !== slotIdx && s !== ''),
+              ...choices.flatMap((_, bi) =>
+                bi !== blockIdx
+                  ? (raceAsiChoices[bi] ?? []).filter((s) => s !== '')
+                  : [],
+              ),
+            ]);
             return (
               <div
                 key={`${block.amount}|${block.from.join('-')}|${slotIdx}`}
@@ -387,7 +440,13 @@ export function AbilityScoresStep({ data, onChange }: StepProps) {
       (!data.raceSource || r.source === data.raceSource),
   );
   const subraceObj = raceObj?.subraces?.find((sr) => sr.name === data.subrace);
-  const raceAsiData = getRaceAbilityData(raceObj, subraceObj);
+  const raceAsiData = getRaceAbilityData(
+    raceObj,
+    subraceObj,
+    (data.raceAsiBlockIndex ?? 0) as 0 | 1,
+  );
+  const isLineageRaceAsiFallback =
+    raceObj?.lineage === true || typeof raceObj?.lineage === 'string';
   const racialBonuses = buildRacialBonuses(
     raceAsiData,
     data.raceAsiChoices ?? [],
@@ -430,6 +489,7 @@ export function AbilityScoresStep({ data, onChange }: StepProps) {
         data={data}
         onChange={onChange}
         raceAsiData={raceAsiData}
+        isLineageRaceAsiFallback={isLineageRaceAsiFallback}
       />
     </div>
   );

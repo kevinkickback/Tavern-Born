@@ -1,16 +1,18 @@
+import { SOURCE_PRESETS } from '@/lib/sourcePresets';
 import type { Character, ProvenanceLedger } from '@/types/character';
 
 const RECOMMENDED_SOURCES = [
-  'PHB',
-  'DMG',
-  'MM',
-  'XGE',
-  'TCE',
-  'VGM',
-  'MTF',
-  'SCAG',
-  'ERLW',
-  'EGW',
+  ...(SOURCE_PRESETS.find((preset) => preset.id === '2014-recommended')
+    ?.abbreviations ?? [
+    'PHB',
+    'XGE',
+    'TCE',
+    'MPMM',
+    'ERLW',
+    'EGW',
+    'MOT',
+    'VRGR',
+  ]),
 ];
 
 const ALL_BOOK_SOURCES = [

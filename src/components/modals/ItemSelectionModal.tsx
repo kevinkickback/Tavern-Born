@@ -237,31 +237,31 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
             {item.rarity}
           </Badge>
         )}
-        {item.weight !== undefined && <span>{item.weight} lb</span>}
+        {properties.slice(0, 6).map((prop) => (
+          <Badge
+            key={prop}
+            variant="outline"
+            className={cn('text-[11px] px-1.5 py-0 h-5')}
+            title={getPropertyLabel(prop)}
+          >
+            {getPropertyLabel(prop)}
+          </Badge>
+        ))}
+        {properties.length > 6 && (
+          <Badge variant="outline" className="text-[11px] px-1.5 py-0 h-5">
+            +{properties.length - 6}
+          </Badge>
+        )}
+        {item.weight !== undefined && (
+          <Badge variant="outline" className="text-[11px] px-1.5 py-0 h-5">
+            {item.weight} lb
+          </Badge>
+        )}
       </div>
       {description && (
         <p className="mt-2 text-xs text-muted-foreground leading-relaxed line-clamp-2">
           {description}
         </p>
-      )}
-      {properties.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {properties.slice(0, 6).map((prop) => (
-            <Badge
-              key={prop}
-              variant="outline"
-              className={cn('text-[11px] px-1.5 py-0 h-5')}
-              title={getPropertyLabel(prop)}
-            >
-              {getPropertyLabel(prop)}
-            </Badge>
-          ))}
-          {properties.length > 6 && (
-            <Badge variant="outline" className="text-[11px] px-1.5 py-0 h-5">
-              +{properties.length - 6}
-            </Badge>
-          )}
-        </div>
       )}
     </div>
   );

@@ -14,10 +14,18 @@ function getLedger(character: Character | null): ProvenanceLedger {
 }
 
 export function useProvenance() {
-  const character = useCharacterStore((s) => s.activeCharacter);
+  const character = useCharacterStore((state) => {
+    if (state.activeCharacter) return state.activeCharacter;
+    if (!state.activeCharacterId) return null;
+    return (
+      state.characters.find((entry) => entry.id === state.activeCharacterId) ??
+      null
+    );
+  });
   const updateCharacter = useCharacterStore((s) => s.updateCharacter);
   const gameData = useGameDataStore((s) => s.gameData);
   const items = gameData?.items ?? EMPTY_ITEMS;
+  const itemsBase = gameData?.itemsBase ?? EMPTY_ITEMS;
 
   const ledger = useMemo(
     () => getLedger(character),
@@ -38,6 +46,8 @@ export function useProvenance() {
     character,
     ledger,
     itemLookup,
+    items,
+    itemsBase,
     patch,
     updateCharacter,
   });

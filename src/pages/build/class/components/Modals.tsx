@@ -225,7 +225,8 @@ export function BuildClassModals({
           const title = [
             gain.cantrips > 0 &&
               `Learn ${gain.cantrips} cantrip${gain.cantrips > 1 ? 's' : ''}`,
-            `${gain.spells} spell${gain.spells > 1 ? 's' : ''}${gain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(gain.maxSpellLevel)}-level)` : ''}`,
+            gain.spells > 0 &&
+              `${gain.spells} spell${gain.spells > 1 ? 's' : ''}${gain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(gain.maxSpellLevel)}-level)` : ''}`,
           ]
             .filter(Boolean)
             .join(' · ');

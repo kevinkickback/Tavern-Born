@@ -100,6 +100,19 @@ const TYPE_FILTER: FilterSection = {
   ],
 };
 
+const RESTRICTIONS_FILTER: FilterSection = {
+  key: 'restrictions',
+  label: 'Restrictions',
+  type: 'switches',
+  columns: 1,
+  options: [
+    {
+      value: 'ignore-class-list',
+      label: 'Ignore spell list restriction (show all spells)',
+    },
+  ],
+};
+
 function isRitualSpell(spell: Spell5e): boolean {
   const meta = spell.meta;
   if (!meta || typeof meta !== 'object') {
@@ -114,9 +127,14 @@ function matchSpell(
   activeFilters: ActiveFilters,
   className: string | undefined,
   classSource: string | undefined,
+  enforceClassList: boolean,
   strictLevels: boolean,
 ): boolean {
-  if (className && !isSpellOnClassList(spell, className, classSource)) {
+  if (
+    enforceClassList &&
+    className &&
+    !isSpellOnClassList(spell, className, classSource)
+  ) {
     return false;
   }
 
@@ -275,6 +293,7 @@ export function SpellSelectionModal({
     buildLevelFilter(allowedLevels),
     SCHOOL_FILTER,
     TYPE_FILTER,
+    ...(className ? [RESTRICTIONS_FILTER] : []),
   ];
 
   const canSelect = (
@@ -324,6 +343,7 @@ export function SpellSelectionModal({
           activeFilters,
           className,
           classSource,
+          !activeFilters.restrictions?.has('ignore-class-list'),
           !!allowedLevels,
         )
       }

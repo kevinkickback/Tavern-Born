@@ -8,6 +8,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { buildSuppressedKeys } from '@/lib/5etools/reprints';
+import {
+  ABILITY_ABBREVIATIONS,
+  ABILITY_NAMES,
+  getRaceAbilityData,
+} from '@/lib/calculations/abilityScores';
 import type { Race5e } from '@/types/5etools';
 import { TraitTooltip } from '../../TraitTooltip';
 import type { StepProps } from '../types';
@@ -62,25 +68,34 @@ function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
 export function RaceStep({ data, onChange, races }: RaceStepProps) {
   const raceSelectId = useId();
   const subraceSelectId = useId();
-  const filteredRaces =
-    data.allowedSources && data.allowedSources.length > 0
-      ? races.filter((race) => data.allowedSources.includes(race.source))
+  const allowedSources = data.allowedSources ?? [];
+  const sourceFilteredRaces =
+    allowedSources.length > 0
+      ? races.filter((race) => allowedSources.includes(race.source))
       : races;
+  const suppressedRaceKeys =
+    data.variantRules?.preferNewerPrintings && allowedSources.length > 0
+      ? buildSuppressedKeys(sourceFilteredRaces, new Set(allowedSources))
+      : undefined;
+  const filteredRaces = sourceFilteredRaces.filter(
+    (race) => !suppressedRaceKeys?.has(`${race.name}|${race.source}`),
+  );
 
   const selectedRace = data.race
     ? data.raceSource
       ? filteredRaces.find(
-        (r) => r.name === data.race && (r.source ?? '') === data.raceSource,
-      )
+          (r) => r.name === data.race && (r.source ?? '') === data.raceSource,
+        )
       : filteredRaces.find((r) => r.name === data.race)
     : undefined;
 
   const getAvailableSubraces = (race?: Race5e) =>
     (race?.subraces || []).filter((sr) => {
       if (!sr.name) return false;
-      if (!data.allowedSources || data.allowedSources.length === 0) return true;
+      if (allowedSources.length === 0) return true;
       const src = (sr as { source?: string }).source ?? race?.source ?? '';
-      return data.allowedSources.includes(src);
+      if (!allowedSources.includes(src)) return false;
+      return !suppressedRaceKeys?.has(`${sr.name}|${src}`);
     });
 
   const subraces = getAvailableSubraces(selectedRace);
@@ -126,19 +141,35 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
       : selectedSubrace || selectedRace;
 
   const getAbilityScoreIncreases = () => {
-    if (!displayRace?.ability) return [];
+    if (
+      displayRace?.lineage === true ||
+      typeof displayRace?.lineage === 'string'
+    ) {
+      return [
+        'Choose: +1/+2 (any 2 abilities)',
+        'Choose: +1 (any 3 abilities)',
+      ];
+    }
 
+    const { fixed, choices } = getRaceAbilityData(
+      displayRace,
+      undefined,
+      data.raceAsiBlockIndex ?? 0,
+    );
     const increases: string[] = [];
-    for (const abilityObj of displayRace.ability) {
-      for (const [key, value] of Object.entries(abilityObj)) {
-        if (key !== 'choose' && typeof value === 'number') {
-          increases.push(`${key.toUpperCase()} +${value}`);
-        }
-      }
-      if (abilityObj.choose) {
-        const { from, count, amount = 1 } = abilityObj.choose;
+    for (const fb of fixed) {
+      increases.push(`${ABILITY_ABBREVIATIONS[fb.ability]} +${fb.value}`);
+    }
+    for (const block of choices) {
+      const isAnyAbility = block.from.length === ABILITY_NAMES.length;
+      if (isAnyAbility) {
+        increases.push(`Choose ${block.count}: +${block.amount} (any ability)`);
+      } else {
+        const fromStr = block.from
+          .map((a) => ABILITY_ABBREVIATIONS[a])
+          .join(', ');
         increases.push(
-          `Choose ${count} from ${from.map((a: string) => a.toUpperCase()).join(', ')} +${amount}`,
+          `Choose ${block.count} from ${fromStr} +${block.amount}`,
         );
       }
     }
@@ -159,7 +190,12 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
   };
 
   const getLanguages = () => {
-    if (!displayRace?.languageProficiencies) return '';
+    if (!displayRace?.languageProficiencies) {
+      // MPMM-style lineage races: language is a free player pick
+      if (typeof displayRace?.lineage === 'string')
+        return 'Common, + 1 of your choice';
+      return '';
+    }
 
     const languages: string[] = [];
     for (const langProf of displayRace.languageProficiencies) {
@@ -288,6 +324,8 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                   raceSource,
                   subrace: firstSubrace?.name ?? '',
                   subraceSource: firstSubrace?.source ?? '',
+                  raceAsiChoices: [],
+                  raceAsiBlockIndex: 0,
                 });
               }}
             >
@@ -336,6 +374,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                 onChange({
                   subrace: subraceNamePart,
                   subraceSource: subraceSourcePart,
+                  raceAsiChoices: [],
                 });
               }}
               disabled={subraces.length === 0}

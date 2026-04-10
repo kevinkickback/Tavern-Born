@@ -1,9 +1,15 @@
 import { describe, expect, test } from 'vitest';
 import {
+  buildArtisanChoiceMap,
   buildChoiceCounts,
+  buildOptionalToolNamesFromChoices,
   buildSkillDescriptions,
   buildToolChoiceSlots,
   buildToolSubtypeOptionsByKind,
+  buildVisibleToolCandidates,
+  dedupeByNorm,
+  getSelectedToolNames,
+  hasUnresolvedChoiceForKind,
   normalizeGenericToolKind,
 } from '@/pages/build/proficiencies/model/data';
 
@@ -174,5 +180,170 @@ describe('buildProficienciesData', () => {
         options: ['Dragonchess Set', 'Lute', "Smith's Tools"],
       },
     ]);
+  });
+});
+
+describe('dedupeByNorm', () => {
+  test('removes duplicates by normalised key', () => {
+    expect(dedupeByNorm(['Lute', 'lute', 'Lyre'])).toEqual(['Lute', 'Lyre']);
+  });
+
+  test('returns empty for empty input', () => {
+    expect(dedupeByNorm([])).toEqual([]);
+  });
+});
+
+describe('hasUnresolvedChoiceForKind', () => {
+  const choices = [
+    {
+      id: 'c1',
+      domain: 'tools',
+      sourceTag: {
+        sourceType: 'class' as const,
+        sourceName: 'Bard',
+        grantType: 'choice' as const,
+        label: 'Bard',
+      },
+      chooseCount: 1,
+      optionPool: ['any musical instrument'],
+      selected: [],
+      status: 'pending' as const,
+    },
+  ];
+
+  test('returns true when an unfilled slot matches the kind', () => {
+    expect(hasUnresolvedChoiceForKind(choices, 'musical instrument')).toBe(
+      true,
+    );
+  });
+
+  test('returns false when no slot matches', () => {
+    expect(hasUnresolvedChoiceForKind(choices, 'gaming set')).toBe(false);
+  });
+
+  test('returns false when the choice is fully resolved', () => {
+    const resolved = [{ ...choices[0], selected: ['Lute'] }];
+    expect(hasUnresolvedChoiceForKind(resolved, 'musical instrument')).toBe(
+      false,
+    );
+  });
+});
+
+describe('buildVisibleToolCandidates', () => {
+  test('removes abstract tool token and duplicates', () => {
+    const result = buildVisibleToolCandidates({
+      availableTools: ['Lute', "Thieves' Tools"],
+      optionalToolNames: ['Lute', 'Lyre'],
+      artisanToolNames: [],
+      currentTools: [],
+      selectedToolNames: [],
+    });
+
+    expect(result).toContain('Lute');
+    expect(result).toContain('Lyre');
+    expect(result).toContain("Thieves' Tools");
+    // No duplicates
+    expect(result.filter((n) => n === 'Lute')).toHaveLength(1);
+  });
+
+  test('keeps canonical generic labels and filters verbose placeholders', () => {
+    const result = buildVisibleToolCandidates({
+      availableTools: [],
+      optionalToolNames: [],
+      artisanToolNames: [],
+      currentTools: ['gaming set', 'one type of gaming set of your choice'],
+      selectedToolNames: [],
+    });
+
+    expect(result).toContain('gaming set');
+    expect(result.some((n) => n.toLowerCase().includes('one type'))).toBe(
+      false,
+    );
+  });
+});
+
+describe('buildArtisanChoiceMap', () => {
+  test('maps normalised tool names to choice IDs', () => {
+    const map = buildArtisanChoiceMap([
+      {
+        id: 'slot-1',
+        choiceId: 'choice-1',
+        label: "artisan's tools",
+        sourceName: 'Artificer',
+        options: ["Smith's Tools", "Brewer's Supplies"],
+      },
+    ]);
+
+    expect(map.get("smith's tools")).toBe('choice-1');
+    expect(map.get("brewer's supplies")).toBe('choice-1');
+  });
+});
+
+describe('getSelectedToolNames', () => {
+  test('collects unique tool names from tool choices', () => {
+    const result = getSelectedToolNames([
+      {
+        id: 'c1',
+        domain: 'tools',
+        sourceTag: {
+          sourceType: 'class' as const,
+          sourceName: 'Bard',
+          grantType: 'choice' as const,
+          label: 'Bard',
+        },
+        chooseCount: 1,
+        optionPool: [],
+        selected: ['Lute'],
+        status: 'resolved' as const,
+      },
+      {
+        id: 'c2',
+        domain: 'skills',
+        sourceTag: {
+          sourceType: 'class' as const,
+          sourceName: 'Bard',
+          grantType: 'choice' as const,
+          label: 'Bard',
+        },
+        chooseCount: 1,
+        optionPool: [],
+        selected: ['Stealth'],
+        status: 'resolved' as const,
+      },
+    ]);
+
+    expect(result).toEqual(['Lute']);
+  });
+});
+
+describe('buildOptionalToolNamesFromChoices', () => {
+  test('expands generic tool kinds to concrete names', () => {
+    const result = buildOptionalToolNamesFromChoices(
+      [
+        {
+          id: 'c1',
+          domain: 'tools',
+          sourceTag: {
+            sourceType: 'class' as const,
+            sourceName: 'Bard',
+            grantType: 'choice' as const,
+            label: 'Bard',
+          },
+          chooseCount: 1,
+          optionPool: ['any musical instrument'],
+          selected: ['Lute'],
+          status: 'resolved' as const,
+        },
+      ],
+      {
+        'musical instrument': ['Lute', 'Lyre'],
+        "artisan's tools": [],
+        'gaming set': [],
+        tool: ['Lute', 'Lyre'],
+      },
+    );
+
+    expect(result).toContain('Lute');
+    expect(result).toContain('Lyre');
   });
 });

@@ -51,11 +51,13 @@ export const INITIAL_CHARACTER_DATA = {
   rulesMode: 'strict',
   allowedSources: [] as string[],
   raceAsiChoices: [] as string[][],
+  raceAsiBlockIndex: 0 as 0 | 1,
   variantRules: {
     optionalClassFeatures: false,
     averageHitPoints: false,
     bladesingerAnyRace: false,
     battleragerAnyRace: false,
     firearmsAllowed: false,
+    preferNewerPrintings: true,
   },
 };

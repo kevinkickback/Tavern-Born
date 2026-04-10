@@ -180,6 +180,8 @@ export interface RaceAbilityData {
   choices: ChoosableAbilityBonus[];
 }
 
+export type RaceLineageAsiBlockIndex = 0 | 1;
+
 type RaceAbilityEntry = Partial<Record<string, number>> & {
   choose?: {
     count?: number;
@@ -276,11 +278,14 @@ export function buildBackgroundBonuses(
  * Extract fixed bonuses and choosable bonuses from 5etools race/subrace ability arrays.
  */
 export function getRaceAbilityData(
-  race?: { ability?: RaceAbilityEntry[] } | null,
+  race?: { ability?: RaceAbilityEntry[]; lineage?: string | boolean } | null,
   subrace?: { ability?: RaceAbilityEntry[] } | null,
+  lineageAsiBlockIndex: RaceLineageAsiBlockIndex = 0,
 ): RaceAbilityData {
   const fixed: FixedAbilityBonus[] = [];
   const choices: ChoosableAbilityBonus[] = [];
+  const usesTashasLineageAsi =
+    race?.lineage === true || typeof race?.lineage === 'string';
 
   function processEntries(
     entries: RaceAbilityEntry[] | undefined,
@@ -308,8 +313,40 @@ export function getRaceAbilityData(
     }
   }
 
-  processEntries(race?.ability, 'race');
+  // For lineage races (including Tasha's Custom Lineage), we synthesize the
+  // ASI blocks from the selected lineage mode instead of consuming race.ability.
+  if (!usesTashasLineageAsi) {
+    processEntries(race?.ability, 'race');
+  }
   processEntries(subrace?.ability, 'subrace');
+
+  // Lineage races follow Tasha's ASI choice at character creation:
+  // - block 0: +2 to one ability and +1 to a different ability
+  // - block 1: +1 to three different abilities
+  if (usesTashasLineageAsi) {
+    const allAbilities = [...ABILITY_NAMES] as AbilityName[];
+    if (lineageAsiBlockIndex === 1) {
+      choices.push({
+        count: 3,
+        amount: 1,
+        from: allAbilities,
+        source: 'race',
+      });
+    } else {
+      choices.push({
+        count: 1,
+        amount: 2,
+        from: allAbilities,
+        source: 'race',
+      });
+      choices.push({
+        count: 1,
+        amount: 1,
+        from: allAbilities,
+        source: 'race',
+      });
+    }
+  }
 
   return { fixed, choices };
 }

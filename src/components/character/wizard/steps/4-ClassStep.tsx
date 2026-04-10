@@ -1,3 +1,4 @@
+import { buildSuppressedKeys } from '@/lib/5etools/reprints';
 import { cn } from '@/lib/utils';
 import type { Class5e } from '@/types/5etools';
 import type { StepProps } from '../types';
@@ -7,17 +8,25 @@ interface ClassStepProps extends StepProps {
 }
 
 export function ClassStep({ data, onChange, classes }: ClassStepProps) {
-  const filteredClasses =
-    data.allowedSources && data.allowedSources.length > 0
-      ? classes.filter((cls) => data.allowedSources.includes(cls.source))
+  const allowedSources = data.allowedSources ?? [];
+  const sourceFilteredClasses =
+    allowedSources.length > 0
+      ? classes.filter((cls) => allowedSources.includes(cls.source))
       : classes;
+  const suppressedClassKeys =
+    data.variantRules?.preferNewerPrintings && allowedSources.length > 0
+      ? buildSuppressedKeys(sourceFilteredClasses, new Set(allowedSources))
+      : undefined;
+  const filteredClasses = sourceFilteredClasses.filter(
+    (cls) => !suppressedClassKeys?.has(`${cls.name}|${cls.source}`),
+  );
 
   return (
     <div className="flex flex-col h-full gap-4">
       <div className="shrink-0 pb-3 border-b border-border">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold">Choose Your Class</h3>
-          {data.allowedSources && data.allowedSources.length > 0 && (
+          {allowedSources.length > 0 && (
             <span className="ml-auto text-xs text-muted-foreground">
               {filteredClasses.length} available
             </span>
@@ -32,7 +41,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
         <div className="grid grid-cols-2 gap-4 pb-1">
           {filteredClasses.length === 0 ? (
             <div className="col-span-2 text-center py-8 text-muted-foreground">
-              {data.allowedSources && data.allowedSources.length > 0
+              {allowedSources.length > 0
                 ? 'No classes available from selected sources. Try selecting more source books in the Rules step.'
                 : 'No classes available. Please load game data in Settings.'}
             </div>
