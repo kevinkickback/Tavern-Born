@@ -6,9 +6,9 @@
  * Keep entries sorted alphabetically by key for easy scanning.
  */
 export interface SourceFallback {
-  name: string;
-  group: string;
-  published?: string;
+  name: string
+  group: string
+  published?: string
 }
 
 export const SOURCE_FALLBACKS: Record<string, SourceFallback> = {
@@ -57,4 +57,4 @@ export const SOURCE_FALLBACKS: Record<string, SourceFallback> = {
     group: 'supplement',
     published: '2014-09-09',
   },
-};
+}

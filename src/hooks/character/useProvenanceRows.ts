@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react'
 import {
   getAbilityBonusRows,
   getAllProficiencyRows,
@@ -6,18 +6,15 @@ import {
   getFeatRows,
   getFeatureRows,
   getSpellRows,
-} from '@/lib/provenance';
-import { getSourcesRowsBySectionId } from '@/lib/provenance/sectionRows';
-import type { ProvenanceLedger, SourceRow } from '@/lib/provenance/types';
-import {
-  getCollapseState,
-  setCollapseState,
-} from '@/lib/storage/collapseState';
+} from '@/lib/provenance'
+import { getSourcesRowsBySectionId } from '@/lib/provenance/sectionRows'
+import type { ProvenanceLedger, SourceRow } from '@/lib/provenance/types'
+import { getCollapseState, setCollapseState } from '@/lib/storage/collapseState'
 
 interface UseProvenanceRowsParams {
-  ledger: ProvenanceLedger;
-  raceAsiChoices?: string[][];
-  backgroundAsiChoices?: string[];
+  ledger: ProvenanceLedger
+  raceAsiChoices?: string[][]
+  backgroundAsiChoices?: string[]
 }
 
 export function useProvenanceRows({
@@ -25,23 +22,16 @@ export function useProvenanceRows({
   raceAsiChoices,
   backgroundAsiChoices,
 }: UseProvenanceRowsParams) {
-  const proficiencyRows = useMemo(
-    () => getAllProficiencyRows(ledger),
-    [ledger],
-  );
+  const proficiencyRows = useMemo(() => getAllProficiencyRows(ledger), [ledger])
   const abilityBonusRows = useMemo(
     () =>
-      getAbilityBonusRows(
-        ledger,
-        raceAsiChoices ?? undefined,
-        backgroundAsiChoices ?? undefined,
-      ),
+      getAbilityBonusRows(ledger, raceAsiChoices ?? undefined, backgroundAsiChoices ?? undefined),
     [ledger, raceAsiChoices, backgroundAsiChoices],
-  );
-  const featRows = useMemo(() => getFeatRows(ledger), [ledger]);
-  const featureRows = useMemo(() => getFeatureRows(ledger), [ledger]);
-  const spellRows = useMemo(() => getSpellRows(ledger), [ledger]);
-  const equipmentRows = useMemo(() => getEquipmentRows(ledger), [ledger]);
+  )
+  const featRows = useMemo(() => getFeatRows(ledger), [ledger])
+  const featureRows = useMemo(() => getFeatureRows(ledger), [ledger])
+  const spellRows = useMemo(() => getSpellRows(ledger), [ledger])
+  const equipmentRows = useMemo(() => getEquipmentRows(ledger), [ledger])
 
   const getSourcesRowsBySection = useCallback(
     (sectionId: string): SourceRow[] =>
@@ -54,28 +44,17 @@ export function useProvenanceRows({
         spellRows,
         equipmentRows,
       }),
-    [
-      proficiencyRows,
-      abilityBonusRows,
-      featRows,
-      featureRows,
-      spellRows,
-      equipmentRows,
-    ],
-  );
+    [proficiencyRows, abilityBonusRows, featRows, featureRows, spellRows, equipmentRows],
+  )
 
   const getCollapsedState = useCallback(
-    (sectionId: string, defaultCollapsed = true) =>
-      getCollapseState(sectionId, defaultCollapsed),
+    (sectionId: string, defaultCollapsed = true) => getCollapseState(sectionId, defaultCollapsed),
     [],
-  );
+  )
 
-  const persistCollapsedState = useCallback(
-    (sectionId: string, collapsed: boolean) => {
-      setCollapseState(sectionId, collapsed);
-    },
-    [],
-  );
+  const persistCollapsedState = useCallback((sectionId: string, collapsed: boolean) => {
+    setCollapseState(sectionId, collapsed)
+  }, [])
 
   return {
     proficiencyRows,
@@ -87,5 +66,5 @@ export function useProvenanceRows({
     getSourcesRowsBySection,
     getCollapsedState,
     persistCollapsedState,
-  };
+  }
 }

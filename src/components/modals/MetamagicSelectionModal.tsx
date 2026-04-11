@@ -1,41 +1,31 @@
-import { memo } from 'react';
-import { SelectionModal } from '@/components/modals/SelectionModal';
-import { Badge } from '@/components/ui/badge';
-import type { OptionalFeatureLike } from '@/lib/5etools/classData';
-import { renderEntryCached } from '@/lib/entryRenderCache';
-import { cn } from '@/lib/utils';
+import { memo } from 'react'
+import { SelectionModal } from '@/components/modals/SelectionModal'
+import { Badge } from '@/components/ui/badge'
+import type { OptionalFeatureLike } from '@/lib/5etools/classData'
+import { renderEntryCached } from '@/lib/entryRenderCache'
+import { cn } from '@/lib/utils'
 
 interface MetamagicCardProps {
-  metamagic: OptionalFeatureLike;
-  isSelected: boolean;
+  metamagic: OptionalFeatureLike
+  isSelected: boolean
 }
 
-const MetamagicCard = memo(function MetamagicCard({
-  metamagic,
-  isSelected,
-}: MetamagicCardProps) {
-  const firstEntry = metamagic.entries?.[0];
-  const descHtml = firstEntry ? renderEntryCached(firstEntry) : '';
+const MetamagicCard = memo(function MetamagicCard({ metamagic, isSelected }: MetamagicCardProps) {
+  const firstEntry = metamagic.entries?.[0]
+  const descHtml = firstEntry ? renderEntryCached(firstEntry) : ''
 
   return (
     <div className="p-3.5">
       <div className="flex items-start justify-between gap-2 mb-1.5">
-        <span className={cn('font-semibold text-sm leading-tight')}>
-          {metamagic.name}
-        </span>
+        <span className={cn('font-semibold text-sm leading-tight')}>{metamagic.name}</span>
         <div className="flex gap-1 flex-shrink-0">
           {metamagic.source && (
-            <Badge
-              variant="outline"
-              className="text-xs px-1.5 py-0 h-5 text-muted-foreground"
-            >
+            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 text-muted-foreground">
               {metamagic.source}
             </Badge>
           )}
           {isSelected && (
-            <Badge className="text-xs px-1.5 py-0 h-5 bg-accent text-accent-foreground">
-              ✓
-            </Badge>
+            <Badge className="text-xs px-1.5 py-0 h-5 bg-accent text-accent-foreground">✓</Badge>
           )}
         </div>
       </div>
@@ -49,17 +39,17 @@ const MetamagicCard = memo(function MetamagicCard({
         />
       )}
     </div>
-  );
-});
+  )
+})
 
 export interface MetamagicSelectionModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title?: string;
-  metamagics: OptionalFeatureLike[];
-  selectedNames?: string[];
-  maxSelections?: number;
-  onConfirm: (metamagics: OptionalFeatureLike[]) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title?: string
+  metamagics: OptionalFeatureLike[]
+  selectedNames?: string[]
+  maxSelections?: number
+  onConfirm: (metamagics: OptionalFeatureLike[]) => void
 }
 
 export function MetamagicSelectionModal({
@@ -79,17 +69,14 @@ export function MetamagicSelectionModal({
       items={metamagics}
       getItemId={(m) => `${m.name}|${m.source ?? ''}`}
       initialSelectedIds={selectedNames.map((n) => {
-        const item = metamagics.find((m) => m.name === n);
-        return `${item?.name}|${item?.source ?? ''}`;
+        const item = metamagics.find((m) => m.name === n)
+        return `${item?.name}|${item?.source ?? ''}`
       })}
       matchItem={(item, search) => {
-        if (search && !item.name.toLowerCase().includes(search.toLowerCase()))
-          return false;
-        return true;
+        if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false
+        return true
       }}
-      renderCard={(item, isSelected) => (
-        <MetamagicCard metamagic={item} isSelected={isSelected} />
-      )}
+      renderCard={(item, isSelected) => <MetamagicCard metamagic={item} isSelected={isSelected} />}
       categories={
         maxSelections !== Number.POSITIVE_INFINITY
           ? [
@@ -103,8 +90,8 @@ export function MetamagicSelectionModal({
           : []
       }
       onConfirm={(_ids, items) => {
-        onConfirm(items);
+        onConfirm(items)
       }}
     />
-  );
+  )
 }

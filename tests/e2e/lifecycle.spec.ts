@@ -1,19 +1,14 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { expect, test } from '@playwright/test';
-import {
-  ensureStartupPromptResolved,
-  selectCharacterFromHome,
-} from './helpers/startup';
+import fs from 'node:fs'
+import path from 'node:path'
+import { expect, test } from '@playwright/test'
+import { ensureStartupPromptResolved, selectCharacterFromHome } from './helpers/startup'
 
-test('import -> edit portrait -> save -> reload persists character changes', async ({
-  page,
-}) => {
-  const fixturePath = path.resolve('tests/fixtures/equipment-e2e.dndchar');
+test('import -> edit portrait -> save -> reload persists character changes', async ({ page }) => {
+  const fixturePath = path.resolve('tests/fixtures/equipment-e2e.dndchar')
   const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf-8')) as {
-    id: string;
-    name: string;
-  };
+    id: string
+    name: string
+  }
 
   const baseCharacter = {
     id: 'lifecycle-seed-1',
@@ -101,35 +96,35 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
     },
     createdAt: '2026-01-01T00:00:00.000Z',
     lastModified: '2026-01-01T00:00:00.000Z',
-  };
+  }
 
-  await page.goto('/');
-  await ensureStartupPromptResolved(page, 'e2e-lifecycle-seed');
+  await page.goto('/')
+  await ensureStartupPromptResolved(page, 'e2e-lifecycle-seed')
 
   await page.evaluate(
     async ({ characterSeed, cacheSeed }) => {
       await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('keyval-store');
-        request.onerror = () => reject(request.error);
+        const request = indexedDB.open('keyval-store')
+        request.onerror = () => reject(request.error)
         request.onupgradeneeded = () => {
-          const db = request.result;
+          const db = request.result
           if (!db.objectStoreNames.contains('keyval')) {
-            db.createObjectStore('keyval');
+            db.createObjectStore('keyval')
           }
-        };
+        }
         request.onsuccess = () => {
-          const db = request.result;
-          const tx = db.transaction('keyval', 'readwrite');
-          const store = tx.objectStore('keyval');
-          store.put(characterSeed, 'character-storage');
-          store.put(cacheSeed, 'tb:game-data-cache');
+          const db = request.result
+          const tx = db.transaction('keyval', 'readwrite')
+          const store = tx.objectStore('keyval')
+          store.put(characterSeed, 'character-storage')
+          store.put(cacheSeed, 'tb:game-data-cache')
           tx.oncomplete = () => {
-            db.close();
-            resolve();
-          };
-          tx.onerror = () => reject(tx.error);
-        };
-      });
+            db.close()
+            resolve()
+          }
+          tx.onerror = () => reject(tx.error)
+        }
+      })
     },
     {
       characterSeed: {
@@ -164,78 +159,78 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
         sourceSnapshot: { type: 'remote', path: 'e2e-lifecycle-seed' },
       },
     },
-  );
+  )
 
-  await page.reload();
-  await ensureStartupPromptResolved(page, 'e2e-lifecycle-seed');
+  await page.reload()
+  await ensureStartupPromptResolved(page, 'e2e-lifecycle-seed')
 
-  const fileChooserPromise = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Import Character' }).click();
-  const fileChooser = await fileChooserPromise;
-  await fileChooser.setFiles(fixturePath);
+  const fileChooserPromise = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: 'Import Character' }).click()
+  const fileChooser = await fileChooserPromise
+  await fileChooser.setFiles(fixturePath)
 
-  await expect(page.getByText(fixture.name).first()).toBeVisible();
-  await selectCharacterFromHome(page, fixture.name);
-  await page.getByRole('button', { name: 'Details' }).click();
-  await page.getByRole('link', { name: 'Portrait' }).click();
-  await expect(page).toHaveURL(/\/details\/portrait$/);
+  await expect(page.getByText(fixture.name).first()).toBeVisible()
+  await selectCharacterFromHome(page, fixture.name)
+  await page.getByRole('button', { name: 'Details' }).click()
+  await page.getByRole('link', { name: 'Portrait' }).click()
+  await expect(page).toHaveURL(/\/details\/portrait$/)
 
   const placeholderButton = page
     .locator('button', {
       has: page.locator('img[alt="Placeholder 1"]'),
     })
-    .first();
-  await placeholderButton.click();
+    .first()
+  await placeholderButton.click()
 
-  const saveButton = page.getByRole('button', { name: 'Save' });
-  await expect(saveButton).toBeEnabled();
-  await saveButton.click();
+  const saveButton = page.getByRole('button', { name: 'Save' })
+  await expect(saveButton).toBeEnabled()
+  await saveButton.click()
 
   // Ensure persisted storage has the updated portrait before a full reload.
   await page.waitForFunction(
     async ({ characterId }) => {
       return await new Promise<boolean>((resolve, reject) => {
-        const request = indexedDB.open('keyval-store');
-        request.onerror = () => reject(request.error);
+        const request = indexedDB.open('keyval-store')
+        request.onerror = () => reject(request.error)
         request.onsuccess = () => {
-          const db = request.result;
-          const tx = db.transaction('keyval', 'readonly');
-          const store = tx.objectStore('keyval');
-          const read = store.get('character-storage');
-          read.onerror = () => reject(read.error);
+          const db = request.result
+          const tx = db.transaction('keyval', 'readonly')
+          const store = tx.objectStore('keyval')
+          const read = store.get('character-storage')
+          read.onerror = () => reject(read.error)
           read.onsuccess = () => {
             const payload = read.result as
               | {
                   state?: {
-                    characters?: Array<{ id?: string; portrait?: string }>;
-                  };
+                    characters?: Array<{ id?: string; portrait?: string }>
+                  }
                 }
-              | undefined;
+              | undefined
             const persisted = payload?.state?.characters?.find(
               (character) => character.id === characterId,
-            );
+            )
             resolve(
               typeof persisted?.portrait === 'string' &&
                 persisted.portrait.includes('placeholder_char_card'),
-            );
-            db.close();
-          };
-        };
-      });
+            )
+            db.close()
+          }
+        }
+      })
     },
     { characterId: fixture.id },
     { timeout: 10000 },
-  );
+  )
 
-  await page.reload();
-  await ensureStartupPromptResolved(page, 'e2e-lifecycle-seed');
+  await page.reload()
+  await ensureStartupPromptResolved(page, 'e2e-lifecycle-seed')
 
-  await page.getByRole('link', { name: 'Home' }).click();
-  await expect(page).toHaveURL(/\/$/);
-  await selectCharacterFromHome(page, fixture.name);
-  await page.getByRole('button', { name: 'Details' }).click();
-  await page.getByRole('link', { name: 'Portrait' }).click();
-  await expect(page).toHaveURL(/\/details\/portrait$/);
+  await page.getByRole('link', { name: 'Home' }).click()
+  await expect(page).toHaveURL(/\/$/)
+  await selectCharacterFromHome(page, fixture.name)
+  await page.getByRole('button', { name: 'Details' }).click()
+  await page.getByRole('link', { name: 'Portrait' }).click()
+  await expect(page).toHaveURL(/\/details\/portrait$/)
 
-  await expect(page.getByRole('button', { name: 'Clear' })).toBeEnabled();
-});
+  await expect(page.getByRole('button', { name: 'Clear' })).toBeEnabled()
+})

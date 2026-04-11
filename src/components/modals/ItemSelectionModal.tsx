@@ -1,29 +1,23 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo } from 'react'
 import {
   type ActiveFilters,
   type FilterSection,
   SelectionModal,
-} from '@/components/modals/SelectionModal';
-import { Badge } from '@/components/ui/badge';
-import { renderEntryCached } from '@/lib/entryRenderCache';
-import { cn } from '@/lib/utils';
-import type { Item5e } from '@/types/5etools';
+} from '@/components/modals/SelectionModal'
+import { Badge } from '@/components/ui/badge'
+import { renderEntryCached } from '@/lib/entryRenderCache'
+import { cn } from '@/lib/utils'
+import type { Item5e } from '@/types/5etools'
 
 export interface ItemSelectionModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title?: string;
-  items: Item5e[];
-  onConfirm: (items: Item5e[]) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title?: string
+  items: Item5e[]
+  onConfirm: (items: Item5e[]) => void
 }
 
-type ItemCategory =
-  | 'weapons'
-  | 'armor'
-  | 'ammunition'
-  | 'adventuring-gear'
-  | 'potions'
-  | 'scrolls';
+type ItemCategory = 'weapons' | 'armor' | 'ammunition' | 'adventuring-gear' | 'potions' | 'scrolls'
 
 const TYPE_OPTIONS: Array<{ value: ItemCategory; label: string }> = [
   { value: 'weapons', label: 'Weapons' },
@@ -32,7 +26,7 @@ const TYPE_OPTIONS: Array<{ value: ItemCategory; label: string }> = [
   { value: 'adventuring-gear', label: 'Adventuring Gear' },
   { value: 'potions', label: 'Potions' },
   { value: 'scrolls', label: 'Scrolls' },
-];
+]
 
 const RARITY_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'common', label: 'Common' },
@@ -41,13 +35,13 @@ const RARITY_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'very rare', label: 'Very Rare' },
   { value: 'legendary', label: 'Legendary' },
   { value: 'artifact', label: 'Artifact' },
-];
+]
 
 const PROPERTY_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'magic', label: 'Magic' },
   { value: 'consumable', label: 'Consumable' },
   { value: 'cursed', label: 'Cursed' },
-];
+]
 
 const ITEM_PROPERTY_LABELS: Record<string, string> = {
   A: 'Ammunition',
@@ -61,7 +55,7 @@ const ITEM_PROPERTY_LABELS: Record<string, string> = {
   T: 'Thrown',
   '2H': 'Two-Handed',
   V: 'Versatile',
-};
+}
 
 function toPlainText(html: string): string {
   return html
@@ -71,65 +65,63 @@ function toPlainText(html: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
 }
 
 function getItemDescription(item: Item5e): string {
-  const entries = Array.isArray(item.entries) ? item.entries : [];
-  if (entries.length === 0) return '';
+  const entries = Array.isArray(item.entries) ? item.entries : []
+  if (entries.length === 0) return ''
 
-  const rendered = renderEntryCached(entries[0]);
-  const plain = toPlainText(rendered);
-  return plain.length > 180 ? `${plain.slice(0, 177)}...` : plain;
+  const rendered = renderEntryCached(entries[0])
+  const plain = toPlainText(rendered)
+  return plain.length > 180 ? `${plain.slice(0, 177)}...` : plain
 }
 
 function getPropertyLabel(tag: string): string {
-  const key = tag.trim().toUpperCase();
-  return ITEM_PROPERTY_LABELS[key] ?? tag;
+  const key = tag.trim().toUpperCase()
+  return ITEM_PROPERTY_LABELS[key] ?? tag
 }
 
 function getItemTypeCodes(item: Item5e): string[] {
-  const type = item.type;
+  const type = item.type
   if (Array.isArray(type)) {
-    return type.map((t) => String(t).split('|')[0].toUpperCase());
+    return type.map((t) => String(t).split('|')[0].toUpperCase())
   }
   return [
     String(type ?? '')
       .split('|')[0]
       .toUpperCase(),
-  ].filter(Boolean);
+  ].filter(Boolean)
 }
 
 function getItemCategories(item: Item5e): Set<ItemCategory> {
-  const categories = new Set<ItemCategory>();
-  const typeCodes = getItemTypeCodes(item);
+  const categories = new Set<ItemCategory>()
+  const typeCodes = getItemTypeCodes(item)
 
   const isWeapon =
     Boolean(item.weaponCategory) ||
     Boolean((item as { weapon?: unknown }).weapon) ||
-    typeCodes.some((code) => code === 'M' || code === 'R');
+    typeCodes.some((code) => code === 'M' || code === 'R')
 
-  if (isWeapon) categories.add('weapons');
+  if (isWeapon) categories.add('weapons')
 
   if (
     Boolean((item as { armor?: unknown }).armor) ||
-    typeCodes.some(
-      (code) => code === 'LA' || code === 'MA' || code === 'HA' || code === 'S',
-    )
+    typeCodes.some((code) => code === 'LA' || code === 'MA' || code === 'HA' || code === 'S')
   ) {
-    categories.add('armor');
+    categories.add('armor')
   }
 
-  if (typeCodes.includes('A')) categories.add('ammunition');
-  if (typeCodes.includes('G')) categories.add('adventuring-gear');
-  if (typeCodes.includes('P')) categories.add('potions');
-  if (typeCodes.includes('SC')) categories.add('scrolls');
+  if (typeCodes.includes('A')) categories.add('ammunition')
+  if (typeCodes.includes('G')) categories.add('adventuring-gear')
+  if (typeCodes.includes('P')) categories.add('potions')
+  if (typeCodes.includes('SC')) categories.add('scrolls')
 
-  return categories;
+  return categories
 }
 
 function getPrimaryCategoryLabel(item: Item5e): string {
-  const categories = getItemCategories(item);
+  const categories = getItemCategories(item)
   const ordered: ItemCategory[] = [
     'weapons',
     'armor',
@@ -137,86 +129,74 @@ function getPrimaryCategoryLabel(item: Item5e): string {
     'adventuring-gear',
     'potions',
     'scrolls',
-  ];
+  ]
 
-  const primary = ordered.find((category) => categories.has(category));
-  return (
-    TYPE_OPTIONS.find((option) => option.value === primary)?.label ?? 'Item'
-  );
+  const primary = ordered.find((category) => categories.has(category))
+  return TYPE_OPTIONS.find((option) => option.value === primary)?.label ?? 'Item'
 }
 
-function matchItem(
-  item: Item5e,
-  search: string,
-  activeFilters: ActiveFilters,
-): boolean {
+function matchItem(item: Item5e, search: string, activeFilters: ActiveFilters): boolean {
   if (search && !item.name.toLowerCase().includes(search.toLowerCase())) {
-    return false;
+    return false
   }
 
-  const categories = getItemCategories(item);
+  const categories = getItemCategories(item)
   if (categories.size === 0) {
-    return false;
+    return false
   }
 
-  const typeSet = activeFilters.type;
+  const typeSet = activeFilters.type
   if (typeSet && typeSet.size > 0) {
-    const hasTypeMatch = Array.from(typeSet).some((type) =>
-      categories.has(type as ItemCategory),
-    );
+    const hasTypeMatch = Array.from(typeSet).some((type) => categories.has(type as ItemCategory))
     if (!hasTypeMatch) {
-      return false;
+      return false
     }
   }
 
-  const rarity = (item.rarity ?? '').toLowerCase();
+  const rarity = (item.rarity ?? '').toLowerCase()
   if (!rarity || !RARITY_OPTIONS.some((option) => option.value === rarity)) {
     if (activeFilters.rarity?.size) {
-      return false;
+      return false
     }
   }
 
-  const raritySet = activeFilters.rarity;
+  const raritySet = activeFilters.rarity
   if (raritySet && raritySet.size > 0 && !raritySet.has(rarity)) {
-    return false;
+    return false
   }
 
-  const propertySet = activeFilters.property;
+  const propertySet = activeFilters.property
   if (propertySet && propertySet.size > 0) {
-    const typeCodes = getItemTypeCodes(item);
+    const typeCodes = getItemTypeCodes(item)
     const hasAnyMatch = Array.from(propertySet).some((property) => {
       if (property === 'magic') {
-        return Boolean(item.rarity && item.rarity.toLowerCase() !== 'none');
+        return Boolean(item.rarity && item.rarity.toLowerCase() !== 'none')
       }
       if (property === 'consumable') {
-        return (
-          typeCodes.includes('P') ||
-          typeCodes.includes('SC') ||
-          typeCodes.includes('$')
-        );
+        return typeCodes.includes('P') || typeCodes.includes('SC') || typeCodes.includes('$')
       }
       if (property === 'cursed') {
-        return Boolean((item as { curse?: unknown }).curse);
+        return Boolean((item as { curse?: unknown }).curse)
       }
-      return false;
-    });
+      return false
+    })
 
     if (!hasAnyMatch) {
-      return false;
+      return false
     }
   }
 
-  return true;
+  return true
 }
 
 interface ItemCardProps {
-  item: Item5e;
-  isSelected: boolean;
+  item: Item5e
+  isSelected: boolean
 }
 
 const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
-  const properties = item.property ?? [];
-  const description = getItemDescription(item);
+  const properties = item.property ?? []
+  const description = getItemDescription(item)
 
   return (
     <div className="p-3.5">
@@ -224,9 +204,7 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
         <span className="font-semibold text-sm leading-tight">{item.name}</span>
         <div className="flex gap-1 flex-wrap flex-shrink-0">
           {isSelected && (
-            <Badge className="text-xs px-1.5 py-0 h-5 bg-accent text-accent-foreground">
-              ✓
-            </Badge>
+            <Badge className="text-xs px-1.5 py-0 h-5 bg-accent text-accent-foreground">✓</Badge>
           )}
         </div>
       </div>
@@ -264,8 +242,8 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
         </p>
       )}
     </div>
-  );
-});
+  )
+})
 
 export function ItemSelectionModal({
   open,
@@ -277,7 +255,7 @@ export function ItemSelectionModal({
   const filteredItems = useMemo(
     () => items.filter((item) => getItemCategories(item).size > 0),
     [items],
-  );
+  )
 
   const filterSections: FilterSection[] = [
     {
@@ -301,7 +279,7 @@ export function ItemSelectionModal({
       columns: 1,
       options: PROPERTY_OPTIONS,
     },
-  ];
+  ]
 
   return (
     <SelectionModal<Item5e>
@@ -310,14 +288,10 @@ export function ItemSelectionModal({
       title={title}
       items={filteredItems}
       getItemId={(item) => `${item.name}|${item.source ?? ''}`}
-      renderCard={(item, isSelected) => (
-        <ItemCard item={item} isSelected={isSelected} />
-      )}
-      matchItem={(item, search, activeFilters) =>
-        matchItem(item, search, activeFilters)
-      }
+      renderCard={(item, isSelected) => <ItemCard item={item} isSelected={isSelected} />}
+      matchItem={(item, search, activeFilters) => matchItem(item, search, activeFilters)}
       filterSections={filterSections}
       onConfirm={(_ids, selectedItems) => onConfirm(selectedItems)}
     />
-  );
+  )
 }

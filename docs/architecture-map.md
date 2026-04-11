@@ -22,7 +22,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 5. Domain logic
 - Purpose: pure calculations and game rules.
-- Key files: src/lib/characterUtils.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/armorClass.ts.
+- Key files: src/lib/characterUtils.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
 
 6. Provenance system
 - Purpose: track source of grants and reconcile when race/class/features change.

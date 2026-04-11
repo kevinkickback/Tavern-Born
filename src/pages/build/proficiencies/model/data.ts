@@ -1,117 +1,104 @@
-import { normalizeGenericToolChoice, normalizeKey } from '@/lib/provenance';
-import type { ChoiceRecord } from '@/lib/provenance/types';
+import { normalizeGenericToolChoice, normalizeKey } from '@/lib/provenance'
+import type { ChoiceRecord } from '@/lib/provenance/types'
 
-type ToolGenericKind =
-  | 'musical instrument'
-  | "artisan's tools"
-  | 'gaming set'
-  | 'tool';
+type ToolGenericKind = 'musical instrument' | "artisan's tools" | 'gaming set' | 'tool'
 
 export type ToolChoiceSlot = {
-  id: string;
-  choiceId: string;
-  label: string;
-  sourceName: string;
-  options: string[];
-};
-
-interface BuildToolSubtypeParams {
-  itemsBase?: unknown[];
-  items?: unknown[];
-  allowedSources?: string[];
+  id: string
+  choiceId: string
+  label: string
+  sourceName: string
+  options: string[]
 }
 
-export function normalizeGenericToolKind(
-  value: string,
-): ToolGenericKind | null {
-  const generic = normalizeGenericToolChoice(value);
-  if (generic) return generic as ToolGenericKind;
+interface BuildToolSubtypeParams {
+  itemsBase?: unknown[]
+  items?: unknown[]
+  allowedSources?: string[]
+}
 
-  const key = normalizeKey(value);
-  if (key === 'anytool' || key === 'tool') return 'tool';
+export function normalizeGenericToolKind(value: string): ToolGenericKind | null {
+  const generic = normalizeGenericToolChoice(value)
+  if (generic) return generic as ToolGenericKind
 
-  return null;
+  const key = normalizeKey(value)
+  if (key === 'anytool' || key === 'tool') return 'tool'
+
+  return null
 }
 
 function getItemTypePrefix(type: unknown): string {
-  if (typeof type !== 'string') return '';
-  return type.split('|')[0] ?? '';
+  if (typeof type !== 'string') return ''
+  return type.split('|')[0] ?? ''
 }
 
 function addUniqueByNorm(list: string[], value: unknown): string[] {
-  if (typeof value !== 'string' || !value.trim()) return list;
-  const exists = list.some((v) => normalizeKey(v) === normalizeKey(value));
-  if (exists) return list;
-  return [...list, value];
+  if (typeof value !== 'string' || !value.trim()) return list
+  const exists = list.some((v) => normalizeKey(v) === normalizeKey(value))
+  if (exists) return list
+  return [...list, value]
 }
 
 export function hasProfInArray(arr: string[], name: string): boolean {
   const toVariants = (value: string): string[] => {
-    const key = normalizeKey(value);
-    const variants = new Set<string>([key]);
+    const key = normalizeKey(value)
+    const variants = new Set<string>([key])
     if (key.endsWith('ies') && key.length > 3) {
-      variants.add(`${key.slice(0, -3)}y`);
+      variants.add(`${key.slice(0, -3)}y`)
     }
     if (key.endsWith('es') && key.length > 2) {
-      variants.add(key.slice(0, -2));
+      variants.add(key.slice(0, -2))
     }
     if (key.endsWith('s') && key.length > 1) {
-      variants.add(key.slice(0, -1));
+      variants.add(key.slice(0, -1))
     }
-    variants.add(`${key}s`);
-    variants.add(`${key}es`);
-    return Array.from(variants);
-  };
-
-  const target = new Set(toVariants(name));
-  return arr.some((value) =>
-    toVariants(value).some((variant) => target.has(variant)),
-  );
-}
-
-export function buildSkillDescriptions(
-  rawSkills: unknown,
-): Record<string, unknown[]> {
-  const map: Record<string, unknown[]> = {};
-
-  const addSkill = (value: unknown) => {
-    if (!value || typeof value !== 'object') return;
-    const maybeSkill = value as { name?: unknown; entries?: unknown };
-    if (typeof maybeSkill.name !== 'string') return;
-    if (!Array.isArray(maybeSkill.entries)) return;
-    map[maybeSkill.name.toLowerCase()] = maybeSkill.entries;
-  };
-
-  if (Array.isArray(rawSkills)) {
-    for (const skill of rawSkills) addSkill(skill);
-  } else if (rawSkills && typeof rawSkills === 'object') {
-    for (const skill of Object.values(rawSkills)) addSkill(skill);
+    variants.add(`${key}s`)
+    variants.add(`${key}es`)
+    return Array.from(variants)
   }
 
-  return map;
+  const target = new Set(toVariants(name))
+  return arr.some((value) => toVariants(value).some((variant) => target.has(variant)))
+}
+
+export function buildSkillDescriptions(rawSkills: unknown): Record<string, unknown[]> {
+  const map: Record<string, unknown[]> = {}
+
+  const addSkill = (value: unknown) => {
+    if (!value || typeof value !== 'object') return
+    const maybeSkill = value as { name?: unknown; entries?: unknown }
+    if (typeof maybeSkill.name !== 'string') return
+    if (!Array.isArray(maybeSkill.entries)) return
+    map[maybeSkill.name.toLowerCase()] = maybeSkill.entries
+  }
+
+  if (Array.isArray(rawSkills)) {
+    for (const skill of rawSkills) addSkill(skill)
+  } else if (rawSkills && typeof rawSkills === 'object') {
+    for (const skill of Object.values(rawSkills)) addSkill(skill)
+  }
+
+  return map
 }
 
 export function buildChoiceCounts(
   choices: ChoiceRecord[],
 ): Record<'skills' | 'armor' | 'weapons' | 'tools' | 'languages', number> {
-  const counts: Record<
-    'skills' | 'armor' | 'weapons' | 'tools' | 'languages',
-    number
-  > = {
+  const counts: Record<'skills' | 'armor' | 'weapons' | 'tools' | 'languages', number> = {
     skills: 0,
     armor: 0,
     weapons: 0,
     tools: 0,
     languages: 0,
-  };
-
-  for (const choice of choices) {
-    if (!(choice.domain in counts)) continue;
-    const key = choice.domain as keyof typeof counts;
-    counts[key] += Math.max(0, choice.chooseCount - choice.selected.length);
   }
 
-  return counts;
+  for (const choice of choices) {
+    if (!(choice.domain in counts)) continue
+    const key = choice.domain as keyof typeof counts
+    counts[key] += Math.max(0, choice.chooseCount - choice.selected.length)
+  }
+
+  return counts
 }
 
 export function buildToolSubtypeOptionsByKind({
@@ -119,90 +106,83 @@ export function buildToolSubtypeOptionsByKind({
   items,
   allowedSources,
 }: BuildToolSubtypeParams): Record<ToolGenericKind, string[]> {
-  const fromBase = itemsBase ?? [];
-  const fromItems = items ?? [];
-  const allItems = [...fromBase, ...fromItems];
-  const usableSources = allowedSources ?? [];
-  const hasSourceFilter = usableSources.length > 0;
+  const fromBase = itemsBase ?? []
+  const fromItems = items ?? []
+  const allItems = [...fromBase, ...fromItems]
+  const usableSources = allowedSources ?? []
+  const hasSourceFilter = usableSources.length > 0
 
   const filterBySource = (sourceItems: unknown[]) =>
     sourceItems.filter((item) => {
-      const typedItem = item as { source?: string };
-      if (!hasSourceFilter) return true;
-      if (!typedItem?.source) return true;
-      return usableSources.includes(typedItem.source);
-    });
+      const typedItem = item as { source?: string }
+      if (!hasSourceFilter) return true
+      if (!typedItem?.source) return true
+      return usableSources.includes(typedItem.source)
+    })
 
-  const collectByType = (
-    sourceItems: unknown[],
-    typePrefix: string,
-  ): string[] => {
+  const collectByType = (sourceItems: unknown[], typePrefix: string): string[] => {
     const filtered = sourceItems.filter(
-      (item) =>
-        getItemTypePrefix((item as { type?: unknown })?.type) === typePrefix,
-    );
+      (item) => getItemTypePrefix((item as { type?: unknown })?.type) === typePrefix,
+    )
 
-    let out: string[] = [];
+    let out: string[] = []
     for (const item of filtered) {
-      out = addUniqueByNorm(out, (item as { name?: unknown })?.name);
+      out = addUniqueByNorm(out, (item as { name?: unknown })?.name)
     }
 
-    return out.sort((a, b) => a.localeCompare(b));
-  };
+    return out.sort((a, b) => a.localeCompare(b))
+  }
 
-  const scopedItems = filterBySource(allItems);
+  const scopedItems = filterBySource(allItems)
 
-  const scopedInstruments = collectByType(scopedItems, 'INS');
-  const scopedArtisans = collectByType(scopedItems, 'AT');
-  const scopedGaming = collectByType(scopedItems, 'GS');
+  const scopedInstruments = collectByType(scopedItems, 'INS')
+  const scopedArtisans = collectByType(scopedItems, 'AT')
+  const scopedGaming = collectByType(scopedItems, 'GS')
 
-  const allInstruments = collectByType(allItems, 'INS');
-  const allArtisans = collectByType(allItems, 'AT');
-  const allGaming = collectByType(allItems, 'GS');
+  const allInstruments = collectByType(allItems, 'INS')
+  const allArtisans = collectByType(allItems, 'AT')
+  const allGaming = collectByType(allItems, 'GS')
 
-  const fromScopedOrAll = (scoped: string[], all: string[]) =>
-    scoped.length > 0 ? scoped : all;
+  const fromScopedOrAll = (scoped: string[], all: string[]) => (scoped.length > 0 ? scoped : all)
 
-  const instruments = fromScopedOrAll(scopedInstruments, allInstruments);
-  const artisans = fromScopedOrAll(scopedArtisans, allArtisans);
-  const gaming = fromScopedOrAll(scopedGaming, allGaming);
+  const instruments = fromScopedOrAll(scopedInstruments, allInstruments)
+  const artisans = fromScopedOrAll(scopedArtisans, allArtisans)
+  const gaming = fromScopedOrAll(scopedGaming, allGaming)
 
-  const allTools = Array.from(
-    new Set([...instruments, ...artisans, ...gaming]),
-  ).sort((a, b) => a.localeCompare(b));
+  const allTools = Array.from(new Set([...instruments, ...artisans, ...gaming])).sort((a, b) =>
+    a.localeCompare(b),
+  )
 
   return {
     'musical instrument': instruments,
     "artisan's tools": artisans,
     'gaming set': gaming,
     tool: allTools,
-  };
+  }
 }
 
 /** Returns true when a tool choice slot should be rendered as individual selectable pills. */
 export function isArtisanToolSlot(slot: ToolChoiceSlot): boolean {
-  return slot.label === "artisan's tools";
+  return slot.label === "artisan's tools"
 }
 
 /**
  * Collects flat, sorted artisan tool option names from artisan slots.
  * Deduplicates by normalized key.
  */
-export function buildArtisanToolNamesFromSlots(
-  artisanSlots: ToolChoiceSlot[],
-): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
+export function buildArtisanToolNamesFromSlots(artisanSlots: ToolChoiceSlot[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
   for (const slot of artisanSlots) {
     for (const opt of slot.options) {
-      const norm = normalizeKey(opt);
+      const norm = normalizeKey(opt)
       if (!seen.has(norm)) {
-        seen.add(norm);
-        result.push(opt);
+        seen.add(norm)
+        result.push(opt)
       }
     }
   }
-  return result.sort((a, b) => a.localeCompare(b));
+  return result.sort((a, b) => a.localeCompare(b))
 }
 
 /**
@@ -213,70 +193,65 @@ export function buildOptionalToolNamesFromChoices(
   choices: ChoiceRecord[],
   toolSubtypeOptionsByKind: Record<ToolGenericKind, string[]>,
 ): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
+  const seen = new Set<string>()
+  const result: string[] = []
 
   const addName = (name: string) => {
-    const norm = normalizeKey(name);
-    if (!norm || seen.has(norm)) return;
-    seen.add(norm);
-    result.push(name);
-  };
+    const norm = normalizeKey(name)
+    if (!norm || seen.has(norm)) return
+    seen.add(norm)
+    result.push(name)
+  }
 
   for (const choice of choices) {
-    if (choice.domain !== 'tools') continue;
+    if (choice.domain !== 'tools') continue
     for (const token of choice.optionPool) {
-      const kind = normalizeGenericToolKind(token);
+      const kind = normalizeGenericToolKind(token)
       if (kind) {
         for (const name of toolSubtypeOptionsByKind[kind] ?? []) {
-          addName(name);
+          addName(name)
         }
       } else {
-        addName(token);
+        addName(token)
       }
     }
   }
 
-  return result.sort((a, b) => a.localeCompare(b));
+  return result.sort((a, b) => a.localeCompare(b))
 }
 
 /** Deduplicates strings by normalised key, preserving first occurrence order. */
 export function dedupeByNorm(items: string[]): string[] {
-  const seen = new Set<string>();
-  const result: string[] = [];
+  const seen = new Set<string>()
+  const result: string[] = []
   for (const item of items) {
-    const norm = normalizeKey(item);
-    if (!norm || seen.has(norm)) continue;
-    seen.add(norm);
-    result.push(item);
+    const norm = normalizeKey(item)
+    if (!norm || seen.has(norm)) continue
+    seen.add(norm)
+    result.push(item)
   }
-  return result;
+  return result
 }
 
 /**
  * Returns `true` when there is at least one unfilled tool choice whose option
  * pool contains the given generic kind.
  */
-export function hasUnresolvedChoiceForKind(
-  choices: ChoiceRecord[],
-  kind: string,
-): boolean {
+export function hasUnresolvedChoiceForKind(choices: ChoiceRecord[], kind: string): boolean {
   return choices.some(
     (choice) =>
       choice.domain === 'tools' &&
       choice.selected.length < choice.chooseCount &&
-      choice.optionPool.some(
-        (poolEntry) => normalizeGenericToolKind(poolEntry) === kind,
-      ),
-  );
+      choice.optionPool.some((poolEntry) => normalizeGenericToolKind(poolEntry) === kind),
+  )
 }
 
 interface BuildVisibleToolCandidatesParams {
-  availableTools: string[];
-  optionalToolNames: string[];
-  artisanToolNames: string[];
-  currentTools: string[];
-  selectedToolNames: string[];
+  availableTools: string[]
+  optionalToolNames: string[]
+  artisanToolNames: string[]
+  currentTools: string[]
+  selectedToolNames: string[]
 }
 
 /**
@@ -296,35 +271,33 @@ export function buildVisibleToolCandidates({
     ...artisanToolNames,
     ...currentTools,
     ...selectedToolNames,
-  ]).sort((a, b) => a.localeCompare(b));
+  ]).sort((a, b) => a.localeCompare(b))
 
   return toolCandidates.filter((toolName) => {
-    const genericKind = normalizeGenericToolKind(toolName);
-    if (!genericKind) return true;
+    const genericKind = normalizeGenericToolKind(toolName)
+    if (!genericKind) return true
     // Never render the abstract catch-all token as a pill.
-    if (genericKind === 'tool') return false;
+    if (genericKind === 'tool') return false
     // Keep only canonical generic labels (e.g. "gaming set"), not verbose placeholders.
-    return normalizeKey(toolName) === normalizeKey(genericKind);
-  });
+    return normalizeKey(toolName) === normalizeKey(genericKind)
+  })
 }
 
 /**
  * Builds a Map from normalised artisan tool name to the choiceId of the first
  * artisan slot that accepts it.
  */
-export function buildArtisanChoiceMap(
-  artisanSlots: ToolChoiceSlot[],
-): Map<string, string> {
-  const map = new Map<string, string>();
+export function buildArtisanChoiceMap(artisanSlots: ToolChoiceSlot[]): Map<string, string> {
+  const map = new Map<string, string>()
   for (const slot of artisanSlots) {
     for (const opt of slot.options) {
-      const norm = normalizeKey(opt);
+      const norm = normalizeKey(opt)
       if (!map.has(norm)) {
-        map.set(norm, slot.choiceId);
+        map.set(norm, slot.choiceId)
       }
     }
   }
-  return map;
+  return map
 }
 
 /**
@@ -334,17 +307,15 @@ export function buildArtisanChoiceMap(
 export function getSelectedToolNames(choices: ChoiceRecord[]): string[] {
   return Array.from(
     new Set(
-      choices
-        .filter((choice) => choice.domain === 'tools')
-        .flatMap((choice) => choice.selected),
+      choices.filter((choice) => choice.domain === 'tools').flatMap((choice) => choice.selected),
     ),
-  );
+  )
 }
 
 interface BuildToolChoiceSlotsParams {
-  choices: ChoiceRecord[];
-  selectedTools: string[];
-  toolSubtypeOptionsByKind: Record<ToolGenericKind, string[]>;
+  choices: ChoiceRecord[]
+  selectedTools: string[]
+  toolSubtypeOptionsByKind: Record<ToolGenericKind, string[]>
 }
 
 export function buildToolChoiceSlots({
@@ -352,13 +323,11 @@ export function buildToolChoiceSlots({
   selectedTools,
   toolSubtypeOptionsByKind,
 }: BuildToolChoiceSlotsParams): ToolChoiceSlot[] {
-  const selectedToolNorms = new Set(
-    selectedTools.map((name) => normalizeKey(name)),
-  );
-  const slots: ToolChoiceSlot[] = [];
+  const selectedToolNorms = new Set(selectedTools.map((name) => normalizeKey(name)))
+  const slots: ToolChoiceSlot[] = []
 
   for (const choice of choices) {
-    if (choice.domain !== 'tools') continue;
+    if (choice.domain !== 'tools') continue
 
     const kinds = Array.from(
       new Set(
@@ -366,19 +335,17 @@ export function buildToolChoiceSlots({
           .map((token) => normalizeGenericToolKind(token))
           .filter((kind): kind is ToolGenericKind => Boolean(kind)),
       ),
-    );
-    if (kinds.length === 0) continue;
-
-    const remaining = Math.max(0, choice.chooseCount - choice.selected.length);
-    if (remaining === 0) continue;
-
-    const pool = Array.from(
-      new Set(kinds.flatMap((kind) => toolSubtypeOptionsByKind[kind] ?? [])),
     )
-      .filter((name) => !selectedToolNorms.has(normalizeKey(name)))
-      .sort((a, b) => a.localeCompare(b));
+    if (kinds.length === 0) continue
 
-    const label = kinds.length === 1 ? kinds[0] : 'tool proficiency';
+    const remaining = Math.max(0, choice.chooseCount - choice.selected.length)
+    if (remaining === 0) continue
+
+    const pool = Array.from(new Set(kinds.flatMap((kind) => toolSubtypeOptionsByKind[kind] ?? [])))
+      .filter((name) => !selectedToolNorms.has(normalizeKey(name)))
+      .sort((a, b) => a.localeCompare(b))
+
+    const label = kinds.length === 1 ? kinds[0] : 'tool proficiency'
 
     for (let idx = 0; idx < remaining; idx++) {
       slots.push({
@@ -387,9 +354,9 @@ export function buildToolChoiceSlots({
         label,
         sourceName: choice.sourceTag.sourceName,
         options: pool,
-      });
+      })
     }
   }
 
-  return slots;
+  return slots
 }

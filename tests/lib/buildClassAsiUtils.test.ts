@@ -1,8 +1,5 @@
-import { describe, expect, test } from 'vitest';
-import {
-  applyClassAsiChoice,
-  resetClassAsiChoice,
-} from '@/pages/build/class/model/asi';
+import { describe, expect, test } from 'vitest'
+import { applyClassAsiChoice, resetClassAsiChoice } from '@/pages/build/class/model/asi'
 
 describe('buildClassAsiUtils', () => {
   test('applyClassAsiChoice applies a new ASI and appends choice', () => {
@@ -19,9 +16,9 @@ describe('buildClassAsiUtils', () => {
       className: 'Fighter',
       level: 4,
       abilityChanges: { strength: 2 },
-    });
+    })
 
-    expect(result.abilityScores.strength).toBe(12);
+    expect(result.abilityScores.strength).toBe(12)
     expect(result.asiChoices).toEqual([
       {
         id: 'asi-Fighter-4',
@@ -29,8 +26,8 @@ describe('buildClassAsiUtils', () => {
         level: 4,
         abilityChanges: { strength: 2 },
       },
-    ]);
-  });
+    ])
+  })
 
   test('applyClassAsiChoice replaces existing ASI at same class/level', () => {
     const result = applyClassAsiChoice({
@@ -53,13 +50,13 @@ describe('buildClassAsiUtils', () => {
       className: 'Fighter',
       level: 4,
       abilityChanges: { constitution: 2 },
-    });
+    })
 
-    expect(result.abilityScores.strength).toBe(10);
-    expect(result.abilityScores.constitution).toBe(12);
-    expect(result.asiChoices).toHaveLength(1);
-    expect(result.asiChoices[0]?.abilityChanges).toEqual({ constitution: 2 });
-  });
+    expect(result.abilityScores.strength).toBe(10)
+    expect(result.abilityScores.constitution).toBe(12)
+    expect(result.asiChoices).toHaveLength(1)
+    expect(result.asiChoices[0]?.abilityChanges).toEqual({ constitution: 2 })
+  })
 
   test('resetClassAsiChoice reverts scores and removes matching ASI', () => {
     const result = resetClassAsiChoice({
@@ -81,10 +78,10 @@ describe('buildClassAsiUtils', () => {
       ],
       className: 'Fighter',
       level: 4,
-    });
+    })
 
-    expect(result).not.toBeNull();
-    expect(result?.abilityScores.strength).toBe(10);
-    expect(result?.asiChoices).toEqual([]);
-  });
-});
+    expect(result).not.toBeNull()
+    expect(result?.abilityScores.strength).toBe(10)
+    expect(result?.asiChoices).toEqual([])
+  })
+})

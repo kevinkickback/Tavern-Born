@@ -1,5 +1,5 @@
-import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => ({
@@ -7,24 +7,24 @@ vi.mock('@/lib/storage/idb-storage', () => ({
     setItem: vi.fn(async () => undefined),
     removeItem: vi.fn(async () => undefined),
   }),
-}));
+}))
 
-import { useEquipment } from '@/hooks/character/useEquipment';
-import { useCharacterStore } from '@/store/characterStore';
-import { makeCharacterFixture } from '../fixtures/characterFixtures';
+import { useEquipment } from '@/hooks/character/useEquipment'
+import { useCharacterStore } from '@/store/characterStore'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 function resetCharacterStore() {
   useCharacterStore.setState({
     characters: [],
     activeCharacterId: null,
     activeCharacter: null,
-  });
+  })
 }
 
 describe('useEquipment hook', () => {
   beforeEach(() => {
-    resetCharacterStore();
-  });
+    resetCharacterStore()
+  })
 
   test('toggleEquip should sync armor class for equipped armor', () => {
     const character = makeCharacterFixture({
@@ -49,34 +49,30 @@ describe('useEquipment hook', () => {
           armorType: 'light',
         },
       ],
-    });
+    })
 
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-    });
+    })
 
-    const { result } = renderHook(() => useEquipment());
-
-    act(() => {
-      result.current.toggleEquip('armor-1');
-    });
-
-    expect(useCharacterStore.getState().activeCharacter?.armorClass).toBe(13);
-    expect(
-      useCharacterStore.getState().activeCharacter?.equipment[0]?.equipped,
-    ).toBe(true);
+    const { result } = renderHook(() => useEquipment())
 
     act(() => {
-      result.current.toggleEquip('armor-1');
-    });
+      result.current.toggleEquip('armor-1')
+    })
 
-    expect(useCharacterStore.getState().activeCharacter?.armorClass).toBe(12);
-    expect(
-      useCharacterStore.getState().activeCharacter?.equipment[0]?.equipped,
-    ).toBe(false);
-  });
+    expect(useCharacterStore.getState().activeCharacter?.armorClass).toBe(13)
+    expect(useCharacterStore.getState().activeCharacter?.equipment[0]?.equipped).toBe(true)
+
+    act(() => {
+      result.current.toggleEquip('armor-1')
+    })
+
+    expect(useCharacterStore.getState().activeCharacter?.armorClass).toBe(12)
+    expect(useCharacterStore.getState().activeCharacter?.equipment[0]?.equipped).toBe(false)
+  })
 
   test('toggleEquip should include shield bonus in synced armor class', () => {
     const character = makeCharacterFixture({
@@ -110,41 +106,41 @@ describe('useEquipment hook', () => {
           armorType: 'shield',
         },
       ],
-    });
+    })
 
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-    });
+    })
 
-    const { result } = renderHook(() => useEquipment());
+    const { result } = renderHook(() => useEquipment())
 
     act(() => {
-      result.current.toggleEquip('shield-1');
-    });
+      result.current.toggleEquip('shield-1')
+    })
 
-    expect(useCharacterStore.getState().activeCharacter?.armorClass).toBe(18);
-  });
+    expect(useCharacterStore.getState().activeCharacter?.armorClass).toBe(18)
+  })
 
   test('updateCurrency should persist denomination counters', () => {
     const character = makeCharacterFixture({
       id: 'equip-hook-currency',
       currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
-    });
+    })
 
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-    });
+    })
 
-    const { result } = renderHook(() => useEquipment());
+    const { result } = renderHook(() => useEquipment())
 
     act(() => {
-      result.current.updateCurrency('gp', 12);
-      result.current.updateCurrency('sp', 7);
-    });
+      result.current.updateCurrency('gp', 12)
+      result.current.updateCurrency('sp', 7)
+    })
 
     expect(useCharacterStore.getState().activeCharacter?.currency).toEqual({
       cp: 0,
@@ -152,6 +148,6 @@ describe('useEquipment hook', () => {
       ep: 0,
       gp: 12,
       pp: 0,
-    });
-  });
-});
+    })
+  })
+})

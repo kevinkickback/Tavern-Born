@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
-import { AppHeader } from './AppHeader';
-import { AppSidebar } from './AppSidebar';
+import type { ReactNode } from 'react'
+import { AppHeader } from './AppHeader'
+import { AppSidebar } from './AppSidebar'
 
 interface AppLayoutProps {
-  children: ReactNode;
+  children: ReactNode
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -15,5 +15,5 @@ export function AppLayout({ children }: AppLayoutProps) {
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
-  );
+  )
 }

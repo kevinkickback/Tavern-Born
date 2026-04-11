@@ -1,5 +1,5 @@
-import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { act, renderHook } from '@testing-library/react'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => ({
@@ -7,23 +7,23 @@ vi.mock('@/lib/storage/idb-storage', () => ({
     setItem: vi.fn(async () => undefined),
     removeItem: vi.fn(async () => undefined),
   }),
-}));
+}))
 
 vi.mock('@/hooks/data/useGameData', () => ({
   useClasses: () => [],
   useClassLookup: () => ({}),
-}));
+}))
 
-import { useSpellSlots } from '@/hooks/character/useSpellSlots';
-import { useCharacterStore } from '@/store/characterStore';
-import { makeCharacterFixture } from '../fixtures/characterFixtures';
+import { useSpellSlots } from '@/hooks/character/useSpellSlots'
+import { useCharacterStore } from '@/store/characterStore'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 function resetCharacterStore() {
   useCharacterStore.setState({
     characters: [],
     activeCharacterId: null,
     activeCharacter: null,
-  });
+  })
 }
 
 function makeWizardCharacter() {
@@ -58,13 +58,13 @@ function makeWizardCharacter() {
       ],
       spellSlots: makeCharacterFixture().spells.spellSlots,
     },
-  });
+  })
 }
 
 describe('useSpellSlots hook', () => {
   beforeEach(() => {
-    resetCharacterStore();
-  });
+    resetCharacterStore()
+  })
 
   test('add/remove known spells and prepared toggles mutate class profile', () => {
     const character = makeCharacterFixture({
@@ -108,86 +108,84 @@ describe('useSpellSlots hook', () => {
           level9: { max: 0, used: 0 },
         },
       },
-    });
+    })
 
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-    });
+    })
 
-    const { result } = renderHook(() => useSpellSlots());
+    const { result } = renderHook(() => useSpellSlots())
 
     act(() => {
-      result.current.addSpellKnown('Shield', 'class:Wizard|PHB');
-    });
+      result.current.addSpellKnown('Shield', 'class:Wizard|PHB')
+    })
     act(() => {
-      result.current.togglePrepared('class:Wizard|PHB', 'Shield');
-    });
+      result.current.togglePrepared('class:Wizard|PHB', 'Shield')
+    })
     act(() => {
-      result.current.removeSpellKnown('Magic Missile', 'class:Wizard|PHB');
-    });
+      result.current.removeSpellKnown('Magic Missile', 'class:Wizard|PHB')
+    })
 
     const classProfile =
       useCharacterStore
         .getState()
         .activeCharacter?.spells.spellProfiles.find(
           (profile) => profile.id === 'class:Wizard|PHB',
-        ) ?? null;
+        ) ?? null
 
-    expect(classProfile?.spellsKnown).toContain('Shield');
-    expect(classProfile?.spellsKnown).not.toContain('Magic Missile');
-    expect(classProfile?.preparedSpells).toContain('Shield');
-  });
+    expect(classProfile?.spellsKnown).toContain('Shield')
+    expect(classProfile?.spellsKnown).not.toContain('Magic Missile')
+    expect(classProfile?.preparedSpells).toContain('Shield')
+  })
 
   test('addCantrip with default profile uses first class profile', () => {
-    const character = makeWizardCharacter();
+    const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-    });
+    })
 
-    const { result } = renderHook(() => useSpellSlots());
+    const { result } = renderHook(() => useSpellSlots())
 
     act(() => {
-      result.current.addCantrip('Light');
-    });
+      result.current.addCantrip('Light')
+    })
 
     const classProfile = useCharacterStore
       .getState()
-      .activeCharacter?.spells.spellProfiles.find(
-        (profile) => profile.id === 'class:Wizard|PHB',
-      );
+      .activeCharacter?.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB')
 
-    expect(classProfile?.cantrips).toContain('Light');
-  });
+    expect(classProfile?.cantrips).toContain('Light')
+  })
 
   test('addCantrip with explicit profile ID uses that profile', () => {
-    const character = makeWizardCharacter();
+    const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-    });
+    })
 
-    const { result } = renderHook(() => useSpellSlots());
+    const { result } = renderHook(() => useSpellSlots())
 
     act(() => {
-      result.current.addCantrip('Guidance', 'special:unrestricted');
-    });
+      result.current.addCantrip('Guidance', 'special:unrestricted')
+    })
 
     const specialProfile = useCharacterStore
       .getState()
       .activeCharacter?.spells.spellProfiles.find(
         (profile) => profile.id === 'special:unrestricted',
-      );
+      )
 
-    expect(specialProfile?.cantrips).toContain('Guidance');
-  });
+    expect(specialProfile?.cantrips).toContain('Guidance')
+  })
 
   test('removeCantrip removes cantrip from profile and prepared spells', () => {
-    const character = makeWizardCharacter();
+    const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
@@ -206,54 +204,46 @@ describe('useSpellSlots hook', () => {
           ),
         },
       },
-    });
+    })
 
-    const { result } = renderHook(() => useSpellSlots());
+    const { result } = renderHook(() => useSpellSlots())
 
     act(() => {
-      result.current.removeCantrip('Fire Bolt', 'class:Wizard|PHB');
-    });
+      result.current.removeCantrip('Fire Bolt', 'class:Wizard|PHB')
+    })
 
     const classProfile = useCharacterStore
       .getState()
-      .activeCharacter?.spells.spellProfiles.find(
-        (profile) => profile.id === 'class:Wizard|PHB',
-      );
+      .activeCharacter?.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB')
 
-    expect(classProfile?.cantrips).not.toContain('Fire Bolt');
-    expect(classProfile?.preparedSpells).not.toContain('Fire Bolt');
-  });
+    expect(classProfile?.cantrips).not.toContain('Fire Bolt')
+    expect(classProfile?.preparedSpells).not.toContain('Fire Bolt')
+  })
 
   test('setProfileSpells replaces all spells for a profile', () => {
-    const character = makeWizardCharacter();
+    const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-    });
+    })
 
-    const { result } = renderHook(() => useSpellSlots());
+    const { result } = renderHook(() => useSpellSlots())
 
     act(() => {
-      result.current.setProfileSpells(
-        'class:Wizard|PHB',
-        ['Mage Hand'],
-        ['Shield'],
-      );
-    });
+      result.current.setProfileSpells('class:Wizard|PHB', ['Mage Hand'], ['Shield'])
+    })
 
     const classProfile = useCharacterStore
       .getState()
-      .activeCharacter?.spells.spellProfiles.find(
-        (profile) => profile.id === 'class:Wizard|PHB',
-      );
+      .activeCharacter?.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB')
 
-    expect(classProfile?.cantrips).toEqual(['Mage Hand']);
-    expect(classProfile?.spellsKnown).toEqual(['Shield']);
-  });
+    expect(classProfile?.cantrips).toEqual(['Mage Hand'])
+    expect(classProfile?.spellsKnown).toEqual(['Shield'])
+  })
 
   test('syncProfiles rebuilds profiles from class progression', () => {
-    const character = makeWizardCharacter();
+    const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
@@ -264,71 +254,66 @@ describe('useSpellSlots hook', () => {
           { name: 'Cleric', source: 'PHB', levels: 1 },
         ],
       },
-    });
+    })
 
-    const { result } = renderHook(() => useSpellSlots());
+    const { result } = renderHook(() => useSpellSlots())
 
     act(() => {
-      result.current.syncProfiles();
-    });
+      result.current.syncProfiles()
+    })
 
     const profileIds =
       useCharacterStore
         .getState()
-        .activeCharacter?.spells.spellProfiles.map((profile) => profile.id) ??
-      [];
+        .activeCharacter?.spells.spellProfiles.map((profile) => profile.id) ?? []
 
-    expect(profileIds).toContain('class:Cleric|PHB');
-    expect(profileIds).toContain('special:unrestricted');
-  });
+    expect(profileIds).toContain('class:Cleric|PHB')
+    expect(profileIds).toContain('special:unrestricted')
+  })
 
   test('togglePrepared adds/removes spell from prepared list', () => {
-    const character = makeWizardCharacter();
+    const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-    });
+    })
 
-    const { result } = renderHook(() => useSpellSlots());
+    const { result } = renderHook(() => useSpellSlots())
 
     act(() => {
-      result.current.togglePrepared('class:Wizard|PHB', 'Shield');
-    });
+      result.current.togglePrepared('class:Wizard|PHB', 'Shield')
+    })
     act(() => {
-      result.current.togglePrepared('class:Wizard|PHB', 'Shield');
-    });
+      result.current.togglePrepared('class:Wizard|PHB', 'Shield')
+    })
 
     const classProfile = useCharacterStore
       .getState()
-      .activeCharacter?.spells.spellProfiles.find(
-        (profile) => profile.id === 'class:Wizard|PHB',
-      );
+      .activeCharacter?.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB')
 
-    expect(classProfile?.preparedSpells).not.toContain('Shield');
-  });
+    expect(classProfile?.preparedSpells).not.toContain('Shield')
+  })
 
   test('removeSpellKnown removes spell from spellsKnown and prepared', () => {
-    const character = makeWizardCharacter();
+    const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-    });
+    })
 
-    const { result } = renderHook(() => useSpellSlots());
+    const { result } = renderHook(() => useSpellSlots())
 
     act(() => {
-      result.current.removeSpellKnown('Magic Missile', 'class:Wizard|PHB');
-    });
+      result.current.removeSpellKnown('Magic Missile', 'class:Wizard|PHB')
+    })
 
     const classProfile = useCharacterStore
       .getState()
-      .activeCharacter?.spells.spellProfiles.find(
-        (profile) => profile.id === 'class:Wizard|PHB',
-      );
+      .activeCharacter?.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB')
 
-    expect(classProfile?.spellsKnown).not.toContain('Magic Missile');
-    expect(classProfile?.preparedSpells).not.toContain('Magic Missile');
-  });
-});
+    expect(classProfile?.spellsKnown).not.toContain('Magic Missile')
+    expect(classProfile?.preparedSpells).not.toContain('Magic Missile')
+  })
+})

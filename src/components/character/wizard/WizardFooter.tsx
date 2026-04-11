@@ -1,11 +1,11 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 
 interface WizardFooterProps {
-  currentStep: number;
-  totalSteps: number;
-  onBack: () => void;
-  onNext: () => void;
-  onCancel: () => void;
+  currentStep: number
+  totalSteps: number
+  onBack: () => void
+  onNext: () => void
+  onCancel: () => void
 }
 
 export function WizardFooter({
@@ -26,13 +26,10 @@ export function WizardFooter({
             Back
           </Button>
         )}
-        <Button
-          onClick={onNext}
-          className="min-w-24 bg-accent hover:bg-accent/90"
-        >
+        <Button onClick={onNext} className="min-w-24 bg-accent hover:bg-accent/90">
           {currentStep === totalSteps ? 'Create' : 'Next'}
         </Button>
       </div>
     </div>
-  );
+  )
 }

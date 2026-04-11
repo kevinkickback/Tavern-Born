@@ -1,27 +1,27 @@
-import { Sword } from '@phosphor-icons/react';
-import { useMemo } from 'react';
+import { Sword } from '@phosphor-icons/react'
+import { useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { casterProgressionToFull } from '@/lib/calculations/spellSlots';
-import { cn } from '@/lib/utils';
-import type { Class5e } from '@/types/5etools';
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { casterProgressionToFull } from '@/lib/calculations/spellSlots'
+import { cn } from '@/lib/utils'
+import type { Class5e } from '@/types/5etools'
 
 export interface ClassSelectionDialogProps {
-  open: boolean;
-  classes: Class5e[];
-  search: string;
-  selectedClassName?: string;
-  selectedClassSource?: string;
-  onOpenChange: (open: boolean) => void;
-  onSearchChange: (value: string) => void;
-  onClassSelect: (className: string, classSource?: string) => void;
+  open: boolean
+  classes: Class5e[]
+  search: string
+  selectedClassName?: string
+  selectedClassSource?: string
+  onOpenChange: (open: boolean) => void
+  onSearchChange: (value: string) => void
+  onClassSelect: (className: string, classSource?: string) => void
 }
 
 export function ClassSelectionDialog({
@@ -35,19 +35,15 @@ export function ClassSelectionDialog({
   onClassSelect,
 }: ClassSelectionDialogProps) {
   const filteredClasses = useMemo(
-    () =>
-      classes.filter(
-        (cls) =>
-          !search || cls.name.toLowerCase().includes(search.toLowerCase()),
-      ),
+    () => classes.filter((cls) => !search || cls.name.toLowerCase().includes(search.toLowerCase())),
     [classes, search],
-  );
+  )
 
   return (
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        onOpenChange(nextOpen);
+        onOpenChange(nextOpen)
       }}
     >
       <DialogContent className="sm:max-w-2xl flex flex-col gap-4 max-h-[80vh]">
@@ -67,17 +63,14 @@ export function ClassSelectionDialog({
           <div className="grid grid-cols-2 gap-2 pr-3">
             {filteredClasses.map((cls) => {
               const isSelected = selectedClassSource
-                ? selectedClassName === cls.name &&
-                  selectedClassSource === (cls.source ?? '')
-                : selectedClassName === cls.name;
+                ? selectedClassName === cls.name && selectedClassSource === (cls.source ?? '')
+                : selectedClassName === cls.name
 
               return (
                 <button
                   key={`${cls.name}|${cls.source ?? ''}`}
                   type="button"
-                  onClick={() =>
-                    onClassSelect(cls.name, cls.source ?? undefined)
-                  }
+                  onClick={() => onClassSelect(cls.name, cls.source ?? undefined)}
                   className={cn(
                     'p-3 rounded-lg border-2 text-left transition-all hover:scale-[1.01]',
                     isSelected
@@ -86,10 +79,7 @@ export function ClassSelectionDialog({
                   )}
                 >
                   <div className="font-semibold font-display text-sm flex items-center gap-1.5">
-                    <Sword
-                      className="h-3.5 w-3.5 text-accent"
-                      weight="duotone"
-                    />
+                    <Sword className="h-3.5 w-3.5 text-accent" weight="duotone" />
                     {cls.name}
                   </div>
 
@@ -107,7 +97,7 @@ export function ClassSelectionDialog({
                     )}
                   </div>
                 </button>
-              );
+              )
             })}
 
             {filteredClasses.length === 0 && (
@@ -119,5 +109,5 @@ export function ClassSelectionDialog({
         </ScrollArea>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

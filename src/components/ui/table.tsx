@@ -1,30 +1,21 @@
-import type { ComponentProps } from 'react';
+import type { ComponentProps } from 'react'
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'
 
 function Table({ className, ...props }: ComponentProps<'table'>) {
   return (
-    <div
-      data-slot="table-container"
-      className="relative w-full overflow-x-auto"
-    >
+    <div data-slot="table-container" className="relative w-full overflow-x-auto">
       <table
         data-slot="table"
         className={cn('w-full caption-bottom text-sm', className)}
         {...props}
       />
     </div>
-  );
+  )
 }
 
 function TableHeader({ className, ...props }: ComponentProps<'thead'>) {
-  return (
-    <thead
-      data-slot="table-header"
-      className={cn('[&_tr]:border-b', className)}
-      {...props}
-    />
-  );
+  return <thead data-slot="table-header" className={cn('[&_tr]:border-b', className)} {...props} />
 }
 
 function TableBody({ className, ...props }: ComponentProps<'tbody'>) {
@@ -34,20 +25,17 @@ function TableBody({ className, ...props }: ComponentProps<'tbody'>) {
       className={cn('[&_tr:last-child]:border-0', className)}
       {...props}
     />
-  );
+  )
 }
 
 function TableFooter({ className, ...props }: ComponentProps<'tfoot'>) {
   return (
     <tfoot
       data-slot="table-footer"
-      className={cn(
-        'bg-muted/50 border-t font-medium [&>tr]:last:border-b-0',
-        className,
-      )}
+      className={cn('bg-muted/50 border-t font-medium [&>tr]:last:border-b-0', className)}
       {...props}
     />
-  );
+  )
 }
 
 function TableRow({ className, ...props }: ComponentProps<'tr'>) {
@@ -60,7 +48,7 @@ function TableRow({ className, ...props }: ComponentProps<'tr'>) {
       )}
       {...props}
     />
-  );
+  )
 }
 
 function TableHead({ className, ...props }: ComponentProps<'th'>) {
@@ -73,7 +61,7 @@ function TableHead({ className, ...props }: ComponentProps<'th'>) {
       )}
       {...props}
     />
-  );
+  )
 }
 
 function TableCell({ className, ...props }: ComponentProps<'td'>) {
@@ -86,7 +74,7 @@ function TableCell({ className, ...props }: ComponentProps<'td'>) {
       )}
       {...props}
     />
-  );
+  )
 }
 
 function TableCaption({ className, ...props }: ComponentProps<'caption'>) {
@@ -96,16 +84,7 @@ function TableCaption({ className, ...props }: ComponentProps<'caption'>) {
       className={cn('text-muted-foreground mt-4 text-sm', className)}
       {...props}
     />
-  );
+  )
 }
 
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableCaption,
-};
+export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow }

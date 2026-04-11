@@ -1,5 +1,6 @@
 import {
   ArrowClockwise,
+  ArrowsLeftRight,
   CheckCircle,
   CloudArrowDown,
   Database,
@@ -7,240 +8,262 @@ import {
   Trash,
   Warning,
   XCircle,
-} from '@phosphor-icons/react';
-import { useEffect, useId, useRef, useState } from 'react';
-import { toast } from 'sonner';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { validateDataSource } from '@/lib/5etools';
-import { useAppPreferencesStore } from '@/store/appPreferencesStore';
-import { useGameDataStore } from '@/store/gameDataStore';
+} from '@phosphor-icons/react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { validateDataSource } from '@/lib/5etools'
+import { useGameDataStore } from '@/store/gameDataStore'
 
-type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid';
+type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid'
 
-export function DataSourceConfigurator() {
-  const dataSourceConfig = useGameDataStore((state) => state.dataSourceConfig);
-  const gameData = useGameDataStore((state) => state.gameData);
-  const isLoading = useGameDataStore((state) => state.isLoading);
-  const loadProgress = useGameDataStore((state) => state.loadProgress);
-  const error = useGameDataStore((state) => state.error);
-  const lastLoadedAt = useGameDataStore((state) => state.lastLoadedAt);
-  const loadGameData = useGameDataStore((state) => state.loadGameData);
-  const refreshGameData = useGameDataStore((state) => state.refreshGameData);
-  const clearGameData = useGameDataStore((state) => state.clearGameData);
+type DataSourceConfiguratorProps = {
+  selectorOnly?: boolean
+}
+
+export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfiguratorProps) {
+  const dataSourceConfig = useGameDataStore((state) => state.dataSourceConfig)
+  const gameData = useGameDataStore((state) => state.gameData)
+  const isLoading = useGameDataStore((state) => state.isLoading)
+  const loadProgress = useGameDataStore((state) => state.loadProgress)
+  const error = useGameDataStore((state) => state.error)
+  const lastDataChangedAt = useGameDataStore((state) => state.lastDataChangedAt)
+  const lastUpdateCheckAt = useGameDataStore((state) => state.lastUpdateCheckAt)
+  const cacheStatus = useGameDataStore((state) => state.cacheStatus)
+  const loadGameData = useGameDataStore((state) => state.loadGameData)
+  const clearGameData = useGameDataStore((state) => state.clearGameData)
+  const hasActiveDataSource = dataSourceConfig?.isValid && gameData !== null
 
   const [sourceType, setSourceType] = useState<'local' | 'remote'>(
     dataSourceConfig?.type || 'remote',
-  );
-  const [sourcePath, setSourcePath] = useState('');
-  const [isValidating, setIsValidating] = useState(false);
-  const [validationStatus, setValidationStatus] =
-    useState<ValidationStatus>('idle');
-  const remotePathId = useId();
-  const localPathId = useId();
-  const autoUpdateId = useId();
-  const autoRefreshGameData = useAppPreferencesStore(
-    (state) => state.autoRefreshGameData,
-  );
-  const setAutoRefreshGameData = useAppPreferencesStore(
-    (state) => state.setAutoRefreshGameData,
-  );
+  )
+  const [sourcePath, setSourcePath] = useState('')
+  const [isSelectingDataSource, setIsSelectingDataSource] = useState(!hasActiveDataSource)
+  const [isValidating, setIsValidating] = useState(false)
+  const [validationStatus, setValidationStatus] = useState<ValidationStatus>('idle')
+  const remotePathId = useId()
+  const localPathId = useId()
   const [validationResult, setValidationResult] = useState<{
-    isValid: boolean;
-    error?: string;
-    foundResources?: string[];
-    normalizedPath?: string;
-  } | null>(null);
+    isValid: boolean
+    error?: string
+    foundResources?: string[]
+    normalizedPath?: string
+  } | null>(null)
+  const autoOpenedSelectorRef = useRef(!hasActiveDataSource)
 
-  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
+  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleSourceTypeChange = (newType: 'local' | 'remote') => {
-    setSourceType(newType);
-    setSourcePath('');
-    setValidationStatus('idle');
-    setValidationResult(null);
+    setSourceType(newType)
+    setSourcePath('')
+    setValidationStatus('idle')
+    setValidationResult(null)
     if (validationTimeoutRef.current) {
-      clearTimeout(validationTimeoutRef.current);
+      clearTimeout(validationTimeoutRef.current)
     }
-  };
+  }
 
   useEffect(() => {
     return () => {
       if (validationTimeoutRef.current) {
-        clearTimeout(validationTimeoutRef.current);
+        clearTimeout(validationTimeoutRef.current)
       }
-    };
-  }, []);
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!hasActiveDataSource) {
+      autoOpenedSelectorRef.current = true
+      setIsSelectingDataSource(true)
+      return
+    }
+
+    // If selector mode was auto-opened due to missing data (startup/clear),
+    // close it once a valid source is loaded so active details are shown.
+    if (autoOpenedSelectorRef.current && !selectorOnly) {
+      setIsSelectingDataSource(false)
+      autoOpenedSelectorRef.current = false
+    }
+  }, [hasActiveDataSource, selectorOnly])
 
   const performValidation = async (path: string, type: 'local' | 'remote') => {
     if (!path) {
-      setValidationStatus('idle');
-      setValidationResult(null);
-      return;
+      setValidationStatus('idle')
+      setValidationResult(null)
+      return
     }
 
-    setValidationStatus('validating');
-    setIsValidating(true);
+    setValidationStatus('validating')
+    setIsValidating(true)
 
     try {
       const result = await validateDataSource({
         type,
         path,
         isValid: false,
-      });
+      })
 
-      setValidationResult(result);
-      setValidationStatus(result.isValid ? 'valid' : 'invalid');
+      setValidationResult(result)
+      setValidationStatus(result.isValid ? 'valid' : 'invalid')
 
       if (!result.isValid) {
         toast.error('Data source validation failed', {
           description: result.error,
-        });
+        })
       }
     } catch (error) {
       setValidationResult({
         isValid: false,
         error: error instanceof Error ? error.message : 'Unknown error',
-      });
-      setValidationStatus('invalid');
-      toast.error('Validation failed');
+      })
+      setValidationStatus('invalid')
+      toast.error('Validation failed')
     } finally {
-      setIsValidating(false);
+      setIsValidating(false)
     }
-  };
-
-  const _handleValidate = () => {
-    performValidation(sourcePath, sourceType);
-  };
+  }
 
   const handleLocalPathChange = (value: string) => {
-    setSourcePath(value);
-    setValidationStatus('idle');
-    setValidationResult(null);
+    setSourcePath(value)
+    setValidationStatus('idle')
+    setValidationResult(null)
 
     if (validationTimeoutRef.current) {
-      clearTimeout(validationTimeoutRef.current);
+      clearTimeout(validationTimeoutRef.current)
     }
 
     if (value) {
       validationTimeoutRef.current = setTimeout(() => {
-        performValidation(value, 'local');
-      }, 1000);
+        performValidation(value, 'local')
+      }, 1000)
     }
-  };
+  }
 
   const handleUrlChange = (value: string) => {
-    setSourcePath(value);
-    setValidationStatus('idle');
-    setValidationResult(null);
+    setSourcePath(value)
+    setValidationStatus('idle')
+    setValidationResult(null)
 
     if (validationTimeoutRef.current) {
-      clearTimeout(validationTimeoutRef.current);
+      clearTimeout(validationTimeoutRef.current)
     }
 
     if (value && sourceType === 'remote') {
       try {
-        new URL(value);
+        new URL(value)
         validationTimeoutRef.current = setTimeout(() => {
-          performValidation(value, 'remote');
-        }, 1500);
+          performValidation(value, 'remote')
+        }, 1500)
       } catch {
-        setValidationStatus('idle');
+        setValidationStatus('idle')
       }
     }
-  };
+  }
 
   const handleSelectFolder = async () => {
     try {
-      const selectFolder = window.electronAPI?.selectFolder;
+      const selectFolder = window.electronAPI?.selectFolder
       if (!selectFolder) {
-        toast.error('Folder picker is only available in the desktop app');
-        return;
+        toast.error('Folder picker is only available in the desktop app')
+        return
       }
 
-      const folderPath = await selectFolder();
-      if (!folderPath) return;
+      const folderPath = await selectFolder()
+      if (!folderPath) return
 
-      setSourcePath(folderPath);
-      performValidation(folderPath, 'local');
+      setSourcePath(folderPath)
+      performValidation(folderPath, 'local')
     } catch (error) {
       toast.error('Failed to select folder', {
         description: error instanceof Error ? error.message : 'Unknown error',
-      });
+      })
     }
-  };
+  }
 
   const handleSaveConfig = async () => {
     try {
-      const pathToUse = validationResult?.normalizedPath || sourcePath;
+      const pathToUse = validationResult?.normalizedPath || sourcePath
 
       await loadGameData({
         type: sourceType,
         path: pathToUse,
         isValid: true,
-      });
+      })
 
       toast.success('Data source updated and loaded!', {
         description: 'Game data is now available',
-      });
-      setSourcePath('');
-      setValidationStatus('idle');
-      setValidationResult(null);
+      })
+      setIsSelectingDataSource(false)
+      setSourcePath('')
+      setValidationStatus('idle')
+      setValidationResult(null)
     } catch (error) {
       toast.error('Failed to load game data', {
         description: error instanceof Error ? error.message : 'Unknown error',
-      });
+      })
     }
-  };
+  }
 
   const handleRefresh = async () => {
+    if (!dataSourceConfig) return
+    const previousChangedAt = lastDataChangedAt
     try {
-      await refreshGameData();
-      toast.success('Game data refreshed successfully!');
+      await loadGameData(dataSourceConfig, true)
+      const newChangedAt = useGameDataStore.getState().lastDataChangedAt
+      if (newChangedAt !== previousChangedAt) {
+        toast.success('Game data updated successfully!')
+      } else {
+        toast.info('Data is already up to date')
+      }
     } catch (_error) {
-      toast.error('Failed to refresh game data');
+      toast.error('Failed to check for updates')
     }
-  };
+  }
 
   const handleClear = () => {
-    clearGameData();
-    setSourcePath('');
-    setValidationStatus('idle');
-    setValidationResult(null);
-    toast.info('Game data cleared');
-  };
-
-  const hasActiveDataSource = dataSourceConfig?.isValid && gameData !== null;
+    autoOpenedSelectorRef.current = true
+    clearGameData()
+    setIsSelectingDataSource(true)
+    setSourcePath('')
+    setValidationStatus('idle')
+    setValidationResult(null)
+    toast.info('Game data cleared')
+  }
 
   const getProgressPercent = () => {
-    if (!loadProgress) return 0;
-    return Math.round((loadProgress.current / loadProgress.total) * 100);
-  };
+    if (!loadProgress) return 0
+    return Math.round((loadProgress.current / loadProgress.total) * 100)
+  }
 
-  const isValidSource = validationStatus === 'valid';
+  const isValidSource = validationStatus === 'valid'
+
+  const formatDateTime = (iso: string | null) => {
+    if (!iso) return 'Not yet'
+    return new Date(iso).toLocaleString()
+  }
+
+  const getStatusLabel = () => {
+    if (error) return 'Error'
+    if (cacheStatus === 'fresh' || cacheStatus === 'fetched') {
+      return 'Up to date'
+    }
+    return 'Outdated'
+  }
 
   const getValidationBorderClass = () => {
-    if (validationStatus === 'validating') return 'border-muted-foreground/50';
-    if (validationStatus === 'valid') return 'border-success';
-    if (validationStatus === 'invalid') return 'border-destructive';
-    return '';
-  };
+    if (validationStatus === 'validating') return 'border-muted-foreground/50'
+    if (validationStatus === 'valid') return 'border-success'
+    if (validationStatus === 'invalid') return 'border-destructive'
+    return ''
+  }
 
   return (
     <div className="space-y-6">
@@ -252,243 +275,232 @@ export function DataSourceConfigurator() {
             </div>
             <div>
               <CardTitle>Data Source Configuration</CardTitle>
-              <CardDescription>
-                Configure where to load 5etools game data from
-              </CardDescription>
+              <CardDescription>Configure where to load 5etools game data from</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div>
+          {!selectorOnly && hasActiveDataSource && !isSelectingDataSource ? (
             <div className="relative space-y-3 bg-muted/50 p-4 rounded-lg">
-              {hasActiveDataSource && (
-                <Badge
-                  variant="default"
-                  className="gap-1 absolute top-3 right-3"
-                >
-                  <CheckCircle size={14} />
-                  Active
-                </Badge>
-              )}
+              <Badge variant="default" className="gap-1 absolute top-3 right-3">
+                <CheckCircle size={14} />
+                Active
+              </Badge>
               <div className="flex items-center gap-2">
-                {hasActiveDataSource ? (
-                  dataSourceConfig.type === 'remote' ? (
-                    <CloudArrowDown
-                      size={18}
-                      className="text-muted-foreground"
-                    />
-                  ) : (
-                    <FolderOpen size={18} className="text-muted-foreground" />
-                  )
+                {dataSourceConfig.type === 'remote' ? (
+                  <CloudArrowDown size={18} className="text-muted-foreground" />
                 ) : (
-                  <XCircle size={18} className="text-muted-foreground" />
+                  <FolderOpen size={18} className="text-muted-foreground" />
                 )}
                 <span className="text-sm font-medium capitalize">
-                  {hasActiveDataSource
-                    ? dataSourceConfig.type === 'remote'
-                      ? 'Remote URL'
-                      : 'Local Directory'
-                    : 'None'}
+                  {dataSourceConfig.type === 'remote' ? 'Remote URL' : 'Local Directory'}
                 </span>
               </div>
 
-              {hasActiveDataSource && (
-                <>
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs text-muted-foreground min-w-24">
-                      {dataSourceConfig.type === 'remote' ? 'URL:' : 'Path:'}
-                    </span>
-                    <span className="text-xs font-mono break-all">
-                      {dataSourceConfig.path}
-                    </span>
+              <div className="flex items-start gap-2">
+                <span className="text-xs text-muted-foreground min-w-24">Source:</span>
+                <span className="text-xs font-mono break-all">{dataSourceConfig.path}</span>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <span className="text-xs text-muted-foreground min-w-24">Last updated:</span>
+                <span className="text-xs">{formatDateTime(lastDataChangedAt)}</span>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <span className="text-xs text-muted-foreground min-w-24">Last checked:</span>
+                <span className="text-xs">{formatDateTime(lastUpdateCheckAt)}</span>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <span className="text-xs text-muted-foreground min-w-24">Status:</span>
+                <span className="text-xs">{getStatusLabel()}</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              {!selectorOnly && !hasActiveDataSource && (
+                <div className="relative space-y-3 bg-muted/50 p-4 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <XCircle size={18} className="text-muted-foreground" />
+                    <span className="text-sm font-medium">None</span>
                   </div>
-
-                  {lastLoadedAt && (
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs text-muted-foreground min-w-24">
-                        Last Loaded:
-                      </span>
-                      <span className="text-xs">
-                        {new Date(lastLoadedAt).toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-                </>
+                  <p className="text-xs text-muted-foreground">
+                    No data source configured. Configure a remote URL or local directory below to
+                    load game data.
+                  </p>
+                </div>
               )}
 
-              {!hasActiveDataSource && (
-                <p className="text-xs text-muted-foreground">
-                  No data source configured. Configure a remote URL or local
-                  directory below to load game data.
-                </p>
-              )}
-            </div>
-          </div>
+              {!selectorOnly && <Separator />}
 
-          <Separator />
-
-          <Tabs
-            value={sourceType}
-            onValueChange={(v) =>
-              handleSourceTypeChange(v as 'local' | 'remote')
-            }
-          >
-            <div className="flex justify-center">
-              <div className="w-1/2 min-w-[280px]">
-                <TabsList className="grid grid-cols-2 w-full">
-                  <TabsTrigger value="remote" className="gap-2">
-                    <CloudArrowDown size={18} />
-                    Remote URL
-                  </TabsTrigger>
-                  <TabsTrigger value="local" className="gap-2">
-                    <FolderOpen size={18} />
-                    Local Directory
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-            </div>
-            <TabsContent value="remote" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor={remotePathId}>Repository URL</Label>
-                <div className="relative">
-                  <Input
-                    id={remotePathId}
-                    value={sourcePath}
-                    onChange={(e) => handleUrlChange(e.target.value)}
-                    placeholder="https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/master"
-                    disabled={isLoading}
-                    className={`pr-10 ${getValidationBorderClass()}`}
-                  />
-                  {validationStatus === 'validating' && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <div className="animate-spin h-4 w-4 border-2 border-muted-foreground border-t-transparent rounded-full" />
-                    </div>
-                  )}
-                  {validationStatus === 'valid' && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <CheckCircle size={18} className="text-success" />
-                    </div>
-                  )}
-                  {validationStatus === 'invalid' && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      <XCircle size={18} className="text-destructive" />
-                    </div>
-                  )}
+              <Tabs
+                value={sourceType}
+                onValueChange={(v) => handleSourceTypeChange(v as 'local' | 'remote')}
+              >
+                <div className="flex justify-center">
+                  <div className="w-1/2 min-w-[280px]">
+                    <TabsList className="grid grid-cols-2 w-full">
+                      <TabsTrigger value="remote" className="gap-2">
+                        <CloudArrowDown size={18} />
+                        Remote URL
+                      </TabsTrigger>
+                      <TabsTrigger value="local" className="gap-2">
+                        <FolderOpen size={18} />
+                        Local Directory
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
                 </div>
-                {validationStatus === 'validating' && (
-                  <p className="text-sm text-muted-foreground">
-                    Checking data source...
-                  </p>
-                )}
-                {validationStatus === 'valid' && (
-                  <p className="text-sm text-success">
-                    ✓ Valid data source ready to load
-                  </p>
-                )}
-                {validationStatus === 'invalid' && validationResult?.error && (
-                  <p className="text-sm text-destructive">
-                    ✗ {validationResult.error}
-                  </p>
-                )}
-                {validationStatus === 'idle' && (
-                  <p className="text-sm text-muted-foreground">
-                    URL to the 5etools GitHub repository or mirror
-                  </p>
-                )}
-              </div>
-            </TabsContent>
-            <TabsContent value="local" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor={localPathId}>Local Path</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id={localPathId}
-                    value={sourcePath}
-                    onChange={(e) => handleLocalPathChange(e.target.value)}
-                    placeholder="/path/to/5etools/data"
-                    disabled={isLoading}
-                    className={`flex-1 ${getValidationBorderClass()}`}
-                  />
-                  <Button
-                    onClick={handleSelectFolder}
-                    disabled={isValidating || isLoading}
-                    variant="outline"
-                    className="gap-2 shrink-0"
-                  >
-                    <FolderOpen size={16} />
-                    {isValidating ? 'Selecting...' : 'Select Folder'}
-                  </Button>
-                </div>
-                {validationStatus === 'validating' && (
-                  <p className="text-sm text-muted-foreground">
-                    Checking data source...
-                  </p>
-                )}
-                {validationStatus === 'valid' && (
-                  <p className="text-sm text-success">
-                    ✓ Valid data source ready to load
-                  </p>
-                )}
-                {validationStatus === 'invalid' && validationResult?.error && (
-                  <p className="text-sm text-destructive">
-                    ✗ {validationResult.error}
-                  </p>
-                )}
-                {validationStatus === 'idle' && (
-                  <p className="text-sm text-muted-foreground">
-                    Path to the directory containing 5etools JSON files
-                  </p>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-            <div className="space-y-0.5">
-              <Label htmlFor={autoUpdateId} className="text-sm font-medium">
-                Auto Update
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Automatically refresh cached data when it's older than 24 hours.
-              </p>
-            </div>
-            <Switch
-              id={autoUpdateId}
-              checked={autoRefreshGameData}
-              onCheckedChange={setAutoRefreshGameData}
-              aria-label="Toggle automatic data refresh"
-            />
-          </div>
+                <TabsContent value="remote" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={remotePathId}>Repository URL</Label>
+                    <div className="relative">
+                      <Input
+                        id={remotePathId}
+                        value={sourcePath}
+                        onChange={(e) => handleUrlChange(e.target.value)}
+                        placeholder="https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/master"
+                        disabled={isLoading}
+                        className={`pr-10 ${getValidationBorderClass()}`}
+                      />
+                      {validationStatus === 'validating' && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="animate-spin h-4 w-4 border-2 border-muted-foreground border-t-transparent rounded-full" />
+                        </div>
+                      )}
+                      {validationStatus === 'valid' && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <CheckCircle size={18} className="text-success" />
+                        </div>
+                      )}
+                      {validationStatus === 'invalid' && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <XCircle size={18} className="text-destructive" />
+                        </div>
+                      )}
+                    </div>
+                    {validationStatus === 'validating' && (
+                      <p className="text-sm text-muted-foreground">Checking data source...</p>
+                    )}
+                    {validationStatus === 'valid' && (
+                      <p className="text-sm text-success">✓ Valid data source ready to load</p>
+                    )}
+                    {validationStatus === 'invalid' && validationResult?.error && (
+                      <p className="text-sm text-destructive">✗ {validationResult.error}</p>
+                    )}
+                    {validationStatus === 'idle' && (
+                      <p className="text-sm text-muted-foreground">
+                        URL to the 5etools GitHub repository or mirror
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
+                <TabsContent value="local" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={localPathId}>Local Path</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id={localPathId}
+                        value={sourcePath}
+                        onChange={(e) => handleLocalPathChange(e.target.value)}
+                        placeholder="/path/to/5etools/data"
+                        disabled={isLoading}
+                        className={`flex-1 ${getValidationBorderClass()}`}
+                      />
+                      <Button
+                        onClick={handleSelectFolder}
+                        disabled={isValidating || isLoading}
+                        variant="outline"
+                        className="gap-2 shrink-0"
+                      >
+                        <FolderOpen size={16} />
+                        {isValidating ? 'Selecting...' : 'Select Folder'}
+                      </Button>
+                    </div>
+                    {validationStatus === 'validating' && (
+                      <p className="text-sm text-muted-foreground">Checking data source...</p>
+                    )}
+                    {validationStatus === 'valid' && (
+                      <p className="text-sm text-success">✓ Valid data source ready to load</p>
+                    )}
+                    {validationStatus === 'invalid' && validationResult?.error && (
+                      <p className="text-sm text-destructive">✗ {validationResult.error}</p>
+                    )}
+                    {validationStatus === 'idle' && (
+                      <p className="text-sm text-muted-foreground">
+                        Path to the directory containing 5etools JSON files
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
 
           <div className="flex gap-2">
-            <Button
-              onClick={handleClear}
-              disabled={isLoading || !hasActiveDataSource}
-              variant="destructive"
-              className="gap-2"
-            >
-              <Trash size={16} />
-              Clear Data
-            </Button>
-            <div className="flex gap-2 ml-auto">
+            {!selectorOnly && (
               <Button
-                onClick={handleRefresh}
+                onClick={handleClear}
                 disabled={isLoading || !hasActiveDataSource}
-                variant="outline"
+                variant="destructive"
                 className="gap-2"
               >
-                <ArrowClockwise size={16} />
-                Update Data
+                <Trash size={16} />
+                Clear Data
               </Button>
-              <Button
-                onClick={handleSaveConfig}
-                disabled={isLoading || !sourcePath || !isValidSource}
-                variant="outline"
-                className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-success !text-success-foreground !border-success hover:!bg-success/90 hover:!border-success/90' : 'text-muted-foreground'}`}
-              >
-                <Database size={16} />
-                {isLoading ? 'Saving...' : 'Save & Load'}
-              </Button>
+            )}
+            <div className="flex gap-2 ml-auto">
+              {!selectorOnly && hasActiveDataSource && !isSelectingDataSource && (
+                <Button
+                  onClick={() => {
+                    autoOpenedSelectorRef.current = false
+                    setIsSelectingDataSource(true)
+                  }}
+                  disabled={isLoading || selectorOnly}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <ArrowsLeftRight size={16} />
+                  Change Source
+                </Button>
+              )}
+              {!selectorOnly && hasActiveDataSource && isSelectingDataSource && (
+                <Button
+                  onClick={() => {
+                    setIsSelectingDataSource(false)
+                    setSourcePath('')
+                    setValidationStatus('idle')
+                    setValidationResult(null)
+                  }}
+                  disabled={isLoading}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+              )}
+              {!selectorOnly && !isSelectingDataSource && (
+                <Button
+                  onClick={handleRefresh}
+                  disabled={isLoading || !hasActiveDataSource}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <ArrowClockwise size={16} />
+                  Update Data
+                </Button>
+              )}
+              {(!hasActiveDataSource || isSelectingDataSource || selectorOnly) && (
+                <Button
+                  onClick={handleSaveConfig}
+                  disabled={isLoading || !sourcePath || !isValidSource}
+                  variant="outline"
+                  className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-success !text-success-foreground !border-success hover:!bg-success/90 hover:!border-success/90' : 'text-muted-foreground'}`}
+                >
+                  <Database size={16} />
+                  {isLoading ? 'Saving...' : 'Save & Load'}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -504,8 +516,7 @@ export function DataSourceConfigurator() {
               <div className="flex-1">
                 <CardTitle className="text-base">Loading Game Data</CardTitle>
                 <CardDescription>
-                  {loadProgress.resource} ({loadProgress.current} of{' '}
-                  {loadProgress.total})
+                  {loadProgress.resource} ({loadProgress.current} of {loadProgress.total})
                 </CardDescription>
               </div>
               <Badge variant="secondary" className="font-mono">
@@ -527,5 +538,5 @@ export function DataSourceConfigurator() {
         </Alert>
       )}
     </div>
-  );
+  )
 }

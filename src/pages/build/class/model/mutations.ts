@@ -1,15 +1,24 @@
-import { getEntityLookupKey } from '@/lib/5etools/lookups';
-import type { Class5e } from '@/types/5etools';
-import type { Character, CharacterClassEntry } from '@/types/character';
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
+import type { Class5e } from '@/types/5etools'
+import type { Character, CharacterClassEntry } from '@/types/character'
 
 interface BuildClassSelectionPatchParams {
-  character: Character;
-  className: string;
-  classSource?: string;
-  classLookup: Record<string, Class5e | undefined>;
-  fallbackClassByName: Map<string, Class5e>;
+  character: Character
+  className: string
+  classSource?: string
+  classLookup: Record<string, Class5e | undefined>
+  fallbackClassByName: Map<string, Class5e>
 }
 
+/**
+ * Build a patch for updating the character's raw class/proficiency data.
+ *
+ * **IMPORTANT**: This patch updates raw proficiencies arrays but does NOT update the provenance ledger.
+ * The caller MUST also call `applyClassSelection()` from `useProvenanceMutations` to update ledger/grants.
+ * Both should be called together in the same transaction to keep ledger and arrays in sync.
+ *
+ * See `useProvenanceMutations.applyClassSelection()` for the canonical class grant application.
+ */
 export function buildClassSelectionPatch({
   character,
   className,
@@ -17,12 +26,12 @@ export function buildClassSelectionPatch({
   classLookup,
   fallbackClassByName,
 }: BuildClassSelectionPatchParams): {
-  classEntity?: Class5e;
-  patch: Partial<Character>;
+  classEntity?: Class5e
+  patch: Partial<Character>
 } {
   const classEntity = classSource
     ? classLookup[getEntityLookupKey(className, classSource)]
-    : fallbackClassByName.get(className);
+    : fallbackClassByName.get(className)
 
   return {
     classEntity,
@@ -55,15 +64,15 @@ export function buildClassSelectionPatch({
         ...character.spells,
       },
     },
-  };
+  }
 }
 
 interface BuildSubclassSelectionPatchParams {
-  character: Character;
-  classProgression: CharacterClassEntry[];
-  viewingEntry?: CharacterClassEntry;
-  subclassName: string;
-  subclassSource?: string;
+  character: Character
+  classProgression: CharacterClassEntry[]
+  viewingEntry?: CharacterClassEntry
+  subclassName: string
+  subclassSource?: string
 }
 
 export function buildSubclassSelectionPatch({
@@ -75,30 +84,29 @@ export function buildSubclassSelectionPatch({
 }: BuildSubclassSelectionPatchParams): Record<string, unknown> {
   if (classProgression.length > 0 && viewingEntry) {
     const nextClassProgression = classProgression.map((entry) =>
-      entry.name === viewingEntry.name &&
-      (entry.source ?? '') === (viewingEntry.source ?? '')
+      entry.name === viewingEntry.name && (entry.source ?? '') === (viewingEntry.source ?? '')
         ? {
             ...entry,
             subclass: subclassName,
             subclassSource: subclassSource ?? undefined,
           }
         : entry,
-    );
+    )
 
     const updates: Record<string, unknown> = {
       classProgression: nextClassProgression,
-    };
-
-    if (viewingEntry.name === character.class) {
-      updates.subclass = subclassName;
-      updates.subclassSource = subclassSource ?? undefined;
     }
 
-    return updates;
+    if (viewingEntry.name === character.class) {
+      updates.subclass = subclassName
+      updates.subclassSource = subclassSource ?? undefined
+    }
+
+    return updates
   }
 
   return {
     subclass: subclassName,
     subclassSource: subclassSource ?? undefined,
-  };
+  }
 }

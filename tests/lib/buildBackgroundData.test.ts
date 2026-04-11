@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'vitest';
-import { getBackgroundEquipmentPackages } from '@/pages/build/background/model/data';
-import type { Background5e } from '@/types/5etools';
+import { describe, expect, test } from 'vitest'
+import { getBackgroundEquipmentPackages } from '@/pages/build/background/model/data'
+import type { Background5e } from '@/types/5etools'
 
 describe('buildBackgroundData', () => {
   test('getBackgroundEquipmentPackages supports 2024 uppercase option keys', () => {
@@ -13,13 +13,13 @@ describe('buildBackgroundData', () => {
           B: [{ value: 5000 }],
         },
       ],
-    } as Background5e;
+    } as Background5e
 
     expect(getBackgroundEquipmentPackages(background)).toEqual([
       { label: 'Option A', entries: ['book|xphb'] },
       { label: 'Option B', entries: [{ value: 5000 }] },
-    ]);
-  });
+    ])
+  })
 
   test('getBackgroundEquipmentPackages supports 2014 lowercase option keys', () => {
     const background = {
@@ -34,11 +34,11 @@ describe('buildBackgroundData', () => {
           b: [{ special: 'prayer wheel' }],
         },
       ],
-    } as Background5e;
+    } as Background5e
 
     expect(getBackgroundEquipmentPackages(background)).toEqual([
       { label: 'Option A', entries: ['book|phb'] },
       { label: 'Option B', entries: [{ special: 'prayer wheel' }] },
-    ]);
-  });
-});
+    ])
+  })
+})

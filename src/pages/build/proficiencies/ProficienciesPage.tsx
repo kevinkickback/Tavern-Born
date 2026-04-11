@@ -1,15 +1,15 @@
-import { CaretLeft, CaretRight, Certificate } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
-import { SourcesAccordion } from '@/components/provenance/SourcesAccordion';
-import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useProvenance } from '@/hooks/character/useProvenance';
-import { useSavingThrows } from '@/hooks/character/useSavingThrows';
-import { useSkills } from '@/hooks/character/useSkills';
-import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies';
-import { NoCharCard } from '@/pages/_shared';
-import { BuildProficienciesDetailsPanel } from '@/pages/build/proficiencies/components/DetailsPanel';
-import { BuildProficienciesTabsPanel } from '@/pages/build/proficiencies/components/TabsPanel';
+import { CaretLeft, CaretRight, Certificate } from '@phosphor-icons/react'
+import { useMemo, useState } from 'react'
+import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
+import { Card } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useProvenance } from '@/hooks/character/useProvenance'
+import { useSavingThrows } from '@/hooks/character/useSavingThrows'
+import { useSkills } from '@/hooks/character/useSkills'
+import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
+import { NoCharCard } from '@/pages/_shared'
+import { BuildProficienciesDetailsPanel } from '@/pages/build/proficiencies/components/DetailsPanel'
+import { BuildProficienciesTabsPanel } from '@/pages/build/proficiencies/components/TabsPanel'
 import {
   buildArtisanChoiceMap,
   buildArtisanToolNamesFromSlots,
@@ -21,39 +21,32 @@ import {
   buildVisibleToolCandidates,
   getSelectedToolNames,
   isArtisanToolSlot,
-} from '@/pages/build/proficiencies/model/data';
-import type { ProfFocus } from '@/pages/build/proficiencies/model/types';
-import { useCharacterStore } from '@/store/characterStore';
-import { useGameDataStore } from '@/store/gameDataStore';
+} from '@/pages/build/proficiencies/model/data'
+import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
+import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 
 export function BuildProficienciesPage() {
   const character = useCharacterStore((state) => {
-    if (state.activeCharacter) return state.activeCharacter;
-    if (!state.activeCharacterId) return null;
-    return (
-      state.characters.find((entry) => entry.id === state.activeCharacterId) ??
-      null
-    );
-  });
-  const gameData = useGameDataStore((s) => s.gameData);
-  const { skills } = useSkills();
-  const { savingThrows } = useSavingThrows();
-  const { ledger, resolveChoiceSelection, getSourcesRowsBySection } =
-    useProvenance();
-  const availableProficiencies = useAvailableProficiencies();
+    if (state.activeCharacter) return state.activeCharacter
+    if (!state.activeCharacterId) return null
+    return state.characters.find((entry) => entry.id === state.activeCharacterId) ?? null
+  })
+  const gameData = useGameDataStore((s) => s.gameData)
+  const { skills } = useSkills()
+  const { savingThrows } = useSavingThrows()
+  const { ledger, resolveChoiceSelection, getSourcesRowsBySection } = useProvenance()
+  const availableProficiencies = useAvailableProficiencies()
 
-  const [detailCollapsed, setDetailCollapsed] = useState(false);
-  const [focused, setFocused] = useState<ProfFocus | null>(null);
+  const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [focused, setFocused] = useState<ProfFocus | null>(null)
 
   const skillDescriptions = useMemo(
     () => buildSkillDescriptions(gameData?.skills),
     [gameData?.skills],
-  );
+  )
 
-  const choiceCounts = useMemo(
-    () => buildChoiceCounts(ledger.choices),
-    [ledger.choices],
-  );
+  const choiceCounts = useMemo(() => buildChoiceCounts(ledger.choices), [ledger.choices])
 
   const toolSubtypeOptionsByKind = useMemo(
     () =>
@@ -63,7 +56,7 @@ export function BuildProficienciesPage() {
         allowedSources: character?.allowedSources,
       }),
     [character?.allowedSources, gameData?.items, gameData?.itemsBase],
-  );
+  )
 
   const toolChoiceSlots = useMemo(
     () =>
@@ -73,44 +66,34 @@ export function BuildProficienciesPage() {
         toolSubtypeOptionsByKind,
       }),
     [character?.proficiencies.tools, ledger.choices, toolSubtypeOptionsByKind],
-  );
+  )
 
   const artisanToolSlots = useMemo(
     () => toolChoiceSlots.filter(isArtisanToolSlot),
     [toolChoiceSlots],
-  );
+  )
 
   const dropdownToolSlots = useMemo(
     () => toolChoiceSlots.filter((s) => !isArtisanToolSlot(s)),
     [toolChoiceSlots],
-  );
+  )
 
   const artisanToolNames = useMemo(
     () => buildArtisanToolNamesFromSlots(artisanToolSlots),
     [artisanToolSlots],
-  );
+  )
 
   const optionalToolNames = useMemo(
-    () =>
-      buildOptionalToolNamesFromChoices(
-        ledger.choices,
-        toolSubtypeOptionsByKind,
-      ),
+    () => buildOptionalToolNamesFromChoices(ledger.choices, toolSubtypeOptionsByKind),
     [ledger.choices, toolSubtypeOptionsByKind],
-  );
+  )
 
   const availableTools = useMemo(
-    () =>
-      availableProficiencies.tools.filter(
-        (t): t is string => typeof t === 'string',
-      ),
+    () => availableProficiencies.tools.filter((t): t is string => typeof t === 'string'),
     [availableProficiencies.tools],
-  );
+  )
 
-  const selectedToolNames = useMemo(
-    () => getSelectedToolNames(ledger.choices),
-    [ledger.choices],
-  );
+  const selectedToolNames = useMemo(() => getSelectedToolNames(ledger.choices), [ledger.choices])
 
   const visibleToolCandidates = useMemo(
     () =>
@@ -128,20 +111,15 @@ export function BuildProficienciesPage() {
       character?.proficiencies.tools,
       selectedToolNames,
     ],
-  );
+  )
 
   const artisanChoiceByNorm = useMemo(
     () => buildArtisanChoiceMap(artisanToolSlots),
     [artisanToolSlots],
-  );
+  )
 
   if (!character) {
-    return (
-      <NoCharCard
-        icon={<Certificate weight="duotone" />}
-        noun="view proficiencies"
-      />
-    );
+    return <NoCharCard icon={<Certificate weight="duotone" />} noun="view proficiencies" />
   }
 
   return (
@@ -163,11 +141,7 @@ export function BuildProficienciesPage() {
               <button
                 type="button"
                 onClick={() => setDetailCollapsed((c) => !c)}
-                title={
-                  detailCollapsed
-                    ? 'Expand details panel'
-                    : 'Collapse details panel'
-                }
+                title={detailCollapsed ? 'Expand details panel' : 'Collapse details panel'}
                 className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all"
               >
                 {detailCollapsed ? (
@@ -183,16 +157,13 @@ export function BuildProficienciesPage() {
                       skills={skills}
                       savingThrows={savingThrows}
                       availableArmor={availableProficiencies.armor.filter(
-                        (armorKey): armorKey is string =>
-                          typeof armorKey === 'string',
+                        (armorKey): armorKey is string => typeof armorKey === 'string',
                       )}
                       availableWeapons={availableProficiencies.weapons.filter(
-                        (weaponKey): weaponKey is string =>
-                          typeof weaponKey === 'string',
+                        (weaponKey): weaponKey is string => typeof weaponKey === 'string',
                       )}
                       availableLanguages={availableProficiencies.languages.filter(
-                        (langName): langName is string =>
-                          typeof langName === 'string',
+                        (langName): langName is string => typeof langName === 'string',
                       )}
                       currentProficiencies={{
                         armor: character.proficiencies.armor,
@@ -209,12 +180,10 @@ export function BuildProficienciesPage() {
                       focused={focused}
                       onFocusChange={setFocused}
                       onExpandDetails={() => {
-                        if (detailCollapsed) setDetailCollapsed(false);
+                        if (detailCollapsed) setDetailCollapsed(false)
                       }}
                       onResolveChoiceSelection={resolveChoiceSelection}
-                      isStandardLanguage={
-                        availableProficiencies.isStandardLanguage
-                      }
+                      isStandardLanguage={availableProficiencies.isStandardLanguage}
                     />
                   </div>
                 </ScrollArea>
@@ -236,5 +205,5 @@ export function BuildProficienciesPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

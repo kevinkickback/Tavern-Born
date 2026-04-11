@@ -1,42 +1,33 @@
-import { CaretDown, Check, Star, Trash } from '@phosphor-icons/react';
-import { memo, useCallback, useMemo, useState } from 'react';
-import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal';
-import { SourcesAccordion } from '@/components/provenance/SourcesAccordion';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { useProvenance } from '@/hooks/character/useProvenance';
-import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
-import { useClass } from '@/hooks/data/useGameData';
-import {
-  featCategoryToFull,
-  isNormallySelectableFeat,
-} from '@/lib/5etools/classData';
-import { getASILevelsFromClass } from '@/lib/calculations/gameRules';
+import { CaretDown, Check, Star, Trash } from '@phosphor-icons/react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
+import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { useProvenance } from '@/hooks/character/useProvenance'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useClass } from '@/hooks/data/useGameData'
+import { featCategoryToFull, isNormallySelectableFeat } from '@/lib/5etools/classData'
+import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
-} from '@/lib/calculations/prerequisites';
-import {
-  collectKnownSpells,
-  ensureSpellProfiles,
-} from '@/lib/calculations/spellProfiles';
-import { renderEntryCached } from '@/lib/entryRenderCache';
-import { cn } from '@/lib/utils';
-import {
-  buildFeatModalFeats,
-  partitionSelectedFeats,
-} from '@/pages/feats/model/selection';
-import { useCharacterStore } from '@/store/characterStore';
-import type { Feat5e, Raw5ePrereq } from '@/types/5etools';
-import { NoCharCard } from '../_shared';
+} from '@/lib/calculations/prerequisites'
+import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
+import { renderEntryCached } from '@/lib/entryRenderCache'
+import { cn } from '@/lib/utils'
+import { buildFeatModalFeats, partitionSelectedFeats } from '@/pages/feats/model/selection'
+import { useCharacterStore } from '@/store/characterStore'
+import type { Feat5e, Raw5ePrereq } from '@/types/5etools'
+import { NoCharCard } from '../_shared'
 
 interface FeatDetailCardProps {
-  feat: { id: string; name: string; source: string };
-  featData: Feat5e | undefined;
-  characterSnapshot: PrereqCharacterSnapshot;
-  onRemove: (name: string) => void;
-  isSpecial?: boolean;
+  feat: { id: string; name: string; source: string }
+  featData: Feat5e | undefined
+  characterSnapshot: PrereqCharacterSnapshot
+  onRemove: (name: string) => void
+  isSpecial?: boolean
 }
 
 const FeatDetailCard = memo(function FeatDetailCard({
@@ -46,25 +37,22 @@ const FeatDetailCard = memo(function FeatDetailCard({
   onRemove,
   isSpecial,
 }: FeatDetailCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(false)
   const categoryLabel =
     typeof featData?.category === 'string' && featData.category.length > 0
       ? featCategoryToFull(featData.category)
-      : null;
+      : null
 
   const { met, failures } = useMemo(
     () =>
       featData
-        ? checkAllPrerequisites(
-            featData as { prerequisite?: Raw5ePrereq[] },
-            characterSnapshot,
-          )
+        ? checkAllPrerequisites(featData as { prerequisite?: Raw5ePrereq[] }, characterSnapshot)
         : { met: true, failures: [] },
     [featData, characterSnapshot],
-  );
+  )
 
-  const allEntries = featData?.entries ?? [];
-  const visibleEntries = expanded ? allEntries : allEntries.slice(0, 2);
+  const allEntries = featData?.entries ?? []
+  const visibleEntries = expanded ? allEntries : allEntries.slice(0, 2)
   const descHtml = useMemo(
     () =>
       visibleEntries
@@ -74,33 +62,24 @@ const FeatDetailCard = memo(function FeatDetailCard({
     // `renderEntryCached` is a stable shared utility; include only entry visibility changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [visibleEntries],
-  );
-  const hasMore = allEntries.length > 2;
+  )
+  const hasMore = allEntries.length > 2
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden transition-colors hover:border-accent/30">
       <div className="flex items-start gap-3 p-4">
-        <Star
-          className="h-4 w-4 text-accent flex-shrink-0 mt-0.5"
-          weight="duotone"
-        />
+        <Star className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" weight="duotone" />
         <div className="flex-1 min-w-0">
           {/* Name row */}
           <div className="flex items-center gap-2 flex-wrap mb-1.5">
             <span className="font-semibold text-sm">{feat.name}</span>
             {feat.source && (
-              <Badge
-                variant="outline"
-                className="text-xs px-1.5 py-0 h-5 text-muted-foreground"
-              >
+              <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 text-muted-foreground">
                 {feat.source}
               </Badge>
             )}
             {categoryLabel && (
-              <Badge
-                variant="outline"
-                className="text-xs px-1.5 py-0 h-5 text-muted-foreground"
-              >
+              <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 text-muted-foreground">
                 {categoryLabel}
               </Badge>
             )}
@@ -129,9 +108,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
 
           {/* Prereq failure detail */}
           {!met && failures.length > 0 && (
-            <p className="text-xs text-warning/80 mb-1.5">
-              {failures.join(' · ')}
-            </p>
+            <p className="text-xs text-warning/80 mb-1.5">{failures.join(' · ')}</p>
           )}
 
           {/* Description */}
@@ -143,9 +120,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
               dangerouslySetInnerHTML={{ __html: descHtml }}
             />
           ) : (
-            <p className="text-xs text-muted-foreground italic">
-              No description available.
-            </p>
+            <p className="text-xs text-muted-foreground italic">No description available.</p>
           )}
 
           {hasMore && (
@@ -154,12 +129,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
               onClick={() => setExpanded((v) => !v)}
               className="flex items-center gap-1 mt-1.5 text-xs text-accent hover:text-accent/80 transition-colors"
             >
-              <CaretDown
-                className={cn(
-                  'h-3 w-3 transition-transform',
-                  expanded && 'rotate-180',
-                )}
-              />
+              <CaretDown className={cn('h-3 w-3 transition-transform', expanded && 'rotate-180')} />
               {expanded ? 'Show less' : 'Show more'}
             </button>
           )}
@@ -176,32 +146,29 @@ const FeatDetailCard = memo(function FeatDetailCard({
         </Button>
       </div>
     </div>
-  );
-});
+  )
+})
 
 export function FeatsPage() {
-  const character = useCharacterStore((s) => s.activeCharacter);
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter);
-  const { feats } = useFilteredGameData();
-  const { replaceFeatSelections, getSourcesRowsBySection } = useProvenance();
-  const [modalOpen, setModalOpen] = useState(false);
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const { feats } = useFilteredGameData()
+  const { replaceFeatSelections, getSourcesRowsBySection } = useProvenance()
+  const [modalOpen, setModalOpen] = useState(false)
 
-  const primaryClassData = useClass(
-    character?.class ?? '',
-    character?.classSource,
-  );
-  const asiLevels = getASILevelsFromClass(primaryClassData);
-  const earnedASILevels = asiLevels.filter((l) => l <= (character?.level ?? 0));
+  const primaryClassData = useClass(character?.class ?? '', character?.classSource)
+  const asiLevels = getASILevelsFromClass(primaryClassData)
+  const earnedASILevels = asiLevels.filter((l) => l <= (character?.level ?? 0))
   const appliedAsiCount = (character?.asiChoices ?? []).filter((ac) =>
     earnedASILevels.includes(ac.level),
-  ).length;
-  const totalASI = earnedASILevels.length - appliedAsiCount;
-  const usedASI = character?.feats?.length ?? 0;
-  const specialFeatCount = character?.specialFeats?.length ?? 0;
-  const remainingASI = totalASI - usedASI;
+  ).length
+  const totalASI = earnedASILevels.length - appliedAsiCount
+  const usedASI = character?.feats?.length ?? 0
+  const specialFeatCount = character?.specialFeats?.length ?? 0
+  const remainingASI = totalASI - usedASI
   const profileSpells = character
     ? collectKnownSpells(ensureSpellProfiles(character))
-    : { cantrips: [], spellsKnown: [], preparedSpells: [] };
+    : { cantrips: [], spellsKnown: [], preparedSpells: [] }
 
   const characterSnapshot: PrereqCharacterSnapshot = {
     level: character?.level ?? 0,
@@ -221,44 +188,42 @@ export function FeatsPage() {
       spellsKnown: profileSpells.spellsKnown,
       preparedSpells: profileSpells.preparedSpells,
     },
-  };
+  }
 
   const modalFeats = useMemo(() => {
-    const available = (feats as Feat5e[]).filter(isNormallySelectableFeat);
+    const available = (feats as Feat5e[]).filter(isNormallySelectableFeat)
     return buildFeatModalFeats({
       availableFeats: available,
       selectedFeats: character?.feats ?? [],
       selectedSpecialFeats: character?.specialFeats ?? [],
-    });
-  }, [feats, character?.feats, character?.specialFeats]);
+    })
+  }, [feats, character?.feats, character?.specialFeats])
 
   // Both normal and special feats are pre-selected when the modal opens.
   const initialSelectedIds = [
     ...(character?.feats ?? []).map((f) => `${f.name}|${f.source ?? ''}`),
-    ...(character?.specialFeats ?? []).map(
-      (f) => `${f.name}|${f.source ?? ''}`,
-    ),
-  ];
+    ...(character?.specialFeats ?? []).map((f) => `${f.name}|${f.source ?? ''}`),
+  ]
   const initialSpecialIds = (character?.specialFeats ?? []).map(
     (f) => `${f.name}|${f.source ?? ''}`,
-  );
+  )
 
   const handleModalConfirm = useCallback(
     (selectedFeats: Feat5e[]) => {
-      if (!character) return;
+      if (!character) return
       const { normalFeats, specialFeats } = partitionSelectedFeats({
         selectedFeats,
         existingNormalFeats: character.feats ?? [],
         existingSpecialFeats: character.specialFeats ?? [],
         totalNormalSlots: totalASI,
-      });
+      })
 
-      replaceFeatSelections(normalFeats);
+      replaceFeatSelections(normalFeats)
       updateCharacter(character.id, {
         specialFeats: specialFeats.map((f) => {
           const existing = (character.specialFeats ?? []).find(
             (sf) => sf.name === f.name && sf.source === (f.source ?? ''),
-          );
+          )
           return (
             existing ?? {
               id: `special-${f.name}-${f.source ?? ''}`,
@@ -266,38 +231,36 @@ export function FeatsPage() {
               source: f.source ?? '',
               description: '',
             }
-          );
+          )
         }),
-      });
+      })
     },
     [character, totalASI, replaceFeatSelections, updateCharacter],
-  );
+  )
 
   const handleRemoveFeat = useCallback(
     (featName: string) => {
-      if (!character) return;
+      if (!character) return
       const remaining = (character.feats ?? [])
         .filter((f) => f.name !== featName)
-        .map((f) => ({ name: f.name, source: f.source }) as Feat5e);
-      replaceFeatSelections(remaining);
+        .map((f) => ({ name: f.name, source: f.source }) as Feat5e)
+      replaceFeatSelections(remaining)
     },
     [character, replaceFeatSelections],
-  );
+  )
 
   const handleRemoveSpecialFeat = useCallback(
     (featName: string) => {
-      if (!character) return;
+      if (!character) return
       updateCharacter(character.id, {
-        specialFeats: (character.specialFeats ?? []).filter(
-          (f) => f.name !== featName,
-        ),
-      });
+        specialFeats: (character.specialFeats ?? []).filter((f) => f.name !== featName),
+      })
     },
     [character, updateCharacter],
-  );
+  )
 
   if (!character) {
-    return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />;
+    return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />
   }
 
   return (
@@ -317,9 +280,7 @@ export function FeatsPage() {
           {/* Stat tiles */}
           <div className="flex items-center gap-8 flex-wrap mb-5">
             <div className="text-center">
-              <div className="text-3xl font-bold font-mono text-accent">
-                {totalASI}
-              </div>
+              <div className="text-3xl font-bold font-mono text-accent">{totalASI}</div>
               <div className="text-xs text-muted-foreground uppercase tracking-wider mt-0.5">
                 Total Slots
               </div>
@@ -353,7 +314,7 @@ export function FeatsPage() {
           {earnedASILevels.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {earnedASILevels.map((level, i) => {
-                const feat = (character.feats ?? [])[i];
+                const feat = (character.feats ?? [])[i]
                 return (
                   <div
                     key={level}
@@ -364,9 +325,7 @@ export function FeatsPage() {
                         : 'border-border bg-muted/30 text-muted-foreground',
                     )}
                   >
-                    <span className="text-xs font-mono text-muted-foreground">
-                      Lv {level}
-                    </span>
+                    <span className="text-xs font-mono text-muted-foreground">Lv {level}</span>
                     {feat ? (
                       <>
                         <Check className="h-3 w-3 text-accent flex-shrink-0" />
@@ -376,7 +335,7 @@ export function FeatsPage() {
                       <span className="text-xs italic">Open</span>
                     )}
                   </div>
-                );
+                )
               })}
             </div>
           ) : (
@@ -393,9 +352,7 @@ export function FeatsPage() {
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(character.feats ?? []).map((feat) => {
-                  const featData = (feats as Feat5e[]).find(
-                    (f) => f.name === feat.name,
-                  );
+                  const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
                   return (
                     <FeatDetailCard
                       key={feat.id}
@@ -404,12 +361,10 @@ export function FeatsPage() {
                       characterSnapshot={characterSnapshot}
                       onRemove={handleRemoveFeat}
                     />
-                  );
+                  )
                 })}
                 {(character.specialFeats ?? []).map((feat) => {
-                  const featData = (feats as Feat5e[]).find(
-                    (f) => f.name === feat.name,
-                  );
+                  const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
                   return (
                     <FeatDetailCard
                       key={feat.id}
@@ -419,20 +374,16 @@ export function FeatsPage() {
                       onRemove={handleRemoveSpecialFeat}
                       isSpecial
                     />
-                  );
+                  )
                 })}
               </div>
             </div>
           ) : earnedASILevels.length > 0 ? (
             <div className="mt-6 pt-5 border-t border-border flex flex-col items-center gap-3 py-6 text-center">
-              <Star
-                className="h-10 w-10 text-muted-foreground/30"
-                weight="duotone"
-              />
+              <Star className="h-10 w-10 text-muted-foreground/30" weight="duotone" />
               <p className="text-muted-foreground">No feats chosen yet.</p>
               <p className="text-sm text-muted-foreground/70">
-                You have {remainingASI} feat slot{remainingASI !== 1 ? 's' : ''}{' '}
-                available.
+                You have {remainingASI} feat slot{remainingASI !== 1 ? 's' : ''} available.
               </p>
               <Button onClick={() => setModalOpen(true)} className="mt-1">
                 Choose Feats
@@ -464,5 +415,5 @@ export function FeatsPage() {
         onConfirm={handleModalConfirm}
       />
     </div>
-  );
+  )
 }

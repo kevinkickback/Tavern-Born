@@ -16,8 +16,8 @@ Flow:
 4. Hook reads data source config from gameDataStore and cache snapshot from dataCache.
 5. Decision branch:
 - No cache and no source: set cacheStatus to unconfigured.
-- Cache and source, same source, fresh cache: serve cache immediately.
-- Cache and source, same source, stale cache: serve cache and trigger background refresh when auto-refresh is enabled.
+- Cache and source, same source, fresh cache: serve cache immediately and run a background source verification check.
+- Cache and source, same source, stale cache: serve cache and trigger background refresh.
 - Cache and source, different source: fetch fresh and replace cache.
 - Cache without source: serve offline cache and warn.
 - Source without cache: fetch fresh.
@@ -25,8 +25,13 @@ Flow:
 
 Startup preference behavior:
 - Theme is applied immediately from localStorage before React renders, then reconciled with the persisted app preferences store after IndexedDB hydration.
-- Home-page card size and auto-refresh behavior are read from the app preferences store.
-- When cached game data is stale and auto-refresh is disabled, startup serves stale cache without launching the background refresh.
+- Home-page card size is read from the app preferences store. The size slider is on the home page itself, not in Settings.
+- Stale cache always triggers a background refresh on startup.
+
+Update metadata behavior:
+- `lastUpdateCheckAt` is set only after a successful source check/fetch.
+- Cache entries store `lastDataChangedAt`, which advances only when fetched parsed data differs from the previous cached content for the same source.
+- When a successful check finds no content changes, only `lastUpdateCheckAt` advances; `lastDataChangedAt` remains unchanged.
 
 ## 2) Game Data Ingestion Pipeline
 

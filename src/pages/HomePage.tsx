@@ -1,14 +1,8 @@
-import {
-  CheckSquare,
-  Plus,
-  SlidersHorizontal,
-  Trash,
-  Upload,
-} from '@phosphor-icons/react';
-import { useCallback, useMemo, useState } from 'react';
-import { toast } from 'sonner';
-import { CharacterCard } from '@/components/character/CharacterCard';
-import { CharacterCreationWizard } from '@/components/character/wizard/CharacterCreationWizard';
+import { CheckSquare, Plus, SlidersHorizontal, Trash, Upload } from '@phosphor-icons/react'
+import { useCallback, useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { CharacterCard } from '@/components/character/CharacterCard'
+import { CharacterCreationWizard } from '@/components/character/wizard/CharacterCreationWizard'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,232 +12,204 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
+} from '@/components/ui/select'
+import { Slider } from '@/components/ui/slider'
 import {
   MAX_HOME_CARD_SIZE,
   MIN_HOME_CARD_SIZE,
   useAppPreferencesStore,
-} from '@/store/appPreferencesStore';
-import { useCharacterStore } from '@/store/characterStore';
-import type { Character } from '@/types/character';
+} from '@/store/appPreferencesStore'
+import { useCharacterStore } from '@/store/characterStore'
+import type { Character } from '@/types/character'
 
-type SortOption =
-  | 'recent'
-  | 'name-asc'
-  | 'name-desc'
-  | 'level-desc'
-  | 'level-asc';
+type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'level-desc' | 'level-asc'
 
 export function HomePage() {
-  const characters = useCharacterStore((state) => state.characters);
-  const activeCharacterId = useCharacterStore(
-    (state) => state.activeCharacterId,
-  );
-  const hasUnsavedChanges = useCharacterStore((state) =>
-    state.hasUnsavedChanges(),
-  );
-  const setActiveCharacter = useCharacterStore(
-    (state) => state.setActiveCharacter,
-  );
-  const deleteCharacter = useCharacterStore((state) => state.deleteCharacter);
-  const cardSize = useAppPreferencesStore((state) => state.homeCardSize);
-  const setHomeCardSize = useAppPreferencesStore(
-    (state) => state.setHomeCardSize,
-  );
-  const [showCreateWizard, setShowCreateWizard] = useState(false);
-  const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(
-    null,
-  );
-  const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false);
-  const [pendingDeleteCharacterId, setPendingDeleteCharacterId] = useState<
-    string | null
-  >(null);
-  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false);
-  const [sortBy, setSortBy] = useState<SortOption>('recent');
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>(
-    [],
-  );
-  const [toolbarOpen, setToolbarOpen] = useState(false);
+  const characters = useCharacterStore((state) => state.characters)
+  const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
+  const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
+  const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
+  const deleteCharacter = useCharacterStore((state) => state.deleteCharacter)
+  const cardSize = useAppPreferencesStore((state) => state.homeCardSize)
+  const setHomeCardSize = useAppPreferencesStore((state) => state.setHomeCardSize)
+  const [showCreateWizard, setShowCreateWizard] = useState(false)
+  const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(null)
+  const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false)
+  const [pendingDeleteCharacterId, setPendingDeleteCharacterId] = useState<string | null>(null)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false)
+  const [sortBy, setSortBy] = useState<SortOption>('recent')
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
+  const [toolbarOpen, setToolbarOpen] = useState(false)
 
   const sortedCharacters = useMemo(() => {
-    const sorted = [...characters];
+    const sorted = [...characters]
 
     sorted.sort((a, b) => {
       if (sortBy === 'recent') {
-        return (
-          new Date(b.lastModified).getTime() -
-          new Date(a.lastModified).getTime()
-        );
+        return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
       }
 
       if (sortBy === 'name-asc') {
-        return (a.name || '').localeCompare(b.name || '');
+        return (a.name || '').localeCompare(b.name || '')
       }
 
       if (sortBy === 'name-desc') {
-        return (b.name || '').localeCompare(a.name || '');
+        return (b.name || '').localeCompare(a.name || '')
       }
 
       if (sortBy === 'level-desc') {
-        return b.level - a.level;
+        return b.level - a.level
       }
 
-      return a.level - b.level;
-    });
+      return a.level - b.level
+    })
 
-    return sorted;
-  }, [characters, sortBy]);
+    return sorted
+  }, [characters, sortBy])
 
   const allSelected =
-    sortedCharacters.length > 0 &&
-    selectedCharacterIds.length === sortedCharacters.length;
+    sortedCharacters.length > 0 && selectedCharacterIds.length === sortedCharacters.length
 
   const handleLoadCharacter = useCallback(
     (id: string) => {
       if (id === activeCharacterId) {
-        return;
+        return
       }
 
       if (hasUnsavedChanges) {
-        setPendingCharacterId(id);
-        setConfirmSwitchOpen(true);
-        return;
+        setPendingCharacterId(id)
+        setConfirmSwitchOpen(true)
+        return
       }
 
-      setActiveCharacter(id);
+      setActiveCharacter(id)
     },
     [activeCharacterId, hasUnsavedChanges, setActiveCharacter],
-  );
+  )
 
   const confirmSwitchCharacter = () => {
     if (!pendingCharacterId) {
-      return;
+      return
     }
 
-    setActiveCharacter(pendingCharacterId);
-    setPendingCharacterId(null);
-    setConfirmSwitchOpen(false);
-  };
+    setActiveCharacter(pendingCharacterId)
+    setPendingCharacterId(null)
+    setConfirmSwitchOpen(false)
+  }
 
   const handleDeleteCharacter = useCallback((id: string) => {
-    setPendingDeleteCharacterId(id);
-    setConfirmDeleteOpen(true);
-  }, []);
+    setPendingDeleteCharacterId(id)
+    setConfirmDeleteOpen(true)
+  }, [])
 
   const confirmDeleteCharacter = useCallback(() => {
     if (!pendingDeleteCharacterId) {
-      return;
+      return
     }
 
-    deleteCharacter(pendingDeleteCharacterId);
-    toast.success('Character deleted');
+    deleteCharacter(pendingDeleteCharacterId)
+    toast.success('Character deleted')
     setSelectedCharacterIds((prev) =>
       prev.filter((selectedId) => selectedId !== pendingDeleteCharacterId),
-    );
-    setPendingDeleteCharacterId(null);
-    setConfirmDeleteOpen(false);
-  }, [deleteCharacter, pendingDeleteCharacterId]);
+    )
+    setPendingDeleteCharacterId(null)
+    setConfirmDeleteOpen(false)
+  }, [deleteCharacter, pendingDeleteCharacterId])
 
   const handleToggleCharacterSelection = (id: string) => {
     setSelectedCharacterIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((selectedId) => selectedId !== id)
-        : [...prev, id],
-    );
-  };
+      prev.includes(id) ? prev.filter((selectedId) => selectedId !== id) : [...prev, id],
+    )
+  }
 
   const handleToggleAllSelection = () => {
     if (allSelected) {
-      setSelectedCharacterIds([]);
-      return;
+      setSelectedCharacterIds([])
+      return
     }
 
-    setSelectedCharacterIds(sortedCharacters.map((character) => character.id));
-  };
+    setSelectedCharacterIds(sortedCharacters.map((character) => character.id))
+  }
 
   const handleDeleteSelected = () => {
     if (selectedCharacterIds.length === 0) {
-      toast.info('No characters selected');
-      return;
+      toast.info('No characters selected')
+      return
     }
 
-    setConfirmBulkDeleteOpen(true);
-  };
+    setConfirmBulkDeleteOpen(true)
+  }
 
   const confirmDeleteSelected = useCallback(() => {
     selectedCharacterIds.forEach((id) => {
-      deleteCharacter(id);
-    });
-    setSelectedCharacterIds([]);
-    setSelectionMode(false);
-    setConfirmBulkDeleteOpen(false);
-    toast.success('Selected characters deleted');
-  }, [deleteCharacter, selectedCharacterIds]);
+      deleteCharacter(id)
+    })
+    setSelectedCharacterIds([])
+    setSelectionMode(false)
+    setConfirmBulkDeleteOpen(false)
+    toast.success('Selected characters deleted')
+  }, [deleteCharacter, selectedCharacterIds])
 
   const handleToggleSelectionMode = () => {
     setSelectionMode((prev) => {
       if (prev) {
-        setSelectedCharacterIds([]);
+        setSelectedCharacterIds([])
       }
-      return !prev;
-    });
-  };
+      return !prev
+    })
+  }
 
   const handleExportCharacter = useCallback((character: Character) => {
-    const dataStr = JSON.stringify(character, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${character.name || 'character'}.dndchar`;
-    link.click();
-    URL.revokeObjectURL(url);
-    toast.success('Character exported successfully');
-  }, []);
+    const dataStr = JSON.stringify(character, null, 2)
+    const dataBlob = new Blob([dataStr], { type: 'application/json' })
+    const url = URL.createObjectURL(dataBlob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${character.name || 'character'}.dndchar`
+    link.click()
+    URL.revokeObjectURL(url)
+    toast.success('Character exported successfully')
+  }, [])
 
   const handleImportCharacter = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.dndchar,.json';
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.dndchar,.json'
     input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
       try {
-        const text = await file.text();
-        const character = JSON.parse(text);
+        const text = await file.text()
+        const character = JSON.parse(text)
 
         // Validate full character structure before importing
-        const { validateCharacterData } = await import(
-          '@/store/characterStore'
-        );
-        const validationError = validateCharacterData(character);
+        const { validateCharacterData } = await import('@/store/characterStore')
+        const validationError = validateCharacterData(character)
         if (validationError) {
-          toast.error(`Invalid character: ${validationError}`);
-          return;
+          toast.error(`Invalid character: ${validationError}`)
+          return
         }
 
-        useCharacterStore.getState().addCharacter(character);
-        toast.success('Character imported successfully');
+        useCharacterStore.getState().addCharacter(character)
+        toast.success('Character imported successfully')
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unknown error';
-        toast.error(`Failed to import character: ${message}`);
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        toast.error(`Failed to import character: ${message}`)
       }
-    };
-    input.click();
-  };
+    }
+    input.click()
+  }
 
   return (
     <div>
@@ -251,12 +217,7 @@ export function HomePage() {
         <div className="relative mb-8 flex flex-col gap-2">
           {/* Main toolbar row */}
           <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleImportCharacter}
-              className="gap-2"
-            >
+            <Button variant="outline" size="lg" onClick={handleImportCharacter} className="gap-2">
               <Upload />
               Import Character
             </Button>
@@ -286,30 +247,20 @@ export function HomePage() {
                 {toolbarOpen && (
                   <div className="absolute right-0 top-full z-50 mt-2 flex flex-col gap-2 rounded-lg border bg-background/95 px-1.5 py-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 xl:right-full xl:top-1/2 xl:mt-0 xl:mr-3 xl:flex-row xl:flex-nowrap xl:items-center xl:-translate-y-1/2 xl:px-2 xl:py-2">
                     <div className="flex h-8 items-center gap-2 rounded-md border bg-card px-2">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        Sort
-                      </span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">Sort</span>
                       <Select
                         value={sortBy}
-                        onValueChange={(value) =>
-                          setSortBy(value as SortOption)
-                        }
+                        onValueChange={(value) => setSortBy(value as SortOption)}
                       >
                         <SelectTrigger className="!h-4 min-h-0 w-28 gap-1 border-0 bg-transparent px-0 py-0 text-[11px] leading-none shadow-none ring-0 focus:ring-0 focus:ring-offset-0 [&_svg]:size-3">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-card border-border">
-                          <SelectItem value="recent">
-                            Recently Modified
-                          </SelectItem>
+                          <SelectItem value="recent">Recently Modified</SelectItem>
                           <SelectItem value="name-asc">Name (A-Z)</SelectItem>
                           <SelectItem value="name-desc">Name (Z-A)</SelectItem>
-                          <SelectItem value="level-desc">
-                            Level (High-Low)
-                          </SelectItem>
-                          <SelectItem value="level-asc">
-                            Level (Low-High)
-                          </SelectItem>
+                          <SelectItem value="level-desc">Level (High-Low)</SelectItem>
+                          <SelectItem value="level-asc">Level (Low-High)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -352,10 +303,7 @@ export function HomePage() {
           {selectionMode && (
             <div className="mt-2 flex items-center gap-3 rounded-lg border bg-card px-4 py-2">
               <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={handleToggleAllSelection}
-                />
+                <Checkbox checked={allSelected} onCheckedChange={handleToggleAllSelection} />
                 <span className="text-sm text-muted-foreground">
                   {allSelected ? 'Deselect All' : 'Select All'}
                 </span>
@@ -383,9 +331,7 @@ export function HomePage() {
           <div className="w-32 h-32 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center">
             <Plus className="text-6xl text-muted-foreground" />
           </div>
-          <h2 className="font-display text-2xl font-semibold mb-2">
-            No Characters Yet
-          </h2>
+          <h2 className="font-display text-2xl font-semibold mb-2">No Characters Yet</h2>
           <p className="text-muted-foreground mb-6">
             Create your first character to begin your adventure
           </p>
@@ -424,27 +370,22 @@ export function HomePage() {
         </div>
       )}
 
-      <CharacterCreationWizard
-        open={showCreateWizard}
-        onOpenChange={setShowCreateWizard}
-      />
+      <CharacterCreationWizard open={showCreateWizard} onOpenChange={setShowCreateWizard} />
 
       <AlertDialog open={confirmSwitchOpen} onOpenChange={setConfirmSwitchOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
             <AlertDialogDescription>
-              You have unsaved changes on the current character. Switching
-              characters will discard them.
+              You have unsaved changes on the current character. Switching characters will discard
+              them.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPendingCharacterId(null)}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSwitchCharacter}>
-              Discard & Switch
-            </AlertDialogAction>
+            <AlertDialogAction onClick={confirmSwitchCharacter}>Discard & Switch</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -452,18 +393,16 @@ export function HomePage() {
       <AlertDialog
         open={confirmDeleteOpen}
         onOpenChange={(open) => {
-          setConfirmDeleteOpen(open);
+          setConfirmDeleteOpen(open)
           if (!open) {
-            setPendingDeleteCharacterId(null);
+            setPendingDeleteCharacterId(null)
           }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete character?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -477,16 +416,13 @@ export function HomePage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={confirmBulkDeleteOpen}
-        onOpenChange={setConfirmBulkDeleteOpen}
-      >
+      <AlertDialog open={confirmBulkDeleteOpen} onOpenChange={setConfirmBulkDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete selected characters?</AlertDialogTitle>
             <AlertDialogDescription>
-              Delete {selectedCharacterIds.length} selected character(s)? This
-              action cannot be undone.
+              Delete {selectedCharacterIds.length} selected character(s)? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -501,5 +437,5 @@ export function HomePage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
+  )
 }

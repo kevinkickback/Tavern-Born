@@ -1,19 +1,21 @@
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { BasicsStep } from '@/components/character/wizard/steps/1-BasicsStep';
-import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants';
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { BasicsStep } from '@/components/character/wizard/steps/1-BasicsStep'
+import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
 
-const previewSpy = vi.hoisted(() => vi.fn());
+const pickerSpy = vi.hoisted(() => vi.fn())
 
-vi.mock('@/components/character/PortraitCardPreview', () => ({
-  PortraitCardPreview: (props: Record<string, unknown>) => {
-    previewSpy(props);
-    return <div data-testid="portrait-card-preview-mock" />;
+vi.mock('@/components/character/PortraitPicker', () => ({
+  PortraitPicker: (props: Record<string, unknown>) => {
+    pickerSpy(props)
+    return <div data-testid="portrait-picker-mock" />
   },
-}));
+}))
 
 const baseData = {
   name: 'Aelar',
+  playerName: '',
+  age: null,
   gender: 'Male',
   race: '',
   raceSource: '',
@@ -37,52 +39,47 @@ const baseData = {
   rulesMode: 'legacy',
   allowedSources: [],
   raceAsiChoices: [],
+  raceAsiBlockIndex: 0 as const,
   variantRules: {
     optionalClassFeatures: false,
     averageHitPoints: true,
+    bladesingerAnyRace: false,
+    battleragerAnyRace: false,
+    preferNewerPrintings: false,
   },
-};
+}
 
 describe('BasicsStep portrait preview wiring', () => {
   beforeEach(() => {
-    previewSpy.mockClear();
-  });
+    pickerSpy.mockClear()
+  })
 
   afterEach(() => {
-    cleanup();
-  });
+    cleanup()
+  })
 
   test('passes placeholder card metadata and current transform to PortraitCardPreview', () => {
-    render(
-      <BasicsStep
-        data={baseData}
-        onChange={vi.fn()}
-        invalidFields={new Set()}
-      />,
-    );
+    render(<BasicsStep data={baseData} onChange={vi.fn()} invalidFields={new Set()} />)
 
-    expect(screen.getByTestId('portrait-card-preview-mock')).toBeTruthy();
-    expect(previewSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('portrait-picker-mock')).toBeTruthy()
+    expect(pickerSpy).toHaveBeenCalledTimes(1)
 
-    const props = previewSpy.mock.calls[0][0] as Record<string, unknown>;
+    const props = pickerSpy.mock.calls[0][0] as Record<string, unknown>
 
-    expect(props.image).toBe('/portrait.png');
-    expect(props.name).toBe('Aelar');
-    expect(props.level).toBe(1);
-    expect(props.race).toBe('Race');
-    expect(props.characterClass).toBe('Class');
-    expect(props.gender).toBe('Male');
-    expect(props.transform).toEqual(DEFAULT_PORTRAIT_TRANSFORM);
-    expect(props.className).toBe('mx-auto max-w-xl xl:max-w-none');
-    expect(typeof props.lastModified).toBe('string');
-    expect(Number.isNaN(Date.parse(String(props.lastModified)))).toBe(false);
-  });
+    expect(props.portrait).toBe('/portrait.png')
+    expect(props.name).toBe('Aelar')
+    expect(props.level).toBe(1)
+    expect(props.race).toBe('Race')
+    expect(props.characterClass).toBe('Class')
+    expect(props.gender).toBe('Male')
+    expect(props.transform).toEqual(DEFAULT_PORTRAIT_TRANSFORM)
+  })
 
   test('uses default portrait transform when wizard data does not provide one', () => {
     const dataWithoutTransform = {
       ...baseData,
       portraitTransform: undefined,
-    };
+    }
 
     render(
       <BasicsStep
@@ -90,11 +87,11 @@ describe('BasicsStep portrait preview wiring', () => {
         onChange={vi.fn()}
         invalidFields={new Set()}
       />,
-    );
+    )
 
-    expect(previewSpy).toHaveBeenCalledTimes(1);
+    expect(pickerSpy).toHaveBeenCalledTimes(1)
 
-    const props = previewSpy.mock.calls[0][0] as Record<string, unknown>;
-    expect(props.transform).toEqual(DEFAULT_PORTRAIT_TRANSFORM);
-  });
-});
+    const props = pickerSpy.mock.calls[0][0] as Record<string, unknown>
+    expect(props.transform).toEqual(DEFAULT_PORTRAIT_TRANSFORM)
+  })
+})

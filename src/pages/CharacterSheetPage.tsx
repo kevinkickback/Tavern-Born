@@ -1,136 +1,123 @@
-import {
-  ArrowsClockwise,
-  DownloadSimple,
-  FilePdf,
-  Sparkle,
-} from '@phosphor-icons/react';
-import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
-import { PdfCanvasPreview } from '@/components/PdfCanvasPreview';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowsClockwise, DownloadSimple, FilePdf, Sparkle } from '@phosphor-icons/react'
+import { useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
+import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select'
 import {
   CHARACTER_SHEET_TEMPLATES,
   type CharacterSheetTemplateId,
   DEFAULT_CHARACTER_SHEET_TEMPLATE,
   generateFilledCharacterSheetPdf,
   getCharacterSheetTemplate,
-} from '@/lib/pdf/characterSheetPdf';
-import { useCharacterStore } from '@/store/characterStore';
-import { NoCharCard } from './_shared';
+} from '@/lib/pdf/characterSheetPdf'
+import { useCharacterStore } from '@/store/characterStore'
+import { NoCharCard } from './_shared'
 
 function getSafeFileName(name: string): string {
-  return name.trim().replace(/[^a-zA-Z0-9_-]+/g, '_') || 'character';
+  return name.trim().replace(/[^a-zA-Z0-9_-]+/g, '_') || 'character'
 }
 
 export function CharacterSheetPage() {
-  const character = useCharacterStore((s) => s.activeCharacter);
-  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [refreshNonce, setRefreshNonce] = useState(0);
-  const [selectedTemplateId, setSelectedTemplateId] =
-    useState<CharacterSheetTemplateId>(DEFAULT_CHARACTER_SHEET_TEMPLATE.id);
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [refreshNonce, setRefreshNonce] = useState(0)
+  const [selectedTemplateId, setSelectedTemplateId] = useState<CharacterSheetTemplateId>(
+    DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
+  )
 
   const selectedTemplate = useMemo(
     () => getCharacterSheetTemplate(selectedTemplateId),
     [selectedTemplateId],
-  );
+  )
 
-  const characterName = character?.name?.trim() || 'Unnamed Character';
+  const characterName = character?.name?.trim() || 'Unnamed Character'
   const downloadName = useMemo(
     () => `${getSafeFileName(characterName)}_character_sheet.pdf`,
     [characterName],
-  );
+  )
 
   useEffect(() => {
-    let canceled = false;
+    let canceled = false
 
     const buildPreview = async () => {
       if (!character) {
-        setPdfBytes(null);
-        setErrorMessage(null);
-        return;
+        setPdfBytes(null)
+        setErrorMessage(null)
+        return
       }
 
       try {
-        setIsGenerating(true);
-        setErrorMessage(null);
+        setIsGenerating(true)
+        setErrorMessage(null)
 
-        const templateUrl = `${selectedTemplate.assetPath}?r=${refreshNonce}`;
-        const response = await fetch(templateUrl);
+        const templateUrl = `${selectedTemplate.assetPath}?r=${refreshNonce}`
+        const response = await fetch(templateUrl)
         if (!response.ok) {
-          throw new Error(
-            `Unable to load PDF template (${response.status} ${response.statusText})`,
-          );
+          throw new Error(`Unable to load PDF template (${response.status} ${response.statusText})`)
         }
 
-        const templateBytes = new Uint8Array(await response.arrayBuffer());
+        const templateBytes = new Uint8Array(await response.arrayBuffer())
         const filledBytes = await generateFilledCharacterSheetPdf(
           character,
           templateBytes,
           selectedTemplateId,
-        );
+        )
 
-        if (canceled) return;
+        if (canceled) return
 
-        setPdfBytes(filledBytes);
+        setPdfBytes(filledBytes)
       } catch (error) {
         const message =
-          error instanceof Error
-            ? error.message
-            : 'Failed to generate character sheet PDF.';
+          error instanceof Error ? error.message : 'Failed to generate character sheet PDF.'
         if (!canceled) {
-          setErrorMessage(message);
-          setPdfBytes(null);
+          setErrorMessage(message)
+          setPdfBytes(null)
         }
       } finally {
         if (!canceled) {
-          setIsGenerating(false);
+          setIsGenerating(false)
         }
       }
-    };
+    }
 
-    buildPreview();
+    buildPreview()
 
     return () => {
-      canceled = true;
-    };
-  }, [character, refreshNonce, selectedTemplate, selectedTemplateId]);
+      canceled = true
+    }
+  }, [character, refreshNonce, selectedTemplate, selectedTemplateId])
 
   const handleDownload = () => {
     if (!pdfBytes) {
-      toast.error('Generate a preview before downloading the sheet.');
-      return;
+      toast.error('Generate a preview before downloading the sheet.')
+      return
     }
 
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = downloadName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = downloadName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
 
-    toast.success('Character sheet PDF downloaded.');
-  };
+    toast.success('Character sheet PDF downloaded.')
+  }
 
   if (!character) {
-    return (
-      <NoCharCard
-        icon={<FilePdf weight="duotone" />}
-        noun="generate a character sheet PDF"
-      />
-    );
+    return <NoCharCard icon={<FilePdf weight="duotone" />} noun="generate a character sheet PDF" />
   }
 
   return (
@@ -153,9 +140,7 @@ export function CharacterSheetPage() {
             <span className="text-sm text-muted-foreground">Template</span>
             <Select
               value={selectedTemplateId}
-              onValueChange={(value) =>
-                setSelectedTemplateId(value as CharacterSheetTemplateId)
-              }
+              onValueChange={(value) => setSelectedTemplateId(value as CharacterSheetTemplateId)}
             >
               <SelectTrigger className="w-[260px]">
                 <SelectValue />
@@ -180,11 +165,7 @@ export function CharacterSheetPage() {
               <ArrowsClockwise className="h-4 w-4" weight="bold" />
               Regenerate
             </Button>
-            <Button
-              type="button"
-              onClick={handleDownload}
-              disabled={isGenerating || !pdfBytes}
-            >
+            <Button type="button" onClick={handleDownload} disabled={isGenerating || !pdfBytes}>
               <DownloadSimple className="h-4 w-4" weight="bold" />
               Download PDF
             </Button>
@@ -218,11 +199,9 @@ export function CharacterSheetPage() {
             </div>
           )}
 
-          {!isGenerating && !errorMessage && pdfBytes && (
-            <PdfCanvasPreview pdfBytes={pdfBytes} />
-          )}
+          {!isGenerating && !errorMessage && pdfBytes && <PdfCanvasPreview pdfBytes={pdfBytes} />}
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

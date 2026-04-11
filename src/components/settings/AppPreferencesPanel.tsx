@@ -1,37 +1,31 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   ACCENT_THEMES,
   type AccentTheme,
   APPEARANCE_THEMES,
   type AppearanceTheme,
-} from '@/lib/themeManager';
-import { useAppPreferencesStore } from '@/store/appPreferencesStore';
+} from '@/lib/themeManager'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
 const APPEARANCE_LABELS: Record<AppearanceTheme, string> = {
   light: 'Light',
   dark: 'Dark',
-};
+}
 
 const ACCENT_LABELS: Record<AccentTheme, string> = {
   blue: 'Blue',
   violet: 'Violet',
   green: 'Green',
   orange: 'Orange',
-};
+}
 
 export function AppPreferencesPanel() {
-  const themeAccent = useAppPreferencesStore((state) => state.themeAccent);
-  const themeAppearance = useAppPreferencesStore(
-    (state) => state.themeAppearance,
-  );
-  const setThemeAccent = useAppPreferencesStore(
-    (state) => state.setThemeAccent,
-  );
-  const setThemeAppearance = useAppPreferencesStore(
-    (state) => state.setThemeAppearance,
-  );
+  const themeAccent = useAppPreferencesStore((state) => state.themeAccent)
+  const themeAppearance = useAppPreferencesStore((state) => state.themeAppearance)
+  const setThemeAccent = useAppPreferencesStore((state) => state.setThemeAccent)
+  const setThemeAppearance = useAppPreferencesStore((state) => state.setThemeAppearance)
 
   return (
     <div className="space-y-6">
@@ -39,8 +33,7 @@ export function AppPreferencesPanel() {
         <CardHeader>
           <CardTitle>App Preferences</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Changes here save automatically and do not affect character unsaved
-            state.
+            Changes here save automatically and do not affect character unsaved state.
           </p>
         </CardHeader>
         <CardContent className="space-y-8">
@@ -55,13 +48,11 @@ export function AppPreferencesPanel() {
 
               <RadioGroup
                 value={themeAppearance}
-                onValueChange={(value) =>
-                  setThemeAppearance(value as AppearanceTheme)
-                }
+                onValueChange={(value) => setThemeAppearance(value as AppearanceTheme)}
                 className="grid gap-3 sm:grid-cols-2"
               >
                 {APPEARANCE_THEMES.map((theme) => {
-                  const id = `appearance-${theme}`;
+                  const id = `appearance-${theme}`
                   return (
                     <Label
                       key={theme}
@@ -71,7 +62,7 @@ export function AppPreferencesPanel() {
                       <RadioGroupItem id={id} value={theme} />
                       <span>{APPEARANCE_LABELS[theme]}</span>
                     </Label>
-                  );
+                  )
                 })}
               </RadioGroup>
             </div>
@@ -90,7 +81,7 @@ export function AppPreferencesPanel() {
                 className="grid gap-3 sm:grid-cols-2"
               >
                 {ACCENT_THEMES.map((accent) => {
-                  const id = `accent-${accent}`;
+                  const id = `accent-${accent}`
                   return (
                     <Label
                       key={accent}
@@ -100,7 +91,7 @@ export function AppPreferencesPanel() {
                       <RadioGroupItem id={id} value={accent} />
                       <span>{ACCENT_LABELS[accent]}</span>
                     </Label>
-                  );
+                  )
                 })}
               </RadioGroup>
             </div>
@@ -108,5 +99,5 @@ export function AppPreferencesPanel() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

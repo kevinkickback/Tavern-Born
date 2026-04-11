@@ -1,20 +1,17 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { loadDataFromSource } from '@/lib/5etools';
-import {
-  clearGameDataCache,
-  writeGameDataCache,
-} from '@/lib/storage/dataCache';
-import { createIdbStorage } from '@/lib/storage/idb-storage';
-import type { DataSourceConfig, GameData } from '@/types/5etools';
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { loadDataFromSource } from '@/lib/5etools'
+import { clearGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
+import { createIdbStorage } from '@/lib/storage/idb-storage'
+import type { DataSourceConfig, GameData } from '@/types/5etools'
 
-let activeLoadController: AbortController | null = null;
-let activeLoadRequestId = 0;
+let activeLoadController: AbortController | null = null
+let activeLoadRequestId = 0
 
 interface LoadProgress {
-  current: number;
-  total: number;
-  resource: string;
+  current: number
+  total: number
+  resource: string
 }
 
 /** How the current gameData was sourced this session. */
@@ -24,38 +21,38 @@ export type CacheStatus =
   | 'stale' // loaded from cache, being refreshed in background
   | 'offline' // loaded from cache, no source configured
   | 'fetched' // freshly fetched from source this session
-  | 'unconfigured'; // no cache and no source — user must configure
+  | 'unconfigured' // no cache and no source — user must configure
 
 interface GameDataState {
-  gameData: GameData | null;
-  dataSourceConfig: DataSourceConfig | null;
-  isLoading: boolean;
-  isBackgroundRefreshing: boolean;
-  loadProgress: LoadProgress | null;
-  error: string | null;
-  lastLoadedAt: string | null;
-  cacheStatus: CacheStatus;
+  gameData: GameData | null
+  dataSourceConfig: DataSourceConfig | null
+  isLoading: boolean
+  isBackgroundRefreshing: boolean
+  loadProgress: LoadProgress | null
+  error: string | null
+  lastLoadedAt: string | null
+  lastDataChangedAt: string | null
+  lastUpdateCheckAt: string | null
+  cacheStatus: CacheStatus
   /** True once the Zustand persist middleware has read back from IDB. */
-  hasHydrated: boolean;
+  hasHydrated: boolean
 
-  setGameData: (data: GameData) => void;
-  setCacheStatus: (status: CacheStatus) => void;
-  setDataSourceConfig: (config: DataSourceConfig) => void;
-  setLoading: (loading: boolean) => void;
-  setLoadProgress: (progress: LoadProgress | null) => void;
-  setError: (error: string | null) => void;
-  setHasHydrated: (v: boolean) => void;
+  setGameData: (data: GameData) => void
+  setCacheStatus: (status: CacheStatus) => void
+  setDataSourceConfig: (config: DataSourceConfig) => void
+  setLoading: (loading: boolean) => void
+  setLoadProgress: (progress: LoadProgress | null) => void
+  setError: (error: string | null) => void
+  setLastDataChangedAt: (iso: string | null) => void
+  setHasHydrated: (v: boolean) => void
 
   /**
    * Fetch data from `config`, write to IDB cache, update store.
    * Pass `background = true` to do a silent refresh without blocking UI.
    */
-  loadGameData: (
-    config: DataSourceConfig,
-    background?: boolean,
-  ) => Promise<void>;
-  refreshGameData: () => Promise<void>;
-  clearGameData: () => void;
+  loadGameData: (config: DataSourceConfig, background?: boolean) => Promise<void>
+  refreshGameData: () => Promise<void>
+  clearGameData: () => void
 }
 
 export const useGameDataStore = create<GameDataState>()(
@@ -68,6 +65,8 @@ export const useGameDataStore = create<GameDataState>()(
       loadProgress: null,
       error: null,
       lastLoadedAt: null,
+      lastDataChangedAt: null,
+      lastUpdateCheckAt: null,
       cacheStatus: 'unknown',
       hasHydrated: false,
 
@@ -77,92 +76,100 @@ export const useGameDataStore = create<GameDataState>()(
       setLoading: (loading) => set({ isLoading: loading }),
       setLoadProgress: (progress) => set({ loadProgress: progress }),
       setError: (error) => set({ error }),
+      setLastDataChangedAt: (iso) => set({ lastDataChangedAt: iso }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
       loadGameData: async (config, background = false) => {
-        const requestId = ++activeLoadRequestId;
-        activeLoadController?.abort();
-        const controller = new AbortController();
-        activeLoadController = controller;
+        const requestId = ++activeLoadRequestId
+        activeLoadController?.abort()
+        const controller = new AbortController()
+        activeLoadController = controller
 
         if (background) {
-          set({ isBackgroundRefreshing: true, error: null });
+          set({
+            isBackgroundRefreshing: true,
+            error: null,
+          })
         } else {
-          set({ isLoading: true, error: null, loadProgress: null });
+          set({
+            isLoading: true,
+            error: null,
+            loadProgress: null,
+          })
         }
 
         try {
           const data = await loadDataFromSource(config, {
             onProgress: background
               ? undefined
-              : (current, total, resource) =>
-                  set({ loadProgress: { current, total, resource } }),
+              : (current, total, resource) => set({ loadProgress: { current, total, resource } }),
             signal: controller.signal,
-          });
+          })
 
           // Ignore stale results from superseded requests.
           if (requestId !== activeLoadRequestId) {
-            return;
+            return
           }
 
-          const now = new Date().toISOString();
+          const now = new Date().toISOString()
           // Persist parsed data to IDB cache so next launch is instant.
-          await writeGameDataCache(data, config);
+          const prevChangedAt = get().lastDataChangedAt
+          const cacheEntry = await writeGameDataCache(data, config)
+          const contentChanged = cacheEntry.lastDataChangedAt !== prevChangedAt
           set({
-            gameData: data,
+            gameData: contentChanged ? data : get().gameData,
             dataSourceConfig: { ...config, isValid: true, lastLoaded: now },
             isLoading: false,
             isBackgroundRefreshing: false,
             loadProgress: null,
             lastLoadedAt: now,
+            ...(contentChanged ? { lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now } : {}),
+            lastUpdateCheckAt: now,
             cacheStatus: 'fetched',
-          });
+          })
         } catch (error) {
           // Ignore stale request failures and intentional aborts.
           if (requestId !== activeLoadRequestId) {
-            return;
+            return
           }
 
           const isAbortError =
             (error instanceof DOMException && error.name === 'AbortError') ||
-            (error instanceof Error && error.name === 'AbortError');
+            (error instanceof Error && error.name === 'AbortError')
           if (isAbortError) {
             set({
               isLoading: false,
               isBackgroundRefreshing: false,
               loadProgress: null,
-            });
-            return;
+            })
+            return
           }
 
           set({
-            error:
-              error instanceof Error
-                ? error.message
-                : 'Failed to load game data',
+            error: error instanceof Error ? error.message : 'Failed to load game data',
             isLoading: false,
             isBackgroundRefreshing: false,
             loadProgress: null,
-          });
+          })
         } finally {
           if (activeLoadController === controller) {
-            activeLoadController = null;
+            activeLoadController = null
           }
         }
       },
 
       refreshGameData: async () => {
-        const { dataSourceConfig } = get();
+        const { dataSourceConfig } = get()
         if (dataSourceConfig) {
-          await get().loadGameData(dataSourceConfig);
+          await get().loadGameData(dataSourceConfig)
         }
       },
 
       clearGameData: () => {
-        activeLoadController?.abort();
-        activeLoadController = null;
+        activeLoadController?.abort()
+        activeLoadController = null
         // Fire-and-forget IDB cache clear.
-        clearGameDataCache().catch(console.error);
+        clearGameDataCache().catch(console.error)
         set({
           gameData: null,
           dataSourceConfig: null,
@@ -171,8 +178,10 @@ export const useGameDataStore = create<GameDataState>()(
           loadProgress: null,
           error: null,
           lastLoadedAt: null,
+          lastDataChangedAt: null,
+          lastUpdateCheckAt: null,
           cacheStatus: 'unconfigured',
-        });
+        })
       },
     }),
     {
@@ -182,10 +191,12 @@ export const useGameDataStore = create<GameDataState>()(
       partialize: (state) => ({
         dataSourceConfig: state.dataSourceConfig,
         lastLoadedAt: state.lastLoadedAt,
+        lastDataChangedAt: state.lastDataChangedAt,
+        lastUpdateCheckAt: state.lastUpdateCheckAt,
       }),
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        state?.setHasHydrated(true)
       },
     },
   ),
-);
+)

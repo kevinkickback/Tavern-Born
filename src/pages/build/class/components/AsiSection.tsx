@@ -1,30 +1,30 @@
-import { Check, Star } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/button';
-import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData';
-import { cn } from '@/lib/utils';
-import type { Feat5e, Subclass5e } from '@/types/5etools';
-import type { AsiChoice, Character } from '@/types/character';
-import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel';
+import { Check, Star } from '@phosphor-icons/react'
+import { Button } from '@/components/ui/button'
+import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
+import { cn } from '@/lib/utils'
+import type { Feat5e, Subclass5e } from '@/types/5etools'
+import type { AsiChoice, Character } from '@/types/character'
+import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 
 interface BuildClassAsiSectionProps {
-  level: number;
-  viewingClass: string;
-  viewingSubclassData?: Subclass5e;
-  featuresByLevel: Map<number, ClassFeatureDisplay[]>;
-  appliedAsiChoicesForClass: AsiChoice[];
-  asiModeByLevel: Record<string, 'asi' | 'feat'>;
-  usedASI: number;
-  totalASIAcrossClasses: number;
-  character: Character;
-  feats: Feat5e[];
-  detailCollapsed: boolean;
-  onExpandDetails: () => void;
-  onSelectFeature: (feature: SelectedFeatureState) => void;
-  onAsiReset: (level: number) => void;
-  onOpenAsiPicker: (level: number) => void;
-  onOpenFeatPicker: () => void;
-  onSetAsiModeByLevel: (levelKey: string, mode: 'asi' | 'feat') => void;
-  onClearFeatSelectionsForAsi: () => void;
+  level: number
+  viewingClass: string
+  viewingSubclassData?: Subclass5e
+  featuresByLevel: Map<number, ClassFeatureDisplay[]>
+  appliedAsiChoicesForClass: AsiChoice[]
+  asiModeByLevel: Record<string, 'asi' | 'feat'>
+  usedASI: number
+  totalASIAcrossClasses: number
+  character: Character
+  feats: Feat5e[]
+  detailCollapsed: boolean
+  onExpandDetails: () => void
+  onSelectFeature: (feature: SelectedFeatureState) => void
+  onAsiReset: (level: number) => void
+  onOpenAsiPicker: (level: number) => void
+  onOpenFeatPicker: () => void
+  onSetAsiModeByLevel: (levelKey: string, mode: 'asi' | 'feat') => void
+  onClearFeatSelectionsForAsi: () => void
 }
 
 export function BuildClassAsiSection({
@@ -47,13 +47,11 @@ export function BuildClassAsiSection({
   onSetAsiModeByLevel,
   onClearFeatSelectionsForAsi,
 }: BuildClassAsiSectionProps) {
-  const existingAsi = appliedAsiChoicesForClass.find(
-    (ac) => ac.level === level,
-  );
-  const levelKey = `${level}|${viewingClass}`;
-  const mode = existingAsi ? 'asi' : (asiModeByLevel[levelKey] ?? 'feat');
-  const isApplied = !!existingAsi;
-  const featsTaken = character.feats ?? [];
+  const existingAsi = appliedAsiChoicesForClass.find((ac) => ac.level === level)
+  const levelKey = `${level}|${viewingClass}`
+  const mode = existingAsi ? 'asi' : (asiModeByLevel[levelKey] ?? 'feat')
+  const isApplied = !!existingAsi
+  const featsTaken = character.feats ?? []
 
   return (
     <div
@@ -72,9 +70,7 @@ export function BuildClassAsiSection({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-sm font-semibold">
               Ability Score Improvement
-              {isApplied && (
-                <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />
-              )}
+              {isApplied && <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />}
             </div>
             <div className="text-xs text-muted-foreground">
               {isApplied
@@ -143,8 +139,8 @@ export function BuildClassAsiSection({
               value="asi"
               checked={mode === 'asi'}
               onChange={() => {
-                onSetAsiModeByLevel(levelKey, 'asi');
-                onClearFeatSelectionsForAsi();
+                onSetAsiModeByLevel(levelKey, 'asi')
+                onClearFeatSelectionsForAsi()
               }}
               className="accent-current"
             />
@@ -157,85 +153,82 @@ export function BuildClassAsiSection({
         (() => {
           const asiFeature = (featuresByLevel.get(level) ?? []).find(
             (f) => f.name === 'Ability Score Improvement',
-          );
+          )
           return (
             <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-success/20 pt-2">
-              {Object.entries(existingAsi?.abilityChanges ?? {}).map(
-                ([ability, bonus]) => (
-                  <button
-                    key={ability}
-                    type="button"
-                    onMouseEnter={() => {
-                      if (!asiFeature) return;
-                      onSelectFeature({
-                        name: asiFeature.name,
-                        source: asiFeature.source,
-                        entries: resolveSubclassFeatureRefs(
-                          asiFeature.entries ?? [],
-                          viewingSubclassData?.shortName,
-                        ),
-                      });
-                      if (detailCollapsed) onExpandDetails();
-                    }}
-                    onClick={() => {
-                      if (!asiFeature) return;
-                      onSelectFeature({
-                        name: asiFeature.name,
-                        source: asiFeature.source,
-                        entries: resolveSubclassFeatureRefs(
-                          asiFeature.entries ?? [],
-                          viewingSubclassData?.shortName,
-                        ),
-                      });
-                      if (detailCollapsed) onExpandDetails();
-                    }}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-success/30 bg-success/5 hover:border-success/50 hover:bg-success/15 text-foreground transition-colors"
-                  >
-                    <span className="font-medium">
-                      +{bonus}{' '}
-                      {ability.charAt(0).toUpperCase() + ability.slice(1)}
-                    </span>
-                  </button>
-                ),
-              )}
+              {Object.entries(existingAsi?.abilityChanges ?? {}).map(([ability, bonus]) => (
+                <button
+                  key={ability}
+                  type="button"
+                  onMouseEnter={() => {
+                    if (!asiFeature) return
+                    onSelectFeature({
+                      name: asiFeature.name,
+                      source: asiFeature.source,
+                      entries: resolveSubclassFeatureRefs(
+                        asiFeature.entries ?? [],
+                        viewingSubclassData?.shortName,
+                      ),
+                    })
+                    if (detailCollapsed) onExpandDetails()
+                  }}
+                  onClick={() => {
+                    if (!asiFeature) return
+                    onSelectFeature({
+                      name: asiFeature.name,
+                      source: asiFeature.source,
+                      entries: resolveSubclassFeatureRefs(
+                        asiFeature.entries ?? [],
+                        viewingSubclassData?.shortName,
+                      ),
+                    })
+                    if (detailCollapsed) onExpandDetails()
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-success/30 bg-success/5 hover:border-success/50 hover:bg-success/15 text-foreground transition-colors"
+                >
+                  <span className="font-medium">
+                    +{bonus} {ability.charAt(0).toUpperCase() + ability.slice(1)}
+                  </span>
+                </button>
+              ))}
             </div>
-          );
+          )
         })()}
 
       {!isApplied && mode === 'feat' && featsTaken.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-success/20 pt-2">
           {featsTaken.map((feat) => {
-            const featData = feats.find((f) => f.name === feat.name);
+            const featData = feats.find((f) => f.name === feat.name)
             return (
               <button
                 key={feat.id}
                 type="button"
                 onMouseEnter={() => {
-                  if (!featData) return;
+                  if (!featData) return
                   onSelectFeature({
                     name: featData.name,
                     source: featData.source,
                     entries: featData.entries ?? [],
-                  });
-                  if (detailCollapsed) onExpandDetails();
+                  })
+                  if (detailCollapsed) onExpandDetails()
                 }}
                 onClick={() => {
-                  if (!featData) return;
+                  if (!featData) return
                   onSelectFeature({
                     name: featData.name,
                     source: featData.source,
                     entries: featData.entries ?? [],
-                  });
-                  if (detailCollapsed) onExpandDetails();
+                  })
+                  if (detailCollapsed) onExpandDetails()
                 }}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-success/30 bg-success/5 hover:border-success/50 hover:bg-success/15 text-foreground transition-colors"
               >
                 <span className="font-medium">{feat.name}</span>
               </button>
-            );
+            )
           })}
         </div>
       )}
     </div>
-  );
+  )
 }

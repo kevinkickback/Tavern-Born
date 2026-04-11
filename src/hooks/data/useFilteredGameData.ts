@@ -1,20 +1,16 @@
-import { useMemo } from 'react';
-import { DataFilter } from '@/lib/5etools/filters';
-import { buildSuppressedKeys } from '@/lib/5etools/reprints';
-import { useCharacterStore } from '@/store/characterStore';
-import { useGameDataStore } from '@/store/gameDataStore';
+import { useMemo } from 'react'
+import { DataFilter } from '@/lib/5etools/filters'
+import { buildSuppressedKeys } from '@/lib/5etools/reprints'
+import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 
 export function useFilteredGameData() {
-  const gameData = useGameDataStore((state) => state.gameData);
+  const gameData = useGameDataStore((state) => state.gameData)
   const activeCharacter = useCharacterStore((state) => {
-    if (state.activeCharacter) return state.activeCharacter;
-    if (!state.activeCharacterId) return null;
-    return (
-      state.characters.find(
-        (character) => character.id === state.activeCharacterId,
-      ) ?? null
-    );
-  });
+    if (state.activeCharacter) return state.activeCharacter
+    if (!state.activeCharacterId) return null
+    return state.characters.find((character) => character.id === state.activeCharacterId) ?? null
+  })
 
   const filteredData = useMemo(() => {
     if (!gameData) {
@@ -29,24 +25,18 @@ export function useFilteredGameData() {
         classFeatures: [],
         optionalfeatures: [],
         sources: [],
-      };
+      }
     }
 
-    const allowedSources = activeCharacter?.allowedSources;
-    const firearmsAllowed =
-      activeCharacter?.variantRules?.firearmsAllowed ?? false;
-    const preferNewerPrintings =
-      activeCharacter?.variantRules?.preferNewerPrintings ?? false;
-
-    const filterFirearms = <T extends { firearm?: boolean }>(items: T[]) =>
-      firearmsAllowed ? items : items.filter((i) => !i.firearm);
+    const allowedSources = activeCharacter?.allowedSources
+    const preferNewerPrintings = activeCharacter?.variantRules?.preferNewerPrintings ?? false
 
     if (!allowedSources || allowedSources.length === 0) {
       return {
         ...gameData,
-        items: filterFirearms(gameData.items),
-        itemsBase: filterFirearms(gameData.itemsBase ?? []),
-      };
+        items: gameData.items,
+        itemsBase: gameData.itemsBase ?? [],
+      }
     }
 
     const suppressedKeys = preferNewerPrintings
@@ -61,14 +51,14 @@ export function useFilteredGameData() {
             ...(gameData.itemsBase ?? []),
             ...gameData.classFeatures,
             ...((gameData.optionalfeatures ?? []) as Array<{
-              name?: unknown;
-              source?: unknown;
-              reprintedAs?: unknown;
+              name?: unknown
+              source?: unknown
+              reprintedAs?: unknown
             }>),
           ],
           new Set(allowedSources),
         )
-      : undefined;
+      : undefined
 
     return {
       races: DataFilter.filterRaces(gameData.races, {
@@ -91,43 +81,35 @@ export function useFilteredGameData() {
         sources: allowedSources,
         suppressedKeys,
       }),
-      items: filterFirearms(
-        DataFilter.filterItems(gameData.items, {
-          sources: allowedSources,
-          suppressedKeys,
-        }),
-      ),
-      itemsBase: filterFirearms(
-        DataFilter.filterItems(gameData.itemsBase ?? [], {
-          sources: allowedSources,
-          suppressedKeys,
-        }),
-      ),
+      items: DataFilter.filterItems(gameData.items, {
+        sources: allowedSources,
+        suppressedKeys,
+      }),
+      itemsBase: DataFilter.filterItems(gameData.itemsBase ?? [], {
+        sources: allowedSources,
+        suppressedKeys,
+      }),
       classFeatures: gameData.classFeatures.filter(
         (cf) =>
           allowedSources.includes(cf.source) &&
           !(suppressedKeys?.has(`${cf.name}|${cf.source}`) ?? false),
       ),
-      optionalfeatures: (gameData.optionalfeatures ?? []).filter(
-        (of: unknown) => {
-          const optionalFeature = of as { name?: string; source?: string };
-          const source = optionalFeature.source ?? '';
-          if (!allowedSources.includes(source)) {
-            return false;
-          }
-          return !(
-            suppressedKeys?.has(`${optionalFeature.name}|${source}`) ?? false
-          );
-        },
-      ),
+      optionalfeatures: (gameData.optionalfeatures ?? []).filter((of: unknown) => {
+        const optionalFeature = of as { name?: string; source?: string }
+        const source = optionalFeature.source ?? ''
+        if (!allowedSources.includes(source)) {
+          return false
+        }
+        return !(suppressedKeys?.has(`${optionalFeature.name}|${source}`) ?? false)
+      }),
       sources: gameData.sources,
-    };
+    }
   }, [
     gameData,
     activeCharacter?.allowedSources,
-    activeCharacter?.variantRules?.firearmsAllowed,
-    activeCharacter?.variantRules?.preferNewerPrintings,
-  ]);
 
-  return filteredData;
+    activeCharacter?.variantRules?.preferNewerPrintings,
+  ])
+
+  return filteredData
 }

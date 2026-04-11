@@ -5,12 +5,12 @@ import type {
   GameDataLookups,
   Spell5e,
   Subclass5e,
-} from '@/types/5etools';
+} from '@/types/5etools'
 
 export function getEntityLookupKey(name?: unknown, source?: unknown): string {
-  const safeName = typeof name === 'string' ? name.trim() : '';
-  const safeSource = typeof source === 'string' ? source.trim() : '';
-  return `${safeName}|${safeSource}`;
+  const safeName = typeof name === 'string' ? name.trim() : ''
+  const safeSource = typeof source === 'string' ? source.trim() : ''
+  return `${safeName}|${safeSource}`
 }
 
 export function getSubclassLookupKey(
@@ -24,73 +24,61 @@ export function getSubclassLookupKey(
     typeof classSource === 'string' ? classSource.trim() : '',
     typeof subclassName === 'string' ? subclassName.trim() : '',
     typeof subclassSource === 'string' ? subclassSource.trim() : '',
-  ].join('|');
+  ].join('|')
 }
 
 export function buildClassFeatureLookup(
   classFeatures: ClassFeature[],
 ): Record<string, ClassFeature> {
-  return classFeatures.reduce<Record<string, ClassFeature>>(
-    (lookup, feature) => {
-      const key = getEntityLookupKey(feature.name, feature.source);
-      if (key !== '|' && !lookup[key]) {
-        lookup[key] = feature;
-      }
-      return lookup;
-    },
-    {},
-  );
+  return classFeatures.reduce<Record<string, ClassFeature>>((lookup, feature) => {
+    const key = getEntityLookupKey(feature.name, feature.source)
+    if (key !== '|' && !lookup[key]) {
+      lookup[key] = feature
+    }
+    return lookup
+  }, {})
 }
 
 export function buildClassLookup(classes: Class5e[]): Record<string, Class5e> {
   return classes.reduce<Record<string, Class5e>>((lookup, cls) => {
-    const key = getEntityLookupKey(cls.name, cls.source);
+    const key = getEntityLookupKey(cls.name, cls.source)
     if (key !== '|' && !lookup[key]) {
-      lookup[key] = cls;
+      lookup[key] = cls
     }
-    return lookup;
-  }, {});
+    return lookup
+  }, {})
 }
 
 export function buildSpellLookup(spells: Spell5e[]): Record<string, Spell5e> {
   return spells.reduce<Record<string, Spell5e>>((lookup, spell) => {
-    const key = getEntityLookupKey(spell.name, spell.source);
+    const key = getEntityLookupKey(spell.name, spell.source)
     if (key !== '|' && !lookup[key]) {
-      lookup[key] = spell;
+      lookup[key] = spell
     }
-    return lookup;
-  }, {});
+    return lookup
+  }, {})
 }
 
-export function buildOptionalFeatureLookup(
-  optionalFeatures: unknown[],
-): Record<string, unknown> {
+export function buildOptionalFeatureLookup(optionalFeatures: unknown[]): Record<string, unknown> {
   return optionalFeatures.reduce<Record<string, unknown>>((lookup, feature) => {
-    if (typeof feature !== 'object' || feature === null) return lookup;
+    if (typeof feature !== 'object' || feature === null) return lookup
     const key = getEntityLookupKey(
       (feature as { name?: unknown }).name,
       (feature as { source?: unknown }).source,
-    );
+    )
     if (key !== '|' && !lookup[key]) {
-      lookup[key] = feature;
+      lookup[key] = feature
     }
-    return lookup;
-  }, {});
+    return lookup
+  }, {})
 }
 
-export function buildSubclassLookup(
-  classes: Class5e[],
-): Record<string, Subclass5e> {
+export function buildSubclassLookup(classes: Class5e[]): Record<string, Subclass5e> {
   return classes.reduce<Record<string, Subclass5e>>((lookup, cls) => {
     for (const subclass of cls.subclasses ?? []) {
-      const key = getSubclassLookupKey(
-        cls.name,
-        cls.source,
-        subclass.name,
-        subclass.source,
-      );
+      const key = getSubclassLookupKey(cls.name, cls.source, subclass.name, subclass.source)
       if (key !== '|||' && !lookup[key]) {
-        lookup[key] = subclass;
+        lookup[key] = subclass
       }
 
       const shortKey = getSubclassLookupKey(
@@ -98,13 +86,13 @@ export function buildSubclassLookup(
         cls.source,
         subclass.shortName,
         subclass.source,
-      );
+      )
       if (shortKey !== '|||' && !lookup[shortKey]) {
-        lookup[shortKey] = subclass;
+        lookup[shortKey] = subclass
       }
     }
-    return lookup;
-  }, {});
+    return lookup
+  }, {})
 }
 
 export function buildGameDataLookups(gameData: GameData): GameDataLookups {
@@ -112,9 +100,7 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
     classesByKey: buildClassLookup(gameData.classes),
     classFeaturesByKey: buildClassFeatureLookup(gameData.classFeatures),
     spellsByKey: buildSpellLookup(gameData.spells),
-    optionalFeaturesByKey: buildOptionalFeatureLookup(
-      gameData.optionalfeatures,
-    ),
+    optionalFeaturesByKey: buildOptionalFeatureLookup(gameData.optionalfeatures),
     subclassesByKey: buildSubclassLookup(gameData.classes),
-  };
+  }
 }

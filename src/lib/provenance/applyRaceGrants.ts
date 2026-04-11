@@ -1,37 +1,37 @@
-import type { Item5e } from '@/types/5etools';
-import { addAbilityBonus, addChoicePlaceholder, addGrant } from './ledger';
-import { normalizeGenericToolChoice, normalizeKey } from './normalization';
-import { makeSourceTag } from './sourceLabels';
-import type { ChoiceRecord, ProvenanceLedger } from './types';
+import type { Item5e } from '@/types/5etools'
+import { addAbilityBonus, addChoicePlaceholder, addGrant } from './ledger'
+import { normalizeGenericToolChoice, normalizeKey } from './normalization'
+import { makeSourceTag } from './sourceLabels'
+import type { ChoiceRecord, ProvenanceLedger } from './types'
 
 type ProfBlock = Record<
   string,
   | boolean
   | {
-      choose?: { from?: string[]; fromFilter?: string; count?: number };
+      choose?: { from?: string[]; fromFilter?: string; count?: number }
     }
   | number
->;
+>
 
-type RaceFilterDomain = 'armor' | 'weapons';
+type RaceFilterDomain = 'armor' | 'weapons'
 
 export interface RaceGrantOptionContext {
-  items?: Item5e[];
-  itemsBase?: Item5e[];
-  allowedSources?: string[];
+  items?: Item5e[]
+  itemsBase?: Item5e[]
+  allowedSources?: string[]
 }
 
 function addUniqueNames(list: string[], value: string): string[] {
-  if (!value.trim()) return list;
+  if (!value.trim()) return list
   if (list.some((entry) => normalizeKey(entry) === normalizeKey(value))) {
-    return list;
+    return list
   }
-  return [...list, value];
+  return [...list, value]
 }
 
 function getArmorTypePrefix(value: unknown): string {
-  if (typeof value !== 'string' || !value) return '';
-  return value.split('|')[0] ?? '';
+  if (typeof value !== 'string' || !value) return ''
+  return value.split('|')[0] ?? ''
 }
 
 export function resolveRaceGrantFilterOptions(
@@ -39,13 +39,13 @@ export function resolveRaceGrantFilterOptions(
   fromFilter: string,
   context: RaceGrantOptionContext,
 ): string[] {
-  const allowedSources = context.allowedSources ?? [];
-  const hasSourceFilter = allowedSources.length > 0;
+  const allowedSources = context.allowedSources ?? []
+  const hasSourceFilter = allowedSources.length > 0
   const isAllowedBySource = (item: { source?: string } | null | undefined) => {
-    if (!hasSourceFilter) return true;
-    if (!item?.source) return true;
-    return allowedSources.includes(item.source);
-  };
+    if (!hasSourceFilter) return true
+    if (!item?.source) return true
+    return allowedSources.includes(item.source)
+  }
 
   const criteria = new Map(
     fromFilter
@@ -53,37 +53,30 @@ export function resolveRaceGrantFilterOptions(
       .map((part) => part.trim())
       .filter(Boolean)
       .map((part) => {
-        const [key, value = ''] = part.split('=');
-        return [normalizeKey(key), normalizeKey(value)] as const;
+        const [key, value = ''] = part.split('=')
+        return [normalizeKey(key), normalizeKey(value)] as const
       }),
-  );
+  )
 
-  const typeFilter = criteria.get('type') ?? '';
-  const wantsMundane = criteria.get('miscellaneous') === 'mundane';
+  const typeFilter = criteria.get('type') ?? ''
+  const wantsMundane = criteria.get('miscellaneous') === 'mundane'
   const basePool = wantsMundane
     ? (context.itemsBase ?? [])
-    : [...(context.itemsBase ?? []), ...(context.items ?? [])];
-  const filteredPool = basePool.filter(isAllowedBySource);
+    : [...(context.itemsBase ?? []), ...(context.items ?? [])]
+  const filteredPool = basePool.filter(isAllowedBySource)
 
-  let results: string[] = [];
+  let results: string[] = []
 
   if (domain === 'weapons') {
     const weaponCategory =
-      typeFilter === 'martial weapon'
-        ? 'martial'
-        : typeFilter === 'simple weapon'
-          ? 'simple'
-          : '';
+      typeFilter === 'martial weapon' ? 'martial' : typeFilter === 'simple weapon' ? 'simple' : ''
 
     for (const item of filteredPool) {
-      if (!item?.name) continue;
-      if (
-        weaponCategory &&
-        normalizeKey(item.weaponCategory ?? '') !== weaponCategory
-      ) {
-        continue;
+      if (!item?.name) continue
+      if (weaponCategory && normalizeKey(item.weaponCategory ?? '') !== weaponCategory) {
+        continue
       }
-      results = addUniqueNames(results, item.name);
+      results = addUniqueNames(results, item.name)
     }
   }
 
@@ -97,40 +90,37 @@ export function resolveRaceGrantFilterOptions(
             ? 'HA'
             : typeFilter === 'shield'
               ? 'S'
-              : '';
+              : ''
 
     for (const item of filteredPool) {
-      if (!item?.name) continue;
+      if (!item?.name) continue
       if (armorPrefix && getArmorTypePrefix(item.type) !== armorPrefix) {
-        continue;
+        continue
       }
-      results = addUniqueNames(results, item.name);
+      results = addUniqueNames(results, item.name)
     }
   }
 
-  return results.sort((left, right) => left.localeCompare(right));
+  return results.sort((left, right) => left.localeCompare(right))
 }
 
 function getLineageLanguageBlocks(
   lineage: string | boolean | undefined,
   languageProficiencies: unknown[] | undefined,
 ): ProfBlock[] {
-  if (
-    Array.isArray(languageProficiencies) &&
-    languageProficiencies.length > 0
-  ) {
-    return languageProficiencies as ProfBlock[];
+  if (Array.isArray(languageProficiencies) && languageProficiencies.length > 0) {
+    return languageProficiencies as ProfBlock[]
   }
   // MPMM lineage races (lineage: "VRGR") encode languages as Common + one choice,
   // but omit explicit languageProficiencies blocks.
   if (typeof lineage === 'string') {
-    return [{ common: true, anyStandard: 1 } as ProfBlock];
+    return [{ common: true, anyStandard: 1 } as ProfBlock]
   }
-  return [];
+  return []
 }
 
 function toProfBlocks(blocks: unknown[] | undefined): ProfBlock[] {
-  return Array.isArray(blocks) ? (blocks as ProfBlock[]) : [];
+  return Array.isArray(blocks) ? (blocks as ProfBlock[]) : []
 }
 
 function applyProfBlocks(
@@ -139,18 +129,15 @@ function applyProfBlocks(
   blocks: ProfBlock[],
   tag: import('./types').SourceTag,
   choiceIdPrefix: string,
-  resolveFilterOptions?: (
-    domain: RaceFilterDomain,
-    fromFilter: string,
-  ) => string[],
+  resolveFilterOptions?: (domain: RaceFilterDomain, fromFilter: string) => string[],
 ): ProvenanceLedger {
-  let result = ledger;
-  let choiceIndex = 0;
+  let result = ledger
+  let choiceIndex = 0
   for (const block of blocks) {
     for (const [key, val] of Object.entries(block)) {
-      if (key === 'choose' || key === 'anyStandard') continue;
+      if (key === 'choose' || key === 'anyStandard') continue
       if (domain === 'tools') {
-        const generic = normalizeGenericToolChoice(key);
+        const generic = normalizeGenericToolChoice(key)
         if (generic) {
           if (val === true || (typeof val === 'number' && val > 0)) {
             const choiceRecord: ChoiceRecord = {
@@ -161,18 +148,18 @@ function applyProfBlocks(
               optionPool: [generic],
               selected: [],
               status: 'pending',
-            };
-            result = addChoicePlaceholder(result, choiceRecord);
-            choiceIndex++;
-            continue;
+            }
+            result = addChoicePlaceholder(result, choiceRecord)
+            choiceIndex++
+            continue
           }
         }
       }
       if (val === true) {
-        result = addGrant(result, domain, key, tag);
+        result = addGrant(result, domain, key, tag)
       }
     }
-    const anyStandard = (block as { anyStandard?: number }).anyStandard;
+    const anyStandard = (block as { anyStandard?: number }).anyStandard
     if (anyStandard) {
       const choiceRecord: ChoiceRecord = {
         id: `${choiceIdPrefix}:${domain}:any:${choiceIndex}`,
@@ -182,24 +169,22 @@ function applyProfBlocks(
         optionPool: [],
         selected: [],
         status: 'pending',
-      };
-      result = addChoicePlaceholder(result, choiceRecord);
-      choiceIndex++;
+      }
+      result = addChoicePlaceholder(result, choiceRecord)
+      choiceIndex++
     }
     const choose = (
       block as {
-        choose?: { from?: string[]; fromFilter?: string; count?: number };
+        choose?: { from?: string[]; fromFilter?: string; count?: number }
       }
-    ).choose;
+    ).choose
     if (choose) {
       const normalizedPool =
         domain === 'tools'
-          ? (choose.from ?? []).map(
-              (entry) => normalizeGenericToolChoice(entry) ?? entry,
-            )
+          ? (choose.from ?? []).map((entry) => normalizeGenericToolChoice(entry) ?? entry)
           : choose.fromFilter && (domain === 'armor' || domain === 'weapons')
             ? (resolveFilterOptions?.(domain, choose.fromFilter) ?? [])
-            : (choose.from ?? []);
+            : (choose.from ?? [])
       const choiceRecord: ChoiceRecord = {
         id: `${choiceIdPrefix}:${domain}:choose:${choiceIndex}`,
         domain,
@@ -208,12 +193,12 @@ function applyProfBlocks(
         optionPool: normalizedPool,
         selected: [],
         status: 'pending',
-      };
-      result = addChoicePlaceholder(result, choiceRecord);
-      choiceIndex++;
+      }
+      result = addChoicePlaceholder(result, choiceRecord)
+      choiceIndex++
     }
   }
-  return result;
+  return result
 }
 
 /**
@@ -222,41 +207,37 @@ function applyProfBlocks(
  */
 export function applyRaceGrants(
   race: {
-    name: string;
-    source?: string;
-    lineage?: string | boolean;
-    skillProficiencies?: unknown[];
-    languageProficiencies?: unknown[];
-    toolProficiencies?: unknown[];
-    weaponProficiencies?: unknown[];
-    armorProficiencies?: unknown[];
-    ability?: unknown[];
+    name: string
+    source?: string
+    lineage?: string | boolean
+    skillProficiencies?: unknown[]
+    languageProficiencies?: unknown[]
+    toolProficiencies?: unknown[]
+    weaponProficiencies?: unknown[]
+    armorProficiencies?: unknown[]
+    ability?: unknown[]
   },
   subrace:
     | {
-        name: string;
-        source?: string;
-        skillProficiencies?: unknown[];
-        languageProficiencies?: unknown[];
-        toolProficiencies?: unknown[];
-        weaponProficiencies?: unknown[];
-        armorProficiencies?: unknown[];
-        ability?: unknown[];
-        overwrite?: { ability?: boolean };
+        name: string
+        source?: string
+        skillProficiencies?: unknown[]
+        languageProficiencies?: unknown[]
+        toolProficiencies?: unknown[]
+        weaponProficiencies?: unknown[]
+        armorProficiencies?: unknown[]
+        ability?: unknown[]
+        overwrite?: { ability?: boolean }
       }
     | undefined,
   ledger: ProvenanceLedger,
-  resolveFilterOptions?: (
-    domain: RaceFilterDomain,
-    fromFilter: string,
-  ) => string[],
+  resolveFilterOptions?: (domain: RaceFilterDomain, fromFilter: string) => string[],
   lineageAsiBlockIndex: 0 | 1 = 0,
 ): ProvenanceLedger {
-  let result = ledger;
-  const usesTashasLineageAsi =
-    race.lineage === true || typeof race.lineage === 'string';
+  let result = ledger
+  const usesTashasLineageAsi = race.lineage === true || typeof race.lineage === 'string'
 
-  const raceTag = makeSourceTag('race', race.name, 'fixed', race.source);
+  const raceTag = makeSourceTag('race', race.name, 'fixed', race.source)
 
   result = applyProfBlocks(
     result,
@@ -264,7 +245,7 @@ export function applyRaceGrants(
     toProfBlocks(race.skillProficiencies),
     raceTag,
     `race:${normalizeKey(race.name)}`,
-  );
+  )
 
   result = applyProfBlocks(
     result,
@@ -273,7 +254,7 @@ export function applyRaceGrants(
     raceTag,
     `race:${normalizeKey(race.name)}`,
     resolveFilterOptions,
-  );
+  )
 
   result = applyProfBlocks(
     result,
@@ -282,7 +263,7 @@ export function applyRaceGrants(
     raceTag,
     `race:${normalizeKey(race.name)}`,
     resolveFilterOptions,
-  );
+  )
 
   result = applyProfBlocks(
     result,
@@ -291,7 +272,7 @@ export function applyRaceGrants(
     raceTag,
     `race:${normalizeKey(race.name)}`,
     resolveFilterOptions,
-  );
+  )
 
   result = applyProfBlocks(
     result,
@@ -300,19 +281,19 @@ export function applyRaceGrants(
     raceTag,
     `race:${normalizeKey(race.name)}`,
     resolveFilterOptions,
-  );
+  )
 
   if (!usesTashasLineageAsi) {
     for (const block of race.ability ?? []) {
-      const abilityBlock = block as Record<string, unknown>;
-      let choiceIndex = 0;
+      const abilityBlock = block as Record<string, unknown>
+      let choiceIndex = 0
       for (const [key, val] of Object.entries(abilityBlock)) {
         if (key === 'choose') {
           const choose = val as {
-            from?: string[];
-            count?: number;
-            amount?: number;
-          };
+            from?: string[]
+            count?: number
+            amount?: number
+          }
           const choiceRecord: ChoiceRecord = {
             id: `race:${normalizeKey(race.name)}:abilityBonuses:choose:${choiceIndex}`,
             domain: 'abilityBonuses',
@@ -322,15 +303,15 @@ export function applyRaceGrants(
             optionPool: choose.from ?? [],
             selected: [],
             status: 'pending',
-          };
-          result = addChoicePlaceholder(result, choiceRecord);
-          choiceIndex++;
+          }
+          result = addChoicePlaceholder(result, choiceRecord)
+          choiceIndex++
         } else if (typeof val === 'number') {
           result = addAbilityBonus(result, {
             ability: key.toLowerCase(),
             value: val,
             sourceTag: raceTag,
-          });
+          })
         }
       }
     }
@@ -344,9 +325,9 @@ export function applyRaceGrants(
     'intelligence',
     'wisdom',
     'charisma',
-  ];
+  ]
   if (usesTashasLineageAsi) {
-    const lineageAmounts = lineageAsiBlockIndex === 1 ? [1, 1, 1] : [2, 1];
+    const lineageAmounts = lineageAsiBlockIndex === 1 ? [1, 1, 1] : [2, 1]
     for (let i = 0; i < lineageAmounts.length; i++) {
       const choiceRecord: ChoiceRecord = {
         id: `race:${normalizeKey(race.name)}:abilityBonuses:choose:${i}`,
@@ -357,28 +338,21 @@ export function applyRaceGrants(
         optionPool: abilityNames,
         selected: [],
         status: 'pending',
-      };
-      result = addChoicePlaceholder(result, choiceRecord);
+      }
+      result = addChoicePlaceholder(result, choiceRecord)
     }
   }
 
   if (subrace) {
-    const subraceTag = makeSourceTag(
-      'subrace',
-      subrace.name,
-      'fixed',
-      subrace.source,
-    );
-    const replace = subrace.overwrite?.ability === true;
+    const subraceTag = makeSourceTag('subrace', subrace.name, 'fixed', subrace.source)
+    const replace = subrace.overwrite?.ability === true
 
     if (replace) {
       // Remove parent race ability bonuses and apply subrace's
       result = {
         ...result,
         abilityBonuses: result.abilityBonuses.filter(
-          (r) =>
-            r.sourceTag.sourceType !== 'race' ||
-            r.sourceTag.sourceName !== race.name,
+          (r) => r.sourceTag.sourceType !== 'race' || r.sourceTag.sourceName !== race.name,
         ),
         choices: result.choices.filter(
           (c) =>
@@ -388,19 +362,19 @@ export function applyRaceGrants(
               c.sourceTag.sourceName === race.name
             ),
         ),
-      };
+      }
     }
 
     for (const block of subrace.ability ?? []) {
-      const abilityBlock = block as Record<string, unknown>;
-      let choiceIndex = 0;
+      const abilityBlock = block as Record<string, unknown>
+      let choiceIndex = 0
       for (const [key, val] of Object.entries(abilityBlock)) {
         if (key === 'choose') {
           const choose = val as {
-            from?: string[];
-            count?: number;
-            amount?: number;
-          };
+            from?: string[]
+            count?: number
+            amount?: number
+          }
           const choiceRecord: ChoiceRecord = {
             id: `subrace:${normalizeKey(subrace.name)}:abilityBonuses:choose:${choiceIndex}`,
             domain: 'abilityBonuses',
@@ -410,15 +384,15 @@ export function applyRaceGrants(
             optionPool: choose.from ?? [],
             selected: [],
             status: 'pending',
-          };
-          result = addChoicePlaceholder(result, choiceRecord);
-          choiceIndex++;
+          }
+          result = addChoicePlaceholder(result, choiceRecord)
+          choiceIndex++
         } else if (typeof val === 'number') {
           result = addAbilityBonus(result, {
             ability: key.toLowerCase(),
             value: val,
             sourceTag: subraceTag,
-          });
+          })
         }
       }
     }
@@ -430,7 +404,7 @@ export function applyRaceGrants(
       subraceTag,
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,
-    );
+    )
     result = applyProfBlocks(
       result,
       'languages',
@@ -438,7 +412,7 @@ export function applyRaceGrants(
       subraceTag,
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,
-    );
+    )
     result = applyProfBlocks(
       result,
       'tools',
@@ -446,7 +420,7 @@ export function applyRaceGrants(
       subraceTag,
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,
-    );
+    )
     result = applyProfBlocks(
       result,
       'weapons',
@@ -454,7 +428,7 @@ export function applyRaceGrants(
       subraceTag,
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,
-    );
+    )
     result = applyProfBlocks(
       result,
       'armor',
@@ -462,8 +436,8 @@ export function applyRaceGrants(
       subraceTag,
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,
-    );
+    )
   }
 
-  return result;
+  return result
 }

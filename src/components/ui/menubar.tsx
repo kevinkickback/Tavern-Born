@@ -1,15 +1,12 @@
-import * as MenubarPrimitive from '@radix-ui/react-menubar';
-import CheckIcon from 'lucide-react/dist/esm/icons/check';
-import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right';
-import CircleIcon from 'lucide-react/dist/esm/icons/circle';
-import type { ComponentProps } from 'react';
+import * as MenubarPrimitive from '@radix-ui/react-menubar'
+import CheckIcon from 'lucide-react/dist/esm/icons/check'
+import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right'
+import CircleIcon from 'lucide-react/dist/esm/icons/circle'
+import type { ComponentProps } from 'react'
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'
 
-function Menubar({
-  className,
-  ...props
-}: ComponentProps<typeof MenubarPrimitive.Root>) {
+function Menubar({ className, ...props }: ComponentProps<typeof MenubarPrimitive.Root>) {
   return (
     <MenubarPrimitive.Root
       data-slot="menubar"
@@ -19,39 +16,26 @@ function Menubar({
       )}
       {...props}
     />
-  );
+  )
 }
 
-function MenubarMenu({
-  ...props
-}: ComponentProps<typeof MenubarPrimitive.Menu>) {
-  return <MenubarPrimitive.Menu data-slot="menubar-menu" {...props} />;
+function MenubarMenu({ ...props }: ComponentProps<typeof MenubarPrimitive.Menu>) {
+  return <MenubarPrimitive.Menu data-slot="menubar-menu" {...props} />
 }
 
-function MenubarGroup({
-  ...props
-}: ComponentProps<typeof MenubarPrimitive.Group>) {
-  return <MenubarPrimitive.Group data-slot="menubar-group" {...props} />;
+function MenubarGroup({ ...props }: ComponentProps<typeof MenubarPrimitive.Group>) {
+  return <MenubarPrimitive.Group data-slot="menubar-group" {...props} />
 }
 
-function MenubarPortal({
-  ...props
-}: ComponentProps<typeof MenubarPrimitive.Portal>) {
-  return <MenubarPrimitive.Portal data-slot="menubar-portal" {...props} />;
+function MenubarPortal({ ...props }: ComponentProps<typeof MenubarPrimitive.Portal>) {
+  return <MenubarPrimitive.Portal data-slot="menubar-portal" {...props} />
 }
 
-function MenubarRadioGroup({
-  ...props
-}: ComponentProps<typeof MenubarPrimitive.RadioGroup>) {
-  return (
-    <MenubarPrimitive.RadioGroup data-slot="menubar-radio-group" {...props} />
-  );
+function MenubarRadioGroup({ ...props }: ComponentProps<typeof MenubarPrimitive.RadioGroup>) {
+  return <MenubarPrimitive.RadioGroup data-slot="menubar-radio-group" {...props} />
 }
 
-function MenubarTrigger({
-  className,
-  ...props
-}: ComponentProps<typeof MenubarPrimitive.Trigger>) {
+function MenubarTrigger({ className, ...props }: ComponentProps<typeof MenubarPrimitive.Trigger>) {
   return (
     <MenubarPrimitive.Trigger
       data-slot="menubar-trigger"
@@ -61,7 +45,7 @@ function MenubarTrigger({
       )}
       {...props}
     />
-  );
+  )
 }
 
 function MenubarContent({
@@ -85,7 +69,7 @@ function MenubarContent({
         {...props}
       />
     </MenubarPortal>
-  );
+  )
 }
 
 function MenubarItem({
@@ -94,8 +78,8 @@ function MenubarItem({
   variant = 'default',
   ...props
 }: ComponentProps<typeof MenubarPrimitive.Item> & {
-  inset?: boolean;
-  variant?: 'default' | 'destructive';
+  inset?: boolean
+  variant?: 'default' | 'destructive'
 }) {
   return (
     <MenubarPrimitive.Item
@@ -108,7 +92,7 @@ function MenubarItem({
       )}
       {...props}
     />
-  );
+  )
 }
 
 function MenubarCheckboxItem({
@@ -134,7 +118,7 @@ function MenubarCheckboxItem({
       </span>
       {children}
     </MenubarPrimitive.CheckboxItem>
-  );
+  )
 }
 
 function MenubarRadioItem({
@@ -158,7 +142,7 @@ function MenubarRadioItem({
       </span>
       {children}
     </MenubarPrimitive.RadioItem>
-  );
+  )
 }
 
 function MenubarLabel({
@@ -166,19 +150,16 @@ function MenubarLabel({
   inset,
   ...props
 }: ComponentProps<typeof MenubarPrimitive.Label> & {
-  inset?: boolean;
+  inset?: boolean
 }) {
   return (
     <MenubarPrimitive.Label
       data-slot="menubar-label"
       data-inset={inset}
-      className={cn(
-        'px-2 py-1.5 text-sm font-medium data-[inset]:pl-8',
-        className,
-      )}
+      className={cn('px-2 py-1.5 text-sm font-medium data-[inset]:pl-8', className)}
       {...props}
     />
-  );
+  )
 }
 
 function MenubarSeparator({
@@ -191,24 +172,21 @@ function MenubarSeparator({
       className={cn('bg-border -mx-1 my-1 h-px', className)}
       {...props}
     />
-  );
+  )
 }
 
 function MenubarShortcut({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
       data-slot="menubar-shortcut"
-      className={cn(
-        'text-muted-foreground ml-auto text-xs tracking-widest',
-        className,
-      )}
+      className={cn('text-muted-foreground ml-auto text-xs tracking-widest', className)}
       {...props}
     />
-  );
+  )
 }
 
 function MenubarSub({ ...props }: ComponentProps<typeof MenubarPrimitive.Sub>) {
-  return <MenubarPrimitive.Sub data-slot="menubar-sub" {...props} />;
+  return <MenubarPrimitive.Sub data-slot="menubar-sub" {...props} />
 }
 
 function MenubarSubTrigger({
@@ -217,7 +195,7 @@ function MenubarSubTrigger({
   children,
   ...props
 }: ComponentProps<typeof MenubarPrimitive.SubTrigger> & {
-  inset?: boolean;
+  inset?: boolean
 }) {
   return (
     <MenubarPrimitive.SubTrigger
@@ -232,7 +210,7 @@ function MenubarSubTrigger({
       {children}
       <ChevronRightIcon className="ml-auto h-4 w-4" />
     </MenubarPrimitive.SubTrigger>
-  );
+  )
 }
 
 function MenubarSubContent({
@@ -248,24 +226,24 @@ function MenubarSubContent({
       )}
       {...props}
     />
-  );
+  )
 }
 
 export {
   Menubar,
-  MenubarPortal,
-  MenubarMenu,
-  MenubarTrigger,
+  MenubarCheckboxItem,
   MenubarContent,
   MenubarGroup,
-  MenubarSeparator,
-  MenubarLabel,
   MenubarItem,
-  MenubarShortcut,
-  MenubarCheckboxItem,
+  MenubarLabel,
+  MenubarMenu,
+  MenubarPortal,
   MenubarRadioGroup,
   MenubarRadioItem,
+  MenubarSeparator,
+  MenubarShortcut,
   MenubarSub,
-  MenubarSubTrigger,
   MenubarSubContent,
-};
+  MenubarSubTrigger,
+  MenubarTrigger,
+}

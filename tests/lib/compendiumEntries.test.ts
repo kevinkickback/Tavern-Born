@@ -1,8 +1,5 @@
-import { describe, expect, test } from 'vitest';
-import {
-  buildCompendiumEntries,
-  filterCompendiumEntries,
-} from '@/lib/compendiumEntries';
+import { describe, expect, test } from 'vitest'
+import { buildCompendiumEntries, filterCompendiumEntries } from '@/lib/compendiumEntries'
 
 describe('compendiumEntries', () => {
   test('buildCompendiumEntries flattens multiple game data families', () => {
@@ -19,15 +16,15 @@ describe('compendiumEntries', () => {
         mm: { name: 'Magic Missile', source: 'PHB', level: 1, school: 'E' },
       },
       items: [{ name: 'Rope', source: 'PHB', entries: ['item text'] }],
-    });
+    })
 
     expect(entries.map((e) => `${e.type}:${e.name}`)).toEqual([
       'Race:Elf',
       'Class:Wizard',
       'Spell:Magic Missile',
       'Item:Rope',
-    ]);
-  });
+    ])
+  })
 
   test('buildCompendiumEntries supports array collections for primary families', () => {
     const entries = buildCompendiumEntries({
@@ -40,18 +37,16 @@ describe('compendiumEntries', () => {
         },
       ],
       spells: [{ name: 'Magic Missile', source: 'PHB', level: 1, school: 'E' }],
-      backgrounds: [
-        { name: 'Acolyte', source: 'PHB', entries: ['background text'] },
-      ],
-    });
+      backgrounds: [{ name: 'Acolyte', source: 'PHB', entries: ['background text'] }],
+    })
 
     expect(entries.map((e) => `${e.type}:${e.name}`)).toEqual([
       'Race:Elf',
       'Class:Wizard',
       'Spell:Magic Missile',
       'Background:Acolyte',
-    ]);
-  });
+    ])
+  })
 
   test('filterCompendiumEntries filters by type, source, and text query', () => {
     const entries = [
@@ -73,16 +68,11 @@ describe('compendiumEntries', () => {
         source: 'XGE',
         data: {},
       },
-    ];
+    ]
 
-    const filtered = filterCompendiumEntries(
-      entries,
-      'magic',
-      new Set(['Spell']),
-      new Set(['PHB']),
-    );
+    const filtered = filterCompendiumEntries(entries, 'magic', new Set(['Spell']), new Set(['PHB']))
 
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0]?.name).toBe('Magic Missile');
-  });
-});
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0]?.name).toBe('Magic Missile')
+  })
+})

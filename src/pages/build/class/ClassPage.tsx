@@ -1,14 +1,10 @@
-import { CaretLeft, CaretRight, Sword } from '@phosphor-icons/react';
-import { useMemo } from 'react';
-import { Card } from '@/components/ui/card';
-import { useProvenance } from '@/hooks/character/useProvenance';
-import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
-import {
-  useClassLookup,
-  useOptionalFeatureLookup,
-  useSubclass,
-} from '@/hooks/data/useGameData';
-import type { OptionalFeatureLike } from '@/lib/5etools/classData';
+import { CaretLeft, CaretRight, Sword } from '@phosphor-icons/react'
+import { useMemo } from 'react'
+import { Card } from '@/components/ui/card'
+import { useProvenance } from '@/hooks/character/useProvenance'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useClassLookup, useOptionalFeatureLookup, useSubclass } from '@/hooks/data/useGameData'
+import type { OptionalFeatureLike } from '@/lib/5etools/classData'
 import {
   getClassFeatureGroups,
   getClassSpellGainAtLevel,
@@ -16,28 +12,25 @@ import {
   getSubclassSelectionInfo,
   isNormallySelectableFeat,
   resolveSubclassFeatureRefs,
-} from '@/lib/5etools/classData';
-import { getEntityLookupKey } from '@/lib/5etools/lookups';
-import { getClassStartingEquipmentChoiceOptions } from '@/lib/5etools/startingEquipment';
-import { getASILevelsFromClass } from '@/lib/calculations/gameRules';
-import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites';
-import { getOrdinalForm } from '@/lib/calculations/spellUtils';
-import { NoCharCard } from '@/pages/_shared';
+} from '@/lib/5etools/classData'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
+import { getClassStartingEquipmentChoiceOptions } from '@/lib/5etools/startingEquipment'
+import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
+import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
+import { getOrdinalForm } from '@/lib/calculations/spellUtils'
+import { NoCharCard } from '@/pages/_shared'
 import {
   BuildClassDetailsPanel,
   type ClassFeatureDisplay,
-} from '@/pages/build/class/components/DetailsPanel';
-import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel';
-import { BuildClassModals } from '@/pages/build/class/components/Modals';
-import {
-  applyClassAsiChoice,
-  resetClassAsiChoice,
-} from '@/pages/build/class/model/asi';
-import type { ClassFeatProgression } from '@/pages/build/class/model/levelsUtils';
+} from '@/pages/build/class/components/DetailsPanel'
+import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
+import { BuildClassModals } from '@/pages/build/class/components/Modals'
+import { applyClassAsiChoice, resetClassAsiChoice } from '@/pages/build/class/model/asi'
+import type { ClassFeatProgression } from '@/pages/build/class/model/levelsUtils'
 import {
   buildClassSelectionPatch,
   buildSubclassSelectionPatch,
-} from '@/pages/build/class/model/mutations';
+} from '@/pages/build/class/model/mutations'
 import {
   buildCharacterSnapshot,
   buildClassProgression,
@@ -46,26 +39,25 @@ import {
   countTotalAsiAcrossClasses,
   countTotalFeatSlots,
   filterClassSpells,
-} from '@/pages/build/class/model/pageUtils';
-import { useClassPageState } from '@/pages/build/class/useClassPageState';
-import { useCharacterStore } from '@/store/characterStore';
-import type { Class5e, Feat5e, Spell5e } from '@/types/5etools';
+} from '@/pages/build/class/model/pageUtils'
+import { useClassPageState } from '@/pages/build/class/useClassPageState'
+import { useCharacterStore } from '@/store/characterStore'
+import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
 
 interface SubclassOption {
-  name: string;
-  source?: string;
-  shortName?: string;
-  entries?: unknown[];
-  levelFeatures?: { level: number; features: ClassFeatureDisplay[] }[];
+  name: string
+  source?: string
+  shortName?: string
+  entries?: unknown[]
+  levelFeatures?: { level: number; features: ClassFeatureDisplay[] }[]
 }
 
 export function BuildClassPage() {
-  const character = useCharacterStore((s) => s.activeCharacter);
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter);
-  const { classes, classFeatures, optionalfeatures, spells, feats } =
-    useFilteredGameData();
-  const classLookup = useClassLookup();
-  const optionalFeatureLookup = useOptionalFeatureLookup();
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const { classes, classFeatures, optionalfeatures, spells, feats } = useFilteredGameData()
+  const classLookup = useClassLookup()
+  const optionalFeatureLookup = useOptionalFeatureLookup()
   const {
     applyClassSelection,
     applyClassEquipmentChoice,
@@ -73,7 +65,7 @@ export function BuildClassPage() {
     applySpellSelection,
     removeSpellProvenance,
     replaceFeatSelections,
-  } = useProvenance();
+  } = useProvenance()
   const {
     selectedClassTab,
     classPickerOpen,
@@ -102,157 +94,133 @@ export function BuildClassPage() {
     handleSubclassSelectionApplied,
     setAsiMode,
     clearAsiMode,
-  } = useClassPageState();
-  const classProgression = buildClassProgression(character);
+  } = useClassPageState()
+  const classProgression = buildClassProgression(character)
 
   const viewingEntry =
-    classProgression.find((e) => e.name === selectedClassTab) ??
-    classProgression[0];
-  const viewingClass = viewingEntry?.name ?? character?.class;
-  const viewingClassSource = viewingEntry?.source ?? character?.classSource;
-  const viewingClassLevel = viewingEntry?.levels ?? character?.level ?? 1;
+    classProgression.find((e) => e.name === selectedClassTab) ?? classProgression[0]
+  const viewingClass = viewingEntry?.name ?? character?.class
+  const viewingClassSource = viewingEntry?.source ?? character?.classSource
+  const viewingClassLevel = viewingEntry?.levels ?? character?.level ?? 1
   const fallbackClassByName = useMemo(
     () => new Map((classes as Class5e[]).map((cls) => [cls.name, cls])),
     [classes],
-  );
+  )
   const spellByName = useMemo(
     () => new Map((spells as Spell5e[]).map((s) => [s.name, s])),
     [spells],
-  );
+  )
   const featByCompositeId = useMemo(
-    () =>
-      new Map(
-        ((feats ?? []) as Feat5e[]).map((f) => [
-          `${f.name}|${f.source ?? ''}`,
-          f,
-        ]),
-      ),
+    () => new Map(((feats ?? []) as Feat5e[]).map((f) => [`${f.name}|${f.source ?? ''}`, f])),
     [feats],
-  );
+  )
 
   const viewingClassData = viewingClassSource
     ? classLookup[getEntityLookupKey(viewingClass, viewingClassSource)]
-    : fallbackClassByName.get(viewingClass ?? '');
+    : fallbackClassByName.get(viewingClass ?? '')
   const classEquipmentChoiceOptions = useMemo(
-    () =>
-      getClassStartingEquipmentChoiceOptions(
-        viewingClassData?.startingEquipment,
-      ),
+    () => getClassStartingEquipmentChoiceOptions(viewingClassData?.startingEquipment),
     [viewingClassData?.startingEquipment],
-  );
+  )
   const classEquipmentChoiceKey =
-    viewingClass && viewingClassData
-      ? `${viewingClass}|${viewingClassData.source ?? ''}`
-      : '';
+    viewingClass && viewingClassData ? `${viewingClass}|${viewingClassData.source ?? ''}` : ''
   const selectedClassEquipmentChoice =
     (classEquipmentChoiceKey
       ? character?.classEquipmentChoices?.[classEquipmentChoiceKey]
-      : undefined) ?? 'A';
+      : undefined) ?? 'A'
 
   const handleClassChange = (className: string, classSource?: string) => {
-    if (!character) return;
+    if (!character) return
     const { classEntity: cls, patch } = buildClassSelectionPatch({
       character,
       className,
       classSource,
       classLookup,
       fallbackClassByName,
-    });
-    if (cls) applyClassSelection(cls, undefined);
-    updateCharacter(character.id, patch);
-    handleClassSelectionApplied();
-  };
+    })
+    if (cls) applyClassSelection(cls, undefined)
+    updateCharacter(character.id, patch)
+    handleClassSelectionApplied()
+  }
   const allClassFeatures = useMemo(() => {
-    if (!viewingClass) return [];
-    const src = viewingClassSource ?? viewingClassData?.source;
+    if (!viewingClass) return []
+    const src = viewingClassSource ?? viewingClassData?.source
     return classFeatures
-      .filter(
-        (f) => f.className === viewingClass && (!src || f.classSource === src),
-      )
-      .sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
-  }, [classFeatures, viewingClass, viewingClassSource, viewingClassData]);
+      .filter((f) => f.className === viewingClass && (!src || f.classSource === src))
+      .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
+  }, [classFeatures, viewingClass, viewingClassSource, viewingClassData])
 
   const featuresByLevel = useMemo(() => {
-    return getClassFeatureGroups(allClassFeatures);
-  }, [allClassFeatures]);
+    return getClassFeatureGroups(allClassFeatures)
+  }, [allClassFeatures])
   const { subclassLevel, subclassFeatureName } = useMemo(() => {
-    return getSubclassSelectionInfo(viewingClassData);
-  }, [viewingClassData]);
-  const asiLevels = getASILevelsFromClass(viewingClassData);
-  const optFeatures = (optionalfeatures ?? []) as OptionalFeatureLike[];
+    return getSubclassSelectionInfo(viewingClassData)
+  }, [viewingClassData])
+  const asiLevels = getASILevelsFromClass(viewingClassData)
+  const optFeatures = (optionalfeatures ?? []) as OptionalFeatureLike[]
 
-  const isOptionalFeatureLike = (
-    value: unknown,
-  ): value is OptionalFeatureLike => {
+  const isOptionalFeatureLike = (value: unknown): value is OptionalFeatureLike => {
     return (
       typeof value === 'object' &&
       value !== null &&
       typeof (value as { name?: unknown }).name === 'string'
-    );
-  };
+    )
+  }
 
-  const findOptionalFeature = (
-    name: string,
-    source?: string,
-  ): OptionalFeatureLike | undefined => {
-    const fromLookup = optionalFeatureLookup[getEntityLookupKey(name, source)];
-    if (isOptionalFeatureLike(fromLookup)) return fromLookup;
-    return optFeatures.find(
-      (f) => f.name === name && (source === undefined || f.source === source),
-    );
-  };
+  const findOptionalFeature = (name: string, source?: string): OptionalFeatureLike | undefined => {
+    const fromLookup = optionalFeatureLookup[getEntityLookupKey(name, source)]
+    if (isOptionalFeatureLike(fromLookup)) return fromLookup
+    return optFeatures.find((f) => f.name === name && (source === undefined || f.source === source))
+  }
 
-  const selectedNames = new Set((character?.features ?? []).map((f) => f.name));
+  const selectedNames = new Set((character?.features ?? []).map((f) => f.name))
 
   const handleOptFeatureConfirm = (names: string[], featureTypes: string[]) => {
-    if (!character) return;
+    if (!character) return
     // Keep features that belong to other types (spells, class features, feats, etc.).
     const existingNonOpt = character.features.filter((f) => {
-      const of = findOptionalFeature(f.name, f.source);
-      if (!of) return true;
-      const fTypes = getFeatureTypes(of);
-      return !featureTypes.some((t) => fTypes.includes(t));
-    });
+      const of = findOptionalFeature(f.name, f.source)
+      if (!of) return true
+      const fTypes = getFeatureTypes(of)
+      return !featureTypes.some((t) => fTypes.includes(t))
+    })
     const newFeatures = names.map((name) => {
-      const feat = findOptionalFeature(name);
+      const feat = findOptionalFeature(name)
       return {
         id: `${name}-opt`,
         name,
         source: feat?.source ?? '',
         description: '',
-      };
-    });
+      }
+    })
     updateCharacter(character.id, {
       features: [...existingNonOpt, ...newFeatures],
-    });
+    })
     for (const name of names) {
-      const feat = findOptionalFeature(name);
-      applyOptionalFeatureSelection(name, feat?.source, viewingClass, 'class');
+      const feat = findOptionalFeature(name)
+      applyOptionalFeatureSelection(name, feat?.source, viewingClass, 'class')
     }
-  };
+  }
   const spellChoicesByLevel = useMemo(() => {
-    const map = new Map<
-      number,
-      { cantrips: number; spells: number; maxSpellLevel: number }
-    >();
-    if (!viewingClassData) return map;
+    const map = new Map<number, { cantrips: number; spells: number; maxSpellLevel: number }>()
+    if (!viewingClassData) return map
     for (let lv = 1; lv <= 20; lv++) {
-      const gain = getClassSpellGainAtLevel(viewingClassData, lv);
-      if (gain.cantrips > 0 || gain.spells > 0) map.set(lv, gain);
+      const gain = getClassSpellGainAtLevel(viewingClassData, lv)
+      if (gain.cantrips > 0 || gain.spells > 0) map.set(lv, gain)
     }
-    return map;
-  }, [viewingClassData]);
+    return map
+  }, [viewingClassData])
   const optFeatureProgressions = useMemo(
     () =>
       character?.variantRules?.optionalClassFeatures
         ? (viewingClassData?.optionalfeatureProgression ?? [])
         : [],
     [viewingClassData, character?.variantRules?.optionalClassFeatures],
-  );
+  )
   const classFeatProgressions = useMemo(
     () => (viewingClassData?.featProgression ?? []) as ClassFeatProgression[],
     [viewingClassData],
-  );
+  )
   const levelsToShow = useMemo(
     () =>
       buildLevelsToShow({
@@ -273,39 +241,28 @@ export function BuildClassPage() {
       optFeatureProgressions,
       classFeatProgressions,
     ],
-  );
+  )
   const subclasses = useMemo(() => {
-    const raw = (viewingClassData?.subclasses ?? []) as SubclassOption[];
-    const allowedSources = character?.allowedSources;
-    const characterRace = (character?.race ?? '').toLowerCase();
+    const raw = (viewingClassData?.subclasses ?? []) as SubclassOption[]
+    const allowedSources = character?.allowedSources
+    const characterRace = (character?.race ?? '').toLowerCase()
 
-    let filtered = raw;
+    let filtered = raw
     if (allowedSources && allowedSources.length > 0) {
-      filtered = filtered.filter((sc) =>
-        allowedSources.includes(sc.source ?? ''),
-      );
+      filtered = filtered.filter((sc) => allowedSources.includes(sc.source ?? ''))
     }
 
-    const isElf =
-      characterRace.includes('elf') || characterRace.includes('half-elf');
-    if (
-      !character?.variantRules?.bladesingerAnyRace &&
-      !isElf &&
-      viewingClass === 'Wizard'
-    ) {
-      filtered = filtered.filter((sc) => sc.name !== 'Bladesinger');
+    const isElf = characterRace.includes('elf') || characterRace.includes('half-elf')
+    if (!character?.variantRules?.bladesingerAnyRace && !isElf && viewingClass === 'Wizard') {
+      filtered = filtered.filter((sc) => sc.name !== 'Bladesinger')
     }
 
-    const isDwarf = characterRace.includes('dwarf');
-    if (
-      !character?.variantRules?.battleragerAnyRace &&
-      !isDwarf &&
-      viewingClass === 'Barbarian'
-    ) {
-      filtered = filtered.filter((sc) => sc.name !== 'Battlerager');
+    const isDwarf = characterRace.includes('dwarf')
+    if (!character?.variantRules?.battleragerAnyRace && !isDwarf && viewingClass === 'Barbarian') {
+      filtered = filtered.filter((sc) => sc.name !== 'Battlerager')
     }
 
-    return filtered;
+    return filtered
   }, [
     viewingClassData?.subclasses,
     character?.allowedSources,
@@ -313,47 +270,47 @@ export function BuildClassPage() {
     character?.variantRules?.bladesingerAnyRace,
     character?.variantRules?.battleragerAnyRace,
     viewingClass,
-  ]);
+  ])
 
   const subclassTitle =
     typeof viewingClassData?.subclassTitle === 'string'
       ? viewingClassData.subclassTitle
-      : 'Subclass';
+      : 'Subclass'
   const viewingSubclass = viewingEntry
     ? classProgression.length > 1
       ? viewingEntry.subclass
       : (viewingEntry.subclass ?? character?.subclass)
-    : character?.subclass;
+    : character?.subclass
   const viewingSubclassData = useSubclass(
     viewingClass ?? '',
     viewingClassSource,
     viewingSubclass ?? '',
     viewingEntry?.subclassSource ?? character?.subclassSource,
-  );
+  )
 
   const handleSubclassSelect = (sc: SubclassOption) => {
-    if (!character) return;
-    if (viewingClassData) applyClassSelection(viewingClassData, sc);
+    if (!character) return
+    if (viewingClassData) applyClassSelection(viewingClassData, sc)
     const patch = buildSubclassSelectionPatch({
       character,
       classProgression,
       viewingEntry,
       subclassName: sc.name,
       subclassSource: sc.source,
-    });
-    updateCharacter(character.id, patch);
+    })
+    updateCharacter(character.id, patch)
     handleSubclassSelectionApplied({
       name: sc.name,
       source: sc.source,
       entries: resolveSubclassFeatureRefs(sc.entries ?? [], sc.shortName),
       levelFeatures: sc.levelFeatures,
-    });
-  };
+    })
+  }
   const characterSnapshot: PrereqCharacterSnapshot = buildCharacterSnapshot({
     character,
     classProgression,
     viewingClass,
-  });
+  })
   const totalASIAcrossClasses = useMemo(
     () =>
       countTotalAsiAcrossClasses({
@@ -363,9 +320,9 @@ export function BuildClassPage() {
         fallbackClassByName,
       }),
     [classLookup, classProgression, fallbackClassByName, character],
-  );
+  )
 
-  const usedASI = character?.feats?.length ?? 0;
+  const usedASI = character?.feats?.length ?? 0
 
   // Feat slots = total ASI levels earned minus those committed to ability score increases
   const totalFeatSlots = useMemo(
@@ -377,62 +334,54 @@ export function BuildClassPage() {
         fallbackClassByName,
       }),
     [classLookup, classProgression, fallbackClassByName, character],
-  );
+  )
 
   // Applied ASI choices for the currently-viewed class (used in the accordion rows)
   const appliedAsiChoicesForClass = useMemo(
-    () =>
-      (character?.asiChoices ?? []).filter(
-        (ac) => ac.className === viewingClass,
-      ),
+    () => (character?.asiChoices ?? []).filter((ac) => ac.className === viewingClass),
     [character?.asiChoices, viewingClass],
-  );
+  )
 
   const handleFeatConfirm = (selectedFeats: Feat5e[]) => {
-    replaceFeatSelections(selectedFeats);
-  };
+    replaceFeatSelections(selectedFeats)
+  }
 
-  const handleAsiApply = (
-    level: number,
-    abilityChanges: Record<string, 1 | 2>,
-  ) => {
-    if (!character) return;
+  const handleAsiApply = (level: number, abilityChanges: Record<string, 1 | 2>) => {
+    if (!character) return
     const next = applyClassAsiChoice({
       characterAbilityScores: character.abilityScores,
       currentAsiChoices: character.asiChoices ?? [],
       className: viewingClass,
       level,
       abilityChanges,
-    });
+    })
     updateCharacter(character.id, {
       abilityScores: next.abilityScores,
       asiChoices: next.asiChoices,
-    });
-    setAsiPickerLevel(null);
-  };
+    })
+    setAsiPickerLevel(null)
+  }
 
   const handleAsiReset = (level: number) => {
-    if (!character) return;
+    if (!character) return
     const next = resetClassAsiChoice({
       characterAbilityScores: character.abilityScores,
       currentAsiChoices: character.asiChoices ?? [],
       className: viewingClass,
       level,
-    });
-    if (!next) return;
+    })
+    if (!next) return
     updateCharacter(character.id, {
       abilityScores: next.abilityScores,
       asiChoices: next.asiChoices,
-    });
-    const levelKey = `${level}|${viewingClass}`;
-    clearAsiMode(levelKey);
-  };
+    })
+    const levelKey = `${level}|${viewingClass}`
+    clearAsiMode(levelKey)
+  }
 
   // Merged feat list for the picker: available + any saved feats outside allowed sources
   const featModalFeats = useMemo(() => {
-    const available = ((feats ?? []) as Feat5e[]).filter(
-      isNormallySelectableFeat,
-    );
+    const available = ((feats ?? []) as Feat5e[]).filter(isNormallySelectableFeat)
     return buildFeatModalFeats({
       availableFeats: available,
       selectedFeats: character?.feats ?? [],
@@ -442,31 +391,22 @@ export function BuildClassPage() {
           source: selected.source,
           entries: [],
         }) as Feat5e,
-    });
-  }, [feats, character?.feats]);
+    })
+  }, [feats, character?.feats])
 
   const viewingClassEntries = useMemo(
-    () =>
-      Array.isArray(viewingClassData?.entries)
-        ? (viewingClassData.entries as unknown[])
-        : [],
+    () => (Array.isArray(viewingClassData?.entries) ? (viewingClassData.entries as unknown[]) : []),
     [viewingClassData?.entries],
-  );
+  )
   // Reduces array from ~1255 to ~100-200 before it reaches the modal,
   // cutting both filter cost and initial card render count.
   const classSpells = useMemo(
-    () =>
-      filterClassSpells(spells as Spell5e[], viewingClass, viewingClassSource),
+    () => filterClassSpells(spells as Spell5e[], viewingClass, viewingClassSource),
     [spells, viewingClass, viewingClassSource],
-  );
+  )
 
   if (!character) {
-    return (
-      <NoCharCard
-        icon={<Sword weight="duotone" />}
-        noun="configure your class"
-      />
-    );
+    return <NoCharCard icon={<Sword weight="duotone" />} noun="configure your class" />
   }
 
   return (
@@ -487,11 +427,7 @@ export function BuildClassPage() {
               <button
                 type="button"
                 onClick={() => setDetailCollapsed((c) => !c)}
-                title={
-                  detailCollapsed
-                    ? 'Expand details panel'
-                    : 'Collapse details panel'
-                }
+                title={detailCollapsed ? 'Expand details panel' : 'Collapse details panel'}
                 className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all"
               >
                 {detailCollapsed ? (
@@ -540,8 +476,8 @@ export function BuildClassPage() {
                 onOpenOptPicker={setOptPickerState}
                 onOpenClassFeatPicker={setClassFeatPickerState}
                 onClassEquipmentChoiceChange={(choice) => {
-                  if (!viewingClassData) return;
-                  applyClassEquipmentChoice(viewingClassData, choice);
+                  if (!viewingClassData) return
+                  applyClassEquipmentChoice(viewingClassData, choice)
                 }}
                 onSelectFeature={setSelectedFeature}
                 onExpandDetails={() => setDetailCollapsed(false)}
@@ -607,5 +543,5 @@ export function BuildClassPage() {
         featByCompositeId={featByCompositeId}
       />
     </div>
-  );
+  )
 }

@@ -1,25 +1,22 @@
-import { CaretRight, Check, Star } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/button';
-import {
-  getSubclassFeatureGroups,
-  resolveSubclassFeatureRefs,
-} from '@/lib/5etools/classData';
-import { cn } from '@/lib/utils';
-import type { Class5e, Subclass5e } from '@/types/5etools';
-import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel';
+import { CaretRight, Check, Star } from '@phosphor-icons/react'
+import { Button } from '@/components/ui/button'
+import { getSubclassFeatureGroups, resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
+import { cn } from '@/lib/utils'
+import type { Class5e, Subclass5e } from '@/types/5etools'
+import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 
 interface BuildClassSubclassSectionProps {
-  level: number;
-  subclassFeatureName: string | null;
-  featuresByLevel: Map<number, ClassFeatureDisplay[]>;
-  viewingClassData?: Class5e;
-  viewingSubclass?: string;
-  viewingSubclassData?: Subclass5e;
-  selectedFeature: SelectedFeatureState | null;
-  detailCollapsed: boolean;
-  onSelectFeature: (feature: SelectedFeatureState) => void;
-  onExpandDetails: () => void;
-  onOpenSubclassPicker: () => void;
+  level: number
+  subclassFeatureName: string | null
+  featuresByLevel: Map<number, ClassFeatureDisplay[]>
+  viewingClassData?: Class5e
+  viewingSubclass?: string
+  viewingSubclassData?: Subclass5e
+  selectedFeature: SelectedFeatureState | null
+  detailCollapsed: boolean
+  onSelectFeature: (feature: SelectedFeatureState) => void
+  onExpandDetails: () => void
+  onOpenSubclassPicker: () => void
 }
 
 export function BuildClassSubclassSection({
@@ -36,22 +33,16 @@ export function BuildClassSubclassSection({
   onOpenSubclassPicker,
 }: BuildClassSubclassSectionProps) {
   const subclassFeature = subclassFeatureName
-    ? (featuresByLevel.get(level) ?? []).find(
-        (feature) => feature.name === subclassFeatureName,
-      )
-    : undefined;
+    ? (featuresByLevel.get(level) ?? []).find((feature) => feature.name === subclassFeatureName)
+    : undefined
 
-  const title =
-    (viewingClassData as { subclassTitle?: string })?.subclassTitle ??
-    'Subclass';
+  const title = (viewingClassData as { subclassTitle?: string })?.subclassTitle ?? 'Subclass'
 
   return (
     <div
       className={cn(
         'rounded-lg border overflow-hidden',
-        viewingSubclass
-          ? 'border-success/30 bg-success/5'
-          : 'border-warning/30 bg-warning/5',
+        viewingSubclass ? 'border-success/30 bg-success/5' : 'border-warning/30 bg-warning/5',
       )}
     >
       <div className="flex items-center justify-between px-3 py-2.5">
@@ -59,12 +50,10 @@ export function BuildClassSubclassSection({
           type="button"
           className={cn(
             'flex items-center gap-2 min-w-0 text-left transition-colors hover:text-accent group',
-            subclassFeature &&
-              selectedFeature?.name === subclassFeature.name &&
-              'text-accent',
+            subclassFeature && selectedFeature?.name === subclassFeature.name && 'text-accent',
           )}
           onClick={() => {
-            if (!subclassFeature) return;
+            if (!subclassFeature) return
             onSelectFeature({
               name: subclassFeature.name,
               source: subclassFeature.source,
@@ -72,24 +61,17 @@ export function BuildClassSubclassSection({
                 subclassFeature.entries ?? [],
                 viewingSubclassData?.shortName,
               ),
-            });
-            if (detailCollapsed) onExpandDetails();
+            })
+            if (detailCollapsed) onExpandDetails()
           }}
         >
-          <Star
-            className="h-4 w-4 text-accent flex-shrink-0"
-            weight="duotone"
-          />
+          <Star className="h-4 w-4 text-accent flex-shrink-0" weight="duotone" />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 text-sm font-semibold">
               {title}
-              {viewingSubclass && (
-                <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />
-              )}
+              {viewingSubclass && <Check className="h-3.5 w-3.5 text-success flex-shrink-0" />}
             </div>
-            {!viewingSubclass && (
-              <div className="text-xs text-muted-foreground">None selected</div>
-            )}
+            {!viewingSubclass && <div className="text-xs text-muted-foreground">None selected</div>}
           </div>
           {subclassFeature && (subclassFeature.entries ?? []).length > 0 && (
             <CaretRight className="h-3 w-3 text-muted-foreground group-hover:text-accent flex-shrink-0" />
@@ -117,8 +99,8 @@ export function BuildClassSubclassSection({
                   viewingSubclassData?.shortName,
                 ),
                 levelFeatures: getSubclassFeatureGroups(viewingSubclassData),
-              });
-              if (detailCollapsed) onExpandDetails();
+              })
+              if (detailCollapsed) onExpandDetails()
             }}
             onClick={() =>
               onSelectFeature({
@@ -138,5 +120,5 @@ export function BuildClassSubclassSection({
         </div>
       )}
     </div>
-  );
+  )
 }

@@ -1,16 +1,16 @@
-import { CaretRight } from '@phosphor-icons/react';
-import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData';
-import { cn } from '@/lib/utils';
-import type { Subclass5e } from '@/types/5etools';
-import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel';
+import { CaretRight } from '@phosphor-icons/react'
+import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
+import { cn } from '@/lib/utils'
+import type { Subclass5e } from '@/types/5etools'
+import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 
 interface BuildClassPassiveFeatureListProps {
-  passiveFeatures: ClassFeatureDisplay[];
-  selectedFeature: SelectedFeatureState | null;
-  viewingSubclassData?: Subclass5e;
-  detailCollapsed: boolean;
-  onSelectFeature: (feature: SelectedFeatureState) => void;
-  onExpandDetails: () => void;
+  passiveFeatures: ClassFeatureDisplay[]
+  selectedFeature: SelectedFeatureState | null
+  viewingSubclassData?: Subclass5e
+  detailCollapsed: boolean
+  onSelectFeature: (feature: SelectedFeatureState) => void
+  onExpandDetails: () => void
 }
 
 export function BuildClassPassiveFeatureList({
@@ -35,13 +35,12 @@ export function BuildClassPassiveFeatureList({
                 feature.entries ?? [],
                 viewingSubclassData?.shortName,
               ),
-            });
-            if (detailCollapsed) onExpandDetails();
+            })
+            if (detailCollapsed) onExpandDetails()
           }}
           className={cn(
             'w-full text-left px-3 py-2 rounded-md hover:bg-accent/10 hover:text-accent transition-colors group flex items-center justify-between',
-            selectedFeature?.name === feature.name &&
-              'bg-accent/10 text-accent',
+            selectedFeature?.name === feature.name && 'bg-accent/10 text-accent',
           )}
         >
           <span className="text-sm font-medium">{feature.name}</span>
@@ -51,5 +50,5 @@ export function BuildClassPassiveFeatureList({
         </button>
       ))}
     </>
-  );
+  )
 }

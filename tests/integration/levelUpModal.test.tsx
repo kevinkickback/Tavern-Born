@@ -1,11 +1,11 @@
-import { cleanup, render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { LevelUpModal } from '@/components/modals/LevelUpModal';
-import { useCharacterStore } from '@/store/characterStore';
-import type { Class5e } from '@/types/5etools';
-import { makeCharacterFixture } from '../fixtures/characterFixtures';
-import { makeClassFixture } from '../fixtures/gameDataFixtures';
+import { cleanup, render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { LevelUpModal } from '@/components/modals/LevelUpModal'
+import { useCharacterStore } from '@/store/characterStore'
+import type { Class5e } from '@/types/5etools'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
 vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => ({
@@ -13,9 +13,9 @@ vi.mock('@/lib/storage/idb-storage', () => ({
     setItem: vi.fn(async () => undefined),
     removeItem: vi.fn(async () => undefined),
   }),
-}));
+}))
 
-let mockClasses: Class5e[] = [];
+let mockClasses: Class5e[] = []
 
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
@@ -28,35 +28,31 @@ vi.mock('@/hooks/data/useFilteredGameData', () => ({
     backgrounds: [],
     items: [],
   }),
-}));
+}))
 
 vi.mock('@/components/ui/select', () => ({
   Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   SelectTrigger: ({ children }: { children: ReactNode }) => (
     <button type="button">{children}</button>
   ),
-  SelectValue: ({ placeholder }: { placeholder?: string }) => (
-    <span>{placeholder ?? ''}</span>
-  ),
-  SelectContent: ({ children }: { children: ReactNode }) => (
-    <div>{children}</div>
-  ),
+  SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder ?? ''}</span>,
+  SelectContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   SelectItem: ({
     children,
   }: {
-    children: ReactNode;
-    value: string;
-    disabled?: boolean;
-    className?: string;
+    children: ReactNode
+    value: string
+    disabled?: boolean
+    className?: string
   }) => <div>{children}</div>,
-}));
+}))
 
 function resetCharacterStoreWith(character = makeCharacterFixture()) {
   useCharacterStore.setState({
     characters: [character],
     activeCharacterId: character.id,
     activeCharacter: character,
-  });
+  })
 }
 
 describe('level up modal multiclass requirement text', () => {
@@ -73,8 +69,8 @@ describe('level up modal multiclass requirement text', () => {
         wisdom: 12,
         charisma: 10,
       },
-    });
-    resetCharacterStoreWith(character);
+    })
+    resetCharacterStoreWith(character)
 
     mockClasses = [
       makeClassFixture({ name: 'Fighter', source: 'PHB' }),
@@ -93,26 +89,24 @@ describe('level up modal multiclass requirement text', () => {
           },
         },
       }),
-    ];
-  });
+    ]
+  })
 
   afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
-  });
+    cleanup()
+    vi.clearAllMocks()
+  })
 
   test('shows canonical ability names instead of legacy abbreviations', () => {
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />);
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
 
-    expect(screen.getByText(/\(Strength 13\)/)).toBeTruthy();
-    expect(screen.queryByText(/\(STR 13\+\)/)).toBeNull();
-  });
+    expect(screen.getByText(/\(Strength 13\)/)).toBeTruthy()
+    expect(screen.queryByText(/\(STR 13\+\)/)).toBeNull()
+  })
 
   test('shows combined OR and base requirements with canonical text', () => {
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />);
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
 
-    expect(
-      screen.getByText(/\(Dexterity 13; Wisdom 13; Strength 13\)/),
-    ).toBeTruthy();
-  });
-});
+    expect(screen.getByText(/\(Dexterity 13; Wisdom 13; Strength 13\)/)).toBeTruthy()
+  })
+})

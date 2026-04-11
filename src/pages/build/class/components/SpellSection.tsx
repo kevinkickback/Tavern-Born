@@ -1,25 +1,25 @@
-import { MagicWand } from '@phosphor-icons/react';
-import { Button } from '@/components/ui/button';
-import { formatSpellLevel } from '@/lib/calculations/spellUtils';
-import type { Spell5e } from '@/types/5etools';
-import type { SelectedFeatureState } from './DetailsPanel';
+import { MagicWand } from '@phosphor-icons/react'
+import { Button } from '@/components/ui/button'
+import { formatSpellLevel } from '@/lib/calculations/spellUtils'
+import type { Spell5e } from '@/types/5etools'
+import type { SelectedFeatureState } from './DetailsPanel'
 
 interface SpellGain {
-  cantrips: number;
-  spells: number;
-  maxSpellLevel: number;
+  cantrips: number
+  spells: number
+  maxSpellLevel: number
 }
 
 interface BuildClassSpellSectionProps {
-  level: number;
-  spellGain: SpellGain;
-  chosenNames: string[];
-  spellByName: Map<string, Spell5e>;
-  detailCollapsed: boolean;
-  onOpenSpellPicker: (level: number) => void;
-  onSelectFeature: (feature: SelectedFeatureState) => void;
-  onExpandDetails: () => void;
-  getOrdinalForm: (n: number) => string;
+  level: number
+  spellGain: SpellGain
+  chosenNames: string[]
+  spellByName: Map<string, Spell5e>
+  detailCollapsed: boolean
+  onOpenSpellPicker: (level: number) => void
+  onSelectFeature: (feature: SelectedFeatureState) => void
+  onExpandDetails: () => void
+  getOrdinalForm: (n: number) => string
 }
 
 export function BuildClassSpellSection({
@@ -37,10 +37,7 @@ export function BuildClassSpellSection({
     <div className="rounded-lg border border-accent-secondary/30 bg-accent-secondary/5 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5">
         <div className="flex items-center gap-2 min-w-0">
-          <MagicWand
-            className="h-4 w-4 text-accent-secondary flex-shrink-0"
-            weight="duotone"
-          />
+          <MagicWand className="h-4 w-4 text-accent-secondary flex-shrink-0" weight="duotone" />
           <div className="min-w-0">
             <div className="text-sm font-semibold">Spell Selection</div>
             <div className="text-xs text-muted-foreground">
@@ -67,19 +64,19 @@ export function BuildClassSpellSection({
       {chosenNames.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-accent-secondary/20 pt-2">
           {chosenNames.map((name) => {
-            const spell = spellByName.get(name);
+            const spell = spellByName.get(name)
             return (
               <button
                 key={spell ? `${spell.name}|${spell.source ?? ''}` : name}
                 type="button"
                 onMouseEnter={() => {
-                  if (!spell) return;
+                  if (!spell) return
                   onSelectFeature({
                     name: spell.name,
                     source: spell.source,
                     entries: spell.entries ?? [],
-                  });
-                  if (detailCollapsed) onExpandDetails();
+                  })
+                  if (detailCollapsed) onExpandDetails()
                 }}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-accent-secondary/30 bg-accent-secondary/5 hover:border-accent-secondary/50 hover:bg-accent-secondary/15 text-foreground transition-colors"
               >
@@ -90,10 +87,10 @@ export function BuildClassSpellSection({
                   </span>
                 )}
               </button>
-            );
+            )
           })}
         </div>
       )}
     </div>
-  );
+  )
 }

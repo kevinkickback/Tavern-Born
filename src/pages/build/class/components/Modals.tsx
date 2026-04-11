@@ -1,119 +1,113 @@
-import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal';
-import { OptionalFeatureSelectionModal } from '@/components/modals/OptionalFeatureSelectionModal';
-import type {
-  ActiveFilters,
-  CategoryLimit,
-} from '@/components/modals/SelectionModal';
-import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal';
-import { SubclassSelectionModal } from '@/components/modals/SubclassSelectionModal';
-import {
-  getFeatureTypes,
-  type OptionalFeatureLike,
-} from '@/lib/5etools/classData';
-import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites';
+import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
+import { OptionalFeatureSelectionModal } from '@/components/modals/OptionalFeatureSelectionModal'
+import type { ActiveFilters, CategoryLimit } from '@/components/modals/SelectionModal'
+import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
+import { SubclassSelectionModal } from '@/components/modals/SubclassSelectionModal'
+import { getFeatureTypes, type OptionalFeatureLike } from '@/lib/5etools/classData'
+import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
   buildClassProfileLabel,
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
   getKnownSpellNames,
-} from '@/lib/calculations/spellProfiles';
-import { getOrdinalForm } from '@/lib/calculations/spellUtils';
-import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog';
-import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelectionDialog';
-import type { Class5e, Feat5e, Spell5e } from '@/types/5etools';
-import type { AsiChoice, Character } from '@/types/character';
+} from '@/lib/calculations/spellProfiles'
+import { getOrdinalForm } from '@/lib/calculations/spellUtils'
+import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog'
+import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelectionDialog'
+import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
+import type { AsiChoice, Character } from '@/types/character'
 
 interface SubclassOption {
-  name: string;
-  source?: string;
-  shortName?: string;
-  entries?: unknown[];
+  name: string
+  source?: string
+  shortName?: string
+  entries?: unknown[]
   levelFeatures?: {
-    level: number;
-    features: { name: string; source?: string; entries?: unknown[] }[];
-  }[];
+    level: number
+    features: { name: string; source?: string; entries?: unknown[] }[]
+  }[]
 }
 
 interface OptPickerState {
-  progName: string;
-  featureTypes: string[];
-  total: number;
+  progName: string
+  featureTypes: string[]
+  total: number
 }
 
 interface ClassFeatPickerState {
-  progName: string;
-  categories: string[];
-  total: number;
+  progName: string
+  categories: string[]
+  total: number
 }
 
 type OptionalFeatureModalOption = {
-  name: string;
-  source?: string;
-  entries?: unknown[];
-  [extra: string]: unknown;
-};
+  name: string
+  source?: string
+  entries?: unknown[]
+  [extra: string]: unknown
+}
 
 interface BuildClassModalsProps {
-  character: Character;
-  classes: Class5e[];
-  classPickerOpen: boolean;
-  classPickerSearch: string;
-  onClassPickerOpenChange: (open: boolean) => void;
-  onClassPickerSearchChange: (search: string) => void;
-  onClassSelect: (className: string, classSource?: string) => void;
+  character: Character
+  classes: Class5e[]
+  classPickerOpen: boolean
+  classPickerSearch: string
+  onClassPickerOpenChange: (open: boolean) => void
+  onClassPickerSearchChange: (search: string) => void
+  onClassSelect: (className: string, classSource?: string) => void
 
-  spellPickerLevel: number | null;
-  onSpellPickerLevelChange: (level: number | null) => void;
+  spellPickerLevel: number | null
+  onSpellPickerLevelChange: (level: number | null) => void
   spellChoicesByLevel: Map<
     number,
     {
-      cantrips: number;
-      spells: number;
-      maxSpellLevel: number;
+      cantrips: number
+      spells: number
+      maxSpellLevel: number
     }
-  >;
-  classSpells: Spell5e[];
-  spellByName: Map<string, Spell5e>;
-  viewingClass?: string;
-  viewingClassSource?: string;
+  >
+  classSpells: Spell5e[]
+  spellByName: Map<string, Spell5e>
+  viewingClass?: string
+  viewingClassSource?: string
   onApplySpellSelection: (
     className: string,
     classSource: string | undefined,
     spellName: string,
     grantedAtLevel?: number,
-  ) => void;
-  onRemoveSpellProvenance: (spellName: string) => void;
-  onUpdateCharacter: (patch: Partial<Character>) => void;
+  ) => void
+  onRemoveSpellProvenance: (spellName: string) => void
+  onUpdateCharacter: (patch: Partial<Character>) => void
 
-  subclassPickerOpen: boolean;
-  onSubclassPickerOpenChange: (open: boolean) => void;
-  subclassTitle: string;
-  subclasses: SubclassOption[];
-  viewingSubclass?: string;
-  onSubclassConfirm: (subclass: SubclassOption) => void;
+  subclassPickerOpen: boolean
+  onSubclassPickerOpenChange: (open: boolean) => void
+  subclassTitle: string
+  subclasses: SubclassOption[]
+  viewingSubclass?: string
+  onSubclassConfirm: (subclass: SubclassOption) => void
 
-  optPickerState: OptPickerState | null;
-  onOptPickerStateChange: (state: OptPickerState | null) => void;
-  optFeatures: OptionalFeatureLike[];
-  characterSnapshot: PrereqCharacterSnapshot;
-  onOptFeatureConfirm: (names: string[], featureTypes: string[]) => void;
+  optPickerState: OptPickerState | null
+  onOptPickerStateChange: (state: OptPickerState | null) => void
+  optFeatures: OptionalFeatureLike[]
+  characterSnapshot: PrereqCharacterSnapshot
+  onOptFeatureConfirm: (names: string[], featureTypes: string[]) => void
 
-  asiPickerLevel: number | null;
-  onAsiPickerLevelChange: (level: number | null) => void;
-  appliedAsiChoicesForClass: AsiChoice[];
-  onAsiApply: (level: number, changes: Record<string, 1 | 2>) => void;
+  asiPickerLevel: number | null
+  onAsiPickerLevelChange: (level: number | null) => void
+  appliedAsiChoicesForClass: AsiChoice[]
+  onAsiApply: (level: number, changes: Record<string, 1 | 2>) => void
 
-  featPickerOpen: boolean;
-  onFeatPickerOpenChange: (open: boolean) => void;
-  featModalFeats: Feat5e[];
-  totalFeatSlots: number;
-  usedASI: number;
-  onFeatConfirm: (selectedFeats: Feat5e[]) => void;
+  featPickerOpen: boolean
+  onFeatPickerOpenChange: (open: boolean) => void
+  featModalFeats: Feat5e[]
+  totalFeatSlots: number
+  usedASI: number
+  onFeatConfirm: (selectedFeats: Feat5e[]) => void
 
-  classFeatPickerState: ClassFeatPickerState | null;
-  onClassFeatPickerStateChange: (state: ClassFeatPickerState | null) => void;
-  feats: Feat5e[];
-  featByCompositeId: Map<string, Feat5e>;
+  classFeatPickerState: ClassFeatPickerState | null
+  onClassFeatPickerStateChange: (state: ClassFeatPickerState | null) => void
+  feats: Feat5e[]
+  featByCompositeId: Map<string, Feat5e>
 }
 
 export function BuildClassModals({
@@ -169,8 +163,8 @@ export function BuildClassModals({
         selectedClassName={character.class}
         selectedClassSource={character.classSource}
         onOpenChange={(open) => {
-          onClassPickerOpenChange(open);
-          if (!open) onClassPickerSearchChange('');
+          onClassPickerOpenChange(open)
+          if (!open) onClassPickerSearchChange('')
         }}
         onSearchChange={onClassPickerSearchChange}
         onClassSelect={onClassSelect}
@@ -178,35 +172,32 @@ export function BuildClassModals({
 
       {spellPickerLevel !== null &&
         (() => {
-          const gain = spellChoicesByLevel.get(spellPickerLevel);
-          if (!gain) return null;
+          const gain = spellChoicesByLevel.get(spellPickerLevel)
+          if (!gain) return null
 
-          const classProfileId = `class:${viewingClass ?? ''}|${viewingClassSource ?? ''}`;
-          const profiles = ensureSpellProfiles(character);
-          const classProfile = profiles.find(
-            (profile) => profile.id === classProfileId,
-          );
+          const classProfileId = `class:${viewingClass ?? ''}|${viewingClassSource ?? ''}`
+          const profiles = ensureSpellProfiles(character)
+          const classProfile = profiles.find((profile) => profile.id === classProfileId)
           const selectionsByLevel = buildClassSpellSelectionsByLevel({
             character,
             className: viewingClass,
             classSource: viewingClassSource,
-          });
-          const initialSelectedNames =
-            selectionsByLevel.get(spellPickerLevel) ?? [];
+          })
+          const initialSelectedNames = selectionsByLevel.get(spellPickerLevel) ?? []
           const lockedNames = new Set(
             [...getKnownSpellNames(profiles)].filter(
               (name) => !initialSelectedNames.includes(name),
             ),
-          );
+          )
 
-          const categories: CategoryLimit<Spell5e>[] = [];
+          const categories: CategoryLimit<Spell5e>[] = []
           if (gain.cantrips > 0) {
             categories.push({
               key: 'cantrips',
               label: 'cantrips',
               max: gain.cantrips,
               test: (spell) => spell.level === 0,
-            });
+            })
           }
           if (gain.spells > 0) {
             categories.push({
@@ -217,40 +208,38 @@ export function BuildClassModals({
                   : 'spells',
               max: gain.spells,
               test: (spell) =>
-                spell.level > 0 &&
-                (gain.maxSpellLevel === 0 || spell.level <= gain.maxSpellLevel),
-            });
+                spell.level > 0 && (gain.maxSpellLevel === 0 || spell.level <= gain.maxSpellLevel),
+            })
           }
 
           const title = [
-            gain.cantrips > 0 &&
-              `Learn ${gain.cantrips} cantrip${gain.cantrips > 1 ? 's' : ''}`,
+            gain.cantrips > 0 && `Learn ${gain.cantrips} cantrip${gain.cantrips > 1 ? 's' : ''}`,
             gain.spells > 0 &&
               `${gain.spells} spell${gain.spells > 1 ? 's' : ''}${gain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(gain.maxSpellLevel)}-level)` : ''}`,
           ]
             .filter(Boolean)
-            .join(' · ');
+            .join(' · ')
 
-          const levelValues: string[] = [];
-          if (gain.cantrips > 0) levelValues.push('0');
+          const levelValues: string[] = []
+          if (gain.cantrips > 0) levelValues.push('0')
           if (gain.spells > 0 && gain.maxSpellLevel > 0) {
             for (let i = 1; i <= gain.maxSpellLevel; i++) {
-              levelValues.push(String(i));
+              levelValues.push(String(i))
             }
           }
 
-          const allowedLevels = new Set(levelValues);
+          const allowedLevels = new Set(levelValues)
           const initialFilters: ActiveFilters = {
             level: new Set(levelValues),
             school: new Set(),
             type: new Set(),
-          };
+          }
 
           return (
             <SpellSelectionModal
               open={true}
               onOpenChange={(open) => {
-                if (!open) onSpellPickerLevelChange(null);
+                if (!open) onSpellPickerLevelChange(null)
               }}
               title={title}
               spells={classSpells}
@@ -260,33 +249,30 @@ export function BuildClassModals({
               initialFilters={initialFilters}
               allowedLevels={allowedLevels}
               onConfirm={(names) => {
-                const previousLevelNames =
-                  selectionsByLevel.get(spellPickerLevel) ?? [];
-                const previousLevelSet = new Set(previousLevelNames);
-                const nextLevelSet = new Set(names);
+                const previousLevelNames = selectionsByLevel.get(spellPickerLevel) ?? []
+                const previousLevelSet = new Set(previousLevelNames)
+                const nextLevelSet = new Set(names)
 
-                const nextSelectionsByLevel = new Map(selectionsByLevel);
+                const nextSelectionsByLevel = new Map(selectionsByLevel)
                 if (names.length > 0) {
-                  nextSelectionsByLevel.set(spellPickerLevel, names);
+                  nextSelectionsByLevel.set(spellPickerLevel, names)
                 } else {
-                  nextSelectionsByLevel.delete(spellPickerLevel);
+                  nextSelectionsByLevel.delete(spellPickerLevel)
                 }
 
-                const classSelectedNames = Array.from(
-                  nextSelectionsByLevel.values(),
-                ).flatMap((selected) => selected ?? []);
-                const uniqueClassSelectedNames = [
-                  ...new Set(classSelectedNames),
-                ];
+                const classSelectedNames = Array.from(nextSelectionsByLevel.values()).flatMap(
+                  (selected) => selected ?? [],
+                )
+                const uniqueClassSelectedNames = [...new Set(classSelectedNames)]
                 const nextProfileCantrips = uniqueClassSelectedNames.filter(
                   (name) => spellByName.get(name)?.level === 0,
-                );
+                )
                 const nextProfileKnown = uniqueClassSelectedNames.filter(
                   (name) => spellByName.get(name)?.level !== 0,
-                );
+                )
 
                 const mappedProfiles = profiles.map((profile) => {
-                  if (profile.id !== classProfileId) return profile;
+                  if (profile.id !== classProfileId) return profile
                   return {
                     ...profile,
                     cantrips: nextProfileCantrips,
@@ -294,11 +280,9 @@ export function BuildClassModals({
                     preparedSpells: profile.preparedSpells.filter((spellName) =>
                       nextProfileKnown.includes(spellName),
                     ),
-                  };
-                });
-                const hasProfile = mappedProfiles.some(
-                  (profile) => profile.id === classProfileId,
-                );
+                  }
+                })
+                const hasProfile = mappedProfiles.some((profile) => profile.id === classProfileId)
                 const nextProfiles = hasProfile
                   ? mappedProfiles
                   : [
@@ -315,8 +299,7 @@ export function BuildClassModals({
                               character.classProgression?.find(
                                 (entry) =>
                                   entry.name === viewingClass &&
-                                  (entry.source ?? '') ===
-                                    (viewingClassSource ?? ''),
+                                  (entry.source ?? '') === (viewingClassSource ?? ''),
                               )?.levels ?? 1,
                           }),
                         className: viewingClass,
@@ -326,44 +309,36 @@ export function BuildClassModals({
                         preparedSpells: [],
                         alwaysPrepared: false,
                       },
-                    ];
+                    ]
 
                 onUpdateCharacter({
                   spells: {
                     ...character.spells,
                     spellProfiles: nextProfiles,
                   },
-                });
+                })
 
                 for (const name of names) {
-                  if (previousLevelSet.has(name)) continue;
+                  if (previousLevelSet.has(name)) continue
                   if (viewingClass) {
-                    onApplySpellSelection(
-                      viewingClass,
-                      viewingClassSource,
-                      name,
-                      spellPickerLevel,
-                    );
+                    onApplySpellSelection(viewingClass, viewingClassSource, name, spellPickerLevel)
                   }
                 }
 
                 const remainingKnownNames = new Set(
-                  nextProfiles.flatMap((profile) => [
-                    ...profile.cantrips,
-                    ...profile.spellsKnown,
-                  ]),
-                );
+                  nextProfiles.flatMap((profile) => [...profile.cantrips, ...profile.spellsKnown]),
+                )
 
                 for (const name of previousLevelNames) {
                   if (nextLevelSet.has(name) || remainingKnownNames.has(name)) {
-                    continue;
+                    continue
                   }
-                  onRemoveSpellProvenance(name);
+                  onRemoveSpellProvenance(name)
                 }
-                onSpellPickerLevelChange(null);
+                onSpellPickerLevelChange(null)
               }}
             />
-          );
+          )
         })()}
 
       {subclassPickerOpen && (
@@ -380,26 +355,23 @@ export function BuildClassModals({
       {optPickerState &&
         (() => {
           const featuresOfType = optFeatures.filter((feature) => {
-            const featureTypes = getFeatureTypes(feature);
-            return optPickerState.featureTypes.some((type) =>
-              featureTypes.includes(type),
-            );
-          });
+            const featureTypes = getFeatureTypes(feature)
+            return optPickerState.featureTypes.some((type) => featureTypes.includes(type))
+          })
 
           const initialSelectedNames = character.features
-            .filter((feature) =>
-              featuresOfType.some((of) => of.name === feature.name),
-            )
-            .map((feature) => feature.name);
+            .filter((feature) => featuresOfType.some((of) => of.name === feature.name))
+            .map((feature) => feature.name)
 
-          const modalFeatures: OptionalFeatureModalOption[] =
-            featuresOfType.map((feature) => ({ ...feature }));
+          const modalFeatures: OptionalFeatureModalOption[] = featuresOfType.map((feature) => ({
+            ...feature,
+          }))
 
           return (
             <OptionalFeatureSelectionModal
               open={true}
               onOpenChange={(open) => {
-                if (!open) onOptPickerStateChange(null);
+                if (!open) onOptPickerStateChange(null)
               }}
               title={`Choose ${optPickerState.progName}`}
               features={modalFeatures}
@@ -408,11 +380,11 @@ export function BuildClassModals({
               characterSnapshot={characterSnapshot}
               className={viewingClass}
               onConfirm={(names) => {
-                onOptFeatureConfirm(names, optPickerState.featureTypes);
-                onOptPickerStateChange(null);
+                onOptFeatureConfirm(names, optPickerState.featureTypes)
+                onOptPickerStateChange(null)
               }}
             />
-          );
+          )
         })()}
 
       {asiPickerLevel !== null && (
@@ -420,8 +392,7 @@ export function BuildClassModals({
           open={true}
           level={asiPickerLevel}
           existingChanges={
-            appliedAsiChoicesForClass.find((ac) => ac.level === asiPickerLevel)
-              ?.abilityChanges
+            appliedAsiChoicesForClass.find((ac) => ac.level === asiPickerLevel)?.abilityChanges
           }
           onApply={(changes) => onAsiApply(asiPickerLevel, changes)}
           onClose={() => onAsiPickerLevelChange(null)}
@@ -443,27 +414,18 @@ export function BuildClassModals({
 
       {classFeatPickerState &&
         (() => {
-          const categorySet = new Set(classFeatPickerState.categories);
+          const categorySet = new Set(classFeatPickerState.categories)
           const available = feats.filter(
             (feat) => !!feat.category && categorySet.has(feat.category),
-          );
-          const availableIds = new Set(
-            available.map((feat) => `${feat.name}|${feat.source ?? ''}`),
-          );
-          const savedInCategory = (character.specialFeats ?? []).filter(
-            (specialFeat) => {
-              const feat = featByCompositeId.get(
-                `${specialFeat.name}|${specialFeat.source ?? ''}`,
-              );
-              return !!feat?.category && categorySet.has(feat.category);
-            },
-          );
+          )
+          const availableIds = new Set(available.map((feat) => `${feat.name}|${feat.source ?? ''}`))
+          const savedInCategory = (character.specialFeats ?? []).filter((specialFeat) => {
+            const feat = featByCompositeId.get(`${specialFeat.name}|${specialFeat.source ?? ''}`)
+            return !!feat?.category && categorySet.has(feat.category)
+          })
           const savedNotInList = savedInCategory
             .filter(
-              (specialFeat) =>
-                !availableIds.has(
-                  `${specialFeat.name}|${specialFeat.source ?? ''}`,
-                ),
+              (specialFeat) => !availableIds.has(`${specialFeat.name}|${specialFeat.source ?? ''}`),
             )
             .map(
               (specialFeat) =>
@@ -472,15 +434,15 @@ export function BuildClassModals({
                   source: specialFeat.source,
                   entries: [],
                 }) as Feat5e,
-            );
+            )
 
-          const modalFeats = [...available, ...savedNotInList];
+          const modalFeats = [...available, ...savedNotInList]
 
           return (
             <FeatSelectionModal
               open={true}
               onOpenChange={(open) => {
-                if (!open) onClassFeatPickerStateChange(null);
+                if (!open) onClassFeatPickerStateChange(null)
               }}
               feats={modalFeats}
               maxSelections={classFeatPickerState.total}
@@ -495,30 +457,28 @@ export function BuildClassModals({
               characterSnapshot={characterSnapshot}
               allowIgnoreLimit={false}
               onConfirm={(selectedFeats) => {
-                const keptSpecial = (character.specialFeats ?? []).filter(
-                  (specialFeat) => {
-                    const feat = featByCompositeId.get(
-                      `${specialFeat.name}|${specialFeat.source ?? ''}`,
-                    );
-                    return !feat?.category || !categorySet.has(feat.category);
-                  },
-                );
+                const keptSpecial = (character.specialFeats ?? []).filter((specialFeat) => {
+                  const feat = featByCompositeId.get(
+                    `${specialFeat.name}|${specialFeat.source ?? ''}`,
+                  )
+                  return !feat?.category || !categorySet.has(feat.category)
+                })
 
                 const newSpecial = selectedFeats.map((feat) => ({
                   id: `${feat.name}-${feat.source ?? ''}`,
                   name: feat.name,
                   source: feat.source ?? '',
                   description: '',
-                }));
+                }))
 
                 onUpdateCharacter({
                   specialFeats: [...keptSpecial, ...newSpecial],
-                });
-                onClassFeatPickerStateChange(null);
+                })
+                onClassFeatPickerStateChange(null)
               }}
             />
-          );
+          )
         })()}
     </>
-  );
+  )
 }

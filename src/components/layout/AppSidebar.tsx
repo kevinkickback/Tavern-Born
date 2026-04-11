@@ -11,23 +11,23 @@ import {
   Star,
   Sword,
   User,
-} from '@phosphor-icons/react';
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+} from '@phosphor-icons/react'
+import { useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { cn } from '@/lib/utils'
 
 interface NavItem {
-  label: string;
-  path: string;
-  icon: React.ReactNode;
-  children?: NavItem[];
+  label: string
+  path: string
+  icon: React.ReactNode
+  children?: NavItem[]
 }
 
 interface FooterAction {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  onClick?: () => void;
+  id: string
+  label: string
+  icon: React.ReactNode
+  onClick?: () => void
 }
 
 const navItems: NavItem[] = [
@@ -93,15 +93,13 @@ const navItems: NavItem[] = [
     path: '/settings',
     icon: <Gear />,
   },
-];
+]
 
 export function AppSidebar() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [expandedSections, setExpandedSections] = useState<string[]>([]);
-  const [activeFooterAction, setActiveFooterAction] = useState<string | null>(
-    null,
-  );
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [expandedSections, setExpandedSections] = useState<string[]>([])
+  const [activeFooterAction, setActiveFooterAction] = useState<string | null>(null)
 
   const footerActions: FooterAction[] = [
     {
@@ -120,16 +118,16 @@ export function AppSidebar() {
       label: 'Theme',
       icon: <Moon className="text-lg" />,
     },
-  ];
+  ]
 
   const toggleSection = (label: string) => {
-    setExpandedSections((prev) => (prev.includes(label) ? [] : [label]));
-  };
+    setExpandedSections((prev) => (prev.includes(label) ? [] : [label]))
+  }
 
   const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
-  };
+    if (path === '/') return location.pathname === '/'
+    return location.pathname.startsWith(path)
+  }
 
   return (
     <aside className="w-60 bg-card border-r border-border flex flex-col h-full">
@@ -201,8 +199,8 @@ export function AppSidebar() {
       <div className="border-t border-border p-4">
         <div className="flex items-center justify-center overflow-hidden">
           {footerActions.map((action) => {
-            const isExpanded = activeFooterAction === action.id;
-            const isCollapsed = activeFooterAction !== null && !isExpanded;
+            const isExpanded = activeFooterAction === action.id
+            const isCollapsed = activeFooterAction !== null && !isExpanded
 
             return (
               <button
@@ -220,8 +218,7 @@ export function AppSidebar() {
                   isExpanded
                     ? 'w-36 gap-2 bg-secondary px-3 text-secondary-foreground shadow-sm'
                     : 'w-10 justify-center text-muted-foreground hover:bg-secondary/70 hover:text-secondary-foreground',
-                  isCollapsed &&
-                    'w-0 scale-90 px-0 opacity-0 pointer-events-none',
+                  isCollapsed && 'w-0 scale-90 px-0 opacity-0 pointer-events-none',
                 )}
               >
                 <span className="shrink-0">{action.icon}</span>
@@ -236,10 +233,10 @@ export function AppSidebar() {
                   {action.label}
                 </span>
               </button>
-            );
+            )
           })}
         </div>
       </div>
     </aside>
-  );
+  )
 }

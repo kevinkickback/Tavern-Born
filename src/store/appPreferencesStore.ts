@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { createIdbStorage } from '@/lib/storage/idb-storage';
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import { createIdbStorage } from '@/lib/storage/idb-storage'
 import {
   ACCENT_THEMES,
   type AccentTheme,
@@ -11,37 +11,35 @@ import {
   getStoredAccentTheme,
   getStoredAppearanceTheme,
   setThemePreferences,
-} from '@/lib/themeManager';
+} from '@/lib/themeManager'
 
-export const MIN_HOME_CARD_SIZE = 360;
-export const MAX_HOME_CARD_SIZE = 560;
-export const DEFAULT_HOME_CARD_SIZE = MIN_HOME_CARD_SIZE;
+export const MIN_HOME_CARD_SIZE = 360
+export const MAX_HOME_CARD_SIZE = 560
+export const DEFAULT_HOME_CARD_SIZE = MIN_HOME_CARD_SIZE
 
 function clampHomeCardSize(size: number): number {
-  return Math.min(MAX_HOME_CARD_SIZE, Math.max(MIN_HOME_CARD_SIZE, size));
+  return Math.min(MAX_HOME_CARD_SIZE, Math.max(MIN_HOME_CARD_SIZE, size))
 }
 
 function normalizeAccentTheme(value: string): AccentTheme {
-  return (ACCENT_THEMES as readonly string[]).includes(value)
-    ? (value as AccentTheme)
-    : 'blue';
+  return (ACCENT_THEMES as readonly string[]).includes(value) ? (value as AccentTheme) : 'blue'
 }
 
 function normalizeAppearanceTheme(value: string): AppearanceTheme {
   return (APPEARANCE_THEMES as readonly string[]).includes(value)
     ? (value as AppearanceTheme)
-    : 'light';
+    : 'light'
 }
 
 interface AppPreferencesState {
-  homeCardSize: number;
-  themeAccent: AccentTheme;
-  themeAppearance: AppearanceTheme;
-  autoRefreshGameData: boolean;
-  setHomeCardSize: (size: number) => void;
-  setThemeAccent: (accent: AccentTheme) => void;
-  setThemeAppearance: (appearance: AppearanceTheme) => void;
-  setAutoRefreshGameData: (enabled: boolean) => void;
+  homeCardSize: number
+  themeAccent: AccentTheme
+  themeAppearance: AppearanceTheme
+  autoRefreshGameData: boolean
+  setHomeCardSize: (size: number) => void
+  setThemeAccent: (accent: AccentTheme) => void
+  setThemeAppearance: (appearance: AppearanceTheme) => void
+  setAutoRefreshGameData: (enabled: boolean) => void
 }
 
 export const useAppPreferencesStore = create<AppPreferencesState>()(
@@ -55,17 +53,16 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
       setHomeCardSize: (size) => set({ homeCardSize: clampHomeCardSize(size) }),
 
       setThemeAccent: (accent) => {
-        applyAccentTheme(accent);
-        set({ themeAccent: accent });
+        applyAccentTheme(accent)
+        set({ themeAccent: accent })
       },
 
       setThemeAppearance: (appearance) => {
-        applyAppearanceTheme(appearance);
-        set({ themeAppearance: appearance });
+        applyAppearanceTheme(appearance)
+        set({ themeAppearance: appearance })
       },
 
-      setAutoRefreshGameData: (enabled) =>
-        set({ autoRefreshGameData: enabled }),
+      setAutoRefreshGameData: (enabled) => set({ autoRefreshGameData: enabled }),
     }),
     {
       name: 'app-preferences-storage',
@@ -78,16 +75,16 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) {
-          return;
+          return
         }
 
-        state.homeCardSize = clampHomeCardSize(state.homeCardSize);
-        state.themeAccent = normalizeAccentTheme(state.themeAccent);
-        state.themeAppearance = normalizeAppearanceTheme(state.themeAppearance);
-        state.autoRefreshGameData = state.autoRefreshGameData !== false;
+        state.homeCardSize = clampHomeCardSize(state.homeCardSize)
+        state.themeAccent = normalizeAccentTheme(state.themeAccent)
+        state.themeAppearance = normalizeAppearanceTheme(state.themeAppearance)
+        state.autoRefreshGameData = state.autoRefreshGameData !== false
 
-        setThemePreferences(state.themeAccent, state.themeAppearance);
+        setThemePreferences(state.themeAccent, state.themeAppearance)
       },
     },
   ),
-);
+)

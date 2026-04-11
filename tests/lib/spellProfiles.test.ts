@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest'
 import {
   buildClassSpellLevelKey,
   buildClassSpellSelectionsByLevel,
@@ -12,16 +12,16 @@ import {
   isSpellOnClassList,
   SPECIAL_SPELL_PROFILE_ID,
   SPECIAL_SPELL_PROFILE_LABEL,
-} from '@/lib/calculations/spellProfiles';
-import { makeCharacterFixture } from '../fixtures/characterFixtures';
-import { makeClassFixture } from '../fixtures/gameDataFixtures';
+} from '@/lib/calculations/spellProfiles'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
+import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
 function makeBaseProvenance() {
-  const provenance = makeCharacterFixture().provenance;
+  const provenance = makeCharacterFixture().provenance
   if (!provenance) {
-    throw new Error('Expected fixture provenance to be defined');
+    throw new Error('Expected fixture provenance to be defined')
   }
-  return provenance;
+  return provenance
 }
 
 describe('spellProfiles', () => {
@@ -50,23 +50,23 @@ describe('spellProfiles', () => {
         ],
         spellSlots: makeCharacterFixture().spells.spellSlots,
       },
-    });
+    })
 
-    const profiles = ensureSpellProfiles(character);
+    const profiles = ensureSpellProfiles(character)
     expect(profiles.map((profile) => profile.id)).toEqual([
       'class:Wizard|PHB',
       'class:Cleric|PHB',
       SPECIAL_SPELL_PROFILE_ID,
-    ]);
-    expect(profiles[0].cantrips).toEqual(['Mage Hand']);
-    expect(profiles[2].alwaysPrepared).toBe(true);
-    expect(profiles[2].label).toBe(SPECIAL_SPELL_PROFILE_LABEL);
-  });
+    ])
+    expect(profiles[0].cantrips).toEqual(['Mage Hand'])
+    expect(profiles[2].alwaysPrepared).toBe(true)
+    expect(profiles[2].label).toBe(SPECIAL_SPELL_PROFILE_LABEL)
+  })
 
   test('buildClassSpellLevelKey includes class source to avoid multiclass collisions', () => {
-    expect(buildClassSpellLevelKey('Wizard', 'PHB', 3)).toBe('Wizard|PHB:3');
-    expect(buildClassSpellLevelKey('Wizard', 'XPHB', 3)).toBe('Wizard|XPHB:3');
-  });
+    expect(buildClassSpellLevelKey('Wizard', 'PHB', 3)).toBe('Wizard|PHB:3')
+    expect(buildClassSpellLevelKey('Wizard', 'XPHB', 3)).toBe('Wizard|XPHB:3')
+  })
 
   test('isSpellOnClassList matches exact class source when present', () => {
     const spell = {
@@ -76,16 +76,16 @@ describe('spellProfiles', () => {
           { name: 'Cleric', source: 'PHB' },
         ],
       },
-    };
+    }
 
-    expect(isSpellOnClassList(spell, 'Wizard', 'PHB')).toBe(true);
-    expect(isSpellOnClassList(spell, 'Wizard', 'XPHB')).toBe(false);
-    expect(isSpellOnClassList(spell, 'Druid', 'PHB')).toBe(false);
-  });
+    expect(isSpellOnClassList(spell, 'Wizard', 'PHB')).toBe(true)
+    expect(isSpellOnClassList(spell, 'Wizard', 'XPHB')).toBe(false)
+    expect(isSpellOnClassList(spell, 'Druid', 'PHB')).toBe(false)
+  })
 
   test('isSpellOnClassList does not treat missing class lists as universally available', () => {
-    expect(isSpellOnClassList({}, 'Wizard', 'PHB')).toBe(false);
-  });
+    expect(isSpellOnClassList({}, 'Wizard', 'PHB')).toBe(false)
+  })
 
   test('collectKnownSpells includes always-prepared unrestricted spells', () => {
     const character = makeCharacterFixture({
@@ -118,19 +118,13 @@ describe('spellProfiles', () => {
         ],
         spellSlots: makeCharacterFixture().spells.spellSlots,
       },
-    });
+    })
 
-    const known = collectKnownSpells(ensureSpellProfiles(character));
-    expect(known.cantrips).toEqual(
-      expect.arrayContaining(['Mage Hand', 'Guidance']),
-    );
-    expect(known.spellsKnown).toEqual(
-      expect.arrayContaining(['Shield', 'Fireball']),
-    );
-    expect(known.preparedSpells).toEqual(
-      expect.arrayContaining(['Shield', 'Fireball', 'Guidance']),
-    );
-  });
+    const known = collectKnownSpells(ensureSpellProfiles(character))
+    expect(known.cantrips).toEqual(expect.arrayContaining(['Mage Hand', 'Guidance']))
+    expect(known.spellsKnown).toEqual(expect.arrayContaining(['Shield', 'Fireball']))
+    expect(known.preparedSpells).toEqual(expect.arrayContaining(['Shield', 'Fireball', 'Guidance']))
+  })
 
   test('calculateCharacterSpellSlots combines multiclass shared slots and keeps pact separate', () => {
     const character = makeCharacterFixture({
@@ -156,7 +150,7 @@ describe('spellProfiles', () => {
           level9: { max: 0, used: 0 },
         },
       },
-    });
+    })
 
     const classesById = new Map([
       [
@@ -183,13 +177,13 @@ describe('spellProfiles', () => {
           casterProgression: 'pact',
         }),
       ],
-    ]);
+    ])
 
-    const slots = calculateCharacterSpellSlots(character, classesById);
-    expect(slots.shared[1]?.max).toBe(4);
-    expect(slots.shared[2]?.max).toBe(3);
-    expect(slots.pact[1]?.max).toBe(2);
-  });
+    const slots = calculateCharacterSpellSlots(character, classesById)
+    expect(slots.shared[1]?.max).toBe(4)
+    expect(slots.shared[2]?.max).toBe(3)
+    expect(slots.pact[1]?.max).toBe(2)
+  })
 
   test('buildSpellcastingClassDetails computes save and attack values per class', () => {
     const character = makeCharacterFixture({
@@ -230,7 +224,7 @@ describe('spellProfiles', () => {
         ],
         spellSlots: makeCharacterFixture().spells.spellSlots,
       },
-    });
+    })
 
     const classesById = new Map([
       [
@@ -243,14 +237,14 @@ describe('spellProfiles', () => {
           spellsKnownProgression: [6, 8, 10, 12, 14],
         }),
       ],
-    ]);
+    ])
 
-    const details = buildSpellcastingClassDetails(character, classesById);
-    expect(details).toHaveLength(1);
-    expect(details[0].spellSaveDC).toBe(14);
-    expect(details[0].spellAttackBonus).toBe(6);
-    expect(details[0].isPreparedCaster).toBe(false);
-  });
+    const details = buildSpellcastingClassDetails(character, classesById)
+    expect(details).toHaveLength(1)
+    expect(details[0].spellSaveDC).toBe(14)
+    expect(details[0].spellAttackBonus).toBe(6)
+    expect(details[0].isPreparedCaster).toBe(false)
+  })
 
   test('inferClassSpellAttributionLevels assigns to lowest eligible level with capacity', () => {
     const wizard = makeClassFixture({
@@ -260,13 +254,13 @@ describe('spellProfiles', () => {
       cantripProgression: [3, 3, 3, 4, 4],
       spellsKnownProgressionFixed: [6, 2, 2, 2, 2],
       casterProgression: 'full',
-    });
+    })
 
     const spellLevelByName = new Map<string, number>([
       ['Scorching Ray', 2],
       ['Misty Step', 2],
       ['Counterspell', 3],
-    ]);
+    ])
 
     const assignments = inferClassSpellAttributionLevels({
       classData: wizard,
@@ -281,14 +275,14 @@ describe('spellProfiles', () => {
         { spellName: 'Identify', grantedAtLevel: 1 },
         { spellName: 'Detect Magic', grantedAtLevel: 1 },
       ],
-    });
+    })
 
     expect(assignments).toEqual([
       { spellName: 'Misty Step', grantedAtLevel: 3 },
       { spellName: 'Scorching Ray', grantedAtLevel: 3 },
       { spellName: 'Counterspell', grantedAtLevel: 5 },
-    ]);
-  });
+    ])
+  })
 
   test('inferClassSpellAttributionLevels uses cantrip capacity independently', () => {
     const wizard = makeClassFixture({
@@ -298,14 +292,14 @@ describe('spellProfiles', () => {
       cantripProgression: [3, 3, 3, 4],
       spellsKnownProgressionFixed: [6, 2, 2, 2],
       casterProgression: 'full',
-    });
+    })
 
     const spellLevelByName = new Map<string, number>([
       ['Light', 0],
       ['Fire Bolt', 0],
       ['Mage Hand', 0],
       ['Prestidigitation', 0],
-    ]);
+    ])
 
     const assignments = inferClassSpellAttributionLevels({
       classData: wizard,
@@ -317,13 +311,13 @@ describe('spellProfiles', () => {
         { spellName: 'Mage Hand', grantedAtLevel: 1 },
         { spellName: 'Prestidigitation', grantedAtLevel: 1 },
       ],
-    });
+    })
 
-    expect(assignments).toEqual([{ spellName: 'Light', grantedAtLevel: 4 }]);
-  });
+    expect(assignments).toEqual([{ spellName: 'Light', grantedAtLevel: 4 }])
+  })
 
   test('buildClassSpellSelectionsByLevel reconstructs class-level picks from provenance attribution', () => {
-    const baseProvenance = makeBaseProvenance();
+    const baseProvenance = makeBaseProvenance()
     const character = makeCharacterFixture({
       class: 'Wizard',
       classSource: 'PHB',
@@ -392,20 +386,20 @@ describe('spellProfiles', () => {
           ],
         },
       },
-    });
+    })
 
     const byLevel = buildClassSpellSelectionsByLevel({
       character,
       className: 'Wizard',
       classSource: 'PHB',
-    });
+    })
 
-    expect(byLevel.get(1)).toEqual(['Fire Bolt', 'Magic Missile']);
-    expect(byLevel.get(5)).toEqual(['Fireball']);
-  });
+    expect(byLevel.get(1)).toEqual(['Fire Bolt', 'Magic Missile'])
+    expect(byLevel.get(5)).toEqual(['Fireball'])
+  })
 
   test('buildClassSpellSelectionsByLevel excludes class-profile spells without provenance level attribution', () => {
-    const baseProvenance = makeBaseProvenance();
+    const baseProvenance = makeBaseProvenance()
     const character = makeCharacterFixture({
       class: 'Wizard',
       classSource: 'PHB',
@@ -459,16 +453,16 @@ describe('spellProfiles', () => {
           ],
         },
       },
-    });
+    })
 
     const byLevel = buildClassSpellSelectionsByLevel({
       character,
       className: 'Wizard',
       classSource: 'PHB',
-    });
+    })
 
-    expect(Array.from(byLevel.entries())).toEqual([]);
-  });
+    expect(Array.from(byLevel.entries())).toEqual([])
+  })
 
   test('evaluatePreparedSpellsFormula evaluates wizard formula with level + INT modifier', () => {
     const result = evaluatePreparedSpellsFormula('<$level$> + <$int_mod$>', 5, {
@@ -478,10 +472,10 @@ describe('spellProfiles', () => {
       intelligence: 1,
       wisdom: 0,
       charisma: 0,
-    });
+    })
 
-    expect(result).toBe(6);
-  });
+    expect(result).toBe(6)
+  })
 
   test('evaluatePreparedSpellsFormula handles negative modifiers', () => {
     const result = evaluatePreparedSpellsFormula('<$level$> + <$int_mod$>', 3, {
@@ -491,10 +485,10 @@ describe('spellProfiles', () => {
       intelligence: -2,
       wisdom: -1,
       charisma: -1,
-    });
+    })
 
-    expect(result).toBe(1);
-  });
+    expect(result).toBe(1)
+  })
 
   test('evaluatePreparedSpellsFormula returns null for invalid formula', () => {
     const result = evaluatePreparedSpellsFormula('invalid formula', 5, {
@@ -504,10 +498,10 @@ describe('spellProfiles', () => {
       intelligence: 1,
       wisdom: 0,
       charisma: 0,
-    });
+    })
 
-    expect(result).toBeNull();
-  });
+    expect(result).toBeNull()
+  })
 
   test('getPreparedSpellLimit calculates wizard prepared spells from formula', () => {
     const wizard = makeClassFixture({
@@ -516,23 +510,23 @@ describe('spellProfiles', () => {
       casterProgression: 'full',
       spellcastingAbility: 'int',
       preparedSpells: '<$level$> + <$int_mod$>',
-    });
+    })
 
-    const result = getPreparedSpellLimit(wizard, 5, 1);
+    const result = getPreparedSpellLimit(wizard, 5, 1)
 
-    expect(result).toBe(6);
-  });
+    expect(result).toBe(6)
+  })
 
   test('getPreparedSpellLimit returns null when class has no spellcasting', () => {
     const fighter = makeClassFixture({
       name: 'Fighter',
       source: 'PHB',
-    });
+    })
 
-    const result = getPreparedSpellLimit(fighter, 5, 1);
+    const result = getPreparedSpellLimit(fighter, 5, 1)
 
-    expect(result).toBeNull();
-  });
+    expect(result).toBeNull()
+  })
 
   test('buildSpellcastingClassDetails uses prepared spell formula for prepared casters', () => {
     const character = makeCharacterFixture({
@@ -573,7 +567,7 @@ describe('spellProfiles', () => {
         ],
         spellSlots: makeCharacterFixture().spells.spellSlots,
       },
-    });
+    })
 
     const classesById = new Map([
       [
@@ -587,11 +581,11 @@ describe('spellProfiles', () => {
           spellsKnownProgression: [6, 8, 10, 12, 14],
         }),
       ],
-    ]);
+    ])
 
-    const details = buildSpellcastingClassDetails(character, classesById);
-    expect(details).toHaveLength(1);
-    expect(details[0].isPreparedCaster).toBe(true);
-    expect(details[0].knownSpellLimit).toBe(9);
-  });
-});
+    const details = buildSpellcastingClassDetails(character, classesById)
+    expect(details).toHaveLength(1)
+    expect(details[0].isPreparedCaster).toBe(true)
+    expect(details[0].knownSpellLimit).toBe(9)
+  })
+})

@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'vitest';
-import { buildSuppressedKeys } from '@/lib/5etools/reprints';
+import { describe, expect, test } from 'vitest'
+import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 
 describe('5etools/reprints', () => {
   test('suppresses entity when direct reprint source is allowed', () => {
@@ -12,10 +12,10 @@ describe('5etools/reprints', () => {
         },
       ],
       new Set(['PHB', 'XPHB']),
-    );
+    )
 
-    expect(suppressed.has('Legacy Race|PHB')).toBe(true);
-  });
+    expect(suppressed.has('Legacy Race|PHB')).toBe(true)
+  })
 
   test('does not suppress when reprint source is not allowed', () => {
     const suppressed = buildSuppressedKeys(
@@ -27,10 +27,10 @@ describe('5etools/reprints', () => {
         },
       ],
       new Set(['PHB']),
-    );
+    )
 
-    expect(suppressed.has('Legacy Race|PHB')).toBe(false);
-  });
+    expect(suppressed.has('Legacy Race|PHB')).toBe(false)
+  })
 
   test('suppresses transitive reprint chain', () => {
     const suppressed = buildSuppressedKeys(
@@ -47,11 +47,11 @@ describe('5etools/reprints', () => {
         },
       ],
       new Set(['NEW']),
-    );
+    )
 
-    expect(suppressed.has('Feature|OLD')).toBe(true);
-    expect(suppressed.has('Feature|MID')).toBe(true);
-  });
+    expect(suppressed.has('Feature|OLD')).toBe(true)
+    expect(suppressed.has('Feature|MID')).toBe(true)
+  })
 
   test('parses subclass-style reprint keys', () => {
     const suppressed = buildSuppressedKeys(
@@ -63,8 +63,8 @@ describe('5etools/reprints', () => {
         },
       ],
       new Set(['TCE']),
-    );
+    )
 
-    expect(suppressed.has('Alchemist|EFA')).toBe(true);
-  });
-});
+    expect(suppressed.has('Alchemist|EFA')).toBe(true)
+  })
+})

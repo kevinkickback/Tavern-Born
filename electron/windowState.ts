@@ -1,26 +1,26 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { app, type BrowserWindow, screen } from 'electron';
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { app, type BrowserWindow, screen } from 'electron'
 
-const DEFAULT_WIDTH = 1366;
-const DEFAULT_HEIGHT = 850;
-const MIN_WIDTH = 900;
-const MIN_HEIGHT = 600;
-const SAVE_DEBOUNCE_MS = 250;
-const MAX_WORKAREA_FRACTION = 0.9;
+const DEFAULT_WIDTH = 1366
+const DEFAULT_HEIGHT = 850
+const MIN_WIDTH = 900
+const MIN_HEIGHT = 600
+const SAVE_DEBOUNCE_MS = 250
+const MAX_WORKAREA_FRACTION = 0.9
 
-type Bounds = Pick<Electron.Rectangle, 'x' | 'y' | 'width' | 'height'>;
+type Bounds = Pick<Electron.Rectangle, 'x' | 'y' | 'width' | 'height'>
 
 export interface WindowState {
-  x?: number;
-  y?: number;
-  width: number;
-  height: number;
-  isMaximized: boolean;
+  x?: number
+  y?: number
+  width: number
+  height: number
+  isMaximized: boolean
 }
 
 function getWindowStatePath(): string {
-  return join(app.getPath('userData'), 'window-state.json');
+  return join(app.getPath('userData'), 'window-state.json')
 }
 
 function defaultWindowState(): WindowState {
@@ -28,19 +28,19 @@ function defaultWindowState(): WindowState {
     width: DEFAULT_WIDTH,
     height: DEFAULT_HEIGHT,
     isMaximized: false,
-  };
+  }
 }
 
 function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
+  return typeof value === 'number' && Number.isFinite(value)
 }
 
 function normalizeBounds(raw: unknown): WindowState {
   if (!raw || typeof raw !== 'object') {
-    return defaultWindowState();
+    return defaultWindowState()
   }
 
-  const candidate = raw as Partial<WindowState>;
+  const candidate = raw as Partial<WindowState>
   const state: WindowState = {
     width: isFiniteNumber(candidate.width)
       ? Math.max(MIN_WIDTH, Math.round(candidate.width))
@@ -49,17 +49,17 @@ function normalizeBounds(raw: unknown): WindowState {
       ? Math.max(MIN_HEIGHT, Math.round(candidate.height))
       : DEFAULT_HEIGHT,
     isMaximized: candidate.isMaximized === true,
-  };
+  }
 
   if (isFiniteNumber(candidate.x)) {
-    state.x = Math.round(candidate.x);
+    state.x = Math.round(candidate.x)
   }
 
   if (isFiniteNumber(candidate.y)) {
-    state.y = Math.round(candidate.y);
+    state.y = Math.round(candidate.y)
   }
 
-  return state;
+  return state
 }
 
 function rectanglesIntersect(a: Bounds, b: Bounds): boolean {
@@ -68,7 +68,7 @@ function rectanglesIntersect(a: Bounds, b: Bounds): boolean {
     b.x + b.width <= a.x ||
     a.y + a.height <= b.y ||
     b.y + b.height <= a.y
-  );
+  )
 }
 
 export function coerceWindowStateToVisibleArea(
@@ -76,7 +76,7 @@ export function coerceWindowStateToVisibleArea(
   displayBounds: Bounds[],
 ): WindowState {
   if (state.x === undefined || state.y === undefined) {
-    return state;
+    return state
   }
 
   const hasVisibleDisplay = displayBounds.some((display) =>
@@ -89,103 +89,92 @@ export function coerceWindowStateToVisibleArea(
       },
       display,
     ),
-  );
+  )
 
   if (hasVisibleDisplay) {
-    return state;
+    return state
   }
 
   return {
     width: state.width,
     height: state.height,
     isMaximized: state.isMaximized,
-  };
+  }
 }
 
-export function clampWindowStateToWorkArea(
-  state: WindowState,
-  workArea?: Bounds,
-): WindowState {
+export function clampWindowStateToWorkArea(state: WindowState, workArea?: Bounds): WindowState {
   if (!workArea) {
-    return state;
+    return state
   }
 
-  const maxWidth = Math.max(
-    640,
-    Math.floor(workArea.width * MAX_WORKAREA_FRACTION),
-  );
-  const maxHeight = Math.max(
-    480,
-    Math.floor(workArea.height * MAX_WORKAREA_FRACTION),
-  );
+  const maxWidth = Math.max(640, Math.floor(workArea.width * MAX_WORKAREA_FRACTION))
+  const maxHeight = Math.max(480, Math.floor(workArea.height * MAX_WORKAREA_FRACTION))
 
   return {
     ...state,
     width: Math.min(state.width, maxWidth),
     height: Math.min(state.height, maxHeight),
-  };
+  }
 }
 
 export async function loadWindowState(): Promise<WindowState> {
   try {
-    const raw = await readFile(getWindowStatePath(), 'utf-8');
-    const parsed = normalizeBounds(JSON.parse(raw));
-    const displays = screen.getAllDisplays();
-    const workAreas = displays.map((display) => display.workArea);
-    const coerced = coerceWindowStateToVisibleArea(parsed, workAreas);
-    return clampWindowStateToWorkArea(coerced, workAreas[0]);
+    const raw = await readFile(getWindowStatePath(), 'utf-8')
+    const parsed = normalizeBounds(JSON.parse(raw))
+    const displays = screen.getAllDisplays()
+    const workAreas = displays.map((display) => display.workArea)
+    const coerced = coerceWindowStateToVisibleArea(parsed, workAreas)
+    return clampWindowStateToWorkArea(coerced, workAreas[0])
   } catch {
-    const workArea = screen.getAllDisplays()[0]?.workArea;
-    return clampWindowStateToWorkArea(defaultWindowState(), workArea);
+    const workArea = screen.getAllDisplays()[0]?.workArea
+    return clampWindowStateToWorkArea(defaultWindowState(), workArea)
   }
 }
 
 function getCurrentWindowState(window: BrowserWindow): WindowState {
-  const bounds = window.isMaximized()
-    ? window.getNormalBounds()
-    : window.getBounds();
+  const bounds = window.isMaximized() ? window.getNormalBounds() : window.getBounds()
 
   return {
     ...bounds,
     isMaximized: window.isMaximized(),
-  };
+  }
 }
 
 async function writeWindowState(window: BrowserWindow): Promise<void> {
   if (window.isDestroyed()) {
-    return;
+    return
   }
 
-  const state = getCurrentWindowState(window);
-  const windowStatePath = getWindowStatePath();
-  await mkdir(dirname(windowStatePath), { recursive: true });
-  await writeFile(windowStatePath, JSON.stringify(state, null, 2), 'utf-8');
+  const state = getCurrentWindowState(window)
+  const windowStatePath = getWindowStatePath()
+  await mkdir(dirname(windowStatePath), { recursive: true })
+  await writeFile(windowStatePath, JSON.stringify(state, null, 2), 'utf-8')
 }
 
 export function attachWindowStatePersistence(window: BrowserWindow): void {
-  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null
 
   const scheduleSave = () => {
     if (window.isDestroyed() || window.isMinimized() || window.isFullScreen()) {
-      return;
+      return
     }
 
     if (saveTimeout) {
-      clearTimeout(saveTimeout);
+      clearTimeout(saveTimeout)
     }
 
     saveTimeout = setTimeout(() => {
-      saveTimeout = null;
-      void writeWindowState(window);
-    }, SAVE_DEBOUNCE_MS);
-  };
+      saveTimeout = null
+      void writeWindowState(window)
+    }, SAVE_DEBOUNCE_MS)
+  }
 
-  window.on('resize', scheduleSave);
-  window.on('move', scheduleSave);
+  window.on('resize', scheduleSave)
+  window.on('move', scheduleSave)
   window.on('close', () => {
     if (saveTimeout) {
-      clearTimeout(saveTimeout);
+      clearTimeout(saveTimeout)
     }
-    void writeWindowState(window);
-  });
+    void writeWindowState(window)
+  })
 }

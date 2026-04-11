@@ -1,18 +1,15 @@
-import type { AbilityName } from '@/lib/calculations/abilityScores';
-import {
-  ABILITY_ABBREVIATIONS,
-  formatModifier,
-} from '@/lib/calculations/abilityScores';
-import { getAbilityModifier } from '@/lib/calculations/gameRules';
-import { cn } from '@/lib/utils';
+import type { AbilityName } from '@/lib/calculations/abilityScores'
+import { ABILITY_ABBREVIATIONS, formatModifier } from '@/lib/calculations/abilityScores'
+import { getAbilityModifier } from '@/lib/calculations/gameRules'
+import { cn } from '@/lib/utils'
 
 interface AbilityScoreCardProps {
-  ability: AbilityName;
-  score: number;
-  bonus?: number;
-  children?: React.ReactNode;
-  interactive?: boolean;
-  onSelect?: () => void;
+  ability: AbilityName
+  score: number
+  bonus?: number
+  children?: React.ReactNode
+  interactive?: boolean
+  onSelect?: () => void
 }
 
 /**
@@ -28,13 +25,13 @@ export function AbilityScoreCard({
   interactive = false,
   onSelect,
 }: AbilityScoreCardProps) {
-  const total = score + bonus;
-  const mod = getAbilityModifier(total);
+  const total = score + bonus
+  const mod = getAbilityModifier(total)
 
   const containerClass = cn(
     'border rounded-lg p-3 bg-card/50 border-border flex flex-col items-center justify-between min-h-0',
     interactive && 'cursor-pointer hover:border-accent/60 transition-colors',
-  );
+  )
 
   const cardContent = (
     <>
@@ -64,19 +61,15 @@ export function AbilityScoreCard({
 
       {children && <div>{children}</div>}
     </>
-  );
+  )
 
   if (interactive) {
     return (
-      <button
-        type="button"
-        onClick={onSelect}
-        className={`${containerClass} max-h-[160px]`}
-      >
+      <button type="button" onClick={onSelect} className={`${containerClass} max-h-[160px]`}>
         {cardContent}
       </button>
-    );
+    )
   }
 
-  return <div className={`${containerClass} max-h-[160px]`}>{cardContent}</div>;
+  return <div className={`${containerClass} max-h-[160px]`}>{cardContent}</div>
 }

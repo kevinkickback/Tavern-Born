@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.2.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -19,7 +19,9 @@
   },
   "formatter": {
     "enabled": true,
-    "indentStyle": "space"
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
   },
   "linter": {
     "enabled": true,
@@ -38,7 +40,9 @@
       },
       "correctness": {
         "useUniqueElementIds": "on",
-        "noPrecisionLoss": "on"
+        "noPrecisionLoss": "on",
+        "useExhaustiveDependencies": "warn",
+        "noUnusedImports": "warn"
       },
       "security": {
         "noDangerouslySetInnerHtml": "off"
@@ -54,7 +58,7 @@
       "suspicious": {
         "noArrayIndexKey": "on",
         "noDocumentCookie": "on",
-        "noExplicitAny": "on",
+        "noExplicitAny": "warn",
         "noImplicitAnyLet": "on",
         "useAwait": "on",
         "noDebugger": "on",
@@ -65,12 +69,16 @@
   },
   "css": {
     "parser": {
-      "cssModules": false
+      "cssModules": false,
+      "tailwindDirectives": true
     }
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "single"
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "trailingCommas": "all",
+      "semicolons": "asNeeded"
     }
   },
   "assist": {
@@ -101,7 +109,8 @@
         "rules": {
           "a11y": {
             "useFocusableInteractive": "off",
-            "useSemanticElements": "off"
+            "useSemanticElements": "off",
+            "noStaticElementInteractions": "off"
           },
           "suspicious": {
             "noArrayIndexKey": "off",
@@ -116,6 +125,20 @@
         "rules": {
           "complexity": {
             "noStaticOnlyClass": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.test.ts", "**/*.spec.ts", "tests/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off",
+            "noExplicitAny": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
           }
         }
       }

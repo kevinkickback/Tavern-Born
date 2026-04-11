@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest'
 import {
   buildSourcesList,
   extractProficiencyBlockNames,
@@ -7,26 +7,26 @@ import {
   parseItems,
   parseRaces,
   parseSpells,
-} from '@/lib/5etools/parsers';
+} from '@/lib/5etools/parsers'
 
 describe('5etools/parsers', () => {
   test('parseRaces nests subraces by race name and source', () => {
     const races = parseRaces({
       race: [{ name: 'Elf', source: 'PHB' }],
       subrace: [{ name: 'High Elf', raceName: 'Elf', raceSource: 'PHB' }],
-    }) as Array<{ subraces?: Array<{ name: string }> }>;
+    }) as Array<{ subraces?: Array<{ name: string }> }>
 
-    expect(races[0]?.subraces?.map((s) => s.name)).toEqual(['High Elf']);
-  });
+    expect(races[0]?.subraces?.map((s) => s.name)).toEqual(['High Elf'])
+  })
 
   test('parseRaces names unnamed base subraces as Default', () => {
     const races = parseRaces({
       race: [{ name: 'Human', source: 'PHB' }],
       subrace: [{ raceName: 'Human', raceSource: 'PHB', source: 'PHB' }],
-    }) as Array<{ subraces?: Array<{ name: string }> }>;
+    }) as Array<{ subraces?: Array<{ name: string }> }>
 
-    expect(races[0]?.subraces?.map((s) => s.name)).toEqual(['Default']);
-  });
+    expect(races[0]?.subraces?.map((s) => s.name)).toEqual(['Default'])
+  })
 
   test('parseClasses nests subclasses and resolves intro entries + level features', () => {
     const parsed = parseClasses({
@@ -90,29 +90,29 @@ describe('5etools/parsers', () => {
       ],
     }) as Array<{
       subclasses?: Array<{
-        shortName: string;
-        entries: unknown[];
-        levelFeatures: Array<{ level: number; features: unknown[] }>;
+        shortName: string
+        entries: unknown[]
+        levelFeatures: Array<{ level: number; features: unknown[] }>
         subclassFeatureRefs?: Array<{
-          name: string;
-          level?: number;
-          feature?: { entries?: unknown[] };
-        }>;
-      }>;
+          name: string
+          level?: number
+          feature?: { entries?: unknown[] }
+        }>
+      }>
       classFeatureRefs?: Array<{
-        name: string;
-        source?: string;
-        level?: number;
-        gainSubclassFeature?: boolean;
-        feature?: { entries?: unknown[] };
-      }>;
-      isSpellcaster?: boolean;
-    }>;
+        name: string
+        source?: string
+        level?: number
+        gainSubclassFeature?: boolean
+        feature?: { entries?: unknown[] }
+      }>
+      isSpellcaster?: boolean
+    }>
 
-    const subclass = parsed[0]?.subclasses?.[0];
-    expect(subclass?.shortName).toBe('Abjuration');
-    expect(subclass?.entries).toEqual(['intro text']);
-    expect(subclass?.levelFeatures?.some((l) => l.level === 2)).toBe(true);
+    const subclass = parsed[0]?.subclasses?.[0]
+    expect(subclass?.shortName).toBe('Abjuration')
+    expect(subclass?.entries).toEqual(['intro text'])
+    expect(subclass?.levelFeatures?.some((l) => l.level === 2)).toBe(true)
     expect(subclass?.subclassFeatureRefs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -121,7 +121,7 @@ describe('5etools/parsers', () => {
           feature: expect.objectContaining({ entries: ['feature text'] }),
         }),
       ]),
-    );
+    )
     expect(parsed[0]?.classFeatureRefs).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -137,19 +137,19 @@ describe('5etools/parsers', () => {
           gainSubclassFeature: true,
         }),
       ]),
-    );
-    expect(parsed[0]?.isSpellcaster).toBe(false);
-  });
+    )
+    expect(parsed[0]?.isSpellcaster).toBe(false)
+  })
 
   test('parseItems combines item, itemGroup, and baseitem arrays', () => {
     const items = parseItems({
       item: [{ name: 'Rope' }],
       itemGroup: [{ name: 'Pack' }],
       baseitem: [{ name: 'Longsword' }],
-    }) as Array<{ name: string }>;
+    }) as Array<{ name: string }>
 
-    expect(items.map((i) => i.name)).toEqual(['Rope', 'Pack', 'Longsword']);
-  });
+    expect(items.map((i) => i.name)).toEqual(['Rope', 'Pack', 'Longsword'])
+  })
 
   test('extractProficiencyBlockNames includes fixed keys, anyStandard, and choose count', () => {
     const names = extractProficiencyBlockNames([
@@ -158,12 +158,12 @@ describe('5etools/parsers', () => {
         choose: { count: 2 },
         anyStandard: 1,
       },
-    ]);
+    ])
 
-    expect(names).toContain('common');
-    expect(names).toContain('choose 2');
-    expect(names).toContain('any 1 standard');
-  });
+    expect(names).toContain('common')
+    expect(names).toContain('choose 2')
+    expect(names).toContain('any 1 standard')
+  })
 
   test('buildSourcesList builds and sorts core sources with PHB before DMG', () => {
     const list = buildSourcesList(['DMG', 'XPHB'], {
@@ -171,17 +171,15 @@ describe('5etools/parsers', () => {
         { id: 'DMG', name: 'Dungeon Master Guide', group: 'core' },
         { id: 'XPHB', name: 'Players Handbook', group: 'core' },
       ],
-    });
+    })
 
-    expect(list.map((s) => s.abbreviation)).toEqual(['XPHB', 'DMG']);
-  });
+    expect(list.map((s) => s.abbreviation)).toEqual(['XPHB', 'DMG'])
+  })
 
   test('parseSpells enriches classes and subclasses from generated lookup', () => {
     const spells = parseSpells(
       {
-        spell: [
-          { name: 'Magic Missile', source: 'PHB', level: 1, school: 'E' },
-        ],
+        spell: [{ name: 'Magic Missile', source: 'PHB', level: 1, school: 'E' }],
       },
       {
         sourceLookup: {
@@ -209,23 +207,23 @@ describe('5etools/parsers', () => {
     ) as Array<{
       classes?: {
         fromClassList?: Array<{
-          name: string;
-          source: string;
-          definedInSource?: string;
-        }>;
+          name: string
+          source: string
+          definedInSource?: string
+        }>
         fromSubclass?: Array<{
-          class: { name: string; source: string };
-          subclass: { name: string; shortName: string; source: string };
-        }>;
-      };
-    }>;
+          class: { name: string; source: string }
+          subclass: { name: string; shortName: string; source: string }
+        }>
+      }
+    }>
 
     expect(spells[0]?.classes?.fromClassList).toEqual(
       expect.arrayContaining([
         { name: 'Wizard', source: 'PHB' },
         { name: 'Artificer', source: 'PHB', definedInSource: 'TCE' },
       ]),
-    );
+    )
     expect(spells[0]?.classes?.fromSubclass).toEqual(
       expect.arrayContaining([
         {
@@ -237,8 +235,8 @@ describe('5etools/parsers', () => {
           },
         },
       ]),
-    );
-  });
+    )
+  })
 
   test('parseClassFeatures resolves refSubclassFeature entries with parsed feature data', () => {
     const data = {
@@ -269,24 +267,20 @@ describe('5etools/parsers', () => {
           entries: ['You can weave magic around yourself for protection.'],
         },
       ],
-    };
+    }
 
     const features = parseClassFeatures(data) as Array<{
-      name: string;
-      entries: unknown[];
-    }>;
+      name: string
+      entries: unknown[]
+    }>
 
-    const arcTrad = features.find((f) => f.name === 'Arcane Tradition');
-    expect(arcTrad).toBeTruthy();
+    const arcTrad = features.find((f) => f.name === 'Arcane Tradition')
+    expect(arcTrad).toBeTruthy()
     const ref = arcTrad?.entries.find(
-      (e) =>
-        typeof e === 'object' &&
-        (e as { type?: string }).type === 'refSubclassFeature',
-    ) as { feature?: { entries?: unknown[] } } | undefined;
-    expect(ref?.feature?.entries).toEqual([
-      'You can weave magic around yourself for protection.',
-    ]);
-  });
+      (e) => typeof e === 'object' && (e as { type?: string }).type === 'refSubclassFeature',
+    ) as { feature?: { entries?: unknown[] } } | undefined
+    expect(ref?.feature?.entries).toEqual(['You can weave magic around yourself for protection.'])
+  })
 
   test('parseClassFeatures leaves entries unchanged when no subclassFeature records exist', () => {
     const data = {
@@ -299,13 +293,11 @@ describe('5etools/parsers', () => {
           entries: ['Once per turn, you can deal extra damage.'],
         },
       ],
-    };
+    }
     const features = parseClassFeatures(data) as Array<{
-      name: string;
-      entries: unknown[];
-    }>;
-    expect(features[0]?.entries).toEqual([
-      'Once per turn, you can deal extra damage.',
-    ]);
-  });
-});
+      name: string
+      entries: unknown[]
+    }>
+    expect(features[0]?.entries).toEqual(['Once per turn, you can deal extra damage.'])
+  })
+})

@@ -1,63 +1,55 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
 
 function makeJsonResponse(jsonData: unknown, ok = true) {
   return new Response(JSON.stringify(jsonData), {
     status: ok ? 200 : 404,
     headers: { 'content-type': 'application/json' },
-  });
+  })
 }
 
 describe('5etools/dataLoader', () => {
-  const originalFetch = globalThis.fetch;
+  const originalFetch = globalThis.fetch
 
   beforeEach(() => {
-    vi.restoreAllMocks();
-  });
+    vi.restoreAllMocks()
+  })
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
+    globalThis.fetch = originalFetch
+  })
 
   test('buildUrl always resolves to data path in remote mode', () => {
     const loader = new FiveEToolsDataLoader({
       type: 'remote',
       path: 'https://example.com/5etools-src/main',
       isValid: true,
-    });
+    })
 
     const buildUrl = (filename: string) =>
-      (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(
-        filename,
-      );
+      (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(filename)
 
     expect(buildUrl('class/class-wizard.json')).toBe(
       'https://example.com/5etools-src/main/data/class/class-wizard.json',
-    );
+    )
     expect(buildUrl('spells/spells-phb.json')).toBe(
       'https://example.com/5etools-src/main/data/spells/spells-phb.json',
-    );
-    expect(buildUrl('books.json')).toBe(
-      'https://example.com/5etools-src/main/data/books.json',
-    );
-  });
+    )
+    expect(buildUrl('books.json')).toBe('https://example.com/5etools-src/main/data/books.json')
+  })
 
   test('buildUrl does not inject data prefix in local mode', () => {
     const loader = new FiveEToolsDataLoader({
       type: 'local',
       path: 'C:\\5etools',
       isValid: true,
-    });
+    })
 
     const buildUrl = (filename: string) =>
-      (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(
-        filename,
-      );
+      (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(filename)
 
-    expect(buildUrl('class/class-wizard.json')).toBe(
-      'C:\\5etools/class/class-wizard.json',
-    );
-  });
+    expect(buildUrl('class/class-wizard.json')).toBe('C:\\5etools/class/class-wizard.json')
+  })
 
   test('loads classes from class files and filters spells by index source while enriching lookup data', async () => {
     const payloadByFile: Record<string, unknown> = {
@@ -135,38 +127,30 @@ describe('5etools/dataLoader', () => {
       'magicvariants.json': { magicvariant: [] },
       'optionalfeatures.json': { optionalfeature: [] },
       'variantrules.json': { variantrule: [] },
-    };
+    }
 
     globalThis.fetch = vi.fn((input: string | URL | Request) => {
-      const url = String(input);
-      const entry = Object.entries(payloadByFile).find(([name]) =>
-        url.endsWith(`/data/${name}`),
-      );
-      if (!entry) return makeJsonResponse({}, false);
-      return makeJsonResponse(entry[1], true);
-    }) as unknown as typeof fetch;
+      const url = String(input)
+      const entry = Object.entries(payloadByFile).find(([name]) => url.endsWith(`/data/${name}`))
+      if (!entry) return makeJsonResponse({}, false)
+      return makeJsonResponse(entry[1], true)
+    }) as unknown as typeof fetch
 
     const loader = new FiveEToolsDataLoader({
       type: 'remote',
       path: 'https://example.com/5etools-src/main',
       isValid: true,
-    });
+    })
 
-    const gameData = await loader.loadAllData();
+    const gameData = await loader.loadAllData()
 
-    expect(gameData.classes.map((it) => it.name)).toEqual([
-      'Wizard',
-      'Wrong Source Class',
-    ]);
-    expect(gameData.classFeatures.map((it) => it.name)).toEqual([
-      'Spellcasting',
-      'Wrong Feature',
-    ]);
+    expect(gameData.classes.map((it) => it.name)).toEqual(['Wizard', 'Wrong Source Class'])
+    expect(gameData.classFeatures.map((it) => it.name)).toEqual(['Spellcasting', 'Wrong Feature'])
 
-    expect(gameData.spells.map((it) => it.name)).toEqual(['Magic Missile']);
+    expect(gameData.spells.map((it) => it.name)).toEqual(['Magic Missile'])
     expect(gameData.spells[0]?.classes?.fromClassList).toEqual(
       expect.arrayContaining([{ name: 'Wizard', source: 'PHB' }]),
-    );
+    )
     expect(gameData.spells[0]?.classes?.fromSubclass).toEqual(
       expect.arrayContaining([
         {
@@ -178,8 +162,8 @@ describe('5etools/dataLoader', () => {
           },
         },
       ]),
-    );
-  });
+    )
+  })
 
   test('loads classes from slug-keyed class index entries without source filtering them out', async () => {
     const payloadByFile: Record<string, unknown> = {
@@ -231,32 +215,24 @@ describe('5etools/dataLoader', () => {
       'magicvariants.json': { magicvariant: [] },
       'optionalfeatures.json': { optionalfeature: [] },
       'variantrules.json': { variantrule: [] },
-    };
+    }
 
     globalThis.fetch = vi.fn((input: string | URL | Request) => {
-      const url = String(input);
-      const entry = Object.entries(payloadByFile).find(([name]) =>
-        url.endsWith(`/data/${name}`),
-      );
-      if (!entry) return makeJsonResponse({}, false);
-      return makeJsonResponse(entry[1], true);
-    }) as unknown as typeof fetch;
+      const url = String(input)
+      const entry = Object.entries(payloadByFile).find(([name]) => url.endsWith(`/data/${name}`))
+      if (!entry) return makeJsonResponse({}, false)
+      return makeJsonResponse(entry[1], true)
+    }) as unknown as typeof fetch
 
     const loader = new FiveEToolsDataLoader({
       type: 'remote',
       path: 'https://example.com/5etools-src/main',
       isValid: true,
-    });
+    })
 
-    const gameData = await loader.loadAllData();
+    const gameData = await loader.loadAllData()
 
-    expect(gameData.classes.map((it) => it.name)).toEqual([
-      'Wizard',
-      'Fighter',
-    ]);
-    expect(gameData.classFeatures.map((it) => it.name)).toEqual([
-      'Spellcasting',
-      'Fighting Style',
-    ]);
-  });
-});
+    expect(gameData.classes.map((it) => it.name)).toEqual(['Wizard', 'Fighter'])
+    expect(gameData.classFeatures.map((it) => it.name)).toEqual(['Spellcasting', 'Fighting Style'])
+  })
+})
