@@ -1,14 +1,12 @@
-import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites';
-import type { Progression } from '@/lib/characterUtils';
-import type { Character } from '@/types/character';
+import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
+import type { Progression } from '@/lib/characterUtils'
+import type { Character } from '@/types/character'
 
-export function makeProgressionFixture(
-  overrides: Partial<Progression> = {},
-): Progression {
+export function makeProgressionFixture(overrides: Partial<Progression> = {}): Progression {
   return {
     classes: [{ name: 'Fighter', levels: 1, source: 'PHB' }],
     ...overrides,
-  };
+  }
 }
 
 export function makePrereqCharacterSnapshotFixture(
@@ -36,13 +34,11 @@ export function makePrereqCharacterSnapshotFixture(
       classes: [{ name: 'Fighter', levels: 1, source: 'PHB' }],
     },
     ...overrides,
-  };
+  }
 }
 
-export function makeCharacterFixture(
-  overrides: Partial<Character> = {},
-): Character {
-  const now = '2026-01-01T00:00:00.000Z';
+export function makeCharacterFixture(overrides: Partial<Character> = {}): Character {
+  const now = '2026-01-01T00:00:00.000Z'
 
   return {
     id: 'character-1',
@@ -152,5 +148,5 @@ export function makeCharacterFixture(
     createdAt: now,
     lastModified: now,
     ...overrides,
-  };
+  }
 }

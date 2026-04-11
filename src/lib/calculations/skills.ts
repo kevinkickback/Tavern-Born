@@ -1,7 +1,7 @@
-import type { AbilityName } from './abilityScores';
-import { formatModifier } from './abilityScores';
+import type { AbilityName } from './abilityScores'
+import { formatModifier } from './abilityScores'
 
-export { formatModifier };
+export { formatModifier }
 
 export const SKILL_TO_ABILITY: Readonly<Record<string, AbilityName>> = {
   acrobatics: 'dexterity',
@@ -22,12 +22,12 @@ export const SKILL_TO_ABILITY: Readonly<Record<string, AbilityName>> = {
   'sleight of hand': 'dexterity',
   stealth: 'dexterity',
   survival: 'wisdom',
-};
+}
 
-export const ALL_SKILLS = Object.keys(SKILL_TO_ABILITY) as readonly string[];
+export const ALL_SKILLS = Object.keys(SKILL_TO_ABILITY) as readonly string[]
 
 export function getSkillAbility(skillName: string): AbilityName | null {
-  return SKILL_TO_ABILITY[skillName.toLowerCase().trim()] ?? null;
+  return SKILL_TO_ABILITY[skillName.toLowerCase().trim()] ?? null
 }
 
 export const SAVING_THROW_ABILITIES: readonly AbilityName[] = [
@@ -37,21 +37,21 @@ export const SAVING_THROW_ABILITIES: readonly AbilityName[] = [
   'intelligence',
   'wisdom',
   'charisma',
-];
+]
 
 export function calculateSavingThrowModifier(
   abilityModifier: number,
   proficiencyBonus: number,
   isProficient: boolean,
 ): number {
-  return abilityModifier + (isProficient ? proficiencyBonus : 0);
+  return abilityModifier + (isProficient ? proficiencyBonus : 0)
 }
 
 export interface SavingThrowResult {
-  ability: AbilityName;
-  proficient: boolean;
-  modifier: number;
-  modifierString: string;
+  ability: AbilityName
+  proficient: boolean
+  modifier: number
+  modifierString: string
 }
 
 /**
@@ -66,32 +66,30 @@ export function deriveAllSavingThrows(
   proficientSavingThrows: string[],
   proficiencyBonus: number,
 ): SavingThrowResult[] {
-  const proficientSet = new Set(
-    proficientSavingThrows.map((s) => s.toLowerCase()),
-  );
+  const proficientSet = new Set(proficientSavingThrows.map((s) => s.toLowerCase()))
   return SAVING_THROW_ABILITIES.map((ability) => {
-    const proficient = proficientSet.has(ability);
+    const proficient = proficientSet.has(ability)
     const modifier = calculateSavingThrowModifier(
       abilityModifiers[ability] ?? 0,
       proficiencyBonus,
       proficient,
-    );
+    )
     return {
       ability,
       proficient,
       modifier,
       modifierString: formatModifier(modifier),
-    };
-  });
+    }
+  })
 }
 
 export interface SkillResult {
-  name: string;
-  ability: AbilityName;
-  proficient: boolean;
-  expertise: boolean;
-  modifier: number;
-  modifierString: string;
+  name: string
+  ability: AbilityName
+  proficient: boolean
+  expertise: boolean
+  modifier: number
+  modifierString: string
 }
 
 export function calculateSkillModifier(
@@ -100,9 +98,9 @@ export function calculateSkillModifier(
   isProficient: boolean,
   hasExpertise: boolean,
 ): number {
-  if (hasExpertise) return abilityModifier + proficiencyBonus * 2;
-  if (isProficient) return abilityModifier + proficiencyBonus;
-  return abilityModifier;
+  if (hasExpertise) return abilityModifier + proficiencyBonus * 2
+  if (isProficient) return abilityModifier + proficiencyBonus
+  return abilityModifier
 }
 
 /**
@@ -119,19 +117,19 @@ export function deriveAllSkills(
   expertiseSkills: string[],
   proficiencyBonus: number,
 ): SkillResult[] {
-  const proficientSet = new Set(proficientSkills.map((s) => s.toLowerCase()));
-  const expertiseSet = new Set(expertiseSkills.map((s) => s.toLowerCase()));
+  const proficientSet = new Set(proficientSkills.map((s) => s.toLowerCase()))
+  const expertiseSet = new Set(expertiseSkills.map((s) => s.toLowerCase()))
 
   return ALL_SKILLS.map((name) => {
-    const ability = SKILL_TO_ABILITY[name] ?? 'strength';
-    const proficient = proficientSet.has(name);
-    const expertise = expertiseSet.has(name);
+    const ability = SKILL_TO_ABILITY[name] ?? 'strength'
+    const proficient = proficientSet.has(name)
+    const expertise = expertiseSet.has(name)
     const modifier = calculateSkillModifier(
       abilityModifiers[ability] ?? 0,
       proficiencyBonus,
       proficient,
       expertise,
-    );
+    )
     return {
       name,
       ability,
@@ -139,6 +137,6 @@ export function deriveAllSkills(
       expertise,
       modifier,
       modifierString: formatModifier(modifier),
-    };
-  });
+    }
+  })
 }

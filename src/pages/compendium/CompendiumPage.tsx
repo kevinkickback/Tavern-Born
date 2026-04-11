@@ -1,37 +1,25 @@
-import {
-  Book,
-  CaretLeft,
-  CaretRight,
-  Funnel,
-  MagnifyingGlass,
-  X,
-} from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Book, CaretLeft, CaretRight, Funnel, MagnifyingGlass, X } from '@phosphor-icons/react'
+import { useMemo, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select'
 import {
   buildCompendiumEntries,
   type CompendiumEntry,
   filterCompendiumEntries,
-} from '@/lib/compendiumEntries';
-import { cn } from '@/lib/utils';
-import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails';
-import { useGameDataStore } from '@/store/gameDataStore';
+} from '@/lib/compendiumEntries'
+import { cn } from '@/lib/utils'
+import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
+import { useGameDataStore } from '@/store/gameDataStore'
 
 const ENTRY_TYPES = [
   'Race',
@@ -45,75 +33,64 @@ const ENTRY_TYPES = [
   'Condition',
   'Language',
   'Deity',
-] as const;
+] as const
 
-const MAX_DISPLAY = 200;
+const MAX_DISPLAY = 200
 
 export function CompendiumPage() {
-  const gameData = useGameDataStore((state) => state.gameData);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set());
-  const [activeSources, setActiveSources] = useState<Set<string>>(new Set());
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(
-    null,
-  );
-  const [detailCollapsed, setDetailCollapsed] = useState(false);
+  const gameData = useGameDataStore((state) => state.gameData)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set())
+  const [activeSources, setActiveSources] = useState<Set<string>>(new Set())
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(null)
+  const [detailCollapsed, setDetailCollapsed] = useState(false)
 
-  const allEntries = useMemo(
-    () => buildCompendiumEntries(gameData),
-    [gameData],
-  );
+  const allEntries = useMemo(() => buildCompendiumEntries(gameData), [gameData])
 
   const allSources = useMemo(
     () => Array.from(new Set(allEntries.map((e) => e.source))).sort(),
     [allEntries],
-  );
+  )
 
   const sourceNameMap = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, string>()
     for (const s of gameData?.sources ?? []) {
-      map.set(s.abbreviation, s.name);
+      map.set(s.abbreviation, s.name)
     }
-    return map;
-  }, [gameData?.sources]);
+    return map
+  }, [gameData?.sources])
 
-  const activeFilterCount = activeTypes.size + activeSources.size;
+  const activeFilterCount = activeTypes.size + activeSources.size
 
   const toggleType = (type: string) => {
     setActiveTypes((prev) => {
-      const next = new Set(prev);
-      next.has(type) ? next.delete(type) : next.add(type);
-      return next;
-    });
-  };
+      const next = new Set(prev)
+      next.has(type) ? next.delete(type) : next.add(type)
+      return next
+    })
+  }
 
   const toggleSource = (source: string) => {
     setActiveSources((prev) => {
-      const next = new Set(prev);
-      next.has(source) ? next.delete(source) : next.add(source);
-      return next;
-    });
-  };
+      const next = new Set(prev)
+      next.has(source) ? next.delete(source) : next.add(source)
+      return next
+    })
+  }
 
   const clearFilters = () => {
-    setActiveTypes(new Set());
-    setActiveSources(new Set());
-  };
+    setActiveTypes(new Set())
+    setActiveSources(new Set())
+  }
 
   const filteredEntries = useMemo(
-    () =>
-      filterCompendiumEntries(
-        allEntries,
-        searchQuery,
-        activeTypes,
-        activeSources,
-      ),
+    () => filterCompendiumEntries(allEntries, searchQuery, activeTypes, activeSources),
     [allEntries, searchQuery, activeTypes, activeSources],
-  );
+  )
 
-  const displayedEntries = filteredEntries.slice(0, MAX_DISPLAY);
-  const hasMore = filteredEntries.length > MAX_DISPLAY;
+  const displayedEntries = filteredEntries.slice(0, MAX_DISPLAY)
+  const hasMore = filteredEntries.length > MAX_DISPLAY
 
   if (!gameData) {
     return (
@@ -122,13 +99,12 @@ export function CompendiumPage() {
           <CardHeader>
             <CardTitle>No Data Loaded</CardTitle>
             <CardDescription>
-              Please configure and load a data source in Settings before using
-              the Compendium.
+              Please configure and load a data source in Settings before using the Compendium.
             </CardDescription>
           </CardHeader>
         </Card>
       </div>
-    );
+    )
   }
 
   return (
@@ -157,16 +133,11 @@ export function CompendiumPage() {
               />
             </div>
             <Button
-              variant={
-                filtersOpen || activeFilterCount > 0 ? 'default' : 'outline'
-              }
+              variant={filtersOpen || activeFilterCount > 0 ? 'default' : 'outline'}
               onClick={() => setFiltersOpen((o) => !o)}
               className="gap-2 shrink-0"
             >
-              <Funnel
-                className="h-4 w-4"
-                weight={activeFilterCount > 0 ? 'fill' : 'regular'}
-              />
+              <Funnel className="h-4 w-4" weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
               Filters
               {activeFilterCount > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
@@ -230,8 +201,7 @@ export function CompendiumPage() {
                             onClick={() => toggleSource(s)}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border bg-accent text-accent-foreground border-accent hover:bg-accent/80 transition-colors"
                           >
-                            {sourceNameMap.get(s) ?? s}{' '}
-                            <X className="h-2.5 w-2.5" />
+                            {sourceNameMap.get(s) ?? s} <X className="h-2.5 w-2.5" />
                           </button>
                         ))}
                     </div>
@@ -264,11 +234,7 @@ export function CompendiumPage() {
               <button
                 type="button"
                 onClick={() => setDetailCollapsed((c) => !c)}
-                title={
-                  detailCollapsed
-                    ? 'Expand details panel'
-                    : 'Collapse details panel'
-                }
+                title={detailCollapsed ? 'Expand details panel' : 'Collapse details panel'}
                 className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all"
               >
                 {detailCollapsed ? (
@@ -300,8 +266,8 @@ export function CompendiumPage() {
                           type="button"
                           key={`${entry.type}-${entry.source}-${entry.name}`}
                           onClick={() => {
-                            setSelectedEntry(entry);
-                            if (detailCollapsed) setDetailCollapsed(false);
+                            setSelectedEntry(entry)
+                            if (detailCollapsed) setDetailCollapsed(false)
                           }}
                           className={cn(
                             'w-full text-left p-3 rounded-lg border transition-colors hover:border-accent',
@@ -312,9 +278,7 @@ export function CompendiumPage() {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold truncate">
-                                {entry.name}
-                              </h3>
+                              <h3 className="font-semibold truncate">{entry.name}</h3>
                               {entry.description && (
                                 <p className="text-sm text-muted-foreground line-clamp-1">
                                   {typeof entry.description === 'string'
@@ -343,9 +307,7 @@ export function CompendiumPage() {
               <div
                 className={cn(
                   'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
-                  detailCollapsed
-                    ? 'w-0 min-w-0 opacity-0 pointer-events-none'
-                    : 'min-w-[320px]',
+                  detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'min-w-[320px]',
                   !detailCollapsed && 'w-[42%]',
                 )}
               >
@@ -371,5 +333,5 @@ export function CompendiumPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

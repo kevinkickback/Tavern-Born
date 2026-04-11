@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod'
 
 /**
  * 5etools JSON has broad and evolving nested shapes across books and sources.
@@ -17,13 +17,13 @@ export const RaceSchema = z
     ability: z.array(z.any()).optional(),
     entries: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const RaceDataSchema = z
   .object({
     race: z.array(RaceSchema),
   })
-  .passthrough();
+  .passthrough()
 
 export const ClassSchema = z
   .object({
@@ -34,15 +34,15 @@ export const ClassSchema = z
     startingProficiencies: z.any().optional(),
     classFeatures: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const ClassDataSchema = z
   .object({
     class: z.array(ClassSchema),
   })
-  .passthrough();
+  .passthrough()
 
-export const ClassIndexSchema = z.record(z.string());
+export const ClassIndexSchema = z.record(z.string())
 
 export const BackgroundSchema = z
   .object({
@@ -51,13 +51,13 @@ export const BackgroundSchema = z
     skillProficiencies: z.array(z.any()).optional(),
     entries: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const BackgroundDataSchema = z
   .object({
     background: z.array(BackgroundSchema),
   })
-  .passthrough();
+  .passthrough()
 
 export const SpellSchema = z
   .object({
@@ -71,13 +71,13 @@ export const SpellSchema = z
     duration: z.array(z.any()).optional(),
     entries: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const SpellDataSchema = z
   .object({
     spell: z.array(SpellSchema),
   })
-  .passthrough();
+  .passthrough()
 
 export const FeatSchema = z
   .object({
@@ -86,13 +86,13 @@ export const FeatSchema = z
     entries: z.array(z.any()).optional(),
     prerequisite: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const FeatDataSchema = z
   .object({
     feat: z.array(FeatSchema),
   })
-  .passthrough();
+  .passthrough()
 
 export const ItemSchema = z
   .object({
@@ -102,7 +102,7 @@ export const ItemSchema = z
     rarity: z.string().optional(),
     entries: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const ItemDataSchema = z
   .object({
@@ -110,7 +110,7 @@ export const ItemDataSchema = z
     itemGroup: z.array(ItemSchema).optional(),
     baseitem: z.array(ItemSchema).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const BookSchema = z
   .object({
@@ -120,13 +120,13 @@ export const BookSchema = z
     group: z.string().optional(),
     published: z.string().optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const BookDataSchema = z
   .object({
     book: z.array(BookSchema),
   })
-  .passthrough();
+  .passthrough()
 
 export const ActionSchema = z
   .object({
@@ -134,13 +134,13 @@ export const ActionSchema = z
     source: z.string(),
     entries: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const ActionDataSchema = z
   .object({
     action: z.array(ActionSchema),
   })
-  .passthrough();
+  .passthrough()
 
 export const ConditionSchema = z
   .object({
@@ -148,14 +148,14 @@ export const ConditionSchema = z
     source: z.string(),
     entries: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const ConditionDataSchema = z
   .object({
     condition: z.array(ConditionSchema).optional(),
     disease: z.array(ConditionSchema).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const LanguageSchema = z
   .object({
@@ -164,13 +164,13 @@ export const LanguageSchema = z
     type: z.string().optional(),
     entries: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const LanguageDataSchema = z
   .object({
     language: z.array(LanguageSchema),
   })
-  .passthrough();
+  .passthrough()
 
 export const OptionalFeatureSchema = z
   .object({
@@ -179,20 +179,20 @@ export const OptionalFeatureSchema = z
     featureType: z.array(z.string()).optional(),
     entries: z.array(z.any()).optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const OptionalFeatureDataSchema = z
   .object({
     optionalfeature: z.array(OptionalFeatureSchema),
   })
-  .passthrough();
+  .passthrough()
 
 export const GenericSchema = z
   .object({
     name: z.string().optional(),
     source: z.string().optional(),
   })
-  .passthrough();
+  .passthrough()
 
 export const GenericDataSchema = z
   .object({
@@ -203,4 +203,4 @@ export const GenericDataSchema = z
     magicvariant: z.array(GenericSchema).optional(),
     variantrule: z.array(GenericSchema).optional(),
   })
-  .passthrough();
+  .passthrough()

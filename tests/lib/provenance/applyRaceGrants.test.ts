@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'vitest';
-import { applyRaceGrants, emptyProvenance } from '@/lib/provenance';
+import { describe, expect, test } from 'vitest'
+import { applyRaceGrants, emptyProvenance } from '@/lib/provenance'
 
 describe('provenance/applyRaceGrants', () => {
   test('adds Common and one standard language choice for lineage races without explicit language blocks', () => {
@@ -11,19 +11,17 @@ describe('provenance/applyRaceGrants', () => {
       },
       undefined,
       emptyProvenance(),
-    );
+    )
 
-    expect(ledger.proficiencies.languages.common).toBeDefined();
+    expect(ledger.proficiencies.languages.common).toBeDefined()
     expect(ledger.proficiencies.languages.common[0]).toMatchObject({
       sourceType: 'race',
       sourceName: 'Aarakocra',
       grantType: 'fixed',
-    });
+    })
 
-    const languageChoices = ledger.choices.filter(
-      (choice) => choice.domain === 'languages',
-    );
-    expect(languageChoices).toHaveLength(1);
+    const languageChoices = ledger.choices.filter((choice) => choice.domain === 'languages')
+    expect(languageChoices).toHaveLength(1)
     expect(languageChoices[0]).toMatchObject({
       chooseCount: 1,
       optionPool: [],
@@ -31,8 +29,8 @@ describe('provenance/applyRaceGrants', () => {
         sourceType: 'race',
         sourceName: 'Aarakocra',
       },
-    });
-  });
+    })
+  })
 
   test('does not synthesize lineage language blocks when explicit language proficiencies exist', () => {
     const ledger = applyRaceGrants(
@@ -44,15 +42,13 @@ describe('provenance/applyRaceGrants', () => {
       },
       undefined,
       emptyProvenance(),
-    );
+    )
 
-    expect(ledger.proficiencies.languages.common).toBeDefined();
-    const languageChoices = ledger.choices.filter(
-      (choice) => choice.domain === 'languages',
-    );
-    expect(languageChoices).toHaveLength(1);
-    expect(languageChoices[0].chooseCount).toBe(1);
-  });
+    expect(ledger.proficiencies.languages.common).toBeDefined()
+    const languageChoices = ledger.choices.filter((choice) => choice.domain === 'languages')
+    expect(languageChoices).toHaveLength(1)
+    expect(languageChoices[0].chooseCount).toBe(1)
+  })
 
   test('supports race tool, armor, and weapon proficiency shapes', () => {
     const ledger = applyRaceGrants(
@@ -74,15 +70,14 @@ describe('provenance/applyRaceGrants', () => {
       undefined,
       emptyProvenance(),
       (domain, fromFilter) =>
-        domain === 'weapons' &&
-        fromFilter === 'type=martial weapon|miscellaneous=mundane'
+        domain === 'weapons' && fromFilter === 'type=martial weapon|miscellaneous=mundane'
           ? ['Longsword', 'Warhammer']
           : [],
-    );
+    )
 
-    expect(ledger.proficiencies.tools["poisoner's kit"]).toBeDefined();
-    expect(ledger.proficiencies.armor.light).toBeDefined();
-    expect(ledger.proficiencies.weapons.battleaxe).toBeDefined();
+    expect(ledger.proficiencies.tools["poisoner's kit"]).toBeDefined()
+    expect(ledger.proficiencies.armor.light).toBeDefined()
+    expect(ledger.proficiencies.weapons.battleaxe).toBeDefined()
 
     expect(
       ledger.choices.find(
@@ -91,7 +86,7 @@ describe('provenance/applyRaceGrants', () => {
           choice.optionPool.length === 1 &&
           choice.optionPool[0] === 'tool',
       ),
-    ).toBeDefined();
+    ).toBeDefined()
 
     expect(
       ledger.choices.find(
@@ -101,8 +96,8 @@ describe('provenance/applyRaceGrants', () => {
           choice.optionPool.includes('Longsword') &&
           choice.optionPool.includes('Warhammer'),
       ),
-    ).toBeDefined();
-  });
+    ).toBeDefined()
+  })
 
   test('synthesizes +2/+1 lineage ability choices by default', () => {
     const ledger = applyRaceGrants(
@@ -113,15 +108,13 @@ describe('provenance/applyRaceGrants', () => {
       },
       undefined,
       emptyProvenance(),
-    );
+    )
 
-    const abilityChoices = ledger.choices.filter(
-      (choice) => choice.domain === 'abilityBonuses',
-    );
-    expect(abilityChoices).toHaveLength(2);
-    expect(abilityChoices[0]).toMatchObject({ chooseCount: 1, amount: 2 });
-    expect(abilityChoices[1]).toMatchObject({ chooseCount: 1, amount: 1 });
-  });
+    const abilityChoices = ledger.choices.filter((choice) => choice.domain === 'abilityBonuses')
+    expect(abilityChoices).toHaveLength(2)
+    expect(abilityChoices[0]).toMatchObject({ chooseCount: 1, amount: 2 })
+    expect(abilityChoices[1]).toMatchObject({ chooseCount: 1, amount: 1 })
+  })
 
   test('synthesizes +1/+1/+1 lineage ability choices when block 1 is selected', () => {
     const ledger = applyRaceGrants(
@@ -134,14 +127,12 @@ describe('provenance/applyRaceGrants', () => {
       emptyProvenance(),
       undefined,
       1,
-    );
+    )
 
-    const abilityChoices = ledger.choices.filter(
-      (choice) => choice.domain === 'abilityBonuses',
-    );
-    expect(abilityChoices).toHaveLength(3);
+    const abilityChoices = ledger.choices.filter((choice) => choice.domain === 'abilityBonuses')
+    expect(abilityChoices).toHaveLength(3)
     for (const choice of abilityChoices) {
-      expect(choice).toMatchObject({ chooseCount: 1, amount: 1 });
+      expect(choice).toMatchObject({ chooseCount: 1, amount: 1 })
     }
-  });
-});
+  })
+})

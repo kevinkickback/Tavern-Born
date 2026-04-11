@@ -1,46 +1,37 @@
-import { useMemo } from 'react';
-import { formatModifier } from '@/lib/calculations/abilityScores';
+import { useMemo } from 'react'
+import { formatModifier } from '@/lib/calculations/abilityScores'
 import {
   getAbilityModifier,
   getProficiencyBonus,
   MAX_CHARACTER_LEVEL,
-} from '@/lib/calculations/gameRules';
-import { useCharacterStore } from '@/store/characterStore';
+} from '@/lib/calculations/gameRules'
+import { useCharacterStore } from '@/store/characterStore'
 
 /** Derived level and proficiency state for the active character. */
 export interface CharacterLevelState {
-  level: number;
-  proficiencyBonus: number;
-  proficiencyBonusString: string;
-  isMaxLevel: boolean;
+  level: number
+  proficiencyBonus: number
+  proficiencyBonusString: string
+  isMaxLevel: boolean
 
   /** Initiative modifier — DEX modifier (no proficiency by default). */
-  initiativeModifier: number;
-  initiativeString: string;
+  initiativeModifier: number
+  initiativeString: string
 }
 
 export function useCharacterLevel(): CharacterLevelState {
-  const activeCharacter = useCharacterStore((s) => s.activeCharacter);
+  const activeCharacter = useCharacterStore((s) => s.activeCharacter)
 
-  const level = activeCharacter?.level ?? 1;
-  const dexScore = activeCharacter?.abilityScores?.dexterity ?? 10;
+  const level = activeCharacter?.level ?? 1
+  const dexScore = activeCharacter?.abilityScores?.dexterity ?? 10
 
-  const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level]);
-  const proficiencyBonusString = useMemo(
-    () => formatModifier(proficiencyBonus),
-    [proficiencyBonus],
-  );
+  const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level])
+  const proficiencyBonusString = useMemo(() => formatModifier(proficiencyBonus), [proficiencyBonus])
 
-  const initiativeModifier = useMemo(
-    () => getAbilityModifier(dexScore),
-    [dexScore],
-  );
-  const initiativeString = useMemo(
-    () => formatModifier(initiativeModifier),
-    [initiativeModifier],
-  );
+  const initiativeModifier = useMemo(() => getAbilityModifier(dexScore), [dexScore])
+  const initiativeString = useMemo(() => formatModifier(initiativeModifier), [initiativeModifier])
 
-  const isMaxLevel = level >= MAX_CHARACTER_LEVEL;
+  const isMaxLevel = level >= MAX_CHARACTER_LEVEL
 
   return {
     level,
@@ -49,5 +40,5 @@ export function useCharacterLevel(): CharacterLevelState {
     isMaxLevel,
     initiativeModifier,
     initiativeString,
-  };
+  }
 }

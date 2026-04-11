@@ -35,6 +35,8 @@ Core modules:
 3. Parsing and normalization
 - parsers extract arrays and normalize structure differences.
 - Class and subclass feature references are normalized for downstream consumption.
+- Class loading also reads matching `fluff-class-*.json` resources and attaches a short class summary to the parsed class record. The summary is taken from the last direct paragraph in the first class fluff section and is used by compact UI surfaces such as the character-creation wizard.
+- Race loading also reads `fluff-races.json` and attaches a short race summary to parsed races. The summary is taken from the first available paragraph in the corresponding race fluff entry and is used by compact UI surfaces such as the character-creation wizard.
 
 4. Lookup construction
 - lookups creates composite-key maps (name|source) for fast, collision-safe access.

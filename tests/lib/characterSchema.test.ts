@@ -1,14 +1,14 @@
-import { describe, expect, test } from 'vitest';
-import { characterPersistenceSchema } from '@/types/characterSchema';
-import { makeCharacterFixture } from '../fixtures/characterFixtures';
+import { describe, expect, test } from 'vitest'
+import { characterPersistenceSchema } from '@/types/characterSchema'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('characterPersistenceSchema', () => {
   test('accepts a full persisted character shape', () => {
-    const character = makeCharacterFixture();
-    const result = characterPersistenceSchema.safeParse(character);
+    const character = makeCharacterFixture()
+    const result = characterPersistenceSchema.safeParse(character)
 
-    expect(result.success).toBe(true);
-  });
+    expect(result.success).toBe(true)
+  })
 
   test('rejects malformed spell profiles in persisted data', () => {
     const character = makeCharacterFixture({
@@ -35,9 +35,9 @@ describe('characterPersistenceSchema', () => {
           level9: { max: 0, used: 0 },
         },
       },
-    });
+    })
 
-    const result = characterPersistenceSchema.safeParse(character);
-    expect(result.success).toBe(false);
-  });
-});
+    const result = characterPersistenceSchema.safeParse(character)
+    expect(result.success).toBe(false)
+  })
+})

@@ -17,8 +17,8 @@ This document defines state ownership, mutation rules, and persistence behavior.
 
 3. App preferences store
 - File: src/store/appPreferencesStore.ts
-- Owns: theme selection, home card size, and app-level refresh preferences.
-- Primary write API: store setter methods (`setThemeAccent`, `setThemeAppearance`, `setHomeCardSize`, `setAutoRefreshGameData`).
+- Owns: theme selection and home card size. Theme is configured in Settings; card size is configured via the slider on the home page.
+- Primary write API: store setter methods (`setThemeAccent`, `setThemeAppearance`, `setHomeCardSize`).
 
 ## Persistence
 

@@ -1,12 +1,9 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants';
-import { useCharacterStore } from '@/store/characterStore';
-import { useGameDataStore } from '@/store/gameDataStore';
-import type { Background5e, Class5e, Race5e } from '@/types/5etools';
-import {
-  makeClassFixture,
-  makeRaceFixture,
-} from '../fixtures/gameDataFixtures';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
+import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
+import type { Background5e, Class5e, Race5e } from '@/types/5etools'
+import { makeClassFixture, makeRaceFixture } from '../fixtures/gameDataFixtures'
 
 vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => ({
@@ -14,7 +11,7 @@ vi.mock('@/lib/storage/idb-storage', () => ({
     setItem: vi.fn(async () => undefined),
     removeItem: vi.fn(async () => undefined),
   }),
-}));
+}))
 
 vi.mock('sonner', () => ({
   toast: {
@@ -23,7 +20,7 @@ vi.mock('sonner', () => ({
     error: vi.fn(),
     warning: vi.fn(),
   },
-}));
+}))
 
 function resetCharacterStore() {
   useCharacterStore.setState({
@@ -31,7 +28,7 @@ function resetCharacterStore() {
     activeCharacterId: null,
     activeCharacter: null,
     hasUnsavedChangesFlag: false,
-  });
+  })
 }
 
 function resetGameDataStore() {
@@ -45,21 +42,21 @@ function resetGameDataStore() {
     lastLoadedAt: null,
     cacheStatus: 'unknown',
     hasHydrated: false,
-  });
+  })
 }
 
 describe('character creation and proficiencies validation', () => {
   beforeEach(() => {
-    resetCharacterStore();
-    resetGameDataStore();
-  });
+    resetCharacterStore()
+    resetGameDataStore()
+  })
 
   afterEach(() => {
-    vi.restoreAllMocks();
-  });
+    vi.restoreAllMocks()
+  })
 
   test('wizard defaults start at minimum scores for non-standard methods', () => {
-    expect(INITIAL_CHARACTER_DATA.abilityScoreMethod).toBe('point-buy');
+    expect(INITIAL_CHARACTER_DATA.abilityScoreMethod).toBe('point-buy')
     expect(INITIAL_CHARACTER_DATA.abilityScores).toEqual({
       strength: 8,
       dexterity: 8,
@@ -67,8 +64,8 @@ describe('character creation and proficiencies validation', () => {
       intelligence: 8,
       wisdom: 8,
       charisma: 8,
-    });
-  });
+    })
+  })
 
   test('createNewCharacter with class proficiencies produces valid character with string proficiencies', () => {
     // This test validates that the character creation produces proper data structures.
@@ -85,18 +82,18 @@ describe('character creation and proficiencies validation', () => {
         skills: { choose: { from: ['Athletics', 'Acrobatics'], count: 2 } },
       },
       proficiency: ['strength', 'constitution'],
-    });
+    })
 
     const testRace: Race5e = makeRaceFixture({
       name: 'Elf',
       source: 'PHB',
       ability: [{ dex: 2, int: 1 }],
-    });
+    })
 
     const testBackground: Background5e = {
       name: 'Soldier',
       source: 'PHB',
-    };
+    }
 
     useGameDataStore.setState({
       gameData: {
@@ -121,10 +118,10 @@ describe('character creation and proficiencies validation', () => {
       },
       hasHydrated: true,
       isLoading: false,
-    });
+    })
 
     // Simulate what the wizard does: create character with proficiencies extracted from class
-    const createNewCharacter = useCharacterStore.getState().createNewCharacter;
+    const createNewCharacter = useCharacterStore.getState().createNewCharacter
 
     const character = createNewCharacter({
       name: 'Haldir',
@@ -150,59 +147,59 @@ describe('character creation and proficiencies validation', () => {
         wisdom: 10,
         charisma: 8,
       },
-    });
+    })
 
     // Verify character was created
-    expect(character).toBeTruthy();
-    expect(character.name).toBe('Haldir');
-    expect(character.race).toBe('Elf');
-    expect(character.class).toBe('Fighter');
-    expect(character.background).toBe('Soldier');
+    expect(character).toBeTruthy()
+    expect(character.name).toBe('Haldir')
+    expect(character.race).toBe('Elf')
+    expect(character.class).toBe('Fighter')
+    expect(character.background).toBe('Soldier')
 
     // Crucial validation: proficiencies must be arrays of strings, not objects
-    expect(Array.isArray(character.proficiencies.armor)).toBe(true);
-    expect(Array.isArray(character.proficiencies.weapons)).toBe(true);
-    expect(Array.isArray(character.proficiencies.languages)).toBe(true);
+    expect(Array.isArray(character.proficiencies.armor)).toBe(true)
+    expect(Array.isArray(character.proficiencies.weapons)).toBe(true)
+    expect(Array.isArray(character.proficiencies.languages)).toBe(true)
 
     // Verify armor proficiencies are strings (the bug would put objects here)
     character.proficiencies.armor.forEach((armor) => {
-      expect(typeof armor).toBe('string');
-      expect(armor.length).toBeGreaterThan(0);
-      expect(armor).not.toMatch(/\{@/);
-    });
+      expect(typeof armor).toBe('string')
+      expect(armor.length).toBeGreaterThan(0)
+      expect(armor).not.toMatch(/\{@/)
+    })
 
     // Verify weapons proficiencies are strings (the bug would put objects here)
     character.proficiencies.weapons.forEach((weapon) => {
-      expect(typeof weapon).toBe('string');
-      expect(weapon.length).toBeGreaterThan(0);
-      expect(weapon).not.toMatch(/\{@/);
-    });
+      expect(typeof weapon).toBe('string')
+      expect(weapon.length).toBeGreaterThan(0)
+      expect(weapon).not.toMatch(/\{@/)
+    })
 
     // Verify Common language is present
-    expect(character.proficiencies.languages).toContain('Common');
+    expect(character.proficiencies.languages).toContain('Common')
 
     // Verify character passes schema validation
-    const addCharacter = useCharacterStore.getState().addCharacter;
+    const addCharacter = useCharacterStore.getState().addCharacter
     expect(() => {
-      addCharacter(character);
-    }).not.toThrow();
+      addCharacter(character)
+    }).not.toThrow()
 
     // Verify persisted character maintains valid structure
-    const state = useCharacterStore.getState();
-    const persistedChar = state.characters.find((c) => c.id === character.id);
-    expect(persistedChar).toBeTruthy();
+    const state = useCharacterStore.getState()
+    const persistedChar = state.characters.find((c) => c.id === character.id)
+    expect(persistedChar).toBeTruthy()
     if (persistedChar) {
-      expect(Array.isArray(persistedChar.proficiencies.weapons)).toBe(true);
+      expect(Array.isArray(persistedChar.proficiencies.weapons)).toBe(true)
       persistedChar.proficiencies.weapons.forEach((w) => {
-        expect(typeof w).toBe('string');
-      });
+        expect(typeof w).toBe('string')
+      })
     }
-  });
+  })
 
   test('rejects character creation with invalid non-string proficiencies', () => {
     // Create a character with invalid proficiencies on purpose
     // The validation should reject this when createNewCharacter calls addCharacter internally
-    const createNewCharacter = useCharacterStore.getState().createNewCharacter;
+    const createNewCharacter = useCharacterStore.getState().createNewCharacter
 
     // createNewCharacter should throw when it tries to add invalid data
     expect(() => {
@@ -217,7 +214,7 @@ describe('character creation and proficiencies validation', () => {
           languages: ['Common'],
           savingThrows: [],
         },
-      });
-    }).toThrow(/proficiencies\.weapons/);
-  });
-});
+      })
+    }).toThrow(/proficiencies\.weapons/)
+  })
+})

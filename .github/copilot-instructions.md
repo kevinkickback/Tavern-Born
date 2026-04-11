@@ -31,6 +31,7 @@ For behavior changes, update the corresponding docs file in the same change.
 
 ### 1. Never edit `data/`
 `data/` holds 5etools JSON files managed externally. Put all fixups in source (e.g. `src/lib/5etools/sourceFallbacks.ts`).
+This rule is enforced by automated hooks and must never be bypassed.
 
 ### 2. Prefer parsed game data; hardcoded values are fallback-only
 Canonical 5etools game values must come from parsed data, not source constants.
@@ -55,20 +56,15 @@ All data access goes through hooks — never import JSON directly in a component
 - Named hooks: `useHitPoints`, `useSkills`, `useSpellSlots`, `useEquipment`, etc.
 
 ### 5. Business logic belongs in `src/lib/` — search before writing
-All business logic (modifiers, costs, slots, bonuses, prereq checks, AC, HP) goes in `src/lib/` as pure functions with no React/Zustand imports. **Search before writing** — the function may already exist:
+All business logic (modifiers, costs, slots, bonuses, prereq checks, AC, HP) goes in `src/lib/` as pure functions with no React/Zustand imports. **Search before writing** — the function may already exist.
 
-| File | Contents |
-|---|---|
-| `src/lib/5etools/parsers.ts` | Parse raw 5etools JSON |
-| `src/lib/5etools/filters.ts` | `DataFilter` for filtering collections |
-| `src/lib/skills.ts` | Skill/ability mappings, saving throw helpers |
-| `src/lib/abilityScores.ts` | Score/modifier helpers |
-| `src/lib/characterUtils.ts` | `getTotalLevel()`, `getPrimaryClass()`, ASI counting |
-| `src/lib/gameRules.ts` | `getAbilityModifier()`, `getProficiencyBonus()`, `parseHitDice()` |
-| `src/lib/prerequisites.ts` | `checkAllPrerequisites()` |
-| `src/lib/spellSlots.ts` | Spell slot progression |
+Start with these common locations:
+- `src/lib/5etools/parsers.ts` / `src/lib/5etools/filters.ts`
+- `src/lib/skills.ts` / `src/lib/abilityScores.ts`
+- `src/lib/characterUtils.ts` / `src/lib/gameRules.ts`
+- `src/lib/prerequisites.ts` / `src/lib/spellSlots.ts`
 
-Hooks in `src/hooks/` are thin wrappers connecting these functions to state.
+Hooks in `src/hooks/` should remain thin wrappers that connect lib functions to state.
 
 ### 6. Derive, don't store (except mutable runtime state)
 Do not persist pure derived values on the character object; derive them on demand:
@@ -105,13 +101,25 @@ Equivalent wrapper structure is acceptable if it preserves the same layout behav
 Exceptions: character cards, sidebar, Portrait page (full-bleed).
 
 ### 11. Lint and fix after every change
-After any code change, run the linter and resolve all reported issues before considering the task done:
-```bash
-npm run lint
-```
-Do not leave lint errors or warnings introduced by your changes.
+Linting is enforced automatically via Copilot hooks (Biome).
+
+- Do not bypass or disable hook-driven linting.
+- After every edit, run the fix/check/type sequence and re-run until clean.
+- Do not move to the next plan step while any warning or error remains.
+- If hooks fail or diagnostics remain, fix issues manually before continuing.
+- Stop after 3 unsuccessful fix attempts for the same file and report the blocker.
 
 ### 12. Comments, docs, and tests
 - **Inline comments**: only when code is not self-documenting. Prefer clear names over comments.
 - **JSDoc**: only on public functions, public classes, and exported types.
 - **Tests**: every new feature must include relevant unit and/or E2E coverage.
+
+### 13. Automated enforcement (Copilot hooks)
+
+This repository uses Copilot hooks to enforce:
+- Linting and formatting
+- Type safety checks
+- Test execution
+- Protected file boundaries
+
+Workflow and escalation behavior are defined in Rule 11; follow that quality gate before proceeding.

@@ -1,9 +1,8 @@
-import { SOURCE_PRESETS } from '@/lib/sourcePresets';
-import type { Character, ProvenanceLedger } from '@/types/character';
+import { SOURCE_PRESETS } from '@/lib/sourcePresets'
+import type { Character, ProvenanceLedger } from '@/types/character'
 
 const RECOMMENDED_SOURCES = [
-  ...(SOURCE_PRESETS.find((preset) => preset.id === '2014-recommended')
-    ?.abbreviations ?? [
+  ...(SOURCE_PRESETS.find((preset) => preset.id === '2014-recommended')?.abbreviations ?? [
     'PHB',
     'XGE',
     'TCE',
@@ -13,7 +12,7 @@ const RECOMMENDED_SOURCES = [
     'MOT',
     'VRGR',
   ]),
-];
+]
 
 const ALL_BOOK_SOURCES = [
   'AAG',
@@ -76,10 +75,10 @@ const ALL_BOOK_SOURCES = [
   'XPHB',
   'XSAC',
   'XScreen',
-];
+]
 
 const createEmptyProvenance = (): ProvenanceLedger => {
-  const emptyMap = () => ({}) as Record<string, never[]>;
+  const emptyMap = () => ({}) as Record<string, never[]>
 
   return {
     proficiencies: {
@@ -96,8 +95,8 @@ const createEmptyProvenance = (): ProvenanceLedger => {
     spells: emptyMap(),
     equipment: emptyMap(),
     choices: [],
-  };
-};
+  }
+}
 
 const classSpellTag = (
   sourceName: string,
@@ -112,9 +111,9 @@ const classSpellTag = (
   label: sourceName,
   spellGrantedAtLevel,
   spellAttributionMode,
-});
+})
 
-const BASE_TIME = '2026-04-06T00:00:00.000Z';
+const BASE_TIME = '2026-04-06T00:00:00.000Z'
 
 export const DEV_SEED_CHARACTERS: Character[] = [
   {
@@ -150,13 +149,7 @@ export const DEV_SEED_CHARACTERS: Character[] = [
     },
     proficiencies: {
       armor: [],
-      weapons: [
-        'Daggers',
-        'Darts',
-        'Slings',
-        'Quarterstaffs',
-        'Light Crossbows',
-      ],
+      weapons: ['Daggers', 'Darts', 'Slings', 'Quarterstaffs', 'Light Crossbows'],
       tools: [],
       skills: [],
       languages: ['Common', 'Celestial', 'Elvish'],
@@ -175,16 +168,14 @@ export const DEV_SEED_CHARACTERS: Character[] = [
         id: 'wiz-spellbook',
         name: 'Spellbook',
         source: 'Wizard',
-        description:
-          'Maintains a fully curated spellbook through 3rd-level spells.',
+        description: 'Maintains a fully curated spellbook through 3rd-level spells.',
         level: 1,
       },
       {
         id: 'evoc-savant',
         name: 'Evocation Savant',
         source: 'Wizard (School of Evocation)',
-        description:
-          'Copying evocation spells into the spellbook costs half time and gold.',
+        description: 'Copying evocation spells into the spellbook costs half time and gold.',
         level: 2,
       },
       {
@@ -212,12 +203,7 @@ export const DEV_SEED_CHARACTERS: Character[] = [
           label: 'Wizard (Lv 5)',
           className: 'Wizard',
           classSource: 'PHB',
-          cantrips: [
-            'Fire Bolt',
-            'Mage Hand',
-            'Minor Illusion',
-            'Prestidigitation',
-          ],
+          cantrips: ['Fire Bolt', 'Mage Hand', 'Minor Illusion', 'Prestidigitation'],
           spellsKnown: [
             'Shield',
             'Mage Armor',
@@ -306,11 +292,9 @@ export const DEV_SEED_CHARACTERS: Character[] = [
       alignment: 'Lawful Good',
       faith: 'Mystra',
       lifestyle: 'Modest',
-      personalityTraits:
-        'I am calm under pressure and speak with deliberate precision.',
+      personalityTraits: 'I am calm under pressure and speak with deliberate precision.',
       ideals: 'Knowledge and compassion should guide power.',
-      bonds:
-        'My temple library entrusted me with preserving dangerous lore responsibly.',
+      bonds: 'My temple library entrusted me with preserving dangerous lore responsibly.',
       flaws: 'I struggle to delegate when arcane details are at stake.',
       goals: 'Recover lost fragments of the Codex of Embers.',
       fears: 'That my magic harms innocents through my own carelessness.',
@@ -320,19 +304,15 @@ export const DEV_SEED_CHARACTERS: Character[] = [
       eyes: 'Hazel',
       skin: 'Olive',
       hair: 'Black',
-      physicalDescription:
-        'Travel robes lined with scripture sigils and ash-gray trim.',
+      physicalDescription: 'Travel robes lined with scripture sigils and ash-gray trim.',
       mannerisms: 'Thumb taps twice against her spellbook before casting.',
       origin: 'Raised in a cloister known for preserving magical history.',
       family: 'Youngest of four siblings, first to enter formal arcane study.',
-      definingMoment:
-        'Contained a chapel fire with an improvised ward at age sixteen.',
-      lifeEvents:
-        'Completed a decade apprenticeship and served as temple archivist.',
+      definingMoment: 'Contained a chapel fire with an improvised ward at age sixteen.',
+      lifeEvents: 'Completed a decade apprenticeship and served as temple archivist.',
       backstory:
         'Seraphina trained as an acolyte before embracing wizardry, convinced that arcane study and faith can coexist. She now travels to recover dangerous texts before they are misused.',
-      alliesAndOrganizations:
-        'Order of the Sapphire Torch; High Archivist Meliora.',
+      alliesAndOrganizations: 'Order of the Sapphire Torch; High Archivist Meliora.',
     },
     portrait: '/assets/images/characters/placeholder_char_card.jpg',
     allowedSources: RECOMMENDED_SOURCES,
@@ -600,16 +580,14 @@ export const DEV_SEED_CHARACTERS: Character[] = [
         id: 'second-wind',
         name: 'Second Wind',
         source: 'Fighter',
-        description:
-          'Recover hit points as a bonus action once per short rest.',
+        description: 'Recover hit points as a bonus action once per short rest.',
         level: 1,
       },
       {
         id: 'action-surge',
         name: 'Action Surge',
         source: 'Fighter',
-        description:
-          'Take one additional action on your turn once per short rest.',
+        description: 'Take one additional action on your turn once per short rest.',
         level: 2,
       },
       {
@@ -624,8 +602,7 @@ export const DEV_SEED_CHARACTERS: Character[] = [
         id: 'student-of-war',
         name: 'Student of War',
         source: 'Fighter (Battle Master)',
-        description:
-          "Additional artisan tool proficiency selected: Smith's Tools.",
+        description: "Additional artisan tool proficiency selected: Smith's Tools.",
         level: 3,
       },
       {
@@ -639,8 +616,7 @@ export const DEV_SEED_CHARACTERS: Character[] = [
         id: 'extra-attack',
         name: 'Extra Attack',
         source: 'Fighter',
-        description:
-          'Can attack twice, instead of once, whenever taking the Attack action.',
+        description: 'Can attack twice, instead of once, whenever taking the Attack action.',
         level: 5,
       },
     ],
@@ -747,8 +723,7 @@ export const DEV_SEED_CHARACTERS: Character[] = [
       ideals: 'Discipline keeps people alive.',
       bonds: 'My old unit still sends me coded dispatches from the border.',
       flaws: 'I default to command voice even when collaboration is better.',
-      goals:
-        'Train recruits to survive first contact against monstrous threats.',
+      goals: 'Train recruits to survive first contact against monstrous threats.',
       fears: 'Failing those under my protection.',
       age: 67,
       height: '4\'8"',
@@ -762,12 +737,10 @@ export const DEV_SEED_CHARACTERS: Character[] = [
       faction: 'Stonewatch Garrison',
       rank: 'Sergeant',
       origin: 'Frontier citadel in the Ironspine Range.',
-      definingMoment:
-        'Held a breached gate with six volunteers through the night.',
+      definingMoment: 'Held a breached gate with six volunteers through the night.',
       backstory:
         'Bromm enlisted young, rose through merit, and now serves as a veteran drillmaster. He relies on textbook discipline and Battle Master tactics to keep his squad alive.',
-      alliesAndOrganizations:
-        'Captain Helja Runehand; Stonewatch quartermaster corps.',
+      alliesAndOrganizations: 'Captain Helja Runehand; Stonewatch quartermaster corps.',
     },
     portrait: '/assets/images/characters/placeholder_char_card5.jpg',
     allowedSources: ['XPHB'],
@@ -1018,16 +991,14 @@ export const DEV_SEED_CHARACTERS: Character[] = [
         id: 'dark-ones-blessing',
         name: "Dark One's Blessing",
         source: 'Warlock (The Fiend)',
-        description:
-          'Gain temporary hit points when reducing a hostile creature to 0 HP.',
+        description: 'Gain temporary hit points when reducing a hostile creature to 0 HP.',
         level: 1,
       },
       {
         id: 'eldritch-invocations',
         name: 'Eldritch Invocations',
         source: 'Warlock',
-        description:
-          "Invocations selected: Agonizing Blast, Devil's Sight, Repelling Blast.",
+        description: "Invocations selected: Agonizing Blast, Devil's Sight, Repelling Blast.",
         level: 2,
       },
       {
@@ -1048,8 +1019,7 @@ export const DEV_SEED_CHARACTERS: Character[] = [
         id: 'font-of-magic',
         name: 'Font of Magic',
         source: 'Sorcerer',
-        description:
-          'Sorcery points available for slot conversion and metamagic.',
+        description: 'Sorcery points available for slot conversion and metamagic.',
         level: 2,
       },
       {
@@ -1101,12 +1071,7 @@ export const DEV_SEED_CHARACTERS: Character[] = [
           label: 'Sorcerer (Lv 5)',
           className: 'Sorcerer',
           classSource: 'PHB',
-          cantrips: [
-            'Fire Bolt',
-            'Ray of Frost',
-            'Prestidigitation',
-            'Message',
-          ],
+          cantrips: ['Fire Bolt', 'Ray of Frost', 'Prestidigitation', 'Message'],
           spellsKnown: [
             'Shield',
             'Magic Missile',
@@ -1203,17 +1168,13 @@ export const DEV_SEED_CHARACTERS: Character[] = [
       skin: 'Crimson',
       hair: 'Midnight blue',
       distinguishingMarks: 'Fine silver sigils traced along both horns.',
-      physicalDescription:
-        "Long coat lined in infernal script over scholar's attire.",
+      physicalDescription: "Long coat lined in infernal script over scholar's attire.",
       patron: 'Bel, Lord of Avernus',
-      patronDetails:
-        'Negotiated for knowledge in exchange for field intelligence.',
+      patronDetails: 'Negotiated for knowledge in exchange for field intelligence.',
       origin: 'Academy quarter of a cosmopolitan trade city.',
       family: 'Estranged from a merchant house that hid infernal ancestry.',
-      definingMoment:
-        'Survived a planar breach by sealing it with improvised sorcery.',
-      lifeEvents:
-        'Expelled from one college, then recruited by a rival occult society.',
+      definingMoment: 'Survived a planar breach by sealing it with improvised sorcery.',
+      lifeEvents: 'Expelled from one college, then recruited by a rival occult society.',
       backstory:
         'Nyxara combined formal magical study with a dangerous fiendish pact and draconic sorcerous talent. She now pursues total arcane independence through relentless experimentation.',
       alliesAndOrganizations: 'Obsidian Athenaeum; Professor Irius Keld.',
@@ -1424,10 +1385,7 @@ export const DEV_SEED_CHARACTERS: Character[] = [
         'misty step': [classSpellTag('Warlock', 'PHB', 3)],
         darkness: [classSpellTag('Warlock', 'PHB', 3)],
         counterspell: [classSpellTag('Warlock', 'PHB', 5)],
-        fireball: [
-          classSpellTag('Warlock', 'PHB', 5),
-          classSpellTag('Sorcerer', 'PHB', 5),
-        ],
+        fireball: [classSpellTag('Warlock', 'PHB', 5), classSpellTag('Sorcerer', 'PHB', 5)],
         'fire bolt': [classSpellTag('Sorcerer', 'PHB', 1)],
         'ray of frost': [classSpellTag('Sorcerer', 'PHB', 1)],
         prestidigitation: [classSpellTag('Sorcerer', 'PHB', 1)],
@@ -1463,4 +1421,4 @@ export const DEV_SEED_CHARACTERS: Character[] = [
     createdAt: BASE_TIME,
     lastModified: BASE_TIME,
   },
-];
+]

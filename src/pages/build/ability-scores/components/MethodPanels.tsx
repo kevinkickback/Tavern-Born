@@ -1,21 +1,21 @@
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Progress } from '@/components/ui/progress';
+import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Progress } from '@/components/ui/progress'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/select'
 import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
   type AbilityName,
   formatModifier,
   isValidStandardArrayAssignment,
-} from '@/lib/calculations/abilityScores';
+} from '@/lib/calculations/abilityScores'
 import {
   getAbilityModifier,
   POINT_BUY_BUDGET,
@@ -23,21 +23,21 @@ import {
   POINT_BUY_MAX,
   POINT_BUY_MIN,
   STANDARD_ARRAY,
-} from '@/lib/calculations/gameRules';
-import { cn } from '@/lib/utils';
-import { DEFAULT_STANDARD_ARRAY_ASSIGNMENT } from '@/pages/build/ability-scores/model/data';
+} from '@/lib/calculations/gameRules'
+import { cn } from '@/lib/utils'
+import { DEFAULT_STANDARD_ARRAY_ASSIGNMENT } from '@/pages/build/ability-scores/model/data'
 
 interface SharedPanelProps {
-  scores: Record<AbilityName, number>;
-  racialBonuses: Partial<Record<AbilityName, number>>;
-  selectedAbility: AbilityName;
-  onSelectAbility: (ability: AbilityName) => void;
+  scores: Record<AbilityName, number>
+  racialBonuses: Partial<Record<AbilityName, number>>
+  selectedAbility: AbilityName
+  onSelectAbility: (ability: AbilityName) => void
 }
 
 interface PointBuyPanelProps extends SharedPanelProps {
-  pointBuyTotal: number;
-  pointBuyRemaining: number;
-  setScore: (ability: AbilityName, score: number) => void;
+  pointBuyTotal: number
+  pointBuyRemaining: number
+  setScore: (ability: AbilityName, score: number) => void
 }
 
 export function BuildAbilityScoresPointBuyPanel({
@@ -49,18 +49,14 @@ export function BuildAbilityScoresPointBuyPanel({
   selectedAbility,
   onSelectAbility,
 }: PointBuyPanelProps) {
-  const budgetPct = Math.min(100, (pointBuyTotal / POINT_BUY_BUDGET) * 100);
+  const budgetPct = Math.min(100, (pointBuyTotal / POINT_BUY_BUDGET) * 100)
 
   return (
     <div className="space-y-4">
       <div className="p-4 rounded-lg bg-accent/10 border border-accent/30">
         <div className="flex justify-between text-sm font-semibold mb-2">
           <span>Points Used</span>
-          <span
-            className={cn(
-              pointBuyRemaining < 0 && 'text-destructive font-bold',
-            )}
-          >
+          <span className={cn(pointBuyRemaining < 0 && 'text-destructive font-bold')}>
             {pointBuyTotal} / {POINT_BUY_BUDGET}
             <span className="text-muted-foreground font-normal ml-2">
               (
@@ -76,15 +72,14 @@ export function BuildAbilityScoresPointBuyPanel({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {ABILITY_NAMES.map((ability) => {
-          const score = scores[ability] ?? 8;
-          const racial = racialBonuses[ability] ?? 0;
-          const total = score + racial;
-          const modifier = formatModifier(getAbilityModifier(total));
-          const cost = POINT_BUY_COSTS[score] ?? 0;
-          const nextCost = POINT_BUY_COSTS[score + 1] ?? 999;
-          const canDecrease = score > POINT_BUY_MIN;
-          const canIncrease =
-            score < POINT_BUY_MAX && pointBuyRemaining >= nextCost - cost;
+          const score = scores[ability] ?? 8
+          const racial = racialBonuses[ability] ?? 0
+          const total = score + racial
+          const modifier = formatModifier(getAbilityModifier(total))
+          const cost = POINT_BUY_COSTS[score] ?? 0
+          const nextCost = POINT_BUY_COSTS[score + 1] ?? 999
+          const canDecrease = score > POINT_BUY_MIN
+          const canIncrease = score < POINT_BUY_MAX && pointBuyRemaining >= nextCost - cost
 
           return (
             <div
@@ -116,9 +111,7 @@ export function BuildAbilityScoresPointBuyPanel({
                 className="w-full text-center mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => onSelectAbility(ability)}
               >
-                <div className="text-3xl font-bold font-mono leading-none">
-                  {total}
-                </div>
+                <div className="text-3xl font-bold font-mono leading-none">{total}</div>
                 <div className="text-xl font-semibold mt-1">{modifier}</div>
               </button>
               <div className="flex items-center justify-center gap-2">
@@ -131,9 +124,7 @@ export function BuildAbilityScoresPointBuyPanel({
                       ? 'border-accent/45 bg-accent/5 text-accent hover:bg-accent/10 hover:border-accent/60'
                       : 'opacity-35 cursor-not-allowed',
                   )}
-                  onClick={() =>
-                    setScore(ability, Math.max(POINT_BUY_MIN, score - 1))
-                  }
+                  onClick={() => setScore(ability, Math.max(POINT_BUY_MIN, score - 1))}
                   disabled={!canDecrease}
                 >
                   -
@@ -147,24 +138,22 @@ export function BuildAbilityScoresPointBuyPanel({
                       ? 'border-accent/45 bg-accent/5 text-accent hover:bg-accent/10 hover:border-accent/60'
                       : 'opacity-35 cursor-not-allowed',
                   )}
-                  onClick={() =>
-                    setScore(ability, Math.min(POINT_BUY_MAX, score + 1))
-                  }
+                  onClick={() => setScore(ability, Math.min(POINT_BUY_MAX, score + 1))}
                   disabled={!canIncrease}
                 >
                   +
                 </Button>
               </div>
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }
 
 interface StandardArrayPanelProps extends SharedPanelProps {
-  setAllScores: (next: Partial<Record<AbilityName, number>>) => void;
+  setAllScores: (next: Partial<Record<AbilityName, number>>) => void
 }
 
 export function BuildAbilityScoresStandardArrayPanel({
@@ -174,61 +163,56 @@ export function BuildAbilityScoresStandardArrayPanel({
   selectedAbility,
   onSelectAbility,
 }: StandardArrayPanelProps) {
-  const available = [...STANDARD_ARRAY] as number[];
-  const [assignments, setAssignments] = useState<
-    Partial<Record<AbilityName, number>>
-  >({ ...DEFAULT_STANDARD_ARRAY_ASSIGNMENT });
+  const available = [...STANDARD_ARRAY] as number[]
+  const [assignments, setAssignments] = useState<Partial<Record<AbilityName, number>>>({
+    ...DEFAULT_STANDARD_ARRAY_ASSIGNMENT,
+  })
 
   useEffect(() => {
     if (isValidStandardArrayAssignment(scores)) {
-      const next: Partial<Record<AbilityName, number>> = {};
-      for (const ability of ABILITY_NAMES) next[ability] = scores[ability];
-      setAssignments(next);
-      return;
+      const next: Partial<Record<AbilityName, number>> = {}
+      for (const ability of ABILITY_NAMES) next[ability] = scores[ability]
+      setAssignments(next)
+      return
     }
 
     // Scores aren't a valid standard array assignment — update local UI state
     // only; do NOT overwrite the character store, as the user may have arrived
     // here from a different method (e.g. custom/point-buy) or the panel just
     // mounted for the first time.
-    setAssignments({ ...DEFAULT_STANDARD_ARRAY_ASSIGNMENT });
-  }, [scores]);
+    setAssignments({ ...DEFAULT_STANDARD_ARRAY_ASSIGNMENT })
+  }, [scores])
 
   const assign = (ability: AbilityName, raw: string) => {
-    const value = Number(raw);
-    if (!Number.isFinite(value)) return;
+    const value = Number(raw)
+    if (!Number.isFinite(value)) return
 
-    const next = { ...assignments };
-    const current = next[ability];
-    const otherAbility = ABILITY_NAMES.find(
-      (ab) => ab !== ability && next[ab] === value,
-    );
+    const next = { ...assignments }
+    const current = next[ability]
+    const otherAbility = ABILITY_NAMES.find((ab) => ab !== ability && next[ab] === value)
 
     if (otherAbility) {
-      next[otherAbility] = current ?? available[0] ?? 8;
+      next[otherAbility] = current ?? available[0] ?? 8
     }
 
-    next[ability] = value;
-    setAssignments(next);
+    next[ability] = value
+    setAssignments(next)
 
-    const update: Partial<Record<AbilityName, number>> = {};
+    const update: Partial<Record<AbilityName, number>> = {}
     for (const ab of ABILITY_NAMES) {
-      if (next[ab] !== undefined) update[ab] = next[ab] as number;
+      if (next[ab] !== undefined) update[ab] = next[ab] as number
     }
-    setAllScores(update);
-  };
+    setAllScores(update)
+  }
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {ABILITY_NAMES.map((ability) => {
-          const racial = racialBonuses[ability] ?? 0;
-          const base = assignments[ability];
-          const total = base !== undefined ? base + racial : undefined;
-          const modifier =
-            total !== undefined
-              ? formatModifier(getAbilityModifier(total))
-              : '—';
+          const racial = racialBonuses[ability] ?? 0
+          const base = assignments[ability]
+          const total = base !== undefined ? base + racial : undefined
+          const modifier = total !== undefined ? formatModifier(getAbilityModifier(total)) : '—'
 
           return (
             <div
@@ -260,9 +244,7 @@ export function BuildAbilityScoresStandardArrayPanel({
                 className="w-full text-center mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => onSelectAbility(ability)}
               >
-                <div className="text-3xl font-bold font-mono leading-none">
-                  {total ?? '—'}
-                </div>
+                <div className="text-3xl font-bold font-mono leading-none">{total ?? '—'}</div>
                 <div className="text-xl font-semibold mt-1">{modifier}</div>
               </button>
               <div className="flex justify-center">
@@ -275,11 +257,7 @@ export function BuildAbilityScoresStandardArrayPanel({
                   </SelectTrigger>
                   <SelectContent className="w-[84px] min-w-[84px]">
                     {available.map((value) => (
-                      <SelectItem
-                        key={value}
-                        value={String(value)}
-                        className="pr-6"
-                      >
+                      <SelectItem key={value} value={String(value)} className="pr-6">
                         {value}
                       </SelectItem>
                     ))}
@@ -287,15 +265,15 @@ export function BuildAbilityScoresStandardArrayPanel({
                 </Select>
               </div>
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }
 
 interface CustomScoresPanelProps extends SharedPanelProps {
-  setScore: (ability: AbilityName, score: number) => void;
+  setScore: (ability: AbilityName, score: number) => void
 }
 
 export function BuildAbilityScoresCustomScoresPanel({
@@ -308,10 +286,10 @@ export function BuildAbilityScoresCustomScoresPanel({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
       {ABILITY_NAMES.map((ability) => {
-        const value = scores[ability] ?? 10;
-        const racial = racialBonuses[ability] ?? 0;
-        const total = value + racial;
-        const modifier = formatModifier(getAbilityModifier(total));
+        const value = scores[ability] ?? 10
+        const racial = racialBonuses[ability] ?? 0
+        const total = value + racial
+        const modifier = formatModifier(getAbilityModifier(total))
 
         return (
           <div
@@ -343,9 +321,7 @@ export function BuildAbilityScoresCustomScoresPanel({
               className="w-full text-center mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => onSelectAbility(ability)}
             >
-              <div className="text-3xl font-bold font-mono leading-none">
-                {total}
-              </div>
+              <div className="text-3xl font-bold font-mono leading-none">{total}</div>
               <div className="text-xl font-semibold mt-1">{modifier}</div>
             </button>
             <div className="flex items-center justify-center gap-3">
@@ -356,17 +332,14 @@ export function BuildAbilityScoresCustomScoresPanel({
                 value={value}
                 className="h-10 w-24 text-center font-mono font-bold text-base"
                 onChange={(event) => {
-                  const next = Math.min(
-                    30,
-                    Math.max(1, Number(event.target.value) || 1),
-                  );
-                  setScore(ability, next);
+                  const next = Math.min(30, Math.max(1, Number(event.target.value) || 1))
+                  setScore(ability, next)
                 }}
               />
             </div>
           </div>
-        );
+        )
       })}
     </div>
-  );
+  )
 }

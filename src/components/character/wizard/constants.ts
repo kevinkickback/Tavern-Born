@@ -1,13 +1,5 @@
-import {
-  BookOpen,
-  ChartBar,
-  CheckCircle,
-  Sparkle,
-  Sword,
-  User,
-  Users,
-} from '@phosphor-icons/react';
-import type { WizardStep } from './types';
+import { BookOpen, ChartBar, CheckCircle, Sparkle, Sword, User, Users } from '@phosphor-icons/react'
+import type { WizardStep } from './types'
 
 export const WIZARD_STEPS: WizardStep[] = [
   { id: 1, label: 'Basics', icon: User },
@@ -17,7 +9,7 @@ export const WIZARD_STEPS: WizardStep[] = [
   { id: 5, label: 'Background', icon: BookOpen },
   { id: 6, label: 'Ability Scores', icon: ChartBar },
   { id: 7, label: 'Review', icon: CheckCircle },
-];
+]
 
 export const INITIAL_CHARACTER_DATA = {
   name: '',
@@ -54,10 +46,9 @@ export const INITIAL_CHARACTER_DATA = {
   raceAsiBlockIndex: 0 as 0 | 1,
   variantRules: {
     optionalClassFeatures: false,
-    averageHitPoints: false,
+    averageHitPoints: true,
     bladesingerAnyRace: false,
     battleragerAnyRace: false,
-    firearmsAllowed: false,
     preferNewerPrintings: true,
   },
-};
+}

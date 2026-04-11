@@ -1,47 +1,37 @@
-import { BookOpen, Question, Sparkle, Warning } from '@phosphor-icons/react';
-import { useId } from 'react';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { SOURCE_PRESETS, type SourcePreset } from '@/lib/sourcePresets';
-import { cn } from '@/lib/utils';
-import type { SourceBook } from '@/types/5etools';
-import type { StepProps } from '../types';
+import { BookOpen, Question, Sparkle, Warning } from '@phosphor-icons/react'
+import { useId } from 'react'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { SOURCE_PRESETS, type SourcePreset } from '@/lib/sourcePresets'
+import { cn } from '@/lib/utils'
+import type { SourceBook } from '@/types/5etools'
+import type { StepProps } from '../types'
 
 interface RulesStepProps extends StepProps {
   gameData?: {
-    sources?: SourceBook[];
-  };
+    sources?: SourceBook[]
+  }
 }
 
 export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
-  const optionalClassFeaturesId = useId();
-  const averageHitPointsId = useId();
-  const bladesingerAnyRaceId = useId();
-  const battleragerAnyRaceId = useId();
-  const firearmsAllowedId = useId();
-  const preferNewerPrintingsId = useId();
-  const sources = gameData?.sources || [];
-  const allowedSources = data.allowedSources || [];
-  const availableSourceSet = new Set(
-    sources.map((source) => source.abbreviation),
-  );
+  const optionalClassFeaturesId = useId()
+  const averageHitPointsId = useId()
+  const bladesingerAnyRaceId = useId()
+  const battleragerAnyRaceId = useId()
 
-  const sourcesByGroup = sources.reduce<Record<string, SourceBook[]>>(
-    (acc, source) => {
-      if (!acc[source.group]) {
-        acc[source.group] = [];
-      }
-      acc[source.group].push(source);
-      return acc;
-    },
-    {},
-  );
+  const preferNewerPrintingsId = useId()
+  const sources = gameData?.sources || []
+  const allowedSources = data.allowedSources || []
+  const availableSourceSet = new Set(sources.map((source) => source.abbreviation))
+
+  const sourcesByGroup = sources.reduce<Record<string, SourceBook[]>>((acc, source) => {
+    if (!acc[source.group]) {
+      acc[source.group] = []
+    }
+    acc[source.group].push(source)
+    return acc
+  }, {})
 
   const groupLabels: Record<string, string> = {
     core: 'Core Rulebooks',
@@ -50,102 +40,79 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
     adventure: 'Adventure Books',
     playtest: 'Playtest & Unofficial',
     other: 'Other Sources',
-  };
+  }
 
-  const groupOrder = [
-    'core',
-    'supplement',
-    'setting',
-    'adventure',
-    'playtest',
-    'other',
-  ];
+  const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
 
   const toggleSource = (sourceAbbr: string) => {
-    const currentSources = data.allowedSources || [];
+    const currentSources = data.allowedSources || []
     if (currentSources.includes(sourceAbbr)) {
       onChange({
         allowedSources: currentSources.filter((s: string) => s !== sourceAbbr),
-      });
+      })
     } else {
-      onChange({ allowedSources: [...currentSources, sourceAbbr] });
+      onChange({ allowedSources: [...currentSources, sourceAbbr] })
     }
-  };
+  }
 
   const applySourcePreset = (preset: SourcePreset) => {
     const presetSources = preset.abbreviations.filter((abbreviation) =>
       availableSourceSet.has(abbreviation),
-    );
-    onChange({ allowedSources: presetSources });
-  };
+    )
+    onChange({ allowedSources: presetSources })
+  }
 
   const selectNoneSources = () => {
-    onChange({ allowedSources: [] });
-  };
+    onChange({ allowedSources: [] })
+  }
 
   const _selectGroupSources = (group: string) => {
-    const currentSources = data.allowedSources || [];
-    const groupSources =
-      sourcesByGroup[group]?.map((s) => s.abbreviation) || [];
-    const allSelected = groupSources.every((abbr: string) =>
-      currentSources.includes(abbr),
-    );
+    const currentSources = data.allowedSources || []
+    const groupSources = sourcesByGroup[group]?.map((s) => s.abbreviation) || []
+    const allSelected = groupSources.every((abbr: string) => currentSources.includes(abbr))
 
     if (allSelected) {
       onChange({
-        allowedSources: currentSources.filter(
-          (s: string) => !groupSources.includes(s),
-        ),
-      });
+        allowedSources: currentSources.filter((s: string) => !groupSources.includes(s)),
+      })
     } else {
-      const newSources = [...new Set([...currentSources, ...groupSources])];
-      onChange({ allowedSources: newSources });
+      const newSources = [...new Set([...currentSources, ...groupSources])]
+      onChange({ allowedSources: newSources })
     }
-  };
+  }
 
   const _isGroupSelected = (group: string) => {
-    const currentSources = data.allowedSources || [];
-    const groupSources =
-      sourcesByGroup[group]?.map((s) => s.abbreviation) || [];
+    const currentSources = data.allowedSources || []
+    const groupSources = sourcesByGroup[group]?.map((s) => s.abbreviation) || []
     return (
-      groupSources.length > 0 &&
-      groupSources.every((abbr: string) => currentSources.includes(abbr))
-    );
-  };
+      groupSources.length > 0 && groupSources.every((abbr: string) => currentSources.includes(abbr))
+    )
+  }
 
   const isPhbRequired = () => {
-    const phbSources = sources.filter(
-      (s) => s.abbreviation === 'PHB' || s.abbreviation === 'XPHB',
-    );
-    return !phbSources.some((s) => allowedSources.includes(s.abbreviation));
-  };
+    const phbSources = sources.filter((s) => s.abbreviation === 'PHB' || s.abbreviation === 'XPHB')
+    return !phbSources.some((s) => allowedSources.includes(s.abbreviation))
+  }
 
   const isPresetActive = (preset: SourcePreset) => {
     const presetSources = preset.abbreviations.filter((abbreviation) =>
       availableSourceSet.has(abbreviation),
-    );
+    )
     if (presetSources.length !== allowedSources.length) {
-      return false;
+      return false
     }
-    return presetSources.every((abbreviation) =>
-      allowedSources.includes(abbreviation),
-    );
-  };
+    return presetSources.every((abbreviation) => allowedSources.includes(abbreviation))
+  }
 
   const presetSourceAbbreviations = new Set(
     SOURCE_PRESETS.flatMap((preset) => preset.abbreviations),
-  );
+  )
   const hasNonPresetSourcesSelected = allowedSources.some(
     (abbreviation) => !presetSourceAbbreviations.has(abbreviation),
-  );
-  const expandedPreset = SOURCE_PRESETS.find(
-    (preset) => preset.id === 'expanded',
-  );
-  const isExpandedSelectionActive = expandedPreset
-    ? isPresetActive(expandedPreset)
-    : false;
-  const preferNewerPrintingsEnabled =
-    data.variantRules?.preferNewerPrintings ?? false;
+  )
+  const expandedPreset = SOURCE_PRESETS.find((preset) => preset.id === 'expanded')
+  const isExpandedSelectionActive = expandedPreset ? isPresetActive(expandedPreset) : false
+  const preferNewerPrintingsEnabled = data.variantRules?.preferNewerPrintings ?? false
 
   const AS_METHODS = [
     {
@@ -166,7 +133,7 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
       description:
         'Enter ability scores freely, such as values rolled with 4d6-drop-lowest. No restrictions are enforced.',
     },
-  ];
+  ]
 
   const VARIANT_RULE_DESCRIPTIONS: Record<string, string> = {
     optionalClassFeatures:
@@ -177,11 +144,10 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
       'By default Bladesinger (Wizard) is restricted to elves. Enable this to allow any race to take the Bladesinger subclass.',
     battleragerAnyRace:
       'By default Battlerager (Barbarian) is restricted to dwarves. Enable this to allow any race to take the Battlerager subclass.',
-    firearmsAllowed:
-      'Adds renaissance and futuristic firearms to the equipment list. These are optional rules from the DMG and setting books.',
+
     preferNewerPrintings:
       'When enabled, older printings are hidden when a newer reprint exists in your selected sources. This reduces duplicate races, classes, feats, and spells.',
-  };
+  }
 
   return (
     <TooltipProvider>
@@ -213,8 +179,7 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
             </div>
 
             <p className="text-xs text-muted-foreground leading-relaxed min-h-[2.5rem]">
-              {AS_METHODS.find((m) => m.value === data.abilityScoreMethod)
-                ?.description ?? ''}
+              {AS_METHODS.find((m) => m.value === data.abilityScoreMethod)?.description ?? ''}
             </p>
           </div>
 
@@ -233,11 +198,6 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
                     label: 'Optional Class Features',
                   },
                   {
-                    id: averageHitPointsId,
-                    key: 'averageHitPoints' as const,
-                    label: 'Average Hit Points',
-                  },
-                  {
                     id: bladesingerAnyRaceId,
                     key: 'bladesingerAnyRace' as const,
                     label: 'Bladesinger Any Race',
@@ -248,9 +208,9 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
                     label: 'Battlerager Any Race',
                   },
                   {
-                    id: firearmsAllowedId,
-                    key: 'firearmsAllowed' as const,
-                    label: 'Firearms Allowed',
+                    id: averageHitPointsId,
+                    key: 'averageHitPoints' as const,
+                    label: 'Average Hit Points',
                   },
                   {
                     id: preferNewerPrintingsId,
@@ -277,10 +237,7 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
                           <Question className="h-3.5 w-3.5" />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent
-                        side="top"
-                        className="max-w-[220px] text-wrap"
-                      >
+                      <TooltipContent side="top" className="max-w-[220px] text-wrap">
                         {VARIANT_RULE_DESCRIPTIONS[key]}
                       </TooltipContent>
                     </Tooltip>
@@ -356,8 +313,8 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
             <div className="flex-1 min-h-0 flex flex-col gap-2">
               <div className="flex-1 overflow-y-auto pr-1 space-y-4">
                 {groupOrder.map((group) => {
-                  const groupSources = sourcesByGroup[group];
-                  if (!groupSources || groupSources.length === 0) return null;
+                  const groupSources = sourcesByGroup[group]
+                  if (!groupSources || groupSources.length === 0) return null
 
                   return (
                     <div key={group} className="space-y-1.5">
@@ -380,17 +337,13 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
                             <BookOpen
                               className={cn(
                                 'h-4 w-4 flex-shrink-0 mt-0.5',
-                                data.allowedSources?.includes(
-                                  source.abbreviation,
-                                )
+                                data.allowedSources?.includes(source.abbreviation)
                                   ? 'text-accent'
                                   : 'text-muted-foreground',
                               )}
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="font-semibold truncate">
-                                {source.name}
-                              </div>
+                              <div className="font-semibold truncate">{source.name}</div>
                               <div className="text-xs font-mono text-muted-foreground">
                                 {source.abbreviation}
                                 {source.year && ` (${source.year})`}
@@ -400,7 +353,7 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
                         ))}
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
 
@@ -408,9 +361,8 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
                 <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
                   <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
                   <span>
-                    Non-recommended sources often contain DM-only or outdated
-                    content. These may clutter your options with material not
-                    intended for players.
+                    Non-recommended sources often contain DM-only or outdated content. These may
+                    clutter your options with material not intended for players.
                   </span>
                 </div>
               )}
@@ -429,9 +381,7 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
               {isPhbRequired() && (
                 <div className="text-xs text-destructive flex items-center gap-1.5 flex-shrink-0 bg-destructive/10 border border-destructive/30 p-3 rounded-md">
                   <Warning className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span>
-                    At least one Player's Handbook (2014 or 2024) is required.
-                  </span>
+                  <span>At least one Player's Handbook (2014 or 2024) is required.</span>
                 </div>
               )}
             </div>
@@ -439,5 +389,5 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
         </div>
       </div>
     </TooltipProvider>
-  );
+  )
 }

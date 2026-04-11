@@ -9,92 +9,86 @@
 // filter sidebar UI; all item-specific logic (card rendering, match function,
 // filter sections, category limits) is provided by the caller.
 
-import { Funnel, X } from '@phosphor-icons/react';
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
-import { toast } from 'sonner';
+import { Funnel, X } from '@phosphor-icons/react'
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
+} from '@/components/ui/accordion'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Switch } from '@/components/ui/switch';
-import { cn } from '@/lib/utils';
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Switch } from '@/components/ui/switch'
+import { cn } from '@/lib/utils'
 
 /** The state of all filter sections, keyed by FilterSection.key. */
-export type ActiveFilters = Record<string, Set<string>>;
+export type ActiveFilters = Record<string, Set<string>>
 
 export interface FilterOption {
-  value: string;
-  label: string;
+  value: string
+  label: string
 }
 
 export interface FilterSection {
-  key: string;
-  label: string;
+  key: string
+  label: string
   /** checkboxes: empty set = all pass, non-empty = must match one checked option.
    *  switches:   each enabled value acts as an independent AND clause. */
-  type: 'checkboxes' | 'switches';
-  options: FilterOption[];
+  type: 'checkboxes' | 'switches'
+  options: FilterOption[]
   /** Number of columns for checkbox grid. Defaults to 2. */
-  columns?: 1 | 2;
+  columns?: 1 | 2
   /** Values that should be rendered disabled (greyed out, unclickable). */
-  disabledValues?: Set<string>;
+  disabledValues?: Set<string>
 }
 
 export interface CategoryLimit<T> {
-  key: string;
+  key: string
   /** Short label shown in the footer badge, e.g. "cantrips", "1st-level". */
-  label: string;
+  label: string
   /** Maximum allowed selections in this category. Use Infinity for unlimited. */
-  max: number;
+  max: number
   /** Returns true if this item belongs to this category. */
-  test: (item: T) => boolean;
+  test: (item: T) => boolean
 }
 
 export interface SelectionModalProps<T> {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  title: string;
-  items: T[];
-  getItemId: (item: T) => string;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title: string
+  items: T[]
+  getItemId: (item: T) => string
   /** Render the inner content of a card. The outer click wrapper is provided by the modal. */
-  renderCard: (item: T, isSelected: boolean, canSelect: boolean) => ReactNode;
+  renderCard: (item: T, isSelected: boolean, canSelect: boolean) => ReactNode
   /** Return true when the item should appear given the current search + active filters. */
-  matchItem: (item: T, search: string, activeFilters: ActiveFilters) => boolean;
-  filterSections?: FilterSection[];
+  matchItem: (item: T, search: string, activeFilters: ActiveFilters) => boolean
+  filterSections?: FilterSection[]
   /** Optional per-category selection limits used for footer badges + default guard. */
-  categories?: CategoryLimit<T>[];
+  categories?: CategoryLimit<T>[]
   /** Override the default selection guard. Return false to block adding the item. */
-  canSelect?: (item: T, selectedIds: Set<string>, allItems: T[]) => boolean;
+  canSelect?: (item: T, selectedIds: Set<string>, allItems: T[]) => boolean
   /** IDs that are pre-selected when the dialog opens. Re-evaluated on every open. */
-  initialSelectedIds?: string[];
+  initialSelectedIds?: string[]
   /** Active filter state to pre-apply when the dialog opens (e.g. level checkboxes). */
-  initialFilters?: ActiveFilters;
-  onConfirm: (selectedIds: string[], selectedItems: T[]) => void;
+  initialFilters?: ActiveFilters
+  onConfirm: (selectedIds: string[], selectedItems: T[]) => void
 }
 
 function buildInitialFilters(sections: FilterSection[]): ActiveFilters {
-  return Object.fromEntries(sections.map((s) => [s.key, new Set<string>()]));
+  return Object.fromEntries(sections.map((s) => [s.key, new Set<string>()]))
 }
 
 function defaultCanSelect<T>(
@@ -105,13 +99,11 @@ function defaultCanSelect<T>(
   categories: CategoryLimit<T>[],
 ): boolean {
   for (const cat of categories) {
-    if (cat.max === Number.POSITIVE_INFINITY || !cat.test(item)) continue;
-    const count = allItems.filter(
-      (i) => cat.test(i) && selectedIds.has(getItemId(i)),
-    ).length;
-    if (count >= cat.max) return false;
+    if (cat.max === Number.POSITIVE_INFINITY || !cat.test(item)) continue
+    const count = allItems.filter((i) => cat.test(i) && selectedIds.has(getItemId(i))).length
+    if (count >= cat.max) return false
   }
-  return true;
+  return true
 }
 
 function SelectionModalInner<T>({
@@ -128,39 +120,37 @@ function SelectionModalInner<T>({
   onConfirm,
   onClose,
 }: Omit<SelectionModalProps<T>, 'open' | 'onOpenChange'> & {
-  onClose: () => void;
+  onClose: () => void
 }) {
-  const [search, setSearch] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(filterSections.length > 0);
+  const [search, setSearch] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(filterSections.length > 0)
   const [activeFilters, setActiveFilters] = useState<ActiveFilters>(() => {
-    const base = buildInitialFilters(filterSections);
-    if (!initialFilters) return base;
-    return { ...base, ...initialFilters };
-  });
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(initialSelectedIds),
-  );
+    const base = buildInitialFilters(filterSections)
+    if (!initialFilters) return base
+    return { ...base, ...initialFilters }
+  })
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(initialSelectedIds))
 
   const filteredItems = useMemo(
     () => items.filter((item) => matchItem(item, search, activeFilters)),
     [items, search, activeFilters, matchItem],
-  );
+  )
 
   // Batch rendering: only mount first N cards; load more on demand.
-  const BATCH = 40;
-  const [renderLimit, setRenderLimit] = useState(BATCH);
+  const BATCH = 40
+  const [renderLimit, setRenderLimit] = useState(BATCH)
   // Reset when search or filters change so newly-filtered results start from top.
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset trigger
   useEffect(() => {
-    setRenderLimit(BATCH);
-  }, [search, activeFilters]);
-  const visibleItems = filteredItems.slice(0, renderLimit);
-  const hiddenCount = filteredItems.length - visibleItems.length;
+    setRenderLimit(BATCH)
+  }, [search, activeFilters])
+  const visibleItems = filteredItems.slice(0, renderLimit)
+  const hiddenCount = filteredItems.length - visibleItems.length
 
   const selectedItems = useMemo(
     () => items.filter((item) => selectedIds.has(getItemId(item))),
     [items, selectedIds, getItemId],
-  );
+  )
 
   const categoryCounts = useMemo(
     () =>
@@ -169,73 +159,66 @@ function SelectionModalInner<T>({
         selected: selectedItems.filter((i) => cat.test(i)).length,
       })),
     [categories, selectedItems],
-  );
+  )
 
   const checkCanSelect = useCallback(
     (item: T): boolean => {
-      if (canSelect) return canSelect(item, selectedIds, items);
-      return defaultCanSelect(item, selectedIds, items, getItemId, categories);
+      if (canSelect) return canSelect(item, selectedIds, items)
+      return defaultCanSelect(item, selectedIds, items, getItemId, categories)
     },
     [canSelect, selectedIds, items, getItemId, categories],
-  );
+  )
 
   const toggleItem = useCallback(
     (item: T) => {
-      const id = getItemId(item);
-      const alreadySelected = selectedIds.has(id);
+      const id = getItemId(item)
+      const alreadySelected = selectedIds.has(id)
       if (!alreadySelected && !checkCanSelect(item)) {
-        toast.warning('Selection limit reached for this category.');
-        return;
+        toast.warning('Selection limit reached for this category.')
+        return
       }
       setSelectedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        return next;
-      });
+        const next = new Set(prev)
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        return next
+      })
     },
     [getItemId, selectedIds, checkCanSelect],
-  );
+  )
 
   const handleCheckbox = useCallback(
     (sectionKey: string, optionValue: string, checked: boolean) => {
       setActiveFilters((prev) => {
-        const next = { ...prev, [sectionKey]: new Set(prev[sectionKey]) };
-        if (checked) next[sectionKey].add(optionValue);
-        else next[sectionKey].delete(optionValue);
-        return next;
-      });
+        const next = { ...prev, [sectionKey]: new Set(prev[sectionKey]) }
+        if (checked) next[sectionKey].add(optionValue)
+        else next[sectionKey].delete(optionValue)
+        return next
+      })
     },
     [],
-  );
+  )
 
-  const handleSwitch = useCallback(
-    (sectionKey: string, optionValue: string, enabled: boolean) => {
-      setActiveFilters((prev) => {
-        const next = { ...prev, [sectionKey]: new Set(prev[sectionKey]) };
-        if (enabled) next[sectionKey].add(optionValue);
-        else next[sectionKey].delete(optionValue);
-        return next;
-      });
-    },
-    [],
-  );
+  const handleSwitch = useCallback((sectionKey: string, optionValue: string, enabled: boolean) => {
+    setActiveFilters((prev) => {
+      const next = { ...prev, [sectionKey]: new Set(prev[sectionKey]) }
+      if (enabled) next[sectionKey].add(optionValue)
+      else next[sectionKey].delete(optionValue)
+      return next
+    })
+  }, [])
 
-  const clearSearch = () => setSearch('');
+  const clearSearch = () => setSearch('')
 
   const handleConfirm = () => {
-    onConfirm([...selectedIds], selectedItems);
-    onClose();
-  };
+    onConfirm([...selectedIds], selectedItems)
+    onClose()
+  }
 
-  const allAccordionKeys = filterSections.map((s) => s.key);
+  const allAccordionKeys = filterSections.map((s) => s.key)
 
   const sidebar = (
-    <Accordion
-      type="multiple"
-      defaultValue={allAccordionKeys}
-      className="w-full"
-    >
+    <Accordion type="multiple" defaultValue={allAccordionKeys} className="w-full">
       {filterSections.map((section) => (
         <AccordionItem
           key={section.key}
@@ -254,11 +237,9 @@ function SelectionModalInner<T>({
                 )}
               >
                 {section.options.map((opt) => {
-                  const checked =
-                    activeFilters[section.key]?.has(opt.value) ?? false;
-                  const disabled =
-                    section.disabledValues?.has(opt.value) ?? false;
-                  const filterId = `sm-filter-${section.key}-${opt.value}`;
+                  const checked = activeFilters[section.key]?.has(opt.value) ?? false
+                  const disabled = section.disabledValues?.has(opt.value) ?? false
+                  const filterId = `sm-filter-${section.key}-${opt.value}`
                   return (
                     <div
                       key={opt.value}
@@ -271,9 +252,7 @@ function SelectionModalInner<T>({
                         id={filterId}
                         checked={checked}
                         disabled={disabled}
-                        onCheckedChange={(c) =>
-                          handleCheckbox(section.key, opt.value, !!c)
-                        }
+                        onCheckedChange={(c) => handleCheckbox(section.key, opt.value, !!c)}
                         className="h-4 w-4 rounded-sm"
                       />
                       <Label
@@ -286,33 +265,27 @@ function SelectionModalInner<T>({
                         {opt.label}
                       </Label>
                     </div>
-                  );
+                  )
                 })}
               </div>
             )}
             {section.type === 'switches' && (
               <div className="space-y-2">
                 {section.options.map((opt) => {
-                  const enabled =
-                    activeFilters[section.key]?.has(opt.value) ?? false;
-                  const switchId = `sm-switch-${section.key}-${opt.value}`;
+                  const enabled = activeFilters[section.key]?.has(opt.value) ?? false
+                  const switchId = `sm-switch-${section.key}-${opt.value}`
                   return (
                     <div key={opt.value} className="flex items-center gap-2">
                       <Switch
                         id={switchId}
                         checked={enabled}
-                        onCheckedChange={(c) =>
-                          handleSwitch(section.key, opt.value, c)
-                        }
+                        onCheckedChange={(c) => handleSwitch(section.key, opt.value, c)}
                       />
-                      <Label
-                        htmlFor={switchId}
-                        className="text-[13px] font-normal cursor-pointer"
-                      >
+                      <Label htmlFor={switchId} className="text-[13px] font-normal cursor-pointer">
                         {opt.label}
                       </Label>
                     </div>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -320,7 +293,7 @@ function SelectionModalInner<T>({
         </AccordionItem>
       ))}
     </Accordion>
-  );
+  )
 
   const statusText =
     selectedItems.length === 0
@@ -329,20 +302,17 @@ function SelectionModalInner<T>({
           .slice(0, 5)
           .map((i) => {
             if (typeof i === 'object' && i !== null && 'name' in i) {
-              const maybeName = (i as { name?: unknown }).name;
-              if (typeof maybeName === 'string') return maybeName;
+              const maybeName = (i as { name?: unknown }).name
+              if (typeof maybeName === 'string') return maybeName
             }
-            return getItemId(i);
+            return getItemId(i)
           })
-          .join(', ') +
-        (selectedItems.length > 5 ? `, +${selectedItems.length - 5} more` : '');
+          .join(', ') + (selectedItems.length > 5 ? `, +${selectedItems.length - 5} more` : '')
 
   return (
     <>
       <DialogHeader className="px-5 pt-5 pb-0 flex-shrink-0">
-        <DialogTitle className="font-display text-xl leading-tight">
-          {title}
-        </DialogTitle>
+        <DialogTitle className="font-display text-xl leading-tight">{title}</DialogTitle>
         <DialogDescription className="sr-only">
           Browse and select items. Use the search and filters to narrow results.
         </DialogDescription>
@@ -354,16 +324,12 @@ function SelectionModalInner<T>({
               size="sm"
               className={cn(
                 'h-10 w-10 p-0 flex-shrink-0',
-                sidebarOpen &&
-                  'bg-accent text-accent-foreground hover:bg-accent/90',
+                sidebarOpen && 'bg-accent text-accent-foreground hover:bg-accent/90',
               )}
               onClick={() => setSidebarOpen((v) => !v)}
               title={sidebarOpen ? 'Hide filters' : 'Show filters'}
             >
-              <Funnel
-                className="h-4 w-4"
-                weight={sidebarOpen ? 'fill' : 'regular'}
-              />
+              <Funnel className="h-4 w-4" weight={sidebarOpen ? 'fill' : 'regular'} />
             </Button>
           )}
           <div className="relative flex-1">
@@ -408,9 +374,9 @@ function SelectionModalInner<T>({
               </p>
             ) : (
               visibleItems.map((item) => {
-                const id = getItemId(item);
-                const isSelected = selectedIds.has(id);
-                const canSel = isSelected || checkCanSelect(item);
+                const id = getItemId(item)
+                const isSelected = selectedIds.has(id)
+                const canSel = isSelected || checkCanSelect(item)
                 return (
                   <button
                     key={id}
@@ -428,7 +394,7 @@ function SelectionModalInner<T>({
                   >
                     {renderCard(item, isSelected, canSel)}
                   </button>
-                );
+                )
               })
             )}
             {hiddenCount > 0 && (
@@ -451,9 +417,7 @@ function SelectionModalInner<T>({
             </span>
             {categoryCounts.length > 0 ? (
               categoryCounts.map((cat) => {
-                const full =
-                  cat.max !== Number.POSITIVE_INFINITY &&
-                  cat.selected >= cat.max;
+                const full = cat.max !== Number.POSITIVE_INFINITY && cat.selected >= cat.max
                 return (
                   <Badge
                     key={cat.key}
@@ -463,11 +427,10 @@ function SelectionModalInner<T>({
                       full && 'bg-accent text-accent-foreground',
                     )}
                   >
-                    {cat.selected}/
-                    {cat.max === Number.POSITIVE_INFINITY ? '∞' : cat.max}{' '}
+                    {cat.selected}/{cat.max === Number.POSITIVE_INFINITY ? '∞' : cat.max}{' '}
                     {cat.label}
                   </Badge>
-                );
+                )
               })
             ) : (
               <Badge variant="secondary" className="font-mono text-sm px-2 h-6">
@@ -492,7 +455,7 @@ function SelectionModalInner<T>({
         </div>
       </div>
     </>
-  );
+  )
 }
 
 // The Dialog wrapper is separate so DialogContent is always in the tree for
@@ -500,28 +463,24 @@ function SelectionModalInner<T>({
 // fresh state without needing effect-based resets.
 
 export function SelectionModal<T>(props: SelectionModalProps<T>) {
-  const { open, onOpenChange, ...rest } = props;
+  const { open, onOpenChange, ...rest } = props
 
   // Increment each time the dialog opens — forces SelectionModalInner to
   // remount with fresh state while keeping the Dialog/DialogContent mounted
   // for close animations.
-  const [mountKey, setMountKey] = useState(0);
+  const [mountKey, setMountKey] = useState(0)
 
   useEffect(() => {
     if (open) {
-      setMountKey((k) => k + 1);
+      setMountKey((k) => k + 1)
     }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps — only track open transitions
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps — only track open transitions
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex flex-col gap-0 p-0 overflow-hidden max-h-[90vh] sm:max-w-5xl w-full">
-        <SelectionModalInner
-          key={mountKey}
-          {...rest}
-          onClose={() => onOpenChange(false)}
-        />
+        <SelectionModalInner key={mountKey} {...rest} onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
-  );
+  )
 }

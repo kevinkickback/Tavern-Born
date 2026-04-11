@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test } from 'vitest'
+import type { ChoiceRecord } from '@/lib/provenance/types'
 import {
   buildArtisanChoiceMap,
   buildChoiceCounts,
@@ -11,7 +12,7 @@ import {
   getSelectedToolNames,
   hasUnresolvedChoiceForKind,
   normalizeGenericToolKind,
-} from '@/pages/build/proficiencies/model/data';
+} from '@/pages/build/proficiencies/model/data'
 
 describe('buildProficienciesData', () => {
   test('buildSkillDescriptions supports object and array input', () => {
@@ -19,12 +20,12 @@ describe('buildProficienciesData', () => {
       buildSkillDescriptions({
         arcana: { name: 'Arcana', entries: ['lore'] },
       }),
-    ).toEqual({ arcana: ['lore'] });
+    ).toEqual({ arcana: ['lore'] })
 
-    expect(
-      buildSkillDescriptions([{ name: 'Stealth', entries: ['hide'] }]),
-    ).toEqual({ stealth: ['hide'] });
-  });
+    expect(buildSkillDescriptions([{ name: 'Stealth', entries: ['hide'] }])).toEqual({
+      stealth: ['hide'],
+    })
+  })
 
   test('buildChoiceCounts returns remaining picks per domain', () => {
     const counts = buildChoiceCounts([
@@ -56,7 +57,7 @@ describe('buildProficienciesData', () => {
         selected: [],
         status: 'pending',
       },
-    ]);
+    ])
 
     expect(counts).toEqual({
       skills: 1,
@@ -64,20 +65,16 @@ describe('buildProficienciesData', () => {
       weapons: 0,
       tools: 1,
       languages: 0,
-    });
-  });
+    })
+  })
 
   test('normalizeGenericToolKind recognizes known generic tokens', () => {
-    expect(normalizeGenericToolKind('Any Musical Instrument')).toBe(
-      'musical instrument',
-    );
-    expect(normalizeGenericToolKind("any artisan's tool")).toBe(
-      "artisan's tools",
-    );
-    expect(normalizeGenericToolKind('Any Gaming Set')).toBe('gaming set');
-    expect(normalizeGenericToolKind('anyTool')).toBe('tool');
-    expect(normalizeGenericToolKind("Thieves' Tools")).toBeNull();
-  });
+    expect(normalizeGenericToolKind('Any Musical Instrument')).toBe('musical instrument')
+    expect(normalizeGenericToolKind("any artisan's tool")).toBe("artisan's tools")
+    expect(normalizeGenericToolKind('Any Gaming Set')).toBe('gaming set')
+    expect(normalizeGenericToolKind('anyTool')).toBe('tool')
+    expect(normalizeGenericToolKind("Thieves' Tools")).toBeNull()
+  })
 
   test('buildToolSubtypeOptionsByKind filters by allowed sources and deduplicates names', () => {
     const byKind = buildToolSubtypeOptionsByKind({
@@ -88,24 +85,24 @@ describe('buildProficienciesData', () => {
         { name: 'Dice Set', type: 'GS|PHB', source: 'PHB' },
       ],
       allowedSources: ['PHB'],
-    });
+    })
 
-    expect(byKind['musical instrument']).toEqual(['Lute']);
-    expect(byKind["artisan's tools"]).toEqual(["Smith's Tools"]);
-    expect(byKind['gaming set']).toEqual(['Dice Set']);
-  });
+    expect(byKind['musical instrument']).toEqual(['Lute'])
+    expect(byKind["artisan's tools"]).toEqual(["Smith's Tools"])
+    expect(byKind['gaming set']).toEqual(['Dice Set'])
+  })
 
   test('buildToolSubtypeOptionsByKind falls back to global items when allowed-source subset is empty', () => {
     const byKind = buildToolSubtypeOptionsByKind({
       itemsBase: [{ name: 'Lute', type: 'INS|PHB', source: 'PHB' }],
       items: [{ name: 'Dragonchess Set', type: 'GS|XDMG', source: 'XDMG' }],
       allowedSources: ['XPHB'],
-    });
+    })
 
-    expect(byKind['musical instrument']).toEqual(['Lute']);
-    expect(byKind['gaming set']).toEqual(['Dragonchess Set']);
-    expect(byKind.tool).toEqual(['Dragonchess Set', 'Lute']);
-  });
+    expect(byKind['musical instrument']).toEqual(['Lute'])
+    expect(byKind['gaming set']).toEqual(['Dragonchess Set'])
+    expect(byKind.tool).toEqual(['Dragonchess Set', 'Lute'])
+  })
 
   test('buildToolChoiceSlots expands remaining generic tool picks into slots', () => {
     const slots = buildToolChoiceSlots({
@@ -130,8 +127,9 @@ describe('buildProficienciesData', () => {
         'musical instrument': ['Lute', 'Lyre'],
         "artisan's tools": ["Smith's Tools"],
         'gaming set': ['Dice Set'],
+        tool: ['Dice Set', 'Lute', 'Lyre', "Smith's Tools"],
       },
-    });
+    })
 
     expect(slots).toEqual([
       {
@@ -141,8 +139,8 @@ describe('buildProficienciesData', () => {
         sourceName: 'Bard',
         options: ['Lyre'],
       },
-    ]);
-  });
+    ])
+  })
 
   test('buildToolChoiceSlots supports generic any-tool pools', () => {
     const slots = buildToolChoiceSlots({
@@ -169,7 +167,7 @@ describe('buildProficienciesData', () => {
         'gaming set': ['Dice Set'],
         tool: ['Dice Set', 'Dragonchess Set', 'Lute', "Smith's Tools"],
       },
-    });
+    })
 
     expect(slots).toEqual([
       {
@@ -179,22 +177,22 @@ describe('buildProficienciesData', () => {
         sourceName: 'Noble',
         options: ['Dragonchess Set', 'Lute', "Smith's Tools"],
       },
-    ]);
-  });
-});
+    ])
+  })
+})
 
 describe('dedupeByNorm', () => {
   test('removes duplicates by normalised key', () => {
-    expect(dedupeByNorm(['Lute', 'lute', 'Lyre'])).toEqual(['Lute', 'Lyre']);
-  });
+    expect(dedupeByNorm(['Lute', 'lute', 'Lyre'])).toEqual(['Lute', 'Lyre'])
+  })
 
   test('returns empty for empty input', () => {
-    expect(dedupeByNorm([])).toEqual([]);
-  });
-});
+    expect(dedupeByNorm([])).toEqual([])
+  })
+})
 
 describe('hasUnresolvedChoiceForKind', () => {
-  const choices = [
+  const choices: ChoiceRecord[] = [
     {
       id: 'c1',
       domain: 'tools',
@@ -209,25 +207,21 @@ describe('hasUnresolvedChoiceForKind', () => {
       selected: [],
       status: 'pending' as const,
     },
-  ];
+  ]
 
   test('returns true when an unfilled slot matches the kind', () => {
-    expect(hasUnresolvedChoiceForKind(choices, 'musical instrument')).toBe(
-      true,
-    );
-  });
+    expect(hasUnresolvedChoiceForKind(choices, 'musical instrument')).toBe(true)
+  })
 
   test('returns false when no slot matches', () => {
-    expect(hasUnresolvedChoiceForKind(choices, 'gaming set')).toBe(false);
-  });
+    expect(hasUnresolvedChoiceForKind(choices, 'gaming set')).toBe(false)
+  })
 
   test('returns false when the choice is fully resolved', () => {
-    const resolved = [{ ...choices[0], selected: ['Lute'] }];
-    expect(hasUnresolvedChoiceForKind(resolved, 'musical instrument')).toBe(
-      false,
-    );
-  });
-});
+    const resolved = [{ ...choices[0], selected: ['Lute'] }]
+    expect(hasUnresolvedChoiceForKind(resolved, 'musical instrument')).toBe(false)
+  })
+})
 
 describe('buildVisibleToolCandidates', () => {
   test('removes abstract tool token and duplicates', () => {
@@ -237,14 +231,14 @@ describe('buildVisibleToolCandidates', () => {
       artisanToolNames: [],
       currentTools: [],
       selectedToolNames: [],
-    });
+    })
 
-    expect(result).toContain('Lute');
-    expect(result).toContain('Lyre');
-    expect(result).toContain("Thieves' Tools");
+    expect(result).toContain('Lute')
+    expect(result).toContain('Lyre')
+    expect(result).toContain("Thieves' Tools")
     // No duplicates
-    expect(result.filter((n) => n === 'Lute')).toHaveLength(1);
-  });
+    expect(result.filter((n) => n === 'Lute')).toHaveLength(1)
+  })
 
   test('keeps canonical generic labels and filters verbose placeholders', () => {
     const result = buildVisibleToolCandidates({
@@ -253,14 +247,12 @@ describe('buildVisibleToolCandidates', () => {
       artisanToolNames: [],
       currentTools: ['gaming set', 'one type of gaming set of your choice'],
       selectedToolNames: [],
-    });
+    })
 
-    expect(result).toContain('gaming set');
-    expect(result.some((n) => n.toLowerCase().includes('one type'))).toBe(
-      false,
-    );
-  });
-});
+    expect(result).toContain('gaming set')
+    expect(result.some((n) => n.toLowerCase().includes('one type'))).toBe(false)
+  })
+})
 
 describe('buildArtisanChoiceMap', () => {
   test('maps normalised tool names to choice IDs', () => {
@@ -272,12 +264,12 @@ describe('buildArtisanChoiceMap', () => {
         sourceName: 'Artificer',
         options: ["Smith's Tools", "Brewer's Supplies"],
       },
-    ]);
+    ])
 
-    expect(map.get("smith's tools")).toBe('choice-1');
-    expect(map.get("brewer's supplies")).toBe('choice-1');
-  });
-});
+    expect(map.get("smith's tools")).toBe('choice-1')
+    expect(map.get("brewer's supplies")).toBe('choice-1')
+  })
+})
 
 describe('getSelectedToolNames', () => {
   test('collects unique tool names from tool choices', () => {
@@ -310,11 +302,11 @@ describe('getSelectedToolNames', () => {
         selected: ['Stealth'],
         status: 'resolved' as const,
       },
-    ]);
+    ])
 
-    expect(result).toEqual(['Lute']);
-  });
-});
+    expect(result).toEqual(['Lute'])
+  })
+})
 
 describe('buildOptionalToolNamesFromChoices', () => {
   test('expands generic tool kinds to concrete names', () => {
@@ -341,9 +333,9 @@ describe('buildOptionalToolNamesFromChoices', () => {
         'gaming set': [],
         tool: ['Lute', 'Lyre'],
       },
-    );
+    )
 
-    expect(result).toContain('Lute');
-    expect(result).toContain('Lyre');
-  });
-});
+    expect(result).toContain('Lute')
+    expect(result).toContain('Lyre')
+  })
+})

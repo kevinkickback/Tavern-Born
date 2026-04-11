@@ -1,8 +1,5 @@
-import { describe, expect, test } from 'vitest';
-import {
-  buildFeatModalFeats,
-  partitionSelectedFeats,
-} from '@/pages/feats/model/selection';
+import { describe, expect, test } from 'vitest'
+import { buildFeatModalFeats, partitionSelectedFeats } from '@/pages/feats/model/selection'
 
 describe('feat selection model', () => {
   test('buildFeatModalFeats appends saved feats missing from the available list', () => {
@@ -13,14 +10,14 @@ describe('feat selection model', () => {
       ],
       selectedFeats: [{ name: 'Alert', source: 'PHB' }],
       selectedSpecialFeats: [{ name: 'Chef', source: 'TCE' }],
-    });
+    })
 
     expect(result.map((feat) => `${feat.name}|${feat.source}`)).toEqual([
       'Alert|PHB',
       'Athlete|PHB',
       'Chef|TCE',
-    ]);
-  });
+    ])
+  })
 
   test('partitionSelectedFeats preserves existing special feats and fills normal slots first', () => {
     const result = partitionSelectedFeats({
@@ -32,12 +29,9 @@ describe('feat selection model', () => {
       existingNormalFeats: [{ name: 'Alert', source: 'PHB' }],
       existingSpecialFeats: [{ name: 'Chef', source: 'TCE' }],
       totalNormalSlots: 1,
-    });
+    })
 
-    expect(result.normalFeats.map((feat) => feat.name)).toEqual(['Alert']);
-    expect(result.specialFeats.map((feat) => feat.name)).toEqual([
-      'Chef',
-      'Skilled',
-    ]);
-  });
-});
+    expect(result.normalFeats.map((feat) => feat.name)).toEqual(['Alert'])
+    expect(result.specialFeats.map((feat) => feat.name)).toEqual(['Chef', 'Skilled'])
+  })
+})

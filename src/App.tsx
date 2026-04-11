@@ -1,30 +1,30 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { Toaster } from 'sonner';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay';
-import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { useDataInit } from '@/hooks/data/useDataInit';
-import { BuildAbilityScoresPage } from '@/pages/build/ability-scores/AbilityScoresPage';
-import { BuildBackgroundPage } from '@/pages/build/background/BackgroundPage';
-import { BuildClassPage } from '@/pages/build/class/ClassPage';
-import { BuildProficienciesPage } from '@/pages/build/proficiencies/ProficienciesPage';
-import { BuildRacePage } from '@/pages/build/race/RacePage';
-import { CharacterSheetPage } from '@/pages/CharacterSheetPage';
-import { CompendiumPage } from '@/pages/compendium/CompendiumPage';
-import { AlliesOrganizationsPage } from '@/pages/details/AlliesOrganizationsPage';
-import { AppearancePage } from '@/pages/details/AppearancePage';
-import { CharacteristicsPage } from '@/pages/details/CharacteristicsPage';
-import { HistoryPage } from '@/pages/details/HistoryPage';
-import { PortraitPage } from '@/pages/details/PortraitPage';
-import { EquipmentPage } from '@/pages/equipment/EquipmentPage';
-import { FeatsPage } from '@/pages/feats/FeatsPage';
-import { HomePage } from '@/pages/HomePage';
-import { SettingsPage } from '@/pages/SettingsPage';
-import { SpellsPage } from '@/pages/spells/SpellsPage';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { Toaster } from 'sonner'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
+import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { useDataInit } from '@/hooks/data/useDataInit'
+import { BuildAbilityScoresPage } from '@/pages/build/ability-scores/AbilityScoresPage'
+import { BuildBackgroundPage } from '@/pages/build/background/BackgroundPage'
+import { BuildClassPage } from '@/pages/build/class/ClassPage'
+import { BuildProficienciesPage } from '@/pages/build/proficiencies/ProficienciesPage'
+import { BuildRacePage } from '@/pages/build/race/RacePage'
+import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
+import { CompendiumPage } from '@/pages/compendium/CompendiumPage'
+import { AlliesOrganizationsPage } from '@/pages/details/AlliesOrganizationsPage'
+import { AppearancePage } from '@/pages/details/AppearancePage'
+import { CharacteristicsPage } from '@/pages/details/CharacteristicsPage'
+import { HistoryPage } from '@/pages/details/HistoryPage'
+import { PortraitPage } from '@/pages/details/PortraitPage'
+import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
+import { FeatsPage } from '@/pages/feats/FeatsPage'
+import { HomePage } from '@/pages/HomePage'
+import { SettingsPage } from '@/pages/SettingsPage'
+import { SpellsPage } from '@/pages/spells/SpellsPage'
 
 function App() {
-  useDataInit();
+  useDataInit()
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -32,38 +32,20 @@ function App() {
         <AppLayout>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route
-              path="/build"
-              element={<Navigate to="/build/race" replace />}
-            />
+            <Route path="/build" element={<Navigate to="/build/race" replace />} />
             <Route path="/build/race" element={<BuildRacePage />} />
             <Route path="/build/class" element={<BuildClassPage />} />
             <Route path="/build/background" element={<BuildBackgroundPage />} />
-            <Route
-              path="/build/proficiencies"
-              element={<BuildProficienciesPage />}
-            />
-            <Route
-              path="/build/ability-scores"
-              element={<BuildAbilityScoresPage />}
-            />
+            <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
+            <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
             <Route path="/feats" element={<FeatsPage />} />
             <Route path="/spells" element={<SpellsPage />} />
             <Route path="/equipment" element={<EquipmentPage />} />
-            <Route
-              path="/details"
-              element={<Navigate to="/details/portrait" replace />}
-            />
+            <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
             <Route path="/details/portrait" element={<PortraitPage />} />
-            <Route
-              path="/details/characteristics"
-              element={<CharacteristicsPage />}
-            />
+            <Route path="/details/characteristics" element={<CharacteristicsPage />} />
             <Route path="/details/appearance" element={<AppearancePage />} />
-            <Route
-              path="/details/allies-organizations"
-              element={<AlliesOrganizationsPage />}
-            />
+            <Route path="/details/allies-organizations" element={<AlliesOrganizationsPage />} />
             <Route path="/details/history" element={<HistoryPage />} />
             <Route path="/character-sheet" element={<CharacterSheetPage />} />
             <Route path="/compendium" element={<CompendiumPage />} />
@@ -75,7 +57,7 @@ function App() {
         <AppLoadingOverlay />
       </BrowserRouter>
     </TooltipProvider>
-  );
+  )
 }
 
-export default App;
+export default App

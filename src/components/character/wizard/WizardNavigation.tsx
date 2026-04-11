@@ -1,22 +1,19 @@
-import { cn } from '@/lib/utils';
-import type { WizardStep } from './types';
+import { cn } from '@/lib/utils'
+import type { WizardStep } from './types'
 
 interface WizardNavigationProps {
-  steps: WizardStep[];
-  currentStep: number;
+  steps: WizardStep[]
+  currentStep: number
 }
 
-export function WizardNavigation({
-  steps,
-  currentStep,
-}: WizardNavigationProps) {
+export function WizardNavigation({ steps, currentStep }: WizardNavigationProps) {
   return (
     <div className="w-64 flex-shrink-0 border-r border-border bg-muted/30 p-6 overflow-y-auto">
       <div className="space-y-2">
         {steps.map((step) => {
-          const Icon = step.icon;
-          const isActive = currentStep === step.id;
-          const isCompleted = currentStep > step.id;
+          const Icon = step.icon
+          const isActive = currentStep === step.id
+          const isCompleted = currentStep > step.id
 
           return (
             <div
@@ -32,14 +29,11 @@ export function WizardNavigation({
                 <span className="text-sm font-semibold">{step.id}</span>
               </div>
               <span className="font-medium">{step.label}</span>
-              <Icon
-                className="ml-auto"
-                weight={isActive ? 'fill' : 'regular'}
-              />
+              <Icon className="ml-auto" weight={isActive ? 'fill' : 'regular'} />
             </div>
-          );
+          )
         })}
       </div>
     </div>
-  );
+  )
 }

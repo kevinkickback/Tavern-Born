@@ -1,5 +1,5 @@
-import { removeGrantsBySource } from './ledger';
-import type { ProvenanceLedger } from './types';
+import { removeGrantsBySource } from './ledger'
+import type { ProvenanceLedger } from './types'
 
 /**
  * Reconcile ledger when a race selection changes.
@@ -10,11 +10,10 @@ export function reconcileRaceChange(
   oldRaceName: string | undefined,
   oldSubraceName: string | undefined,
 ): ProvenanceLedger {
-  let result = ledger;
-  if (oldRaceName) result = removeGrantsBySource(result, 'race', oldRaceName);
-  if (oldSubraceName)
-    result = removeGrantsBySource(result, 'subrace', oldSubraceName);
-  return result;
+  let result = ledger
+  if (oldRaceName) result = removeGrantsBySource(result, 'race', oldRaceName)
+  if (oldSubraceName) result = removeGrantsBySource(result, 'subrace', oldSubraceName)
+  return result
 }
 
 /**
@@ -24,8 +23,8 @@ export function reconcileSubraceChange(
   ledger: ProvenanceLedger,
   oldSubraceName: string | undefined,
 ): ProvenanceLedger {
-  if (!oldSubraceName) return ledger;
-  return removeGrantsBySource(ledger, 'subrace', oldSubraceName);
+  if (!oldSubraceName) return ledger
+  return removeGrantsBySource(ledger, 'subrace', oldSubraceName)
 }
 
 /**
@@ -37,12 +36,10 @@ export function reconcileClassChange(
   oldClassName: string | undefined,
   oldSubclassName: string | undefined,
 ): ProvenanceLedger {
-  let result = ledger;
-  if (oldClassName)
-    result = removeGrantsBySource(result, 'class', oldClassName);
-  if (oldSubclassName)
-    result = removeGrantsBySource(result, 'subclass', oldSubclassName);
-  return result;
+  let result = ledger
+  if (oldClassName) result = removeGrantsBySource(result, 'class', oldClassName)
+  if (oldSubclassName) result = removeGrantsBySource(result, 'subclass', oldSubclassName)
+  return result
 }
 
 /**
@@ -52,8 +49,8 @@ export function reconcileBackgroundChange(
   ledger: ProvenanceLedger,
   oldBackgroundName: string | undefined,
 ): ProvenanceLedger {
-  if (!oldBackgroundName) return ledger;
-  return removeGrantsBySource(ledger, 'background', oldBackgroundName);
+  if (!oldBackgroundName) return ledger
+  return removeGrantsBySource(ledger, 'background', oldBackgroundName)
 }
 
 /**
@@ -69,18 +66,16 @@ export function diffProficiencyGrants(
   sourceType: string,
   sourceName: string,
 ): { toRemove: string[] } {
-  const map = ledger.proficiencies[domain];
+  const map = ledger.proficiencies[domain]
 
   // Keys that are exclusively attributed to this source (removing safe)
   const toRemove = Object.entries(map)
     .filter(
       ([, tags]) =>
         tags.length > 0 &&
-        tags.every(
-          (t) => t.sourceType === sourceType && t.sourceName === sourceName,
-        ),
+        tags.every((t) => t.sourceType === sourceType && t.sourceName === sourceName),
     )
-    .map(([key]) => key);
+    .map(([key]) => key)
 
-  return { toRemove };
+  return { toRemove }
 }

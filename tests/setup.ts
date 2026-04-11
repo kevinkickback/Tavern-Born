@@ -2,7 +2,7 @@ global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
-};
+}
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -16,4 +16,4 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   }),
-});
+})

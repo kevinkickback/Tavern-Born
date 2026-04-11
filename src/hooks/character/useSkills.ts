@@ -1,90 +1,71 @@
-import { useCallback, useMemo } from 'react';
-import {
-  ABILITY_NAMES,
-  type AbilityName,
-} from '@/lib/calculations/abilityScores';
-import {
-  getAbilityModifier,
-  getProficiencyBonus,
-} from '@/lib/calculations/gameRules';
-import {
-  ALL_SKILLS,
-  deriveAllSkills,
-  type SkillResult,
-} from '@/lib/calculations/skills';
-import { useCharacterStore } from '@/store/characterStore';
+import { useCallback, useMemo } from 'react'
+import { ABILITY_NAMES, type AbilityName } from '@/lib/calculations/abilityScores'
+import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
+import { ALL_SKILLS, deriveAllSkills, type SkillResult } from '@/lib/calculations/skills'
+import { useCharacterStore } from '@/store/characterStore'
 
-export type { SkillResult };
+export type { SkillResult }
 
 export interface SkillsState {
   /** All 18 skills with derived modifiers. Never stale — always computed from current scores. */
-  skills: SkillResult[];
+  skills: SkillResult[]
 
   /** Passive Perception: 10 + Perception modifier. */
-  passivePerception: number;
+  passivePerception: number
 
-  toggleProficiency: (skillName: string) => void;
+  toggleProficiency: (skillName: string) => void
 
   /** Toggle expertise on a skill (only meaningful when already proficient). */
-  toggleExpertise: (skillName: string) => void;
+  toggleExpertise: (skillName: string) => void
 }
 
 export function useSkills(): SkillsState {
-  const activeCharacter = useCharacterStore((s) => s.activeCharacter);
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter);
+  const activeCharacter = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
-  const level = activeCharacter?.level ?? 1;
-  const abilityScores = activeCharacter?.abilityScores;
-  const storedSkills = activeCharacter?.skills ?? {};
+  const level = activeCharacter?.level ?? 1
+  const abilityScores = activeCharacter?.abilityScores
+  const storedSkills = activeCharacter?.skills ?? {}
 
   const abilityModifiers = useMemo(
     () =>
       Object.fromEntries(
-        ABILITY_NAMES.map((a) => [
-          a,
-          getAbilityModifier(abilityScores?.[a] ?? 10),
-        ]),
+        ABILITY_NAMES.map((a) => [a, getAbilityModifier(abilityScores?.[a] ?? 10)]),
       ) as Record<AbilityName, number>,
     [abilityScores],
-  );
+  )
 
-  const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level]);
+  const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level])
 
   const proficientSkills = useMemo(
     () => ALL_SKILLS.filter((name) => storedSkills[name]?.proficient),
     [storedSkills],
-  );
+  )
   const expertiseSkills = useMemo(
     () => ALL_SKILLS.filter((name) => storedSkills[name]?.expertise),
     [storedSkills],
-  );
+  )
 
   const skills = useMemo(
-    () =>
-      deriveAllSkills(
-        abilityModifiers,
-        proficientSkills,
-        expertiseSkills,
-        proficiencyBonus,
-      ),
+    () => deriveAllSkills(abilityModifiers, proficientSkills, expertiseSkills, proficiencyBonus),
     [abilityModifiers, proficientSkills, expertiseSkills, proficiencyBonus],
-  );
+  )
 
   const passivePerception = useMemo(() => {
-    const perception = skills.find((s) => s.name === 'perception');
-    return 10 + (perception?.modifier ?? abilityModifiers.wisdom ?? 0);
-  }, [skills, abilityModifiers.wisdom]);
+    const perception = skills.find((s) => s.name === 'perception')
+    return 10 + (perception?.modifier ?? abilityModifiers.wisdom ?? 0)
+  }, [skills, abilityModifiers.wisdom])
 
   const toggleProficiency = useCallback(
     (skillName: string) => {
-      if (!activeCharacter) return;
-      const key = skillName.toLowerCase();
+      if (!activeCharacter) return
+      const key = skillName.toLowerCase()
       const current = activeCharacter.skills?.[key] ?? {
         proficient: false,
         expertise: false,
         bonus: 0,
-      };
-      const proficient = !current.proficient;
+      }
+      const proficient = !current.proficient
       const nextSkills = {
         ...activeCharacter.skills,
         [key]: {
@@ -92,10 +73,8 @@ export function useSkills(): SkillsState {
           proficient,
           expertise: proficient ? current.expertise : false,
         },
-      };
-      const nextProficientSkills = ALL_SKILLS.filter(
-        (name) => nextSkills[name]?.proficient,
-      );
+      }
+      const nextProficientSkills = ALL_SKILLS.filter((name) => nextSkills[name]?.proficient)
       // Clearing expertise when removing proficiency
       updateCharacter(activeCharacter.id, {
         skills: nextSkills,
@@ -103,30 +82,30 @@ export function useSkills(): SkillsState {
           ...activeCharacter.proficiencies,
           skills: nextProficientSkills,
         },
-      });
+      })
     },
     [activeCharacter, updateCharacter],
-  );
+  )
 
   const toggleExpertise = useCallback(
     (skillName: string) => {
-      if (!activeCharacter) return;
-      const key = skillName.toLowerCase();
+      if (!activeCharacter) return
+      const key = skillName.toLowerCase()
       const current = activeCharacter.skills?.[key] ?? {
         proficient: false,
         expertise: false,
         bonus: 0,
-      };
-      if (!current.proficient) return; // Expertise requires proficiency
+      }
+      if (!current.proficient) return // Expertise requires proficiency
       updateCharacter(activeCharacter.id, {
         skills: {
           ...activeCharacter.skills,
           [key]: { ...current, expertise: !current.expertise },
         },
-      });
+      })
     },
     [activeCharacter, updateCharacter],
-  );
+  )
 
-  return { skills, passivePerception, toggleProficiency, toggleExpertise };
+  return { skills, passivePerception, toggleProficiency, toggleExpertise }
 }

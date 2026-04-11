@@ -1,11 +1,10 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-const { setThemePreferencesMock, setAccentThemeMock, setAppearanceThemeMock } =
-  vi.hoisted(() => ({
-    setThemePreferencesMock: vi.fn(),
-    setAccentThemeMock: vi.fn(),
-    setAppearanceThemeMock: vi.fn(),
-  }));
+const { setThemePreferencesMock, setAccentThemeMock, setAppearanceThemeMock } = vi.hoisted(() => ({
+  setThemePreferencesMock: vi.fn(),
+  setAccentThemeMock: vi.fn(),
+  setAppearanceThemeMock: vi.fn(),
+}))
 
 vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => ({
@@ -13,7 +12,7 @@ vi.mock('@/lib/storage/idb-storage', () => ({
     setItem: vi.fn(async () => undefined),
     removeItem: vi.fn(async () => undefined),
   }),
-}));
+}))
 
 vi.mock('@/lib/themeManager', () => ({
   ACCENT_THEMES: ['blue', 'violet', 'green', 'orange'],
@@ -23,71 +22,67 @@ vi.mock('@/lib/themeManager', () => ({
   setThemePreferences: setThemePreferencesMock,
   setAccentTheme: setAccentThemeMock,
   setAppearanceTheme: setAppearanceThemeMock,
-}));
+}))
 
 import {
   DEFAULT_HOME_CARD_SIZE,
   MAX_HOME_CARD_SIZE,
   MIN_HOME_CARD_SIZE,
   useAppPreferencesStore,
-} from '@/store/appPreferencesStore';
-import { useCharacterStore } from '@/store/characterStore';
-import { makeCharacterFixture } from '../fixtures/characterFixtures';
+} from '@/store/appPreferencesStore'
+import { useCharacterStore } from '@/store/characterStore'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('appPreferencesStore', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.clearAllMocks()
     useAppPreferencesStore.setState({
       homeCardSize: DEFAULT_HOME_CARD_SIZE,
       themeAccent: 'blue',
       themeAppearance: 'light',
       autoRefreshGameData: true,
-    });
+    })
     useCharacterStore.setState({
       characters: [],
       activeCharacterId: null,
       activeCharacter: null,
       hasUnsavedChangesFlag: false,
-    });
-  });
+    })
+  })
 
   test('setHomeCardSize clamps to configured bounds', () => {
-    useAppPreferencesStore.getState().setHomeCardSize(MAX_HOME_CARD_SIZE + 100);
-    expect(useAppPreferencesStore.getState().homeCardSize).toBe(
-      MAX_HOME_CARD_SIZE,
-    );
+    useAppPreferencesStore.getState().setHomeCardSize(MAX_HOME_CARD_SIZE + 100)
+    expect(useAppPreferencesStore.getState().homeCardSize).toBe(MAX_HOME_CARD_SIZE)
 
-    useAppPreferencesStore.getState().setHomeCardSize(MIN_HOME_CARD_SIZE - 100);
-    expect(useAppPreferencesStore.getState().homeCardSize).toBe(
-      MIN_HOME_CARD_SIZE,
-    );
-  });
+    useAppPreferencesStore.getState().setHomeCardSize(MIN_HOME_CARD_SIZE - 100)
+    expect(useAppPreferencesStore.getState().homeCardSize).toBe(MIN_HOME_CARD_SIZE)
+  })
 
   test('theme setters update persisted preferences and apply theme side effects', () => {
-    useAppPreferencesStore.getState().setThemeAccent('green');
-    useAppPreferencesStore.getState().setThemeAppearance('dark');
+    useAppPreferencesStore.getState().setThemeAccent('green')
+    useAppPreferencesStore.getState().setThemeAppearance('dark')
 
-    const state = useAppPreferencesStore.getState();
-    expect(state.themeAccent).toBe('green');
-    expect(state.themeAppearance).toBe('dark');
-    expect(setAccentThemeMock).toHaveBeenCalledWith('green');
-    expect(setAppearanceThemeMock).toHaveBeenCalledWith('dark');
-  });
+    const state = useAppPreferencesStore.getState()
+    expect(state.themeAccent).toBe('green')
+    expect(state.themeAppearance).toBe('dark')
+    expect(setAccentThemeMock).toHaveBeenCalledWith('green')
+    expect(setAppearanceThemeMock).toHaveBeenCalledWith('dark')
+  })
 
   test('settings changes do not create character unsaved state', () => {
-    const character = makeCharacterFixture({ id: 'hero-1', name: 'Hero' });
+    const character = makeCharacterFixture({ id: 'hero-1', name: 'Hero' })
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
       hasUnsavedChangesFlag: false,
-    });
+    })
 
-    useAppPreferencesStore.getState().setHomeCardSize(520);
-    useAppPreferencesStore.getState().setAutoRefreshGameData(false);
+    useAppPreferencesStore.getState().setHomeCardSize(520)
+    useAppPreferencesStore.getState().setAutoRefreshGameData(false)
 
-    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false);
-  });
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+  })
 
   test('persist partialize stores only app preference fields', () => {
     const storeWithPersist = useAppPreferencesStore as unknown as {
@@ -95,21 +90,21 @@ describe('appPreferencesStore', () => {
         getOptions: () => {
           partialize: (
             state: ReturnType<typeof useAppPreferencesStore.getState>,
-          ) => Record<string, unknown>;
-        };
-      };
-    };
+          ) => Record<string, unknown>
+        }
+      }
+    }
 
-    const partialize = storeWithPersist.persist.getOptions().partialize;
-    const partialized = partialize(useAppPreferencesStore.getState());
+    const partialize = storeWithPersist.persist.getOptions().partialize
+    const partialized = partialize(useAppPreferencesStore.getState())
 
     expect(partialized).toEqual({
       homeCardSize: DEFAULT_HOME_CARD_SIZE,
       themeAccent: 'blue',
       themeAppearance: 'light',
       autoRefreshGameData: true,
-    });
-  });
+    })
+  })
 
   test('persist rehydrate sanitizes values and reapplies theme', () => {
     const storeWithPersist = useAppPreferencesStore as unknown as {
@@ -117,32 +112,30 @@ describe('appPreferencesStore', () => {
         getOptions: () => {
           onRehydrateStorage?: () =>
             | ((state?: {
-                homeCardSize: number;
-                themeAccent: string;
-                themeAppearance: string;
-                autoRefreshGameData: boolean;
+                homeCardSize: number
+                themeAccent: string
+                themeAppearance: string
+                autoRefreshGameData: boolean
               }) => void)
-            | undefined;
-        };
-      };
-    };
+            | undefined
+        }
+      }
+    }
 
-    const onRehydrate = storeWithPersist.persist
-      .getOptions()
-      .onRehydrateStorage?.();
+    const onRehydrate = storeWithPersist.persist.getOptions().onRehydrateStorage?.()
 
     const rehydrateState = {
       homeCardSize: 999,
       themeAccent: 'invalid',
       themeAppearance: 'invalid',
       autoRefreshGameData: false,
-    };
+    }
 
-    onRehydrate?.(rehydrateState);
+    onRehydrate?.(rehydrateState)
 
-    expect(rehydrateState.homeCardSize).toBe(MAX_HOME_CARD_SIZE);
-    expect(rehydrateState.themeAccent).toBe('blue');
-    expect(rehydrateState.themeAppearance).toBe('light');
-    expect(setThemePreferencesMock).toHaveBeenCalledWith('blue', 'light');
-  });
-});
+    expect(rehydrateState.homeCardSize).toBe(MAX_HOME_CARD_SIZE)
+    expect(rehydrateState.themeAccent).toBe('blue')
+    expect(rehydrateState.themeAppearance).toBe('light')
+    expect(setThemePreferencesMock).toHaveBeenCalledWith('blue', 'light')
+  })
+})

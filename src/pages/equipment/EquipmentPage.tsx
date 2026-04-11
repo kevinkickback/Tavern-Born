@@ -1,53 +1,50 @@
-import { Backpack, Plus, Trash } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
-import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal';
-import { SourcesAccordion } from '@/components/provenance/SourcesAccordion';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { useEquipment } from '@/hooks/character/useEquipment';
-import { useProvenance } from '@/hooks/character/useProvenance';
-import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
-import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules';
-import { cn } from '@/lib/utils';
-import { useCharacterStore } from '@/store/characterStore';
-import type { Item5e } from '@/types/5etools';
-import type { Equipment } from '@/types/character';
-import { NoCharCard } from '../_shared';
+import { Backpack, Plus, Trash } from '@phosphor-icons/react'
+import { useMemo, useState } from 'react'
+import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
+import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import { useEquipment } from '@/hooks/character/useEquipment'
+import { useProvenance } from '@/hooks/character/useProvenance'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
+import { cn } from '@/lib/utils'
+import { useCharacterStore } from '@/store/characterStore'
+import type { Item5e } from '@/types/5etools'
+import type { Equipment } from '@/types/character'
+import { NoCharCard } from '../_shared'
 
 function toTitleCase(value: string): string {
   return value
     .split(/\s+/)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(' ');
+    .join(' ')
 }
 
 function getDamageSummary(item: Equipment): string | null {
-  if (!item.dmg1) return null;
-  const damageType = item.dmgType ? ` ${toTitleCase(item.dmgType)}` : '';
+  if (!item.dmg1) return null
+  const damageType = item.dmgType ? ` ${toTitleCase(item.dmgType)}` : ''
   if (item.dmg2) {
-    return `${item.dmg1}${damageType} (${item.dmg2} versatile)`;
+    return `${item.dmg1}${damageType} (${item.dmg2} versatile)`
   }
-  return `${item.dmg1}${damageType}`;
+  return `${item.dmg1}${damageType}`
 }
 
 function getPropertySummary(item: Equipment): string | null {
-  if (!item.properties || item.properties.length === 0) return null;
-  return item.properties.join(', ');
+  if (!item.properties || item.properties.length === 0) return null
+  return item.properties.join(', ')
 }
 
 export function EquipmentPage() {
-  const [addItemOpen, setAddItemOpen] = useState(false);
-  const character = useCharacterStore((s) => s.activeCharacter);
-  const { items, itemsBase } = useFilteredGameData();
-  const {
-    applyManualEquipmentGrant,
-    removeEquipmentProvenance,
-    getSourcesRowsBySection,
-  } = useProvenance();
+  const [addItemOpen, setAddItemOpen] = useState(false)
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const { items, itemsBase } = useFilteredGameData()
+  const { applyManualEquipmentGrant, removeEquipmentProvenance, getSourcesRowsBySection } =
+    useProvenance()
   const {
     equipment,
     totalWeight,
@@ -63,52 +60,42 @@ export function EquipmentPage() {
     toggleEquip,
     toggleAttune,
     updateCurrency,
-  } = useEquipment();
+  } = useEquipment()
   const equipmentItems = useMemo(() => {
-    const merged = new Map<string, Item5e>();
+    const merged = new Map<string, Item5e>()
 
     for (const item of items as Item5e[]) {
-      const key = `${item.name}|${item.source ?? ''}`;
-      merged.set(key, item);
+      const key = `${item.name}|${item.source ?? ''}`
+      merged.set(key, item)
     }
 
     for (const item of (itemsBase ?? []) as Item5e[]) {
-      const key = `${item.name}|${item.source ?? ''}`;
+      const key = `${item.name}|${item.source ?? ''}`
       if (!merged.has(key)) {
-        merged.set(key, item);
+        merged.set(key, item)
       }
     }
 
-    return Array.from(merged.values());
-  }, [items, itemsBase]);
+    return Array.from(merged.values())
+  }, [items, itemsBase])
 
   if (!character) {
-    return (
-      <NoCharCard
-        icon={<Backpack weight="duotone" />}
-        noun="manage equipment"
-      />
-    );
+    return <NoCharCard icon={<Backpack weight="duotone" />} noun="manage equipment" />
   }
 
-  const encumbrancePct =
-    carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0;
+  const encumbrancePct = carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0
   const encumbranceTone =
-    encumbrancePct >= 100
-      ? 'bg-destructive'
-      : encumbrancePct >= 75
-        ? 'bg-warning'
-        : 'bg-accent';
+    encumbrancePct >= 100 ? 'bg-destructive' : encumbrancePct >= 75 ? 'bg-warning' : 'bg-accent'
 
   const handleAddItem = (item: Item5e) => {
-    addFromGameData(item);
-    applyManualEquipmentGrant(item.name);
-  };
+    addFromGameData(item)
+    applyManualEquipmentGrant(item.name)
+  }
   const handleRemoveItem = (itemId: string) => {
-    const existing = equipment.find((item) => item.id === itemId);
-    removeItem(itemId);
-    if (existing) removeEquipmentProvenance(existing.name);
-  };
+    const existing = equipment.find((item) => item.id === itemId)
+    removeItem(itemId)
+    if (existing) removeEquipmentProvenance(existing.name)
+  }
 
   return (
     <div className="max-w-7xl mx-auto w-full space-y-6">
@@ -127,14 +114,9 @@ export function EquipmentPage() {
           <CardContent className="pt-4 pb-4">
             <div className="flex items-center gap-6 flex-wrap">
               <div>
-                <div className="text-xs text-muted-foreground mb-0.5">
-                  Weight
-                </div>
+                <div className="text-xs text-muted-foreground mb-0.5">Weight</div>
                 <div
-                  className={cn(
-                    'text-sm font-mono font-bold',
-                    isEncumbered && 'text-destructive',
-                  )}
+                  className={cn('text-sm font-mono font-bold', isEncumbered && 'text-destructive')}
                 >
                   {totalWeight.toFixed(1)} / {carryCapacity} lb
                   {isEncumbered && ' (Encumbered)'}
@@ -152,9 +134,7 @@ export function EquipmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground mb-0.5">
-                  Attunement
-                </div>
+                <div className="text-xs text-muted-foreground mb-0.5">Attunement</div>
                 <div
                   className={cn(
                     'text-sm font-mono font-bold',
@@ -165,15 +145,11 @@ export function EquipmentPage() {
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground mb-0.5">
-                  Armor Class
-                </div>
+                <div className="text-xs text-muted-foreground mb-0.5">Armor Class</div>
                 <div className="text-sm font-mono font-bold">{derivedAC}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground mb-0.5">
-                  Currency
-                </div>
+                <div className="text-xs text-muted-foreground mb-0.5">Currency</div>
                 <div className="grid grid-cols-5 gap-1.5">
                   {(
                     [
@@ -193,8 +169,8 @@ export function EquipmentPage() {
                         min={0}
                         value={currency[key]}
                         onChange={(event) => {
-                          const raw = Number.parseInt(event.target.value, 10);
-                          updateCurrency(key, Number.isNaN(raw) ? 0 : raw);
+                          const raw = Number.parseInt(event.target.value, 10)
+                          updateCurrency(key, Number.isNaN(raw) ? 0 : raw)
                         }}
                         className="h-7 w-16 px-2 text-xs font-mono"
                       />
@@ -229,49 +205,32 @@ export function EquipmentPage() {
                     key={item.id}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2 rounded-lg border',
-                      item.equipped
-                        ? 'border-accent/40 bg-accent/5'
-                        : 'border-border',
+                      item.equipped ? 'border-accent/40 bg-accent/5' : 'border-border',
                     )}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm truncate">
-                          {item.name}
-                        </span>
+                        <span className="font-medium text-sm truncate">{item.name}</span>
                         {item.rarity && item.rarity !== 'none' && (
-                          <Badge
-                            variant="secondary"
-                            className="text-xs capitalize"
-                          >
+                          <Badge variant="secondary" className="text-xs capitalize">
                             {item.rarity}
                           </Badge>
                         )}
                         {item.armorType && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs capitalize"
-                          >
+                          <Badge variant="outline" className="text-xs capitalize">
                             {item.armorType}
                           </Badge>
                         )}
                         {item.weaponCategory && (
-                          <Badge
-                            variant="outline"
-                            className="text-xs capitalize"
-                          >
+                          <Badge variant="outline" className="text-xs capitalize">
                             {item.weaponCategory}
                           </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                        {item.weight !== undefined && (
-                          <span>{item.weight} lb</span>
-                        )}
+                        {item.weight !== undefined && <span>{item.weight} lb</span>}
                         {item.ac !== undefined && <span>AC {item.ac}</span>}
-                        {getDamageSummary(item) && (
-                          <span>DMG {getDamageSummary(item)}</span>
-                        )}
+                        {getDamageSummary(item) && <span>DMG {getDamageSummary(item)}</span>}
                         {item.range && <span>Range {item.range}</span>}
                         <span>×{item.quantity}</span>
                       </div>
@@ -296,14 +255,10 @@ export function EquipmentPage() {
                       >
                         −
                       </button>
-                      <span className="font-mono text-xs w-5 text-center">
-                        {item.quantity}
-                      </span>
+                      <span className="font-mono text-xs w-5 text-center">{item.quantity}</span>
                       <button
                         type="button"
-                        onClick={() =>
-                          updateItem(item.id, { quantity: item.quantity + 1 })
-                        }
+                        onClick={() => updateItem(item.id, { quantity: item.quantity + 1 })}
                         className="h-5 w-5 rounded border border-border text-xs leading-none"
                       >
                         +
@@ -326,10 +281,7 @@ export function EquipmentPage() {
                         <Switch
                           checked={item.attuned ?? false}
                           onCheckedChange={() => toggleAttune(item.id)}
-                          disabled={
-                            !item.attuned &&
-                            attunedCount >= MAX_ATTUNEMENT_SLOTS
-                          }
+                          disabled={!item.attuned && attunedCount >= MAX_ATTUNEMENT_SLOTS}
                           className="scale-[0.8]"
                         />
                         <span className="text-xs">Attune</span>
@@ -364,10 +316,10 @@ export function EquipmentPage() {
         items={equipmentItems}
         onConfirm={(selectedItems) => {
           for (const item of selectedItems) {
-            handleAddItem(item);
+            handleAddItem(item)
           }
         }}
       />
     </div>
-  );
+  )
 }

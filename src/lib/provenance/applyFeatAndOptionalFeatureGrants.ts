@@ -1,6 +1,6 @@
-import { addGrant } from './ledger';
-import { makeSourceTag } from './sourceLabels';
-import type { ProvenanceLedger } from './types';
+import { addGrant } from './ledger'
+import { makeSourceTag } from './sourceLabels'
+import type { ProvenanceLedger } from './types'
 
 /**
  * Record a feat attribution in the provenance ledger.
@@ -16,8 +16,8 @@ export function applyFeatGrant(
 ): ProvenanceLedger {
   const tag = grantedByManual
     ? makeSourceTag('manual', 'User Choice', 'choice', featSource)
-    : makeSourceTag('feat', featName, 'fixed', featSource);
-  return addGrant(ledger, 'feats', featName, tag);
+    : makeSourceTag('feat', featName, 'fixed', featSource)
+  return addGrant(ledger, 'feats', featName, tag)
 }
 
 /**
@@ -31,11 +31,6 @@ export function applyOptionalFeatureGrant(
   grantingSourceName: string,
   grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
 ): ProvenanceLedger {
-  const tag = makeSourceTag(
-    grantingSourceType,
-    grantingSourceName,
-    'choice',
-    featureSource,
-  );
-  return addGrant(ledger, 'features', featureName, tag);
+  const tag = makeSourceTag(grantingSourceType, grantingSourceName, 'choice', featureSource)
+  return addGrant(ledger, 'features', featureName, tag)
 }

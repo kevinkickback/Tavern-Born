@@ -1,23 +1,23 @@
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import type { AbilityName } from '@/lib/calculations/abilityScores';
-import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills';
-import { renderEntry } from '@/lib/renderer';
-import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import type { AbilityName } from '@/lib/calculations/abilityScores'
+import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills'
+import { renderEntry } from '@/lib/renderer'
+import { cn } from '@/lib/utils'
 import {
   buildSkillSourceTags,
   formatTitleCase,
   type SkillDetail,
-} from '@/pages/build/ability-scores/model/data';
+} from '@/pages/build/ability-scores/model/data'
 
 interface BuildAbilityScoresDetailsPanelProps {
-  detailCollapsed: boolean;
-  selectedAbility: AbilityName;
-  selectedSkillDetails: SkillDetail[];
+  detailCollapsed: boolean
+  selectedAbility: AbilityName
+  selectedSkillDetails: SkillDetail[]
 }
 
 function renderInlineEntry(entry: unknown): string {
-  return renderEntry(entry).replace(/^<p>|<\/p>$/g, '');
+  return renderEntry(entry).replace(/^<p>|<\/p>$/g, '')
 }
 
 export function BuildAbilityScoresDetailsPanel({
@@ -25,10 +25,8 @@ export function BuildAbilityScoresDetailsPanel({
   selectedAbility,
   selectedSkillDetails,
 }: BuildAbilityScoresDetailsPanelProps) {
-  const selectedSkills = ALL_SKILLS.filter(
-    (skill) => getSkillAbility(skill) === selectedAbility,
-  );
-  const sourceTags = buildSkillSourceTags(selectedSkillDetails);
+  const selectedSkills = ALL_SKILLS.filter((skill) => getSkillAbility(skill) === selectedAbility)
+  const sourceTags = buildSkillSourceTags(selectedSkillDetails)
 
   return (
     <div
@@ -66,9 +64,7 @@ export function BuildAbilityScoresDetailsPanel({
                     <div
                       className="text-sm text-muted-foreground"
                       dangerouslySetInnerHTML={{
-                        __html: skill.entries
-                          .map((entry) => renderInlineEntry(entry))
-                          .join(' '),
+                        __html: skill.entries.map((entry) => renderInlineEntry(entry)).join(' '),
                       }}
                     />
                   </div>
@@ -90,5 +86,5 @@ export function BuildAbilityScoresDetailsPanel({
         </div>
       </ScrollArea>
     </div>
-  );
+  )
 }

@@ -1,18 +1,14 @@
-import { MagicWand, PushPin, X } from '@phosphor-icons/react';
-import { useMemo, useState } from 'react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { useProvenance } from '@/hooks/character/useProvenance';
-import { useSpellSlots } from '@/hooks/character/useSpellSlots';
-import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
-import { buildSpellModalConfig } from '@/lib/calculations/spellModalConfig';
+import { MagicWand, PushPin, X } from '@phosphor-icons/react'
+import { useMemo, useState } from 'react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useProvenance } from '@/hooks/character/useProvenance'
+import { useSpellSlots } from '@/hooks/character/useSpellSlots'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { buildSpellModalConfig } from '@/lib/calculations/spellModalConfig'
 import {
   getProfileKnownNames,
   inferClassSpellAttributionLevels,
-} from '@/lib/calculations/spellProfiles';
+} from '@/lib/calculations/spellProfiles'
 import {
   formatCastingTime,
   formatComponents,
@@ -20,85 +16,83 @@ import {
   formatRange,
   formatSpellLevel,
   getSchoolName,
-} from '@/lib/calculations/spellUtils';
-import { normalizeKey } from '@/lib/provenance/normalization';
-import { renderEntry } from '@/lib/renderer';
-import { cn } from '@/lib/utils';
-import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard';
+} from '@/lib/calculations/spellUtils'
+import { normalizeKey } from '@/lib/provenance/normalization'
+import { renderEntry } from '@/lib/renderer'
+import { cn } from '@/lib/utils'
+import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
 import {
   type SpellListItem,
   SpellProfileManager,
-} from '@/pages/spells/components/SpellProfileManager';
-import { useCharacterStore } from '@/store/characterStore';
-import { useGameDataStore } from '@/store/gameDataStore';
-import type { Class5e, Spell5e } from '@/types/5etools';
-import { NoCharCard } from '../_shared';
+} from '@/pages/spells/components/SpellProfileManager'
+import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
+import type { Class5e, Spell5e } from '@/types/5etools'
+import { NoCharCard } from '../_shared'
 
 interface TooltipEntityLike {
-  name?: string;
-  source?: string;
-  page?: number;
-  entries?: unknown[];
+  name?: string
+  source?: string
+  page?: number
+  entries?: unknown[]
 }
 
 interface RecursiveReference {
-  kind: string;
-  name: string;
-  source?: string;
+  kind: string
+  name: string
+  source?: string
 }
 
 interface RecursiveTooltipData {
-  title: string;
-  subtitle?: string;
-  html?: string;
+  title: string
+  subtitle?: string
+  html?: string
 }
 
 interface RecursiveHintState extends RecursiveTooltipData {
-  x: number;
-  y: number;
+  x: number
+  y: number
 }
 
 interface RecursiveLookup {
-  spells: Map<string, Spell5e>;
-  items: Map<string, TooltipEntityLike>;
-  feats: Map<string, TooltipEntityLike>;
-  races: Map<string, TooltipEntityLike>;
-  classes: Map<string, TooltipEntityLike>;
-  backgrounds: Map<string, TooltipEntityLike>;
-  optionalfeatures: Map<string, TooltipEntityLike>;
-  actions: Map<string, TooltipEntityLike>;
-  conditions: Map<string, TooltipEntityLike>;
-  deities: Map<string, TooltipEntityLike>;
-  skills: Map<string, TooltipEntityLike>;
-  senses: Map<string, TooltipEntityLike>;
-  variantrules: Map<string, TooltipEntityLike>;
-  languages: Map<string, TooltipEntityLike>;
+  spells: Map<string, Spell5e>
+  items: Map<string, TooltipEntityLike>
+  feats: Map<string, TooltipEntityLike>
+  races: Map<string, TooltipEntityLike>
+  classes: Map<string, TooltipEntityLike>
+  backgrounds: Map<string, TooltipEntityLike>
+  optionalfeatures: Map<string, TooltipEntityLike>
+  actions: Map<string, TooltipEntityLike>
+  conditions: Map<string, TooltipEntityLike>
+  deities: Map<string, TooltipEntityLike>
+  skills: Map<string, TooltipEntityLike>
+  senses: Map<string, TooltipEntityLike>
+  variantrules: Map<string, TooltipEntityLike>
+  languages: Map<string, TooltipEntityLike>
 }
 
 function getEntityKey(name: string, source?: string): string {
-  return `${name}|${source ?? ''}`.toLowerCase();
+  return `${name}|${source ?? ''}`.toLowerCase()
 }
 
-function buildNameMap<T extends TooltipEntityLike>(
-  items: T[] = [],
-): Map<string, T> {
-  const map = new Map<string, T>();
+function buildNameMap<T extends TooltipEntityLike>(items: T[] = []): Map<string, T> {
+  const map = new Map<string, T>()
   for (const item of items) {
-    const name = item?.name?.trim();
-    if (!name) continue;
+    const name = item?.name?.trim()
+    if (!name) continue
 
-    const source = item.source?.trim();
-    const withSource = getEntityKey(name, source);
+    const source = item.source?.trim()
+    const withSource = getEntityKey(name, source)
     if (!map.has(withSource)) {
-      map.set(withSource, item);
+      map.set(withSource, item)
     }
 
-    const withoutSource = getEntityKey(name);
+    const withoutSource = getEntityKey(name)
     if (!map.has(withoutSource)) {
-      map.set(withoutSource, item);
+      map.set(withoutSource, item)
     }
   }
-  return map;
+  return map
 }
 
 function parseRecursiveReference(
@@ -113,25 +107,25 @@ function parseRecursiveReference(
       kind: hoverType?.trim().toLowerCase() || 'note',
       name: hoverName.trim(),
       source: hoverSource?.trim() || undefined,
-    };
+    }
   }
 
-  const match = /^([^:]+):\s*(.+)$/.exec(rawTitle);
+  const match = /^([^:]+):\s*(.+)$/.exec(rawTitle)
   if (!match) {
     return {
       kind: 'note',
       name: fallbackName.trim() || rawTitle.trim(),
-    };
+    }
   }
 
   return {
     kind: match[1].trim().toLowerCase(),
     name: match[2].trim(),
-  };
+  }
 }
 
 function normalizeKind(kind: string): string {
-  const normalized = kind.trim().toLowerCase();
+  const normalized = kind.trim().toLowerCase()
   const aliases: Record<string, string> = {
     condition: 'conditions',
     status: 'conditions',
@@ -148,16 +142,16 @@ function normalizeKind(kind: string): string {
     background: 'backgrounds',
     optionalfeature: 'optionalfeatures',
     optfeature: 'optionalfeatures',
-  };
-  return aliases[normalized] ?? normalized;
+  }
+  return aliases[normalized] ?? normalized
 }
 
 function getPreviewHtml(entries: unknown[] | undefined): string | undefined {
-  if (!entries?.length) return undefined;
+  if (!entries?.length) return undefined
   return entries
     .slice(0, 2)
     .map((entry) => getEntryWithHoverTitles(entry))
-    .join('');
+    .join('')
 }
 
 function getRecursiveTooltipData(
@@ -168,89 +162,85 @@ function getRecursiveTooltipData(
   const simpleFallback: RecursiveTooltipData = {
     title: reference.name,
     subtitle: rawTitle,
-  };
+  }
 
-  if (!reference.name) return simpleFallback;
+  if (!reference.name) return simpleFallback
 
   if (normalizeKind(reference.kind) === 'spell') {
     const spell =
       lookup.spells.get(getEntityKey(reference.name, reference.source)) ??
-      lookup.spells.get(getEntityKey(reference.name));
-    if (!spell) return simpleFallback;
+      lookup.spells.get(getEntityKey(reference.name))
+    if (!spell) return simpleFallback
     return {
       title: spell.name,
       subtitle: `${formatSpellLevel(spell.level)} ${getSchoolName(spell.school)}${spell.source ? ` • ${spell.source}` : ''}`,
       html: getPreviewHtml(spell.entries),
-    };
+    }
   }
 
-  const mapByKind: Record<string, Map<string, TooltipEntityLike> | undefined> =
-    {
-      items: lookup.items,
-      feats: lookup.feats,
-      races: lookup.races,
-      classes: lookup.classes,
-      backgrounds: lookup.backgrounds,
-      optionalfeatures: lookup.optionalfeatures,
-      actions: lookup.actions,
-      conditions: lookup.conditions,
-      deities: lookup.deities,
-      skills: lookup.skills,
-      senses: lookup.senses,
-      variantrules: lookup.variantrules,
-      languages: lookup.languages,
-    };
+  const mapByKind: Record<string, Map<string, TooltipEntityLike> | undefined> = {
+    items: lookup.items,
+    feats: lookup.feats,
+    races: lookup.races,
+    classes: lookup.classes,
+    backgrounds: lookup.backgrounds,
+    optionalfeatures: lookup.optionalfeatures,
+    actions: lookup.actions,
+    conditions: lookup.conditions,
+    deities: lookup.deities,
+    skills: lookup.skills,
+    senses: lookup.senses,
+    variantrules: lookup.variantrules,
+    languages: lookup.languages,
+  }
 
-  const normalizedKind = normalizeKind(reference.kind);
-  const entityMap = mapByKind[normalizedKind];
+  const normalizedKind = normalizeKind(reference.kind)
+  const entityMap = mapByKind[normalizedKind]
   const entity =
     entityMap?.get(getEntityKey(reference.name, reference.source)) ??
-    entityMap?.get(getEntityKey(reference.name));
-  if (!entity) return simpleFallback;
+    entityMap?.get(getEntityKey(reference.name))
+  if (!entity) return simpleFallback
 
   return {
     title: entity.name ?? reference.name,
     subtitle: `${normalizedKind.charAt(0).toUpperCase()}${normalizedKind.slice(1)}${entity.source ? ` • ${entity.source}` : ''}${entity.page ? ` p. ${entity.page}` : ''}`,
     html: getPreviewHtml(entity.entries),
-  };
+  }
 }
 
 function getEntryWithHoverTitles(entry: unknown): string {
-  const html = renderEntry(entry) ?? '';
+  const html = renderEntry(entry) ?? ''
   return html
     .replace(
       /\stitle="([^"]+)"((?:\sdata-hover-type="[^"]*")?)(?:\sdata-hover-name="([^"]*)")?((?:\sdata-hover-source="[^"]*")?)/g,
       (_match, title, maybeType = '', hoverName = '', maybeSource = '') =>
         ` title="${title}" data-recursive-title="${title}"${maybeType}${hoverName ? ` data-hover-name="${hoverName}"` : ''}${maybeSource}`,
     )
-    .replace(
-      /\scursor-help/g,
-      ' cursor-help underline decoration-dotted underline-offset-2',
-    );
+    .replace(/\scursor-help/g, ' cursor-help underline decoration-dotted underline-offset-2')
 }
 
 function getRecursiveHintPosition(
   target: HTMLElement,
   hasBody: boolean,
 ): {
-  x: number;
-  y: number;
+  x: number
+  y: number
 } {
   // Get viewport-relative coordinates of the hovered element
-  const rect = target.getBoundingClientRect();
+  const rect = target.getBoundingClientRect()
 
   // Find the TooltipContent container (nearest positioned ancestor)
-  let container = target.offsetParent as HTMLElement | null;
+  let container = target.offsetParent as HTMLElement | null
   while (container && !container.classList.contains('[&_p]:my-0.5')) {
-    container = container.offsetParent as HTMLElement | null;
+    container = container.offsetParent as HTMLElement | null
   }
 
   // If we can't find the container, look for any data-* attributes or class patterns
   if (!container) {
-    container = target.closest('[role="tooltip"]') as HTMLElement | null;
+    container = target.closest('[role="tooltip"]') as HTMLElement | null
   }
   if (!container) {
-    container = target.closest('div[class*="shadow-xl"]') as HTMLElement | null;
+    container = target.closest('div[class*="shadow-xl"]') as HTMLElement | null
   }
 
   // Get the container's viewport-relative position
@@ -259,68 +249,52 @@ function getRecursiveHintPosition(
     top: 0,
     right: window.innerWidth,
     bottom: window.innerHeight,
-  };
+  }
 
   // Convert element coordinates to be relative to container
-  const elementRelX = rect.left - containerRect.left;
-  const elementRelY = rect.top - containerRect.top;
+  const elementRelX = rect.left - containerRect.left
+  const elementRelY = rect.top - containerRect.top
 
-  const tooltipWidthEstimate = 300;
-  const tooltipHeightEstimate = hasBody ? 220 : 88;
-  const gap = 8;
+  const tooltipWidthEstimate = 300
+  const tooltipHeightEstimate = hasBody ? 220 : 88
+  const gap = 8
 
   // Position to the right of the hovered text, or left if no space
-  const containerWidth = containerRect.right - containerRect.left;
-  const rightCandidate = rect.right - containerRect.left + gap;
-  const leftCandidate = elementRelX - tooltipWidthEstimate - gap;
+  const containerWidth = containerRect.right - containerRect.left
+  const rightCandidate = rect.right - containerRect.left + gap
+  const leftCandidate = elementRelX - tooltipWidthEstimate - gap
 
-  let x = rightCandidate;
-  if (
-    rightCandidate + tooltipWidthEstimate > containerWidth &&
-    leftCandidate >= 0
-  ) {
-    x = leftCandidate;
+  let x = rightCandidate
+  if (rightCandidate + tooltipWidthEstimate > containerWidth && leftCandidate >= 0) {
+    x = leftCandidate
   } else if (rightCandidate + tooltipWidthEstimate > containerWidth) {
-    x = Math.max(0, containerWidth - tooltipWidthEstimate - 4);
+    x = Math.max(0, containerWidth - tooltipWidthEstimate - 4)
   }
 
   // Position below or above the hovered text
-  const centeredY = elementRelY + rect.height / 2 - tooltipHeightEstimate / 2;
-  const preferredDown = rect.bottom - containerRect.top + gap;
-  const preferredUp = elementRelY - tooltipHeightEstimate - gap;
-  const containerHeight = containerRect.bottom - containerRect.top;
+  const centeredY = elementRelY + rect.height / 2 - tooltipHeightEstimate / 2
+  const preferredDown = rect.bottom - containerRect.top + gap
+  const preferredUp = elementRelY - tooltipHeightEstimate - gap
+  const containerHeight = containerRect.bottom - containerRect.top
 
   const y = Math.max(
     0,
     Math.min(
       centeredY,
-      preferredDown + tooltipHeightEstimate <= containerHeight
-        ? preferredDown
-        : preferredUp,
+      preferredDown + tooltipHeightEstimate <= containerHeight ? preferredDown : preferredUp,
     ),
-  );
+  )
 
-  return { x, y };
+  return { x, y }
 }
 
 export function SpellsPage() {
-  const gameData = useGameDataStore((state) => state.gameData);
-  const character = useCharacterStore((s) => s.activeCharacter);
-  const {
-    spells,
-    items,
-    feats,
-    races,
-    classes,
-    backgrounds,
-    optionalfeatures,
-  } = useFilteredGameData();
-  const {
-    ledger,
-    applyManualSpellGrant,
-    applyInferredClassSpellSelection,
-    removeSpellProvenance,
-  } = useProvenance();
+  const gameData = useGameDataStore((state) => state.gameData)
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const { spells, items, feats, races, classes, backgrounds, optionalfeatures } =
+    useFilteredGameData()
+  const { ledger, applyManualSpellGrant, applyInferredClassSpellSelection, removeSpellProvenance } =
+    useProvenance()
   const {
     spellProfiles,
     spellcastingDetails,
@@ -330,31 +304,31 @@ export function SpellsPage() {
     setProfileSpells,
     removeSpellFromProfile,
     togglePrepared,
-  } = useSpellSlots();
+  } = useSpellSlots()
 
-  const [spellModalOpen, setSpellModalOpen] = useState(false);
-  const [activeProfileId, setActiveProfileId] = useState<string>('');
+  const [spellModalOpen, setSpellModalOpen] = useState(false)
+  const [activeProfileId, setActiveProfileId] = useState<string>('')
 
-  const allSpells = spells as Spell5e[];
+  const allSpells = spells as Spell5e[]
   const spellByName = useMemo(() => {
-    const map = new Map<string, Spell5e>();
+    const map = new Map<string, Spell5e>()
     for (const spell of allSpells) {
-      map.set(getEntityKey(spell.name, spell.source), spell);
-      const withoutSource = getEntityKey(spell.name);
+      map.set(getEntityKey(spell.name, spell.source), spell)
+      const withoutSource = getEntityKey(spell.name)
       if (!map.has(withoutSource)) {
-        map.set(withoutSource, spell);
+        map.set(withoutSource, spell)
       }
     }
-    return map;
-  }, [allSpells]);
+    return map
+  }, [allSpells])
 
   const classByProfileId = useMemo(() => {
-    const map = new Map<string, Class5e>();
+    const map = new Map<string, Class5e>()
     for (const cls of classes as Class5e[]) {
-      map.set(`class:${cls.name}|${cls.source ?? ''}`, cls);
+      map.set(`class:${cls.name}|${cls.source ?? ''}`, cls)
     }
-    return map;
-  }, [classes]);
+    return map
+  }, [classes])
 
   const recursiveLookup = useMemo<RecursiveLookup>(
     () => ({
@@ -366,18 +340,12 @@ export function SpellsPage() {
       backgrounds: buildNameMap(backgrounds as TooltipEntityLike[]),
       optionalfeatures: buildNameMap(optionalfeatures as TooltipEntityLike[]),
       actions: buildNameMap((gameData?.actions as TooltipEntityLike[]) ?? []),
-      conditions: buildNameMap(
-        (gameData?.conditions as TooltipEntityLike[]) ?? [],
-      ),
+      conditions: buildNameMap((gameData?.conditions as TooltipEntityLike[]) ?? []),
       deities: buildNameMap((gameData?.deities as TooltipEntityLike[]) ?? []),
       skills: buildNameMap((gameData?.skills as TooltipEntityLike[]) ?? []),
       senses: buildNameMap((gameData?.senses as TooltipEntityLike[]) ?? []),
-      variantrules: buildNameMap(
-        (gameData?.variantrules as TooltipEntityLike[]) ?? [],
-      ),
-      languages: buildNameMap(
-        (gameData?.languages as TooltipEntityLike[]) ?? [],
-      ),
+      variantrules: buildNameMap((gameData?.variantrules as TooltipEntityLike[]) ?? []),
+      languages: buildNameMap((gameData?.languages as TooltipEntityLike[]) ?? []),
     }),
     [
       backgrounds,
@@ -395,31 +363,24 @@ export function SpellsPage() {
       races,
       spellByName,
     ],
-  );
+  )
 
   const activeProfile =
-    spellProfiles.find((profile) => profile.id === activeProfileId) ??
-    spellProfiles[0] ??
-    null;
+    spellProfiles.find((profile) => profile.id === activeProfileId) ?? spellProfiles[0] ?? null
 
   const detailsByProfileId = useMemo(
-    () =>
-      new Map(
-        spellcastingDetails.map(
-          (detail) => [detail.profileId, detail] as const,
-        ),
-      ),
+    () => new Map(spellcastingDetails.map((detail) => [detail.profileId, detail] as const)),
     [spellcastingDetails],
-  );
+  )
 
   const spellListItems = useMemo(() => {
-    const items: SpellListItem[] = [];
+    const items: SpellListItem[] = []
 
     for (const profile of spellProfiles) {
-      const detail = detailsByProfileId.get(profile.id);
+      const detail = detailsByProfileId.get(profile.id)
 
       for (const name of profile.cantrips) {
-        const spell = spellByName.get(getEntityKey(name));
+        const spell = spellByName.get(getEntityKey(name))
         items.push({
           profileId: profile.id,
           profileLabel: profile.label,
@@ -431,14 +392,12 @@ export function SpellsPage() {
           level: spell?.level ?? 0,
           kind: 'cantrip',
           prepared: !!profile.alwaysPrepared,
-        });
+        })
       }
 
       for (const name of profile.spellsKnown) {
-        const spell = spellByName.get(getEntityKey(name));
-        const prepared = profile.alwaysPrepared
-          ? true
-          : profile.preparedSpells.includes(name);
+        const spell = spellByName.get(getEntityKey(name))
+        const prepared = profile.alwaysPrepared ? true : profile.preparedSpells.includes(name)
         items.push({
           profileId: profile.id,
           profileLabel: profile.label,
@@ -450,37 +409,37 @@ export function SpellsPage() {
           level: spell?.level ?? 1,
           kind: 'spell',
           prepared,
-        });
+        })
       }
     }
 
     return items.sort((a, b) => {
-      const aSpecial = a.profileId.startsWith('special:');
-      const bSpecial = b.profileId.startsWith('special:');
-      if (aSpecial !== bSpecial) return aSpecial ? 1 : -1;
+      const aSpecial = a.profileId.startsWith('special:')
+      const bSpecial = b.profileId.startsWith('special:')
+      if (aSpecial !== bSpecial) return aSpecial ? 1 : -1
       if (a.profileLabel !== b.profileLabel) {
-        return a.profileLabel.localeCompare(b.profileLabel);
+        return a.profileLabel.localeCompare(b.profileLabel)
       }
-      if (a.level !== b.level) return a.level - b.level;
-      return a.name.localeCompare(b.name);
-    });
-  }, [detailsByProfileId, spellByName, spellProfiles]);
+      if (a.level !== b.level) return a.level - b.level
+      return a.name.localeCompare(b.name)
+    })
+  }, [detailsByProfileId, spellByName, spellProfiles])
 
   const groupedItems = useMemo(() => {
-    const map = new Map<string, SpellListItem[]>();
+    const map = new Map<string, SpellListItem[]>()
     for (const item of spellListItems) {
-      if (!map.has(item.profileId)) map.set(item.profileId, []);
-      map.get(item.profileId)?.push(item);
+      if (!map.has(item.profileId)) map.set(item.profileId, [])
+      map.get(item.profileId)?.push(item)
     }
-    return map;
-  }, [spellListItems]);
+    return map
+  }, [spellListItems])
 
   const selectionSourceByProfileAndSpell = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, string>()
     for (const profile of spellProfiles) {
       for (const spellName of [...profile.cantrips, ...profile.spellsKnown]) {
-        const key = `${profile.id}|${spellName}`;
-        const tags = ledger.spells[normalizeKey(spellName)] ?? [];
+        const key = `${profile.id}|${spellName}`
+        const tags = ledger.spells[normalizeKey(spellName)] ?? []
 
         if (profile.type === 'class' && profile.className) {
           const classTag = tags.find(
@@ -488,33 +447,30 @@ export function SpellsPage() {
               tag.sourceType === 'class' &&
               tag.sourceName === profile.className &&
               (tag.sourceRef ?? '') === (profile.classSource ?? ''),
-          );
-          if (!classTag) continue;
+          )
+          if (!classTag) continue
 
           if (classTag.spellGrantedAtLevel) {
             const suffix =
               classTag.spellAttributionMode === 'inferred-lowest-eligible'
                 ? 'Inferred Choice'
-                : 'Choice';
-            map.set(
-              key,
-              `${profile.className} Lv. ${classTag.spellGrantedAtLevel} ${suffix}`,
-            );
-            continue;
+                : 'Choice'
+            map.set(key, `${profile.className} Lv. ${classTag.spellGrantedAtLevel} ${suffix}`)
+            continue
           }
 
-          map.set(key, `${profile.className} Choice`);
-          continue;
+          map.set(key, `${profile.className} Choice`)
+          continue
         }
 
         if (tags.some((tag) => tag.sourceType === 'manual')) {
-          map.set(key, 'User Choice');
+          map.set(key, 'User Choice')
         }
       }
     }
 
-    return map;
-  }, [ledger.spells, spellProfiles]);
+    return map
+  }, [ledger.spells, spellProfiles])
 
   const modalConfig = useMemo(() => {
     return buildSpellModalConfig({
@@ -522,76 +478,66 @@ export function SpellsPage() {
       spellProfiles,
       detailsByProfileId,
       spellByName,
-    });
-  }, [activeProfile, detailsByProfileId, spellByName, spellProfiles]);
+    })
+  }, [activeProfile, detailsByProfileId, spellByName, spellProfiles])
 
   const hasWarlockClass = useMemo(
-    () =>
-      spellcastingDetails.some(
-        (detail) => detail.className.toLowerCase() === 'warlock',
-      ),
+    () => spellcastingDetails.some((detail) => detail.className.toLowerCase() === 'warlock'),
     [spellcastingDetails],
-  );
+  )
 
-  const hasMultipleSpellcastingClasses = spellcastingDetails.length > 1;
+  const hasMultipleSpellcastingClasses = spellcastingDetails.length > 1
 
   if (!character) {
-    return (
-      <NoCharCard icon={<MagicWand weight="duotone" />} noun="manage spells" />
-    );
+    return <NoCharCard icon={<MagicWand weight="duotone" />} noun="manage spells" />
   }
 
   const handleRemoveSpell = (item: SpellListItem) => {
-    removeSpellFromProfile(item.profileId, item.name, item.kind);
+    removeSpellFromProfile(item.profileId, item.name, item.kind)
 
     const existsElsewhere = spellProfiles.some((profile) => {
-      if (profile.id === item.profileId) return false;
-      return (
-        profile.cantrips.includes(item.name) ||
-        profile.spellsKnown.includes(item.name)
-      );
-    });
+      if (profile.id === item.profileId) return false
+      return profile.cantrips.includes(item.name) || profile.spellsKnown.includes(item.name)
+    })
 
     if (!existsElsewhere) {
-      removeSpellProvenance(item.name);
+      removeSpellProvenance(item.name)
     }
-  };
+  }
 
   const activeProfileKnownCount = activeProfile
     ? activeProfile.cantrips.length + activeProfile.spellsKnown.length
-    : 0;
+    : 0
 
   const handleOpenSpellModal = () => {
     if (!activeProfileId && spellProfiles[0]) {
-      setActiveProfileId(spellProfiles[0].id);
+      setActiveProfileId(spellProfiles[0].id)
     }
-    setSpellModalOpen(true);
-  };
+    setSpellModalOpen(true)
+  }
 
   const handleConfirmProfileSpells = (names: string[]) => {
     if (!activeProfile) {
-      return;
+      return
     }
 
-    const activeDetail = detailsByProfileId.get(activeProfile.id);
-    const previousKnownNames = getProfileKnownNames(activeProfile);
+    const activeDetail = detailsByProfileId.get(activeProfile.id)
+    const previousKnownNames = getProfileKnownNames(activeProfile)
     const otherKnownNames = new Set(
       spellProfiles
         .filter((profile) => profile.id !== activeProfile.id)
         .flatMap((profile) => [...profile.cantrips, ...profile.spellsKnown]),
-    );
+    )
     const nextCantrips = names.filter(
       (spellName) => spellByName.get(getEntityKey(spellName))?.level === 0,
-    );
+    )
     const nextSpellsKnown = names.filter(
       (spellName) => spellByName.get(getEntityKey(spellName))?.level !== 0,
-    );
+    )
 
-    setProfileSpells(activeProfile.id, nextCantrips, nextSpellsKnown);
+    setProfileSpells(activeProfile.id, nextCantrips, nextSpellsKnown)
 
-    const newlyAddedNames = names.filter(
-      (spellName) => !previousKnownNames.has(spellName),
-    );
+    const newlyAddedNames = names.filter((spellName) => !previousKnownNames.has(spellName))
 
     if (
       activeProfile.type === 'class' &&
@@ -599,34 +545,28 @@ export function SpellsPage() {
       activeDetail &&
       activeDetail.classLevel > 0
     ) {
-      const classData = classByProfileId.get(activeProfile.id);
+      const classData = classByProfileId.get(activeProfile.id)
       const existingAttributions = [...previousKnownNames]
         .map((spellName) => {
-          const tags = ledger.spells[normalizeKey(spellName)] ?? [];
+          const tags = ledger.spells[normalizeKey(spellName)] ?? []
           const classTag = tags.find(
             (tag) =>
               tag.sourceType === 'class' &&
               tag.sourceName === activeProfile.className &&
               (tag.sourceRef ?? '') === (activeProfile.classSource ?? '') &&
               !!tag.spellGrantedAtLevel,
-          );
-          if (!classTag?.spellGrantedAtLevel) return null;
+          )
+          if (!classTag?.spellGrantedAtLevel) return null
           return {
             spellName,
             grantedAtLevel: classTag.spellGrantedAtLevel,
-          };
+          }
         })
-        .filter(
-          (entry): entry is { spellName: string; grantedAtLevel: number } =>
-            !!entry,
-        );
+        .filter((entry): entry is { spellName: string; grantedAtLevel: number } => !!entry)
 
-      const spellLevelByName = new Map<string, number>();
+      const spellLevelByName = new Map<string, number>()
       for (const spellName of new Set([...previousKnownNames, ...names])) {
-        spellLevelByName.set(
-          spellName,
-          spellByName.get(getEntityKey(spellName))?.level ?? 1,
-        );
+        spellLevelByName.set(spellName, spellByName.get(getEntityKey(spellName))?.level ?? 1)
       }
 
       const inferred = inferClassSpellAttributionLevels({
@@ -635,38 +575,38 @@ export function SpellsPage() {
         newSpellNames: newlyAddedNames,
         spellLevelByName,
         existingAttributions,
-      });
+      })
 
       const inferredByName = new Map(
         inferred.map((entry) => [entry.spellName, entry.grantedAtLevel]),
-      );
+      )
 
       for (const spellName of newlyAddedNames) {
-        const inferredLevel = inferredByName.get(spellName);
+        const inferredLevel = inferredByName.get(spellName)
         if (!inferredLevel) {
-          applyManualSpellGrant(spellName);
-          continue;
+          applyManualSpellGrant(spellName)
+          continue
         }
         applyInferredClassSpellSelection(
           activeProfile.className,
           activeProfile.classSource,
           spellName,
           inferredLevel,
-        );
+        )
       }
     } else {
       for (const spellName of newlyAddedNames) {
-        applyManualSpellGrant(spellName);
+        applyManualSpellGrant(spellName)
       }
     }
 
     for (const spellName of previousKnownNames) {
       if (names.includes(spellName) || otherKnownNames.has(spellName)) {
-        continue;
+        continue
       }
-      removeSpellProvenance(spellName);
+      removeSpellProvenance(spellName)
     }
-  };
+  }
 
   return (
     <div className="max-w-7xl mx-auto w-full space-y-6">
@@ -684,9 +624,7 @@ export function SpellsPage() {
           onSpellModalOpenChange={setSpellModalOpen}
           modalConfig={modalConfig}
           allSpells={allSpells}
-          getSpellByName={(spellName) =>
-            spellByName.get(getEntityKey(spellName))
-          }
+          getSpellByName={(spellName) => spellByName.get(getEntityKey(spellName))}
           onOpenModal={handleOpenSpellModal}
           onTogglePrepared={togglePrepared}
           onRemoveSpell={handleRemoveSpell}
@@ -711,7 +649,7 @@ export function SpellsPage() {
         />
       </div>
     </div>
-  );
+  )
 }
 
 function SpellNameTooltip({
@@ -720,69 +658,67 @@ function SpellNameTooltip({
   recursiveLookup,
   sourceContext,
 }: {
-  name: string;
-  spell?: Spell5e;
-  recursiveLookup: RecursiveLookup;
-  sourceContext?: string;
+  name: string
+  spell?: Spell5e
+  recursiveLookup: RecursiveLookup
+  sourceContext?: string
 }) {
-  const [open, setOpen] = useState(false);
-  const [pinned, setPinned] = useState(false);
-  const [recursiveHint, setRecursiveHint] = useState<RecursiveHintState | null>(
-    null,
-  );
+  const [open, setOpen] = useState(false)
+  const [pinned, setPinned] = useState(false)
+  const [recursiveHint, setRecursiveHint] = useState<RecursiveHintState | null>(null)
 
   const renderedEntries = useMemo(() => {
-    if (!spell) return [];
-    return [...(spell.entries ?? []), ...(spell.entriesHigherLevel ?? [])].map(
-      (entry) => getEntryWithHoverTitles(entry),
-    );
-  }, [spell]);
+    if (!spell) return []
+    const duplicateCounts = new Map<string, number>()
+
+    return [...(spell.entries ?? []), ...(spell.entriesHigherLevel ?? [])].map((entry) => {
+      const html = getEntryWithHoverTitles(entry)
+      const duplicateCount = duplicateCounts.get(html) ?? 0
+      duplicateCounts.set(html, duplicateCount + 1)
+
+      return {
+        html,
+        key: `${spell.name}|entry|${duplicateCount}|${html.slice(0, 48)}`,
+      }
+    })
+  }, [spell])
 
   const handleRecursiveHover = (event: React.MouseEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement;
-    const withTitle = target.closest(
-      '[data-recursive-title]',
-    ) as HTMLElement | null;
+    const target = event.target as HTMLElement
+    const withTitle = target.closest('[data-recursive-title]') as HTMLElement | null
     if (!withTitle) {
-      setRecursiveHint(null);
-      return;
+      setRecursiveHint(null)
+      return
     }
 
-    const text = withTitle.getAttribute('data-recursive-title');
+    const text = withTitle.getAttribute('data-recursive-title')
     if (!text) {
-      setRecursiveHint(null);
-      return;
+      setRecursiveHint(null)
+      return
     }
 
-    const hoverType = withTitle.getAttribute('data-hover-type') ?? undefined;
-    const hoverName = withTitle.getAttribute('data-hover-name') ?? undefined;
-    const hoverSource =
-      withTitle.getAttribute('data-hover-source') ?? undefined;
-    const fallbackName = withTitle.textContent?.trim() ?? '';
-    const reference = parseRecursiveReference(
-      text,
-      fallbackName,
-      hoverType,
-      hoverName,
-      hoverSource,
-    );
-    const resolved = getRecursiveTooltipData(reference, recursiveLookup, text);
-    const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html);
+    const hoverType = withTitle.getAttribute('data-hover-type') ?? undefined
+    const hoverName = withTitle.getAttribute('data-hover-name') ?? undefined
+    const hoverSource = withTitle.getAttribute('data-hover-source') ?? undefined
+    const fallbackName = withTitle.textContent?.trim() ?? ''
+    const reference = parseRecursiveReference(text, fallbackName, hoverType, hoverName, hoverSource)
+    const resolved = getRecursiveTooltipData(reference, recursiveLookup, text)
+    const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html)
 
     setRecursiveHint({
       ...resolved,
       x,
       y,
-    });
-  };
+    })
+  }
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (pinned && !nextOpen) return;
-    setOpen(nextOpen);
+    if (pinned && !nextOpen) return
+    setOpen(nextOpen)
     if (!nextOpen) {
-      setRecursiveHint(null);
+      setRecursiveHint(null)
     }
-  };
+  }
 
   return (
     <Tooltip open={pinned || open} onOpenChange={handleOpenChange}>
@@ -802,9 +738,7 @@ function SpellNameTooltip({
           <>
             <div className="px-3 py-2 border-b border-border relative">
               <div className="pr-16">
-                <div className="font-semibold text-xl leading-tight">
-                  {spell.name}
-                </div>
+                <div className="font-semibold text-xl leading-tight">{spell.name}</div>
                 <div className="text-sm text-muted-foreground mt-0.5">
                   {formatSpellLevel(spell.level)} {getSchoolName(spell.school)}
                 </div>
@@ -813,30 +747,25 @@ function SpellNameTooltip({
                 <button
                   type="button"
                   onClick={(event) => {
-                    event.stopPropagation();
-                    setPinned((value) => !value);
-                    setOpen(true);
+                    event.stopPropagation()
+                    setPinned((value) => !value)
+                    setOpen(true)
                   }}
                   className={cn(
                     'h-7 w-7 rounded border border-border bg-card hover:bg-muted/40 flex items-center justify-center',
-                    pinned
-                      ? 'text-accent border-accent/60'
-                      : 'text-muted-foreground',
+                    pinned ? 'text-accent border-accent/60' : 'text-muted-foreground',
                   )}
                   title={pinned ? 'Unpin tooltip' : 'Pin tooltip'}
                 >
-                  <PushPin
-                    className="h-3.5 w-3.5"
-                    weight={pinned ? 'fill' : 'regular'}
-                  />
+                  <PushPin className="h-3.5 w-3.5" weight={pinned ? 'fill' : 'regular'} />
                 </button>
                 <button
                   type="button"
                   onClick={(event) => {
-                    event.stopPropagation();
-                    setPinned(false);
-                    setOpen(false);
-                    setRecursiveHint(null);
+                    event.stopPropagation()
+                    setPinned(false)
+                    setOpen(false)
+                    setRecursiveHint(null)
                   }}
                   className="h-7 w-7 rounded border border-border bg-card hover:bg-muted/40 text-muted-foreground flex items-center justify-center"
                   title="Close tooltip"
@@ -849,9 +778,7 @@ function SpellNameTooltip({
             <div className="px-3 py-2">
               <div className="rounded border border-border bg-muted/15 p-2 text-sm space-y-1">
                 <div className="flex items-start gap-2">
-                  <span className="font-semibold min-w-[82px]">
-                    Casting Time:
-                  </span>
+                  <span className="font-semibold min-w-[82px]">Casting Time:</span>
                   <span>{formatCastingTime(spell.time)}</span>
                 </div>
                 <div className="flex items-start gap-2">
@@ -859,9 +786,7 @@ function SpellNameTooltip({
                   <span>{formatRange(spell.range)}</span>
                 </div>
                 <div className="flex items-start gap-2">
-                  <span className="font-semibold min-w-[82px]">
-                    Components:
-                  </span>
+                  <span className="font-semibold min-w-[82px]">Components:</span>
                   <span>{formatComponents(spell.components)}</span>
                 </div>
                 <div className="flex items-start gap-2">
@@ -872,12 +797,12 @@ function SpellNameTooltip({
             </div>
 
             <div className="px-3 pb-3 text-sm leading-relaxed space-y-1.5 max-h-[220px] overflow-y-auto">
-              {renderedEntries.map((html, idx) => (
+              {renderedEntries.map((entry) => (
                 <div
                   // renderEntry returns safe HTML from structured 5etools content.
                   // eslint-disable-next-line react/no-danger
-                  dangerouslySetInnerHTML={{ __html: html }}
-                  key={`${spell.name}|entry|${idx}`}
+                  dangerouslySetInnerHTML={{ __html: entry.html }}
+                  key={entry.key}
                   className="[&_p]:my-0.5 [&_p+_p]:mt-1 [&_ul]:my-1 [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-0.5 [&_ol]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-border [&_th]:bg-muted/20 [&_th]:px-1.5 [&_th]:py-1 [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-1 [&_.cursor-help]:underline [&_.cursor-help]:decoration-dotted [&_.cursor-help]:underline-offset-2"
                 />
               ))}
@@ -903,9 +828,7 @@ function SpellNameTooltip({
                   top: `${recursiveHint.y}px`,
                 }}
               >
-                <div className="font-semibold text-sm leading-tight">
-                  {recursiveHint.title}
-                </div>
+                <div className="font-semibold text-sm leading-tight">{recursiveHint.title}</div>
                 {recursiveHint.subtitle ? (
                   <div className="text-[11px] text-muted-foreground mt-0.5 mb-1">
                     {recursiveHint.subtitle}
@@ -923,11 +846,9 @@ function SpellNameTooltip({
             ) : null}
           </>
         ) : (
-          <div className="px-3 py-2 text-[11px] text-muted-foreground">
-            Details unavailable.
-          </div>
+          <div className="px-3 py-2 text-[11px] text-muted-foreground">Details unavailable.</div>
         )}
       </TooltipContent>
     </Tooltip>
-  );
+  )
 }

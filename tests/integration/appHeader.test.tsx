@@ -1,8 +1,8 @@
-import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { AppHeader } from '@/components/layout/AppHeader';
-import { useCharacterStore } from '@/store/characterStore';
-import { makeCharacterFixture } from '../fixtures/characterFixtures';
+import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { AppHeader } from '@/components/layout/AppHeader'
+import { useCharacterStore } from '@/store/characterStore'
+import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => ({
@@ -10,11 +10,11 @@ vi.mock('@/lib/storage/idb-storage', () => ({
     setItem: vi.fn(async () => undefined),
     removeItem: vi.fn(async () => undefined),
   }),
-}));
+}))
 
 vi.mock('@/components/modals/LevelUpModal', () => ({
   LevelUpModal: () => null,
-}));
+}))
 
 vi.mock('@/hooks/character/useArmorClass', () => ({
   useArmorClass: () => ({
@@ -23,7 +23,7 @@ vi.mock('@/hooks/character/useArmorClass', () => ({
     syncAC: vi.fn(),
     setAC: vi.fn(),
   }),
-}));
+}))
 
 vi.mock('@/hooks/character/useHitPoints', () => ({
   useHitPoints: () => ({
@@ -39,7 +39,7 @@ vi.mock('@/hooks/character/useHitPoints', () => ({
     heal: vi.fn(),
     damage: vi.fn(),
   }),
-}));
+}))
 
 describe('app header character summary', () => {
   beforeEach(() => {
@@ -52,34 +52,34 @@ describe('app header character summary', () => {
         { name: 'Fighter', source: 'PHB', levels: 3 },
         { name: 'Wizard', source: 'PHB', levels: 2 },
       ],
-    });
+    })
 
     useCharacterStore.setState({
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
       hasUnsavedChangesFlag: false,
-    });
-  });
+    })
+  })
 
   afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
-  });
+    cleanup()
+    vi.clearAllMocks()
+  })
 
   test('should show multiclass-aware level and class summary in header', () => {
-    render(<AppHeader />);
+    render(<AppHeader />)
 
-    expect(screen.getByText('Aelar')).toBeTruthy();
-    expect(screen.getByText('Elf . Fighter 3 / Wizard 2')).toBeTruthy();
-  });
+    expect(screen.getByText('Aelar')).toBeTruthy()
+    expect(screen.getByText('Elf . Fighter 3 / Wizard 2')).toBeTruthy()
+  })
 
   test('should show current AC and max HP in icon badges', () => {
-    render(<AppHeader />);
+    render(<AppHeader />)
 
-    expect(screen.getByTestId('header-ac-badge')).toBeTruthy();
-    expect(screen.getByTestId('header-hp-badge')).toBeTruthy();
-    expect(screen.getByText('18')).toBeTruthy();
-    expect(screen.getByText('42')).toBeTruthy();
-  });
-});
+    expect(screen.getByTestId('header-ac-badge')).toBeTruthy()
+    expect(screen.getByTestId('header-hp-badge')).toBeTruthy()
+    expect(screen.getByText('18')).toBeTruthy()
+    expect(screen.getByText('42')).toBeTruthy()
+  })
+})

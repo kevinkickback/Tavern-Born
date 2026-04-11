@@ -1,4 +1,4 @@
-import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types';
+import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 
 export const raceSourceTagFixture: SourceTag = {
   sourceType: 'race',
@@ -6,7 +6,7 @@ export const raceSourceTagFixture: SourceTag = {
   sourceRef: 'PHB',
   grantType: 'fixed',
   label: 'Elf',
-};
+}
 
 export const classSourceTagFixture: SourceTag = {
   sourceType: 'class',
@@ -14,7 +14,7 @@ export const classSourceTagFixture: SourceTag = {
   sourceRef: 'PHB',
   grantType: 'fixed',
   label: 'Wizard',
-};
+}
 
 export function makeProvenanceLedgerFixture(): ProvenanceLedger {
   return {
@@ -32,5 +32,5 @@ export function makeProvenanceLedgerFixture(): ProvenanceLedger {
     spells: {},
     equipment: {},
     choices: [],
-  };
+  }
 }

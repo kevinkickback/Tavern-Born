@@ -1,54 +1,39 @@
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import type { CompendiumEntry } from '@/lib/compendiumEntries';
-import { renderEntry } from '@/lib/renderer';
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import type { CompendiumEntry } from '@/lib/compendiumEntries'
+import { renderEntry } from '@/lib/renderer'
 
 interface CompendiumEntryDetailsProps {
-  selectedEntry: CompendiumEntry;
+  selectedEntry: CompendiumEntry
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
+  typeof value === 'object' && value !== null
 
-const asArray = (value: unknown): unknown[] =>
-  Array.isArray(value) ? value : [];
+const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : [])
 
-export function CompendiumEntryDetails({
-  selectedEntry,
-}: CompendiumEntryDetailsProps) {
-  const spellLevel =
-    typeof selectedEntry.data.level === 'number'
-      ? selectedEntry.data.level
-      : null;
-  const spellSchool =
-    typeof selectedEntry.data.school === 'string'
-      ? selectedEntry.data.school
-      : '';
+export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetailsProps) {
+  const spellLevel = typeof selectedEntry.data.level === 'number' ? selectedEntry.data.level : null
+  const spellSchool = typeof selectedEntry.data.school === 'string' ? selectedEntry.data.school : ''
 
   const firstTime = isRecord(asArray(selectedEntry.data.time)[0])
     ? (asArray(selectedEntry.data.time)[0] as Record<string, unknown>)
-    : null;
+    : null
 
-  const range = isRecord(selectedEntry.data.range)
-    ? selectedEntry.data.range
-    : null;
-  const distance = isRecord(range?.distance) ? range.distance : null;
+  const range = isRecord(selectedEntry.data.range) ? selectedEntry.data.range : null
+  const distance = isRecord(range?.distance) ? range.distance : null
 
   const firstDuration = isRecord(asArray(selectedEntry.data.duration)[0])
     ? (asArray(selectedEntry.data.duration)[0] as Record<string, unknown>)
-    : null;
-  const durationInner = isRecord(firstDuration?.duration)
-    ? firstDuration.duration
-    : null;
+    : null
+  const durationInner = isRecord(firstDuration?.duration) ? firstDuration.duration : null
 
-  const entryList = asArray(selectedEntry.data.entries);
+  const entryList = asArray(selectedEntry.data.entries)
 
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-display font-bold mb-2">
-          {selectedEntry.name}
-        </h2>
+        <h2 className="text-2xl font-display font-bold mb-2">{selectedEntry.name}</h2>
         <div className="flex gap-2 mb-4">
           <Badge>{selectedEntry.type}</Badge>
           <Badge variant="outline">{selectedEntry.source}</Badge>
@@ -74,8 +59,7 @@ export function CompendiumEntryDetails({
               <div>
                 <span className="text-muted-foreground">Casting Time: </span>
                 <span className="font-medium">
-                  {String(firstTime.number ?? '')}{' '}
-                  {String(firstTime.unit ?? '')}
+                  {String(firstTime.number ?? '')} {String(firstTime.unit ?? '')}
                 </span>
               </div>
             )}
@@ -119,5 +103,5 @@ export function CompendiumEntryDetails({
         )}
       </div>
     </div>
-  );
+  )
 }

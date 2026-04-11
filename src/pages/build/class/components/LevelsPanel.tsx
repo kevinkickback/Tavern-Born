@@ -1,107 +1,92 @@
-import { Sword } from '@phosphor-icons/react';
+import { Sword } from '@phosphor-icons/react'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
+} from '@/components/ui/accordion'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   featCategoryToFull,
   getOptFeatureTotal,
   type OptionalFeatureLike,
   optFeatureTypeToFull,
-} from '@/lib/5etools/classData';
-import { buildClassSpellSelectionsByLevel } from '@/lib/calculations/spellProfiles';
-import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools';
-import type {
-  AsiChoice,
-  Character,
-  CharacterClassEntry,
-} from '@/types/character';
-import type {
-  ClassFeatProgression,
-  OptionalFeatureProgression,
-} from '../model/levelsUtils';
-import { computeLevelDisplayData } from '../model/levelsUtils';
-import { BuildClassAsiSection } from './AsiSection';
-import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel';
-import { BuildClassPassiveFeatureList } from './PassiveFeatureList';
-import { BuildClassProgressionChoiceCard } from './ProgressionChoiceCard';
-import { BuildClassSpellSection } from './SpellSection';
-import { BuildClassSubclassSection } from './SubclassSection';
+} from '@/lib/5etools/classData'
+import { buildClassSpellSelectionsByLevel } from '@/lib/calculations/spellProfiles'
+import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
+import type { AsiChoice, Character, CharacterClassEntry } from '@/types/character'
+import type { ClassFeatProgression, OptionalFeatureProgression } from '../model/levelsUtils'
+import { computeLevelDisplayData } from '../model/levelsUtils'
+import { BuildClassAsiSection } from './AsiSection'
+import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
+import { BuildClassPassiveFeatureList } from './PassiveFeatureList'
+import { BuildClassProgressionChoiceCard } from './ProgressionChoiceCard'
+import { BuildClassSpellSection } from './SpellSection'
+import { BuildClassSubclassSection } from './SubclassSection'
 
 interface BuildClassLevelsPanelProps {
-  classProgression: CharacterClassEntry[];
-  selectedClassTab: string;
-  onSelectClassTab: (className: string) => void;
-  character: Character;
-  levelsToShow: number[];
-  subclassLevel: number;
-  asiLevels: number[];
+  classProgression: CharacterClassEntry[]
+  selectedClassTab: string
+  onSelectClassTab: (className: string) => void
+  character: Character
+  levelsToShow: number[]
+  subclassLevel: number
+  asiLevels: number[]
   spellChoicesByLevel: Map<
     number,
     {
-      cantrips: number;
-      spells: number;
-      maxSpellLevel: number;
+      cantrips: number
+      spells: number
+      maxSpellLevel: number
     }
-  >;
-  optFeatureProgressions: OptionalFeatureProgression[];
-  classFeatProgressions: ClassFeatProgression[];
-  featuresByLevel: Map<number, ClassFeatureDisplay[]>;
-  subclassFeatureName: string | null;
-  selectedFeature: SelectedFeatureState | null;
-  viewingClassData?: Class5e;
-  viewingSubclass?: string;
-  viewingSubclassData?: Subclass5e;
-  detailCollapsed: boolean;
-  viewingClass: string;
-  viewingClassSource?: string;
-  viewingClassLevel: number;
-  classEquipmentChoiceOptions: Array<'A' | 'B'>;
-  selectedClassEquipmentChoice: 'a' | 'b' | 'A' | 'B';
-  selectedNames: Set<string>;
-  optFeatures: OptionalFeatureLike[];
-  featByCompositeId: Map<string, Feat5e>;
-  feats: Feat5e[];
-  spellByName: Map<string, Spell5e>;
-  appliedAsiChoicesForClass: AsiChoice[];
-  asiModeByLevel: Record<string, 'asi' | 'feat'>;
-  usedASI: number;
-  totalASIAcrossClasses: number;
-  onOpenClassPicker: () => void;
-  onOpenSubclassPicker: () => void;
-  onOpenSpellPicker: (level: number) => void;
-  onOpenFeatPicker: () => void;
-  onOpenAsiPicker: (level: number) => void;
-  onOpenOptPicker: (state: {
-    progName: string;
-    featureTypes: string[];
-    total: number;
-  }) => void;
-  onOpenClassFeatPicker: (state: {
-    progName: string;
-    categories: string[];
-    total: number;
-  }) => void;
-  onClassEquipmentChoiceChange: (choice: 'A' | 'B') => void;
-  onSelectFeature: (feature: SelectedFeatureState) => void;
-  onExpandDetails: () => void;
-  onAsiReset: (level: number) => void;
-  onSetAsiModeByLevel: (levelKey: string, mode: 'asi' | 'feat') => void;
-  onClearFeatSelectionsForAsi: () => void;
-  getOrdinalForm: (n: number) => string;
+  >
+  optFeatureProgressions: OptionalFeatureProgression[]
+  classFeatProgressions: ClassFeatProgression[]
+  featuresByLevel: Map<number, ClassFeatureDisplay[]>
+  subclassFeatureName: string | null
+  selectedFeature: SelectedFeatureState | null
+  viewingClassData?: Class5e
+  viewingSubclass?: string
+  viewingSubclassData?: Subclass5e
+  detailCollapsed: boolean
+  viewingClass: string
+  viewingClassSource?: string
+  viewingClassLevel: number
+  classEquipmentChoiceOptions: Array<'A' | 'B'>
+  selectedClassEquipmentChoice: 'a' | 'b' | 'A' | 'B'
+  selectedNames: Set<string>
+  optFeatures: OptionalFeatureLike[]
+  featByCompositeId: Map<string, Feat5e>
+  feats: Feat5e[]
+  spellByName: Map<string, Spell5e>
+  appliedAsiChoicesForClass: AsiChoice[]
+  asiModeByLevel: Record<string, 'asi' | 'feat'>
+  usedASI: number
+  totalASIAcrossClasses: number
+  onOpenClassPicker: () => void
+  onOpenSubclassPicker: () => void
+  onOpenSpellPicker: (level: number) => void
+  onOpenFeatPicker: () => void
+  onOpenAsiPicker: (level: number) => void
+  onOpenOptPicker: (state: { progName: string; featureTypes: string[]; total: number }) => void
+  onOpenClassFeatPicker: (state: { progName: string; categories: string[]; total: number }) => void
+  onClassEquipmentChoiceChange: (choice: 'A' | 'B') => void
+  onSelectFeature: (feature: SelectedFeatureState) => void
+  onExpandDetails: () => void
+  onAsiReset: (level: number) => void
+  onSetAsiModeByLevel: (levelKey: string, mode: 'asi' | 'feat') => void
+  onClearFeatSelectionsForAsi: () => void
+  getOrdinalForm: (n: number) => string
 }
 
 export function BuildClassLevelsPanel({
@@ -155,7 +140,7 @@ export function BuildClassLevelsPanel({
     character,
     className: viewingClass,
     classSource: viewingClassSource,
-  });
+  })
 
   return (
     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
@@ -205,10 +190,7 @@ export function BuildClassLevelsPanel({
               No feature data available
             </p>
           ) : (
-            <Accordion
-              type="multiple"
-              defaultValue={[`level-${character.level}`]}
-            >
+            <Accordion type="multiple" defaultValue={[`level-${character.level}`]}>
               {levelsToShow.map((lv) => {
                 const {
                   isSubclassLevel,
@@ -228,15 +210,13 @@ export function BuildClassLevelsPanel({
                   optFeatureProgressions,
                   classFeatProgressions,
                   featuresByLevel,
-                });
+                })
 
                 return (
                   <AccordionItem key={lv} value={`level-${lv}`}>
                     <AccordionTrigger className="text-sm px-1 hover:no-underline">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold">
-                          Level {lv} Features
-                        </span>
+                        <span className="font-semibold">Level {lv} Features</span>
                         {totalCount > 0 && (
                           <Badge
                             variant="secondary"
@@ -247,8 +227,7 @@ export function BuildClassLevelsPanel({
                         )}
                         {choiceCount > 0 && (
                           <Badge className="text-xs h-5 px-1.5 pointer-events-none bg-warning/20 text-warning border border-warning/30 hover:bg-warning/20">
-                            {choiceCount}{' '}
-                            {choiceCount === 1 ? 'choice' : 'choices'}
+                            {choiceCount} {choiceCount === 1 ? 'choice' : 'choices'}
                           </Badge>
                         )}
                       </div>
@@ -275,25 +254,17 @@ export function BuildClassLevelsPanel({
                           const totalAllowed = getOptFeatureTotal(
                             prog.progression,
                             viewingClassLevel,
-                          );
-                          const categorySet = new Set(prog.category);
-                          const chosenStyles = (
-                            character.specialFeats ?? []
-                          ).filter((sf) => {
-                            const feat = featByCompositeId.get(
-                              `${sf.name}|${sf.source ?? ''}`,
-                            );
-                            return (
-                              !!feat?.category && categorySet.has(feat.category)
-                            );
-                          });
-                          const selectedCount = chosenStyles.length;
+                          )
+                          const categorySet = new Set(prog.category)
+                          const chosenStyles = (character.specialFeats ?? []).filter((sf) => {
+                            const feat = featByCompositeId.get(`${sf.name}|${sf.source ?? ''}`)
+                            return !!feat?.category && categorySet.has(feat.category)
+                          })
+                          const selectedCount = chosenStyles.length
                           const progLabel =
                             prog.name ??
-                            prog.category
-                              .map((category) => featCategoryToFull(category))
-                              .join(', ');
-                          const isFull = selectedCount >= totalAllowed;
+                            prog.category.map((category) => featCategoryToFull(category)).join(', ')
+                          const isFull = selectedCount >= totalAllowed
 
                           return (
                             <BuildClassProgressionChoiceCard
@@ -306,12 +277,12 @@ export function BuildClassLevelsPanel({
                               chosenItems={chosenStyles.map((style) => {
                                 const feat = featByCompositeId.get(
                                   `${style.name}|${style.source ?? ''}`,
-                                );
+                                )
                                 return {
                                   name: style.name,
                                   source: style.source,
                                   entries: feat?.entries ?? [],
-                                };
+                                }
                               })}
                               detailCollapsed={detailCollapsed}
                               onChoose={() =>
@@ -324,38 +295,30 @@ export function BuildClassLevelsPanel({
                               onSelectFeature={onSelectFeature}
                               onExpandDetails={onExpandDetails}
                             />
-                          );
+                          )
                         })}
 
                         {optFeatureGainsAtLevel.map((prog) => {
                           const totalAllowed = getOptFeatureTotal(
                             prog.progression,
                             viewingClassLevel,
-                          );
-                          const featuresOfType = optFeatures.filter(
-                            (feature) => {
-                              const featureTypes = Array.isArray(
-                                feature.featureType,
-                              )
-                                ? feature.featureType
-                                : [feature.featureType ?? ''];
-                              return prog.featureType.some((type) =>
-                                featureTypes.includes(type),
-                              );
-                            },
-                          );
-                          const selectedCount = featuresOfType.filter(
-                            (feature) => selectedNames.has(feature.name),
-                          ).length;
+                          )
+                          const featuresOfType = optFeatures.filter((feature) => {
+                            const featureTypes = Array.isArray(feature.featureType)
+                              ? feature.featureType
+                              : [feature.featureType ?? '']
+                            return prog.featureType.some((type) => featureTypes.includes(type))
+                          })
+                          const selectedCount = featuresOfType.filter((feature) =>
+                            selectedNames.has(feature.name),
+                          ).length
                           const progLabel =
                             prog.name ||
-                            prog.featureType
-                              .map((type) => optFeatureTypeToFull(type))
-                              .join(', ');
-                          const isFull = selectedCount >= totalAllowed;
-                          const chosenFeatures = featuresOfType.filter(
-                            (feature) => selectedNames.has(feature.name),
-                          );
+                            prog.featureType.map((type) => optFeatureTypeToFull(type)).join(', ')
+                          const isFull = selectedCount >= totalAllowed
+                          const chosenFeatures = featuresOfType.filter((feature) =>
+                            selectedNames.has(feature.name),
+                          )
 
                           return (
                             <BuildClassProgressionChoiceCard
@@ -381,7 +344,7 @@ export function BuildClassLevelsPanel({
                               onSelectFeature={onSelectFeature}
                               onExpandDetails={onExpandDetails}
                             />
-                          );
+                          )
                         })}
 
                         {isASILevel && (
@@ -390,9 +353,7 @@ export function BuildClassLevelsPanel({
                             viewingClass={viewingClass}
                             viewingSubclassData={viewingSubclassData}
                             featuresByLevel={featuresByLevel}
-                            appliedAsiChoicesForClass={
-                              appliedAsiChoicesForClass
-                            }
+                            appliedAsiChoicesForClass={appliedAsiChoicesForClass}
                             asiModeByLevel={asiModeByLevel}
                             usedASI={usedASI}
                             totalASIAcrossClasses={totalASIAcrossClasses}
@@ -405,9 +366,7 @@ export function BuildClassLevelsPanel({
                             onOpenAsiPicker={onOpenAsiPicker}
                             onOpenFeatPicker={onOpenFeatPicker}
                             onSetAsiModeByLevel={onSetAsiModeByLevel}
-                            onClearFeatSelectionsForAsi={
-                              onClearFeatSelectionsForAsi
-                            }
+                            onClearFeatSelectionsForAsi={onClearFeatSelectionsForAsi}
                           />
                         )}
 
@@ -436,7 +395,7 @@ export function BuildClassLevelsPanel({
                       </div>
                     </AccordionContent>
                   </AccordionItem>
-                );
+                )
               })}
             </Accordion>
           )}
@@ -448,9 +407,7 @@ export function BuildClassLevelsPanel({
             <div className="w-[220px] flex-shrink-0">
               <Select
                 value={selectedClassEquipmentChoice.toUpperCase()}
-                onValueChange={(value) =>
-                  onClassEquipmentChoiceChange(value as 'A' | 'B')
-                }
+                onValueChange={(value) => onClassEquipmentChoiceChange(value as 'A' | 'B')}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Starting Equipment" />
@@ -468,5 +425,5 @@ export function BuildClassLevelsPanel({
         </div>
       </div>
     </div>
-  );
+  )
 }

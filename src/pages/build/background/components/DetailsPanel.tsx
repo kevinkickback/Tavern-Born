@@ -1,18 +1,18 @@
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { renderEntry } from '@/lib/renderer';
-import { cn } from '@/lib/utils';
-import { InfoTile } from '@/pages/_shared';
-import { getBackgroundEntries } from '@/pages/build/background/model/data';
-import type { Background5e } from '@/types/5etools';
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { renderEntry } from '@/lib/renderer'
+import { cn } from '@/lib/utils'
+import { InfoTile } from '@/pages/_shared'
+import { getBackgroundEntries } from '@/pages/build/background/model/data'
+import type { Background5e } from '@/types/5etools'
 
 interface BuildBackgroundDetailsPanelProps {
-  detailCollapsed: boolean;
-  selectedBackground?: Background5e;
-  skillNames: string[];
-  languageNames: string[];
-  toolNames: string[];
+  detailCollapsed: boolean
+  selectedBackground?: Background5e
+  skillNames: string[]
+  languageNames: string[]
+  toolNames: string[]
 }
 
 export function BuildBackgroundDetailsPanel({
@@ -26,9 +26,7 @@ export function BuildBackgroundDetailsPanel({
     <div
       className={cn(
         'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
-        detailCollapsed
-          ? 'w-0 min-w-0 opacity-0 pointer-events-none'
-          : 'w-1/2 min-w-[320px]',
+        detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'w-1/2 min-w-[320px]',
       )}
     >
       <div className="p-4 border-b border-border">
@@ -41,9 +39,7 @@ export function BuildBackgroundDetailsPanel({
           {selectedBackground ? (
             <div className="space-y-4">
               <div>
-                <h2 className="text-2xl font-display font-bold">
-                  {selectedBackground.name}
-                </h2>
+                <h2 className="text-2xl font-display font-bold">{selectedBackground.name}</h2>
                 <Badge variant="outline" className="mt-2">
                   {selectedBackground.source}
                 </Badge>
@@ -54,11 +50,7 @@ export function BuildBackgroundDetailsPanel({
                   {skillNames.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {skillNames.map((skillName) => (
-                        <Badge
-                          key={skillName}
-                          variant="secondary"
-                          className="capitalize text-xs"
-                        >
+                        <Badge key={skillName} variant="secondary" className="capitalize text-xs">
                           {skillName}
                         </Badge>
                       ))}
@@ -89,11 +81,7 @@ export function BuildBackgroundDetailsPanel({
                     {toolNames.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {toolNames.map((toolName) => (
-                          <Badge
-                            key={toolName}
-                            variant="secondary"
-                            className="capitalize text-xs"
-                          >
+                          <Badge key={toolName} variant="secondary" className="capitalize text-xs">
                             {toolName}
                           </Badge>
                         ))}
@@ -113,11 +101,7 @@ export function BuildBackgroundDetailsPanel({
                   )}
                   {section.entries.map((entry) => (
                     <div
-                      key={
-                        typeof entry === 'string'
-                          ? entry
-                          : JSON.stringify(entry)
-                      }
+                      key={typeof entry === 'string' ? entry : JSON.stringify(entry)}
                       className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
                       dangerouslySetInnerHTML={{
                         __html: renderEntry(entry),
@@ -135,5 +119,5 @@ export function BuildBackgroundDetailsPanel({
         </div>
       </ScrollArea>
     </div>
-  );
+  )
 }

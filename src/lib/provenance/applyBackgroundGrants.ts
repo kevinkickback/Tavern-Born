@@ -1,16 +1,20 @@
 import {
   buildItemLookup,
   resolveBackgroundStartingEquipment,
-} from '@/lib/5etools/startingEquipment';
-import { addChoicePlaceholder, addGrant } from './ledger';
-import { normalizeGenericToolChoice, normalizeKey } from './normalization';
-import { makeSourceTag } from './sourceLabels';
-import type { ChoiceRecord, ProvenanceLedger } from './types';
+} from '@/lib/5etools/startingEquipment'
+import { addChoicePlaceholder, addGrant } from './ledger'
+import { normalizeGenericToolChoice, normalizeKey } from './normalization'
+import { makeSourceTag } from './sourceLabels'
+import type { ChoiceRecord, ProvenanceLedger } from './types'
 
-type ProfBlock = Record<
-  string,
-  boolean | { choose?: { from: string[]; count: number } } | number
->;
+type ProfBlock = Record<string, boolean | { choose?: { from: string[]; count: number } } | number>
+
+function toProfBlocks(blocks: unknown[] | undefined): ProfBlock[] {
+  return (blocks ?? []).filter(
+    (block): block is ProfBlock =>
+      typeof block === 'object' && block !== null && !Array.isArray(block),
+  )
+}
 
 function applyProfBlocks(
   ledger: ProvenanceLedger,
@@ -19,13 +23,13 @@ function applyProfBlocks(
   tag: import('./types').SourceTag,
   choiceIdPrefix: string,
 ): ProvenanceLedger {
-  let result = ledger;
-  let choiceIndex = 0;
+  let result = ledger
+  let choiceIndex = 0
   for (const block of blocks) {
     for (const [key, val] of Object.entries(block)) {
-      if (key === 'choose' || key === 'anyStandard') continue;
+      if (key === 'choose' || key === 'anyStandard') continue
       if (domain === 'tools') {
-        const generic = normalizeGenericToolChoice(key);
+        const generic = normalizeGenericToolChoice(key)
         if (generic) {
           if (val === true || (typeof val === 'number' && val > 0)) {
             const choiceRecord: ChoiceRecord = {
@@ -36,18 +40,18 @@ function applyProfBlocks(
               optionPool: [generic],
               selected: [],
               status: 'pending',
-            };
-            result = addChoicePlaceholder(result, choiceRecord);
-            choiceIndex++;
-            continue;
+            }
+            result = addChoicePlaceholder(result, choiceRecord)
+            choiceIndex++
+            continue
           }
         }
       }
       if (val === true) {
-        result = addGrant(result, domain, key, tag);
+        result = addGrant(result, domain, key, tag)
       }
     }
-    const anyStandard = (block as { anyStandard?: number }).anyStandard;
+    const anyStandard = (block as { anyStandard?: number }).anyStandard
     if (anyStandard) {
       const choiceRecord: ChoiceRecord = {
         id: `${choiceIdPrefix}:${domain}:any:${choiceIndex}`,
@@ -57,19 +61,16 @@ function applyProfBlocks(
         optionPool: [],
         selected: [],
         status: 'pending',
-      };
-      result = addChoicePlaceholder(result, choiceRecord);
-      choiceIndex++;
+      }
+      result = addChoicePlaceholder(result, choiceRecord)
+      choiceIndex++
     }
-    const choose = (block as { choose?: { from?: string[]; count?: number } })
-      .choose;
+    const choose = (block as { choose?: { from?: string[]; count?: number } }).choose
     if (choose) {
       const normalizedPool =
         domain === 'tools'
-          ? (choose.from ?? []).map(
-              (entry) => normalizeGenericToolChoice(entry) ?? entry,
-            )
-          : (choose.from ?? []);
+          ? (choose.from ?? []).map((entry) => normalizeGenericToolChoice(entry) ?? entry)
+          : (choose.from ?? [])
       const choiceRecord: ChoiceRecord = {
         id: `${choiceIdPrefix}:${domain}:choose:${choiceIndex}`,
         domain,
@@ -78,12 +79,12 @@ function applyProfBlocks(
         optionPool: normalizedPool,
         selected: [],
         status: 'pending',
-      };
-      result = addChoicePlaceholder(result, choiceRecord);
-      choiceIndex++;
+      }
+      result = addChoicePlaceholder(result, choiceRecord)
+      choiceIndex++
     }
   }
-  return result;
+  return result
 }
 
 /**
@@ -92,48 +93,36 @@ function applyProfBlocks(
  */
 export function applyBackgroundGrants(
   bg: {
-    name: string;
-    source?: string;
-    startingEquipment?: unknown;
-    skillProficiencies?: unknown[];
-    languageProficiencies?: unknown[];
-    toolProficiencies?: unknown[];
+    name: string
+    source?: string
+    startingEquipment?: unknown
+    skillProficiencies?: unknown[]
+    languageProficiencies?: unknown[]
+    toolProficiencies?: unknown[]
   },
   ledger: ProvenanceLedger,
 ): ProvenanceLedger {
-  let result = ledger;
-  const bgTag = makeSourceTag('background', bg.name, 'fixed', bg.source);
-  const prefix = `background:${normalizeKey(bg.name)}`;
+  let result = ledger
+  const bgTag = makeSourceTag('background', bg.name, 'fixed', bg.source)
+  const prefix = `background:${normalizeKey(bg.name)}`
 
-  result = applyProfBlocks(
-    result,
-    'skills',
-    bg.skillProficiencies ?? [],
-    bgTag,
-    prefix,
-  );
+  result = applyProfBlocks(result, 'skills', toProfBlocks(bg.skillProficiencies), bgTag, prefix)
   result = applyProfBlocks(
     result,
     'languages',
-    bg.languageProficiencies ?? [],
+    toProfBlocks(bg.languageProficiencies),
     bgTag,
     prefix,
-  );
-  result = applyProfBlocks(
-    result,
-    'tools',
-    bg.toolProficiencies ?? [],
-    bgTag,
-    prefix,
-  );
+  )
+  result = applyProfBlocks(result, 'tools', toProfBlocks(bg.toolProficiencies), bgTag, prefix)
 
   // Starting equipment defaults (choice option A from each block).
   for (const item of resolveBackgroundStartingEquipment(
     bg.startingEquipment,
     buildItemLookup([]),
   )) {
-    result = addGrant(result, 'equipment', item.name, bgTag);
+    result = addGrant(result, 'equipment', item.name, bgTag)
   }
 
-  return result;
+  return result
 }

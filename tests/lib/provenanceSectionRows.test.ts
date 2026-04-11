@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'vitest';
-import { getSourcesRowsBySectionId } from '@/lib/provenance/sectionRows';
-import type { SourceRow } from '@/lib/provenance/types';
+import { describe, expect, test } from 'vitest'
+import { getSourcesRowsBySectionId } from '@/lib/provenance/sectionRows'
+import type { SourceRow } from '@/lib/provenance/types'
 
 function row(
   itemName: string,
@@ -13,7 +13,7 @@ function row(
     attribution: 'test',
     sourceTypes,
     isPending,
-  };
+  }
 }
 
 describe('provenanceSectionRows', () => {
@@ -34,14 +34,10 @@ describe('provenanceSectionRows', () => {
       featureRows: [],
       spellRows: [],
       equipmentRows: [],
-    });
+    })
 
-    expect(result.map((r) => r.itemName)).toEqual([
-      'Arcana',
-      'Elvish',
-      'Pick one skill',
-    ]);
-  });
+    expect(result.map((r) => r.itemName)).toEqual(['Arcana', 'Elvish', 'Pick one skill'])
+  })
 
   test('build-class excludes class/subclass rows and keeps other source rows', () => {
     const result = getSourcesRowsBySectionId({
@@ -60,8 +56,8 @@ describe('provenanceSectionRows', () => {
       featureRows: [row('Rage', ['class'])],
       spellRows: [row('Magic Missile', ['subclass'])],
       equipmentRows: [],
-    });
+    })
 
-    expect(result.map((r) => r.itemName)).toEqual(['Light Armor']);
-  });
-});
+    expect(result.map((r) => r.itemName)).toEqual(['Light Armor'])
+  })
+})

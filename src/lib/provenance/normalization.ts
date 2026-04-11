@@ -3,11 +3,11 @@
  * E.g. "{@item Thieves' Tools|PHB}" → "Thieves' Tools"
  */
 export function stripItemTag(value: string): string {
-  let out = value.replace(/\{@[a-zA-Z]+\s+([^}|]+)[^}]*\}/g, '$1').trim();
+  let out = value.replace(/\{@[a-zA-Z]+\s+([^}|]+)[^}]*\}/g, '$1').trim()
   if (out.includes('|')) {
-    out = out.split('|')[0]?.trim() ?? out;
+    out = out.split('|')[0]?.trim() ?? out
   }
-  return out.trim();
+  return out.trim()
 }
 
 /**
@@ -16,7 +16,7 @@ export function stripItemTag(value: string): string {
  * produce the same key — preventing duplicate ledger entries.
  */
 export function normalizeKey(name: string): string {
-  return stripItemTag(String(name)).toLowerCase().trim();
+  return stripItemTag(String(name)).toLowerCase().trim()
 }
 
 /**
@@ -24,13 +24,13 @@ export function normalizeKey(name: string): string {
  * choice records, so equivalent 5etools keys collapse to one option.
  */
 export function normalizeGenericToolChoice(value: string): string | null {
-  const key = normalizeKey(value);
+  const key = normalizeKey(value)
   if (
     key.includes('musical instrument') ||
     key === 'anymusicalinstrument' ||
     key === 'instrumentmusical'
   ) {
-    return 'musical instrument';
+    return 'musical instrument'
   }
   if (
     key.includes("artisan's tool") ||
@@ -38,14 +38,10 @@ export function normalizeGenericToolChoice(value: string): string | null {
     key === 'anyartisanstool' ||
     key === 'anyartisantool'
   ) {
-    return "artisan's tools";
+    return "artisan's tools"
   }
-  if (
-    key.includes('gaming set') ||
-    key === 'anygamingset' ||
-    key === 'setgaming'
-  ) {
-    return 'gaming set';
+  if (key.includes('gaming set') || key === 'anygamingset' || key === 'setgaming') {
+    return 'gaming set'
   }
   if (
     key === 'any' ||
@@ -54,9 +50,9 @@ export function normalizeGenericToolChoice(value: string): string | null {
     key === 'toolproficiency' ||
     key === 'anytoolproficiency'
   ) {
-    return 'tool';
+    return 'tool'
   }
-  return null;
+  return null
 }
 
 /** Convert a normalized key back to a display name. */
@@ -64,5 +60,5 @@ export function toDisplayName(key: string): string {
   return key
     .split(/[\s_-]/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+    .join(' ')
 }

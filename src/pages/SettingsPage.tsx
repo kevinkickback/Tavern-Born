@@ -1,5 +1,5 @@
-import { AppPreferencesPanel } from '@/components/settings/AppPreferencesPanel';
-import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigurator';
+import { AppPreferencesPanel } from '@/components/settings/AppPreferencesPanel'
+import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigurator'
 
 export function SettingsPage() {
   return (
@@ -7,5 +7,5 @@ export function SettingsPage() {
       <AppPreferencesPanel />
       <DataSourceConfigurator />
     </div>
-  );
+  )
 }

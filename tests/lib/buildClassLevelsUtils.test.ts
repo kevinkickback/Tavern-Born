@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'vitest';
-import { computeLevelDisplayData } from '@/pages/build/class/model/levelsUtils';
+import { describe, expect, test } from 'vitest'
+import { computeLevelDisplayData } from '@/pages/build/class/model/levelsUtils'
 
 describe('buildClassLevelsUtils', () => {
   test('computeLevelDisplayData derives level flags, gains, and passive features', () => {
@@ -8,9 +8,7 @@ describe('buildClassLevelsUtils', () => {
       subclassLevel: 3,
       subclassFeatureName: 'Arcane Tradition',
       asiLevels: [4, 8],
-      spellChoicesByLevel: new Map([
-        [3, { cantrips: 1, spells: 2, maxSpellLevel: 2 }],
-      ]),
+      spellChoicesByLevel: new Map([[3, { cantrips: 1, spells: 2, maxSpellLevel: 2 }]]),
       optFeatureProgressions: [
         {
           name: 'Maneuver',
@@ -47,22 +45,19 @@ describe('buildClassLevelsUtils', () => {
           ],
         ],
       ]),
-    });
+    })
 
-    expect(levelData.isSubclassLevel).toBe(true);
-    expect(levelData.isASILevel).toBe(false);
+    expect(levelData.isSubclassLevel).toBe(true)
+    expect(levelData.isASILevel).toBe(false)
     expect(levelData.spellGain).toEqual({
       cantrips: 1,
       spells: 2,
       maxSpellLevel: 2,
-    });
-    expect(levelData.optFeatureGainsAtLevel).toHaveLength(1);
-    expect(levelData.classFeatGainsAtLevel).toHaveLength(0);
-    expect(levelData.passiveFeatures.map((f) => f.name)).toEqual([
-      'Spellcasting',
-      'Fighting Style',
-    ]);
-    expect(levelData.choiceCount).toBe(3);
-    expect(levelData.totalCount).toBe(5);
-  });
-});
+    })
+    expect(levelData.optFeatureGainsAtLevel).toHaveLength(1)
+    expect(levelData.classFeatGainsAtLevel).toHaveLength(0)
+    expect(levelData.passiveFeatures.map((f) => f.name)).toEqual(['Spellcasting', 'Fighting Style'])
+    expect(levelData.choiceCount).toBe(3)
+    expect(levelData.totalCount).toBe(5)
+  })
+})

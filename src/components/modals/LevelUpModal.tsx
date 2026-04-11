@@ -1,6 +1,6 @@
-import { Minus, Plus, Scroll, Users } from '@phosphor-icons/react';
-import { useId, useState } from 'react';
-import { toast } from 'sonner';
+import { Minus, Plus, Scroll, Users } from '@phosphor-icons/react'
+import { useId, useState } from 'react'
+import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,59 +10,55 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+} from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
-import { useFilteredGameData } from '@/hooks/data/useFilteredGameData';
-import {
-  checkMulticlassRequirements,
-  MAX_CHARACTER_LEVEL,
-} from '@/lib/calculations/gameRules';
-import { reconcileClassChange } from '@/lib/provenance/reconciliation';
-import { cn } from '@/lib/utils';
-import { useCharacterStore } from '@/store/characterStore';
-import type { Class5e } from '@/types/5etools';
-import type { CharacterClassEntry } from '@/types/character';
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { checkMulticlassRequirements, MAX_CHARACTER_LEVEL } from '@/lib/calculations/gameRules'
+import { reconcileClassChange } from '@/lib/provenance/reconciliation'
+import { cn } from '@/lib/utils'
+import { useCharacterStore } from '@/store/characterStore'
+import type { Class5e } from '@/types/5etools'
+import type { CharacterClassEntry } from '@/types/character'
 
 interface LevelUpModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
-  const character = useCharacterStore((s) => s.activeCharacter);
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter);
-  const { classes } = useFilteredGameData();
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const { classes } = useFilteredGameData()
 
-  const [ignoreRestrictions, setIgnoreRestrictions] = useState(false);
-  const [multiclassSelection, setMulticlassSelection] = useState('');
-  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
-  const ignoreRestrictionsId = useId();
+  const [ignoreRestrictions, setIgnoreRestrictions] = useState(false)
+  const [multiclassSelection, setMulticlassSelection] = useState('')
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
+  const ignoreRestrictionsId = useId()
 
-  if (!character) return null;
+  if (!character) return null
 
   // classProgression is the authoritative progression model; top-level
   // class/level fields remain mirrored summary fields for existing UI surfaces.
-  const classProgression: CharacterClassEntry[] = character.classProgression
-    ?.length
+  const classProgression: CharacterClassEntry[] = character.classProgression?.length
     ? character.classProgression
     : character.class
       ? [
@@ -72,56 +68,50 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
             levels: character.level,
           },
         ]
-      : [];
+      : []
 
-  const totalLevel =
-    classProgression.reduce((sum, e) => sum + e.levels, 0) || character.level;
-  const isAtCap = totalLevel >= MAX_CHARACTER_LEVEL;
+  const totalLevel = classProgression.reduce((sum, e) => sum + e.levels, 0) || character.level
+  const isAtCap = totalLevel >= MAX_CHARACTER_LEVEL
 
   // Classes available to add — deduplicate by name (same class can appear from multiple sources),
   // then exclude classes already in the progression
-  const seenClassNames = new Set<string>();
+  const seenClassNames = new Set<string>()
   const multiclassOptions = (classes as Class5e[])
     .filter((cls) => {
-      if (seenClassNames.has(cls.name)) return false;
-      seenClassNames.add(cls.name);
-      return true;
+      if (seenClassNames.has(cls.name)) return false
+      seenClassNames.add(cls.name)
+      return true
     })
     .map((cls) => {
-      const { meetsRequirements, requirementText } =
-        checkMulticlassRequirements(cls, character.abilityScores);
+      const { meetsRequirements, requirementText } = checkMulticlassRequirements(
+        cls,
+        character.abilityScores,
+      )
       return {
         cls,
         meetsRequirements,
         requirementText,
         already: classProgression.some((e) => e.name === cls.name),
-      };
-    });
+      }
+    })
   const multiclassOptionByName = new Map(
     multiclassOptions.map((option) => [option.cls.name, option.cls]),
-  );
+  )
 
-  function syncUpdate(
-    char: typeof character,
-    newProgression: CharacterClassEntry[],
-  ) {
-    if (!char) return;
-    const newTotal = newProgression.reduce((s, e) => s + e.levels, 0);
+  function syncUpdate(char: typeof character, newProgression: CharacterClassEntry[]) {
+    if (!char) return
+    const newTotal = newProgression.reduce((s, e) => s + e.levels, 0)
 
     // Reconcile provenance for any class entries that were fully removed.
     // This prevents orphaned grants (proficiencies, features, spells) from
     // lingering after a multiclass entry is dropped.
     const removedEntries = classProgression.filter(
       (old) => !newProgression.some((n) => n.name === old.name),
-    );
-    let updatedProvenance = char.provenance;
+    )
+    let updatedProvenance = char.provenance
     if (removedEntries.length > 0 && updatedProvenance) {
       for (const removed of removedEntries) {
-        updatedProvenance = reconcileClassChange(
-          updatedProvenance,
-          removed.name,
-          undefined,
-        );
+        updatedProvenance = reconcileClassChange(updatedProvenance, removed.name, undefined)
       }
     }
 
@@ -133,76 +123,74 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       ...(updatedProvenance && updatedProvenance !== char.provenance
         ? { provenance: updatedProvenance }
         : {}),
-    });
+    })
   }
 
   const handleAddLevel = (index: number) => {
     if (isAtCap) {
-      toast.warning(`Character is already level ${MAX_CHARACTER_LEVEL}.`);
-      return;
+      toast.warning(`Character is already level ${MAX_CHARACTER_LEVEL}.`)
+      return
     }
     const newProgression = classProgression.map((e, i) =>
       i === index ? { ...e, levels: e.levels + 1 } : e,
-    );
-    syncUpdate(character, newProgression);
+    )
+    syncUpdate(character, newProgression)
     toast.success(
       `${classProgression[index].name} is now level ${classProgression[index].levels + 1}.`,
-    );
-  };
+    )
+  }
 
   const handleAddMulticlass = () => {
     if (!multiclassSelection) {
-      toast.warning('Please select a class.');
-      return;
+      toast.warning('Please select a class.')
+      return
     }
     if (isAtCap) {
-      toast.warning(`Character is already level ${MAX_CHARACTER_LEVEL}.`);
-      return;
+      toast.warning(`Character is already level ${MAX_CHARACTER_LEVEL}.`)
+      return
     }
-    const selectedClass = multiclassOptionByName.get(multiclassSelection);
+    const selectedClass = multiclassOptionByName.get(multiclassSelection)
     const { meetsRequirements } = checkMulticlassRequirements(
       selectedClass ?? { name: multiclassSelection, source: '' },
       character.abilityScores,
-    );
+    )
     if (!ignoreRestrictions && !meetsRequirements) {
-      toast.warning(
-        `You don't meet the ability score requirements for ${multiclassSelection}.`,
-      );
-      return;
+      toast.warning(`You don't meet the ability score requirements for ${multiclassSelection}.`)
+      return
     }
     const newEntry: CharacterClassEntry = {
       name: multiclassSelection,
       source: selectedClass?.source,
       levels: 1,
-    };
-    syncUpdate(character, [...classProgression, newEntry]);
-    toast.success(`Added ${multiclassSelection} (level 1).`);
-    setMulticlassSelection('');
-  };
+    }
+    syncUpdate(character, [...classProgression, newEntry])
+    toast.success(`Added ${multiclassSelection} (level 1).`)
+    setMulticlassSelection('')
+  }
 
   const handleRemoveLastLevel = () => {
     if (totalLevel <= 1 || !classProgression.length) {
-      toast.warning('Cannot go below level 1.');
-      setConfirmRemoveOpen(false);
-      return;
+      toast.warning('Cannot go below level 1.')
+      setConfirmRemoveOpen(false)
+      return
     }
-    const lastIdx = classProgression.length - 1;
+    const lastIdx = classProgression.length - 1
     let newProgression = classProgression.map((e, i) =>
       i === lastIdx ? { ...e, levels: e.levels - 1 } : e,
-    );
-    const removedClass = classProgression[lastIdx].name;
+    )
+    const removedClass = classProgression[lastIdx].name
     // Drop the class entirely if it hits 0 levels
     if (newProgression[lastIdx].levels <= 0) {
-      newProgression = newProgression.slice(0, -1);
+      newProgression = newProgression.slice(0, -1)
     }
-    syncUpdate(character, newProgression);
-    toast.success(`Removed a level from ${removedClass}.`);
-    setConfirmRemoveOpen(false);
-  };
+    syncUpdate(character, newProgression)
+    toast.success(`Removed a level from ${removedClass}.`)
+    setConfirmRemoveOpen(false)
+  }
 
   const lastClassName = classProgression.length
     ? classProgression[classProgression.length - 1].name
-    : '';
+    : ''
 
   return (
     <>
@@ -227,9 +215,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                     Your Classes
                   </h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      Character Level
-                    </span>
+                    <span className="text-xs text-muted-foreground">Character Level</span>
                     <Badge className="font-mono">{totalLevel}</Badge>
                   </div>
                 </div>
@@ -242,9 +228,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                         className="border border-border rounded-xl p-4 bg-card/50 flex items-center justify-between gap-3"
                       >
                         <div className="min-w-0">
-                          <div className="font-semibold font-display truncate">
-                            {entry.name}
-                          </div>
+                          <div className="font-semibold font-display truncate">{entry.name}</div>
                           <div className="text-xs text-muted-foreground mt-0.5">
                             Class Level {entry.levels}
                           </div>
@@ -288,8 +272,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
                 {isAtCap && (
                   <p className="text-xs text-warning text-center mt-3 border border-warning/30 bg-warning/5 rounded-lg py-2 px-3">
-                    Character is already level {MAX_CHARACTER_LEVEL}. Remove a
-                    level to add more.
+                    Character is already level {MAX_CHARACTER_LEVEL}. Remove a level to add more.
                   </p>
                 )}
               </section>
@@ -323,33 +306,21 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                   </p>
                 ) : (
                   <div className="flex gap-2">
-                    <Select
-                      value={multiclassSelection}
-                      onValueChange={setMulticlassSelection}
-                    >
+                    <Select value={multiclassSelection} onValueChange={setMulticlassSelection}>
                       <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Choose a class..." />
                       </SelectTrigger>
                       <SelectContent>
                         {multiclassOptions.map(
-                          ({
-                            cls,
-                            meetsRequirements,
-                            requirementText,
-                            already,
-                          }) => {
-                            const disabled =
-                              already ||
-                              (!ignoreRestrictions && !meetsRequirements);
+                          ({ cls, meetsRequirements, requirementText, already }) => {
+                            const disabled = already || (!ignoreRestrictions && !meetsRequirements)
                             return (
                               <SelectItem
                                 key={`${cls.name}|${cls.source ?? ''}`}
                                 value={cls.name}
                                 disabled={disabled}
                                 className={cn(
-                                  !meetsRequirements && !ignoreRestrictions
-                                    ? 'opacity-50'
-                                    : '',
+                                  !meetsRequirements && !ignoreRestrictions ? 'opacity-50' : '',
                                 )}
                               >
                                 <span>{cls.name}</span>
@@ -367,7 +338,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                                     </span>
                                   )}
                               </SelectItem>
-                            );
+                            )
                           },
                         )}
                       </SelectContent>
@@ -387,11 +358,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
           </ScrollArea>
 
           <div className="px-6 py-4 border-t border-border flex justify-end flex-shrink-0">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="gap-1.5"
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="gap-1.5">
               Close
             </Button>
           </div>
@@ -419,5 +386,5 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
         </AlertDialogContent>
       </AlertDialog>
     </>
-  );
+  )
 }

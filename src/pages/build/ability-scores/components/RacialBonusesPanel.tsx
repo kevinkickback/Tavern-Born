@@ -1,24 +1,22 @@
+import { useMemo } from 'react'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import {
-  ABILITY_ABBREVIATIONS,
-  type AbilityName,
-} from '@/lib/calculations/abilityScores';
+} from '@/components/ui/select'
+import { ABILITY_ABBREVIATIONS, type AbilityName } from '@/lib/calculations/abilityScores'
 
 interface RaceAsiData {
-  fixed: Array<{ ability: AbilityName; value: number }>;
-  choices: Array<{ count: number; amount: number; from: AbilityName[] }>;
+  fixed: Array<{ ability: AbilityName; value: number }>
+  choices: Array<{ count: number; amount: number; from: AbilityName[] }>
 }
 
 interface BuildAbilityScoresRacialBonusesPanelProps {
-  raceAsiData: RaceAsiData;
-  raceAsiChoices: string[][];
-  onUpdateChoice: (blockIdx: number, slotIdx: number, value: string) => void;
+  raceAsiData: RaceAsiData
+  raceAsiChoices: string[][]
+  onUpdateChoice: (blockIdx: number, slotIdx: number, value: string) => void
 }
 
 export function BuildAbilityScoresRacialBonusesPanel({
@@ -26,8 +24,19 @@ export function BuildAbilityScoresRacialBonusesPanel({
   raceAsiChoices,
   onUpdateChoice,
 }: BuildAbilityScoresRacialBonusesPanelProps) {
+  const choiceSlotIds = useMemo(
+    () =>
+      raceAsiData.choices.map((block) =>
+        Array.from(
+          { length: block.count },
+          (_, slotNumber) => `asi-${block.amount}-${block.from.join('-')}-${slotNumber + 1}`,
+        ),
+      ),
+    [raceAsiData.choices],
+  )
+
   if (raceAsiData.fixed.length === 0 && raceAsiData.choices.length === 0) {
-    return null;
+    return null
   }
 
   return (
@@ -36,9 +45,9 @@ export function BuildAbilityScoresRacialBonusesPanel({
         Racial Bonuses
       </div>
       <div className="flex flex-wrap gap-2">
-        {raceAsiData.fixed.map((fixedBonus, index) => (
+        {raceAsiData.fixed.map((fixedBonus) => (
           <span
-            key={`${fixedBonus.ability}-${fixedBonus.value}-${index}`}
+            key={`${fixedBonus.ability}-${fixedBonus.value}`}
             className="rounded border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-400"
           >
             {ABILITY_ABBREVIATIONS[fixedBonus.ability]} +{fixedBonus.value}
@@ -46,30 +55,27 @@ export function BuildAbilityScoresRacialBonusesPanel({
         ))}
 
         {raceAsiData.choices.map((block, blockIdx) => {
-          const selections = raceAsiChoices[blockIdx] ?? [];
+          const selections = raceAsiChoices[blockIdx] ?? []
 
           return Array.from({ length: block.count }, (_, slotIdx) => {
-            const selected = selections[slotIdx] ?? '';
+            const selected = selections[slotIdx] ?? ''
             const takenByOthers = new Set(
               selections.filter(
-                (selection, selectionIdx) =>
-                  selectionIdx !== slotIdx && selection !== '',
+                (selection, selectionIdx) => selectionIdx !== slotIdx && selection !== '',
               ),
-            );
+            )
 
             return (
               <div
-                key={`asi-${block.amount}-${block.from.join('-')}-${slotIdx}`}
+                key={
+                  choiceSlotIds[blockIdx]?.[slotIdx] ?? `${block.amount}-${block.from.join('-')}`
+                }
                 className="flex items-center gap-1"
               >
-                <span className="text-xs text-muted-foreground">
-                  +{block.amount}
-                </span>
+                <span className="text-xs text-muted-foreground">+{block.amount}</span>
                 <Select
                   value={selected}
-                  onValueChange={(value) =>
-                    onUpdateChoice(blockIdx, slotIdx, value)
-                  }
+                  onValueChange={(value) => onUpdateChoice(blockIdx, slotIdx, value)}
                 >
                   <SelectTrigger className="h-7 w-24 px-2 text-xs">
                     <SelectValue placeholder="Choose..." />
@@ -88,10 +94,10 @@ export function BuildAbilityScoresRacialBonusesPanel({
                   </SelectContent>
                 </Select>
               </div>
-            );
-          });
+            )
+          })
         })}
       </div>
     </div>
-  );
+  )
 }

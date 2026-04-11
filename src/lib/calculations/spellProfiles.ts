@@ -1,12 +1,6 @@
-import { getClassSpellGainAtLevel } from '@/lib/5etools/classData';
-import {
-  type AbilityName,
-  normalizeAbilityName,
-} from '@/lib/calculations/abilityScores';
-import {
-  getAbilityModifier,
-  getProficiencyBonus,
-} from '@/lib/calculations/gameRules';
+import { getClassSpellGainAtLevel } from '@/lib/5etools/classData'
+import { type AbilityName, normalizeAbilityName } from '@/lib/calculations/abilityScores'
+import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
   type CasterProgression,
   calculateSpellSlots,
@@ -14,23 +8,23 @@ import {
   getStandardSpellSlots,
   mergeSpellSlots,
   type SpellSlotsResult,
-} from '@/lib/calculations/spellSlots';
-import { getTotalLevel } from '@/lib/characterUtils';
-import { normalizeKey } from '@/lib/provenance/normalization';
-import type { Class5e } from '@/types/5etools';
+} from '@/lib/calculations/spellSlots'
+import { getTotalLevel } from '@/lib/characterUtils'
+import { normalizeKey } from '@/lib/provenance/normalization'
+import type { Class5e } from '@/types/5etools'
 import type {
   AbilityScores,
   Character,
   CharacterClassEntry,
   SpellProfile,
   SpellSlots,
-} from '@/types/character';
+} from '@/types/character'
 
-export const SPECIAL_SPELL_PROFILE_ID = 'special:unrestricted';
-export const SPECIAL_SPELL_PROFILE_LABEL = 'Bonus Spells';
+export const SPECIAL_SPELL_PROFILE_ID = 'special:unrestricted'
+export const SPECIAL_SPELL_PROFILE_LABEL = 'Bonus Spells'
 
 function toClassProfileId(name: string, source?: string): string {
-  return `class:${name}|${source ?? ''}`;
+  return `class:${name}|${source ?? ''}`
 }
 
 function cloneProfile(profile: SpellProfile): SpellProfile {
@@ -39,13 +33,11 @@ function cloneProfile(profile: SpellProfile): SpellProfile {
     cantrips: [...profile.cantrips],
     spellsKnown: [...profile.spellsKnown],
     preparedSpells: [...profile.preparedSpells],
-  };
+  }
 }
 
 export function buildClassProfileLabel(entry: CharacterClassEntry): string {
-  return entry.levels > 1
-    ? `${entry.name} (Lv ${entry.levels})`
-    : `${entry.name} (Lv 1)`;
+  return entry.levels > 1 ? `${entry.name} (Lv ${entry.levels})` : `${entry.name} (Lv 1)`
 }
 
 export function buildClassSpellLevelKey(
@@ -53,70 +45,65 @@ export function buildClassSpellLevelKey(
   classSource: string | undefined,
   level: number,
 ): string {
-  return `${className ?? ''}|${classSource ?? ''}:${level}`;
+  return `${className ?? ''}|${classSource ?? ''}:${level}`
 }
 
 export function buildClassSpellSelectionsByLevel(params: {
-  character: Character;
-  className?: string;
-  classSource?: string;
+  character: Character
+  className?: string
+  classSource?: string
 }): Map<number, string[]> {
-  const { character, className, classSource } = params;
-  const selections = new Map<number, string[]>();
-  if (!className) return selections;
+  const { character, className, classSource } = params
+  const selections = new Map<number, string[]>()
+  if (!className) return selections
 
-  const profileId = `class:${className}|${classSource ?? ''}`;
-  const classProfile = ensureSpellProfiles(character).find(
-    (profile) => profile.id === profileId,
-  );
-  if (!classProfile) return selections;
+  const profileId = `class:${className}|${classSource ?? ''}`
+  const classProfile = ensureSpellProfiles(character).find((profile) => profile.id === profileId)
+  if (!classProfile) return selections
 
-  const classKnownNames = new Set([
-    ...classProfile.cantrips,
-    ...classProfile.spellsKnown,
-  ]);
-  if (classKnownNames.size === 0) return selections;
+  const classKnownNames = new Set([...classProfile.cantrips, ...classProfile.spellsKnown])
+  if (classKnownNames.size === 0) return selections
 
   const addAtLevel = (level: number, spellName: string) => {
-    const existing = selections.get(level) ?? [];
-    if (existing.includes(spellName)) return;
-    selections.set(level, [...existing, spellName]);
-  };
+    const existing = selections.get(level) ?? []
+    if (existing.includes(spellName)) return
+    selections.set(level, [...existing, spellName])
+  }
 
   for (const spellName of classKnownNames) {
-    const tags = character.provenance?.spells?.[normalizeKey(spellName)] ?? [];
+    const tags = character.provenance?.spells?.[normalizeKey(spellName)] ?? []
     const classTag = tags.find(
       (tag) =>
         tag.sourceType === 'class' &&
         tag.sourceName === className &&
         (tag.sourceRef ?? '') === (classSource ?? '') &&
         !!tag.spellGrantedAtLevel,
-    );
-    if (!classTag?.spellGrantedAtLevel) continue;
+    )
+    if (!classTag?.spellGrantedAtLevel) continue
 
     for (const [level, names] of selections.entries()) {
-      if (!names.includes(spellName)) continue;
-      const filtered = names.filter((name) => name !== spellName);
+      if (!names.includes(spellName)) continue
+      const filtered = names.filter((name) => name !== spellName)
       if (filtered.length > 0) {
-        selections.set(level, filtered);
+        selections.set(level, filtered)
       } else {
-        selections.delete(level);
+        selections.delete(level)
       }
     }
-    addAtLevel(classTag.spellGrantedAtLevel, spellName);
+    addAtLevel(classTag.spellGrantedAtLevel, spellName)
   }
 
-  return selections;
+  return selections
 }
 
 export interface ExistingSpellAttribution {
-  spellName: string;
-  grantedAtLevel: number;
+  spellName: string
+  grantedAtLevel: number
 }
 
 export interface InferredSpellAttribution {
-  spellName: string;
-  grantedAtLevel: number;
+  spellName: string
+  grantedAtLevel: number
 }
 
 /**
@@ -125,176 +112,153 @@ export interface InferredSpellAttribution {
  * spells page attribution only.
  */
 export function inferClassSpellAttributionLevels(params: {
-  classData: Class5e | undefined;
-  classLevel: number;
-  newSpellNames: string[];
-  spellLevelByName: Map<string, number>;
-  existingAttributions: ExistingSpellAttribution[];
+  classData: Class5e | undefined
+  classLevel: number
+  newSpellNames: string[]
+  spellLevelByName: Map<string, number>
+  existingAttributions: ExistingSpellAttribution[]
 }): InferredSpellAttribution[] {
-  const {
-    classData,
-    classLevel,
-    newSpellNames,
-    spellLevelByName,
-    existingAttributions,
-  } = params;
+  const { classData, classLevel, newSpellNames, spellLevelByName, existingAttributions } = params
 
   if (!classData || classLevel <= 0 || newSpellNames.length === 0) {
-    return [];
+    return []
   }
 
-  const spellCapacity = new Map<number, number>();
-  const cantripCapacity = new Map<number, number>();
-  const maxSpellLevelByClassLevel = new Map<number, number>();
+  const spellCapacity = new Map<number, number>()
+  const cantripCapacity = new Map<number, number>()
+  const maxSpellLevelByClassLevel = new Map<number, number>()
 
   for (let level = 1; level <= classLevel; level++) {
-    const gain = getClassSpellGainAtLevel(classData, level);
-    spellCapacity.set(level, gain.spells);
-    cantripCapacity.set(level, gain.cantrips);
-    maxSpellLevelByClassLevel.set(level, gain.maxSpellLevel);
+    const gain = getClassSpellGainAtLevel(classData, level)
+    spellCapacity.set(level, gain.spells)
+    cantripCapacity.set(level, gain.cantrips)
+    maxSpellLevelByClassLevel.set(level, gain.maxSpellLevel)
   }
 
-  const usedSpellSlots = new Map<number, number>();
-  const usedCantripSlots = new Map<number, number>();
+  const usedSpellSlots = new Map<number, number>()
+  const usedCantripSlots = new Map<number, number>()
 
   for (const attribution of existingAttributions) {
-    const attributedSpellLevel =
-      spellLevelByName.get(attribution.spellName) ?? 1;
+    const attributedSpellLevel = spellLevelByName.get(attribution.spellName) ?? 1
     if (attributedSpellLevel === 0) {
       usedCantripSlots.set(
         attribution.grantedAtLevel,
         (usedCantripSlots.get(attribution.grantedAtLevel) ?? 0) + 1,
-      );
-      continue;
+      )
+      continue
     }
 
     usedSpellSlots.set(
       attribution.grantedAtLevel,
       (usedSpellSlots.get(attribution.grantedAtLevel) ?? 0) + 1,
-    );
+    )
   }
 
-  const assignments: InferredSpellAttribution[] = [];
+  const assignments: InferredSpellAttribution[] = []
   const pending = [...newSpellNames].sort((a, b) => {
-    const levelDelta =
-      (spellLevelByName.get(a) ?? 1) - (spellLevelByName.get(b) ?? 1);
-    if (levelDelta !== 0) return levelDelta;
-    return a.localeCompare(b);
-  });
+    const levelDelta = (spellLevelByName.get(a) ?? 1) - (spellLevelByName.get(b) ?? 1)
+    if (levelDelta !== 0) return levelDelta
+    return a.localeCompare(b)
+  })
 
   for (const spellName of pending) {
-    const spellLevel = spellLevelByName.get(spellName) ?? 1;
-    const eligibleLevels: number[] = [];
+    const spellLevel = spellLevelByName.get(spellName) ?? 1
+    const eligibleLevels: number[] = []
 
     for (let level = 1; level <= classLevel; level++) {
       const cap =
-        spellLevel === 0
-          ? (cantripCapacity.get(level) ?? 0)
-          : (spellCapacity.get(level) ?? 0);
-      if (cap <= 0) continue;
+        spellLevel === 0 ? (cantripCapacity.get(level) ?? 0) : (spellCapacity.get(level) ?? 0)
+      if (cap <= 0) continue
 
-      if (
-        spellLevel > 0 &&
-        spellLevel > (maxSpellLevelByClassLevel.get(level) ?? 0)
-      ) {
-        continue;
+      if (spellLevel > 0 && spellLevel > (maxSpellLevelByClassLevel.get(level) ?? 0)) {
+        continue
       }
 
-      eligibleLevels.push(level);
+      eligibleLevels.push(level)
     }
 
-    const fallbackLevel = eligibleLevels[0] ?? classLevel;
-    let selectedLevel = fallbackLevel;
+    const fallbackLevel = eligibleLevels[0] ?? classLevel
+    let selectedLevel = fallbackLevel
 
     for (const level of eligibleLevels) {
       const used =
-        spellLevel === 0
-          ? (usedCantripSlots.get(level) ?? 0)
-          : (usedSpellSlots.get(level) ?? 0);
+        spellLevel === 0 ? (usedCantripSlots.get(level) ?? 0) : (usedSpellSlots.get(level) ?? 0)
       const cap =
-        spellLevel === 0
-          ? (cantripCapacity.get(level) ?? 0)
-          : (spellCapacity.get(level) ?? 0);
+        spellLevel === 0 ? (cantripCapacity.get(level) ?? 0) : (spellCapacity.get(level) ?? 0)
       if (used < cap) {
-        selectedLevel = level;
-        break;
+        selectedLevel = level
+        break
       }
     }
 
     if (spellLevel === 0) {
-      usedCantripSlots.set(
-        selectedLevel,
-        (usedCantripSlots.get(selectedLevel) ?? 0) + 1,
-      );
+      usedCantripSlots.set(selectedLevel, (usedCantripSlots.get(selectedLevel) ?? 0) + 1)
     } else {
-      usedSpellSlots.set(
-        selectedLevel,
-        (usedSpellSlots.get(selectedLevel) ?? 0) + 1,
-      );
+      usedSpellSlots.set(selectedLevel, (usedSpellSlots.get(selectedLevel) ?? 0) + 1)
     }
 
-    assignments.push({ spellName, grantedAtLevel: selectedLevel });
+    assignments.push({ spellName, grantedAtLevel: selectedLevel })
   }
 
-  return assignments;
+  return assignments
 }
 
 export function isSpellOnClassList(
   spell: {
     classes?: {
-      fromClassList?: Array<{ name?: string; source?: string }>;
-    };
+      fromClassList?: Array<{ name?: string; source?: string }>
+    }
   },
   className?: string,
   classSource?: string,
 ): boolean {
-  if (!className) return true;
+  if (!className) return true
 
-  const targetName = className.trim().toLowerCase();
-  const targetSource = (classSource ?? '').trim().toLowerCase();
-  const fromClassList = spell.classes?.fromClassList ?? [];
+  const targetName = className.trim().toLowerCase()
+  const targetSource = (classSource ?? '').trim().toLowerCase()
+  const fromClassList = spell.classes?.fromClassList ?? []
 
   if (fromClassList.length === 0) {
-    return false;
+    return false
   }
 
   return fromClassList.some((entry) => {
-    const entryName = entry.name?.trim().toLowerCase();
-    if (entryName !== targetName) return false;
+    const entryName = entry.name?.trim().toLowerCase()
+    if (entryName !== targetName) return false
 
-    const entrySource = entry.source?.trim().toLowerCase();
-    if (!targetSource || !entrySource) return true;
+    const entrySource = entry.source?.trim().toLowerCase()
+    if (!targetSource || !entrySource) return true
 
-    return entrySource === targetSource;
-  });
+    return entrySource === targetSource
+  })
 }
 
 export function getProfileKnownNames(profile: SpellProfile): Set<string> {
-  return new Set([...profile.cantrips, ...profile.spellsKnown]);
+  return new Set([...profile.cantrips, ...profile.spellsKnown])
 }
 
 export function getKnownSpellNames(profiles: SpellProfile[]): Set<string> {
-  const names = new Set<string>();
+  const names = new Set<string>()
 
   for (const profile of profiles) {
     for (const name of profile.cantrips) {
-      names.add(name);
+      names.add(name)
     }
     for (const name of profile.spellsKnown) {
-      names.add(name);
+      names.add(name)
     }
   }
 
-  return names;
+  return names
 }
 
 export function ensureSpellProfiles(character: Character): SpellProfile[] {
   const existing = Array.isArray(character.spells.spellProfiles)
     ? character.spells.spellProfiles.map(cloneProfile)
-    : [];
+    : []
 
-  const byId = new Map(existing.map((profile) => [profile.id, profile]));
-  const next: SpellProfile[] = [];
+  const byId = new Map(existing.map((profile) => [profile.id, profile]))
+  const next: SpellProfile[] = []
 
   const classEntries =
     character.classProgression && character.classProgression.length > 0
@@ -307,11 +271,11 @@ export function ensureSpellProfiles(character: Character): SpellProfile[] {
               levels: character.level,
             },
           ]
-        : [];
+        : []
 
   for (const entry of classEntries) {
-    const id = toClassProfileId(entry.name, entry.source);
-    const existingProfile = byId.get(id);
+    const id = toClassProfileId(entry.name, entry.source)
+    const existingProfile = byId.get(id)
     next.push({
       id,
       type: 'class',
@@ -322,10 +286,10 @@ export function ensureSpellProfiles(character: Character): SpellProfile[] {
       spellsKnown: existingProfile?.spellsKnown ?? [],
       preparedSpells: existingProfile?.preparedSpells ?? [],
       alwaysPrepared: false,
-    });
+    })
   }
 
-  const special = byId.get(SPECIAL_SPELL_PROFILE_ID);
+  const special = byId.get(SPECIAL_SPELL_PROFILE_ID)
   next.push({
     id: SPECIAL_SPELL_PROFILE_ID,
     type: 'special',
@@ -334,9 +298,9 @@ export function ensureSpellProfiles(character: Character): SpellProfile[] {
     spellsKnown: special?.spellsKnown ?? [],
     preparedSpells: [],
     alwaysPrepared: true,
-  });
+  })
 
-  return next;
+  return next
 }
 
 function storedToNumericUsed(spellSlots: SpellSlots): Record<number, number> {
@@ -350,7 +314,7 @@ function storedToNumericUsed(spellSlots: SpellSlots): Record<number, number> {
     7: spellSlots.level7?.used ?? 0,
     8: spellSlots.level8?.used ?? 0,
     9: spellSlots.level9?.used ?? 0,
-  };
+  }
 }
 
 export function numericToStored(
@@ -367,87 +331,78 @@ export function numericToStored(
     level7: { max: 0, used: 0 },
     level8: { max: 0, used: 0 },
     level9: { max: 0, used: 0 },
-  };
+  }
 
   for (let sl = 1; sl <= 9; sl++) {
-    const key = `level${sl}` as keyof SpellSlots;
-    const calc = calculated[sl];
+    const key = `level${sl}` as keyof SpellSlots
+    const calc = calculated[sl]
     if (calc) {
-      base[key] = { max: calc.max, used: Math.min(usedMap[sl] ?? 0, calc.max) };
+      base[key] = { max: calc.max, used: Math.min(usedMap[sl] ?? 0, calc.max) }
     }
   }
 
-  return base;
+  return base
 }
 
 function normalizeProgression(value?: string): CasterProgression {
-  if (value === 'full') return 'full';
-  if (value === '1/2') return '1/2';
-  if (value === '1/3') return '1/3';
-  if (value === 'pact') return 'pact';
-  if (value === 'artificer') return 'artificer';
-  return 'none';
+  if (value === 'full') return 'full'
+  if (value === '1/2') return '1/2'
+  if (value === '1/3') return '1/3'
+  if (value === 'pact') return 'pact'
+  if (value === 'artificer') return 'artificer'
+  return 'none'
 }
 
-function getCasterLevelContribution(
-  progression: CasterProgression,
-  classLevel: number,
-): number {
-  if (progression === 'full') return classLevel;
-  if (progression === '1/2') return Math.floor(classLevel / 2);
-  if (progression === '1/3') return Math.floor(classLevel / 3);
-  if (progression === 'artificer') return Math.ceil(classLevel / 2);
-  return 0;
+function getCasterLevelContribution(progression: CasterProgression, classLevel: number): number {
+  if (progression === 'full') return classLevel
+  if (progression === '1/2') return Math.floor(classLevel / 2)
+  if (progression === '1/3') return Math.floor(classLevel / 3)
+  if (progression === 'artificer') return Math.ceil(classLevel / 2)
+  return 0
 }
 
 export interface SpellcastingClassDetail {
-  profileId: string;
-  className: string;
-  classSource?: string;
-  classLevel: number;
-  casterProgression: CasterProgression;
-  spellcastingAbility?: AbilityName;
-  spellSaveDC: number | null;
-  spellAttackBonus: number | null;
-  maxSpellLevel: number;
-  knownSpellLimit: number | null;
-  cantripLimit: number | null;
-  isPreparedCaster: boolean;
+  profileId: string
+  className: string
+  classSource?: string
+  classLevel: number
+  casterProgression: CasterProgression
+  spellcastingAbility?: AbilityName
+  spellSaveDC: number | null
+  spellAttackBonus: number | null
+  maxSpellLevel: number
+  knownSpellLimit: number | null
+  cantripLimit: number | null
+  isPreparedCaster: boolean
 }
 
 function getProgressionArray(value: unknown): number[] | null {
   return Array.isArray(value) && value.every((v) => typeof v === 'number')
     ? (value as number[])
-    : null;
+    : null
 }
 
 export function isPreparedCaster(classData?: Class5e): boolean {
-  if (!classData?.spellcastingAbility) return false;
-  if (typeof classData.preparedSpells === 'string') return true;
-  const known = getProgressionArray(classData.spellsKnownProgression);
-  const knownFixed = getProgressionArray(classData.spellsKnownProgressionFixed);
-  return !known && !knownFixed;
+  if (!classData?.spellcastingAbility) return false
+  if (typeof classData.preparedSpells === 'string') return true
+  const known = getProgressionArray(classData.spellsKnownProgression)
+  const knownFixed = getProgressionArray(classData.spellsKnownProgressionFixed)
+  return !known && !knownFixed
 }
 
-export function getCantripLimit(
-  classData: Class5e | undefined,
-  level: number,
-): number | null {
-  const progression = getProgressionArray(classData?.cantripProgression);
-  if (!progression) return null;
-  return progression[level - 1] ?? progression[progression.length - 1] ?? null;
+export function getCantripLimit(classData: Class5e | undefined, level: number): number | null {
+  const progression = getProgressionArray(classData?.cantripProgression)
+  if (!progression) return null
+  return progression[level - 1] ?? progression[progression.length - 1] ?? null
 }
 
-export function getKnownSpellLimit(
-  classData: Class5e | undefined,
-  level: number,
-): number | null {
-  if (!classData?.spellcastingAbility) return null;
-  let total = 0;
+export function getKnownSpellLimit(classData: Class5e | undefined, level: number): number | null {
+  if (!classData?.spellcastingAbility) return null
+  let total = 0
   for (let i = 1; i <= level; i++) {
-    total += getClassSpellGainAtLevel(classData, i).spells;
+    total += getClassSpellGainAtLevel(classData, i).spells
   }
-  return total > 0 ? total : null;
+  return total > 0 ? total : null
 }
 
 /**
@@ -460,87 +415,80 @@ export function getKnownSpellLimit(
  */
 function safeEvalArithmetic(expr: string): number {
   // Strip all whitespace before validation/parsing
-  const cleaned = expr.replace(/\s+/g, '');
+  const cleaned = expr.replace(/\s+/g, '')
 
   // Whitelist check: only digits, decimal point, operators, parens, and the
   // three allowed function names. Anything else is rejected.
-  const withoutFns = cleaned.replace(/floor|ceil|round/g, '');
+  const withoutFns = cleaned.replace(/floor|ceil|round/g, '')
   if (!/^[\d.+\-*/()]+$/.test(withoutFns)) {
-    throw new Error(`Rejected non-arithmetic expression: ${expr}`);
+    throw new Error(`Rejected non-arithmetic expression: ${expr}`)
   }
 
-  let pos = 0;
+  let pos = 0
 
   function parseExpr(): number {
-    let left = parseTerm();
-    while (
-      pos < cleaned.length &&
-      (cleaned[pos] === '+' || cleaned[pos] === '-')
-    ) {
-      const op = cleaned[pos++];
-      const right = parseTerm();
-      left = op === '+' ? left + right : left - right;
+    let left = parseTerm()
+    while (pos < cleaned.length && (cleaned[pos] === '+' || cleaned[pos] === '-')) {
+      const op = cleaned[pos++]
+      const right = parseTerm()
+      left = op === '+' ? left + right : left - right
     }
-    return left;
+    return left
   }
 
   function parseTerm(): number {
-    let left = parseFactor();
-    while (
-      pos < cleaned.length &&
-      (cleaned[pos] === '*' || cleaned[pos] === '/')
-    ) {
-      const op = cleaned[pos++];
-      const right = parseFactor();
-      left = op === '*' ? left * right : left / right;
+    let left = parseFactor()
+    while (pos < cleaned.length && (cleaned[pos] === '*' || cleaned[pos] === '/')) {
+      const op = cleaned[pos++]
+      const right = parseFactor()
+      left = op === '*' ? left * right : left / right
     }
-    return left;
+    return left
   }
 
   function parseFactor(): number {
     // floor(...) / ceil(...) / round(...)
     for (const fn of ['floor', 'ceil', 'round'] as const) {
       if (cleaned.startsWith(fn, pos)) {
-        pos += fn.length;
-        if (cleaned[pos] !== '(') throw new Error(`Expected '(' after ${fn}`);
-        pos++; // consume '('
-        const inner = parseExpr();
-        if (cleaned[pos] !== ')')
-          throw new Error(`Expected ')' after ${fn}(...)`);
-        pos++; // consume ')'
-        return Math[fn](inner);
+        pos += fn.length
+        if (cleaned[pos] !== '(') throw new Error(`Expected '(' after ${fn}`)
+        pos++ // consume '('
+        const inner = parseExpr()
+        if (cleaned[pos] !== ')') throw new Error(`Expected ')' after ${fn}(...)`)
+        pos++ // consume ')'
+        return Math[fn](inner)
       }
     }
 
     // Parenthesised expression
     if (cleaned[pos] === '(') {
-      pos++; // consume '('
-      const val = parseExpr();
-      if (cleaned[pos] !== ')') throw new Error("Expected closing ')'");
-      pos++; // consume ')'
-      return val;
+      pos++ // consume '('
+      const val = parseExpr()
+      if (cleaned[pos] !== ')') throw new Error("Expected closing ')'")
+      pos++ // consume ')'
+      return val
     }
 
     // Unary minus
     if (cleaned[pos] === '-') {
-      pos++;
-      return -parseFactor();
+      pos++
+      return -parseFactor()
     }
 
     // Number literal (integer or decimal)
-    const start = pos;
-    while (pos < cleaned.length && /[\d.]/.test(cleaned[pos])) pos++;
+    const start = pos
+    while (pos < cleaned.length && /[\d.]/.test(cleaned[pos])) pos++
     if (pos === start) {
-      throw new Error(`Unexpected token at position ${pos}: '${cleaned[pos]}'`);
+      throw new Error(`Unexpected token at position ${pos}: '${cleaned[pos]}'`)
     }
-    return parseFloat(cleaned.slice(start, pos));
+    return parseFloat(cleaned.slice(start, pos))
   }
 
-  const result = parseExpr();
+  const result = parseExpr()
   if (pos !== cleaned.length) {
-    throw new Error(`Unexpected trailing input: '${cleaned.slice(pos)}'`);
+    throw new Error(`Unexpected trailing input: '${cleaned.slice(pos)}'`)
   }
-  return result;
+  return result
 }
 
 /**
@@ -553,7 +501,7 @@ export function evaluatePreparedSpellsFormula(
   characterLevel: number,
   abilityModifiers: Record<string, number>,
 ): number | null {
-  if (!formula || typeof formula !== 'string') return null;
+  if (!formula || typeof formula !== 'string') return null
 
   try {
     // Replace formula tokens with values
@@ -564,19 +512,19 @@ export function evaluatePreparedSpellsFormula(
       .replace(/<\$cha_mod\$>/g, String(abilityModifiers.charisma ?? 0))
       .replace(/<\$str_mod\$>/g, String(abilityModifiers.strength ?? 0))
       .replace(/<\$dex_mod\$>/g, String(abilityModifiers.dexterity ?? 0))
-      .replace(/<\$con_mod\$>/g, String(abilityModifiers.constitution ?? 0));
+      .replace(/<\$con_mod\$>/g, String(abilityModifiers.constitution ?? 0))
 
     // Safe arithmetic evaluation — no dynamic code execution.
-    const evalResult = safeEvalArithmetic(result);
+    const evalResult = safeEvalArithmetic(result)
 
     if (typeof evalResult === 'number' && Number.isFinite(evalResult)) {
-      return Math.max(0, Math.floor(evalResult));
+      return Math.max(0, Math.floor(evalResult))
     }
   } catch {
     // Fall through to return null
   }
 
-  return null;
+  return null
 }
 
 /**
@@ -589,11 +537,11 @@ export function getPreparedSpellLimit(
   spellcastingAbilityModifier: number | null,
 ): number | null {
   if (!classData?.spellcastingAbility || !classData.preparedSpells) {
-    return null;
+    return null
   }
 
   if (spellcastingAbilityModifier === null) {
-    return null;
+    return null
   }
 
   // Build a map of all ability modifiers - we'll use the primary ability modifier
@@ -605,71 +553,56 @@ export function getPreparedSpellLimit(
     intelligence: 0,
     wisdom: 0,
     charisma: 0,
-  };
-
-  // Set the specific spellcasting ability modifier
-  const normalizedAbility = normalizeAbilityName(classData.spellcastingAbility);
-  if (normalizedAbility) {
-    abilityModifiers[normalizedAbility] = spellcastingAbilityModifier;
   }
 
-  return evaluatePreparedSpellsFormula(
-    classData.preparedSpells,
-    characterLevel,
-    abilityModifiers,
-  );
+  // Set the specific spellcasting ability modifier
+  const normalizedAbility = normalizeAbilityName(classData.spellcastingAbility)
+  if (normalizedAbility) {
+    abilityModifiers[normalizedAbility] = spellcastingAbilityModifier
+  }
+
+  return evaluatePreparedSpellsFormula(classData.preparedSpells, characterLevel, abilityModifiers)
 }
 
-export function getClassMaxSpellLevel(
-  classData: Class5e | undefined,
-  classLevel: number,
-): number {
-  if (!classData) return 0;
+export function getClassMaxSpellLevel(classData: Class5e | undefined, classLevel: number): number {
+  if (!classData) return 0
   if (classData.casterProgression === 'pact') {
-    const pactSlots = getPactMagicSlots(classLevel);
+    const pactSlots = getPactMagicSlots(classLevel)
     return Object.keys(pactSlots)
       .map((k) => Number.parseInt(k, 10))
       .filter((k) => Number.isFinite(k))
-      .reduce((max, k) => Math.max(max, k), 0);
+      .reduce((max, k) => Math.max(max, k), 0)
   }
 
   const tableGroups = Array.isArray(classData.classTableGroups)
     ? (classData.classTableGroups as Array<{
-        rowsSpellProgression?: unknown[];
+        rowsSpellProgression?: unknown[]
       }>)
-    : [];
+    : []
   const spellRows = tableGroups.find((group) =>
     Array.isArray(group.rowsSpellProgression),
-  )?.rowsSpellProgression;
-  const row =
-    classData.spellSlotProgression?.[classLevel - 1] ??
-    spellRows?.[classLevel - 1];
+  )?.rowsSpellProgression
+  const row = classData.spellSlotProgression?.[classLevel - 1] ?? spellRows?.[classLevel - 1]
 
   if (Array.isArray(row)) {
     return row
       .map((value, idx) => ({ value, level: idx + 1 }))
       .filter((item) => typeof item.value === 'number' && item.value > 0)
-      .reduce((max, item) => Math.max(max, item.level), 0);
+      .reduce((max, item) => Math.max(max, item.level), 0)
   }
 
-  const fallback = calculateSpellSlots(
-    classData.name,
-    classLevel,
-    classData.casterProgression,
-  );
+  const fallback = calculateSpellSlots(classData.name, classLevel, classData.casterProgression)
   return Object.keys(fallback)
     .map((k) => Number.parseInt(k, 10))
     .filter((k) => Number.isFinite(k))
-    .reduce((max, k) => Math.max(max, k), 0);
+    .reduce((max, k) => Math.max(max, k), 0)
 }
 
 export function buildSpellcastingClassDetails(
   character: Character,
   classesById: Map<string, Class5e>,
 ): SpellcastingClassDetail[] {
-  const profiles = ensureSpellProfiles(character).filter(
-    (profile) => profile.type === 'class',
-  );
+  const profiles = ensureSpellProfiles(character).filter((profile) => profile.type === 'class')
   const totalLevel = getTotalLevel({
     classes: character.classProgression?.map((entry) => ({
       name: entry.name,
@@ -682,8 +615,8 @@ export function buildSpellcastingClassDetails(
         source: character.classSource,
       },
     ],
-  });
-  const proficiency = getProficiencyBonus(totalLevel);
+  })
+  const proficiency = getProficiencyBonus(totalLevel)
 
   const entries =
     character.classProgression && character.classProgression.length > 0
@@ -694,7 +627,7 @@ export function buildSpellcastingClassDetails(
             source: character.classSource,
             levels: character.level,
           },
-        ];
+        ]
 
   return profiles
     .map((profile) => {
@@ -702,22 +635,18 @@ export function buildSpellcastingClassDetails(
         (candidate) =>
           candidate.name === profile.className &&
           (candidate.source ?? '') === (profile.classSource ?? ''),
-      );
-      if (!entry || !profile.className) return null;
+      )
+      if (!entry || !profile.className) return null
 
-      const classData = classesById.get(
-        toClassProfileId(entry.name, entry.source),
-      );
+      const classData = classesById.get(toClassProfileId(entry.name, entry.source))
       const ability = classData?.spellcastingAbility
         ? normalizeAbilityName(classData.spellcastingAbility)
-        : null;
+        : null
       const mod = ability
-        ? getAbilityModifier(
-            (character.abilityScores as AbilityScores)[ability] ?? 10,
-          )
-        : null;
-      const saveDc = mod !== null ? 8 + proficiency + mod : null;
-      const attack = mod !== null ? proficiency + mod : null;
+        ? getAbilityModifier((character.abilityScores as AbilityScores)[ability] ?? 10)
+        : null
+      const saveDc = mod !== null ? 8 + proficiency + mod : null
+      const attack = mod !== null ? proficiency + mod : null
 
       return {
         profileId: profile.id,
@@ -735,34 +664,30 @@ export function buildSpellcastingClassDetails(
             : getKnownSpellLimit(classData, entry.levels),
         cantripLimit: getCantripLimit(classData, entry.levels),
         isPreparedCaster: isPreparedCaster(classData),
-      } as SpellcastingClassDetail;
+      } as SpellcastingClassDetail
     })
     .filter((detail): detail is SpellcastingClassDetail => detail !== null)
-    .filter((detail) => detail.casterProgression !== 'none');
+    .filter((detail) => detail.casterProgression !== 'none')
 }
 
-function addSlotRows(
-  acc: SpellSlotsResult,
-  rows: SpellSlotsResult,
-  pact = false,
-): void {
+function addSlotRows(acc: SpellSlotsResult, rows: SpellSlotsResult, pact = false): void {
   for (const [levelText, row] of Object.entries(rows)) {
-    const level = Number.parseInt(levelText, 10);
-    if (!row || !level) continue;
-    const existing = acc[level];
+    const level = Number.parseInt(levelText, 10)
+    if (!row || !level) continue
+    const existing = acc[level]
     acc[level] = {
       max: (existing?.max ?? 0) + row.max,
       used: existing?.used ?? 0,
       ...(pact ? { isPactMagic: true } : {}),
-    };
+    }
   }
 }
 
 export interface CharacterSpellSlotsBreakdown {
-  shared: SpellSlotsResult;
-  pact: SpellSlotsResult;
-  mergedSharedWithUsage: SpellSlotsResult;
-  mergedPactWithUsage: SpellSlotsResult;
+  shared: SpellSlotsResult
+  pact: SpellSlotsResult
+  mergedSharedWithUsage: SpellSlotsResult
+  mergedPactWithUsage: SpellSlotsResult
 }
 
 export function calculateCharacterSpellSlots(
@@ -780,70 +705,64 @@ export function calculateCharacterSpellSlots(
               levels: character.level,
             },
           ]
-        : [];
+        : []
 
-  let combinedCasterLevel = 0;
-  const pact: SpellSlotsResult = {};
+  let combinedCasterLevel = 0
+  const pact: SpellSlotsResult = {}
 
   for (const entry of entries) {
-    const classData = classesById.get(
-      toClassProfileId(entry.name, entry.source),
-    );
-    const progression = normalizeProgression(classData?.casterProgression);
+    const classData = classesById.get(toClassProfileId(entry.name, entry.source))
+    const progression = normalizeProgression(classData?.casterProgression)
 
     if (progression === 'pact') {
-      addSlotRows(pact, getPactMagicSlots(entry.levels), true);
-      continue;
+      addSlotRows(pact, getPactMagicSlots(entry.levels), true)
+      continue
     }
 
-    combinedCasterLevel += getCasterLevelContribution(
-      progression,
-      entry.levels,
-    );
+    combinedCasterLevel += getCasterLevelContribution(progression, entry.levels)
   }
 
-  const shared =
-    combinedCasterLevel > 0 ? getStandardSpellSlots(combinedCasterLevel) : {};
-  const usedMap = storedToNumericUsed(character.spells.spellSlots);
+  const shared = combinedCasterLevel > 0 ? getStandardSpellSlots(combinedCasterLevel) : {}
+  const usedMap = storedToNumericUsed(character.spells.spellSlots)
 
-  const mergedSharedWithUsage = mergeSpellSlots(shared, usedMap);
+  const mergedSharedWithUsage = mergeSpellSlots(shared, usedMap)
 
   // Pact slots are tracked in the same usage pool, so allocate usage greedily by level.
-  const pactUsedMap: Record<number, number> = {};
+  const pactUsedMap: Record<number, number> = {}
   for (const [levelText, slots] of Object.entries(pact)) {
-    const level = Number.parseInt(levelText, 10);
-    if (!level || !slots) continue;
-    const used = Math.min(usedMap[level] ?? 0, slots.max);
-    pactUsedMap[level] = used;
+    const level = Number.parseInt(levelText, 10)
+    if (!level || !slots) continue
+    const used = Math.min(usedMap[level] ?? 0, slots.max)
+    pactUsedMap[level] = used
   }
-  const mergedPactWithUsage = mergeSpellSlots(pact, pactUsedMap);
+  const mergedPactWithUsage = mergeSpellSlots(pact, pactUsedMap)
 
   return {
     shared,
     pact,
     mergedSharedWithUsage,
     mergedPactWithUsage,
-  };
+  }
 }
 
 export function collectKnownSpells(profiles: SpellProfile[]): {
-  cantrips: string[];
-  spellsKnown: string[];
-  preparedSpells: string[];
+  cantrips: string[]
+  spellsKnown: string[]
+  preparedSpells: string[]
 } {
-  const cantrips = new Set<string>();
-  const spellsKnown = new Set<string>();
-  const prepared = new Set<string>();
+  const cantrips = new Set<string>()
+  const spellsKnown = new Set<string>()
+  const prepared = new Set<string>()
 
   for (const profile of profiles) {
     for (const name of profile.cantrips) {
-      cantrips.add(name);
-      if (profile.alwaysPrepared) prepared.add(name);
+      cantrips.add(name)
+      if (profile.alwaysPrepared) prepared.add(name)
     }
     for (const name of profile.spellsKnown) {
-      spellsKnown.add(name);
+      spellsKnown.add(name)
       if (profile.alwaysPrepared || profile.preparedSpells.includes(name)) {
-        prepared.add(name);
+        prepared.add(name)
       }
     }
   }
@@ -852,5 +771,5 @@ export function collectKnownSpells(profiles: SpellProfile[]): {
     cantrips: [...cantrips],
     spellsKnown: [...spellsKnown],
     preparedSpells: [...prepared],
-  };
+  }
 }
