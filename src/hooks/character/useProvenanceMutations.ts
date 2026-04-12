@@ -814,6 +814,32 @@ export function useProvenanceMutations({
     [character, ledger, patch],
   )
 
+  const applyBatchSpellSelections = useCallback(
+    (
+      className: string,
+      classSource: string | undefined,
+      spells: Array<{ name: string; grantedAtLevel?: number }>,
+    ) => {
+      if (!character || spells.length === 0) return
+      let accumulated = ledger
+      for (const spell of spells) {
+        accumulated = applyClassSpellGrant(
+          accumulated,
+          className,
+          classSource,
+          spell.name,
+          'choice',
+          {
+            ...(spell.grantedAtLevel ? { spellGrantedAtLevel: spell.grantedAtLevel } : {}),
+            spellAttributionMode: spell.grantedAtLevel ? 'exact' : undefined,
+          },
+        )
+      }
+      patch(accumulated)
+    },
+    [character, ledger, patch],
+  )
+
   const applyInferredClassSpellSelection = useCallback(
     (
       className: string,
@@ -1216,6 +1242,7 @@ export function useProvenanceMutations({
     applyBackgroundSelection,
     applyBackgroundAbilityChoices,
     applySpellSelection,
+    applyBatchSpellSelections,
     applyInferredClassSpellSelection,
     applyFeatSelection,
     removeFeatProvenance,

@@ -1,8 +1,19 @@
+import { useCallback, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useDataInit } from '@/hooks/data/useDataInit'
 import { BuildAbilityScoresPage } from '@/pages/build/ability-scores/AbilityScoresPage'
@@ -20,6 +31,40 @@ import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { HomePage } from '@/pages/HomePage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
+
+function CloseConfirmDialog() {
+  const [open, setOpen] = useState(false)
+
+  const handleConfirmClose = useCallback(() => {
+    setOpen(true)
+  }, [])
+
+  useEffect(() => {
+    window.electronAPI?.onConfirmClose(handleConfirmClose)
+    return () => {
+      window.electronAPI?.removeConfirmCloseListener(handleConfirmClose)
+    }
+  }, [handleConfirmClose])
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Closing the app will discard unsaved changes to the current character.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={() => window.electronAPI?.forceClose()}>
+            Discard & Close
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
 
 function App() {
   useDataInit()
@@ -51,6 +96,7 @@ function App() {
         <Toaster position="bottom-right" />
         <DataSourceStartupModal />
         <AppLoadingOverlay />
+        <CloseConfirmDialog />
       </BrowserRouter>
     </TooltipProvider>
   )

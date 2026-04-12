@@ -112,6 +112,22 @@ Grouped tool choices:
 - Adding new grant paths without updating reconciliation.
 - Applying grants directly to character without ledger tags.
 - Forgetting tests for source replacement edge cases.
+- **Calling `patch(ledger)` inside a loop loses intermediate writes.** Each call overwrites the previous one because `ledger` is captured from the React closure and never updated mid-render. When granting multiple items of the same domain (e.g. multiple spells, multiple equipment items) in one user action, **accumulate through the ledger** and call `patch` once:
+  ```ts
+  // ✅ batch — each grant sees the previous one's result
+  let accumulated = ledger
+  for (const spell of spells) {
+    accumulated = applyClassSpellGrant(accumulated, className, classSource, spell.name, 'choice')
+  }
+  patch(accumulated)
+
+  // ❌ loop with stale closure — only the last write survives
+  for (const spell of spells) {
+    const next = applyClassSpellGrant(ledger, className, classSource, spell.name, 'choice')
+    patch(next)
+  }
+  ```
+  Use the `applyBatch*` helpers in `useProvenanceMutations` when available.
 
 ## Testing Guidance
 

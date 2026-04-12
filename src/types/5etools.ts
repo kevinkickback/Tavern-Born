@@ -141,8 +141,9 @@ export interface Subclass5e {
 }
 
 export interface RaceAdditionalSpells {
+  name?: string
   innate?: Record<string, Record<string, Record<string, string[]>>>
-  known?: Record<string, string[]>
+  known?: Record<string, string[] | { _: Array<string | { choose: string }> }>
   ability?: string | { choose: string[] }
 }
 

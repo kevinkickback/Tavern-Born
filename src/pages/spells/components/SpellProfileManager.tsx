@@ -1,4 +1,4 @@
-import { BookOpen, Check, Plus, Trash } from '@phosphor-icons/react'
+import { BookOpen, Check, Lock, Plus, Trash } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import type { ActiveFilters, CategoryLimit } from '@/components/modals/SelectionModal'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
@@ -21,6 +21,7 @@ import {
 import { formatSpellLevel } from '@/lib/calculations/spellUtils'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
+import type { RaceSpellChoice } from '@/types/character'
 
 export interface SpellListItem {
   profileId: string
@@ -33,20 +34,27 @@ export interface SpellListItem {
   level: number
   kind: 'cantrip' | 'spell'
   prepared: boolean
+  isFixed?: boolean
 }
 
 interface SpellProfileLike {
   id: string
+  type?: string
   label: string
   className?: string
   classSource?: string
   alwaysPrepared?: boolean
+  castingAbility?: string
+  castingAbilityOptions?: string[]
+  choices?: RaceSpellChoice[]
+  fixedSpells?: string[]
 }
 
 interface SpellcastingDetailLike {
   profileId: string
   isPreparedCaster?: boolean
   knownSpellLimit?: number | null
+  cantripLimit?: number | null
 }
 
 interface SpellModalConfigLike {
@@ -69,7 +77,6 @@ interface SpellProfileManagerProps {
   activeProfileId: string
   onActiveProfileChange: (profileId: string) => void
   activeProfile: SpellProfileLike | null
-  activeProfileKnownCount: number
   spellModalOpen: boolean
   onSpellModalOpenChange: (open: boolean) => void
   modalConfig: SpellModalConfigLike | null
@@ -79,6 +86,13 @@ interface SpellProfileManagerProps {
   onTogglePrepared: (profileId: string, spellName: string) => void
   onRemoveSpell: (item: SpellListItem) => void
   onConfirmSpells: (names: string[]) => void
+  onSelectRacialSpell?: (profileId: string, choiceId: string, spellName: string) => void
+  onRemoveRacialSpell?: (profileId: string, choiceId: string, spellName: string) => void
+  onSetRacialCastingAbility?: (profileId: string, ability: string) => void
+  racialChoiceModalOpen?: boolean
+  onRacialChoiceModalOpenChange?: (open: boolean) => void
+  racialChoiceModalConfig?: SpellModalConfigLike | null
+  onConfirmRacialChoice?: (names: string[]) => void
   renderSpellName: (params: {
     item: SpellListItem
     spell?: Spell5e
@@ -94,7 +108,6 @@ export function SpellProfileManager({
   activeProfileId,
   onActiveProfileChange,
   activeProfile,
-  activeProfileKnownCount,
   spellModalOpen,
   onSpellModalOpenChange,
   modalConfig,
@@ -104,6 +117,11 @@ export function SpellProfileManager({
   onTogglePrepared,
   onRemoveSpell,
   onConfirmSpells,
+  onSetRacialCastingAbility,
+  racialChoiceModalOpen,
+  onRacialChoiceModalOpenChange,
+  racialChoiceModalConfig,
+  onConfirmRacialChoice,
   renderSpellName,
 }: SpellProfileManagerProps) {
   return (
@@ -151,21 +169,24 @@ export function SpellProfileManager({
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1">
-          {groupedItems.size === 0 ? (
+          {spellProfiles.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
               No spells assigned yet.
             </p>
           ) : (
             <Accordion
               type="multiple"
-              defaultValue={spellProfiles
-                .map((profile) => profile.id)
-                .filter((profileId) => (groupedItems.get(profileId)?.length ?? 0) > 0)}
+              defaultValue={spellProfiles.map((profile) => profile.id)}
               className="space-y-3 max-h-[620px] overflow-y-auto pr-1"
             >
               {spellProfiles.map((profile) => {
                 const items = groupedItems.get(profile.id) ?? []
-                if (items.length === 0) return null
+                const isRacial = profile.type === 'racial'
+                const hasUnfulfilledChoices = profile.choices?.some(
+                  (c) => c.selected.length < c.count,
+                )
+                if (profile.type === 'special' && items.length === 0) return null
+                if (isRacial && items.length === 0 && !hasUnfulfilledChoices) return null
                 const detail = detailsByProfileId.get(profile.id)
 
                 const preparedCount = items.filter(
@@ -179,6 +200,19 @@ export function SpellProfileManager({
                   : preparableSpells.length
                 const levels = [...new Set(items.map((item) => item.level))].sort((a, b) => a - b)
 
+                // Compute missing spells for class profiles
+                const currentCantrips = items.filter((item) => item.kind === 'cantrip').length
+                const currentSpells = items.filter((item) => item.kind === 'spell').length
+                const missingCantrips =
+                  detail?.cantripLimit != null
+                    ? Math.max(0, detail.cantripLimit - currentCantrips)
+                    : 0
+                const missingSpells =
+                  !isRacial && detail?.knownSpellLimit != null
+                    ? Math.max(0, detail.knownSpellLimit - currentSpells)
+                    : 0
+                const hasMissingSpells = missingCantrips > 0 || missingSpells > 0
+
                 return (
                   <AccordionItem
                     key={profile.id}
@@ -188,12 +222,13 @@ export function SpellProfileManager({
                     <AccordionTrigger className="px-3 py-2 bg-muted/30 hover:no-underline">
                       <div className="flex items-center gap-2 text-left w-full min-w-0">
                         <span className="font-medium text-sm">{profile.label}</span>
-                        {profile.alwaysPrepared ? (
-                          <Badge variant="secondary" className="text-xs">
-                            Always Prepared
-                          </Badge>
-                        ) : null}
                         <div className="ml-auto flex items-center gap-2 pr-1">
+                          {profile.alwaysPrepared ||
+                          (profile.type === 'class' && detail && !detail.isPreparedCaster) ? (
+                            <Badge variant="secondary" className="text-xs">
+                              Always Prepared
+                            </Badge>
+                          ) : null}
                           {detail?.isPreparedCaster ? (
                             <Badge variant="outline" className="text-xs">
                               Prepared: {preparedCount}/{preparedTotal}
@@ -206,6 +241,85 @@ export function SpellProfileManager({
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="pb-0">
+                      {/* Missing spells note for all profiles */}
+                      {hasMissingSpells ? (
+                        <div className="px-3 py-2 border-b border-border/60 bg-accent/10 flex items-center gap-2">
+                          <span className="text-xs text-accent-foreground/80">
+                            ⚠{' '}
+                            {[
+                              missingCantrips > 0
+                                ? `${missingCantrips} cantrip${missingCantrips !== 1 ? 's' : ''}`
+                                : null,
+                              missingSpells > 0
+                                ? `${missingSpells} spell${missingSpells !== 1 ? 's' : ''}`
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join(' and ')}{' '}
+                            remaining to choose. Use Add Spells to select.
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {/* Racial profile: casting ability selector */}
+                      {isRacial &&
+                      profile.castingAbilityOptions &&
+                      profile.castingAbilityOptions.length > 1 ? (
+                        <div className="px-3 py-2 border-b border-border/60 bg-muted/10 flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground font-medium">
+                            Casting Ability:
+                          </span>
+                          <Select
+                            value={profile.castingAbility ?? ''}
+                            onValueChange={(value) =>
+                              onSetRacialCastingAbility?.(profile.id, value)
+                            }
+                          >
+                            <SelectTrigger className="h-7 w-[100px] text-xs">
+                              <SelectValue placeholder="Choose..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {profile.castingAbilityOptions.map((opt) => (
+                                <SelectItem key={opt} value={opt} className="text-xs uppercase">
+                                  {opt.toUpperCase()}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : null}
+
+                      {/* Racial profile: unfulfilled choice prompts */}
+                      {isRacial && profile.choices
+                        ? profile.choices
+                            .filter((choice) => choice.selected.length < choice.count)
+                            .map((choice) => (
+                              <div
+                                key={choice.id}
+                                className="px-3 py-2 border-b border-border/60 bg-accent/10 flex items-center gap-2"
+                              >
+                                <span className="text-xs text-accent-foreground/80">
+                                  ⚠ {choice.count - choice.selected.length} unchosen{' '}
+                                  {choice.isCantrip ? 'cantrip' : 'spell'}
+                                  {choice.count - choice.selected.length !== 1 ? 's' : ''}
+                                  {' — '}
+                                  Choose {choice.count} {choice.isCantrip ? 'cantrip' : 'spell'}
+                                  {choice.filter?.classes
+                                    ? ` from ${choice.filter.classes.join(', ')} list`
+                                    : choice.pool
+                                      ? ` from ${choice.pool.length} options`
+                                      : ''}
+                                </span>
+                              </div>
+                            ))
+                        : null}
+
+                      {items.length === 0 && !hasMissingSpells && !hasUnfulfilledChoices ? (
+                        <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+                          No spells selected yet.
+                        </div>
+                      ) : null}
+
                       <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-px bg-border/60">
                         {levels.map((level) => {
                           const levelItems = items.filter((item) => item.level === level)
@@ -217,6 +331,7 @@ export function SpellProfileManager({
                               <div className="divide-y divide-border/60">
                                 {levelItems.map((item) => {
                                   const canPrepare =
+                                    !isRacial &&
                                     item.kind === 'spell' &&
                                     !item.alwaysPrepared &&
                                     !!item.isPreparedCaster
@@ -237,7 +352,7 @@ export function SpellProfileManager({
                                         })}
                                       </div>
                                       <div className="flex items-center gap-2">
-                                        {item.alwaysPrepared ? (
+                                        {!isRacial && item.alwaysPrepared ? (
                                           <Badge className="text-xs bg-accent text-accent-foreground">
                                             <Check className="h-3 w-3 mr-1" />
                                             Prepared
@@ -257,14 +372,18 @@ export function SpellProfileManager({
                                             title={item.prepared ? 'Prepared' : 'Not prepared'}
                                           />
                                         ) : null}
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                          onClick={() => onRemoveSpell(item)}
-                                        >
-                                          <Trash className="h-3.5 w-3.5" />
-                                        </Button>
+                                        {item.isFixed ? (
+                                          <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                        ) : (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                                            onClick={() => onRemoveSpell(item)}
+                                          >
+                                            <Trash className="h-3.5 w-3.5" />
+                                          </Button>
+                                        )}
                                       </div>
                                     </div>
                                   )
@@ -305,10 +424,26 @@ export function SpellProfileManager({
         />
       ) : null}
 
-      {activeProfile ? (
-        <p className="text-xs text-muted-foreground">
-          Adding to {activeProfile.label} ({activeProfileKnownCount} known total)
-        </p>
+      {racialChoiceModalConfig ? (
+        <SpellSelectionModal
+          open={racialChoiceModalOpen ?? false}
+          onOpenChange={onRacialChoiceModalOpenChange ?? (() => {})}
+          title={racialChoiceModalConfig.title}
+          spells={allSpells}
+          initialSelectedNames={racialChoiceModalConfig.initialSelectedNames}
+          lockedNames={racialChoiceModalConfig.lockedNames}
+          className={racialChoiceModalConfig.className}
+          classSource={racialChoiceModalConfig.classSource}
+          classListOverrides={racialChoiceModalConfig.classListOverrides}
+          allowedLevels={racialChoiceModalConfig.allowedLevels}
+          initialFilters={racialChoiceModalConfig.initialFilters}
+          categories={
+            racialChoiceModalConfig.categories && racialChoiceModalConfig.categories.length > 0
+              ? racialChoiceModalConfig.categories
+              : undefined
+          }
+          onConfirm={onConfirmRacialChoice ?? (() => {})}
+        />
       ) : null}
     </>
   )

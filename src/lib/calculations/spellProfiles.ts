@@ -1,4 +1,5 @@
 import { getClassSpellGainAtLevel } from '@/lib/5etools/classData'
+import { parseRaceSpellBlocks } from '@/lib/5etools/raceSpells'
 import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
 import { type AbilityName, normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -16,20 +17,26 @@ import {
 } from '@/lib/calculations/spellSlots'
 import { getTotalLevel } from '@/lib/characterUtils'
 import { normalizeKey } from '@/lib/provenance/normalization'
-import type { Class5e } from '@/types/5etools'
+import type { Class5e, RaceAdditionalSpells } from '@/types/5etools'
 import type {
   AbilityScores,
   Character,
   CharacterClassEntry,
+  RaceSpellChoice,
   SpellProfile,
   SpellSlots,
 } from '@/types/character'
 
 export const SPECIAL_SPELL_PROFILE_ID = 'special:unrestricted'
 export const SPECIAL_SPELL_PROFILE_LABEL = 'Bonus Spells'
+export const RACIAL_SPELL_PROFILE_LABEL = 'Racial Spells'
 
 function toClassProfileId(name: string, source?: string): string {
   return `class:${name}|${source ?? ''}`
+}
+
+export function toRacialProfileId(raceName: string, raceSource?: string): string {
+  return `racial:${raceName}|${raceSource ?? ''}`
 }
 
 function getSelectedSubclassData(classData: Class5e | undefined, entry: CharacterClassEntry) {
@@ -46,6 +53,13 @@ function cloneProfile(profile: SpellProfile): SpellProfile {
     cantrips: [...profile.cantrips],
     spellsKnown: [...profile.spellsKnown],
     preparedSpells: [...profile.preparedSpells],
+    ...(profile.fixedSpells ? { fixedSpells: [...profile.fixedSpells] } : {}),
+    ...(profile.choices
+      ? { choices: profile.choices.map((c) => ({ ...c, selected: [...c.selected] })) }
+      : {}),
+    ...(profile.castingAbilityOptions
+      ? { castingAbilityOptions: [...profile.castingAbilityOptions] }
+      : {}),
   }
 }
 
@@ -280,6 +294,132 @@ export function getProfileKnownNames(profile: SpellProfile): Set<string> {
   return new Set([...profile.cantrips, ...profile.spellsKnown])
 }
 
+/**
+ * Build or update a racial spell profile from parsed race data.
+ *
+ * - Multiple additionalSpells blocks = mutually exclusive (pick-one pool).
+ * - Single block with choose filters = class-list filtered choices.
+ * - Fixed spells are always included and marked non-removable via `fixedSpells`.
+ */
+export function buildRacialSpellProfile(params: {
+  raceName: string
+  raceSource?: string
+  additionalSpells: RaceAdditionalSpells[]
+  totalLevel: number
+  existingProfile?: SpellProfile
+}): SpellProfile {
+  const { raceName, raceSource, additionalSpells, totalLevel, existingProfile } = params
+  const profileId = toRacialProfileId(raceName, raceSource)
+
+  const blocks = parseRaceSpellBlocks(additionalSpells)
+  const isMutuallyExclusive = blocks.length > 1
+
+  const fixedSpells: string[] = []
+  const cantrips: string[] = []
+  const spellsKnown: string[] = []
+  const choices: RaceSpellChoice[] = []
+
+  let ability: string | undefined
+  let abilityOptions: string[] | undefined
+
+  if (isMutuallyExclusive) {
+    // Multiple blocks: user picks one block. Collect all block spells as a pool.
+    const pool: string[] = []
+    let isCantrip = false
+
+    for (const block of blocks) {
+      if (block.ability) ability = block.ability
+      if (block.abilityOptions) abilityOptions = block.abilityOptions
+
+      for (const grant of block.grants) {
+        if (grant.level <= totalLevel) {
+          pool.push(grant.spellName)
+          isCantrip = grant.isCantrip
+        }
+      }
+    }
+
+    if (pool.length > 0) {
+      const existingChoice = existingProfile?.choices?.find((c) => c.id === 'block-choice')
+      const selected = existingChoice?.selected.filter((s) => pool.includes(s)) ?? []
+      choices.push({
+        id: 'block-choice',
+        count: 1,
+        isCantrip,
+        pool,
+        selected,
+      })
+
+      // Add selected spells to cantrips/spellsKnown
+      for (const name of selected) {
+        if (isCantrip) {
+          cantrips.push(name)
+        } else {
+          spellsKnown.push(name)
+        }
+      }
+    }
+  } else if (blocks.length === 1) {
+    const block = blocks[0]
+    if (block.ability) ability = block.ability
+    if (block.abilityOptions) abilityOptions = block.abilityOptions
+
+    // Add fixed grants
+    for (const grant of block.grants) {
+      if (grant.level > totalLevel) continue
+      fixedSpells.push(grant.spellName)
+      if (grant.isCantrip) {
+        cantrips.push(grant.spellName)
+      } else {
+        spellsKnown.push(grant.spellName)
+      }
+    }
+
+    // Add choices from choose filters
+    for (const choiceDesc of block.choices) {
+      const existingChoice = existingProfile?.choices?.find((c) => c.id === choiceDesc.id)
+      const selected = existingChoice?.selected ?? []
+      const choice: RaceSpellChoice = {
+        id: choiceDesc.id,
+        count: choiceDesc.count,
+        isCantrip: choiceDesc.isCantrip,
+        selected,
+      }
+      if (choiceDesc.filter) choice.filter = choiceDesc.filter
+      if (choiceDesc.pool) choice.pool = choiceDesc.pool
+      choices.push(choice)
+
+      // Add selected spells to cantrips/spellsKnown
+      for (const name of selected) {
+        if (choiceDesc.isCantrip) {
+          cantrips.push(name)
+        } else {
+          spellsKnown.push(name)
+        }
+      }
+    }
+  }
+
+  // Inherit casting ability from existing profile if user already chose
+  const resolvedAbility = existingProfile?.castingAbility ?? ability
+
+  return {
+    id: profileId,
+    type: 'racial',
+    label: RACIAL_SPELL_PROFILE_LABEL,
+    raceName,
+    raceSource,
+    castingAbility: resolvedAbility,
+    castingAbilityOptions: abilityOptions,
+    choices: choices.length > 0 ? choices : undefined,
+    fixedSpells: fixedSpells.length > 0 ? fixedSpells : undefined,
+    cantrips,
+    spellsKnown,
+    preparedSpells: [],
+    alwaysPrepared: true,
+  }
+}
+
 export function getKnownSpellNames(profiles: SpellProfile[]): Set<string> {
   const names = new Set<string>()
 
@@ -298,6 +438,7 @@ export function getKnownSpellNames(profiles: SpellProfile[]): Set<string> {
 export function ensureSpellProfiles(
   character: Character,
   classesById?: Map<string, Class5e>,
+  raceData?: { name: string; source?: string; additionalSpells?: RaceAdditionalSpells[] },
 ): SpellProfile[] {
   const existing = Array.isArray(character.spells.spellProfiles)
     ? character.spells.spellProfiles.map(cloneProfile)
@@ -374,6 +515,29 @@ export function ensureSpellProfiles(
         alwaysPrepared: true,
       })
     }
+  }
+
+  // Build racial spell profile if the character has a race with additionalSpells
+  if (raceData?.additionalSpells && raceData.additionalSpells.length > 0) {
+    const racialId = toRacialProfileId(raceData.name, raceData.source)
+    const existingRacial = byId.get(racialId)
+    const totalLevel = getTotalLevel({
+      classes:
+        character.classProgression && character.classProgression.length > 0
+          ? character.classProgression
+          : character.class
+            ? [{ name: character.class, source: character.classSource, levels: character.level }]
+            : [],
+    })
+    next.push(
+      buildRacialSpellProfile({
+        raceName: raceData.name,
+        raceSource: raceData.source,
+        additionalSpells: raceData.additionalSpells,
+        totalLevel,
+        existingProfile: existingRacial,
+      }),
+    )
   }
 
   const special = byId.get(SPECIAL_SPELL_PROFILE_ID)

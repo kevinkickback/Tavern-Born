@@ -273,6 +273,31 @@ describe('mergeRaceWithSubrace', () => {
     const merged = mergeRaceWithSubrace(parent, subrace)
     expect(merged.resist).toEqual(['fire', 'cold', 'poison'])
   })
+
+  test('uses version entries directly instead of concatenating when _isVersion is true', () => {
+    const parent = makeRace({
+      entries: [{ name: 'Darkvision', text: '60 ft.' }] as unknown as Race5e['entries'],
+    })
+    const versionSubrace = makeRace({
+      entries: [{ name: 'Darkvision', text: '120 ft.' }] as unknown as Race5e['entries'],
+      _isVersion: true,
+    } as Partial<Race5e>)
+    const merged = mergeRaceWithSubrace(parent, versionSubrace)
+    // Version entries replace parent entries, not concatenate
+    expect(merged.entries).toHaveLength(1)
+    expect((merged.entries as Array<{ text: string }>)[0]?.text).toBe('120 ft.')
+  })
+
+  test('concatenates entries normally for non-version subraces', () => {
+    const parent = makeRace({
+      entries: [{ name: 'Base Trait' }] as unknown as Race5e['entries'],
+    })
+    const subrace = makeRace({
+      entries: [{ name: 'Subrace Trait' }] as unknown as Race5e['entries'],
+    })
+    const merged = mergeRaceWithSubrace(parent, subrace)
+    expect(merged.entries).toHaveLength(2)
+  })
 })
 
 describe('getAvailableSubraces', () => {

@@ -14,6 +14,7 @@ type RaceTraitEntry = {
 
 /** Merge a parent race with a selected subrace, handling ability overwrites and unioning arrays. */
 export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
+  const isVersion = (subrace as Race5e & { _isVersion?: boolean })._isVersion === true
   const replacesAbility =
     (subrace as Race5e & { overwrite?: { ability?: boolean } }).overwrite?.ability === true
   return {
@@ -22,7 +23,11 @@ export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
     ability: replacesAbility
       ? (subrace.ability ?? [])
       : [...(parent.ability ?? []), ...(subrace.ability ?? [])],
-    entries: [...(parent.entries ?? []), ...(subrace.entries ?? [])],
+    // Version subraces carry fully-resolved entries (parent entries with _mod applied);
+    // traditional subraces append their entries after the parent's.
+    entries: isVersion
+      ? (subrace.entries ?? [])
+      : [...(parent.entries ?? []), ...(subrace.entries ?? [])],
     size: subrace.size ?? parent.size,
     speed: subrace.speed ?? parent.speed,
     darkvision: subrace.darkvision ?? parent.darkvision,

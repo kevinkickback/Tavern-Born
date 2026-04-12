@@ -1,4 +1,5 @@
 import { Sword } from '@phosphor-icons/react'
+import { useState } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -128,6 +129,8 @@ export function BuildClassLevelsPanel({
   onClearFeatSelectionsForAsi,
   getOrdinalForm,
 }: BuildClassLevelsPanelProps) {
+  const [openSections, setOpenSections] = useState<string[]>([])
+
   const spellSelectionsByLevel = buildClassSpellSelectionsByLevel({
     character,
     className: viewingClass,
@@ -182,10 +185,7 @@ export function BuildClassLevelsPanel({
               No feature data available
             </p>
           ) : (
-            <Accordion
-              type="multiple"
-              defaultValue={['starting-equipment', `level-${character.level}`]}
-            >
+            <Accordion type="multiple" value={openSections} onValueChange={setOpenSections}>
               <AccordionItem value="starting-equipment">
                 <AccordionTrigger className="text-sm px-1 hover:no-underline">
                   <div className="flex items-center gap-2">

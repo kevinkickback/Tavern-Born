@@ -1,5 +1,5 @@
 import { MagicWand, PushPin, X } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
@@ -305,10 +305,23 @@ export function SpellsPage() {
     setProfileSpells,
     removeSpellFromProfile,
     togglePrepared,
+    selectRacialSpell,
+    removeRacialSpell,
+    setRacialCastingAbility,
   } = useSpellSlots()
 
   const [spellModalOpen, setSpellModalOpen] = useState(false)
   const [activeProfileId, setActiveProfileId] = useState<string>('')
+  const [racialChoiceModalOpen, setRacialChoiceModalOpen] = useState(false)
+  const [activeRacialChoice, setActiveRacialChoice] = useState<{
+    profileId: string
+    choiceId: string
+    count: number
+    isCantrip: boolean
+    filter?: { level: number; classes: string[] }
+    pool?: string[]
+    selected: string[]
+  } | null>(null)
 
   const allSpells = spells as Spell5e[]
   const spellByName = useMemo(() => {
@@ -379,6 +392,8 @@ export function SpellsPage() {
 
     for (const profile of spellProfiles) {
       const detail = detailsByProfileId.get(profile.id)
+      const fixedSet =
+        profile.type === 'racial' && profile.fixedSpells ? new Set(profile.fixedSpells) : undefined
 
       for (const name of profile.cantrips) {
         const spell = spellByName.get(getEntityKey(name))
@@ -393,6 +408,7 @@ export function SpellsPage() {
           level: spell?.level ?? 0,
           kind: 'cantrip',
           prepared: !!profile.alwaysPrepared,
+          isFixed: fixedSet?.has(name),
         })
       }
 
@@ -410,6 +426,7 @@ export function SpellsPage() {
           level: spell?.level ?? 1,
           kind: 'spell',
           prepared,
+          isFixed: fixedSet?.has(name),
         })
       }
     }
@@ -520,6 +537,100 @@ export function SpellsPage() {
 
   const hasMultipleSpellcastingClasses = spellcastingDetails.length > 1
 
+  const racialChoiceModalConfig = useMemo(() => {
+    if (!activeRacialChoice) return null
+
+    const initialSelectedNames = activeRacialChoice.selected ?? []
+
+    // Collect spells from all other profiles so they appear locked
+    const otherProfileSpells = new Set<string>()
+    for (const profile of spellProfiles) {
+      if (profile.id === activeRacialChoice.profileId) continue
+      for (const name of profile.cantrips) otherProfileSpells.add(name)
+      for (const name of profile.spellsKnown) otherProfileSpells.add(name)
+    }
+    const lockedNames = otherProfileSpells.size > 0 ? otherProfileSpells : undefined
+
+    if (activeRacialChoice.pool) {
+      const poolAllowedLevels = activeRacialChoice.isCantrip ? new Set(['0']) : undefined
+      return {
+        title: `Choose ${activeRacialChoice.count} ${activeRacialChoice.isCantrip ? 'Cantrip' : 'Spell'}${activeRacialChoice.count > 1 ? 's' : ''}`,
+        initialSelectedNames,
+        allowedLevels: poolAllowedLevels,
+        lockedNames,
+        className: undefined as string | undefined,
+        classSource: undefined as string | undefined,
+        classListOverrides: new Set(activeRacialChoice.pool),
+        initialFilters: poolAllowedLevels
+          ? { level: poolAllowedLevels, school: new Set<string>(), type: new Set<string>() }
+          : undefined,
+        categories: undefined,
+      }
+    }
+
+    if (activeRacialChoice.filter) {
+      const { level, classes } = activeRacialChoice.filter
+      const filterAllowedLevels = new Set([String(level)])
+      return {
+        title: `Choose ${activeRacialChoice.count} ${level === 0 ? 'Cantrip' : 'Spell'}${activeRacialChoice.count > 1 ? 's' : ''} from ${classes.join(', ')} list`,
+        initialSelectedNames,
+        allowedLevels: filterAllowedLevels,
+        lockedNames,
+        className: classes[0],
+        classSource: undefined as string | undefined,
+        classListOverrides: undefined as Set<string> | undefined,
+        initialFilters: {
+          level: filterAllowedLevels,
+          school: new Set<string>(),
+          type: new Set<string>(),
+        },
+        categories: undefined,
+      }
+    }
+
+    return null
+  }, [activeRacialChoice, spellProfiles])
+
+  const handleConfirmRacialChoice = useCallback(
+    (names: string[]) => {
+      if (!activeRacialChoice) return
+
+      const previousSelected = new Set(activeRacialChoice.selected)
+      const nextSelected = new Set(names)
+
+      for (const name of names) {
+        if (!previousSelected.has(name)) {
+          selectRacialSpell(activeRacialChoice.profileId, activeRacialChoice.choiceId, name)
+          applyManualSpellGrant(name)
+        }
+      }
+
+      for (const name of activeRacialChoice.selected) {
+        if (!nextSelected.has(name)) {
+          removeRacialSpell(activeRacialChoice.profileId, activeRacialChoice.choiceId, name)
+          const existsElsewhere = spellProfiles.some((profile) => {
+            if (profile.id === activeRacialChoice.profileId) return false
+            return profile.cantrips.includes(name) || profile.spellsKnown.includes(name)
+          })
+          if (!existsElsewhere) {
+            removeSpellProvenance(name)
+          }
+        }
+      }
+
+      setRacialChoiceModalOpen(false)
+      setActiveRacialChoice(null)
+    },
+    [
+      activeRacialChoice,
+      selectRacialSpell,
+      removeRacialSpell,
+      applyManualSpellGrant,
+      removeSpellProvenance,
+      spellProfiles,
+    ],
+  )
+
   if (!character) {
     return <NoCharCard icon={<MagicWand weight="duotone" />} noun="manage spells" />
   }
@@ -537,14 +648,31 @@ export function SpellsPage() {
     }
   }
 
-  const activeProfileKnownCount = activeProfile
-    ? activeProfile.cantrips.length + activeProfile.spellsKnown.length
-    : 0
-
   const handleOpenSpellModal = () => {
     if (!activeProfileId && spellProfiles[0]) {
       setActiveProfileId(spellProfiles[0].id)
     }
+
+    const profile = spellProfiles.find((p) => p.id === activeProfileId) ?? spellProfiles[0] ?? null
+    if (profile?.type === 'racial' && profile.choices) {
+      const unfulfilledChoice = profile.choices.find(
+        (choice) => choice.selected.length < choice.count,
+      )
+      if (unfulfilledChoice) {
+        setActiveRacialChoice({
+          profileId: profile.id,
+          choiceId: unfulfilledChoice.id,
+          count: unfulfilledChoice.count,
+          isCantrip: unfulfilledChoice.isCantrip,
+          filter: unfulfilledChoice.filter,
+          pool: unfulfilledChoice.pool,
+          selected: unfulfilledChoice.selected,
+        })
+        setRacialChoiceModalOpen(true)
+        return
+      }
+    }
+
     setSpellModalOpen(true)
   }
 
@@ -651,7 +779,6 @@ export function SpellsPage() {
           activeProfileId={activeProfileId}
           onActiveProfileChange={setActiveProfileId}
           activeProfile={activeProfile}
-          activeProfileKnownCount={activeProfileKnownCount}
           spellModalOpen={spellModalOpen}
           onSpellModalOpenChange={setSpellModalOpen}
           modalConfig={modalConfig}
@@ -661,6 +788,11 @@ export function SpellsPage() {
           onTogglePrepared={togglePrepared}
           onRemoveSpell={handleRemoveSpell}
           onConfirmSpells={handleConfirmProfileSpells}
+          onSetRacialCastingAbility={setRacialCastingAbility}
+          racialChoiceModalOpen={racialChoiceModalOpen}
+          onRacialChoiceModalOpenChange={setRacialChoiceModalOpen}
+          racialChoiceModalConfig={racialChoiceModalConfig}
+          onConfirmRacialChoice={handleConfirmRacialChoice}
           renderSpellName={({ item, spell, sourceContext }) => (
             <SpellNameTooltip
               name={item.name}

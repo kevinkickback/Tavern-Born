@@ -9,6 +9,7 @@ const __dirname = dirname(__filename)
 
 let mainWindow: BrowserWindow | null = null
 let hasUnsavedChanges = false
+let forceClose = false
 /**
  * The base directory the user configured for local 5etools data files.
  * Set whenever the renderer calls `dialog:selectFolder` or
@@ -90,34 +91,9 @@ async function createWindow(): Promise<void> {
   })
 
   mainWindow.on('close', (event) => {
-    if (!hasUnsavedChanges) {
-      return
-    }
-
-    const choice = mainWindow
-      ? dialog.showMessageBoxSync(mainWindow, {
-          type: 'warning',
-          title: 'Unsaved changes',
-          message: 'You have unsaved changes.',
-          detail:
-            'Closing the app now will discard those changes. Are you sure you want to continue?',
-          buttons: ['Cancel', 'Discard Changes'],
-          defaultId: 0,
-          cancelId: 0,
-        })
-      : dialog.showMessageBoxSync({
-          type: 'warning',
-          title: 'Unsaved changes',
-          message: 'You have unsaved changes.',
-          detail:
-            'Closing the app now will discard those changes. Are you sure you want to continue?',
-          buttons: ['Cancel', 'Discard Changes'],
-          defaultId: 0,
-          cancelId: 0,
-        })
-
-    if (choice === 0) {
+    if (hasUnsavedChanges && !forceClose) {
       event.preventDefault()
+      mainWindow?.webContents.send('app:confirmClose')
     }
   })
 }
@@ -201,6 +177,11 @@ app.on('ready', () => {
   })
   ipcMain.on('state:setUnsavedChanges', (_event, value: boolean) => {
     hasUnsavedChanges = !!value
+  })
+
+  ipcMain.on('app:forceClose', () => {
+    forceClose = true
+    mainWindow?.close()
   })
 })
 

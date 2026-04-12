@@ -16,6 +16,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
    *  enforce path-containment on `readLocalJson` calls. Call this on startup
    *  when restoring a previously-configured local data source config. */
   setLocalDataPath: (folderPath: string) => ipcRenderer.send('config:setLocalDataPath', folderPath),
+  onConfirmClose: (callback: () => void) => {
+    ipcRenderer.on('app:confirmClose', callback)
+  },
+  removeConfirmCloseListener: (callback: () => void) => {
+    ipcRenderer.removeListener('app:confirmClose', callback)
+  },
+  forceClose: () => ipcRenderer.send('app:forceClose'),
 })
 
 // Type declaration for the exposed API
@@ -32,6 +39,9 @@ declare global {
       readLocalJson: (filePath: string) => Promise<unknown>
       setUnsavedChanges?: (value: boolean) => void
       setLocalDataPath: (folderPath: string) => void
+      onConfirmClose: (callback: () => void) => void
+      removeConfirmCloseListener: (callback: () => void) => void
+      forceClose: () => void
     }
   }
 }

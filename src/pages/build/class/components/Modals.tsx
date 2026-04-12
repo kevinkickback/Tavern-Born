@@ -70,11 +70,10 @@ interface BuildClassModalsProps {
   spellByName: Map<string, Spell5e>
   viewingClass?: string
   viewingClassSource?: string
-  onApplySpellSelection: (
+  onApplyBatchSpellSelections: (
     className: string,
     classSource: string | undefined,
-    spellName: string,
-    grantedAtLevel?: number,
+    spells: Array<{ name: string; grantedAtLevel?: number }>,
   ) => void
   onRemoveSpellProvenance: (spellName: string) => void
   onUpdateCharacter: (patch: Partial<Character>) => void
@@ -125,7 +124,7 @@ export function BuildClassModals({
   spellByName,
   viewingClass,
   viewingClassSource,
-  onApplySpellSelection,
+  onApplyBatchSpellSelections,
   onRemoveSpellProvenance,
   onUpdateCharacter,
   subclassPickerOpen,
@@ -178,6 +177,9 @@ export function BuildClassModals({
           const classProfileId = `class:${viewingClass ?? ''}|${viewingClassSource ?? ''}`
           const profiles = ensureSpellProfiles(character)
           const classProfile = profiles.find((profile) => profile.id === classProfileId)
+          const classProfileNames = classProfile
+            ? new Set([...classProfile.cantrips, ...classProfile.spellsKnown])
+            : new Set<string>()
           const selectionsByLevel = buildClassSpellSelectionsByLevel({
             character,
             className: viewingClass,
@@ -185,9 +187,7 @@ export function BuildClassModals({
           })
           const initialSelectedNames = selectionsByLevel.get(spellPickerLevel) ?? []
           const lockedNames = new Set(
-            [...getKnownSpellNames(profiles)].filter(
-              (name) => !initialSelectedNames.includes(name),
-            ),
+            [...getKnownSpellNames(profiles)].filter((name) => !classProfileNames.has(name)),
           )
 
           const categories: CategoryLimit<Spell5e>[] = []
@@ -252,6 +252,7 @@ export function BuildClassModals({
                 const previousLevelNames = selectionsByLevel.get(spellPickerLevel) ?? []
                 const previousLevelSet = new Set(previousLevelNames)
                 const nextLevelSet = new Set(names)
+                const newSpells: Array<{ name: string; grantedAtLevel?: number }> = []
 
                 const nextSelectionsByLevel = new Map(selectionsByLevel)
                 if (names.length > 0) {
@@ -321,8 +322,11 @@ export function BuildClassModals({
                 for (const name of names) {
                   if (previousLevelSet.has(name)) continue
                   if (viewingClass) {
-                    onApplySpellSelection(viewingClass, viewingClassSource, name, spellPickerLevel)
+                    newSpells.push({ name, grantedAtLevel: spellPickerLevel })
                   }
+                }
+                if (viewingClass && newSpells.length > 0) {
+                  onApplyBatchSpellSelections(viewingClass, viewingClassSource, newSpells)
                 }
 
                 const remainingKnownNames = new Set(

@@ -39,6 +39,10 @@ Core modules:
 - The summary is taken from the last direct paragraph in the first class fluff section and is used by compact UI surfaces such as the character-creation wizard.
 - Full fluff sections are attached on `classFluffSections` and image metadata on `classFluffImages`, enabling richer class-details rendering without reparsing raw fluff payloads.
 - Race loading also reads `fluff-races.json` and attaches a short race summary to parsed races. The summary is taken from the first available paragraph in the corresponding race fluff entry and is used by compact UI surfaces such as the character-creation wizard.
+- Race parsing also expands `_versions` arrays embedded in race records into synthetic subraces. Two formats are supported:
+  - **Simple versions** (e.g., XPHB Elf's Drow/High Elf/Wood Elf lineages): direct objects with `name`, `_mod`, and properties like `additionalSpells`, `darkvision`, `speed`.
+  - **Template versions** (e.g., XPHB Dragonborn colors): an `_abstract` template with `{{variable}}` placeholders expanded per `_implementations` entry.
+- Version entries apply `_mod` operations (`replaceArr`, `removeArr`) to parent entries at parse time, producing fully resolved `entries` on each synthetic subrace. These subraces carry an `_isVersion: true` flag so that `mergeRaceWithSubrace` uses the resolved entries directly instead of concatenating.
 
 4. Lookup construction
 - lookups creates composite-key maps (name|source) for fast, collision-safe access.
