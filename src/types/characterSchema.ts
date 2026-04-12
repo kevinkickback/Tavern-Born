@@ -479,6 +479,9 @@ export const spellProfileSchema = z
     spellsKnown: z.array(z.string()).default([]),
     preparedSpells: z.array(z.string()).default([]),
     alwaysPrepared: z.boolean().optional(),
+    spellSwaps: z
+      .record(z.coerce.number(), z.object({ removed: z.string(), added: z.string() }))
+      .optional(),
   })
   .refine(
     (profile) => {

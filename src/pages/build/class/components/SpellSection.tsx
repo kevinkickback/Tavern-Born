@@ -1,4 +1,4 @@
-import { MagicWand } from '@phosphor-icons/react'
+import { ArrowsClockwise, MagicWand } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { formatSpellLevel } from '@/lib/calculations/spellUtils'
 import type { Spell5e } from '@/types/5etools'
@@ -8,6 +8,7 @@ interface SpellGain {
   cantrips: number
   spells: number
   maxSpellLevel: number
+  canSwap: boolean
 }
 
 interface BuildClassSpellSectionProps {
@@ -16,7 +17,10 @@ interface BuildClassSpellSectionProps {
   chosenNames: string[]
   spellByName: Map<string, Spell5e>
   detailCollapsed: boolean
+  hasExistingKnown: boolean
+  swapDoneAtLevel: boolean
   onOpenSpellPicker: (level: number) => void
+  onOpenSpellSwap: (level: number) => void
   onSelectFeature: (feature: SelectedFeatureState) => void
   onExpandDetails: () => void
   getOrdinalForm: (n: number) => string
@@ -28,7 +32,10 @@ export function BuildClassSpellSection({
   chosenNames,
   spellByName,
   detailCollapsed,
+  hasExistingKnown,
+  swapDoneAtLevel,
   onOpenSpellPicker,
+  onOpenSpellSwap,
   onSelectFeature,
   onExpandDetails,
   getOrdinalForm,
@@ -52,14 +59,27 @@ export function BuildClassSpellSection({
             </div>
           </div>
         </div>
-        <Button
-          variant={chosenNames.length > 0 ? 'outline' : 'default'}
-          size="sm"
-          className="flex-shrink-0 ml-2 h-7 text-xs"
-          onClick={() => onOpenSpellPicker(level)}
-        >
-          {chosenNames.length > 0 ? 'Edit' : 'Choose'}
-        </Button>
+        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+          <Button
+            variant={chosenNames.length > 0 ? 'outline' : 'default'}
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => onOpenSpellPicker(level)}
+          >
+            {chosenNames.length > 0 ? 'Edit' : 'Choose'}
+          </Button>
+          {spellGain.canSwap && hasExistingKnown && (
+            <Button
+              variant={swapDoneAtLevel ? 'ghost' : 'outline'}
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={() => onOpenSpellSwap(level)}
+            >
+              <ArrowsClockwise className="h-3 w-3" />
+              {swapDoneAtLevel ? 'Swapped' : 'Replace'}
+            </Button>
+          )}
+        </div>
       </div>
       {chosenNames.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-accent-secondary/20 pt-2">

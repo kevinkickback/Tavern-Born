@@ -8,7 +8,9 @@ describe('buildClassLevelsUtils', () => {
       subclassLevel: 3,
       subclassFeatureName: 'Arcane Tradition',
       asiLevels: [4, 8],
-      spellChoicesByLevel: new Map([[3, { cantrips: 1, spells: 2, maxSpellLevel: 2 }]]),
+      spellChoicesByLevel: new Map([
+        [3, { cantrips: 1, spells: 2, maxSpellLevel: 2, canSwap: true }],
+      ]),
       optFeatureProgressions: [
         {
           name: 'Maneuver',
@@ -53,6 +55,7 @@ describe('buildClassLevelsUtils', () => {
       cantrips: 1,
       spells: 2,
       maxSpellLevel: 2,
+      canSwap: true,
     })
     expect(levelData.optFeatureGainsAtLevel).toHaveLength(1)
     expect(levelData.classFeatGainsAtLevel).toHaveLength(0)

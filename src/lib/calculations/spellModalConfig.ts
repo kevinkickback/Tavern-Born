@@ -36,6 +36,10 @@ function getEntityKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`.toLowerCase()
 }
 
+/**
+ * @deprecated No longer used — class spell selection moved to Class page,
+ * prepared caster selection is inline on Spells page.
+ */
 export function buildSpellModalConfig(params: {
   activeProfile: SpellProfile | null
   spellProfiles: SpellProfile[]

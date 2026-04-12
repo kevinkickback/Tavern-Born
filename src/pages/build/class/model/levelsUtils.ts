@@ -17,6 +17,7 @@ interface SpellGain {
   cantrips: number
   spells: number
   maxSpellLevel: number
+  canSwap: boolean
 }
 
 interface ComputeLevelDisplayDataParams {

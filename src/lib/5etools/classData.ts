@@ -80,6 +80,8 @@ export interface SpellGainAtLevel {
   cantrips: number
   spells: number
   maxSpellLevel: number
+  /** True when known-caster swap is available (level 2+ with spellsKnownProgression). */
+  canSwap: boolean
 }
 
 export function getClassSpellGainAtLevel(
@@ -87,7 +89,7 @@ export function getClassSpellGainAtLevel(
   level: number,
 ): SpellGainAtLevel {
   if (!classData?.spellcastingAbility) {
-    return { cantrips: 0, spells: 0, maxSpellLevel: 0 }
+    return { cantrips: 0, spells: 0, maxSpellLevel: 0, canSwap: false }
   }
 
   const cantripProg = Array.isArray(classData.cantripProgression)
@@ -119,6 +121,7 @@ export function getClassSpellGainAtLevel(
     cantrips: newCantrips,
     spells: newSpells,
     maxSpellLevel: getMaxSpellLevelForClassLevel(classData, level),
+    canSwap: level >= 2 && Array.isArray(classData.spellsKnownProgression),
   }
 }
 
