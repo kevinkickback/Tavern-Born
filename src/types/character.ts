@@ -84,14 +84,14 @@ export interface Character {
    */
   backgroundAsiBlockIndex?: number
 
-  /** Preferred background starting-equipment option key. */
-  backgroundEquipmentChoice?: 'a' | 'b'
+  /** Preferred background starting-equipment option keys per block. */
+  backgroundEquipmentChoices?: string[]
 
   /** Last currency grant applied from background starting equipment. */
   backgroundCurrencyGrant?: Currency
 
-  /** Equipment option choices for each class, keyed by "className|source". Maps to which choice was selected (a/b/A/B). */
-  classEquipmentChoices?: Record<string, 'a' | 'b' | 'A' | 'B'>
+  /** Equipment option choices for each class, keyed by "className|source". Per-block choice keys array. */
+  classEquipmentChoices?: Record<string, string[]>
   /**
    * Ordered ability selections for the chosen background ability block.
    * selections[i] receives weights[i] bonus from the selected block.
@@ -228,6 +228,8 @@ export interface Equipment {
   properties?: string[]
   /** Weapon range text. */
   range?: string
+  /** True when a starting-equipment item reference could not be resolved from item data. */
+  _unresolved?: boolean
 }
 
 export interface Currency {

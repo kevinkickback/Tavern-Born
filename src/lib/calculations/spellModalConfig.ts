@@ -13,6 +13,7 @@ export interface SpellModalConfig {
   title: string
   className?: string
   classSource?: string
+  classListOverrides?: Set<string>
   allowedLevels: Set<string>
   initialFilters: {
     level: Set<string>
@@ -40,8 +41,10 @@ export function buildSpellModalConfig(params: {
   spellProfiles: SpellProfile[]
   detailsByProfileId: Map<string, SpellModalConfigDetail>
   spellByName: Map<string, Spell5e>
+  classListOverrides?: Set<string>
 }): SpellModalConfig | null {
-  const { activeProfile, spellProfiles, detailsByProfileId, spellByName } = params
+  const { activeProfile, spellProfiles, detailsByProfileId, spellByName, classListOverrides } =
+    params
 
   if (!activeProfile) return null
 
@@ -71,6 +74,7 @@ export function buildSpellModalConfig(params: {
       title: `Add Spells (${activeProfile.label})`,
       className: undefined,
       classSource: undefined,
+      classListOverrides: undefined,
       allowedLevels,
       initialFilters,
       categories: [
@@ -159,6 +163,7 @@ export function buildSpellModalConfig(params: {
     title: `Add Spells (${activeProfile.label})`,
     className: activeProfile.className,
     classSource: activeProfile.classSource,
+    classListOverrides,
     allowedLevels,
     initialFilters,
     categories,

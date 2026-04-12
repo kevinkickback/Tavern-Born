@@ -1,17 +1,15 @@
+import { parseRaceSpells } from '@/lib/5etools/raceSpells'
 import type { Item5e } from '@/types/5etools'
+import { applyFeatGrantBlocks } from './applyFeatAndOptionalFeatureGrants'
+import {
+  applyProficiencyBlocks,
+  type ProficiencyBlock,
+  toProficiencyBlocks,
+} from './applyProficiencyBlocks'
 import { addAbilityBonus, addChoicePlaceholder, addGrant } from './ledger'
-import { normalizeGenericToolChoice, normalizeKey } from './normalization'
+import { normalizeKey } from './normalization'
 import { makeSourceTag } from './sourceLabels'
 import type { ChoiceRecord, ProvenanceLedger } from './types'
-
-type ProfBlock = Record<
-  string,
-  | boolean
-  | {
-      choose?: { from?: string[]; fromFilter?: string; count?: number }
-    }
-  | number
->
 
 type RaceFilterDomain = 'armor' | 'weapons'
 
@@ -107,96 +105,31 @@ export function resolveRaceGrantFilterOptions(
 function getLineageLanguageBlocks(
   lineage: string | boolean | undefined,
   languageProficiencies: unknown[] | undefined,
-): ProfBlock[] {
+): ProficiencyBlock[] {
   if (Array.isArray(languageProficiencies) && languageProficiencies.length > 0) {
-    return languageProficiencies as ProfBlock[]
+    return languageProficiencies as ProficiencyBlock[]
   }
   // MPMM lineage races (lineage: "VRGR") encode languages as Common + one choice,
   // but omit explicit languageProficiencies blocks.
   if (typeof lineage === 'string') {
-    return [{ common: true, anyStandard: 1 } as ProfBlock]
+    return [{ common: true, anyStandard: 1 } as ProficiencyBlock]
   }
   return []
 }
 
-function toProfBlocks(blocks: unknown[] | undefined): ProfBlock[] {
-  return Array.isArray(blocks) ? (blocks as ProfBlock[]) : []
-}
-
-function applyProfBlocks(
+export function applyRaceSpellGrants(
+  race: {
+    additionalSpells?: import('@/types/5etools').RaceAdditionalSpells[]
+  },
+  totalCharacterLevel: number,
   ledger: ProvenanceLedger,
-  domain: 'skills' | 'languages' | 'tools' | 'armor' | 'weapons',
-  blocks: ProfBlock[],
   tag: import('./types').SourceTag,
-  choiceIdPrefix: string,
-  resolveFilterOptions?: (domain: RaceFilterDomain, fromFilter: string) => string[],
 ): ProvenanceLedger {
   let result = ledger
-  let choiceIndex = 0
-  for (const block of blocks) {
-    for (const [key, val] of Object.entries(block)) {
-      if (key === 'choose' || key === 'anyStandard') continue
-      if (domain === 'tools') {
-        const generic = normalizeGenericToolChoice(key)
-        if (generic) {
-          if (val === true || (typeof val === 'number' && val > 0)) {
-            const choiceRecord: ChoiceRecord = {
-              id: `${choiceIdPrefix}:${domain}:generic:${choiceIndex}`,
-              domain,
-              sourceTag: { ...tag, grantType: 'placeholder' },
-              chooseCount: typeof val === 'number' && val > 0 ? val : 1,
-              optionPool: [generic],
-              selected: [],
-              status: 'pending',
-            }
-            result = addChoicePlaceholder(result, choiceRecord)
-            choiceIndex++
-            continue
-          }
-        }
-      }
-      if (val === true) {
-        result = addGrant(result, domain, key, tag)
-      }
-    }
-    const anyStandard = (block as { anyStandard?: number }).anyStandard
-    if (anyStandard) {
-      const choiceRecord: ChoiceRecord = {
-        id: `${choiceIdPrefix}:${domain}:any:${choiceIndex}`,
-        domain,
-        sourceTag: { ...tag, grantType: 'placeholder' },
-        chooseCount: anyStandard,
-        optionPool: [],
-        selected: [],
-        status: 'pending',
-      }
-      result = addChoicePlaceholder(result, choiceRecord)
-      choiceIndex++
-    }
-    const choose = (
-      block as {
-        choose?: { from?: string[]; fromFilter?: string; count?: number }
-      }
-    ).choose
-    if (choose) {
-      const normalizedPool =
-        domain === 'tools'
-          ? (choose.from ?? []).map((entry) => normalizeGenericToolChoice(entry) ?? entry)
-          : choose.fromFilter && (domain === 'armor' || domain === 'weapons')
-            ? (resolveFilterOptions?.(domain, choose.fromFilter) ?? [])
-            : (choose.from ?? [])
-      const choiceRecord: ChoiceRecord = {
-        id: `${choiceIdPrefix}:${domain}:choose:${choiceIndex}`,
-        domain,
-        sourceTag: { ...tag, grantType: 'placeholder' },
-        chooseCount: choose.count ?? 1,
-        optionPool: normalizedPool,
-        selected: [],
-        status: 'pending',
-      }
-      result = addChoicePlaceholder(result, choiceRecord)
-      choiceIndex++
-    }
+  const grants = parseRaceSpells(race.additionalSpells)
+  for (const grant of grants) {
+    if (grant.level > totalCharacterLevel) continue
+    result = addGrant(result, 'spells', grant.spellName, tag)
   }
   return result
 }
@@ -216,6 +149,8 @@ export function applyRaceGrants(
     weaponProficiencies?: unknown[]
     armorProficiencies?: unknown[]
     ability?: unknown[]
+    feats?: unknown[]
+    additionalSpells?: import('@/types/5etools').RaceAdditionalSpells[]
   },
   subrace:
     | {
@@ -227,27 +162,30 @@ export function applyRaceGrants(
         weaponProficiencies?: unknown[]
         armorProficiencies?: unknown[]
         ability?: unknown[]
+        feats?: unknown[]
+        additionalSpells?: import('@/types/5etools').RaceAdditionalSpells[]
         overwrite?: { ability?: boolean }
       }
     | undefined,
   ledger: ProvenanceLedger,
   resolveFilterOptions?: (domain: RaceFilterDomain, fromFilter: string) => string[],
   lineageAsiBlockIndex: 0 | 1 = 0,
+  totalCharacterLevel = 1,
 ): ProvenanceLedger {
   let result = ledger
   const usesTashasLineageAsi = race.lineage === true || typeof race.lineage === 'string'
 
   const raceTag = makeSourceTag('race', race.name, 'fixed', race.source)
 
-  result = applyProfBlocks(
+  result = applyProficiencyBlocks(
     result,
     'skills',
-    toProfBlocks(race.skillProficiencies),
+    toProficiencyBlocks(race.skillProficiencies),
     raceTag,
     `race:${normalizeKey(race.name)}`,
   )
 
-  result = applyProfBlocks(
+  result = applyProficiencyBlocks(
     result,
     'languages',
     getLineageLanguageBlocks(race.lineage, race.languageProficiencies),
@@ -256,32 +194,38 @@ export function applyRaceGrants(
     resolveFilterOptions,
   )
 
-  result = applyProfBlocks(
+  result = applyProficiencyBlocks(
     result,
     'tools',
-    (race.toolProficiencies ?? []) as ProfBlock[],
+    toProficiencyBlocks(race.toolProficiencies),
     raceTag,
     `race:${normalizeKey(race.name)}`,
     resolveFilterOptions,
   )
 
-  result = applyProfBlocks(
+  result = applyProficiencyBlocks(
     result,
     'weapons',
-    (race.weaponProficiencies ?? []) as ProfBlock[],
+    toProficiencyBlocks(race.weaponProficiencies),
     raceTag,
     `race:${normalizeKey(race.name)}`,
     resolveFilterOptions,
   )
 
-  result = applyProfBlocks(
+  result = applyProficiencyBlocks(
     result,
     'armor',
-    (race.armorProficiencies ?? []) as ProfBlock[],
+    toProficiencyBlocks(race.armorProficiencies),
     raceTag,
     `race:${normalizeKey(race.name)}`,
     resolveFilterOptions,
   )
+
+  // Apply race feat grants (e.g. Variant Human bonus feat, XPHB Human origin feat).
+  result = applyFeatGrantBlocks(result, race.feats, 'race', race.name, race.source)
+
+  // Apply race additional spells independently of ability score parsing.
+  result = applyRaceSpellGrants(race, totalCharacterLevel, result, raceTag)
 
   if (!usesTashasLineageAsi) {
     for (const block of race.ability ?? []) {
@@ -345,6 +289,13 @@ export function applyRaceGrants(
 
   if (subrace) {
     const subraceTag = makeSourceTag('subrace', subrace.name, 'fixed', subrace.source)
+
+    // Apply subrace feat grants.
+    result = applyFeatGrantBlocks(result, subrace.feats, 'subrace', subrace.name, subrace.source)
+
+    // Apply subrace additional spells independently of ability score parsing.
+    result = applyRaceSpellGrants(subrace, totalCharacterLevel, result, subraceTag)
+
     const replace = subrace.overwrite?.ability === true
 
     if (replace) {
@@ -397,42 +348,42 @@ export function applyRaceGrants(
       }
     }
 
-    result = applyProfBlocks(
+    result = applyProficiencyBlocks(
       result,
       'skills',
-      toProfBlocks(subrace.skillProficiencies),
+      toProficiencyBlocks(subrace.skillProficiencies),
       subraceTag,
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,
     )
-    result = applyProfBlocks(
+    result = applyProficiencyBlocks(
       result,
       'languages',
-      toProfBlocks(subrace.languageProficiencies),
+      toProficiencyBlocks(subrace.languageProficiencies),
       subraceTag,
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,
     )
-    result = applyProfBlocks(
+    result = applyProficiencyBlocks(
       result,
       'tools',
-      (subrace.toolProficiencies ?? []) as ProfBlock[],
+      toProficiencyBlocks(subrace.toolProficiencies),
       subraceTag,
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,
     )
-    result = applyProfBlocks(
+    result = applyProficiencyBlocks(
       result,
       'weapons',
-      (subrace.weaponProficiencies ?? []) as ProfBlock[],
+      toProficiencyBlocks(subrace.weaponProficiencies),
       subraceTag,
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,
     )
-    result = applyProfBlocks(
+    result = applyProficiencyBlocks(
       result,
       'armor',
-      (subrace.armorProficiencies ?? []) as ProfBlock[],
+      toProficiencyBlocks(subrace.armorProficiencies),
       subraceTag,
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,

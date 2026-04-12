@@ -8,13 +8,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   featCategoryToFull,
@@ -29,6 +22,7 @@ import type { ClassFeatProgression, OptionalFeatureProgression } from '../model/
 import { computeLevelDisplayData } from '../model/levelsUtils'
 import { BuildClassAsiSection } from './AsiSection'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
+import { BuildClassEquipmentSection } from './EquipmentSection'
 import { BuildClassPassiveFeatureList } from './PassiveFeatureList'
 import { BuildClassProgressionChoiceCard } from './ProgressionChoiceCard'
 import { BuildClassSpellSection } from './SpellSection'
@@ -62,8 +56,7 @@ interface BuildClassLevelsPanelProps {
   viewingClass: string
   viewingClassSource?: string
   viewingClassLevel: number
-  classEquipmentChoiceOptions: Array<'A' | 'B'>
-  selectedClassEquipmentChoice: 'a' | 'b' | 'A' | 'B'
+  classEquipmentBlockChoices: string[]
   selectedNames: Set<string>
   optFeatures: OptionalFeatureLike[]
   featByCompositeId: Map<string, Feat5e>
@@ -80,7 +73,7 @@ interface BuildClassLevelsPanelProps {
   onOpenAsiPicker: (level: number) => void
   onOpenOptPicker: (state: { progName: string; featureTypes: string[]; total: number }) => void
   onOpenClassFeatPicker: (state: { progName: string; categories: string[]; total: number }) => void
-  onClassEquipmentChoiceChange: (choice: 'A' | 'B') => void
+  onBlockChoiceChange: (blockIndex: number, choice: string) => void
   onSelectFeature: (feature: SelectedFeatureState) => void
   onExpandDetails: () => void
   onAsiReset: (level: number) => void
@@ -110,8 +103,7 @@ export function BuildClassLevelsPanel({
   viewingClass,
   viewingClassSource,
   viewingClassLevel,
-  classEquipmentChoiceOptions,
-  selectedClassEquipmentChoice,
+  classEquipmentBlockChoices,
   selectedNames,
   optFeatures,
   featByCompositeId,
@@ -128,7 +120,7 @@ export function BuildClassLevelsPanel({
   onOpenAsiPicker,
   onOpenOptPicker,
   onOpenClassFeatPicker,
-  onClassEquipmentChoiceChange,
+  onBlockChoiceChange,
   onSelectFeature,
   onExpandDetails,
   onAsiReset,
@@ -190,7 +182,30 @@ export function BuildClassLevelsPanel({
               No feature data available
             </p>
           ) : (
-            <Accordion type="multiple" defaultValue={[`level-${character.level}`]}>
+            <Accordion
+              type="multiple"
+              defaultValue={['starting-equipment', `level-${character.level}`]}
+            >
+              <AccordionItem value="starting-equipment">
+                <AccordionTrigger className="text-sm px-1 hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Starting Equipment</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="pt-1 pb-2 px-1">
+                    <BuildClassEquipmentSection
+                      viewingClassData={viewingClassData}
+                      blockChoices={classEquipmentBlockChoices}
+                      detailCollapsed={detailCollapsed}
+                      onBlockChoiceChange={onBlockChoiceChange}
+                      onSelectFeature={onSelectFeature}
+                      onExpandDetails={onExpandDetails}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
               {levelsToShow.map((lv) => {
                 const {
                   isSubclassLevel,
@@ -401,29 +416,6 @@ export function BuildClassLevelsPanel({
           )}
         </div>
       </ScrollArea>
-      <div className="flex items-center gap-3">
-        <div className="flex-1 min-w-0">
-          {character.class && classEquipmentChoiceOptions.length > 1 && (
-            <div className="w-[220px] flex-shrink-0">
-              <Select
-                value={selectedClassEquipmentChoice.toUpperCase()}
-                onValueChange={(value) => onClassEquipmentChoiceChange(value as 'A' | 'B')}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Starting Equipment" />
-                </SelectTrigger>
-                <SelectContent>
-                  {classEquipmentChoiceOptions.map((choice) => (
-                    <SelectItem key={choice} value={choice} className="text-xs">
-                      Starting Equipment {choice}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   )
 }

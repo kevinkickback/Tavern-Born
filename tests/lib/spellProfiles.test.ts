@@ -63,6 +63,67 @@ describe('spellProfiles', () => {
     expect(profiles[2].label).toBe(SPECIAL_SPELL_PROFILE_LABEL)
   })
 
+  test('ensureSpellProfiles adds subclass always-prepared and known spells', () => {
+    const character = makeCharacterFixture({
+      class: 'Fighter',
+      classSource: 'PHB',
+      subclass: 'Eldritch Knight',
+      subclassSource: 'PHB',
+      level: 3,
+      classProgression: [
+        {
+          name: 'Fighter',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Eldritch Knight',
+          subclassSource: 'PHB',
+        },
+      ],
+      spells: {
+        spellProfiles: [],
+        spellSlots: makeCharacterFixture().spells.spellSlots,
+      },
+    })
+
+    const classesById = new Map([
+      [
+        'class:Fighter|PHB',
+        makeClassFixture({
+          name: 'Fighter',
+          source: 'PHB',
+          casterProgression: 'none',
+          subclasses: [
+            {
+              name: 'Eldritch Knight',
+              shortName: 'EK',
+              source: 'PHB',
+              className: 'Fighter',
+              classSource: 'PHB',
+              spellcastingAbility: 'int',
+              casterProgression: '1/3',
+              additionalSpells: [
+                {
+                  prepared: { '3': ['shield'] },
+                  known: { '3': ['mage armor'] },
+                },
+              ],
+            },
+          ],
+        }),
+      ],
+    ])
+
+    const profiles = ensureSpellProfiles(character, classesById)
+    const classProfile = profiles.find((profile) => profile.id === 'class:Fighter|PHB')
+    const subclassProfile = profiles.find((profile) =>
+      profile.id.includes('Eldritch Knight|PHB:prepared'),
+    )
+
+    expect(classProfile?.spellsKnown).toContain('mage armor')
+    expect(subclassProfile?.alwaysPrepared).toBe(true)
+    expect(subclassProfile?.spellsKnown).toContain('shield')
+  })
+
   test('buildClassSpellLevelKey includes class source to avoid multiclass collisions', () => {
     expect(buildClassSpellLevelKey('Wizard', 'PHB', 3)).toBe('Wizard|PHB:3')
     expect(buildClassSpellLevelKey('Wizard', 'XPHB', 3)).toBe('Wizard|XPHB:3')
@@ -175,6 +236,15 @@ describe('spellProfiles', () => {
           name: 'Warlock',
           source: 'PHB',
           casterProgression: 'pact',
+          classTableGroups: [
+            {
+              colLabels: ['Spell Slots', 'Slot Level'],
+              rows: [
+                [1, 1],
+                [2, 1],
+              ],
+            },
+          ],
         }),
       ],
     ])
@@ -183,6 +253,54 @@ describe('spellProfiles', () => {
     expect(slots.shared[1]?.max).toBe(4)
     expect(slots.shared[2]?.max).toBe(3)
     expect(slots.pact[1]?.max).toBe(2)
+  })
+
+  test('calculateCharacterSpellSlots uses subclass caster progression for non-caster classes', () => {
+    const character = makeCharacterFixture({
+      class: 'Fighter',
+      classSource: 'PHB',
+      subclass: 'Eldritch Knight',
+      subclassSource: 'PHB',
+      level: 3,
+      classProgression: [
+        {
+          name: 'Fighter',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Eldritch Knight',
+          subclassSource: 'PHB',
+        },
+      ],
+      spells: {
+        spellProfiles: [],
+        spellSlots: makeCharacterFixture().spells.spellSlots,
+      },
+    })
+
+    const classesById = new Map([
+      [
+        'class:Fighter|PHB',
+        makeClassFixture({
+          name: 'Fighter',
+          source: 'PHB',
+          casterProgression: 'none',
+          subclasses: [
+            {
+              name: 'Eldritch Knight',
+              shortName: 'EK',
+              source: 'PHB',
+              className: 'Fighter',
+              classSource: 'PHB',
+              spellcastingAbility: 'int',
+              casterProgression: '1/3',
+            },
+          ],
+        }),
+      ],
+    ])
+
+    const slots = calculateCharacterSpellSlots(character, classesById)
+    expect(slots.shared[1]?.max).toBe(2)
   })
 
   test('buildSpellcastingClassDetails computes save and attack values per class', () => {

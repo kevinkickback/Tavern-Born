@@ -155,8 +155,8 @@ export function useSpellSlots(): SpellSlotsState {
 
   const spellProfiles = useMemo(() => {
     if (!character) return []
-    return ensureSpellProfiles(character)
-  }, [character])
+    return ensureSpellProfiles(character, classesById)
+  }, [character, classesById])
 
   const slotsBreakdown = useMemo(() => {
     if (!character) {
@@ -209,40 +209,40 @@ export function useSpellSlots(): SpellSlotsState {
 
   const syncProfiles = useCallback(() => {
     if (!character) return
-    patchSpells({ spellProfiles: ensureSpellProfiles(character) })
-  }, [character, patchSpells])
+    patchSpells({ spellProfiles: ensureSpellProfiles(character, classesById) })
+  }, [character, classesById, patchSpells])
 
   const addSpellToProfile = useCallback(
     (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
       if (!character) return
-      const baseProfiles = ensureSpellProfiles(character)
+      const baseProfiles = ensureSpellProfiles(character, classesById)
       patchSpells({
         spellProfiles: upsertProfileSpell(baseProfiles, profileId, name, kind),
       })
     },
-    [character, patchSpells],
+    [character, classesById, patchSpells],
   )
 
   const setProfileSpells = useCallback(
     (profileId: string, cantrips: string[], spellsKnown: string[]) => {
       if (!character) return
-      const baseProfiles = ensureSpellProfiles(character)
+      const baseProfiles = ensureSpellProfiles(character, classesById)
       patchSpells({
         spellProfiles: replaceProfileSpells(baseProfiles, profileId, cantrips, spellsKnown),
       })
     },
-    [character, patchSpells],
+    [character, classesById, patchSpells],
   )
 
   const removeSpellFromProfile = useCallback(
     (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
       if (!character) return
-      const baseProfiles = ensureSpellProfiles(character)
+      const baseProfiles = ensureSpellProfiles(character, classesById)
       patchSpells({
         spellProfiles: removeProfileSpell(baseProfiles, profileId, name, kind),
       })
     },
-    [character, patchSpells],
+    [character, classesById, patchSpells],
   )
 
   const addCantrip = useCallback(
@@ -280,7 +280,7 @@ export function useSpellSlots(): SpellSlotsState {
   const togglePrepared = useCallback(
     (profileId: string, name: string) => {
       if (!character) return
-      const nextProfiles = ensureSpellProfiles(character).map((profile) => {
+      const nextProfiles = ensureSpellProfiles(character, classesById).map((profile) => {
         if (profile.id !== profileId || profile.alwaysPrepared) return profile
 
         const isPrepared = profile.preparedSpells.includes(name)
@@ -306,7 +306,7 @@ export function useSpellSlots(): SpellSlotsState {
 
       patchSpells({ spellProfiles: nextProfiles })
     },
-    [character, patchSpells, spellcastingDetailByProfileId],
+    [character, classesById, patchSpells, spellcastingDetailByProfileId],
   )
 
   return {

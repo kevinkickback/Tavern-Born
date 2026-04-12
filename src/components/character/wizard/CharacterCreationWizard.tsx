@@ -1,10 +1,9 @@
 import { Warning } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
-  buildItemLookup,
   resolveBackgroundStartingEquipment,
   resolveClassStartingEquipment,
 } from '@/lib/5etools/startingEquipment'
@@ -18,6 +17,7 @@ import {
   resolveRaceGrantFilterOptions,
 } from '@/lib/provenance'
 import { stripItemTag } from '@/lib/provenance/normalization'
+import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Background5e, Class5e, Race5e } from '@/types/5etools'
@@ -83,11 +83,46 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   const createNewCharacter = useCharacterStore((state) => state.createNewCharacter)
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const gameData = useGameDataStore((state) => state.gameData)
+  const itemLookup = useGameDataStore((state) => state.itemLookup)
 
   const [currentStep, setCurrentStep] = useState(1)
   const [characterData, setCharacterData] = useState<CharacterWizardData>(INITIAL_CHARACTER_DATA)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    setCharacterData((prev) => {
+      if ((prev.allowedSources?.length ?? 0) > 0) {
+        return prev
+      }
+
+      const recommended2014 = SOURCE_PRESETS.find((preset) => preset.id === '2014-recommended')
+      if (!recommended2014) {
+        return prev
+      }
+
+      const availableSourceSet = new Set(
+        (gameData?.sources ?? []).map((source) => source.abbreviation),
+      )
+      const allowedSources =
+        availableSourceSet.size > 0
+          ? recommended2014.abbreviations.filter((abbr) => availableSourceSet.has(abbr))
+          : recommended2014.abbreviations
+
+      if (allowedSources.length === 0) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        allowedSources,
+      }
+    })
+  }, [open, gameData?.sources])
 
   const handleClose = () => {
     setCurrentStep(1)
@@ -163,8 +198,12 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         characterData.raceAsiBlockIndex,
       )
     }
-    if (classObj) provenance = applyClassGrants(classObj, undefined, provenance)
-    if (bgObj) provenance = applyBackgroundGrants(bgObj, provenance)
+    if (classObj) {
+      provenance = applyClassGrants(classObj, undefined, provenance, { itemLookup })
+    }
+    if (bgObj) {
+      provenance = applyBackgroundGrants(bgObj, provenance, { itemLookup })
+    }
     provenance = addGrant(
       provenance,
       'languages',
@@ -173,7 +212,6 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     )
 
     const classProficiencies = classObj?.startingProficiencies ?? {}
-    const itemLookup = buildItemLookup(gameData?.items ?? [])
     const startingEquipment = [
       ...resolveClassStartingEquipment(classObj?.startingEquipment, itemLookup),
       ...resolveBackgroundStartingEquipment(bgObj?.startingEquipment, itemLookup),

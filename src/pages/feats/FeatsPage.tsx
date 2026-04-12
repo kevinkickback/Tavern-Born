@@ -1,6 +1,7 @@
-import { CaretDown, Check, Star, Trash } from '@phosphor-icons/react'
+import { CaretDown, Check, Sparkle, Star, Trash } from '@phosphor-icons/react'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
+import type { ActiveFilters } from '@/components/modals/SelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -26,8 +27,10 @@ interface FeatDetailCardProps {
   feat: { id: string; name: string; source: string }
   featData: Feat5e | undefined
   characterSnapshot: PrereqCharacterSnapshot
-  onRemove: (name: string) => void
+  onRemove?: (name: string) => void
   isSpecial?: boolean
+  /** Shows a "Granted by …" badge instead of the remove button. */
+  grantedBy?: string
 }
 
 const FeatDetailCard = memo(function FeatDetailCard({
@@ -36,6 +39,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
   characterSnapshot,
   onRemove,
   isSpecial,
+  grantedBy,
 }: FeatDetailCardProps) {
   const [expanded, setExpanded] = useState(false)
   const categoryLabel =
@@ -88,6 +92,12 @@ const FeatDetailCard = memo(function FeatDetailCard({
                 Special
               </Badge>
             )}
+            {grantedBy && (
+              <Badge className="text-xs px-1.5 py-0 h-5 bg-accent/20 text-accent border border-accent/40">
+                <Sparkle className="h-2.5 w-2.5 mr-0.5" weight="duotone" />
+                {grantedBy}
+              </Badge>
+            )}
             {met ? (
               <Badge
                 variant="outline"
@@ -135,15 +145,17 @@ const FeatDetailCard = memo(function FeatDetailCard({
           )}
         </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
-          onClick={() => onRemove(feat.name)}
-          title="Remove feat"
-        >
-          <Trash className="h-3.5 w-3.5" />
-        </Button>
+        {onRemove && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
+            onClick={() => onRemove(feat.name)}
+            title="Remove feat"
+          >
+            <Trash className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -153,8 +165,16 @@ export function FeatsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { feats } = useFilteredGameData()
-  const { replaceFeatSelections, getSourcesRowsBySection } = useProvenance()
+  const {
+    replaceFeatSelections,
+    resolveFeatChoiceSelection,
+    removeFeatChoiceSelection,
+    getSourcesRowsBySection,
+    ledger,
+  } = useProvenance()
   const [modalOpen, setModalOpen] = useState(false)
+  const [grantedModalOpen, setGrantedModalOpen] = useState(false)
+  const [activeChoiceId, setActiveChoiceId] = useState<string | null>(null)
 
   const primaryClassData = useClass(character?.class ?? '', character?.classSource)
   const asiLevels = getASILevelsFromClass(primaryClassData)
@@ -198,6 +218,82 @@ export function FeatsPage() {
       selectedSpecialFeats: character?.specialFeats ?? [],
     })
   }, [feats, character?.feats, character?.specialFeats])
+
+  // Granted feats from race/background provenance
+  const featChoices = useMemo(
+    () => ledger.choices.filter((c) => c.domain === 'feats'),
+    [ledger.choices],
+  )
+
+  const fixedGrantedFeats = useMemo(() => {
+    return Object.entries(ledger.feats)
+      .filter(([, tags]) => tags.some((t) => t.grantType === 'fixed'))
+      .map(([name, tags]) => {
+        const tag = tags.find((t) => t.grantType === 'fixed')
+        if (!tag) return null
+        const data = (feats as Feat5e[]).find((f) => f.name.toLowerCase() === name.toLowerCase())
+        return {
+          name: data?.name ?? name,
+          source: data?.source ?? tag.sourceRef ?? '',
+          sourceLabel: `${tag.sourceType}: ${tag.sourceName}`,
+          featData: data,
+        }
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null)
+  }, [ledger.feats, feats])
+
+  const activeChoice = useMemo(
+    () => featChoices.find((c) => c.id === activeChoiceId),
+    [featChoices, activeChoiceId],
+  )
+
+  const grantedModalFeats = useMemo(() => {
+    if (!activeChoice) return []
+    const pool = activeChoice.optionPool
+    if (pool.length === 0) return feats as Feat5e[]
+    const categoryPrefixes = pool.filter((p) => p.startsWith('category:'))
+    if (categoryPrefixes.length > 0) {
+      const allowedCategories = new Set(categoryPrefixes.map((p) => p.replace('category:', '')))
+      return (feats as Feat5e[]).filter((f) => f.category && allowedCategories.has(f.category))
+    }
+    // Specific feat names in pool
+    const poolLower = new Set(pool.map((p) => p.toLowerCase()))
+    return (feats as Feat5e[]).filter((f) => poolLower.has(f.name.toLowerCase()))
+  }, [activeChoice, feats])
+
+  const grantedModalInitialFilters = useMemo<ActiveFilters | undefined>(() => {
+    if (!activeChoice) return undefined
+    const cats = activeChoice.optionPool
+      .filter((p) => p.startsWith('category:'))
+      .map((p) => p.replace('category:', ''))
+    if (cats.length > 0) return { featCategory: new Set(cats) }
+    return undefined
+  }, [activeChoice])
+
+  const handleOpenGrantedModal = useCallback((choiceId: string) => {
+    setActiveChoiceId(choiceId)
+    setGrantedModalOpen(true)
+  }, [])
+
+  const handleGrantedModalConfirm = useCallback(
+    (selectedFeats: Feat5e[]) => {
+      if (!activeChoiceId || selectedFeats.length === 0) return
+      const feat = selectedFeats[0]
+      resolveFeatChoiceSelection(activeChoiceId, { name: feat.name, source: feat.source })
+      setGrantedModalOpen(false)
+      setActiveChoiceId(null)
+    },
+    [activeChoiceId, resolveFeatChoiceSelection],
+  )
+
+  const handleRemoveGrantedChoice = useCallback(
+    (choiceId: string, featName: string) => {
+      removeFeatChoiceSelection(choiceId, featName)
+    },
+    [removeFeatChoiceSelection],
+  )
+
+  const hasGrantedFeats = fixedGrantedFeats.length > 0 || featChoices.length > 0
 
   // Both normal and special feats are pre-selected when the modal opens.
   const initialSelectedIds = [
@@ -404,6 +500,83 @@ export function FeatsPage() {
         )}
       </Card>
 
+      {/* Granted Feats — from race/background provenance */}
+      {hasGrantedFeats && (
+        <Card className="w-full">
+          <CardContent className="pt-6">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
+              <Sparkle className="h-3.5 w-3.5 text-accent" weight="duotone" />
+              Granted Feats
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Fixed grants (e.g. "Feat X" given by race/bg) */}
+              {fixedGrantedFeats.map((granted) => (
+                <FeatDetailCard
+                  key={`fixed-${granted.name}|${granted.source}`}
+                  feat={{ id: `fixed-${granted.name}`, name: granted.name, source: granted.source }}
+                  featData={granted.featData}
+                  characterSnapshot={characterSnapshot}
+                  grantedBy={granted.sourceLabel}
+                />
+              ))}
+
+              {/* Choice-based grants (pending and resolved) */}
+              {featChoices.map((choice) => {
+                if (choice.selected.length > 0) {
+                  // Resolved — show the selected feat with a change option
+                  return choice.selected.map((selectedName) => {
+                    const data = (feats as Feat5e[]).find(
+                      (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
+                    )
+                    return (
+                      <FeatDetailCard
+                        key={`choice-${choice.id}-${selectedName}`}
+                        feat={{
+                          id: `choice-${choice.id}-${selectedName}`,
+                          name: data?.name ?? selectedName,
+                          source: data?.source ?? '',
+                        }}
+                        featData={data}
+                        characterSnapshot={characterSnapshot}
+                        grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
+                        onRemove={() => handleRemoveGrantedChoice(choice.id, selectedName)}
+                      />
+                    )
+                  })
+                }
+                // Pending — show placeholder with choose button
+                const poolLabel = choice.optionPool
+                  .filter((p) => p.startsWith('category:'))
+                  .map((p) => featCategoryToFull(p.replace('category:', '')))
+                  .join(', ')
+                return (
+                  <div
+                    key={`pending-${choice.id}`}
+                    className="rounded-xl border border-dashed border-accent/40 bg-accent/5 p-4 flex items-center gap-3"
+                  >
+                    <Sparkle className="h-4 w-4 text-accent flex-shrink-0" weight="duotone" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Choose {poolLabel || 'a'} Feat</p>
+                      <p className="text-xs text-muted-foreground">
+                        Granted by {choice.sourceTag.sourceType}: {choice.sourceTag.sourceName}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleOpenGrantedModal(choice.id)}
+                    >
+                      Choose
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <FeatSelectionModal
         open={modalOpen}
         onOpenChange={setModalOpen}
@@ -413,6 +586,21 @@ export function FeatsPage() {
         initialSpecialIds={initialSpecialIds}
         characterSnapshot={characterSnapshot}
         onConfirm={handleModalConfirm}
+      />
+
+      {/* Granted feat choice modal */}
+      <FeatSelectionModal
+        open={grantedModalOpen}
+        onOpenChange={(open) => {
+          setGrantedModalOpen(open)
+          if (!open) setActiveChoiceId(null)
+        }}
+        feats={grantedModalFeats}
+        maxSelections={1}
+        characterSnapshot={characterSnapshot}
+        onConfirm={handleGrantedModalConfirm}
+        initialFilters={grantedModalInitialFilters}
+        allowIgnoreLimit={false}
       />
     </div>
   )

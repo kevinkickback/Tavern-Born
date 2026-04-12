@@ -55,6 +55,7 @@ interface SpellModalConfigLike {
   lockedNames?: Set<string>
   className?: string
   classSource?: string
+  classListOverrides?: Set<string>
   allowedLevels?: Set<string>
   initialFilters?: ActiveFilters
   categories?: CategoryLimit<Spell5e>[]
@@ -292,6 +293,7 @@ export function SpellProfileManager({
           lockedNames={modalConfig.lockedNames}
           className={modalConfig.className}
           classSource={modalConfig.classSource}
+          classListOverrides={modalConfig.classListOverrides}
           allowedLevels={modalConfig.allowedLevels}
           initialFilters={modalConfig.initialFilters}
           categories={

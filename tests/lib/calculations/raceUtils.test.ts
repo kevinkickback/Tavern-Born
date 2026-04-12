@@ -60,6 +60,20 @@ describe('getSpeedDisplay', () => {
     expect(getSpeedDisplay(makeRace({ speed: { walk: 25 } }))).toBe('25 ft.')
   })
 
+  test('formats object speed with movement modes', () => {
+    expect(
+      getSpeedDisplay(
+        makeRace({
+          speed: { walk: 30, fly: 50, swim: 20, climb: 15 },
+        }),
+      ),
+    ).toBe('30 ft., fly 50 ft., swim 20 ft., climb 15 ft.')
+  })
+
+  test('treats true movement mode values as walk speed', () => {
+    expect(getSpeedDisplay(makeRace({ speed: { walk: 35, fly: true } }))).toBe('35 ft., fly 35 ft.')
+  })
+
   test('returns dash for missing speed', () => {
     expect(getSpeedDisplay(makeRace())).toBe('—')
   })

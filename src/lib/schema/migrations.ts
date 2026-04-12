@@ -11,7 +11,7 @@ import type { Character } from '@/types/character'
  * Current character schema version.
  * Increment when making breaking changes to the character format.
  */
-export const CURRENT_SCHEMA_VERSION = 1
+export const CURRENT_SCHEMA_VERSION = 2
 
 /**
  * Migration handler: transform character from version N to N+1.
@@ -182,5 +182,60 @@ registerMigration({
     const c = character as unknown as Record<string, unknown>
     const { version: _v, ...rest } = c
     return rest
+  },
+})
+
+/**
+ * v1 → v2: Migrate equipment choices from single value to per-block arrays.
+ * backgroundEquipmentChoice (string) → backgroundEquipmentChoices (string[])
+ * classEquipmentChoices values ('a'|'b'|'A'|'B') → string[]
+ */
+registerMigration({
+  fromVersion: 1,
+  toVersion: 2,
+  description: 'Migrate equipment choices from single-value to per-block arrays.',
+  up: (character) => {
+    const c = character as Record<string, unknown>
+    const updates: Record<string, unknown> = { ...c, version: '2.0.0' }
+
+    // backgroundEquipmentChoice → backgroundEquipmentChoices
+    if (typeof c.backgroundEquipmentChoice === 'string') {
+      updates.backgroundEquipmentChoices = [c.backgroundEquipmentChoice]
+      delete updates.backgroundEquipmentChoice
+    }
+
+    // classEquipmentChoices: Record<string, string> → Record<string, string[]>
+    if (c.classEquipmentChoices && typeof c.classEquipmentChoices === 'object') {
+      const old = c.classEquipmentChoices as Record<string, unknown>
+      const migrated: Record<string, string[]> = {}
+      for (const [key, val] of Object.entries(old)) {
+        migrated[key] = typeof val === 'string' ? [val.toLowerCase()] : []
+      }
+      updates.classEquipmentChoices = migrated
+    }
+
+    return updates as unknown as Character
+  },
+  down: (character) => {
+    const c = character as unknown as Record<string, unknown>
+    const updates: Record<string, unknown> = { ...c, version: '1.0.0' }
+
+    // backgroundEquipmentChoices → backgroundEquipmentChoice
+    if (Array.isArray(c.backgroundEquipmentChoices) && c.backgroundEquipmentChoices.length > 0) {
+      updates.backgroundEquipmentChoice = c.backgroundEquipmentChoices[0]
+      delete updates.backgroundEquipmentChoices
+    }
+
+    // classEquipmentChoices: Record<string, string[]> → Record<string, string>
+    if (c.classEquipmentChoices && typeof c.classEquipmentChoices === 'object') {
+      const current = c.classEquipmentChoices as Record<string, string[]>
+      const downgraded: Record<string, string> = {}
+      for (const [key, val] of Object.entries(current)) {
+        downgraded[key] = Array.isArray(val) && val.length > 0 ? val[0] : 'a'
+      }
+      updates.classEquipmentChoices = downgraded
+    }
+
+    return updates
   },
 })

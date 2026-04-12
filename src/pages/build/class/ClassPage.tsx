@@ -1,5 +1,5 @@
-import { CaretLeft, CaretRight, Sword } from '@phosphor-icons/react'
-import { useMemo } from 'react'
+import { CaretLeft, CaretRight, Sword, X } from '@phosphor-icons/react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -14,10 +14,10 @@ import {
   resolveSubclassFeatureRefs,
 } from '@/lib/5etools/classData'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
-import { getClassStartingEquipmentChoiceOptions } from '@/lib/5etools/startingEquipment'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
+import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { NoCharCard } from '@/pages/_shared'
 import {
   BuildClassDetailsPanel,
@@ -38,7 +38,6 @@ import {
   buildLevelsToShow,
   countTotalAsiAcrossClasses,
   countTotalFeatSlots,
-  filterClassSpells,
 } from '@/pages/build/class/model/pageUtils'
 import { useClassPageState } from '@/pages/build/class/useClassPageState'
 import { useCharacterStore } from '@/store/characterStore'
@@ -52,6 +51,16 @@ interface SubclassOption {
   levelFeatures?: { level: number; features: ClassFeatureDisplay[] }[]
 }
 
+const CLASS_LEVEL_UP_HINT_ID = 'class-level-up-banner'
+const LEVEL_UP_BUTTON_SELECTOR = '[data-level-up-button="true"]'
+const LEVEL_UP_HINT_WIDTH = 320
+
+interface HintPosition {
+  top: number
+  left: number
+  arrowLeft: number
+}
+
 export function BuildClassPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
@@ -62,9 +71,9 @@ export function BuildClassPage() {
     applyClassSelection,
     applyClassEquipmentChoice,
     applyOptionalFeatureSelection,
+    replaceFeatSelections,
     applySpellSelection,
     removeSpellProvenance,
-    replaceFeatSelections,
   } = useProvenance()
   const {
     selectedClassTab,
@@ -118,16 +127,12 @@ export function BuildClassPage() {
   const viewingClassData = viewingClassSource
     ? classLookup[getEntityLookupKey(viewingClass, viewingClassSource)]
     : fallbackClassByName.get(viewingClass ?? '')
-  const classEquipmentChoiceOptions = useMemo(
-    () => getClassStartingEquipmentChoiceOptions(viewingClassData?.startingEquipment),
-    [viewingClassData?.startingEquipment],
-  )
   const classEquipmentChoiceKey =
     viewingClass && viewingClassData ? `${viewingClass}|${viewingClassData.source ?? ''}` : ''
-  const selectedClassEquipmentChoice =
+  const classEquipmentBlockChoices: string[] =
     (classEquipmentChoiceKey
       ? character?.classEquipmentChoices?.[classEquipmentChoiceKey]
-      : undefined) ?? 'A'
+      : undefined) ?? []
 
   const handleClassChange = (className: string, classSource?: string) => {
     if (!character) return
@@ -398,12 +403,49 @@ export function BuildClassPage() {
     () => (Array.isArray(viewingClassData?.entries) ? (viewingClassData.entries as unknown[]) : []),
     [viewingClassData?.entries],
   )
-  // Reduces array from ~1255 to ~100-200 before it reaches the modal,
-  // cutting both filter cost and initial card render count.
-  const classSpells = useMemo(
-    () => filterClassSpells(spells as Spell5e[], viewingClass, viewingClassSource),
-    [spells, viewingClass, viewingClassSource],
+  const allSpells = spells as Spell5e[]
+  const [showLevelUpHint, setShowLevelUpHint] = useState(
+    () => !isHintDismissed(CLASS_LEVEL_UP_HINT_ID),
   )
+  const [hintPosition, setHintPosition] = useState<HintPosition | null>(null)
+
+  const handleDismissLevelUpHint = () => {
+    setShowLevelUpHint(false)
+    setHintDismissed(CLASS_LEVEL_UP_HINT_ID, true)
+  }
+
+  useEffect(() => {
+    if (!showLevelUpHint) {
+      setHintPosition(null)
+      return
+    }
+
+    const updateHintPosition = () => {
+      const levelUpButton = document.querySelector<HTMLElement>(LEVEL_UP_BUTTON_SELECTOR)
+      if (!levelUpButton) {
+        setHintPosition(null)
+        return
+      }
+
+      const rect = levelUpButton.getBoundingClientRect()
+      const maxLeft = Math.max(16, window.innerWidth - LEVEL_UP_HINT_WIDTH - 16)
+      const left = Math.min(Math.max(rect.right - LEVEL_UP_HINT_WIDTH, 16), maxLeft)
+      const top = rect.bottom + 12
+      const centerX = rect.left + rect.width / 2
+      const arrowLeft = Math.min(Math.max(centerX - left, 18), LEVEL_UP_HINT_WIDTH - 18)
+
+      setHintPosition({ top, left, arrowLeft })
+    }
+
+    updateHintPosition()
+    window.addEventListener('resize', updateHintPosition)
+    window.addEventListener('scroll', updateHintPosition, true)
+
+    return () => {
+      window.removeEventListener('resize', updateHintPosition)
+      window.removeEventListener('scroll', updateHintPosition, true)
+    }
+  }, [showLevelUpHint])
 
   if (!character) {
     return <NoCharCard icon={<Sword weight="duotone" />} noun="configure your class" />
@@ -419,6 +461,32 @@ export function BuildClassPage() {
           </h1>
         </div>
       </div>
+
+      {showLevelUpHint && hintPosition ? (
+        <div
+          className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
+          style={{ top: hintPosition.top, left: hintPosition.left }}
+        >
+          <div className="pointer-events-auto animate-hint-bounce relative w-[320px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
+            <div
+              className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
+              style={{ left: hintPosition.arrowLeft - 7 }}
+            />
+            <button
+              type="button"
+              className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
+              onClick={handleDismissLevelUpHint}
+              aria-label="Dismiss class page hint"
+              title="Dismiss hint"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            <p className="leading-snug text-accent-foreground/95 pr-8">
+              Use the Level Up button to add, remove, or change your classes.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex-1 overflow-hidden px-6 pb-6">
         <div className="max-w-7xl mx-auto h-full">
@@ -457,8 +525,7 @@ export function BuildClassPage() {
                 viewingClass={viewingClass ?? ''}
                 viewingClassSource={viewingClassSource}
                 viewingClassLevel={viewingClassLevel}
-                classEquipmentChoiceOptions={classEquipmentChoiceOptions}
-                selectedClassEquipmentChoice={selectedClassEquipmentChoice}
+                classEquipmentBlockChoices={classEquipmentBlockChoices}
                 selectedNames={selectedNames}
                 optFeatures={optFeatures}
                 featByCompositeId={featByCompositeId}
@@ -475,9 +542,9 @@ export function BuildClassPage() {
                 onOpenAsiPicker={setAsiPickerLevel}
                 onOpenOptPicker={setOptPickerState}
                 onOpenClassFeatPicker={setClassFeatPickerState}
-                onClassEquipmentChoiceChange={(choice) => {
+                onBlockChoiceChange={(blockIndex, choice) => {
                   if (!viewingClassData) return
-                  applyClassEquipmentChoice(viewingClassData, choice)
+                  applyClassEquipmentChoice(viewingClassData, blockIndex, choice)
                 }}
                 onSelectFeature={setSelectedFeature}
                 onExpandDetails={() => setDetailCollapsed(false)}
@@ -509,12 +576,10 @@ export function BuildClassPage() {
         spellPickerLevel={spellPickerLevel}
         onSpellPickerLevelChange={setSpellPickerLevel}
         spellChoicesByLevel={spellChoicesByLevel}
-        classSpells={classSpells}
+        classSpells={allSpells}
         spellByName={spellByName}
         viewingClass={viewingClass}
         viewingClassSource={viewingClassSource}
-        onApplySpellSelection={applySpellSelection}
-        onRemoveSpellProvenance={removeSpellProvenance}
         onUpdateCharacter={(patch) => updateCharacter(character.id, patch)}
         subclassPickerOpen={subclassPickerOpen}
         onSubclassPickerOpenChange={setSubclassPickerOpen}
@@ -541,6 +606,8 @@ export function BuildClassPage() {
         onClassFeatPickerStateChange={setClassFeatPickerState}
         feats={(feats ?? []) as Feat5e[]}
         featByCompositeId={featByCompositeId}
+        onApplySpellSelection={applySpellSelection}
+        onRemoveSpellProvenance={removeSpellProvenance}
       />
     </div>
   )

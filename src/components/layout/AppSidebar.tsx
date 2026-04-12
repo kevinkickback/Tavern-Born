@@ -44,8 +44,8 @@ const navItems: NavItem[] = [
       { label: 'Race', path: '/build/race', icon: null },
       { label: 'Class', path: '/build/class', icon: null },
       { label: 'Background', path: '/build/background', icon: null },
-      { label: 'Proficiencies', path: '/build/proficiencies', icon: null },
       { label: 'Ability Scores', path: '/build/ability-scores', icon: null },
+      { label: 'Proficiencies', path: '/build/proficiencies', icon: null },
     ],
   },
   {
@@ -74,13 +74,7 @@ const navItems: NavItem[] = [
         path: '/details/characteristics',
         icon: null,
       },
-      { label: 'Appearance', path: '/details/appearance', icon: null },
-      {
-        label: 'Allies & Organizations',
-        path: '/details/allies-organizations',
-        icon: null,
-      },
-      { label: 'History', path: '/details/history', icon: null },
+      { label: 'Backstory & Appearance', path: '/details/backstory', icon: null },
     ],
   },
   {

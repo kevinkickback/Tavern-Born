@@ -8,7 +8,7 @@ import {
   Toolbox,
   X,
 } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import {
@@ -56,6 +56,20 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
         )
       : filteredClasses.find((cls) => cls.name === data.class)
     : undefined
+
+  useEffect(() => {
+    if (filteredClasses.length === 0) return
+
+    const hasValidSelection = filteredClasses.some(
+      (cls) => cls.name === data.class && (cls.source ?? '') === (data.classSource ?? ''),
+    )
+    if (hasValidSelection) return
+
+    const firstClass = filteredClasses[0]
+    if (!firstClass) return
+
+    onChange({ class: firstClass.name, classSource: firstClass.source ?? '' })
+  }, [data.class, data.classSource, filteredClasses, onChange])
 
   const spellcastingStat = selectedClass ? getSpellcastingStatDisplay(selectedClass) : 'None'
   const savingThrows = selectedClass ? getSavingThrowsDisplay(selectedClass) : 'None'

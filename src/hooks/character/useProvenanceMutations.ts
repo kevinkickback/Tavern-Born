@@ -1,8 +1,9 @@
 import { useCallback } from 'react'
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import {
-  resolveBackgroundStartingEquipmentPackage,
-  resolveClassStartingEquipmentWithChoice,
+  getBackgroundEquipmentBlocks,
+  getClassDefaultEquipmentBlocks,
+  resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
 import { getBackgroundAbilityData, normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import {
@@ -207,6 +208,7 @@ export function useProvenanceMutations({
         weaponProficiencies?: unknown[]
         armorProficiencies?: unknown[]
         ability?: unknown[]
+        feats?: unknown[]
       },
       subrace?: {
         name: string
@@ -221,6 +223,7 @@ export function useProvenanceMutations({
         weaponProficiencies?: unknown[]
         armorProficiencies?: unknown[]
         ability?: unknown[]
+        feats?: unknown[]
         overwrite?: { ability?: boolean }
       },
       raceAsiBlockIndex: 0 | 1 = 0,
@@ -368,6 +371,7 @@ export function useProvenanceMutations({
         weaponProficiencies?: unknown[]
         armorProficiencies?: unknown[]
         ability?: unknown[]
+        feats?: unknown[]
         overwrite?: { ability?: boolean }
       },
     ) => {
@@ -503,7 +507,7 @@ export function useProvenanceMutations({
       const oldSubclassName = character.subclass || undefined
 
       let newLedger = reconcileClassChange(ledger, oldClassName, oldSubclassName)
-      newLedger = applyClassGrants(cls, subclass, newLedger)
+      newLedger = applyClassGrants(cls, subclass, newLedger, { itemLookup })
 
       const updates: Partial<typeof character> = { provenance: newLedger }
       let newProfs = { ...character.proficiencies }
@@ -580,23 +584,24 @@ export function useProvenanceMutations({
       updates.proficiencies = newProfs
       updates.skills = newSkills
       const classChoiceKey = getClassChoiceKey(cls.name, cls.source)
-      const selectedClassChoice = character.classEquipmentChoices?.[classChoiceKey] ?? 'A'
-      const classEquipment = resolveClassStartingEquipmentWithChoice(
-        cls.startingEquipment,
+      const savedBlockChoices = character.classEquipmentChoices?.[classChoiceKey] ?? []
+      const classBlocks = getClassDefaultEquipmentBlocks(cls.startingEquipment)
+      const classEquipment = resolveEquipmentWithBlockChoices(
+        classBlocks,
         itemLookup,
-        selectedClassChoice,
+        savedBlockChoices,
       )
       newLedger = replaceClassEquipmentGrants(
         newLedger,
         cls.name,
         cls.source,
-        classEquipment.map((item) => item.name),
+        classEquipment.items.map((item) => item.name),
       )
       updates.provenance = newLedger
-      updates.equipment = upsertGrantedEquipment(newEquipment, classEquipment)
+      updates.equipment = upsertGrantedEquipment(newEquipment, classEquipment.items)
       updates.classEquipmentChoices = {
         ...(character.classEquipmentChoices ?? {}),
-        [classChoiceKey]: selectedClassChoice,
+        [classChoiceKey]: savedBlockChoices,
       }
 
       updateCharacter(character.id, updates)
@@ -613,14 +618,15 @@ export function useProvenanceMutations({
         languageProficiencies?: unknown[]
         toolProficiencies?: unknown[]
         startingEquipment?: unknown
+        feats?: unknown[]
       },
-      preferredOption: 'a' | 'b' = 'a',
+      blockChoices: string[] = [],
     ) => {
       if (!character) return
       const oldBgName = character.background || undefined
 
       let newLedger = reconcileBackgroundChange(ledger, oldBgName)
-      newLedger = applyBackgroundGrants(bg, newLedger)
+      newLedger = applyBackgroundGrants(bg, newLedger, { itemLookup })
 
       let newProfs = { ...character.proficiencies }
       const newSkills = { ...(character.skills ?? {}) }
@@ -689,10 +695,11 @@ export function useProvenanceMutations({
         }
       }
 
-      const resolvedBackgroundPackage = resolveBackgroundStartingEquipmentPackage(
-        bg.startingEquipment,
+      const bgBlocks = getBackgroundEquipmentBlocks(bg.startingEquipment)
+      const resolvedBackgroundPackage = resolveEquipmentWithBlockChoices(
+        bgBlocks,
         itemLookup,
-        preferredOption,
+        blockChoices,
       )
 
       const previousBackgroundCurrency = character.backgroundCurrencyGrant
@@ -724,7 +731,7 @@ export function useProvenanceMutations({
         equipment: upsertGrantedEquipment(newEquipment, resolvedBackgroundPackage.items),
         currency: nextCurrency,
         backgroundCurrencyGrant: resolvedBackgroundPackage.currency,
-        backgroundEquipmentChoice: preferredOption,
+        backgroundEquipmentChoices: blockChoices,
       })
     },
     [character, ledger, updateCharacter, itemLookup],
@@ -737,7 +744,8 @@ export function useProvenanceMutations({
         source?: string
         startingEquipment?: unknown
       },
-      choice: 'A' | 'B',
+      blockIndex: number,
+      choice: string,
     ) => {
       if (!character) return
 
@@ -756,25 +764,33 @@ export function useProvenanceMutations({
         [...(character.equipment ?? [])],
         classEquipmentToRemove,
       )
-      const resolvedClassEquipment = resolveClassStartingEquipmentWithChoice(
-        cls.startingEquipment,
+      const classChoiceKey = getClassChoiceKey(cls.name, cls.source)
+      const currentChoices = [...(character.classEquipmentChoices?.[classChoiceKey] ?? [])]
+      // Ensure the array is big enough, then update the specific block index
+      while (currentChoices.length <= blockIndex) {
+        currentChoices.push('a')
+      }
+      currentChoices[blockIndex] = choice.toLowerCase()
+
+      const classBlocks = getClassDefaultEquipmentBlocks(cls.startingEquipment)
+      const resolvedClassEquipment = resolveEquipmentWithBlockChoices(
+        classBlocks,
         itemLookup,
-        choice,
+        currentChoices,
       )
       const nextLedger = replaceClassEquipmentGrants(
         ledger,
         cls.name,
         cls.source,
-        resolvedClassEquipment.map((item) => item.name),
+        resolvedClassEquipment.items.map((item) => item.name),
       )
-      const classChoiceKey = getClassChoiceKey(cls.name, cls.source)
 
       updateCharacter(character.id, {
         provenance: nextLedger,
-        equipment: upsertGrantedEquipment(nextEquipment, resolvedClassEquipment),
+        equipment: upsertGrantedEquipment(nextEquipment, resolvedClassEquipment.items),
         classEquipmentChoices: {
           ...(character.classEquipmentChoices ?? {}),
-          [classChoiceKey]: choice,
+          [classChoiceKey]: currentChoices,
         },
       })
     },
@@ -952,6 +968,52 @@ export function useProvenanceMutations({
       patch({ ...ledger, equipment: newEquipment })
     },
     [character, ledger, patch],
+  )
+
+  const resolveFeatChoiceSelection = useCallback(
+    (choiceId: string, feat: { name: string; source?: string }) => {
+      if (!character) return
+      const choice = ledger.choices.find((c) => c.id === choiceId && c.domain === 'feats')
+      if (!choice || choice.selected.length >= choice.chooseCount) return
+
+      const newSelected = [...choice.selected, feat.name]
+      let newLedger = resolveChoice(ledger, choiceId, newSelected)
+      const tag = makeSourceTag(
+        choice.sourceTag.sourceType,
+        choice.sourceTag.sourceName,
+        'choice',
+        choice.sourceTag.sourceRef,
+      )
+      newLedger = addGrant(newLedger, 'feats', feat.name, tag)
+
+      updateCharacter(character.id, { provenance: newLedger })
+    },
+    [character, ledger, updateCharacter],
+  )
+
+  const removeFeatChoiceSelection = useCallback(
+    (choiceId: string, featName: string) => {
+      if (!character) return
+      const normKey = normalizeKey(featName)
+      const choice = ledger.choices.find((c) => c.id === choiceId && c.domain === 'feats')
+      if (!choice) return
+
+      const newSelected = choice.selected.filter((s) => normalizeKey(s) !== normKey)
+      let newLedger = resolveChoice(ledger, choiceId, newSelected)
+
+      const tags = newLedger.feats[normKey] ?? []
+      const filtered = tags.filter(
+        (t) => !(t.grantType === 'choice' && t.sourceName === choice.sourceTag.sourceName),
+      )
+      const newFeats =
+        filtered.length > 0
+          ? { ...newLedger.feats, [normKey]: filtered }
+          : Object.fromEntries(Object.entries(newLedger.feats).filter(([k]) => k !== normKey))
+      newLedger = { ...newLedger, feats: newFeats }
+
+      updateCharacter(character.id, { provenance: newLedger })
+    },
+    [character, ledger, updateCharacter],
   )
 
   const resolveChoiceSelection = useCallback(
@@ -1164,6 +1226,8 @@ export function useProvenanceMutations({
     removeSpellProvenance,
     applyManualEquipmentGrant,
     removeEquipmentProvenance,
+    resolveFeatChoiceSelection,
+    removeFeatChoiceSelection,
     resolveChoiceSelection,
   }
 }

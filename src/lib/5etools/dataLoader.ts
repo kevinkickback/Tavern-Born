@@ -6,6 +6,7 @@ import {
   parseBackgrounds,
   parseClasses,
   parseClassFeatures,
+  parseClassFluff,
   parseClassFluffSummaries,
   parseConditions,
   parseDeities,
@@ -279,16 +280,32 @@ export class FiveEToolsDataLoader {
             source: string
             summary: string
           }> = []
+          let richFluff: Array<{
+            name: string
+            source: string
+            summary: string
+            sections: Array<{ name: string; entries: unknown[] }>
+            images?: Array<{
+              type: 'image'
+              href?: { url?: string; path?: string }
+              title?: string
+            }>
+          }> = []
           try {
             const fluffFile = classFile.file.replace(/^class-/, 'fluff-class-')
             const fluffData = await this.loadResource(`class/${fluffFile}`, options?.signal)
             fluffSummaries = parseClassFluffSummaries(fluffData)
+            richFluff = parseClassFluff(fluffData)
           } catch {
             fluffSummaries = []
+            richFluff = []
           }
 
           const fluffSummaryByKey = new Map(
             fluffSummaries.map((item) => [`${item.name}|${item.source}`, item.summary]),
+          )
+          const richFluffByKey = new Map(
+            richFluff.map((item) => [`${item.name}|${item.source}`, item]),
           )
 
           const parsedClasses = this.filterByIndexedSource(
@@ -296,7 +313,14 @@ export class FiveEToolsDataLoader {
             classFile.source,
           ).map((item) => {
             const summary = fluffSummaryByKey.get(`${item.name}|${item.source}`)
-            return summary ? { ...item, fluffEntries: [summary] } : item
+            const fluff = richFluffByKey.get(`${item.name}|${item.source}`)
+
+            return {
+              ...item,
+              ...(summary ? { fluffEntries: [summary] } : {}),
+              ...(fluff?.sections ? { classFluffSections: fluff.sections } : {}),
+              ...(fluff?.images ? { classFluffImages: fluff.images } : {}),
+            }
           })
           const parsedFeatures = this.filterByIndexedSource(
             parseClassFeatures(classData) as GameData['classFeatures'],

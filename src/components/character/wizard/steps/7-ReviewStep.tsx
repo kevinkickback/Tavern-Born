@@ -127,16 +127,16 @@ export function ReviewStep({ data }: ReviewStepProps) {
       enabled: data.variantRules?.optionalClassFeatures,
     },
     {
-      label: 'Average Hit Points',
-      enabled: data.variantRules?.averageHitPoints,
-    },
-    {
       label: 'Bladesinger Any Race',
       enabled: data.variantRules?.bladesingerAnyRace,
     },
     {
       label: 'Battlerager Any Race',
       enabled: data.variantRules?.battleragerAnyRace,
+    },
+    {
+      label: 'Average Hit Points',
+      enabled: data.variantRules?.averageHitPoints,
     },
     {
       label: 'Prefer Newer Printings',

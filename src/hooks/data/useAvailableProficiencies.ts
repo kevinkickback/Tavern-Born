@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
 import {
+  iterateProficiencyBlocks,
   normalizeGenericToolChoice,
   normalizeKey,
   resolveRaceGrantFilterOptions,
+  toProficiencyBlocks,
 } from '@/lib/provenance'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -103,22 +105,17 @@ function collectFromProfBlocks(
   blocks: Record<string, unknown>[] | undefined,
   map: Map<string, string>,
 ): void {
-  if (!Array.isArray(blocks)) return
-  for (const block of blocks) {
-    if (!block || typeof block !== 'object') continue
-    for (const [key, val] of Object.entries(block as Record<string, unknown>)) {
-      if (key === 'choose') {
-        const chooseFrom = (val as { from?: unknown[] } | undefined)?.from
-        if (Array.isArray(chooseFrom)) {
-          for (const entry of chooseFrom) addUniqueTool(map, entry)
-        }
-        continue
-      }
-      if (typeof val === 'number' && val > 0) {
-        addUniqueTool(map, key)
-        continue
-      }
-      if (val === true) addUniqueTool(map, key)
+  for (const entry of iterateProficiencyBlocks(toProficiencyBlocks(blocks), 'tools')) {
+    if (entry.kind === 'fixed' || entry.kind === 'numeric') {
+      addUniqueTool(map, entry.key)
+      continue
+    }
+    if (entry.kind === 'generic-tool') {
+      addUniqueTool(map, entry.genericKey)
+      continue
+    }
+    if (entry.kind === 'choose') {
+      for (const choice of entry.from) addUniqueTool(map, choice)
     }
   }
 }
@@ -129,29 +126,24 @@ function collectWeaponOrArmorFromProfBlocks(
   domain: 'armor' | 'weapons',
   context: Parameters<typeof resolveRaceGrantFilterOptions>[2],
 ): void {
-  if (!Array.isArray(blocks)) return
-  for (const block of blocks) {
-    if (!block || typeof block !== 'object') continue
-    for (const [key, val] of Object.entries(block)) {
-      if (key === 'choose') {
-        const choose = val as { from?: unknown[]; fromFilter?: string } | undefined
-        if (Array.isArray(choose?.from)) {
-          for (const entry of choose.from) {
-            if (domain === 'weapons') addUniqueWeapon(map, entry)
-            else addUniqueNormalized(map, entry)
-          }
-        }
-        if (typeof choose?.fromFilter === 'string') {
-          for (const entry of resolveRaceGrantFilterOptions(domain, choose.fromFilter, context)) {
-            if (domain === 'weapons') addUniqueWeapon(map, entry)
-            else addUniqueNormalized(map, entry)
-          }
-        }
-        continue
+  for (const entry of iterateProficiencyBlocks(toProficiencyBlocks(blocks), domain)) {
+    if (entry.kind === 'fixed' || entry.kind === 'numeric') {
+      if (domain === 'weapons') addUniqueWeapon(map, entry.key)
+      else addUniqueNormalized(map, entry.key)
+      continue
+    }
+
+    if (entry.kind === 'choose') {
+      for (const item of entry.from) {
+        if (domain === 'weapons') addUniqueWeapon(map, item)
+        else addUniqueNormalized(map, item)
       }
-      if (val === true) {
-        if (domain === 'weapons') addUniqueWeapon(map, key)
-        else addUniqueNormalized(map, key)
+
+      if (typeof entry.fromFilter === 'string') {
+        for (const item of resolveRaceGrantFilterOptions(domain, entry.fromFilter, context)) {
+          if (domain === 'weapons') addUniqueWeapon(map, item)
+          else addUniqueNormalized(map, item)
+        }
       }
     }
   }

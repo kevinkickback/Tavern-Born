@@ -25,18 +25,24 @@ export function DataSourceStartupModal() {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated)
   const gameData = useGameDataStore((s) => s.gameData)
   const isLoading = useGameDataStore((s) => s.isLoading)
+  const cacheStatus = useGameDataStore((s) => s.cacheStatus)
+  const error = useGameDataStore((s) => s.error)
 
   const [isForced] = useState(() => Boolean(localStorage.getItem(FORCE_KEY)))
   const shouldShowSelectorOnly = !isForced && !gameData
   const [open, setOpen] = useState(false)
 
-  // Only evaluate visibility once the IDB hydration pass is complete.
-  // This prevents the modal from flashing on launch before cached config is read.
+  // Wait for both IDB hydration AND useDataInit to finish resolving the cache
+  // status.  While cacheStatus is still 'unknown', the init hook is reading
+  // the IDB cache — opening here would cause a brief flash before gameData
+  // arrives.  If there's a load error, allow the modal through so the user
+  // can reconfigure.
   useEffect(() => {
     if (!hasHydrated) return
+    if (cacheStatus === 'unknown' && !error) return
     const needsSetup = !gameData && !isLoading
     setOpen(isForced || needsSetup)
-  }, [hasHydrated, gameData, isLoading, isForced])
+  }, [hasHydrated, gameData, isLoading, isForced, cacheStatus, error])
 
   const handleOpenChange = (next: boolean) => {
     if (!next && !gameData && !isLoading && !isForced) {

@@ -7,6 +7,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { buildSpellModalConfig } from '@/lib/calculations/spellModalConfig'
 import {
   getProfileKnownNames,
+  getSubclassExpandedSpellNames,
   inferClassSpellAttributionLevels,
 } from '@/lib/calculations/spellProfiles'
 import {
@@ -473,13 +474,44 @@ export function SpellsPage() {
   }, [ledger.spells, spellProfiles])
 
   const modalConfig = useMemo(() => {
+    const classListOverrides = new Set<string>()
+
+    if (activeProfile?.type === 'class' && activeProfile.className && character) {
+      const classEntry =
+        character.classProgression?.find(
+          (entry) =>
+            entry.name === activeProfile.className &&
+            (entry.source ?? '') === (activeProfile.classSource ?? ''),
+        ) ??
+        (character.class === activeProfile.className
+          ? {
+              name: character.class,
+              source: character.classSource,
+              levels: character.level,
+              subclass: character.subclass,
+              subclassSource: character.subclassSource,
+            }
+          : undefined)
+
+      if (classEntry) {
+        const classData = classByProfileId.get(
+          `class:${classEntry.name}|${classEntry.source ?? ''}`,
+        )
+        const expanded = getSubclassExpandedSpellNames(classEntry, classData)
+        for (const name of expanded) {
+          classListOverrides.add(name)
+        }
+      }
+    }
+
     return buildSpellModalConfig({
       activeProfile,
       spellProfiles,
       detailsByProfileId,
       spellByName,
+      classListOverrides,
     })
-  }, [activeProfile, detailsByProfileId, spellByName, spellProfiles])
+  }, [activeProfile, character, classByProfileId, detailsByProfileId, spellByName, spellProfiles])
 
   const hasWarlockClass = useMemo(
     () => spellcastingDetails.some((detail) => detail.className.toLowerCase() === 'warlock'),

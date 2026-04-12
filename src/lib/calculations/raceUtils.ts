@@ -66,7 +66,29 @@ export function formatCapitalized(s: unknown): string {
 export function getSpeedDisplay(race: Race5e | undefined): string {
   if (!race?.speed) return '—'
   if (typeof race.speed === 'number') return `${race.speed} ft.`
-  if (typeof race.speed === 'object' && 'walk' in race.speed) return `${race.speed.walk ?? 30} ft.`
+  if (typeof race.speed === 'object') {
+    const walk = race.speed.walk ?? 30
+    const parts = [`${walk} ft.`]
+
+    const movementModes: Array<{ label: string; value: number | boolean | undefined }> = [
+      { label: 'fly', value: race.speed.fly },
+      { label: 'swim', value: race.speed.swim },
+      { label: 'climb', value: race.speed.climb },
+      { label: 'burrow', value: race.speed.burrow },
+    ]
+
+    for (const mode of movementModes) {
+      if (mode.value === true) {
+        parts.push(`${mode.label} ${walk} ft.`)
+        continue
+      }
+      if (typeof mode.value === 'number' && mode.value > 0) {
+        parts.push(`${mode.label} ${mode.value} ft.`)
+      }
+    }
+
+    return parts.join(', ')
+  }
   return '—'
 }
 

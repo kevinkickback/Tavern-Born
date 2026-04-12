@@ -44,7 +44,12 @@ export interface SpellSelectionModalProps {
   /** Optional class filter — show only spells on that class list. */
   className?: string
   classSource?: string
+  classListOverrides?: Set<string>
   onConfirm: (names: string[]) => void
+}
+
+function normalizeSpellName(value: string): string {
+  return value.trim().toLowerCase()
 }
 
 const ALL_LEVEL_OPTIONS = [
@@ -121,10 +126,16 @@ function matchSpell(
   activeFilters: ActiveFilters,
   className: string | undefined,
   classSource: string | undefined,
+  classListOverrides: Set<string> | undefined,
   enforceClassList: boolean,
   strictLevels: boolean,
 ): boolean {
-  if (enforceClassList && className && !isSpellOnClassList(spell, className, classSource)) {
+  if (
+    enforceClassList &&
+    className &&
+    !isSpellOnClassList(spell, className, classSource) &&
+    !classListOverrides?.has(normalizeSpellName(spell.name))
+  ) {
     return false
   }
 
@@ -242,6 +253,7 @@ export function SpellSelectionModal({
   allowedLevels,
   className,
   classSource,
+  classListOverrides,
   onConfirm,
 }: SpellSelectionModalProps) {
   const getItemId = (spell: Spell5e) => `${spell.name}|${spell.source ?? ''}`
@@ -299,6 +311,7 @@ export function SpellSelectionModal({
           activeFilters,
           className,
           classSource,
+          classListOverrides,
           !activeFilters.restrictions?.has('ignore-class-list'),
           !!allowedLevels,
         )

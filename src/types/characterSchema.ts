@@ -6,6 +6,7 @@ import {
   POINT_BUY_MAX,
   POINT_BUY_MIN,
 } from '@/lib/calculations/gameRules'
+import { ALL_SKILLS } from '@/lib/calculations/skills'
 
 export const sourceSchema = z
   .string()
@@ -245,13 +246,16 @@ export const savingThrowsSchema = z.object({
   charisma: savingThrowEntrySchema,
 })
 
-export const skillsSchema = z.record(
-  z.object({
-    proficient: z.boolean(),
-    expertise: z.boolean(),
-    bonus: z.number().int(),
-  }),
-)
+const skillEntrySchema = z.object({
+  proficient: z.boolean(),
+  expertise: z.boolean(),
+  bonus: z.number().int(),
+})
+
+export const skillsSchema = z.record(skillEntrySchema).transform((record) => {
+  const validKeySet = new Set<string>(ALL_SKILLS)
+  return Object.fromEntries(Object.entries(record).filter(([key]) => validKeySet.has(key)))
+})
 
 export const portraitTransformSchema = z.object({
   zoom: z.number(),
@@ -503,65 +507,87 @@ export const asiChoiceSchema = z.object({
   abilityChanges: z.record(z.union([z.literal(1), z.literal(2)])),
 })
 
-export const characterSchema = z.object({
-  id: z.string().min(1),
-  version: z.string().default('1.0.0'),
-  name: z.string().min(1).max(100),
-  race: z.string(),
-  raceSource: z.string().optional(),
-  subrace: z.string().optional(),
-  subraceSource: z.string().optional(),
-  class: z.string(),
-  classSource: z.string().optional(),
-  subclass: z.string().optional(),
-  subclassSource: z.string().optional(),
-  background: z.string(),
-  backgroundSource: z.string().optional(),
-  currency: currencySchema.default({ cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }).optional(),
-  level: levelSchema,
-  experiencePoints: z.number().int().min(0).default(0),
-  classProgression: z.array(characterClassEntrySchema).optional(),
-  abilityScores: abilityScoresSchema,
-  proficiencies: proficienciesSchema,
-  features: z.array(featureSchema),
-  feats: z.array(featSchema),
-  allowedSources: z.array(sourceSchema).default(['PHB']),
-  variantRules: variantRulesSchema.optional(),
-  raceAsiChoices: z.array(z.array(z.string())).optional(),
-  raceAsiBlockIndex: z.union([z.literal(0), z.literal(1)]).optional(),
-  backgroundAsiBlockIndex: z.number().int().nonnegative().optional(),
-  backgroundEquipmentChoice: z.enum(['a', 'b']).optional(),
-  backgroundAsiChoices: z.array(z.string()).optional(),
-  backgroundCurrencyGrant: currencySchema.optional(),
-  classEquipmentChoices: z.record(z.enum(['a', 'b', 'A', 'B'])).optional(),
-  spells: spellSelectionSchema,
-  equipment: z.array(equipmentSchema),
-  visions: z
-    .array(
-      z.object({
-        type: z.string().min(1),
-        range: z.number().int().positive().optional(),
+export const characterSchema = z
+  .object({
+    id: z.string().min(1),
+    version: z.string().default('1.0.0'),
+    name: z
+      .string()
+      .min(1)
+      .max(100)
+      .refine((s) => s.trim().length > 0, {
+        message: 'Character name cannot be only whitespace',
       }),
-    )
-    .optional(),
-  hitPoints: hitPointsSchema,
-  armorClass: z.number().int().min(0),
-  initiative: z.number().int(),
-  speed: z.number().int(),
-  damageResistances: z.array(z.string()).optional(),
-  damageImmunities: z.array(z.string()).optional(),
-  conditionImmunities: z.array(z.string()).optional(),
-  savingThrows: savingThrowsSchema,
-  skills: skillsSchema,
-  details: characterDetailsSchema,
-  portrait: z.string().optional(),
-  portraitTransform: portraitTransformSchema.optional(),
-  asiChoices: z.array(asiChoiceSchema).optional(),
-  specialFeats: z.array(featSchema).optional(),
-  provenance: provenanceLedgerSchema.optional(),
-  createdAt: z.string(),
-  lastModified: z.string(),
-})
+    race: z.string(),
+    raceSource: z.string().optional(),
+    subrace: z.string().optional(),
+    subraceSource: z.string().optional(),
+    class: z.string(),
+    classSource: z.string().optional(),
+    subclass: z.string().optional(),
+    subclassSource: z.string().optional(),
+    background: z.string(),
+    backgroundSource: z.string().optional(),
+    currency: currencySchema.default({ cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }).optional(),
+    level: levelSchema,
+    experiencePoints: z.number().int().min(0).default(0),
+    classProgression: z.array(characterClassEntrySchema).optional(),
+    abilityScores: abilityScoresSchema,
+    proficiencies: proficienciesSchema,
+    features: z.array(featureSchema),
+    feats: z.array(featSchema),
+    allowedSources: z.array(sourceSchema).default(['PHB']),
+    variantRules: variantRulesSchema.optional(),
+    raceAsiChoices: z.array(z.array(z.string())).optional(),
+    raceAsiBlockIndex: z.union([z.literal(0), z.literal(1)]).optional(),
+    backgroundAsiBlockIndex: z.number().int().nonnegative().optional(),
+    backgroundEquipmentChoices: z.array(z.string()).optional(),
+    backgroundAsiChoices: z.array(z.string()).optional(),
+    backgroundCurrencyGrant: currencySchema.optional(),
+    classEquipmentChoices: z.record(z.array(z.string())).optional(),
+    spells: spellSelectionSchema,
+    equipment: z.array(equipmentSchema),
+    visions: z
+      .array(
+        z.object({
+          type: z.string().min(1),
+          range: z.number().int().positive().optional(),
+        }),
+      )
+      .optional(),
+    hitPoints: hitPointsSchema,
+    armorClass: z.number().int().min(0),
+    initiative: z.number().int(),
+    speed: z.number().int(),
+    damageResistances: z.array(z.string()).optional(),
+    damageImmunities: z.array(z.string()).optional(),
+    conditionImmunities: z.array(z.string()).optional(),
+    savingThrows: savingThrowsSchema,
+    skills: skillsSchema,
+    details: characterDetailsSchema,
+    portrait: z.string().optional(),
+    portraitTransform: portraitTransformSchema.optional(),
+    asiChoices: z.array(asiChoiceSchema).optional(),
+    specialFeats: z.array(featSchema).optional(),
+    provenance: provenanceLedgerSchema.optional(),
+    createdAt: z.string(),
+    lastModified: z.string(),
+  })
+  .superRefine((char, ctx) => {
+    if (char.classProgression && char.classProgression.length > 0) {
+      const totalLevels = char.classProgression.reduce((sum, entry) => sum + entry.levels, 0)
+      if (totalLevels > MAX_CHARACTER_LEVEL) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.too_big,
+          maximum: MAX_CHARACTER_LEVEL,
+          type: 'number',
+          inclusive: true,
+          message: `Total class levels cannot exceed ${MAX_CHARACTER_LEVEL} (got ${totalLevels})`,
+          path: ['classProgression'],
+        })
+      }
+    }
+  })
 
 export const characterPersistenceSchema = characterSchema
 

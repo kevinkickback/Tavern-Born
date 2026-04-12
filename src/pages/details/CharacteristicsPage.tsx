@@ -1,7 +1,7 @@
 import { Sparkle } from '@phosphor-icons/react'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { RichTextArea } from '@/components/editor/RichTextArea'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -12,233 +12,271 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
+import { NoCharCard } from '../_shared'
+
+const ALIGNMENTS = [
+  'Lawful Good',
+  'Neutral Good',
+  'Chaotic Good',
+  'Lawful Neutral',
+  'True Neutral',
+  'Chaotic Neutral',
+  'Lawful Evil',
+  'Neutral Evil',
+  'Chaotic Evil',
+]
 
 export function CharacteristicsPage() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const updateActiveCharacterDetails = useCharacterStore(
     (state) => state.updateActiveCharacterDetails,
   )
+  const gameData = useGameDataStore((state) => state.gameData)
 
-  const [alignment, setAlignment] = useState(activeCharacter?.details?.alignment || '')
+  const [charName, setCharName] = useState(activeCharacter?.name || '')
+  const [playerName, setPlayerName] = useState(activeCharacter?.details?.playerName || '')
+  const [gender, setGender] = useState(activeCharacter?.details?.gender || '')
   const [faith, setFaith] = useState(activeCharacter?.details?.faith || '')
-  const [lifestyle, setLifestyle] = useState(activeCharacter?.details?.lifestyle || '')
+  const [alignment, setAlignment] = useState(activeCharacter?.details?.alignment || '')
+  const [xp, setXp] = useState(activeCharacter?.experiencePoints ?? 0)
   const [personalityTraits, setPersonalityTraits] = useState(
     activeCharacter?.details?.personalityTraits || '',
   )
   const [ideals, setIdeals] = useState(activeCharacter?.details?.ideals || '')
   const [bonds, setBonds] = useState(activeCharacter?.details?.bonds || '')
   const [flaws, setFlaws] = useState(activeCharacter?.details?.flaws || '')
-  const [goals, setGoals] = useState(activeCharacter?.details?.goals || '')
-  const [fears, setFears] = useState(activeCharacter?.details?.fears || '')
+
+  const charNameId = useId()
+  const playerNameId = useId()
+  const genderId = useId()
+  const deityId = useId()
+  const deityListId = useId()
   const alignmentId = useId()
-  const faithId = useId()
-  const lifestyleId = useId()
+  const xpId = useId()
   const personalityTraitsId = useId()
   const idealsId = useId()
   const bondsId = useId()
   const flawsId = useId()
-  const goalsId = useId()
-  const fearsId = useId()
+
+  const deityInputRef = useRef<HTMLInputElement>(null)
+
+  const deityNames = useMemo(() => {
+    if (!gameData?.deities) return []
+    const names = new Set<string>()
+    for (const d of gameData.deities) {
+      const name = (d as { name?: string }).name
+      if (name) names.add(name)
+    }
+    return [...names].sort((a, b) => a.localeCompare(b))
+  }, [gameData?.deities])
 
   useEffect(() => {
+    setCharName(activeCharacter?.name || '')
+    setXp(activeCharacter?.experiencePoints ?? 0)
     if (activeCharacter?.details) {
-      setAlignment(activeCharacter.details.alignment || '')
+      setPlayerName(activeCharacter.details.playerName || '')
+      setGender(activeCharacter.details.gender || '')
       setFaith(activeCharacter.details.faith || '')
-      setLifestyle(activeCharacter.details.lifestyle || '')
+      setAlignment(activeCharacter.details.alignment || '')
       setPersonalityTraits(activeCharacter.details.personalityTraits || '')
       setIdeals(activeCharacter.details.ideals || '')
       setBonds(activeCharacter.details.bonds || '')
       setFlaws(activeCharacter.details.flaws || '')
-      setGoals(activeCharacter.details.goals || '')
-      setFears(activeCharacter.details.fears || '')
     }
   }, [activeCharacter])
 
-  const alignments = [
-    'Lawful Good',
-    'Neutral Good',
-    'Chaotic Good',
-    'Lawful Neutral',
-    'True Neutral',
-    'Chaotic Neutral',
-    'Lawful Evil',
-    'Neutral Evil',
-    'Chaotic Evil',
-  ]
-
-  const updateDraftDetails = (updates: Record<string, unknown>) => {
-    updateActiveCharacterDetails(updates)
-  }
-
   if (!activeCharacter) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Card className="p-8 text-center max-w-md">
-          <Sparkle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
-          <p className="text-muted-foreground">
-            Please select or create a character to edit their characteristics.
-          </p>
-        </Card>
-      </div>
-    )
+    return <NoCharCard icon={<Sparkle weight="duotone" />} noun="edit characteristics" />
   }
 
   return (
     <div className="max-w-7xl mx-auto w-full space-y-6">
-      <div>
-        <h1 className="font-display text-4xl font-bold mb-2">Characteristics</h1>
-        <p className="text-muted-foreground">Define your character's personality and beliefs</p>
-      </div>
+      <h1 className="font-display text-4xl font-bold flex items-center gap-3">
+        <Sparkle className="h-8 w-8 text-accent" weight="duotone" />
+        Characteristics
+      </h1>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card className="p-6 space-y-4">
-          <div>
-            <Label htmlFor={alignmentId} className="mb-2 block flex items-center gap-2">
-              <Sparkle className="h-4 w-4" weight="fill" />
-              Alignment
-            </Label>
-            <Select
-              value={alignment}
-              onValueChange={(value) => {
-                setAlignment(value)
-                updateDraftDetails({ alignment: value })
-              }}
-            >
-              <SelectTrigger id={alignmentId}>
-                <SelectValue placeholder="Select alignment" />
-              </SelectTrigger>
-              <SelectContent>
-                {alignments.map((align) => (
-                  <SelectItem key={align} value={align.toLowerCase().replace(' ', '-')}>
-                    {align}
-                  </SelectItem>
+      <Card className="w-full">
+        <CardContent className="pt-6">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
+            Identity
+          </h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl">
+            <div className="space-y-1.5">
+              <Label htmlFor={charNameId}>Character Name</Label>
+              <Input
+                id={charNameId}
+                value={charName}
+                onChange={(e) => {
+                  setCharName(e.target.value)
+                  updateCharacter(activeCharacter.id, { name: e.target.value })
+                }}
+                placeholder="Character name"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor={playerNameId}>Player Name</Label>
+              <Input
+                id={playerNameId}
+                value={playerName}
+                onChange={(e) => {
+                  setPlayerName(e.target.value)
+                  updateActiveCharacterDetails({ playerName: e.target.value })
+                }}
+                placeholder="Player name"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor={genderId}>Gender</Label>
+              <Select
+                value={gender}
+                onValueChange={(value) => {
+                  setGender(value)
+                  updateActiveCharacterDetails({ gender: value })
+                }}
+              >
+                <SelectTrigger id={genderId}>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Non-binary">Non-binary</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor={deityId}>Deity</Label>
+              <Input
+                ref={deityInputRef}
+                id={deityId}
+                list={deityListId}
+                value={faith}
+                onChange={(e) => {
+                  setFaith(e.target.value)
+                  updateActiveCharacterDetails({ faith: e.target.value })
+                }}
+                placeholder="Enter or select deity"
+              />
+              <datalist id={deityListId}>
+                {deityNames.map((name) => (
+                  <option key={name} value={name} />
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </datalist>
+            </div>
 
-          <div>
-            <Label htmlFor={faithId} className="mb-2 block">
-              Faith / Deity
-            </Label>
-            <Input
-              id={faithId}
-              value={faith}
-              onChange={(e) => {
-                const value = e.target.value
-                setFaith(value)
-                updateDraftDetails({ faith: value })
+            <div className="space-y-1.5">
+              <Label htmlFor={xpId}>Experience Points</Label>
+              <Input
+                id={xpId}
+                type="number"
+                min={0}
+                step={1}
+                value={xp || ''}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  if (raw === '') {
+                    setXp(0)
+                    updateCharacter(activeCharacter.id, { experiencePoints: 0 })
+                    return
+                  }
+                  const parsed = Number.parseInt(raw, 10)
+                  if (Number.isNaN(parsed)) return
+                  const val = Math.max(0, parsed)
+                  setXp(val)
+                  updateCharacter(activeCharacter.id, { experiencePoints: val })
+                }}
+                placeholder="0"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor={alignmentId}>Alignment</Label>
+              <Select
+                value={alignment}
+                onValueChange={(value) => {
+                  setAlignment(value)
+                  updateActiveCharacterDetails({ alignment: value })
+                }}
+              >
+                <SelectTrigger id={alignmentId}>
+                  <SelectValue placeholder="Select alignment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALIGNMENTS.map((align) => (
+                    <SelectItem key={align} value={align.toLowerCase().replace(' ', '-')}>
+                      {align}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="w-full">
+        <CardContent className="pt-6">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-5">
+            Personality
+          </h3>
+          <div className="grid md:grid-cols-2 gap-6">
+            <RichTextArea
+              id={personalityTraitsId}
+              label="Personality Traits"
+              value={personalityTraits}
+              onChange={(value) => {
+                setPersonalityTraits(value)
+                updateActiveCharacterDetails({ personalityTraits: value })
               }}
-              placeholder="e.g., Bahamut, Pelor, None"
+              placeholder="Describe your character's personality traits."
+              rows={6}
+            />
+
+            <RichTextArea
+              id={idealsId}
+              label="Ideals"
+              value={ideals}
+              onChange={(value) => {
+                setIdeals(value)
+                updateActiveCharacterDetails({ ideals: value })
+              }}
+              placeholder="What does your character believe in?"
+              rows={6}
+            />
+
+            <RichTextArea
+              id={bondsId}
+              label="Bonds"
+              value={bonds}
+              onChange={(value) => {
+                setBonds(value)
+                updateActiveCharacterDetails({ bonds: value })
+              }}
+              placeholder="What ties bind your character to the world?"
+              rows={6}
+            />
+
+            <RichTextArea
+              id={flawsId}
+              label="Flaws"
+              value={flaws}
+              onChange={(value) => {
+                setFlaws(value)
+                updateActiveCharacterDetails({ flaws: value })
+              }}
+              placeholder="What weaknesses does your character have?"
+              rows={6}
             />
           </div>
-
-          <div>
-            <Label htmlFor={lifestyleId} className="mb-2 block">
-              Lifestyle
-            </Label>
-            <Select
-              value={lifestyle}
-              onValueChange={(value) => {
-                setLifestyle(value)
-                updateDraftDetails({ lifestyle: value })
-              }}
-            >
-              <SelectTrigger id={lifestyleId}>
-                <SelectValue placeholder="Select lifestyle" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="wretched">Wretched</SelectItem>
-                <SelectItem value="squalid">Squalid</SelectItem>
-                <SelectItem value="poor">Poor</SelectItem>
-                <SelectItem value="modest">Modest</SelectItem>
-                <SelectItem value="comfortable">Comfortable</SelectItem>
-                <SelectItem value="wealthy">Wealthy</SelectItem>
-                <SelectItem value="aristocratic">Aristocratic</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
-
-        <Card className="p-6 space-y-4">
-          <RichTextArea
-            id={personalityTraitsId}
-            label="Personality Traits"
-            value={personalityTraits}
-            onChange={(value) => {
-              setPersonalityTraits(value)
-              updateDraftDetails({ personalityTraits: value })
-            }}
-            placeholder="Describe your character's personality traits in plain language."
-            rows={4}
-          />
-
-          <RichTextArea
-            id={idealsId}
-            label="Ideals"
-            value={ideals}
-            onChange={(value) => {
-              setIdeals(value)
-              updateDraftDetails({ ideals: value })
-            }}
-            placeholder="What does your character believe in? (e.g., Justice, Freedom, Honor)"
-            rows={3}
-          />
-        </Card>
-
-        <Card className="p-6 space-y-4">
-          <RichTextArea
-            id={bondsId}
-            label="Bonds"
-            value={bonds}
-            onChange={(value) => {
-              setBonds(value)
-              updateDraftDetails({ bonds: value })
-            }}
-            placeholder="What ties bind your character to the world?"
-            rows={4}
-          />
-
-          <RichTextArea
-            id={flawsId}
-            label="Flaws"
-            value={flaws}
-            onChange={(value) => {
-              setFlaws(value)
-              updateDraftDetails({ flaws: value })
-            }}
-            placeholder="What weaknesses does your character have?"
-            rows={3}
-          />
-        </Card>
-
-        <Card className="p-6 space-y-4">
-          <RichTextArea
-            id={goalsId}
-            label="Goals & Motivations"
-            value={goals}
-            onChange={(value) => {
-              setGoals(value)
-              updateDraftDetails({ goals: value })
-            }}
-            placeholder="What drives your character forward?"
-            rows={4}
-          />
-
-          <RichTextArea
-            id={fearsId}
-            label="Fears & Phobias"
-            value={fears}
-            onChange={(value) => {
-              setFears(value)
-              updateDraftDetails({ fears: value })
-            }}
-            placeholder="What does your character fear? (e.g., dragons, darkness)"
-            rows={3}
-          />
-        </Card>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
