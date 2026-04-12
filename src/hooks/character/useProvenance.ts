@@ -1,7 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useProvenanceMutations } from '@/hooks/character/useProvenanceMutations'
 import { useProvenanceRows } from '@/hooks/character/useProvenanceRows'
-import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -26,7 +25,7 @@ export function useProvenance() {
 
   const ledger = useMemo(() => getLedger(character), [character?.provenance, character])
 
-  const itemLookup = useMemo(() => buildItemLookup(items), [items])
+  const itemLookup = useGameDataStore((s) => s.itemLookup)
 
   const patch = useCallback(
     (newLedger: ProvenanceLedger) => {

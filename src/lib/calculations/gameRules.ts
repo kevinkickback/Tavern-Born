@@ -1,5 +1,11 @@
 import type { Class5e } from '@/types/5etools'
 import type { AbilityScores } from '@/types/character'
+import {
+  ABILITY_ABBREV_ORDER,
+  ABILITY_ABBREV_TO_FULL,
+  ABILITY_ABBREV_TO_TITLE,
+  toAbilityAbbrev,
+} from './abilityNames'
 
 export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const
 
@@ -61,12 +67,14 @@ export function getHitDiceFromClass(cls: Class5e | undefined | null): number {
  * Read ASI levels from parsed class feature references.
  * Falls back to the standard [4,8,12,16,19] if parsed refs are unavailable.
  */
+const ASI_NAME_PATTERNS = ['ability score improvement', 'ability score increase', 'epic boon']
+
 export function getASILevelsFromClass(cls: Class5e | undefined | null): number[] {
   if (cls?.classFeatureRefs && cls.classFeatureRefs.length > 0) {
     const levels = cls.classFeatureRefs
       .filter(
         (ref) =>
-          ref.name.toLowerCase().includes('ability score improvement') &&
+          ASI_NAME_PATTERNS.some((pattern) => ref.name.toLowerCase().includes(pattern)) &&
           typeof ref.level === 'number',
       )
       .map((ref) => ref.level as number)
@@ -80,31 +88,8 @@ export function getASILevelsFromClass(cls: Class5e | undefined | null): number[]
   return [4, 8, 12, 16, 19]
 }
 
-const ABILITY_ABBREV_TO_FULL: Record<string, string> = {
-  str: 'strength',
-  dex: 'dexterity',
-  con: 'constitution',
-  int: 'intelligence',
-  wis: 'wisdom',
-  cha: 'charisma',
-}
-
-const ABILITY_ABV_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const
-
-const ABILITY_ABV_TO_TITLE: Record<string, string> = {
-  str: 'Strength',
-  dex: 'Dexterity',
-  con: 'Constitution',
-  int: 'Intelligence',
-  wis: 'Wisdom',
-  cha: 'Charisma',
-}
-
 function normalizeReqKeyToAbilityAbv(key: string): string | null {
-  const lower = key.toLowerCase()
-  if (ABILITY_ABV_TO_TITLE[lower]) return lower
-  const fromFull = Object.entries(ABILITY_ABBREV_TO_FULL).find(([, full]) => full === lower)
-  return fromFull?.[0] ?? null
+  return toAbilityAbbrev(key)
 }
 
 function sortedAbilityReqEntries(group: Record<string, number>): Array<[string, number]> {
@@ -113,14 +98,14 @@ function sortedAbilityReqEntries(group: Record<string, number>): Array<[string, 
     .filter((entry): entry is [string, number] => !!entry[0])
     .sort(
       (a, b) =>
-        ABILITY_ABV_ORDER.indexOf(a[0] as (typeof ABILITY_ABV_ORDER)[number]) -
-        ABILITY_ABV_ORDER.indexOf(b[0] as (typeof ABILITY_ABV_ORDER)[number]),
+        ABILITY_ABBREV_ORDER.indexOf(a[0] as (typeof ABILITY_ABBREV_ORDER)[number]) -
+        ABILITY_ABBREV_ORDER.indexOf(b[0] as (typeof ABILITY_ABBREV_ORDER)[number]),
     )
 }
 
 function formatAbilityRequirementGroup(group: Record<string, number>, joiner = ', '): string {
   return sortedAbilityReqEntries(group)
-    .map(([abv, min]) => `${ABILITY_ABV_TO_TITLE[abv]} ${min}`)
+    .map(([abv, min]) => `${ABILITY_ABBREV_TO_TITLE[abv]} ${min}`)
     .join(joiner)
 }
 

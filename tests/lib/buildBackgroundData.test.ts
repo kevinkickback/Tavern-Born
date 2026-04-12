@@ -16,8 +16,8 @@ describe('buildBackgroundData', () => {
     } as Background5e
 
     expect(getBackgroundEquipmentPackages(background)).toEqual([
-      { label: 'Option A', entries: ['book|xphb'] },
-      { label: 'Option B', entries: [{ value: 5000 }] },
+      { key: 'a', label: 'Option A', entries: ['book|xphb'] },
+      { key: 'b', label: 'Option B', entries: [{ value: 5000 }] },
     ])
   })
 
@@ -37,8 +37,8 @@ describe('buildBackgroundData', () => {
     } as Background5e
 
     expect(getBackgroundEquipmentPackages(background)).toEqual([
-      { label: 'Option A', entries: ['book|phb'] },
-      { label: 'Option B', entries: [{ special: 'prayer wheel' }] },
+      { key: 'a', label: 'Option A', entries: ['book|phb'] },
+      { key: 'b', label: 'Option B', entries: [{ special: 'prayer wheel' }] },
     ])
   })
 })

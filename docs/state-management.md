@@ -39,7 +39,7 @@ The character store exposes three write paths. Use the correct one for the conte
 |---|---|
 | `updateCharacter(id, patch)` | Any component that holds an explicit character `id` (e.g. character list, class page, level-up modal). The standard and preferred path for most writes. |
 | `updateActiveCharacter(patch)` | Components that are always scoped to the active character and don't have an explicit id (e.g. PortraitPage, detail sub-pages). Convenience wrapper around `updateCharacter` that fills in `activeCharacterId`. |
-| `updateActiveCharacterDetails(patch)` | Same as above, but restricted to the `character.details` sub-object. Use in detail-editing pages (CharacteristicsPage, HistoryPage, AppearancePage, AlliesOrganizationsPage). |
+| `updateActiveCharacterDetails(patch)` | Same as above, but restricted to the `character.details` sub-object. Use in detail-editing pages (CharacteristicsPage, BackstoryAppearancePage). |
 
 Rules that apply to all three paths:
 - Active character changes are draft updates until `saveActiveCharacter()` is called.
@@ -54,7 +54,7 @@ Stored examples (mutable runtime):
 - spell profile selections (class profiles + special unrestricted profile)
 - user-entered detail fields and choices
 - inventory currency counters (`cp`, `sp`, `ep`, `gp`, `pp`)
-- selected background equipment option (`backgroundEquipmentChoice`)
+- selected background equipment options per block (`backgroundEquipmentChoices`)
 - selected class equipment option per class source (`classEquipmentChoices`)
 - race-applied trait state (`visions`, `damageResistances`, `damageImmunities`, `conditionImmunities`)
 

@@ -5,7 +5,15 @@ export interface Race5e {
   fluffEntries?: unknown[]
   lineage?: string | boolean
   size?: string[]
-  speed?: number | { walk?: number }
+  speed?:
+    | number
+    | {
+        walk?: number
+        fly?: number | boolean
+        swim?: number | boolean
+        climb?: number | boolean
+        burrow?: number | boolean
+      }
   ability?: AbilityBonus[]
   entries?: unknown[]
   darkvision?: number
@@ -15,7 +23,7 @@ export interface Race5e {
   weaponProficiencies?: Record<string, unknown>[]
   armorProficiencies?: Record<string, unknown>[]
   feats?: unknown[]
-  additionalSpells?: unknown[]
+  additionalSpells?: RaceAdditionalSpells[]
   resist?: string[]
   immune?: string[]
   conditionImmune?: string[]
@@ -34,10 +42,20 @@ export interface Class5e {
   source: string
   page?: number
   fluffEntries?: unknown[]
+  classFluffSections?: ClassFluffSection[]
+  classFluffImages?: ClassFluffImage[]
   hd?: { faces: number; number?: number }
   multiclassing?: {
     requirements?: MulticlassRequirements
-    proficienciesGained?: unknown
+    proficienciesGained?: {
+      armor?: string[]
+      weapons?: string[]
+      tools?: string[]
+      toolProficiencies?: Array<
+        Record<string, boolean | number | { choose?: { from?: string[]; count?: number } }>
+      >
+      skills?: { choose?: { from: string[]; count: number } }
+    }
   }
   proficiency?: string[]
   startingProficiencies?: {
@@ -71,6 +89,28 @@ export interface ClassFeature {
   [key: string]: unknown
 }
 
+export interface ClassFluffSection {
+  name: string
+  entries: unknown[]
+}
+
+export interface ClassFluffImage {
+  type: 'image'
+  href?: {
+    url?: string
+    path?: string
+  }
+  title?: string
+}
+
+export interface ClassFluff {
+  name: string
+  source: string
+  summary: string
+  sections: ClassFluffSection[]
+  images?: ClassFluffImage[]
+}
+
 export interface ClassFeatureReference {
   ref: string
   name: string
@@ -92,7 +132,27 @@ export interface Subclass5e {
   subclassFeatures?: string[] | SubclassFeature[]
   subclassFeatureRefs?: SubclassFeatureReference[]
   levelFeatures?: Array<{ level: number; features: SubclassFeature[] }>
+  spellcastingAbility?: string
+  casterProgression?: string
+  cantripProgression?: number[]
+  spellsKnownProgression?: number[]
+  additionalSpells?: SubclassAdditionalSpells[]
   [key: string]: unknown
+}
+
+export interface RaceAdditionalSpells {
+  innate?: Record<string, Record<string, Record<string, string[]>>>
+  known?: Record<string, string[]>
+  ability?: string | { choose: string[] }
+}
+
+export interface SubclassAdditionalSpells {
+  prepared?: Record<string, string[]>
+  expanded?: Record<string, string[]>
+  innate?: Record<string, unknown>
+  known?: Record<string, string[]>
+  ability?: string | { choose: string[] }
+  name?: string
 }
 
 export interface SubclassFeature {

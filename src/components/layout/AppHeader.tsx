@@ -106,6 +106,7 @@ export function AppHeader() {
               variant="ghost"
               size="sm"
               className="gap-2"
+              data-level-up-button="true"
               onClick={() => setLevelUpOpen(true)}
             >
               <TrendUp />

@@ -43,6 +43,14 @@ describe('gameRules', () => {
     expect(getASILevelsFromClass(undefined)).toEqual([4, 8, 12, 16, 19])
   })
 
+  test('getASILevelsFromClass detects epic boon as an ASI-equivalent level', () => {
+    const cls = makeClassFixture({
+      classFeatures: ['Epic Boon|Wizard|XPHB|19'],
+    })
+
+    expect(getASILevelsFromClass(cls)).toEqual([19])
+  })
+
   test('checkMulticlassRequirements handles direct requirements', () => {
     const fighter = makeClassFixture({
       name: 'Fighter',

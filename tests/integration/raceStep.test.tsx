@@ -52,6 +52,27 @@ describe('RaceStep', () => {
     expect(document.body.textContent?.includes('diverse and ambitious')).toBe(true)
   })
 
+  test('defaults to the first available race when no race is selected', async () => {
+    const onChange = vi.fn()
+    const races: Race5e[] = [
+      { name: 'Dwarf', source: 'PHB' } as Race5e,
+      { name: 'Elf', source: 'PHB' } as Race5e,
+    ]
+
+    render(<RaceStep data={INITIAL_CHARACTER_DATA} onChange={onChange} races={races} />)
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledWith({
+        race: 'Dwarf',
+        raceSource: 'PHB',
+        subrace: '',
+        subraceSource: '',
+        raceAsiChoices: [],
+        raceAsiBlockIndex: 0,
+      })
+    })
+  })
+
   test('keeps parent race traits visible when the default subrace is selected', () => {
     const races: Race5e[] = [
       {

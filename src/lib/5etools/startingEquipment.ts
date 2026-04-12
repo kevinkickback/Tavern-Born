@@ -17,11 +17,7 @@ type EquipmentEntry =
     }
 
 type EquipmentChoiceBlock = {
-  _?: EquipmentEntry[]
-  a?: EquipmentEntry[]
-  b?: EquipmentEntry[]
-  A?: EquipmentEntry[]
-  B?: EquipmentEntry[]
+  [key: string]: EquipmentEntry[] | undefined
 }
 
 export interface CurrencyTotals {
@@ -75,9 +71,21 @@ function normalizeChoiceBlock(block: unknown): EquipmentChoiceBlock | null {
   return block as EquipmentChoiceBlock
 }
 
-function getClassDefaultEquipmentBlocks(startingEquipment: unknown): unknown[] {
+export function getClassDefaultEquipmentBlocks(startingEquipment: unknown): unknown[] {
   if (!startingEquipment || typeof startingEquipment !== 'object') return []
   return (startingEquipment as { defaultData?: unknown[] }).defaultData ?? []
+}
+
+export function getBackgroundEquipmentBlocks(startingEquipment: unknown): unknown[] {
+  if (Array.isArray(startingEquipment)) return startingEquipment
+  if (!startingEquipment || typeof startingEquipment !== 'object') return []
+
+  const withDefaultData = startingEquipment as { defaultData?: unknown[] }
+  if (Array.isArray(withDefaultData.defaultData)) {
+    return withDefaultData.defaultData
+  }
+
+  return [startingEquipment]
 }
 
 export function hasClassStartingEquipmentChoice(startingEquipment: unknown): boolean {
@@ -106,11 +114,15 @@ function resolveFromItemRef(
   const item = itemLookup.get(buildItemKey(parsed.name, source))
 
   if (!item) {
+    console.warn(
+      `[startingEquipment] Item lookup failed for "${parsed.name}" (${source}); using generic placeholder.`,
+    )
     return {
       name: options?.displayName || parsed.name,
       source,
       type: 'G',
       quantity: options?.quantity ?? 1,
+      _unresolved: true,
     }
   }
 
@@ -227,6 +239,19 @@ function mergeEquipment(items: EquipmentLike[]): EquipmentLike[] {
   return Array.from(merged.values())
 }
 
+function countUnresolved(items: EquipmentLike[]): number {
+  return items.filter((item) => item._unresolved).length
+}
+
+function warnIfUnresolved(context: string, items: EquipmentLike[]): void {
+  const unresolvedCount = countUnresolved(items)
+  if (unresolvedCount === 0) return
+
+  console.warn(
+    `[startingEquipment] ${unresolvedCount}/${items.length} items unresolved while resolving ${context}.`,
+  )
+}
+
 function collectChosenEntries(
   block: EquipmentChoiceBlock,
   preferredOption: 'a' | 'b',
@@ -290,7 +315,9 @@ export function resolveClassStartingEquipment(
     items.push(...resolved.items)
   }
 
-  return mergeEquipment(items)
+  const merged = mergeEquipment(items)
+  warnIfUnresolved('class starting equipment', merged)
+  return merged
 }
 
 /**
@@ -313,8 +340,84 @@ export function resolveClassStartingEquipmentWithChoice(
     items.push(...resolved.items)
   }
 
-  return mergeEquipment(items)
+  const merged = mergeEquipment(items)
+  warnIfUnresolved(`class starting equipment (${normalizedChoice.toUpperCase()})`, merged)
+  return merged
 }
+
+export interface ClassStartingEquipmentOptions {
+  A: BackgroundStartingPackage
+  B: BackgroundStartingPackage
+}
+
+export function resolveClassStartingEquipmentOptions(
+  startingEquipment: unknown,
+  itemLookup: Map<string, Item5e>,
+): ClassStartingEquipmentOptions {
+  const defaultData = getClassDefaultEquipmentBlocks(startingEquipment)
+  const optionAItems: EquipmentLike[] = []
+  const optionBItems: EquipmentLike[] = []
+  const optionACurrency = emptyCurrency()
+  const optionBCurrency = emptyCurrency()
+
+  for (const block of defaultData) {
+    const normalized = normalizeChoiceBlock(block)
+    if (!normalized) continue
+
+    const resolvedA = resolveEntries(collectChosenEntries(normalized, 'a'), itemLookup)
+    const resolvedB = resolveEntries(collectChosenEntries(normalized, 'b'), itemLookup)
+
+    optionAItems.push(...resolvedA.items)
+    optionBItems.push(...resolvedB.items)
+    addCurrency(optionACurrency, resolvedA.currency)
+    addCurrency(optionBCurrency, resolvedB.currency)
+  }
+
+  return {
+    A: {
+      items: mergeEquipment(optionAItems),
+      currency: optionACurrency,
+    },
+    B: {
+      items: mergeEquipment(optionBItems),
+      currency: optionBCurrency,
+    },
+  }
+}
+
+function formatCurrencyDisplay(currency: CurrencyTotals): string | null {
+  const parts: string[] = []
+  if (currency.pp > 0) parts.push(`${currency.pp} pp`)
+  if (currency.gp > 0) parts.push(`${currency.gp} gp`)
+  if (currency.ep > 0) parts.push(`${currency.ep} ep`)
+  if (currency.sp > 0) parts.push(`${currency.sp} sp`)
+  if (currency.cp > 0) parts.push(`${currency.cp} cp`)
+  return parts.length > 0 ? parts.join(', ') : null
+}
+
+export function formatClassStartingEquipmentOptionEntries(
+  equipment: BackgroundStartingPackage,
+): unknown[] {
+  const itemLines = equipment.items.map((item) =>
+    item.quantity > 1 ? `${item.name} x${item.quantity}` : item.name,
+  )
+  const currencyLine = formatCurrencyDisplay(equipment.currency)
+  if (currencyLine) {
+    itemLines.push(`Currency: ${currencyLine}`)
+  }
+
+  if (itemLines.length === 0) {
+    return ['No starting equipment listed.']
+  }
+
+  return [
+    {
+      type: 'list',
+      items: itemLines,
+    },
+  ]
+}
+
 export function resolveBackgroundStartingEquipment(
   startingEquipment: unknown,
   itemLookup: Map<string, Item5e>,
@@ -329,9 +432,7 @@ export function resolveBackgroundStartingEquipmentPackage(
   itemLookup: Map<string, Item5e>,
   preferredOption: 'a' | 'b' = 'a',
 ): BackgroundStartingPackage {
-  const blocks: unknown[] = Array.isArray(startingEquipment)
-    ? startingEquipment
-    : [startingEquipment]
+  const blocks = getBackgroundEquipmentBlocks(startingEquipment)
 
   const items: EquipmentLike[] = []
   const currency = emptyCurrency()
@@ -344,8 +445,166 @@ export function resolveBackgroundStartingEquipmentPackage(
     addCurrency(currency, resolved.currency)
   }
 
+  const mergedItems = mergeEquipment(items)
+  warnIfUnresolved('background starting equipment', mergedItems)
+
   return {
-    items: mergeEquipment(items),
+    items: mergedItems,
     currency,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Per-block equipment resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * A resolved equipment block, ready for UI rendering.
+ * Fixed blocks (no choices) have isFixed=true and a single `_` option.
+ * Choice blocks have choiceKeys=['a','b',...] and an option entry per key.
+ * Each option's BackgroundStartingPackage already includes the fixed (_) items.
+ */
+export interface ResolvedEquipmentBlock {
+  index: number
+  displayText: string | null
+  isFixed: boolean
+  choiceKeys: string[]
+  options: Record<string, BackgroundStartingPackage>
+}
+
+function getBlockChoiceKeys(block: EquipmentChoiceBlock): string[] {
+  const seen = new Set<string>()
+  const keys: string[] = []
+  for (const k of Object.keys(block)) {
+    if (k === '_') continue
+    const lower = k.toLowerCase()
+    if (!seen.has(lower)) {
+      seen.add(lower)
+      keys.push(lower)
+    }
+  }
+  return keys.sort()
+}
+
+/**
+ * Convert per-block choice indices to a resolved equipment package.
+ * blockChoices[i] is the selected lowercase key for block i (defaults to first choice key or 'a').
+ */
+export function resolveEquipmentWithBlockChoices(
+  blocks: unknown[],
+  itemLookup: Map<string, Item5e>,
+  blockChoices: string[],
+): BackgroundStartingPackage {
+  const allItems: EquipmentLike[] = []
+  const currency = emptyCurrency()
+
+  blocks.forEach((rawBlock, i) => {
+    const block = normalizeChoiceBlock(rawBlock)
+    if (!block) return
+
+    const choiceKeys = getBlockChoiceKeys(block)
+    const wantedKey = (blockChoices[i] ?? choiceKeys[0] ?? 'a').toLowerCase()
+
+    const actualKey =
+      Object.keys(block).find((k) => k.toLowerCase() === wantedKey) ??
+      Object.keys(block).find((k) => k !== '_')
+
+    const fixed = block._ ?? []
+    const chosen = actualKey ? (block[actualKey] ?? []) : []
+    const resolved = resolveEntries([...fixed, ...chosen], itemLookup)
+
+    allItems.push(...resolved.items)
+    addCurrency(currency, resolved.currency)
+  })
+
+  const mergedItems = mergeEquipment(allItems)
+  warnIfUnresolved('equipment block choices', mergedItems)
+
+  return {
+    items: mergedItems,
+    currency,
+  }
+}
+
+function resolveBlocksToStructure(
+  blocks: unknown[],
+  displayTexts: (string | null)[],
+  itemLookup: Map<string, Item5e>,
+): ResolvedEquipmentBlock[] {
+  return blocks.flatMap((rawBlock, index) => {
+    const block = normalizeChoiceBlock(rawBlock)
+    if (!block) return []
+
+    const rawKeys = Object.keys(block)
+    const choiceKeys = getBlockChoiceKeys(block)
+    const isFixed = choiceKeys.length === 0
+    const displayText = displayTexts[index] ?? null
+
+    const options: Record<string, BackgroundStartingPackage> = {}
+
+    if (isFixed) {
+      options._ = resolveEntries(block._ ?? [], itemLookup)
+    } else {
+      for (const key of choiceKeys) {
+        const actualKey = rawKeys.find((k) => k.toLowerCase() === key) ?? key
+        const combined = resolveEntries(
+          [...(block._ ?? []), ...(block[actualKey] ?? [])],
+          itemLookup,
+        )
+        options[key] = combined
+      }
+    }
+
+    return [{ index, displayText, isFixed, choiceKeys, options }]
+  })
+}
+
+export function resolveClassEquipmentBlocks(
+  startingEquipment: unknown,
+  itemLookup: Map<string, Item5e>,
+): ResolvedEquipmentBlock[] {
+  const defaultData = getClassDefaultEquipmentBlocks(startingEquipment)
+  const se = startingEquipment as {
+    default?: string[]
+    entries?: string[]
+  } | null
+
+  const displayTexts: (string | null)[] = defaultData.map((_, i) => {
+    if (se && Array.isArray(se.default) && se.default[i]) {
+      return se.default[i]
+    }
+    if (se && Array.isArray(se.entries) && i === 0) {
+      return se.entries[0] ?? null
+    }
+    return null
+  })
+
+  return resolveBlocksToStructure(defaultData, displayTexts, itemLookup)
+}
+
+export function resolveBackgroundEquipmentBlocks(
+  startingEquipment: unknown,
+  itemLookup: Map<string, Item5e>,
+): ResolvedEquipmentBlock[] {
+  const blocks = getBackgroundEquipmentBlocks(startingEquipment)
+
+  const displayTexts: (string | null)[] = blocks.map(() => null)
+  return resolveBlocksToStructure(blocks, displayTexts, itemLookup)
+}
+
+export function formatEquipmentOptionEntries(pkg: BackgroundStartingPackage): string[] {
+  const entries: string[] = []
+
+  for (const item of pkg.items) {
+    entries.push(item.quantity > 1 ? `${item.quantity}× ${item.name}` : item.name)
+  }
+
+  const { cp, sp, ep, gp, pp } = pkg.currency
+  if (pp > 0) entries.push(`${pp} pp`)
+  if (gp > 0) entries.push(`${gp} gp`)
+  if (ep > 0) entries.push(`${ep} ep`)
+  if (sp > 0) entries.push(`${sp} sp`)
+  if (cp > 0) entries.push(`${cp} cp`)
+
+  return entries
 }

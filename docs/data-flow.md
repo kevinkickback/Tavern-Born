@@ -105,7 +105,7 @@ Flow:
 4. Resulting character sheet stays aligned with source-attributed grants.
 
 Background equipment detail:
-- Background starting equipment is resolved from 5etools `startingEquipment` blocks using a persisted option key (`backgroundEquipmentChoice`, default `a` / Option A).
+- Background starting equipment is resolved from 5etools `startingEquipment` blocks using persisted per-block choice keys (`backgroundEquipmentChoices`, an array of lowercase keys like `['a', 'b']`).
 - The resolver applies both materialized items and numeric currency grants found in the same entries (`value` and `containsValue`).
 - On background change (or option swap), previously granted background currency is removed first, then the new grant is applied.
 
@@ -133,6 +133,11 @@ Flow:
 3. When `variantRules.preferNewerPrintings` is enabled, the hook builds a suppression set from 5etools `reprintedAs` metadata.
 4. DataFilter removes any entity whose `name|source` key is in the suppression set.
 5. Older printings remain available when newer reprints are not in the selected source list.
+
+Wizard defaults:
+- New-character setup defaults `allowedSources` to the `2014-recommended` source preset (filtered to currently loaded sources).
+- Basics step defaults portrait selection to the first placeholder portrait.
+- Race, Class, and Background steps auto-select the first available `name|source` entry whenever the current selection is empty or filtered out.
 
 Important behavior:
 - Reprint suppression is content-driven from parsed 5etools data, not a hardcoded override map.

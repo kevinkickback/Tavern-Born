@@ -24,5 +24,6 @@ export default defineConfig({
     alias: {
       '@': resolve(projectRoot, 'src'),
     },
+    dedupe: ['react', 'react-dom'],
   },
 })

@@ -1,6 +1,7 @@
 export * from './applyBackgroundGrants'
 export * from './applyClassGrants'
 export * from './applyFeatAndOptionalFeatureGrants'
+export * from './applyProficiencyBlocks'
 export * from './applyRaceGrants'
 export * from './ledger'
 export * from './normalization'

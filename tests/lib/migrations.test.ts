@@ -60,8 +60,8 @@ describe('migrateCharacter', () => {
     expect(result).toBeDefined()
     expect(result.id).toBe('test-id')
     expect(result.name).toBe('Test Hero')
-    // The 0→1 migration stamps the version as '1.0.0'
-    expect(result.version).toBe('1.0.0')
+    // The 0→1→2 migration chain stamps the version as '2.0.0'
+    expect(result.version).toBe('2.0.0')
   })
 
   it('is a no-op when character is already at current version', () => {

@@ -1,4 +1,5 @@
 import { BookOpen, ChartBar, CheckCircle, Sparkle, Sword, User, Users } from '@phosphor-icons/react'
+import { DEFAULT_PORTRAIT_TRANSFORM, PLACEHOLDER_PORTRAITS } from '@/lib/portraitConstants'
 import type { WizardStep } from './types'
 
 export const WIZARD_STEPS: WizardStep[] = [
@@ -33,13 +34,8 @@ export const INITIAL_CHARACTER_DATA = {
     wisdom: 8,
     charisma: 8,
   },
-  portrait: '',
-  portraitTransform: {
-    zoom: 150,
-    panX: 25,
-    panY: 25,
-    rotation: 0,
-  },
+  portrait: PLACEHOLDER_PORTRAITS[0] ?? '',
+  portraitTransform: DEFAULT_PORTRAIT_TRANSFORM,
   rulesMode: 'strict',
   allowedSources: [] as string[],
   raceAsiChoices: [] as string[][],

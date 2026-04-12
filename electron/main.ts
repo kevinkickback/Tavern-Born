@@ -30,6 +30,7 @@ async function createWindow(): Promise<void> {
     ...(windowState.y !== undefined ? { y: windowState.y } : {}),
     minWidth: 900,
     minHeight: 600,
+    backgroundColor: '#111113',
     webPreferences: {
       preload: join(__dirname, 'preload.mjs'),
       // Security best practices

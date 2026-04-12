@@ -1,4 +1,4 @@
-import type { Class5e } from '@/types/5etools'
+import type { Class5e, Subclass5e } from '@/types/5etools'
 
 export type CasterProgression = 'full' | '1/2' | '1/3' | 'pact' | 'artificer' | 'none'
 
@@ -21,9 +21,11 @@ export function casterProgressionToFull(progression: string): string {
   return CASTER_PROGRESSION_TO_FULL[progression as CasterProgression] ?? progression
 }
 
-// Fallback-only table used when class spell progression data is unavailable.
-// Canonical values should come from parsed class data (`rowsSpellProgression`).
-// Each row is [level-1 slots, level-2 slots, ..., level-9 slots].
+/**
+ * Fallback-only table used when class spell progression data is unavailable.
+ * Canonical values should come from parsed class data (`rowsSpellProgression`).
+ * Each row is [level-1 slots, level-2 slots, ..., level-9 slots].
+ */
 const FALLBACK_STANDARD_SPELL_SLOTS: number[][] = [
   /* lv 0  */ [],
   /* lv 1  */ [2],
@@ -48,7 +50,16 @@ const FALLBACK_STANDARD_SPELL_SLOTS: number[][] = [
   /* lv 20 */ [4, 3, 3, 3, 3, 2, 2, 2, 1],
 ]
 
+/**
+ * Fallback-only pact slot count table.
+ * Prefer pact slot extraction from `classTableGroups.rows` when available.
+ */
 const FALLBACK_PACT_SLOT_COUNT = [0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4]
+
+/**
+ * Fallback-only pact slot level table.
+ * Prefer pact slot extraction from `classTableGroups.rows` when available.
+ */
 const FALLBACK_PACT_SLOT_LEVEL = [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
 
 // Used only as a last-resort fallback when class data is not loaded.
@@ -76,6 +87,38 @@ export interface SpellSlotLevel {
 }
 
 export type SpellSlotsResult = Partial<Record<number, SpellSlotLevel>>
+
+export function getCasterLevelContribution(
+  progression: CasterProgression,
+  classLevel: number,
+): number {
+  if (progression === 'full') return classLevel
+  if (progression === '1/2') return Math.floor(classLevel / 2)
+  if (progression === '1/3') return Math.floor(classLevel / 3)
+  if (progression === 'artificer') return Math.ceil(classLevel / 2)
+  return 0
+}
+
+export function getEffectiveCasterProgression(
+  classData: Class5e | undefined,
+  subclassData?: Subclass5e,
+): CasterProgression {
+  const classProgression = (classData?.casterProgression as CasterProgression | undefined) ?? 'none'
+  const subclassProgression = subclassData?.casterProgression as CasterProgression | undefined
+
+  if (subclassProgression && classProgression === 'none') {
+    return subclassProgression
+  }
+
+  return classProgression
+}
+
+export function getEffectiveSpellcastingAbility(
+  classData: Class5e | undefined,
+  subclassData?: Subclass5e,
+): string | undefined {
+  return subclassData?.spellcastingAbility ?? classData?.spellcastingAbility
+}
 
 function validateFallbackProgression(className: string, parsedCasterProgression?: string): void {
   if (!parsedCasterProgression) return
@@ -108,6 +151,50 @@ export function getPactMagicSlots(level: number): SpellSlotsResult {
   return { [slotLevel]: { max: count, used: 0, isPactMagic: true } }
 }
 
+function findColumnIndex(labels: unknown[], matcher: (text: string) => boolean): number {
+  return labels.findIndex((label) => {
+    if (typeof label !== 'string') return false
+    return matcher(label.toLowerCase())
+  })
+}
+
+function getPactMagicSlotsFromClassData(
+  classData: Class5e,
+  level: number,
+): SpellSlotsResult | null {
+  const classTableGroups = Array.isArray(classData.classTableGroups)
+    ? (classData.classTableGroups as Array<{ colLabels?: unknown[]; rows?: unknown[] }>)
+    : []
+
+  for (const group of classTableGroups) {
+    const labels = Array.isArray(group.colLabels) ? group.colLabels : []
+    const rows = Array.isArray(group.rows) ? group.rows : []
+    if (labels.length === 0 || rows.length < level) continue
+
+    const slotsIndex = findColumnIndex(labels, (text) => text.includes('spell slots'))
+    const slotLevelIndex = findColumnIndex(labels, (text) => text.includes('slot level'))
+    if (slotsIndex < 0 || slotLevelIndex < 0) continue
+
+    const row = rows[level - 1]
+    if (!Array.isArray(row)) continue
+
+    const slotCount = row[slotsIndex]
+    const pactSlotLevel = row[slotLevelIndex]
+    if (typeof slotCount !== 'number' || slotCount <= 0) return {}
+    if (typeof pactSlotLevel !== 'number' || pactSlotLevel <= 0) return {}
+
+    return {
+      [pactSlotLevel]: {
+        max: slotCount,
+        used: 0,
+        isPactMagic: true,
+      },
+    }
+  }
+
+  return null
+}
+
 /**
  * Read spell slot maximums directly from a class object's `classTableGroups` data.
  * This is the preferred approach — it handles all progression types correctly,
@@ -121,6 +208,11 @@ export function getSpellSlotsFromClassData(
   classData: Class5e,
   level: number,
 ): SpellSlotsResult | null {
+  if (classData.casterProgression === 'pact') {
+    const pact = getPactMagicSlotsFromClassData(classData, level)
+    if (pact) return pact
+  }
+
   const classTableGroups = (classData.classTableGroups ?? []) as Array<{
     rowsSpellProgression?: unknown[]
   }>
@@ -144,14 +236,6 @@ export function getMaxSpellLevelForClassLevel(classData: Class5e, level: number)
   const spellSlots = getSpellSlotsFromClassData(classData, level)
   if (spellSlots) {
     return Object.keys(spellSlots)
-      .map((key) => Number.parseInt(key, 10))
-      .filter((value) => !Number.isNaN(value))
-      .reduce((max, value) => Math.max(max, value), 0)
-  }
-
-  if (classData.casterProgression === 'pact') {
-    const pactSlots = getPactMagicSlots(level)
-    return Object.keys(pactSlots)
       .map((key) => Number.parseInt(key, 10))
       .filter((value) => !Number.isNaN(value))
       .reduce((max, value) => Math.max(max, value), 0)
@@ -188,10 +272,7 @@ export function calculateSpellSlots(
   if (progression === 'none') return {}
   if (progression === 'pact') return getPactMagicSlots(level)
 
-  let casterLevel = level
-  if (progression === '1/2') casterLevel = Math.floor(level / 2)
-  if (progression === '1/3') casterLevel = Math.floor(level / 3)
-  if (progression === 'artificer') casterLevel = Math.ceil(level / 2)
+  const casterLevel = getCasterLevelContribution(progression, level)
 
   return getStandardSpellSlots(casterLevel)
 }

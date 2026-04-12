@@ -643,9 +643,13 @@ function getLastStringFromEntries(entries: unknown[]): string | null {
   return null
 }
 
-export function parseClassFluffSummaries(
-  data: unknown,
-): Array<{ name: string; source: string; summary: string }> {
+export function parseClassFluff(data: unknown): Array<{
+  name: string
+  source: string
+  summary: string
+  sections: Array<{ name: string; entries: unknown[] }>
+  images?: Array<{ type: 'image'; href?: { url?: string; path?: string }; title?: string }>
+}> {
   const obj = asObject(data)
   const classFluff = asArray(obj.classFluff)
 
@@ -654,12 +658,54 @@ export function parseClassFluffSummaries(
       const fluff = asObject(entry)
       const name = typeof fluff.name === 'string' ? fluff.name : ''
       const source = typeof fluff.source === 'string' ? fluff.source : ''
-      const firstSection = asObject(asArray(fluff.entries)[0])
-      const firstSectionEntries = asArray(firstSection.entries)
-      const summary = getLastStringFromEntries(firstSectionEntries)
+      const topEntries = asArray(fluff.entries)
+      const firstSection = asObject(topEntries[0])
+      const summary = getLastStringFromEntries(asArray(firstSection.entries))
 
       if (!name || !source || !summary) return null
-      return { name, source, summary }
+
+      const sections = topEntries
+        .map((sectionEntry) => {
+          const section = asObject(sectionEntry)
+          const sectionName = typeof section.name === 'string' ? section.name : ''
+          const sectionEntries = asArray(section.entries)
+          if (!sectionName || sectionEntries.length === 0) return null
+          return {
+            name: sectionName,
+            entries: sectionEntries,
+          }
+        })
+        .filter((section): section is { name: string; entries: unknown[] } => section !== null)
+
+      const images = asArray(fluff.images)
+        .map((imageEntry) => {
+          const image = asObject(imageEntry)
+          if (image.type !== 'image') return null
+          const hrefObj = asObject(image.href)
+          const href = {
+            ...(typeof hrefObj.url === 'string' ? { url: hrefObj.url } : {}),
+            ...(typeof hrefObj.path === 'string' ? { path: hrefObj.path } : {}),
+          }
+          return {
+            type: 'image' as const,
+            ...(Object.keys(href).length > 0 ? { href } : {}),
+            ...(typeof image.title === 'string' ? { title: image.title } : {}),
+          }
+        })
+        .filter(
+          (
+            image,
+          ): image is { type: 'image'; href?: { url?: string; path?: string }; title?: string } =>
+            image !== null,
+        )
+
+      return {
+        name,
+        source,
+        summary,
+        sections,
+        ...(images.length > 0 ? { images } : {}),
+      }
     })
     .filter(
       (
@@ -668,8 +714,20 @@ export function parseClassFluffSummaries(
         name: string
         source: string
         summary: string
+        sections: Array<{ name: string; entries: unknown[] }>
+        images?: Array<{ type: 'image'; href?: { url?: string; path?: string }; title?: string }>
       } => value !== null,
     )
+}
+
+export function parseClassFluffSummaries(
+  data: unknown,
+): Array<{ name: string; source: string; summary: string }> {
+  return parseClassFluff(data).map((item) => ({
+    name: item.name,
+    source: item.source,
+    summary: item.summary,
+  }))
 }
 
 export function parseBackgrounds(data: unknown): unknown[] {

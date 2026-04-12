@@ -32,10 +32,11 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import { checkMulticlassRequirements, MAX_CHARACTER_LEVEL } from '@/lib/calculations/gameRules'
-import { reconcileClassChange } from '@/lib/provenance/reconciliation'
+import { applyMulticlassGrants, reconcileClassChange, stripItemTag } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
-import { useCharacterStore } from '@/store/characterStore'
+import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Class5e } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
 
@@ -163,7 +164,60 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       source: selectedClass?.source,
       levels: 1,
     }
-    syncUpdate(character, [...classProgression, newEntry])
+
+    const newProgression = [...classProgression, newEntry]
+    const newTotal = newProgression.reduce((s, e) => s + e.levels, 0)
+
+    let nextProvenance = character.provenance ?? emptyProvenance()
+    if (selectedClass) {
+      nextProvenance = applyMulticlassGrants(selectedClass, nextProvenance)
+    }
+
+    const gained = selectedClass?.multiclassing?.proficienciesGained
+    const toolsFromBlocks = extractProficiencyBlockNames(gained?.toolProficiencies ?? [], {
+      includeAnyStandard: false,
+    })
+
+    const nextProficiencies = selectedClass
+      ? {
+          ...character.proficiencies,
+          armor: [
+            ...new Set([
+              ...character.proficiencies.armor,
+              ...(gained?.armor ?? [])
+                .filter((armor): armor is string => typeof armor === 'string')
+                .map((armor) => stripItemTag(armor)),
+            ]),
+          ],
+          weapons: [
+            ...new Set([
+              ...character.proficiencies.weapons,
+              ...(gained?.weapons ?? [])
+                .filter((weapon): weapon is string => typeof weapon === 'string')
+                .map((weapon) => stripItemTag(weapon)),
+            ]),
+          ],
+          tools: [
+            ...new Set([
+              ...character.proficiencies.tools,
+              ...(gained?.tools ?? [])
+                .filter((tool): tool is string => typeof tool === 'string')
+                .map((tool) => stripItemTag(tool)),
+              ...toolsFromBlocks,
+            ]),
+          ],
+        }
+      : character.proficiencies
+
+    updateCharacter(character.id, {
+      classProgression: newProgression,
+      level: newTotal,
+      class: newProgression[0]?.name ?? character.class,
+      classSource: newProgression[0]?.source ?? character.classSource,
+      proficiencies: nextProficiencies,
+      provenance: nextProvenance,
+    })
+
     toast.success(`Added ${multiclassSelection} (level 1).`)
     setMulticlassSelection('')
   }

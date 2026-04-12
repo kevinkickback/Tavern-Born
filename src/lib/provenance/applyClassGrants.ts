@@ -1,6 +1,8 @@
 import { buildItemLookup, resolveClassStartingEquipment } from '@/lib/5etools/startingEquipment'
+import type { Item5e } from '@/types/5etools'
+import { applyProficiencyBlocks, toProficiencyBlocks } from './applyProficiencyBlocks'
 import { addChoicePlaceholder, addGrant } from './ledger'
-import { normalizeGenericToolChoice, normalizeKey, stripItemTag } from './normalization'
+import { normalizeKey, stripItemTag } from './normalization'
 import { makeSourceTag } from './sourceLabels'
 import type { ChoiceRecord, ProvenanceLedger } from './types'
 
@@ -19,6 +21,17 @@ export function applyClassGrants(
     name: string
     source?: string
     startingEquipment?: unknown
+    multiclassing?: {
+      proficienciesGained?: {
+        armor?: string[]
+        weapons?: string[]
+        tools?: string[]
+        toolProficiencies?: Array<
+          Record<string, boolean | number | { choose?: { from?: string[]; count?: number } }>
+        >
+        skills?: { choose?: { from: string[]; count: number } }
+      }
+    }
     proficiency?: string[]
     startingProficiencies?: {
       armor?: string[]
@@ -37,10 +50,13 @@ export function applyClassGrants(
       }
     | undefined,
   ledger: ProvenanceLedger,
+  options?: { isMulticlassGrant?: boolean; itemLookup?: Map<string, Item5e> },
 ): ProvenanceLedger {
   let result = ledger
   const clsTag = makeSourceTag('class', cls.name, 'fixed', cls.source)
-  const profs = cls.startingProficiencies ?? {}
+  const profs = options?.isMulticlassGrant
+    ? (cls.multiclassing?.proficienciesGained ?? {})
+    : (cls.startingProficiencies ?? {})
 
   for (const name of profs.armor ?? []) {
     if (typeof name !== 'string') continue
@@ -59,6 +75,11 @@ export function applyClassGrants(
   // Fall back to tools[] only for classes that lack the structured field.
   const hasStructuredToolProfs = (profs.toolProficiencies?.length ?? 0) > 0
   if (!hasStructuredToolProfs) {
+    if ((profs.tools?.length ?? 0) > 0) {
+      console.warn(
+        `[applyClassGrants] ${cls.name}: using flat tools[] fallback because toolProficiencies[] is empty.`,
+      )
+    }
     for (const name of profs.tools ?? []) {
       if (typeof name !== 'string') continue
       const cleanName = stripItemTag(name)
@@ -67,51 +88,13 @@ export function applyClassGrants(
     }
   }
 
-  // Structured class tool proficiency choices (e.g. anyMusicalInstrument: 3)
-  let toolChoiceIndex = 0
-  for (const block of profs.toolProficiencies ?? []) {
-    for (const [key, val] of Object.entries(block)) {
-      if (key === 'choose') continue
-
-      const generic = normalizeGenericToolChoice(key)
-      if (generic && (val === true || (typeof val === 'number' && val > 0))) {
-        const choiceRecord: ChoiceRecord = {
-          id: `class:${normalizeKey(cls.name)}:tools:generic:${toolChoiceIndex}`,
-          domain: 'tools',
-          sourceTag: { ...clsTag, grantType: 'placeholder' },
-          chooseCount: typeof val === 'number' && val > 0 ? val : 1,
-          optionPool: [generic],
-          selected: [],
-          status: 'pending',
-        }
-        result = addChoicePlaceholder(result, choiceRecord)
-        toolChoiceIndex++
-        continue
-      }
-
-      if (val === true) {
-        result = addGrant(result, 'tools', key, clsTag)
-      }
-    }
-
-    const choose = (block as { choose?: { from?: string[]; count?: number } }).choose
-    if (choose) {
-      const normalizedPool = (choose.from ?? []).map(
-        (entry) => normalizeGenericToolChoice(entry) ?? entry,
-      )
-      const choiceRecord: ChoiceRecord = {
-        id: `class:${normalizeKey(cls.name)}:tools:choose:${toolChoiceIndex}`,
-        domain: 'tools',
-        sourceTag: { ...clsTag, grantType: 'placeholder' },
-        chooseCount: choose.count ?? 1,
-        optionPool: normalizedPool,
-        selected: [],
-        status: 'pending',
-      }
-      result = addChoicePlaceholder(result, choiceRecord)
-      toolChoiceIndex++
-    }
-  }
+  result = applyProficiencyBlocks(
+    result,
+    'tools',
+    toProficiencyBlocks(profs.toolProficiencies),
+    clsTag,
+    `class:${normalizeKey(cls.name)}`,
+  )
 
   const skillChoice = profs.skills
   if (skillChoice?.choose) {
@@ -128,13 +111,20 @@ export function applyClassGrants(
   }
 
   // Saving throw proficiencies (from cls.proficiency: e.g. ['str', 'con'])
-  for (const abbr of cls.proficiency ?? []) {
-    result = addGrant(result, 'savingThrows', abbr.toLowerCase(), clsTag)
+  if (!options?.isMulticlassGrant) {
+    for (const abbr of cls.proficiency ?? []) {
+      result = addGrant(result, 'savingThrows', abbr.toLowerCase(), clsTag)
+    }
   }
 
   // Starting equipment defaults (choice option A from each block).
-  for (const item of resolveClassStartingEquipment(cls.startingEquipment, buildItemLookup([]))) {
-    result = addGrant(result, 'equipment', item.name, clsTag)
+  if (!options?.isMulticlassGrant) {
+    for (const item of resolveClassStartingEquipment(
+      cls.startingEquipment,
+      options?.itemLookup ?? buildItemLookup([]),
+    )) {
+      result = addGrant(result, 'equipment', item.name, clsTag)
+    }
   }
 
   // Subclass attribution (just tag it; features/spells come via modal confirms)
@@ -145,6 +135,13 @@ export function applyClassGrants(
   }
 
   return result
+}
+
+export function applyMulticlassGrants(
+  cls: Parameters<typeof applyClassGrants>[0],
+  ledger: ProvenanceLedger,
+): ProvenanceLedger {
+  return applyClassGrants(cls, undefined, ledger, { isMulticlassGrant: true })
 }
 
 /**

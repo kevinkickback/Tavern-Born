@@ -218,6 +218,47 @@ export function BuildClassDetailsPanel({
                 </div>
               </div>
             )}
+
+            {(viewingClassData.classFluffSections?.length ?? 0) > 0 && (
+              <div>
+                <h4 className="text-xs font-bold text-accent uppercase tracking-wider mb-3">
+                  Lore
+                </h4>
+                <div className="space-y-4">
+                  {(viewingClassData.classFluffSections ?? []).map((section) => (
+                    <div key={section.name}>
+                      <h5 className="text-sm font-semibold mb-2">{section.name}</h5>
+                      <div className="space-y-2">
+                        {section.entries.map((entry) => (
+                          <div
+                            key={typeof entry === 'string' ? entry : JSON.stringify(entry)}
+                            className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold"
+                            dangerouslySetInnerHTML={{
+                              __html: renderEntry(entry) ?? '',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(viewingClassData.classFluffImages?.length ?? 0) > 0 && (
+              <InfoTile title="Class Artwork">
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  {viewingClassData.classFluffImages?.map((image) => (
+                    <li
+                      key={`${image.title ?? 'artwork'}|${image.href?.path ?? image.href?.url ?? ''}`}
+                    >
+                      {image.title ?? 'Artwork'}
+                      {image.href?.path ? ` (${image.href.path})` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </InfoTile>
+            )}
           </div>
         </ScrollArea>
       ) : (

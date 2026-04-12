@@ -186,7 +186,7 @@ describe('useProvenance mutations', () => {
           },
         ],
       },
-      'b',
+      ['b'],
     )
 
     const updated = useCharacterStore.getState().activeCharacter
@@ -196,6 +196,6 @@ describe('useProvenance mutations', () => {
       'Pouch',
     ])
     expect(updated?.currency).toEqual({ cp: 5, sp: 8, ep: 0, gp: 2, pp: 0 })
-    expect(updated?.backgroundEquipmentChoice).toBe('b')
+    expect(updated?.backgroundEquipmentChoices).toEqual(['b'])
   })
 })

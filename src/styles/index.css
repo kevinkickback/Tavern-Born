@@ -83,6 +83,29 @@
   .animate-indeterminate {
     animation: indeterminate 1.4s ease-in-out infinite;
   }
+
+  @keyframes hint-bounce-once {
+    0%,
+    35%,
+    55%,
+    75%,
+    100% {
+      transform: translateY(0);
+    }
+    45% {
+      transform: translateY(-7px);
+    }
+    65% {
+      transform: translateY(-4px);
+    }
+    85% {
+      transform: translateY(-2px);
+    }
+  }
+
+  .animate-hint-bounce {
+    animation: hint-bounce-once 920ms ease-out 220ms 1 both;
+  }
 }
 
 @layer components {

@@ -2,6 +2,44 @@ import { describe, expect, test } from 'vitest'
 import { applyRaceGrants, emptyProvenance } from '@/lib/provenance'
 
 describe('provenance/applyRaceGrants', () => {
+  test('applies race additionalSpells progressively by character level', () => {
+    const race = {
+      name: 'Tiefling',
+      source: 'PHB',
+      additionalSpells: [
+        {
+          known: {
+            '1': ['thaumaturgy#c'],
+          },
+          innate: {
+            '3': {
+              daily: {
+                '1': ['hellish rebuke'],
+              },
+            },
+            '5': {
+              daily: {
+                '1': ['darkness'],
+              },
+            },
+          },
+          ability: 'cha',
+        },
+      ],
+    }
+
+    const level1 = applyRaceGrants(race, undefined, emptyProvenance(), undefined, 0, 1)
+    expect(Object.keys(level1.spells).some((key) => key.includes('thaumaturgy'))).toBe(true)
+    expect(level1.spells['hellish rebuke']).toBeUndefined()
+
+    const level3 = applyRaceGrants(race, undefined, emptyProvenance(), undefined, 0, 3)
+    expect(level3.spells['hellish rebuke']?.length ?? 0).toBeGreaterThan(0)
+    expect(level3.spells.darkness).toBeUndefined()
+
+    const level5 = applyRaceGrants(race, undefined, emptyProvenance(), undefined, 0, 5)
+    expect(level5.spells.darkness?.length ?? 0).toBeGreaterThan(0)
+  })
+
   test('adds Common and one standard language choice for lineage races without explicit language blocks', () => {
     const ledger = applyRaceGrants(
       {

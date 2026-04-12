@@ -14,6 +14,10 @@ import {
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import {
+  formatEquipmentOptionEntries,
+  resolveBackgroundEquipmentBlocks,
+} from '@/lib/5etools/startingEquipment'
+import {
   ABILITY_ABBREVIATIONS,
   type AbilityName,
   getBackgroundAbilityData,
@@ -23,18 +27,19 @@ import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel'
 import {
-  getBackgroundEquipmentPackages,
   getBackgroundLanguageNames,
   getBackgroundSkillNames,
   getBackgroundToolNames,
 } from '@/pages/build/background/model/data'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Background5e } from '@/types/5etools'
 
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { backgrounds } = useFilteredGameData()
+  const itemLookup = useGameDataStore((s) => s.itemLookup)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [bgSearch, setBgSearch] = useState('')
   const { applyBackgroundSelection, applyBackgroundAbilityChoices } = useProvenance()
@@ -65,29 +70,45 @@ export function BuildBackgroundPage() {
     previousSearchRef.current = bgSearch
   }, [bgSearch])
 
+  const selectedBg = character
+    ? (backgrounds.find((b) =>
+        matchesGameDataEntry(character.background, character.backgroundSource, b),
+      ) as Background5e | undefined)
+    : undefined
+  const selectedBackgroundKey = selectedBg ? `${selectedBg.name}|${selectedBg.source ?? ''}` : null
+
+  const equipmentBlocks = useMemo(
+    () => resolveBackgroundEquipmentBlocks(selectedBg?.startingEquipment, itemLookup),
+    [selectedBg?.startingEquipment, itemLookup],
+  )
+  const choiceBlocks = equipmentBlocks.filter((b) => !b.isFixed)
+  const optionCountByBackground = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const bg of backgrounds) {
+      const key = `${bg.name}|${bg.source ?? ''}`
+      const count = resolveBackgroundEquipmentBlocks(bg.startingEquipment, itemLookup).reduce(
+        (total, block) => total + block.choiceKeys.length,
+        0,
+      )
+      counts.set(key, count)
+    }
+    return counts
+  }, [backgrounds, itemLookup])
+
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
   }
 
-  const selectedBg = backgrounds.find((b) =>
-    matchesGameDataEntry(character.background, character.backgroundSource, b),
-  ) as Background5e | undefined
-  const selectedBackgroundKey = selectedBg ? `${selectedBg.name}|${selectedBg.source ?? ''}` : null
-
-  const handleBackground = (
-    name: string,
-    bgSource?: string,
-    preferredEquipmentOption: 'a' | 'b' = 'a',
-  ) => {
+  const handleBackground = (name: string, bgSource?: string) => {
     const bg = backgrounds.find((b) => matchesGameDataEntry(name, bgSource, b)) as
       | Background5e
       | undefined
     if (!bg) return
-    applyBackgroundSelection(bg, preferredEquipmentOption)
+    applyBackgroundSelection(bg)
     updateCharacter(character.id, {
       background: name,
       backgroundSource: bgSource ?? undefined,
-      backgroundEquipmentChoice: preferredEquipmentOption,
+      backgroundEquipmentChoices: [],
     })
     if (detailCollapsed) setDetailCollapsed(false)
   }
@@ -95,11 +116,10 @@ export function BuildBackgroundPage() {
   const skills = getBackgroundSkillNames(selectedBg)
   const langs = getBackgroundLanguageNames(selectedBg)
   const tools = getBackgroundToolNames(selectedBg)
-  const equipmentPackages = getBackgroundEquipmentPackages(selectedBg)
   const bgAsiData = getBackgroundAbilityData(selectedBg)
   const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0
   const bgChoices = character.backgroundAsiChoices ?? []
-  const selectedEquipmentChoice = character.backgroundEquipmentChoice ?? 'a'
+  const bgEquipmentChoices = character.backgroundEquipmentChoices ?? []
 
   return (
     <div className="h-full flex flex-col">
@@ -147,23 +167,8 @@ export function BuildBackgroundPage() {
                     {filteredBackgrounds.map((bg) => {
                       const bgKey = `${bg.name}|${bg.source ?? ''}`
                       const isSelected = selectedBackgroundKey === bgKey
-                      const hasEquip = (bg.startingEquipment ?? []).some((b) => {
-                        if (typeof b !== 'object' || b === null) {
-                          return false
-                        }
-                        const equipmentBlock = b as {
-                          A?: unknown
-                          B?: unknown
-                          a?: unknown
-                          b?: unknown
-                        }
-                        return Boolean(
-                          equipmentBlock.A ??
-                            equipmentBlock.B ??
-                            equipmentBlock.a ??
-                            equipmentBlock.b,
-                        )
-                      })
+                      const rowChoiceBlocks = isSelected ? choiceBlocks : []
+                      const bgOptionCount = optionCountByBackground.get(bgKey) ?? 0
                       return (
                         <div
                           key={bgKey}
@@ -186,35 +191,59 @@ export function BuildBackgroundPage() {
                             />
                             <span className="font-medium text-sm truncate">{bg.name}</span>
                           </button>
-                          {/* Right side: equipment dropdown when selected + has options, badge otherwise */}
                           <div className="flex items-center gap-1 flex-shrink-0">
-                            {isSelected && hasEquip && equipmentPackages.length > 1 ? (
-                              <Select
-                                value={selectedEquipmentChoice}
-                                onValueChange={(value) => {
-                                  if (!selectedBg) return
-                                  const selectedOption: 'a' | 'b' = value === 'b' ? 'b' : 'a'
-                                  applyBackgroundSelection(selectedBg, selectedOption)
-                                  updateCharacter(character.id, {
-                                    backgroundEquipmentChoice: selectedOption,
-                                  })
-                                }}
-                              >
-                                <SelectTrigger className="h-7 text-xs min-w-[110px] max-w-[160px]">
-                                  <SelectValue placeholder="Equipment…" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {equipmentPackages.map((pkg) => (
-                                    <SelectItem key={pkg.key} value={pkg.key} className="text-xs">
-                                      {pkg.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                            {isSelected && rowChoiceBlocks.length > 0 ? (
+                              <div className="flex flex-col gap-1.5 min-w-[220px]">
+                                {rowChoiceBlocks.map((block) => {
+                                  const currentChoice =
+                                    bgEquipmentChoices[block.index]?.toLowerCase() ??
+                                    block.choiceKeys[0] ??
+                                    'a'
+                                  return (
+                                    <Select
+                                      key={block.index}
+                                      value={currentChoice}
+                                      onValueChange={(val) => {
+                                        if (!selectedBg) return
+                                        const next = [...bgEquipmentChoices]
+                                        while (next.length <= block.index) next.push('a')
+                                        next[block.index] = val
+                                        applyBackgroundSelection(selectedBg, next)
+                                        updateCharacter(character.id, {
+                                          backgroundEquipmentChoices: next,
+                                        })
+                                      }}
+                                    >
+                                      <SelectTrigger className="h-7 text-xs w-full">
+                                        <SelectValue placeholder={`Choice ${block.index + 1}…`} />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {block.choiceKeys.map((key) => {
+                                          const optionData = block.options[key]
+                                          const label =
+                                            formatEquipmentOptionEntries(optionData).join(', ')
+                                          return (
+                                            <SelectItem key={key} value={key} className="text-xs">
+                                              ({key.toUpperCase()}) {label}
+                                            </SelectItem>
+                                          )
+                                        })}
+                                      </SelectContent>
+                                    </Select>
+                                  )
+                                })}
+                              </div>
                             ) : (
-                              <Badge variant="outline" className="text-xs">
-                                {bg.source}
-                              </Badge>
+                              <>
+                                {bgOptionCount > 0 && (
+                                  <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                    {bgOptionCount} item option{bgOptionCount === 1 ? '' : 's'}
+                                  </Badge>
+                                )}
+                                <Badge variant="outline" className="text-xs">
+                                  {bg.source}
+                                </Badge>
+                              </>
                             )}
                           </div>
                         </div>

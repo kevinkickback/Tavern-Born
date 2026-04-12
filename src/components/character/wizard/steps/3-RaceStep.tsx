@@ -1,5 +1,5 @@
 import { BookOpen, ChartBar, Eye, MagnifyingGlass, Shield, Users, X } from '@phosphor-icons/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import { getRaceSummary } from '@/lib/calculations/entrySummary'
@@ -55,18 +55,43 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
       : filteredRaces.find((r) => r.name === data.race)
     : undefined
 
-  const getAvailableSubraces = (race?: Race5e) =>
-    (race?.subraces || []).filter((sr) => {
-      if (!sr.name) return false
-      if (allowedSources.length === 0) return true
-      const src = (sr as { source?: string }).source ?? race?.source ?? ''
-      if (!allowedSources.includes(src)) return false
-      const suppressedKeys =
-        data.variantRules?.preferNewerPrintings && allowedSources.length > 0
-          ? buildSuppressedKeys(filteredRaces, new Set(allowedSources))
-          : undefined
-      return !suppressedKeys?.has(`${sr.name}|${src}`)
+  const getAvailableSubraces = useCallback(
+    (race?: Race5e) =>
+      (race?.subraces || []).filter((sr) => {
+        if (!sr.name) return false
+        if (allowedSources.length === 0) return true
+        const src = (sr as { source?: string }).source ?? race?.source ?? ''
+        if (!allowedSources.includes(src)) return false
+        const suppressedKeys =
+          data.variantRules?.preferNewerPrintings && allowedSources.length > 0
+            ? buildSuppressedKeys(filteredRaces, new Set(allowedSources))
+            : undefined
+        return !suppressedKeys?.has(`${sr.name}|${src}`)
+      }),
+    [allowedSources, data.variantRules?.preferNewerPrintings, filteredRaces],
+  )
+
+  useEffect(() => {
+    if (filteredRaces.length === 0) return
+
+    const hasValidSelection = filteredRaces.some(
+      (race) => race.name === data.race && (race.source ?? '') === (data.raceSource ?? ''),
+    )
+    if (hasValidSelection) return
+
+    const firstRace = filteredRaces[0]
+    if (!firstRace) return
+
+    const firstSubrace = getAvailableSubraces(firstRace)[0]
+    onChange({
+      race: firstRace.name,
+      raceSource: firstRace.source ?? '',
+      subrace: firstSubrace?.name ?? '',
+      subraceSource: firstSubrace?.source ?? '',
+      raceAsiChoices: [],
+      raceAsiBlockIndex: 0,
     })
+  }, [data.race, data.raceSource, filteredRaces, getAvailableSubraces, onChange])
 
   const subraces = getAvailableSubraces(selectedRace)
   const selectedSubrace = subraces.find(

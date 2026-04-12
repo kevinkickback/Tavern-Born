@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { INITIAL_CHARACTER_DATA } from '@/components/character/wizard/constants'
 import { ClassStep } from '@/components/character/wizard/steps/4-ClassStep'
@@ -96,6 +96,33 @@ describe('ClassStep', () => {
     expect(onChange).toHaveBeenCalledWith({
       class: 'Wizard',
       classSource: 'PHB',
+    })
+  })
+
+  test('defaults to the first available class when none is selected', async () => {
+    const onChange = vi.fn()
+    const classes: Class5e[] = [
+      { name: 'Barbarian', source: 'PHB' } as Class5e,
+      { name: 'Wizard', source: 'PHB' } as Class5e,
+    ]
+
+    render(
+      <ClassStep
+        data={{
+          ...INITIAL_CHARACTER_DATA,
+          class: '',
+          classSource: '',
+        }}
+        onChange={onChange}
+        classes={classes}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(onChange).toHaveBeenCalledWith({
+        class: 'Barbarian',
+        classSource: 'PHB',
+      })
     })
   })
 

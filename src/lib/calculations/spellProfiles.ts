@@ -1,10 +1,15 @@
 import { getClassSpellGainAtLevel } from '@/lib/5etools/classData'
+import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
 import { type AbilityName, normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
   type CasterProgression,
   calculateSpellSlots,
+  getCasterLevelContribution,
+  getEffectiveCasterProgression,
+  getEffectiveSpellcastingAbility,
   getPactMagicSlots,
+  getSpellSlotsFromClassData,
   getStandardSpellSlots,
   mergeSpellSlots,
   type SpellSlotsResult,
@@ -27,6 +32,14 @@ function toClassProfileId(name: string, source?: string): string {
   return `class:${name}|${source ?? ''}`
 }
 
+function getSelectedSubclassData(classData: Class5e | undefined, entry: CharacterClassEntry) {
+  if (!classData || !entry.subclass) return undefined
+  return (classData.subclasses ?? []).find(
+    (subclass) =>
+      subclass.name === entry.subclass && (subclass.source ?? '') === (entry.subclassSource ?? ''),
+  )
+}
+
 function cloneProfile(profile: SpellProfile): SpellProfile {
   return {
     ...profile,
@@ -34,6 +47,36 @@ function cloneProfile(profile: SpellProfile): SpellProfile {
     spellsKnown: [...profile.spellsKnown],
     preparedSpells: [...profile.preparedSpells],
   }
+}
+
+function mergeSpellNames(existing: string[], additions: string[]): string[] {
+  if (additions.length === 0) return existing
+  const byKey = new Map(existing.map((name) => [normalizeKey(name), name] as const))
+  for (const name of additions) {
+    const key = normalizeKey(name)
+    if (!key || byKey.has(key)) continue
+    byKey.set(key, name)
+  }
+  return [...byKey.values()]
+}
+
+function toSubclassPreparedProfileId(entry: CharacterClassEntry): string {
+  return `subclass:${entry.name}|${entry.source ?? ''}:${entry.subclass ?? ''}|${entry.subclassSource ?? ''}:prepared`
+}
+
+export function getSubclassExpandedSpellNames(
+  entry: CharacterClassEntry,
+  classData: Class5e | undefined,
+): Set<string> {
+  const subclassData = getSelectedSubclassData(classData, entry)
+  if (!subclassData) return new Set<string>()
+  const grants = parseSubclassSpells(subclassData.additionalSpells, entry.levels)
+  const names = new Set<string>()
+  for (const grant of grants) {
+    if (grant.mode !== 'expanded') continue
+    names.add(normalizeKey(grant.spellName))
+  }
+  return names
 }
 
 export function buildClassProfileLabel(entry: CharacterClassEntry): string {
@@ -252,7 +295,10 @@ export function getKnownSpellNames(profiles: SpellProfile[]): Set<string> {
   return names
 }
 
-export function ensureSpellProfiles(character: Character): SpellProfile[] {
+export function ensureSpellProfiles(
+  character: Character,
+  classesById?: Map<string, Class5e>,
+): SpellProfile[] {
   const existing = Array.isArray(character.spells.spellProfiles)
     ? character.spells.spellProfiles.map(cloneProfile)
     : []
@@ -276,17 +322,58 @@ export function ensureSpellProfiles(character: Character): SpellProfile[] {
   for (const entry of classEntries) {
     const id = toClassProfileId(entry.name, entry.source)
     const existingProfile = byId.get(id)
+    const classData = classesById?.get(id)
+    const subclassData = getSelectedSubclassData(classData, entry)
+    const subclassSpells = parseSubclassSpells(subclassData?.additionalSpells, entry.levels)
+
+    const knownSubclassCantrips = subclassSpells
+      .filter((grant) => grant.mode === 'known' && grant.isCantrip)
+      .map((grant) => grant.spellName)
+    const knownSubclassSpells = subclassSpells
+      .filter((grant) => grant.mode === 'known' && !grant.isCantrip)
+      .map((grant) => grant.spellName)
+
+    const preparedSubclassCantrips = subclassSpells
+      .filter((grant) => (grant.mode === 'prepared' || grant.mode === 'innate') && grant.isCantrip)
+      .map((grant) => grant.spellName)
+    const preparedSubclassSpells = subclassSpells
+      .filter((grant) => (grant.mode === 'prepared' || grant.mode === 'innate') && !grant.isCantrip)
+      .map((grant) => grant.spellName)
+
     next.push({
       id,
       type: 'class',
       label: buildClassProfileLabel(entry),
       className: entry.name,
       classSource: entry.source,
-      cantrips: existingProfile?.cantrips ?? [],
-      spellsKnown: existingProfile?.spellsKnown ?? [],
+      cantrips: mergeSpellNames(existingProfile?.cantrips ?? [], knownSubclassCantrips),
+      spellsKnown: mergeSpellNames(existingProfile?.spellsKnown ?? [], knownSubclassSpells),
       preparedSpells: existingProfile?.preparedSpells ?? [],
       alwaysPrepared: false,
     })
+
+    if (
+      entry.subclass &&
+      (preparedSubclassCantrips.length > 0 || preparedSubclassSpells.length > 0)
+    ) {
+      const subclassPreparedId = toSubclassPreparedProfileId(entry)
+      const existingSubclassPrepared = byId.get(subclassPreparedId)
+      next.push({
+        id: subclassPreparedId,
+        type: 'special',
+        label: `${entry.subclass} Spells`,
+        cantrips: mergeSpellNames(
+          existingSubclassPrepared?.cantrips ?? [],
+          preparedSubclassCantrips,
+        ),
+        spellsKnown: mergeSpellNames(
+          existingSubclassPrepared?.spellsKnown ?? [],
+          preparedSubclassSpells,
+        ),
+        preparedSpells: [],
+        alwaysPrepared: true,
+      })
+    }
   }
 
   const special = byId.get(SPECIAL_SPELL_PROFILE_ID)
@@ -303,41 +390,39 @@ export function ensureSpellProfiles(character: Character): SpellProfile[] {
   return next
 }
 
-function storedToNumericUsed(spellSlots: SpellSlots): Record<number, number> {
-  return {
-    1: spellSlots.level1?.used ?? 0,
-    2: spellSlots.level2?.used ?? 0,
-    3: spellSlots.level3?.used ?? 0,
-    4: spellSlots.level4?.used ?? 0,
-    5: spellSlots.level5?.used ?? 0,
-    6: spellSlots.level6?.used ?? 0,
-    7: spellSlots.level7?.used ?? 0,
-    8: spellSlots.level8?.used ?? 0,
-    9: spellSlots.level9?.used ?? 0,
+const SPELL_LEVEL_KEYS = [
+  'level1',
+  'level2',
+  'level3',
+  'level4',
+  'level5',
+  'level6',
+  'level7',
+  'level8',
+  'level9',
+] as const
+
+function storedToNumeric(spellSlots: SpellSlots, field: 'used' | 'max'): Record<number, number> {
+  const result: Record<number, number> = {}
+  for (let i = 0; i < SPELL_LEVEL_KEYS.length; i++) {
+    result[i + 1] = spellSlots[SPELL_LEVEL_KEYS[i]]?.[field] ?? 0
   }
+  return result
 }
 
 export function numericToStored(
   calculated: SpellSlotsResult,
   usedMap: Record<number, number>,
 ): SpellSlots {
-  const base: SpellSlots = {
-    level1: { max: 0, used: 0 },
-    level2: { max: 0, used: 0 },
-    level3: { max: 0, used: 0 },
-    level4: { max: 0, used: 0 },
-    level5: { max: 0, used: 0 },
-    level6: { max: 0, used: 0 },
-    level7: { max: 0, used: 0 },
-    level8: { max: 0, used: 0 },
-    level9: { max: 0, used: 0 },
-  }
+  const base = {} as SpellSlots
 
-  for (let sl = 1; sl <= 9; sl++) {
-    const key = `level${sl}` as keyof SpellSlots
+  for (let i = 0; i < SPELL_LEVEL_KEYS.length; i++) {
+    const sl = i + 1
+    const key = SPELL_LEVEL_KEYS[i]
     const calc = calculated[sl]
-    if (calc) {
-      base[key] = { max: calc.max, used: Math.min(usedMap[sl] ?? 0, calc.max) }
+    base[key] = {
+      max: calc?.max ?? 0,
+      used: Math.min(usedMap[sl] ?? 0, calc?.max ?? 0),
     }
   }
 
@@ -351,14 +436,6 @@ function normalizeProgression(value?: string): CasterProgression {
   if (value === 'pact') return 'pact'
   if (value === 'artificer') return 'artificer'
   return 'none'
-}
-
-function getCasterLevelContribution(progression: CasterProgression, classLevel: number): number {
-  if (progression === 'full') return classLevel
-  if (progression === '1/2') return Math.floor(classLevel / 2)
-  if (progression === '1/3') return Math.floor(classLevel / 3)
-  if (progression === 'artificer') return Math.ceil(classLevel / 2)
-  return 0
 }
 
 export interface SpellcastingClassDetail {
@@ -564,9 +641,15 @@ export function getPreparedSpellLimit(
   return evaluatePreparedSpellsFormula(classData.preparedSpells, characterLevel, abilityModifiers)
 }
 
-export function getClassMaxSpellLevel(classData: Class5e | undefined, classLevel: number): number {
+export function getClassMaxSpellLevel(
+  classData: Class5e | undefined,
+  classLevel: number,
+  casterProgressionOverride?: CasterProgression,
+): number {
   if (!classData) return 0
-  if (classData.casterProgression === 'pact') {
+  const progression = casterProgressionOverride ?? normalizeProgression(classData.casterProgression)
+
+  if (progression === 'pact') {
     const pactSlots = getPactMagicSlots(classLevel)
     return Object.keys(pactSlots)
       .map((k) => Number.parseInt(k, 10))
@@ -591,7 +674,7 @@ export function getClassMaxSpellLevel(classData: Class5e | undefined, classLevel
       .reduce((max, item) => Math.max(max, item.level), 0)
   }
 
-  const fallback = calculateSpellSlots(classData.name, classLevel, classData.casterProgression)
+  const fallback = calculateSpellSlots(classData.name, classLevel, progression)
   return Object.keys(fallback)
     .map((k) => Number.parseInt(k, 10))
     .filter((k) => Number.isFinite(k))
@@ -639,9 +722,10 @@ export function buildSpellcastingClassDetails(
       if (!entry || !profile.className) return null
 
       const classData = classesById.get(toClassProfileId(entry.name, entry.source))
-      const ability = classData?.spellcastingAbility
-        ? normalizeAbilityName(classData.spellcastingAbility)
-        : null
+      const subclassData = getSelectedSubclassData(classData, entry)
+      const effectiveProgression = getEffectiveCasterProgression(classData, subclassData)
+      const effectiveAbility = getEffectiveSpellcastingAbility(classData, subclassData)
+      const ability = effectiveAbility ? normalizeAbilityName(effectiveAbility) : null
       const mod = ability
         ? getAbilityModifier((character.abilityScores as AbilityScores)[ability] ?? 10)
         : null
@@ -653,11 +737,15 @@ export function buildSpellcastingClassDetails(
         className: entry.name,
         classSource: entry.source,
         classLevel: entry.levels,
-        casterProgression: normalizeProgression(classData?.casterProgression),
+        casterProgression: normalizeProgression(effectiveProgression),
         spellcastingAbility: ability ?? undefined,
         spellSaveDC: saveDc,
         spellAttackBonus: attack,
-        maxSpellLevel: getClassMaxSpellLevel(classData, entry.levels),
+        maxSpellLevel: getClassMaxSpellLevel(
+          classData,
+          entry.levels,
+          normalizeProgression(effectiveProgression),
+        ),
         knownSpellLimit:
           isPreparedCaster(classData) && classData?.preparedSpells
             ? getPreparedSpellLimit(classData, entry.levels, mod)
@@ -712,10 +800,12 @@ export function calculateCharacterSpellSlots(
 
   for (const entry of entries) {
     const classData = classesById.get(toClassProfileId(entry.name, entry.source))
-    const progression = normalizeProgression(classData?.casterProgression)
+    const subclassData = getSelectedSubclassData(classData, entry)
+    const progression = normalizeProgression(getEffectiveCasterProgression(classData, subclassData))
 
     if (progression === 'pact') {
-      addSlotRows(pact, getPactMagicSlots(entry.levels), true)
+      const pactRows = classData ? getSpellSlotsFromClassData(classData, entry.levels) : null
+      addSlotRows(pact, pactRows ?? getPactMagicSlots(entry.levels), true)
       continue
     }
 
@@ -723,7 +813,7 @@ export function calculateCharacterSpellSlots(
   }
 
   const shared = combinedCasterLevel > 0 ? getStandardSpellSlots(combinedCasterLevel) : {}
-  const usedMap = storedToNumericUsed(character.spells.spellSlots)
+  const usedMap = storedToNumeric(character.spells.spellSlots, 'used')
 
   const mergedSharedWithUsage = mergeSpellSlots(shared, usedMap)
 

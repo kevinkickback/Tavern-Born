@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { loadDataFromSource } from '@/lib/5etools'
+import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { clearGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
-import type { DataSourceConfig, GameData } from '@/types/5etools'
+import type { DataSourceConfig, GameData, Item5e } from '@/types/5etools'
 
 let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
@@ -25,6 +26,7 @@ export type CacheStatus =
 
 interface GameDataState {
   gameData: GameData | null
+  itemLookup: Map<string, Item5e>
   dataSourceConfig: DataSourceConfig | null
   isLoading: boolean
   isBackgroundRefreshing: boolean
@@ -59,6 +61,7 @@ export const useGameDataStore = create<GameDataState>()(
   persist(
     (set, get) => ({
       gameData: null,
+      itemLookup: new Map(),
       dataSourceConfig: null,
       isLoading: false,
       isBackgroundRefreshing: false,
@@ -70,7 +73,7 @@ export const useGameDataStore = create<GameDataState>()(
       cacheStatus: 'unknown',
       hasHydrated: false,
 
-      setGameData: (data) => set({ gameData: data }),
+      setGameData: (data) => set({ gameData: data, itemLookup: buildItemLookup(data.items ?? []) }),
       setCacheStatus: (status) => set({ cacheStatus: status }),
       setDataSourceConfig: (config) => set({ dataSourceConfig: config }),
       setLoading: (loading) => set({ isLoading: loading }),
@@ -118,6 +121,7 @@ export const useGameDataStore = create<GameDataState>()(
           const contentChanged = cacheEntry.lastDataChangedAt !== prevChangedAt
           set({
             gameData: contentChanged ? data : get().gameData,
+            itemLookup: contentChanged ? buildItemLookup(data.items ?? []) : get().itemLookup,
             dataSourceConfig: { ...config, isValid: true, lastLoaded: now },
             isLoading: false,
             isBackgroundRefreshing: false,
@@ -172,6 +176,7 @@ export const useGameDataStore = create<GameDataState>()(
         clearGameDataCache().catch(console.error)
         set({
           gameData: null,
+          itemLookup: new Map(),
           dataSourceConfig: null,
           isLoading: false,
           isBackgroundRefreshing: false,
