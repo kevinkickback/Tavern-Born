@@ -4,12 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { buildSpellModalConfig } from '@/lib/calculations/spellModalConfig'
-import {
-  getProfileKnownNames,
-  getSubclassExpandedSpellNames,
-  inferClassSpellAttributionLevels,
-} from '@/lib/calculations/spellProfiles'
+import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import {
   formatCastingTime,
   formatComponents,
@@ -28,7 +23,7 @@ import {
 } from '@/pages/spells/components/SpellProfileManager'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Class5e, Spell5e } from '@/types/5etools'
+import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
 
 interface TooltipEntityLike {
@@ -294,15 +289,13 @@ export function SpellsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const { spells, items, feats, races, classes, backgrounds, optionalfeatures } =
     useFilteredGameData()
-  const { ledger, applyManualSpellGrant, applyInferredClassSpellSelection, removeSpellProvenance } =
-    useProvenance()
+  const { ledger, applyManualSpellGrant, removeSpellProvenance } = useProvenance()
   const {
     spellProfiles,
     spellcastingDetails,
     sharedSlots,
     pactSlots,
     isSpellcaster,
-    setProfileSpells,
     removeSpellFromProfile,
     togglePrepared,
     selectRacialSpell,
@@ -310,8 +303,6 @@ export function SpellsPage() {
     setRacialCastingAbility,
   } = useSpellSlots()
 
-  const [spellModalOpen, setSpellModalOpen] = useState(false)
-  const [activeProfileId, setActiveProfileId] = useState<string>('')
   const [racialChoiceModalOpen, setRacialChoiceModalOpen] = useState(false)
   const [activeRacialChoice, setActiveRacialChoice] = useState<{
     profileId: string
@@ -335,14 +326,6 @@ export function SpellsPage() {
     }
     return map
   }, [allSpells])
-
-  const classByProfileId = useMemo(() => {
-    const map = new Map<string, Class5e>()
-    for (const cls of classes as Class5e[]) {
-      map.set(`class:${cls.name}|${cls.source ?? ''}`, cls)
-    }
-    return map
-  }, [classes])
 
   const recursiveLookup = useMemo<RecursiveLookup>(
     () => ({
@@ -379,13 +362,30 @@ export function SpellsPage() {
     ],
   )
 
-  const activeProfile =
-    spellProfiles.find((profile) => profile.id === activeProfileId) ?? spellProfiles[0] ?? null
-
   const detailsByProfileId = useMemo(
     () => new Map(spellcastingDetails.map((detail) => [detail.profileId, detail] as const)),
     [spellcastingDetails],
   )
+
+  /** For true prepared casters (Cleric/Druid/Paladin), pre-compute all castable class spells grouped by profile. */
+  const preparedCasterSpellsByProfile = useMemo(() => {
+    const map = new Map<string, Spell5e[]>()
+    for (const detail of spellcastingDetails) {
+      if (!detail.isTruePreparedCaster || detail.maxSpellLevel < 1) continue
+      const profile = spellProfiles.find((p) => p.id === detail.profileId)
+      if (!profile || profile.type !== 'class') continue
+
+      const available = allSpells.filter(
+        (spell) =>
+          spell.level > 0 &&
+          spell.level <= detail.maxSpellLevel &&
+          isSpellOnClassList(spell, profile.className, profile.classSource),
+      )
+      available.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+      map.set(detail.profileId, available)
+    }
+    return map
+  }, [allSpells, spellcastingDetails, spellProfiles])
 
   const spellListItems = useMemo(() => {
     const items: SpellListItem[] = []
@@ -490,52 +490,21 @@ export function SpellsPage() {
     return map
   }, [ledger.spells, spellProfiles])
 
-  const modalConfig = useMemo(() => {
-    const classListOverrides = new Set<string>()
-
-    if (activeProfile?.type === 'class' && activeProfile.className && character) {
-      const classEntry =
-        character.classProgression?.find(
-          (entry) =>
-            entry.name === activeProfile.className &&
-            (entry.source ?? '') === (activeProfile.classSource ?? ''),
-        ) ??
-        (character.class === activeProfile.className
-          ? {
-              name: character.class,
-              source: character.classSource,
-              levels: character.level,
-              subclass: character.subclass,
-              subclassSource: character.subclassSource,
-            }
-          : undefined)
-
-      if (classEntry) {
-        const classData = classByProfileId.get(
-          `class:${classEntry.name}|${classEntry.source ?? ''}`,
-        )
-        const expanded = getSubclassExpandedSpellNames(classEntry, classData)
-        for (const name of expanded) {
-          classListOverrides.add(name)
-        }
-      }
-    }
-
-    return buildSpellModalConfig({
-      activeProfile,
-      spellProfiles,
-      detailsByProfileId,
-      spellByName,
-      classListOverrides,
-    })
-  }, [activeProfile, character, classByProfileId, detailsByProfileId, spellByName, spellProfiles])
-
   const hasWarlockClass = useMemo(
     () => spellcastingDetails.some((detail) => detail.className.toLowerCase() === 'warlock'),
     [spellcastingDetails],
   )
 
   const hasMultipleSpellcastingClasses = spellcastingDetails.length > 1
+
+  const characterSpellNames = useMemo(() => {
+    const names = new Set<string>()
+    for (const profile of spellProfiles) {
+      for (const name of profile.cantrips) names.add(name)
+      for (const name of profile.spellsKnown) names.add(name)
+    }
+    return names
+  }, [spellProfiles])
 
   const racialChoiceModalConfig = useMemo(() => {
     if (!activeRacialChoice) return null
@@ -648,124 +617,22 @@ export function SpellsPage() {
     }
   }
 
-  const handleOpenSpellModal = () => {
-    if (!activeProfileId && spellProfiles[0]) {
-      setActiveProfileId(spellProfiles[0].id)
-    }
+  const handleOpenRacialChoiceModal = (profileId: string, choiceId: string) => {
+    const profile = spellProfiles.find((p) => p.id === profileId)
+    if (!profile?.choices) return
+    const choice = profile.choices.find((c) => c.id === choiceId)
+    if (!choice) return
 
-    const profile = spellProfiles.find((p) => p.id === activeProfileId) ?? spellProfiles[0] ?? null
-    if (profile?.type === 'racial' && profile.choices) {
-      const unfulfilledChoice = profile.choices.find(
-        (choice) => choice.selected.length < choice.count,
-      )
-      if (unfulfilledChoice) {
-        setActiveRacialChoice({
-          profileId: profile.id,
-          choiceId: unfulfilledChoice.id,
-          count: unfulfilledChoice.count,
-          isCantrip: unfulfilledChoice.isCantrip,
-          filter: unfulfilledChoice.filter,
-          pool: unfulfilledChoice.pool,
-          selected: unfulfilledChoice.selected,
-        })
-        setRacialChoiceModalOpen(true)
-        return
-      }
-    }
-
-    setSpellModalOpen(true)
-  }
-
-  const handleConfirmProfileSpells = (names: string[]) => {
-    if (!activeProfile) {
-      return
-    }
-
-    const activeDetail = detailsByProfileId.get(activeProfile.id)
-    const previousKnownNames = getProfileKnownNames(activeProfile)
-    const otherKnownNames = new Set(
-      spellProfiles
-        .filter((profile) => profile.id !== activeProfile.id)
-        .flatMap((profile) => [...profile.cantrips, ...profile.spellsKnown]),
-    )
-    const nextCantrips = names.filter(
-      (spellName) => spellByName.get(getEntityKey(spellName))?.level === 0,
-    )
-    const nextSpellsKnown = names.filter(
-      (spellName) => spellByName.get(getEntityKey(spellName))?.level !== 0,
-    )
-
-    setProfileSpells(activeProfile.id, nextCantrips, nextSpellsKnown)
-
-    const newlyAddedNames = names.filter((spellName) => !previousKnownNames.has(spellName))
-
-    if (
-      activeProfile.type === 'class' &&
-      activeProfile.className &&
-      activeDetail &&
-      activeDetail.classLevel > 0
-    ) {
-      const classData = classByProfileId.get(activeProfile.id)
-      const existingAttributions = [...previousKnownNames]
-        .map((spellName) => {
-          const tags = ledger.spells[normalizeKey(spellName)] ?? []
-          const classTag = tags.find(
-            (tag) =>
-              tag.sourceType === 'class' &&
-              tag.sourceName === activeProfile.className &&
-              (tag.sourceRef ?? '') === (activeProfile.classSource ?? '') &&
-              !!tag.spellGrantedAtLevel,
-          )
-          if (!classTag?.spellGrantedAtLevel) return null
-          return {
-            spellName,
-            grantedAtLevel: classTag.spellGrantedAtLevel,
-          }
-        })
-        .filter((entry): entry is { spellName: string; grantedAtLevel: number } => !!entry)
-
-      const spellLevelByName = new Map<string, number>()
-      for (const spellName of new Set([...previousKnownNames, ...names])) {
-        spellLevelByName.set(spellName, spellByName.get(getEntityKey(spellName))?.level ?? 1)
-      }
-
-      const inferred = inferClassSpellAttributionLevels({
-        classData,
-        classLevel: activeDetail.classLevel,
-        newSpellNames: newlyAddedNames,
-        spellLevelByName,
-        existingAttributions,
-      })
-
-      const inferredByName = new Map(
-        inferred.map((entry) => [entry.spellName, entry.grantedAtLevel]),
-      )
-
-      for (const spellName of newlyAddedNames) {
-        const inferredLevel = inferredByName.get(spellName)
-        if (!inferredLevel) {
-          applyManualSpellGrant(spellName)
-          continue
-        }
-        applyInferredClassSpellSelection(
-          activeProfile.className,
-          activeProfile.classSource,
-          spellName,
-          inferredLevel,
-        )
-      }
-    } else {
-      for (const spellName of newlyAddedNames) {
-        applyManualSpellGrant(spellName)
-      }
-    }
-
-    for (const spellName of previousKnownNames) {
-      if (names.includes(spellName) || otherKnownNames.has(spellName)) {
-        continue
-      }
-      removeSpellProvenance(spellName)
-    }
+    setActiveRacialChoice({
+      profileId: profile.id,
+      choiceId: choice.id,
+      count: choice.count,
+      isCantrip: choice.isCantrip,
+      filter: choice.filter,
+      pool: choice.pool,
+      selected: choice.selected,
+    })
+    setRacialChoiceModalOpen(true)
   }
 
   return (
@@ -776,23 +643,18 @@ export function SpellsPage() {
           detailsByProfileId={detailsByProfileId}
           groupedItems={groupedItems}
           selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}
-          activeProfileId={activeProfileId}
-          onActiveProfileChange={setActiveProfileId}
-          activeProfile={activeProfile}
-          spellModalOpen={spellModalOpen}
-          onSpellModalOpenChange={setSpellModalOpen}
-          modalConfig={modalConfig}
+          preparedCasterSpellsByProfile={preparedCasterSpellsByProfile}
           allSpells={allSpells}
           getSpellByName={(spellName) => spellByName.get(getEntityKey(spellName))}
-          onOpenModal={handleOpenSpellModal}
           onTogglePrepared={togglePrepared}
           onRemoveSpell={handleRemoveSpell}
-          onConfirmSpells={handleConfirmProfileSpells}
           onSetRacialCastingAbility={setRacialCastingAbility}
+          onOpenRacialChoiceModal={handleOpenRacialChoiceModal}
           racialChoiceModalOpen={racialChoiceModalOpen}
           onRacialChoiceModalOpenChange={setRacialChoiceModalOpen}
           racialChoiceModalConfig={racialChoiceModalConfig}
           onConfirmRacialChoice={handleConfirmRacialChoice}
+          characterSpellNames={characterSpellNames}
           renderSpellName={({ item, spell, sourceContext }) => (
             <SpellNameTooltip
               name={item.name}

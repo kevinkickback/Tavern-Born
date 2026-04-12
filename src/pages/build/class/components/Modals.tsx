@@ -3,6 +3,7 @@ import { OptionalFeatureSelectionModal } from '@/components/modals/OptionalFeatu
 import type { ActiveFilters, CategoryLimit } from '@/components/modals/SelectionModal'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { SubclassSelectionModal } from '@/components/modals/SubclassSelectionModal'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getFeatureTypes, type OptionalFeatureLike } from '@/lib/5etools/classData'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
@@ -11,7 +12,7 @@ import {
   ensureSpellProfiles,
   getKnownSpellNames,
 } from '@/lib/calculations/spellProfiles'
-import { getOrdinalForm } from '@/lib/calculations/spellUtils'
+import { formatSpellLevel, getOrdinalForm } from '@/lib/calculations/spellUtils'
 import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog'
 import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelectionDialog'
 import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
@@ -64,6 +65,7 @@ interface BuildClassModalsProps {
       cantrips: number
       spells: number
       maxSpellLevel: number
+      canSwap: boolean
     }
   >
   classSpells: Spell5e[]
@@ -76,7 +78,18 @@ interface BuildClassModalsProps {
     spells: Array<{ name: string; grantedAtLevel?: number }>,
   ) => void
   onRemoveSpellProvenance: (spellName: string) => void
+  onSwapSpellProvenance: (
+    className: string,
+    classSource: string | undefined,
+    removedName: string,
+    addedName: string,
+  ) => void
   onUpdateCharacter: (patch: Partial<Character>) => void
+
+  spellSwapLevel: number | null
+  spellSwapDrop: string | null
+  onSpellSwapLevelChange: (level: number | null) => void
+  onSpellSwapDropChange: (drop: string | null) => void
 
   subclassPickerOpen: boolean
   onSubclassPickerOpenChange: (open: boolean) => void
@@ -126,7 +139,12 @@ export function BuildClassModals({
   viewingClassSource,
   onApplyBatchSpellSelections,
   onRemoveSpellProvenance,
+  onSwapSpellProvenance,
   onUpdateCharacter,
+  spellSwapLevel,
+  spellSwapDrop,
+  onSpellSwapLevelChange,
+  onSpellSwapDropChange,
   subclassPickerOpen,
   onSubclassPickerOpenChange,
   subclassTitle,
@@ -189,6 +207,10 @@ export function BuildClassModals({
           const lockedNames = new Set(
             [...getKnownSpellNames(profiles)].filter((name) => !classProfileNames.has(name)),
           )
+          const initialSelectedSet = new Set(initialSelectedNames)
+          const characterSpellNames = new Set(
+            [...getKnownSpellNames(profiles)].filter((name) => !initialSelectedSet.has(name)),
+          )
 
           const categories: CategoryLimit<Spell5e>[] = []
           if (gain.cantrips > 0) {
@@ -245,6 +267,7 @@ export function BuildClassModals({
               spells={classSpells}
               initialSelectedNames={initialSelectedNames}
               lockedNames={lockedNames}
+              characterSpellNames={characterSpellNames}
               categories={categories}
               initialFilters={initialFilters}
               allowedLevels={allowedLevels}
@@ -479,6 +502,155 @@ export function BuildClassModals({
                   specialFeats: [...keptSpecial, ...newSpecial],
                 })
                 onClassFeatPickerStateChange(null)
+              }}
+            />
+          )
+        })()}
+
+      {spellSwapLevel !== null &&
+        (() => {
+          const classProfileId = `class:${viewingClass ?? ''}|${viewingClassSource ?? ''}`
+          const profiles = ensureSpellProfiles(character)
+          const classProfile = profiles.find((profile) => profile.id === classProfileId)
+          if (!classProfile || classProfile.spellsKnown.length === 0) return null
+
+          const maxSpellLevel = (() => {
+            const gain = spellChoicesByLevel.get(spellSwapLevel)
+            return gain?.maxSpellLevel ?? 0
+          })()
+
+          const closeSwap = () => {
+            onSpellSwapLevelChange(null)
+            onSpellSwapDropChange(null)
+          }
+
+          if (!spellSwapDrop) {
+            // Step 1: Pick which spell to drop
+            return (
+              <Dialog
+                open
+                onOpenChange={(open) => {
+                  if (!open) closeSwap()
+                }}
+              >
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Replace a Known Spell</DialogTitle>
+                  </DialogHeader>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Select a spell to replace. You may swap one spell each time you gain a level.
+                  </p>
+                  <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
+                    {classProfile.spellsKnown.map((name) => {
+                      const spell = spellByName.get(name)
+                      return (
+                        <button
+                          key={spell ? `${spell.name}|${spell.source ?? ''}` : name}
+                          type="button"
+                          className="flex items-center justify-between px-3 py-2 rounded-md text-sm hover:bg-accent/10 border border-transparent hover:border-accent/30 transition-colors text-left"
+                          onClick={() => onSpellSwapDropChange(name)}
+                        >
+                          <span className="font-medium">{name}</span>
+                          {spell && (
+                            <span className="text-xs text-muted-foreground">
+                              {formatSpellLevel(spell.level)}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )
+          }
+
+          // Step 2: Pick the replacement spell
+          const lockedNames = new Set(
+            [...getKnownSpellNames(profiles)].filter((name) => name !== spellSwapDrop),
+          )
+          const characterSpellNames = lockedNames
+          const allowedLevels = new Set(
+            Array.from({ length: maxSpellLevel }, (_, i) => String(i + 1)),
+          )
+          const categories: CategoryLimit<Spell5e>[] = [
+            {
+              key: 'replacement',
+              label: `replacement (up to ${getOrdinalForm(maxSpellLevel)}-level)`,
+              max: 1,
+              test: (spell) =>
+                spell.level > 0 && (maxSpellLevel === 0 || spell.level <= maxSpellLevel),
+            },
+          ]
+          const initialFilters: ActiveFilters = {
+            level: new Set(allowedLevels),
+            school: new Set(),
+            type: new Set(),
+          }
+
+          return (
+            <SpellSelectionModal
+              open
+              onOpenChange={(open) => {
+                if (!open) closeSwap()
+              }}
+              title={`Replace: ${spellSwapDrop}`}
+              spells={classSpells}
+              initialSelectedNames={[]}
+              lockedNames={lockedNames}
+              characterSpellNames={characterSpellNames}
+              categories={categories}
+              initialFilters={initialFilters}
+              allowedLevels={allowedLevels}
+              onConfirm={(names) => {
+                const replacement = names[0]
+                if (!replacement) {
+                  closeSwap()
+                  return
+                }
+
+                // Update spellsKnown: remove dropped, add replacement
+                const nextKnown = classProfile.spellsKnown
+                  .filter((n) => n !== spellSwapDrop)
+                  .concat(replacement)
+
+                // Also remove from preparedSpells if dropped spell was prepared
+                const nextPrepared = classProfile.preparedSpells.filter((n) => n !== spellSwapDrop)
+
+                // Record the swap
+                const nextSwaps = {
+                  ...classProfile.spellSwaps,
+                  [spellSwapLevel]: { removed: spellSwapDrop, added: replacement },
+                }
+
+                const nextProfiles = profiles.map((profile) => {
+                  if (profile.id !== classProfileId) return profile
+                  return {
+                    ...profile,
+                    spellsKnown: nextKnown,
+                    preparedSpells: nextPrepared,
+                    spellSwaps: nextSwaps,
+                  }
+                })
+
+                onUpdateCharacter({
+                  spells: {
+                    ...character.spells,
+                    spellProfiles: nextProfiles,
+                  },
+                })
+
+                // Update provenance: atomic remove + add (no level attribution)
+                if (viewingClass) {
+                  onSwapSpellProvenance(
+                    viewingClass,
+                    viewingClassSource,
+                    spellSwapDrop,
+                    replacement,
+                  )
+                }
+
+                closeSwap()
               }}
             />
           )

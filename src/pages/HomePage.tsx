@@ -217,10 +217,6 @@ export function HomePage() {
         <div className="relative mb-8 flex flex-col gap-2">
           {/* Main toolbar row */}
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="outline" size="lg" onClick={handleImportCharacter} className="gap-2">
-              <Upload />
-              Import Character
-            </Button>
             <Button
               variant="default"
               size="lg"
@@ -229,6 +225,10 @@ export function HomePage() {
             >
               <Plus />
               New Character
+            </Button>
+            <Button variant="outline" size="lg" onClick={handleImportCharacter} className="gap-2">
+              <Upload />
+              Import Character
             </Button>
 
             <div className="ml-auto relative shrink-0">

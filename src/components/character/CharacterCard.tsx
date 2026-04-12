@@ -71,11 +71,6 @@ export const CharacterCard = memo(function CharacterCard({
     onDelete(character.id)
   }
 
-  const handleCheckboxClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onToggleSelect?.(character.id)
-  }
-
   return (
     <Card
       className={`group relative aspect-[3/2] cursor-pointer overflow-hidden border transition-colors hover:border-accent ${isActive ? 'border-accent border-2' : ''} ${isSelected ? 'ring-2 ring-primary/50' : ''}`}
@@ -101,9 +96,14 @@ export const CharacterCard = memo(function CharacterCard({
       <div className="absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-t from-background/70 via-background/25 to-transparent" />
 
       {selectionMode && (
-        <button type="button" className="absolute top-3 left-3 z-10" onClick={handleCheckboxClick}>
-          <Checkbox checked={isSelected} aria-label={`Select ${character.name || 'character'}`} />
-        </button>
+        <div className="absolute top-3 left-3 z-10">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => onToggleSelect?.(character.id)}
+            aria-label={`Select ${character.name || 'character'}`}
+            className="border-white shadow-md"
+          />
+        </div>
       )}
 
       <div

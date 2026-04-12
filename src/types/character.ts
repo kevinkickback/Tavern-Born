@@ -199,6 +199,8 @@ export interface SpellProfile {
   preparedSpells: string[]
   /** Special unrestricted profile is always prepared. */
   alwaysPrepared?: boolean
+  /** Spell swaps by class level: each level allows at most one swap for known casters. */
+  spellSwaps?: Record<number, { removed: string; added: string }>
 }
 
 export interface SpellSlots {

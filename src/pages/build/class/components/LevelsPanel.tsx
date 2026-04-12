@@ -16,7 +16,10 @@ import {
   type OptionalFeatureLike,
   optFeatureTypeToFull,
 } from '@/lib/5etools/classData'
-import { buildClassSpellSelectionsByLevel } from '@/lib/calculations/spellProfiles'
+import {
+  buildClassSpellSelectionsByLevel,
+  ensureSpellProfiles,
+} from '@/lib/calculations/spellProfiles'
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Character, CharacterClassEntry } from '@/types/character'
 import type { ClassFeatProgression, OptionalFeatureProgression } from '../model/levelsUtils'
@@ -43,6 +46,7 @@ interface BuildClassLevelsPanelProps {
       cantrips: number
       spells: number
       maxSpellLevel: number
+      canSwap: boolean
     }
   >
   optFeatureProgressions: OptionalFeatureProgression[]
@@ -70,6 +74,7 @@ interface BuildClassLevelsPanelProps {
   onOpenClassPicker: () => void
   onOpenSubclassPicker: () => void
   onOpenSpellPicker: (level: number) => void
+  onOpenSpellSwap: (level: number) => void
   onOpenFeatPicker: () => void
   onOpenAsiPicker: (level: number) => void
   onOpenOptPicker: (state: { progName: string; featureTypes: string[]; total: number }) => void
@@ -117,6 +122,7 @@ export function BuildClassLevelsPanel({
   onOpenClassPicker,
   onOpenSubclassPicker,
   onOpenSpellPicker,
+  onOpenSpellSwap,
   onOpenFeatPicker,
   onOpenAsiPicker,
   onOpenOptPicker,
@@ -136,6 +142,11 @@ export function BuildClassLevelsPanel({
     className: viewingClass,
     classSource: viewingClassSource,
   })
+
+  const classProfileId = `class:${viewingClass}|${viewingClassSource ?? ''}`
+  const classProfile = ensureSpellProfiles(character).find((p) => p.id === classProfileId)
+  const hasExistingKnown = (classProfile?.spellsKnown?.length ?? 0) > 0
+  const swapsByLevel = classProfile?.spellSwaps ?? {}
 
   return (
     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
@@ -392,7 +403,10 @@ export function BuildClassLevelsPanel({
                             chosenNames={spellSelectionsByLevel.get(lv) ?? []}
                             spellByName={spellByName}
                             detailCollapsed={detailCollapsed}
+                            hasExistingKnown={hasExistingKnown}
+                            swapDoneAtLevel={!!swapsByLevel[lv]}
                             onOpenSpellPicker={onOpenSpellPicker}
+                            onOpenSpellSwap={onOpenSpellSwap}
                             onSelectFeature={onSelectFeature}
                             onExpandDetails={onExpandDetails}
                             getOrdinalForm={getOrdinalForm}

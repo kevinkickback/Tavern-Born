@@ -33,6 +33,8 @@ export interface SpellSelectionModalProps {
   spells: Spell5e[]
   /** Names already selected in another profile or slot and therefore unavailable here. */
   lockedNames?: Set<string>
+  /** All spell names the character already knows (from any source). Hidden by default, never re-selectable. */
+  characterSpellNames?: Set<string>
   /** Per-level selection limits expressed as CategoryLimit objects. Optional. */
   categories?: CategoryLimit<Spell5e>[]
   /** Pre-selected spell names when the dialog opens. */
@@ -112,6 +114,14 @@ const RESTRICTIONS_FILTER: FilterSection = {
   ],
 }
 
+const VISIBILITY_FILTER: FilterSection = {
+  key: 'visibility',
+  label: 'Visibility',
+  type: 'switches',
+  columns: 1,
+  options: [{ value: 'hide-known', label: 'Hide already-known spells' }],
+}
+
 function isRitualSpell(spell: Spell5e): boolean {
   const meta = spell.meta
   if (!meta || typeof meta !== 'object') {
@@ -129,7 +139,13 @@ function matchSpell(
   classListOverrides: Set<string> | undefined,
   enforceClassList: boolean,
   strictLevels: boolean,
+  characterSpellNames?: Set<string>,
 ): boolean {
+  // Hide already-known spells when the visibility filter is active.
+  if (characterSpellNames?.has(spell.name) && activeFilters.visibility?.has('hide-known')) {
+    return false
+  }
+
   if (
     enforceClassList &&
     className &&
@@ -169,9 +185,15 @@ interface SpellCardProps {
   spell: Spell5e
   isSelected: boolean
   isLocked: boolean
+  isCharacterKnown: boolean
 }
 
-const SpellCard = memo(function SpellCard({ spell, isSelected, isLocked }: SpellCardProps) {
+const SpellCard = memo(function SpellCard({
+  spell,
+  isSelected,
+  isLocked,
+  isCharacterKnown,
+}: SpellCardProps) {
   const isRitual = isRitualSpell(spell)
   const isConcentration = spell.duration.some((d) => d.concentration)
   const firstEntry = spell.entries?.[0]
@@ -203,7 +225,12 @@ const SpellCard = memo(function SpellCard({ spell, isSelected, isLocked }: Spell
           {isSelected && (
             <Badge className="text-xs px-1.5 py-0 h-5 bg-accent text-accent-foreground">✓</Badge>
           )}
-          {!isSelected && isLocked && (
+          {!isSelected && isCharacterKnown && (
+            <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5">
+              Already Known
+            </Badge>
+          )}
+          {!isSelected && !isCharacterKnown && isLocked && (
             <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5">
               Added Elsewhere
             </Badge>
@@ -247,6 +274,7 @@ export function SpellSelectionModal({
   title = 'Add Spells',
   spells,
   lockedNames = new Set(),
+  characterSpellNames,
   categories,
   initialSelectedNames = [],
   initialFilters,
@@ -261,16 +289,23 @@ export function SpellSelectionModal({
   const spellIdsByName = new Map(spells.map((spell) => [spell.name, getItemId(spell)]))
   const initialSelectedIds = initialSelectedNames.map((name) => spellIdsByName.get(name) ?? name)
 
+  const hasCharSpells = characterSpellNames && characterSpellNames.size > 0
   const filterSections = [
     buildLevelFilter(allowedLevels),
     SCHOOL_FILTER,
     TYPE_FILTER,
     ...(className ? [RESTRICTIONS_FILTER] : []),
+    ...(hasCharSpells ? [VISIBILITY_FILTER] : []),
   ]
+
+  const effectiveInitialFilters = hasCharSpells
+    ? { ...initialFilters, visibility: new Set(['hide-known']) }
+    : initialFilters
 
   const canSelect = (spell: Spell5e, selectedIds: Set<string>, allItems: Spell5e[]) => {
     const id = getItemId(spell)
     if (selectedIds.has(id)) return true
+    if (characterSpellNames?.has(spell.name)) return false
     if (lockedNames.has(spell.name)) return false
 
     for (const category of categories ?? []) {
@@ -301,6 +336,7 @@ export function SpellSelectionModal({
           spell={spell}
           isSelected={isSelected}
           isLocked={!isSelected && lockedNames.has(spell.name)}
+          isCharacterKnown={!isSelected && !!characterSpellNames?.has(spell.name)}
         />
       )}
       canSelect={canSelect}
@@ -314,12 +350,13 @@ export function SpellSelectionModal({
           classListOverrides,
           !activeFilters.restrictions?.has('ignore-class-list'),
           !!allowedLevels,
+          characterSpellNames,
         )
       }
       filterSections={filterSections}
       categories={categories}
       initialSelectedIds={initialSelectedIds}
-      initialFilters={initialFilters}
+      initialFilters={effectiveInitialFilters}
       onConfirm={(_ids, selectedItems) => onConfirm(selectedItems.map((s) => s.name))}
     />
   )

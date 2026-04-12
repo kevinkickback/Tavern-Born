@@ -976,6 +976,60 @@ export function useProvenanceMutations({
     [character, ledger, patch],
   )
 
+  /** Atomically remove old spell provenance and add replacement in one update. */
+  const swapSpellProvenance = useCallback(
+    (
+      className: string,
+      classSource: string | undefined,
+      removedName: string,
+      addedName: string,
+    ) => {
+      if (!character) return
+      const removedKey = normalizeKey(removedName)
+      const removedTags = ledger.spells[removedKey] ?? []
+      const sourceRef = classSource ?? ''
+      const removedClassTags = removedTags.filter(
+        (tag) =>
+          tag.sourceType === 'class' &&
+          tag.sourceName === className &&
+          (tag.sourceRef ?? '') === sourceRef,
+      )
+      const inheritedGrantedAtLevel = removedClassTags.find(
+        (tag) => !!tag.spellGrantedAtLevel,
+      )?.spellGrantedAtLevel
+
+      // Remove only the swapped class grant; keep unrelated grants for this spell.
+      const retainedTags = removedTags.filter(
+        (tag) =>
+          !(
+            tag.sourceType === 'class' &&
+            tag.sourceName === className &&
+            (tag.sourceRef ?? '') === sourceRef
+          ),
+      )
+
+      const updatedSpells = { ...ledger.spells }
+      if (retainedTags.length > 0) {
+        updatedSpells[removedKey] = retainedTags
+      } else {
+        delete updatedSpells[removedKey]
+      }
+
+      const withRemoval = { ...ledger, spells: updatedSpells }
+      // Add replacement spell, inheriting the original pick's level attribution.
+      const withAdd = applyClassSpellGrant(
+        withRemoval,
+        className,
+        classSource,
+        addedName,
+        'choice',
+        inheritedGrantedAtLevel ? { spellGrantedAtLevel: inheritedGrantedAtLevel } : {},
+      )
+      patch(withAdd)
+    },
+    [character, ledger, patch],
+  )
+
   const applyManualEquipmentGrant = useCallback(
     (itemName: string) => {
       if (!character) return
@@ -1251,6 +1305,7 @@ export function useProvenanceMutations({
     applyManualProficiencyToggle,
     applyManualSpellGrant,
     removeSpellProvenance,
+    swapSpellProvenance,
     applyManualEquipmentGrant,
     removeEquipmentProvenance,
     resolveFeatChoiceSelection,

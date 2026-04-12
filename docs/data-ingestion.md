@@ -118,8 +118,8 @@ Spells in 5etools carry metadata about which classes can use them. This system i
 When a user selects spells for a multiclass character:
 
 1. Each class gets its own `SpellProfile` (separate cantrips/spellsKnown/preparedSpells lists)
-2. When opening the spell selection modal: `buildSpellModalConfig()` passes `className` and `classSource`
-3. Modal filters via `isSpellOnClassList(spell, className, classSource)` — checks if that class appears in the spell's enriched list
+2. Class spell selection happens on the Class page per-level; prepared casters use inline toggles on the Spells page
+3. Filtering uses `isSpellOnClassList(spell, className, classSource)` — checks if that class appears in the spell's enriched list
 4. User can only select spells available to that specific class
 
 **This prevents:** adding Wizard-exclusive spells to a Sorcerer multiclass, for example.

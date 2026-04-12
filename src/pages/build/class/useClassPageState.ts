@@ -19,6 +19,8 @@ export function useClassPageState() {
   const [classPickerSearch, setClassPickerSearch] = useState('')
   const [subclassPickerOpen, setSubclassPickerOpen] = useState(false)
   const [spellPickerLevel, setSpellPickerLevel] = useState<number | null>(null)
+  const [spellSwapLevel, setSpellSwapLevel] = useState<number | null>(null)
+  const [spellSwapDrop, setSpellSwapDrop] = useState<string | null>(null)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [selectedFeature, setSelectedFeature] = useState<SelectedFeatureState | null>(null)
   const [optPickerState, setOptPickerState] = useState<OptPickerState | null>(null)
@@ -78,6 +80,10 @@ export function useClassPageState() {
     setClassPickerSearch,
     setSubclassPickerOpen,
     setSpellPickerLevel,
+    spellSwapLevel,
+    spellSwapDrop,
+    setSpellSwapLevel,
+    setSpellSwapDrop,
     setDetailCollapsed,
     setSelectedFeature,
     setOptPickerState,

@@ -77,6 +77,7 @@ export function BuildClassPage() {
     replaceFeatSelections,
     applyBatchSpellSelections,
     removeSpellProvenance,
+    swapSpellProvenance,
   } = useProvenance()
   const {
     selectedClassTab,
@@ -84,6 +85,8 @@ export function BuildClassPage() {
     classPickerSearch,
     subclassPickerOpen,
     spellPickerLevel,
+    spellSwapLevel,
+    spellSwapDrop,
     detailCollapsed,
     selectedFeature,
     optPickerState,
@@ -95,6 +98,8 @@ export function BuildClassPage() {
     setClassPickerSearch,
     setSubclassPickerOpen,
     setSpellPickerLevel,
+    setSpellSwapLevel,
+    setSpellSwapDrop,
     setDetailCollapsed,
     setSelectedFeature,
     setOptPickerState,
@@ -217,7 +222,10 @@ export function BuildClassPage() {
     }
   }
   const spellChoicesByLevel = useMemo(() => {
-    const map = new Map<number, { cantrips: number; spells: number; maxSpellLevel: number }>()
+    const map = new Map<
+      number,
+      { cantrips: number; spells: number; maxSpellLevel: number; canSwap: boolean }
+    >()
     if (!viewingClassData) return map
     for (let lv = 1; lv <= 20; lv++) {
       const gain = getClassSpellGainAtLevel(viewingClassData, lv)
@@ -545,6 +553,7 @@ export function BuildClassPage() {
                 onOpenClassPicker={() => setClassPickerOpen(true)}
                 onOpenSubclassPicker={() => setSubclassPickerOpen(true)}
                 onOpenSpellPicker={setSpellPickerLevel}
+                onOpenSpellSwap={setSpellSwapLevel}
                 onOpenFeatPicker={() => setFeatPickerOpen(true)}
                 onOpenAsiPicker={setAsiPickerLevel}
                 onOpenOptPicker={setOptPickerState}
@@ -615,6 +624,11 @@ export function BuildClassPage() {
         featByCompositeId={featByCompositeId}
         onApplyBatchSpellSelections={applyBatchSpellSelections}
         onRemoveSpellProvenance={removeSpellProvenance}
+        onSwapSpellProvenance={swapSpellProvenance}
+        spellSwapLevel={spellSwapLevel}
+        spellSwapDrop={spellSwapDrop}
+        onSpellSwapLevelChange={setSpellSwapLevel}
+        onSpellSwapDropChange={setSpellSwapDrop}
       />
     </div>
   )

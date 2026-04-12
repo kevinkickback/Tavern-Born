@@ -150,6 +150,23 @@ export function buildClassSpellSelectionsByLevel(params: {
     addAtLevel(classTag.spellGrantedAtLevel, spellName)
   }
 
+  // Exclude spells that entered via swap — they replace existing known spells
+  // and must not count as new selections for that level.
+  const swaps = classProfile.spellSwaps
+  if (swaps) {
+    for (const [levelStr, swap] of Object.entries(swaps)) {
+      const level = Number(levelStr)
+      const names = selections.get(level)
+      if (!names) continue
+      const filtered = names.filter((n) => n !== swap.added)
+      if (filtered.length > 0) {
+        selections.set(level, filtered)
+      } else {
+        selections.delete(level)
+      }
+    }
+  }
+
   return selections
 }
 
@@ -491,6 +508,7 @@ export function ensureSpellProfiles(
       spellsKnown: mergeSpellNames(existingProfile?.spellsKnown ?? [], knownSubclassSpells),
       preparedSpells: existingProfile?.preparedSpells ?? [],
       alwaysPrepared: false,
+      ...(existingProfile?.spellSwaps ? { spellSwaps: existingProfile.spellSwaps } : {}),
     })
 
     if (
@@ -615,6 +633,7 @@ export interface SpellcastingClassDetail {
   knownSpellLimit: number | null
   cantripLimit: number | null
   isPreparedCaster: boolean
+  isTruePreparedCaster: boolean
 }
 
 function getProgressionArray(value: unknown): number[] | null {
@@ -628,6 +647,14 @@ export function isPreparedCaster(classData?: Class5e): boolean {
   if (typeof classData.preparedSpells === 'string') return true
   const known = getProgressionArray(classData.spellsKnownProgression)
   const knownFixed = getProgressionArray(classData.spellsKnownProgressionFixed)
+  return !known && !knownFixed
+}
+
+/** True prepared casters (Cleric/Druid/Paladin) prepare from the full class list. Wizard has preparedSpells but also spellsKnownProgression so is NOT a true prepared caster. */
+export function isTruePreparedCaster(classData?: Class5e): boolean {
+  if (!isPreparedCaster(classData)) return false
+  const known = getProgressionArray(classData?.spellsKnownProgression)
+  const knownFixed = getProgressionArray(classData?.spellsKnownProgressionFixed)
   return !known && !knownFixed
 }
 
@@ -916,6 +943,7 @@ export function buildSpellcastingClassDetails(
             : getKnownSpellLimit(classData, entry.levels),
         cantripLimit: getCantripLimit(classData, entry.levels),
         isPreparedCaster: isPreparedCaster(classData),
+        isTruePreparedCaster: isTruePreparedCaster(classData),
       } as SpellcastingClassDetail
     })
     .filter((detail): detail is SpellcastingClassDetail => detail !== null)
