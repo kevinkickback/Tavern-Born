@@ -26,7 +26,10 @@ import {
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
 import { applyClassAsiChoice, resetClassAsiChoice } from '@/pages/build/class/model/asi'
-import type { ClassFeatProgression } from '@/pages/build/class/model/levelsUtils'
+import type {
+  ClassFeatProgression,
+  OptionalFeatureProgression,
+} from '@/pages/build/class/model/levelsUtils'
 import {
   buildClassSelectionPatch,
   buildSubclassSelectionPatch,
@@ -72,7 +75,7 @@ export function BuildClassPage() {
     applyClassEquipmentChoice,
     applyOptionalFeatureSelection,
     replaceFeatSelections,
-    applySpellSelection,
+    applyBatchSpellSelections,
     removeSpellProvenance,
   } = useProvenance()
   const {
@@ -162,7 +165,14 @@ export function BuildClassPage() {
     return getSubclassSelectionInfo(viewingClassData)
   }, [viewingClassData])
   const asiLevels = getASILevelsFromClass(viewingClassData)
-  const optFeatures = (optionalfeatures ?? []) as OptionalFeatureLike[]
+  const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
+  const optFeatures = useMemo(
+    () =>
+      (
+        (optionalfeatures ?? []) as Array<OptionalFeatureLike & { isClassFeatureVariant?: boolean }>
+      ).filter((f) => includeClassFeatureVariants || !f.isClassFeatureVariant),
+    [optionalfeatures, includeClassFeatureVariants],
+  )
 
   const isOptionalFeatureLike = (value: unknown): value is OptionalFeatureLike => {
     return (
@@ -216,11 +226,8 @@ export function BuildClassPage() {
     return map
   }, [viewingClassData])
   const optFeatureProgressions = useMemo(
-    () =>
-      character?.variantRules?.optionalClassFeatures
-        ? (viewingClassData?.optionalfeatureProgression ?? [])
-        : [],
-    [viewingClassData, character?.variantRules?.optionalClassFeatures],
+    () => (viewingClassData?.optionalfeatureProgression ?? []) as OptionalFeatureProgression[],
+    [viewingClassData],
   )
   const classFeatProgressions = useMemo(
     () => (viewingClassData?.featProgression ?? []) as ClassFeatProgression[],
@@ -606,7 +613,7 @@ export function BuildClassPage() {
         onClassFeatPickerStateChange={setClassFeatPickerState}
         feats={(feats ?? []) as Feat5e[]}
         featByCompositeId={featByCompositeId}
-        onApplySpellSelection={applySpellSelection}
+        onApplyBatchSpellSelections={applyBatchSpellSelections}
         onRemoveSpellProvenance={removeSpellProvenance}
       />
     </div>

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { useClasses, useClassLookup } from '@/hooks/data/useGameData'
+import { useClasses, useClassLookup, useRaces } from '@/hooks/data/useGameData'
 import {
   buildSpellcastingClassDetails,
   calculateCharacterSpellSlots,
@@ -9,7 +9,7 @@ import {
   type SpellcastingClassDetail,
 } from '@/lib/calculations/spellProfiles'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Class5e } from '@/types/5etools'
+import type { Class5e, Race5e } from '@/types/5etools'
 import type { SpellProfile } from '@/types/character'
 
 export interface SpellSlotInfo {
@@ -39,6 +39,9 @@ export interface SpellSlotsState {
   setProfileSpells: (profileId: string, cantrips: string[], spellsKnown: string[]) => void
   removeSpellFromProfile: (profileId: string, name: string, kind: 'cantrip' | 'spell') => void
   togglePrepared: (profileId: string, name: string) => void
+  selectRacialSpell: (profileId: string, choiceId: string, spellName: string) => void
+  removeRacialSpell: (profileId: string, choiceId: string, spellName: string) => void
+  setRacialCastingAbility: (profileId: string, ability: string) => void
 }
 
 function toClassProfileId(name: string, source?: string): string {
@@ -134,6 +137,7 @@ export function useSpellSlots(): SpellSlotsState {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const classes = useClasses()
   const classLookup = useClassLookup()
+  const allRaces = useRaces()
 
   const classesById = useMemo(() => {
     const map = new Map<string, Class5e>()
@@ -153,10 +157,69 @@ export function useSpellSlots(): SpellSlotsState {
     return map
   }, [classes, classLookup])
 
+  const selectedRaceData = useMemo(() => {
+    if (!character?.race) return undefined
+
+    // Find the parent race entry
+    const parentMatch = allRaces.find(
+      (r) =>
+        r.name === character.race &&
+        (!character.raceSource || (r.source ?? '') === (character.raceSource ?? '')),
+    )
+
+    // Find the subrace entry nested inside the parent
+    let subraceMatch: Race5e | undefined
+    if (character.subrace && parentMatch?.subraces) {
+      subraceMatch = parentMatch.subraces.find(
+        (sr) =>
+          sr.name === character.subrace &&
+          (!character.subraceSource || (sr.source ?? '') === (character.subraceSource ?? '')),
+      )
+    }
+
+    // Also check for subraces promoted to top-level entries (e.g. MPMM lineage races)
+    if (!subraceMatch && character.subrace) {
+      const topLevel = allRaces.find(
+        (r) =>
+          r.name === character.subrace &&
+          (!character.subraceSource || (r.source ?? '') === (character.subraceSource ?? '')),
+      )
+      if (topLevel) subraceMatch = topLevel
+    }
+
+    // Merge additionalSpells from parent and subrace (both can contribute)
+    // When the parent has named additionalSpells blocks (keyed by subrace name),
+    // filter to only include the block matching the selected subrace.
+    const parentSpells = parentMatch?.additionalSpells ?? []
+    const filteredParentSpells =
+      character.subrace && parentSpells.some((s) => !!s.name)
+        ? parentSpells.filter(
+            (s) => !s.name || s.name.toLowerCase() === character.subrace?.toLowerCase(),
+          )
+        : parentSpells
+    const subraceSpells = subraceMatch?.additionalSpells ?? []
+    const mergedSpells = [...filteredParentSpells, ...subraceSpells]
+
+    if (mergedSpells.length === 0) return undefined
+
+    // Use the most specific name for the profile label
+    const displayName =
+      subraceMatch?.name ?? character.subrace ?? parentMatch?.name ?? character.race
+    const displaySource = subraceMatch?.source ?? parentMatch?.source
+
+    return { name: displayName, source: displaySource, additionalSpells: mergedSpells }
+  }, [
+    character?.race,
+    character?.subrace,
+    character?.raceSource,
+    character?.subraceSource,
+    allRaces,
+  ])
+
   const spellProfiles = useMemo(() => {
     if (!character) return []
-    return ensureSpellProfiles(character, classesById)
-  }, [character, classesById])
+    return ensureSpellProfiles(character, classesById, selectedRaceData)
+  }, [character, classesById, selectedRaceData])
 
   const slotsBreakdown = useMemo(() => {
     if (!character) {
@@ -209,40 +272,40 @@ export function useSpellSlots(): SpellSlotsState {
 
   const syncProfiles = useCallback(() => {
     if (!character) return
-    patchSpells({ spellProfiles: ensureSpellProfiles(character, classesById) })
-  }, [character, classesById, patchSpells])
+    patchSpells({ spellProfiles: ensureSpellProfiles(character, classesById, selectedRaceData) })
+  }, [character, classesById, selectedRaceData, patchSpells])
 
   const addSpellToProfile = useCallback(
     (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
       if (!character) return
-      const baseProfiles = ensureSpellProfiles(character, classesById)
+      const baseProfiles = ensureSpellProfiles(character, classesById, selectedRaceData)
       patchSpells({
         spellProfiles: upsertProfileSpell(baseProfiles, profileId, name, kind),
       })
     },
-    [character, classesById, patchSpells],
+    [character, classesById, selectedRaceData, patchSpells],
   )
 
   const setProfileSpells = useCallback(
     (profileId: string, cantrips: string[], spellsKnown: string[]) => {
       if (!character) return
-      const baseProfiles = ensureSpellProfiles(character, classesById)
+      const baseProfiles = ensureSpellProfiles(character, classesById, selectedRaceData)
       patchSpells({
         spellProfiles: replaceProfileSpells(baseProfiles, profileId, cantrips, spellsKnown),
       })
     },
-    [character, classesById, patchSpells],
+    [character, classesById, selectedRaceData, patchSpells],
   )
 
   const removeSpellFromProfile = useCallback(
     (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
       if (!character) return
-      const baseProfiles = ensureSpellProfiles(character, classesById)
+      const baseProfiles = ensureSpellProfiles(character, classesById, selectedRaceData)
       patchSpells({
         spellProfiles: removeProfileSpell(baseProfiles, profileId, name, kind),
       })
     },
-    [character, classesById, patchSpells],
+    [character, classesById, selectedRaceData, patchSpells],
   )
 
   const addCantrip = useCallback(
@@ -280,33 +343,103 @@ export function useSpellSlots(): SpellSlotsState {
   const togglePrepared = useCallback(
     (profileId: string, name: string) => {
       if (!character) return
-      const nextProfiles = ensureSpellProfiles(character, classesById).map((profile) => {
-        if (profile.id !== profileId || profile.alwaysPrepared) return profile
+      const nextProfiles = ensureSpellProfiles(character, classesById, selectedRaceData).map(
+        (profile) => {
+          if (profile.id !== profileId || profile.alwaysPrepared) return profile
 
-        const isPrepared = profile.preparedSpells.includes(name)
-        const detail = spellcastingDetailByProfileId.get(profileId)
-        const preparedLimit =
-          detail?.isPreparedCaster === true ? (detail.knownSpellLimit ?? null) : null
+          const isPrepared = profile.preparedSpells.includes(name)
+          const detail = spellcastingDetailByProfileId.get(profileId)
+          const preparedLimit =
+            detail?.isPreparedCaster === true ? (detail.knownSpellLimit ?? null) : null
 
-        if (
-          !isPrepared &&
-          preparedLimit !== null &&
-          profile.preparedSpells.length >= preparedLimit
-        ) {
-          return profile
-        }
+          if (
+            !isPrepared &&
+            preparedLimit !== null &&
+            profile.preparedSpells.length >= preparedLimit
+          ) {
+            return profile
+          }
 
-        return {
-          ...profile,
-          preparedSpells: isPrepared
-            ? profile.preparedSpells.filter((spellName) => spellName !== name)
-            : [...profile.preparedSpells, name],
-        }
-      })
+          return {
+            ...profile,
+            preparedSpells: isPrepared
+              ? profile.preparedSpells.filter((spellName) => spellName !== name)
+              : [...profile.preparedSpells, name],
+          }
+        },
+      )
 
       patchSpells({ spellProfiles: nextProfiles })
     },
-    [character, classesById, patchSpells, spellcastingDetailByProfileId],
+    [character, classesById, selectedRaceData, patchSpells, spellcastingDetailByProfileId],
+  )
+
+  const selectRacialSpell = useCallback(
+    (profileId: string, choiceId: string, spellName: string) => {
+      if (!character) return
+      const baseProfiles = ensureSpellProfiles(character, classesById, selectedRaceData)
+      const nextProfiles = baseProfiles.map((profile) => {
+        if (profile.id !== profileId || profile.type !== 'racial' || !profile.choices) {
+          return profile
+        }
+        const nextChoices = profile.choices.map((choice) => {
+          if (choice.id !== choiceId) return choice
+          if (choice.selected.includes(spellName)) return choice
+          if (choice.selected.length >= choice.count) return choice
+          return { ...choice, selected: [...choice.selected, spellName] }
+        })
+        const updatedChoice = nextChoices.find((c) => c.id === choiceId)
+        const wasAdded = updatedChoice?.selected.includes(spellName) ?? false
+        if (!wasAdded) return profile
+
+        const isCantrip = updatedChoice?.isCantrip ?? false
+        return {
+          ...profile,
+          choices: nextChoices,
+          cantrips: isCantrip ? [...profile.cantrips, spellName] : profile.cantrips,
+          spellsKnown: isCantrip ? profile.spellsKnown : [...profile.spellsKnown, spellName],
+        }
+      })
+      patchSpells({ spellProfiles: nextProfiles })
+    },
+    [character, classesById, selectedRaceData, patchSpells],
+  )
+
+  const removeRacialSpell = useCallback(
+    (profileId: string, choiceId: string, spellName: string) => {
+      if (!character) return
+      const baseProfiles = ensureSpellProfiles(character, classesById, selectedRaceData)
+      const nextProfiles = baseProfiles.map((profile) => {
+        if (profile.id !== profileId || profile.type !== 'racial' || !profile.choices) {
+          return profile
+        }
+        const nextChoices = profile.choices.map((choice) => {
+          if (choice.id !== choiceId) return choice
+          return { ...choice, selected: choice.selected.filter((s) => s !== spellName) }
+        })
+        return {
+          ...profile,
+          choices: nextChoices,
+          cantrips: profile.cantrips.filter((s) => s !== spellName),
+          spellsKnown: profile.spellsKnown.filter((s) => s !== spellName),
+        }
+      })
+      patchSpells({ spellProfiles: nextProfiles })
+    },
+    [character, classesById, selectedRaceData, patchSpells],
+  )
+
+  const setRacialCastingAbility = useCallback(
+    (profileId: string, ability: string) => {
+      if (!character) return
+      const baseProfiles = ensureSpellProfiles(character, classesById, selectedRaceData)
+      const nextProfiles = baseProfiles.map((profile) => {
+        if (profile.id !== profileId || profile.type !== 'racial') return profile
+        return { ...profile, castingAbility: ability }
+      })
+      patchSpells({ spellProfiles: nextProfiles })
+    },
+    [character, classesById, selectedRaceData, patchSpells],
   )
 
   return {
@@ -328,5 +461,8 @@ export function useSpellSlots(): SpellSlotsState {
     setProfileSpells,
     removeSpellFromProfile,
     togglePrepared,
+    selectRacialSpell,
+    removeRacialSpell,
+    setRacialCastingAbility,
   }
 }

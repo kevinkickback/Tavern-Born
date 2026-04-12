@@ -12,6 +12,7 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 vi.mock('@/hooks/data/useGameData', () => ({
   useClasses: () => [],
   useClassLookup: () => ({}),
+  useRaces: () => [],
 }))
 
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'

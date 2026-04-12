@@ -448,13 +448,33 @@ export const spellSlotsSchema = z.object({
   level9: spellSlotLevelSchema,
 })
 
+export const raceSpellChoiceSchema = z.object({
+  id: z.string().min(1),
+  count: z.number().int().min(1),
+  isCantrip: z.boolean(),
+  filter: z
+    .object({
+      level: z.number().int().min(0),
+      classes: z.array(z.string().min(1)).min(1),
+    })
+    .optional(),
+  pool: z.array(z.string()).optional(),
+  selected: z.array(z.string()).default([]),
+})
+
 export const spellProfileSchema = z
   .object({
     id: z.string().min(1, 'Spell profile ID is required'),
-    type: z.enum(['class', 'special']),
+    type: z.enum(['class', 'special', 'racial']),
     label: z.string().min(1, 'Spell profile label is required'),
     className: z.string().optional(),
     classSource: z.string().optional(),
+    raceName: z.string().optional(),
+    raceSource: z.string().optional(),
+    castingAbility: z.string().optional(),
+    castingAbilityOptions: z.array(z.string()).optional(),
+    choices: z.array(raceSpellChoiceSchema).optional(),
+    fixedSpells: z.array(z.string()).optional(),
     cantrips: z.array(z.string()).default([]),
     spellsKnown: z.array(z.string()).default([]),
     preparedSpells: z.array(z.string()).default([]),

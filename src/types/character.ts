@@ -170,15 +170,30 @@ export interface SpellSelection {
   spellSlots: SpellSlots
 }
 
-export type SpellProfileType = 'class' | 'special'
+export type SpellProfileType = 'class' | 'special' | 'racial'
+
+export interface RaceSpellChoice {
+  id: string
+  count: number
+  isCantrip: boolean
+  filter?: { level: number; classes: string[] }
+  pool?: string[]
+  selected: string[]
+}
 
 export interface SpellProfile {
-  /** Stable profile key: class profiles use `class:<name>|<source>`, special uses `special:unrestricted`. */
+  /** Stable profile key: class profiles use `class:<name>|<source>`, special uses `special:unrestricted`, racial uses `racial:<name>|<source>`. */
   id: string
   type: SpellProfileType
   label: string
   className?: string
   classSource?: string
+  raceName?: string
+  raceSource?: string
+  castingAbility?: string
+  castingAbilityOptions?: string[]
+  choices?: RaceSpellChoice[]
+  fixedSpells?: string[]
   cantrips: string[]
   spellsKnown: string[]
   preparedSpells: string[]

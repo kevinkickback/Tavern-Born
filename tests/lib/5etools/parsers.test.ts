@@ -300,4 +300,157 @@ describe('5etools/parsers', () => {
     }>
     expect(features[0]?.entries).toEqual(['Once per turn, you can deal extra damage.'])
   })
+
+  test('parseRaces expands simple _versions into subraces', () => {
+    const races = parseRaces({
+      race: [
+        {
+          name: 'Elf',
+          source: 'XPHB',
+          entries: [
+            { name: 'Darkvision', type: 'entries', entries: ['60 ft.'] },
+            { name: 'Elven Lineage', type: 'entries', entries: ['Choose a lineage.'] },
+          ],
+          _versions: [
+            {
+              name: 'Elf; Drow Lineage',
+              source: 'XPHB',
+              darkvision: 120,
+              additionalSpells: [{ known: { 1: ['dancing lights|xphb#c'] } }],
+              _mod: {
+                entries: {
+                  mode: 'replaceArr',
+                  replace: 'Elven Lineage',
+                  items: { name: 'Elven Lineage (Drow)', type: 'entries', entries: ['Drow text'] },
+                },
+              },
+            },
+            {
+              name: 'Elf; High Elf Lineage',
+              source: 'XPHB',
+              _mod: {
+                entries: {
+                  mode: 'replaceArr',
+                  replace: 'Elven Lineage',
+                  items: {
+                    name: 'Elven Lineage (High Elf)',
+                    type: 'entries',
+                    entries: ['High Elf text'],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    }) as Array<{
+      name: string
+      subraces?: Array<{
+        name: string
+        source?: string
+        darkvision?: number
+        additionalSpells?: unknown[]
+        _isVersion?: boolean
+        entries?: unknown[]
+      }>
+    }>
+
+    expect(races).toHaveLength(1)
+    const elf = races[0]
+    expect(elf.subraces).toHaveLength(2)
+    expect(elf.subraces?.[0]?.name).toBe('Drow Lineage')
+    expect(elf.subraces?.[0]?.darkvision).toBe(120)
+    expect(elf.subraces?.[0]?.additionalSpells).toBeDefined()
+    expect(elf.subraces?.[0]?._isVersion).toBe(true)
+    expect(elf.subraces?.[1]?.name).toBe('High Elf Lineage')
+
+    // Verify _mod was applied: Elven Lineage replaced with Drow-specific entry
+    const drowEntries = elf.subraces?.[0]?.entries as Array<{ name?: string }>
+    expect(drowEntries?.some((e) => e.name === 'Elven Lineage (Drow)')).toBe(true)
+    expect(drowEntries?.some((e) => e.name === 'Elven Lineage')).toBe(false)
+  })
+
+  test('parseRaces expands template _versions with variable substitution', () => {
+    const races = parseRaces({
+      race: [
+        {
+          name: 'Dragonborn',
+          source: 'XPHB',
+          entries: [
+            { name: 'Draconic Ancestry', type: 'entries', entries: ['Choose ancestry.'] },
+            { name: 'Breath Weapon', type: 'entries', entries: ['You exhale {{damageType}}.'] },
+          ],
+          _versions: [
+            {
+              _abstract: {
+                name: 'Dragonborn ({{color}})',
+                source: 'XPHB',
+                _mod: {
+                  entries: [
+                    { mode: 'removeArr', names: ['Draconic Ancestry'] },
+                    {
+                      mode: 'replaceArr',
+                      replace: 'Breath Weapon',
+                      items: {
+                        name: 'Breath Weapon',
+                        type: 'entries',
+                        entries: ['You exhale {{damageType}} energy.'],
+                      },
+                    },
+                  ],
+                },
+              },
+              _implementations: [
+                { _variables: { color: 'Black', damageType: 'Acid' }, resist: ['acid'] },
+                { _variables: { color: 'Red', damageType: 'Fire' }, resist: ['fire'] },
+              ],
+            },
+          ],
+        },
+      ],
+    }) as Array<{
+      subraces?: Array<{
+        name: string
+        resist?: string[]
+        _isVersion?: boolean
+        entries?: unknown[]
+      }>
+    }>
+
+    const db = races[0]
+    expect(db.subraces).toHaveLength(2)
+    expect(db.subraces?.[0]?.name).toBe('Black')
+    expect(db.subraces?.[0]?.resist).toEqual(['acid'])
+    expect(db.subraces?.[0]?._isVersion).toBe(true)
+    expect(db.subraces?.[1]?.name).toBe('Red')
+    expect(db.subraces?.[1]?.resist).toEqual(['fire'])
+
+    // Verify removeArr removed Draconic Ancestry
+    const blackEntries = db.subraces?.[0]?.entries as Array<{ name?: string }>
+    expect(blackEntries?.some((e) => e.name === 'Draconic Ancestry')).toBe(false)
+
+    // Verify variable substitution in replacement text
+    const breathWeapon = blackEntries?.find((e) => e.name === 'Breath Weapon') as {
+      entries?: string[]
+    }
+    expect(breathWeapon?.entries?.[0]).toBe('You exhale Acid energy.')
+  })
+
+  test('parseRaces combines subrace entries with _versions', () => {
+    const races = parseRaces({
+      race: [{ name: 'Elf', source: 'PHB', entries: [] }],
+      subrace: [{ name: 'High Elf', raceName: 'Elf', raceSource: 'PHB' }],
+    }) as Array<{ subraces?: Array<{ name: string }> }>
+
+    // Standard subraces still work
+    expect(races[0]?.subraces?.map((s) => s.name)).toEqual(['High Elf'])
+  })
+
+  test('parseRaces handles race with no subraces and no _versions', () => {
+    const races = parseRaces({
+      race: [{ name: 'Human', source: 'PHB' }],
+    }) as Array<{ subraces?: unknown[] }>
+
+    expect(races[0]?.subraces).toBeUndefined()
+  })
 })

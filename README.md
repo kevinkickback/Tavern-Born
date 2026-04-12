@@ -50,11 +50,3 @@ This application uses the [5etools](https://wiki.tercept.net/en/home) data forma
 ## 📄 License
 
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
-## Runtime Config
-
-`runtime.config.json` stores build/runtime metadata used by packaged app tooling.
-
-- `app`: opaque app identity hash used by release/runtime integration.
-- It is not part of gameplay data loading and is not read by the 5etools ingestion pipeline.
-- Keep this file committed as-is unless release tooling explicitly regenerates it.
