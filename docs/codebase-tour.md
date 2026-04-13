@@ -84,6 +84,13 @@ Compendium normalization and detail rendering:
 Feat page selection helpers:
 - src/pages/feats/model/selection.ts
 
+Feats page UI orchestration:
+- src/pages/feats/FeatsPage.tsx — Character/Bonus feat accordions, warning badges, and tooltips for potential feat sources
+
+Spells page UI orchestration:
+- src/pages/spells/SpellsPage.tsx
+- src/pages/spells/components/SpellProfileManager.tsx — spell profile accordions and warning badges/tooltips
+
 5etools rich text rendering:
 - src/lib/renderer.ts
 - src/components/editor/FormattedTextRenderer.tsx

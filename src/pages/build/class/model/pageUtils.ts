@@ -6,6 +6,7 @@ import {
   ensureSpellProfiles,
   isSpellOnClassList,
 } from '@/lib/calculations/spellProfiles'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 
@@ -43,18 +44,7 @@ interface BuildFeatModalFeatsParams<T extends { name: string; source?: string }>
 }
 
 export function buildClassProgression(character: Character | null): CharacterClassEntry[] {
-  if (!character) return []
-  if (character.classProgression?.length) return character.classProgression
-  if (character.class) {
-    return [
-      {
-        name: character.class,
-        source: character.classSource,
-        levels: character.level,
-      },
-    ]
-  }
-  return []
+  return getCharacterClassEntries(character)
 }
 
 function resolveClassForEntry(
@@ -94,11 +84,7 @@ export function countTotalAsiAcrossClasses({
   if (!character) return 0
 
   const progressions =
-    classProgression.length > 0
-      ? classProgression
-      : character.class
-        ? [{ name: character.class, levels: character.level }]
-        : []
+    classProgression.length > 0 ? classProgression : getCharacterClassEntries(character)
 
   let count = 0
   for (const entry of progressions) {
@@ -118,11 +104,7 @@ export function countTotalFeatSlots({
   if (!character) return 0
 
   const progressions =
-    classProgression.length > 0
-      ? classProgression
-      : character.class
-        ? [{ name: character.class, levels: character.level }]
-        : []
+    classProgression.length > 0 ? classProgression : getCharacterClassEntries(character)
 
   let count = 0
   for (const entry of progressions) {

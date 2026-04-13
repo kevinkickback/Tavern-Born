@@ -1,6 +1,9 @@
-import { CaretLeft, CaretRight, Scroll } from '@phosphor-icons/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { CaretLeft, CaretRight, Check, Scroll, Star } from '@phosphor-icons/react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
+import type { ActiveFilters } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -13,6 +16,7 @@ import {
 } from '@/components/ui/select'
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { featCategoryToFull } from '@/lib/5etools/classData'
 import {
   formatEquipmentOptionEntries,
   resolveBackgroundEquipmentBlocks,
@@ -22,6 +26,8 @@ import {
   type AbilityName,
   getBackgroundAbilityData,
 } from '@/lib/calculations/abilityScores'
+import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
+import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
@@ -33,17 +39,24 @@ import {
 } from '@/pages/build/background/model/data'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Background5e } from '@/types/5etools'
+import type { Background5e, Feat5e } from '@/types/5etools'
 
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { backgrounds } = useFilteredGameData()
+  const { backgrounds, feats } = useFilteredGameData()
   const itemLookup = useGameDataStore((s) => s.itemLookup)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [bgSearch, setBgSearch] = useState('')
-  const { applyBackgroundSelection, applyBackgroundAbilityChoices } = useProvenance()
+  const {
+    applyBackgroundSelection,
+    applyBackgroundAbilityChoices,
+    resolveFeatChoiceSelection,
+    ledger,
+  } = useProvenance()
   const selectedBackgroundRef = useRef<HTMLDivElement | null>(null)
+  const [featModalOpen, setFeatModalOpen] = useState(false)
+  const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
   const isInitialLoadRef = useRef(true)
   const previousSearchRef = useRef('')
 
@@ -94,6 +107,80 @@ export function BuildBackgroundPage() {
     }
     return counts
   }, [backgrounds, itemLookup])
+
+  // Origin feat choices from provenance
+  const originFeatChoices = useMemo(
+    () =>
+      ledger.choices.filter((c) => c.domain === 'feats' && c.sourceTag.sourceType === 'background'),
+    [ledger.choices],
+  )
+
+  const activeFeatChoice = useMemo(
+    () => originFeatChoices.find((c) => c.id === activeFeatChoiceId),
+    [originFeatChoices, activeFeatChoiceId],
+  )
+
+  const featModalFeats = useMemo(() => {
+    if (!activeFeatChoice) return []
+    const pool = activeFeatChoice.optionPool
+    if (pool.length === 0) return feats as Feat5e[]
+    const categoryPrefixes = pool.filter((p) => p.startsWith('category:'))
+    if (categoryPrefixes.length > 0) {
+      const allowedCategories = new Set(categoryPrefixes.map((p) => p.replace('category:', '')))
+      return (feats as Feat5e[]).filter((f) => f.category && allowedCategories.has(f.category))
+    }
+    const poolLower = new Set(pool.map((p) => p.toLowerCase()))
+    return (feats as Feat5e[]).filter((f) => poolLower.has(f.name.toLowerCase()))
+  }, [activeFeatChoice, feats])
+
+  const featModalInitialFilters = useMemo<ActiveFilters | undefined>(() => {
+    if (!activeFeatChoice) return undefined
+    const cats = activeFeatChoice.optionPool
+      .filter((p) => p.startsWith('category:'))
+      .map((p) => p.replace('category:', ''))
+    if (cats.length > 0) return { featCategory: new Set(cats) }
+    return undefined
+  }, [activeFeatChoice])
+
+  const profileSpells = character
+    ? collectKnownSpells(ensureSpellProfiles(character))
+    : { cantrips: [], spellsKnown: [], preparedSpells: [] }
+
+  const characterSnapshot: PrereqCharacterSnapshot = {
+    level: character?.level ?? 0,
+    class: character?.class ?? '',
+    race: character?.race ?? '',
+    abilityScores: character?.abilityScores ?? {
+      strength: 10,
+      dexterity: 10,
+      constitution: 10,
+      intelligence: 10,
+      wisdom: 10,
+      charisma: 10,
+    },
+    features: character?.features ?? [],
+    spells: {
+      cantrips: profileSpells.cantrips,
+      spellsKnown: profileSpells.spellsKnown,
+      preparedSpells: profileSpells.preparedSpells,
+    },
+  }
+
+  const handleOpenFeatModal = useCallback((choiceId: string) => {
+    setActiveFeatChoiceId(choiceId)
+    setFeatModalOpen(true)
+  }, [])
+
+  const handleFeatModalConfirm = useCallback(
+    (selectedFeats: Feat5e[]) => {
+      if (!activeFeatChoiceId || selectedFeats.length === 0) return
+      const feat = selectedFeats[0]
+      resolveFeatChoiceSelection(activeFeatChoiceId, { name: feat.name, source: feat.source })
+      setFeatModalOpen(false)
+      setActiveFeatChoiceId(null)
+    },
+    [activeFeatChoiceId, resolveFeatChoiceSelection],
+  )
 
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
@@ -246,6 +333,62 @@ export function BuildBackgroundPage() {
                               </>
                             )}
                           </div>
+                          {isSelected &&
+                            (() => {
+                              const bgChoicesForFeat = originFeatChoices.filter(
+                                (c) => c.sourceTag.sourceName === bg.name,
+                              )
+                              if (bgChoicesForFeat.length === 0) return null
+                              return bgChoicesForFeat.map((choice) => {
+                                const isResolved = choice.selected.length > 0
+                                const poolLabel = choice.optionPool
+                                  .filter((p) => p.startsWith('category:'))
+                                  .map((p) => featCategoryToFull(p.replace('category:', '')))
+                                  .join(', ')
+                                const resolvedFeat = isResolved
+                                  ? (feats as Feat5e[]).find(
+                                      (f) =>
+                                        f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                                    )
+                                  : undefined
+                                return (
+                                  <div
+                                    key={choice.id}
+                                    className="flex items-center gap-1.5 flex-shrink-0"
+                                  >
+                                    {isResolved ? (
+                                      <>
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs px-1.5 py-0 h-5 text-success border-success/50 gap-1"
+                                        >
+                                          <Check className="h-2.5 w-2.5" />
+                                          {resolvedFeat?.name ?? choice.selected[0]}
+                                        </Badge>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 text-xs px-1.5"
+                                          onClick={() => handleOpenFeatModal(choice.id)}
+                                        >
+                                          Change
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-xs gap-1"
+                                        onClick={() => handleOpenFeatModal(choice.id)}
+                                      >
+                                        <Star className="h-3 w-3" weight="duotone" />
+                                        {poolLabel ? `Choose ${poolLabel} Feat` : 'Choose Feat'}
+                                      </Button>
+                                    )}
+                                  </div>
+                                )
+                              })
+                            })()}
                         </div>
                       )
                     })}
@@ -354,6 +497,20 @@ export function BuildBackgroundPage() {
           </Card>
         </div>
       </div>
+
+      <FeatSelectionModal
+        open={featModalOpen}
+        onOpenChange={(open) => {
+          setFeatModalOpen(open)
+          if (!open) setActiveFeatChoiceId(null)
+        }}
+        feats={featModalFeats}
+        maxSelections={1}
+        characterSnapshot={characterSnapshot}
+        onConfirm={handleFeatModalConfirm}
+        initialFilters={featModalInitialFilters}
+        allowIgnoreLimit={false}
+      />
     </div>
   )
 }

@@ -1,26 +1,11 @@
 import type { SubclassAdditionalSpells } from '@/types/5etools'
+import { parseSpellToken } from './spellTokens'
 
 export interface SubclassSpellGrant {
   spellName: string
   level: number
   isCantrip: boolean
   mode: 'prepared' | 'known' | 'expanded' | 'innate'
-}
-
-interface ParsedSpellToken {
-  name: string
-  isCantrip: boolean
-}
-
-function parseSpellToken(raw: string): ParsedSpellToken {
-  const token = raw.trim()
-  const isCantrip = token.toLowerCase().endsWith('#c')
-  const withoutCantripSuffix = isCantrip ? token.slice(0, -2).trim() : token
-  const [name] = withoutCantripSuffix.split('|')
-  return {
-    name: (name ?? '').trim(),
-    isCantrip,
-  }
 }
 
 function pushSpellList(

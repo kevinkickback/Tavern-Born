@@ -7,6 +7,7 @@ import type {
   Subclass5e,
   SubclassFeature,
 } from '@/types/5etools'
+import type { CharacterClassEntry } from '@/types/character'
 
 export type { OptFeatureProg, OptionalFeatureLike }
 
@@ -101,6 +102,9 @@ export function getClassSpellGainAtLevel(
   const spellsKnown = Array.isArray(classData.spellsKnownProgression)
     ? (classData.spellsKnownProgression as number[])
     : undefined
+  const preparedProg = Array.isArray(classData.preparedSpellsProgression)
+    ? (classData.preparedSpellsProgression as number[])
+    : undefined
 
   const idx = level - 1
   const prevIdx = level - 2
@@ -115,13 +119,20 @@ export function getClassSpellGainAtLevel(
     const spellsNow = spellsKnown[idx] ?? 0
     const spellsPrev = level > 1 ? (spellsKnown[prevIdx] ?? 0) : 0
     newSpells = Math.max(0, spellsNow - spellsPrev)
+  } else if (preparedProg) {
+    const spellsNow = preparedProg[idx] ?? 0
+    const spellsPrev = level > 1 ? (preparedProg[prevIdx] ?? 0) : 0
+    newSpells = Math.max(0, spellsNow - spellsPrev)
   }
 
   return {
     cantrips: newCantrips,
     spells: newSpells,
     maxSpellLevel: getMaxSpellLevelForClassLevel(classData, level),
-    canSwap: level >= 2 && Array.isArray(classData.spellsKnownProgression),
+    canSwap:
+      level >= 2 &&
+      (Array.isArray(classData.spellsKnownProgression) ||
+        classData.preparedSpellsChange === 'level'),
   }
 }
 
@@ -158,6 +169,18 @@ export function getSubclassByName(
   if (!classData || !subclassName) return undefined
   return classData.subclasses?.find(
     (subclass) => subclass.name === subclassName || subclass.shortName === subclassName,
+  )
+}
+
+export function getSelectedSubclassData(
+  classData: Class5e | undefined,
+  entry: Pick<CharacterClassEntry, 'subclass' | 'subclassSource'>,
+): Subclass5e | undefined {
+  if (!classData || !entry.subclass) return undefined
+
+  return (classData.subclasses ?? []).find(
+    (subclass) =>
+      subclass.name === entry.subclass && (subclass.source ?? '') === (entry.subclassSource ?? ''),
   )
 }
 

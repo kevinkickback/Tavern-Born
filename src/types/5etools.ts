@@ -74,6 +74,8 @@ export interface Class5e {
   isSpellcaster?: boolean
   spellSlotProgression?: number[][]
   preparedSpells?: string
+  preparedSpellsProgression?: number[]
+  preparedSpellsChange?: string
   optionalfeatureProgression?: OptFeatureProg[]
   [key: string]: unknown
 }

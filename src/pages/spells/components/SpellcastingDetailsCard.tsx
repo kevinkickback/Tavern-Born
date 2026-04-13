@@ -49,20 +49,23 @@ export function SpellcastingDetailsCard({
           Spellcasting Details
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5">
         {!isSpellcaster ? (
           <p className="text-sm text-muted-foreground">
             This character has no spellcasting classes yet.
           </p>
         ) : (
           <>
-            <div className="grid gap-3 max-w-3xl xl:grid-cols-2">
+            <div className="grid gap-4 max-w-4xl xl:grid-cols-2">
               {spellcastingDetails.map((detail) => (
-                <div key={detail.profileId} className="rounded-lg border border-border p-3">
+                <div
+                  key={detail.profileId}
+                  className="rounded-lg border border-border/80 bg-muted/15 p-4"
+                >
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="font-medium text-sm">{detail.className}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-medium text-base leading-tight">{detail.className}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
                         Level {detail.classLevel} {detail.casterProgression}
                       </p>
                     </div>
@@ -72,14 +75,16 @@ export function SpellcastingDetailsCard({
                       </Badge>
                     ) : null}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 mt-3 text-xs">
-                    <div className="rounded border border-border px-2 py-1.5">
-                      <div className="text-muted-foreground">Spell Save DC</div>
-                      <div className="font-semibold text-sm">{detail.spellSaveDC ?? '-'}</div>
+                  <div className="grid grid-cols-2 gap-2.5 mt-3 text-sm">
+                    <div className="rounded-md border border-border bg-card px-2.5 py-2">
+                      <div className="text-muted-foreground text-xs">Spell Save DC</div>
+                      <div className="font-semibold text-base leading-tight mt-0.5">
+                        {detail.spellSaveDC ?? '-'}
+                      </div>
                     </div>
-                    <div className="rounded border border-border px-2 py-1.5">
-                      <div className="text-muted-foreground">Spell Attack</div>
-                      <div className="font-semibold text-sm">
+                    <div className="rounded-md border border-border bg-card px-2.5 py-2">
+                      <div className="text-muted-foreground text-xs">Spell Attack</div>
+                      <div className="font-semibold text-base leading-tight mt-0.5">
                         {detail.spellAttackBonus !== null
                           ? formatModifier(detail.spellAttackBonus)
                           : '-'}
@@ -90,21 +95,21 @@ export function SpellcastingDetailsCard({
               ))}
             </div>
 
-            <div className="rounded-lg border border-border p-3">
+            <div className="rounded-lg border border-border/80 bg-muted/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 {hasMultipleSpellcastingClasses ? 'Shared Spell Slots' : 'Spell Slots'}
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2.5">
                 {sharedSlots.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">No shared slots</span>
+                  <span className="text-sm text-muted-foreground">No shared slots</span>
                 ) : (
                   sharedSlots.map((slot) => (
                     <div
                       key={`shared-${slot.level}`}
-                      className="border rounded-lg px-3 py-1.5 text-center min-w-[64px] border-accent/40 bg-accent/5"
+                      className="border rounded-lg px-3.5 py-2 text-center min-w-[72px] border-accent/50 bg-accent/10"
                     >
-                      <div className="text-sm font-bold">{slot.max}</div>
-                      <div className="text-[10px] text-muted-foreground">Level {slot.level}</div>
+                      <div className="text-base font-bold leading-tight">{slot.max}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Level {slot.level}</div>
                     </div>
                   ))
                 )}
@@ -112,23 +117,25 @@ export function SpellcastingDetailsCard({
             </div>
 
             {hasWarlockClass ? (
-              <div className="rounded-lg border border-border p-3">
+              <div className="rounded-lg border border-border/80 bg-warning/5 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                   Pact Magic Slots
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {pactSlots.length === 0 ? (
-                    <span className="text-xs text-muted-foreground">No pact slots</span>
+                    <span className="text-sm text-muted-foreground">No pact slots</span>
                   ) : (
                     pactSlots.map((slot) => (
                       <div
                         key={`pact-${slot.level}`}
-                        className="border rounded-lg px-3 py-1.5 text-center min-w-[64px] border-warning/40 bg-warning/10"
+                        className="border rounded-lg px-3.5 py-2 text-center min-w-[72px] border-warning/50 bg-warning/15"
                       >
-                        <div className="text-sm font-bold">
+                        <div className="text-base font-bold leading-tight">
                           {slot.available}/{slot.max}
                         </div>
-                        <div className="text-[10px] text-muted-foreground">Level {slot.level}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Level {slot.level}
+                        </div>
                       </div>
                     ))
                   )}

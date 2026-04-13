@@ -1,15 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { DEV_SEED_CHARACTERS } from '@/lib/seedCharacters'
 import { isCacheForSource, isCacheStale, readGameDataCache } from '@/lib/storage/dataCache'
 
-// DEV character seeding — tree-shaken away in production builds.
-import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-
-const shouldInjectDevSeeds =
-  import.meta.env.DEV &&
-  (import.meta.env as Record<string, string | boolean | undefined>).VITE_ENABLE_DEV_SEEDS === 'true'
 
 export function useDataInit() {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated)
@@ -21,30 +14,7 @@ export function useDataInit() {
   const setCacheStatus = useGameDataStore((s) => s.setCacheStatus)
   const setLastDataChangedAt = useGameDataStore((s) => s.setLastDataChangedAt)
 
-  const characters = useCharacterStore((s) => s.characters)
-  const setCharacters = useCharacterStore((s) => s.setCharacters)
-
   const initialized = useRef(false)
-  const seedsRefreshed = useRef(false)
-
-  useEffect(() => {
-    // Wait until persisted characters are loaded before applying seed refresh.
-    if (!hasHydrated || !shouldInjectDevSeeds || seedsRefreshed.current) {
-      return
-    }
-    seedsRefreshed.current = true
-    if (characters.length === 0) {
-      setCharacters(DEV_SEED_CHARACTERS)
-      return
-    }
-    // Refresh any existing seed characters whose data may have changed.
-    const seedIds = new Set(DEV_SEED_CHARACTERS.map((c) => c.id))
-    const hasStaleSeed = characters.some((c) => seedIds.has(c.id))
-    if (hasStaleSeed) {
-      const nonSeeds = characters.filter((c) => !seedIds.has(c.id))
-      setCharacters([...DEV_SEED_CHARACTERS, ...nonSeeds])
-    }
-  }, [hasHydrated, characters, setCharacters])
 
   useEffect(() => {
     // When a local data source config is restored from persisted storage,

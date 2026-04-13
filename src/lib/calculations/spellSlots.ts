@@ -26,8 +26,9 @@ export function casterProgressionToFull(progression: string): string {
  * Canonical values should come from parsed class data (`rowsSpellProgression`).
  * Each row is [level-1 slots, level-2 slots, ..., level-9 slots].
  */
-const FALLBACK_STANDARD_SPELL_SLOTS: number[][] = [
-  /* lv 0  */ [],
+const FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL: number[][] = [
+  // Index 0 intentionally unused so index === caster level.
+  [],
   /* lv 1  */ [2],
   /* lv 2  */ [3],
   /* lv 3  */ [4, 2],
@@ -133,7 +134,7 @@ function validateFallbackProgression(className: string, parsedCasterProgression?
 /** Return the standard (non-pact) spell slot maximums for a given `casterLevel`. */
 export function getStandardSpellSlots(casterLevel: number): SpellSlotsResult {
   if (casterLevel < 1 || casterLevel > 20) return {}
-  const row = FALLBACK_STANDARD_SPELL_SLOTS[casterLevel] ?? []
+  const row = FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL[casterLevel] ?? []
   const result: SpellSlotsResult = {}
   for (let sl = 1; sl <= 9; sl++) {
     const count = row[sl - 1]
@@ -241,7 +242,11 @@ export function getMaxSpellLevelForClassLevel(classData: Class5e, level: number)
       .reduce((max, value) => Math.max(max, value), 0)
   }
 
-  const fallbackSlots = calculateSpellSlots(classData.name, level, classData.casterProgression)
+  const progression = (classData.casterProgression as CasterProgression | undefined) ?? 'none'
+  const fallbackSlots =
+    progression === 'pact'
+      ? getPactMagicSlots(level)
+      : getStandardSpellSlots(getCasterLevelContribution(progression, level))
   return Object.keys(fallbackSlots)
     .map((key) => Number.parseInt(key, 10))
     .filter((value) => !Number.isNaN(value))
