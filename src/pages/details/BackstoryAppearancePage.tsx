@@ -56,7 +56,7 @@ export function BackstoryAppearancePage() {
   return (
     <div className="max-w-7xl mx-auto w-full space-y-6">
       <h1 className="font-display text-4xl font-bold flex items-center gap-3">
-        <BookOpen className="h-8 w-8 text-accent" weight="duotone" />
+        <BookOpen className="h-8 w-8 text-primary" weight="duotone" />
         Backstory &amp; Appearance
       </h1>
 

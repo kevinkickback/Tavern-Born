@@ -1,7 +1,7 @@
 const ACCENT_STORAGE_KEY = 'tb.theme.accent'
 const APPEARANCE_STORAGE_KEY = 'tb.theme.appearance'
 
-export const ACCENT_THEMES = ['blue', 'violet', 'green', 'orange'] as const
+export const ACCENT_THEMES = ['blue', 'violet', 'green', 'tomato'] as const
 export type AccentTheme = (typeof ACCENT_THEMES)[number]
 
 export const APPEARANCE_THEMES = ['light', 'dark'] as const
@@ -40,6 +40,12 @@ export function applyThemeRootAttributes(
 ) {
   root.setAttribute('data-accent', accent)
   root.setAttribute('data-appearance', appearance)
+
+  const documentRoot = document.documentElement
+  documentRoot.setAttribute('data-accent', accent)
+  documentRoot.setAttribute('data-appearance', appearance)
+  documentRoot.classList.toggle('dark', appearance === 'dark')
+  document.body.classList.toggle('dark', appearance === 'dark')
 }
 
 export function initThemeFromStorage() {

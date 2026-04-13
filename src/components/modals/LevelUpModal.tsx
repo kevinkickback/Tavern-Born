@@ -252,7 +252,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
         <DialogContent className="sm:max-w-2xl flex flex-col gap-0 p-0 overflow-hidden max-h-[90vh]">
           <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-border">
             <DialogTitle className="font-display text-xl flex items-center gap-2">
-              <Scroll className="h-5 w-5 text-accent" weight="duotone" />
+              <Scroll className="h-5 w-5 text-primary" weight="duotone" />
               Level Up Character
             </DialogTitle>
             <DialogDescription className="sr-only">

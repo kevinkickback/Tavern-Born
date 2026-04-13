@@ -257,12 +257,14 @@
     --font-family: var(--font-sans-serif);
   }
 
+  :root[data-appearance="dark"],
   #root[data-appearance="dark"] {
     --color-bg: var(--color-neutral-1);
     --color-bg-inset: #000000;
     --color-bg-overlay: var(--color-neutral-3);
   }
 
+  :root[data-accent="blue"],
   #root[data-accent="blue"] {
     --color-accent-1: var(--blue-1);
     --color-accent-2: var(--blue-2);
@@ -279,6 +281,7 @@
     --color-accent-contrast: var(--blue-contrast);
   }
 
+  :root[data-accent="violet"],
   #root[data-accent="violet"] {
     --color-accent-1: var(--violet-1);
     --color-accent-2: var(--violet-2);
@@ -295,6 +298,7 @@
     --color-accent-contrast: var(--violet-contrast);
   }
 
+  :root[data-accent="green"],
   #root[data-accent="green"] {
     --color-accent-1: var(--green-1);
     --color-accent-2: var(--green-2);
@@ -311,19 +315,20 @@
     --color-accent-contrast: var(--green-contrast);
   }
 
-  #root[data-accent="orange"] {
-    --color-accent-1: var(--orange-1);
-    --color-accent-2: var(--orange-2);
-    --color-accent-3: var(--orange-3);
-    --color-accent-4: var(--orange-4);
-    --color-accent-5: var(--orange-5);
-    --color-accent-6: var(--orange-6);
-    --color-accent-7: var(--orange-7);
-    --color-accent-8: var(--orange-8);
-    --color-accent-9: var(--orange-9);
-    --color-accent-10: var(--orange-10);
-    --color-accent-11: var(--orange-11);
-    --color-accent-12: var(--orange-12);
-    --color-accent-contrast: var(--orange-contrast);
+  :root[data-accent="tomato"],
+  #root[data-accent="tomato"] {
+    --color-accent-1: var(--crimson-1);
+    --color-accent-2: var(--crimson-2);
+    --color-accent-3: var(--crimson-3);
+    --color-accent-4: var(--crimson-4);
+    --color-accent-5: var(--crimson-5);
+    --color-accent-6: var(--crimson-6);
+    --color-accent-7: var(--crimson-7);
+    --color-accent-8: var(--crimson-8);
+    --color-accent-9: var(--crimson-9);
+    --color-accent-10: var(--crimson-10);
+    --color-accent-11: var(--crimson-11);
+    --color-accent-12: var(--crimson-12);
+    --color-accent-contrast: var(--crimson-contrast);
   }
 }

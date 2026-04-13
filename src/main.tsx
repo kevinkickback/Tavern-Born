@@ -6,8 +6,6 @@ import App from './App.tsx'
 import { ErrorFallback } from './ErrorFallback.tsx'
 
 import './styles/main.css'
-import './styles/theme.css'
-import './styles/index.css'
 
 const syncUnsavedStateToElectron = () => {
   const hasUnsavedChanges = useCharacterStore.getState().hasUnsavedChanges()

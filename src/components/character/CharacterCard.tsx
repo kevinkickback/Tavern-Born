@@ -132,13 +132,16 @@ export const CharacterCard = memo(function CharacterCard({
           <div className={cn('flex flex-col items-end', detailsGap, detailText)}>
             <div className="flex items-center gap-2 text-foreground/90">
               <span className="font-semibold">Level {character.level}</span>
-              <Crown className={cn('text-accent', isSmall ? 'size-3.5' : 'size-4')} weight="fill" />
+              <Crown
+                className={cn('text-accent-foreground', isSmall ? 'size-3.5' : 'size-4')}
+                weight="fill"
+              />
             </div>
             {character.race && (
               <div className="flex items-center gap-2 text-foreground/90">
                 <span className="font-medium">{character.race}</span>
                 <User
-                  className={cn('text-accent', isSmall ? 'size-3.5' : 'size-4')}
+                  className={cn('text-accent-foreground', isSmall ? 'size-3.5' : 'size-4')}
                   weight="fill"
                 />
               </div>
@@ -147,7 +150,7 @@ export const CharacterCard = memo(function CharacterCard({
               <div className="flex items-center gap-2 text-foreground/90">
                 <span className="font-medium">{character.class}</span>
                 <Sword
-                  className={cn('text-accent', isSmall ? 'size-3.5' : 'size-4')}
+                  className={cn('text-accent-foreground', isSmall ? 'size-3.5' : 'size-4')}
                   weight="fill"
                 />
               </div>

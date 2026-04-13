@@ -54,7 +54,7 @@ export function BuildProficienciesDetailsPanel({
                   <span
                     className={cn(
                       'text-sm font-medium',
-                      focused.proficient ? 'text-accent' : 'text-muted-foreground',
+                      focused.proficient ? 'text-accent-foreground' : 'text-muted-foreground',
                     )}
                   >
                     {focused.proficient ? 'Yes' : 'No'}
@@ -64,7 +64,7 @@ export function BuildProficienciesDetailsPanel({
                   <span
                     className={cn(
                       'text-sm font-medium',
-                      focused.expertise ? 'text-accent' : 'text-muted-foreground',
+                      focused.expertise ? 'text-accent-foreground' : 'text-muted-foreground',
                     )}
                   >
                     {focused.expertise ? 'Yes' : 'No'}
@@ -73,7 +73,7 @@ export function BuildProficienciesDetailsPanel({
               </div>
               {skillDescriptions[focused.name.toLowerCase()]?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-bold text-accent uppercase tracking-wider mb-2">
+                  <h4 className="text-xs font-bold text-accent-foreground uppercase tracking-wider mb-2">
                     Description
                   </h4>
                   {skillDescriptions[focused.name.toLowerCase()].map((e) => (
@@ -105,7 +105,7 @@ export function BuildProficienciesDetailsPanel({
                   <span
                     className={cn(
                       'text-sm font-medium',
-                      focused.proficient ? 'text-accent' : 'text-muted-foreground',
+                      focused.proficient ? 'text-accent-foreground' : 'text-muted-foreground',
                     )}
                   >
                     {focused.proficient ? 'Yes' : 'No'}

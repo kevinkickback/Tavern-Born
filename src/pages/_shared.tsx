@@ -4,7 +4,9 @@ import { Card } from '@/components/ui/card'
 export function InfoTile({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="border border-accent/30 rounded-lg p-4 bg-card/50">
-      <h4 className="text-xs font-bold text-accent uppercase tracking-wider mb-2">{title}</h4>
+      <h4 className="text-xs font-bold text-accent-foreground uppercase tracking-wider mb-2">
+        {title}
+      </h4>
       {children}
     </div>
   )

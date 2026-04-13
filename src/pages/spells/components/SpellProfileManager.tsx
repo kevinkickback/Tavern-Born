@@ -157,7 +157,7 @@ export function SpellProfileManager({
     <>
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="font-display text-2xl font-bold flex items-center gap-2">
-          <BookOpen className="h-6 w-6 text-accent" weight="duotone" />
+          <BookOpen className="h-6 w-6 text-primary" weight="duotone" />
           Spells
         </h1>
       </div>
@@ -165,7 +165,7 @@ export function SpellProfileManager({
       <Card className="w-full flex flex-col">
         <CardHeader>
           <CardTitle className="font-display text-xl flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-accent" weight="duotone" />
+            <BookOpen className="h-5 w-5 text-primary" weight="duotone" />
             Spell List
           </CardTitle>
         </CardHeader>
@@ -264,7 +264,7 @@ export function SpellProfileManager({
                               <TooltipTrigger asChild>
                                 <Badge
                                   variant="outline"
-                                  className="text-xs border-accent/40 bg-accent/10 text-accent-foreground"
+                                  className="text-xs border-accent bg-accent text-accent-foreground"
                                 >
                                   <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
                                   Spell selection available
@@ -350,7 +350,7 @@ export function SpellProfileManager({
                             .map((choice) => (
                               <div
                                 key={choice.id}
-                                className="px-3 py-2 border-b border-border/60 bg-accent/10 flex items-center gap-2"
+                                className="px-3 py-2 border-b border-border/60 bg-accent flex items-center gap-2"
                               >
                                 <span className="text-xs text-accent-foreground/80 flex-1">
                                   ⚠ {choice.count - choice.selected.length} unchosen{' '}

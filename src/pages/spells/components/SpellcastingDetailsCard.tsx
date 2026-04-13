@@ -45,7 +45,7 @@ export function SpellcastingDetailsCard({
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="font-display text-xl flex items-center gap-2">
-          <MagicWand className="h-5 w-5 text-accent" weight="duotone" />
+          <MagicWand className="h-5 w-5 text-primary" weight="duotone" />
           Spellcasting Details
         </CardTitle>
       </CardHeader>
@@ -106,7 +106,7 @@ export function SpellcastingDetailsCard({
                   sharedSlots.map((slot) => (
                     <div
                       key={`shared-${slot.level}`}
-                      className="border rounded-lg px-3.5 py-2 text-center min-w-[72px] border-accent/50 bg-accent/10"
+                      className="border rounded-lg px-3.5 py-2 text-center min-w-[72px] border-accent bg-accent"
                     >
                       <div className="text-base font-bold leading-tight">{slot.max}</div>
                       <div className="text-xs text-muted-foreground mt-0.5">Level {slot.level}</div>

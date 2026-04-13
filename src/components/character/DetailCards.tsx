@@ -45,7 +45,7 @@ export function DetailHtmlSection({
       </div>
       {html ? (
         <span
-          className="text-sm [&_a]:text-accent [&_a]:no-underline"
+          className="text-sm [&_a]:text-accent-foreground [&_a]:no-underline"
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (

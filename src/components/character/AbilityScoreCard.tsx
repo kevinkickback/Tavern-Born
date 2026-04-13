@@ -36,7 +36,7 @@ export function AbilityScoreCard({
   const cardContent = (
     <>
       <div className="w-full flex items-center justify-between">
-        <div className="text-xs font-bold text-accent uppercase tracking-wider">
+        <div className="text-xs font-bold text-accent-foreground uppercase tracking-wider">
           {ABILITY_ABBREVIATIONS[ability]}
         </div>
         {bonus !== 0 && (

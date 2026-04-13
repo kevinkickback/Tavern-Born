@@ -25,3 +25,17 @@ export function setHintDismissed(hintId: string, dismissed: boolean): void {
     // localStorage unavailable (SSR, private browsing restriction) — noop
   }
 }
+
+/** Remove all dismissed one-time UI hint records, causing them to appear again. */
+export function resetAllHints(): void {
+  try {
+    const keysToRemove: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith(KEY_PREFIX)) keysToRemove.push(key)
+    }
+    for (const key of keysToRemove) localStorage.removeItem(key)
+  } catch {
+    // localStorage unavailable — noop
+  }
+}
