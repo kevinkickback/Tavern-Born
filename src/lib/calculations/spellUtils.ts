@@ -1,16 +1,7 @@
+import { SP_SCHOOL_ABV_TO_FULL } from '@/lib/5etools/constants'
 import type { CastingTime, SpellComponents, SpellDuration, SpellRange } from '@/types/5etools'
 
-export const SPELL_SCHOOL_NAMES: Record<string, string> = {
-  A: 'Abjuration',
-  C: 'Conjuration',
-  D: 'Divination',
-  E: 'Enchantment',
-  I: 'Illusion',
-  N: 'Necromancy',
-  P: 'Psionic',
-  T: 'Transmutation',
-  V: 'Evocation',
-}
+export const SPELL_SCHOOL_NAMES: Readonly<Record<string, string>> = SP_SCHOOL_ABV_TO_FULL
 
 export function getSchoolName(abbreviation: string | undefined): string {
   if (!abbreviation) return 'Unknown'

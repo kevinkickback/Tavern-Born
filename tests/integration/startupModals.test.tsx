@@ -82,15 +82,16 @@ describe('startup integration: loading overlay and startup modal', () => {
     expect(screen.getByText(/2\s*\/\s*5/)).toBeTruthy()
   })
 
-  test('AppLoadingOverlay does not render when hydrated and idle', () => {
+  test('AppLoadingOverlay shows ready state when hydrated and idle', () => {
     useGameDataStore.setState({
       hasHydrated: true,
       isLoading: false,
       isBackgroundRefreshing: false,
+      cacheStatus: 'unconfigured',
     })
 
-    const { container } = render(<AppLoadingOverlay />)
-    expect(container.textContent).toBe('')
+    render(<AppLoadingOverlay />)
+    expect(screen.getByText('App is ready')).toBeTruthy()
   })
 
   test('DataSourceStartupModal opens when hydrated with no data and not loading', () => {
@@ -98,6 +99,7 @@ describe('startup integration: loading overlay and startup modal', () => {
       hasHydrated: true,
       gameData: null,
       isLoading: false,
+      cacheStatus: 'unconfigured',
     })
 
     render(<DataSourceStartupModal />)
@@ -161,6 +163,7 @@ describe('startup integration: loading overlay and startup modal', () => {
         sources: [],
       },
       isLoading: false,
+      cacheStatus: 'fresh',
     })
 
     render(<DataSourceStartupModal />)

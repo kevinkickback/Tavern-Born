@@ -1,5 +1,5 @@
 import { Backpack, Plus, Trash } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +11,7 @@ import { useEquipment } from '@/hooks/character/useEquipment'
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
+import { getViewportBoundedMaxHeight } from '@/lib/layoutHeights'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
@@ -41,6 +42,10 @@ function getPropertySummary(item: Equipment): string | null {
 
 export function EquipmentPage() {
   const [addItemOpen, setAddItemOpen] = useState(false)
+  const [inventoryListMaxHeight, setInventoryListMaxHeight] = useState(() =>
+    getViewportBoundedMaxHeight(18),
+  )
+  const summaryCardRef = useRef<HTMLDivElement | null>(null)
   const character = useCharacterStore((s) => s.activeCharacter)
   const { items, itemsBase } = useFilteredGameData()
   const { applyManualEquipmentGrant, removeEquipmentProvenance, getSourcesRowsBySection } =
@@ -79,10 +84,6 @@ export function EquipmentPage() {
     return Array.from(merged.values())
   }, [items, itemsBase])
 
-  if (!character) {
-    return <NoCharCard icon={<Backpack weight="duotone" />} noun="manage equipment" />
-  }
-
   const encumbrancePct = carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0
   const encumbranceTone =
     encumbrancePct >= 100 ? 'bg-destructive' : encumbrancePct >= 75 ? 'bg-warning' : 'bg-accent'
@@ -95,6 +96,37 @@ export function EquipmentPage() {
     const existing = equipment.find((item) => item.id === itemId)
     removeItem(itemId)
     if (existing) removeEquipmentProvenance(existing.name)
+  }
+
+  useEffect(() => {
+    const updateInventoryListMaxHeight = () => {
+      const summaryHeight = summaryCardRef.current?.offsetHeight ?? 0
+      setInventoryListMaxHeight(getViewportBoundedMaxHeight(18, summaryHeight + 16))
+    }
+
+    updateInventoryListMaxHeight()
+
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined'
+        ? null
+        : new ResizeObserver(() => {
+            updateInventoryListMaxHeight()
+          })
+
+    if (summaryCardRef.current && resizeObserver) {
+      resizeObserver.observe(summaryCardRef.current)
+    }
+
+    window.addEventListener('resize', updateInventoryListMaxHeight)
+
+    return () => {
+      resizeObserver?.disconnect()
+      window.removeEventListener('resize', updateInventoryListMaxHeight)
+    }
+  }, [])
+
+  if (!character) {
+    return <NoCharCard icon={<Backpack weight="duotone" />} noun="manage equipment" />
   }
 
   return (
@@ -110,80 +142,85 @@ export function EquipmentPage() {
       </div>
       <div className="space-y-4">
         {/* Summary bar */}
-        <Card className="w-full">
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-center gap-6 flex-wrap">
-              <div>
-                <div className="text-xs text-muted-foreground mb-0.5">Weight</div>
-                <div
-                  className={cn('text-sm font-mono font-bold', isEncumbered && 'text-destructive')}
-                >
-                  {totalWeight.toFixed(1)} / {carryCapacity} lb
-                  {isEncumbered && ' (Encumbered)'}
-                </div>
-                <div className="mt-1.5 w-44 space-y-1">
-                  <div className="bg-primary/20 relative h-2 w-full overflow-hidden rounded-full">
-                    <div
-                      className={cn('h-full transition-all', encumbranceTone)}
-                      style={{ width: `${encumbrancePct}%` }}
-                    />
+        <div ref={summaryCardRef}>
+          <Card className="w-full">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-6 flex-wrap">
+                <div>
+                  <div className="text-xs text-muted-foreground mb-0.5">Weight</div>
+                  <div
+                    className={cn(
+                      'text-sm font-mono font-bold',
+                      isEncumbered && 'text-destructive',
+                    )}
+                  >
+                    {totalWeight.toFixed(1)} / {carryCapacity} lb
+                    {isEncumbered && ' (Encumbered)'}
                   </div>
-                  <div className="text-[11px] text-muted-foreground font-mono">
-                    {encumbrancePct.toFixed(0)}%
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-0.5">Attunement</div>
-                <div
-                  className={cn(
-                    'text-sm font-mono font-bold',
-                    attunedCount >= MAX_ATTUNEMENT_SLOTS && 'text-destructive',
-                  )}
-                >
-                  {attunedCount} / {MAX_ATTUNEMENT_SLOTS}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-0.5">Armor Class</div>
-                <div className="text-sm font-mono font-bold">{derivedAC}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-0.5">Currency</div>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {(
-                    [
-                      ['cp', 'CP'],
-                      ['sp', 'SP'],
-                      ['ep', 'EP'],
-                      ['gp', 'GP'],
-                      ['pp', 'PP'],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <div key={key} className="flex flex-col gap-1">
-                      <span className="text-[10px] text-muted-foreground font-semibold tracking-wide">
-                        {label}
-                      </span>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={currency[key]}
-                        onChange={(event) => {
-                          const raw = Number.parseInt(event.target.value, 10)
-                          updateCurrency(key, Number.isNaN(raw) ? 0 : raw)
-                        }}
-                        className="h-7 w-16 px-2 text-xs font-mono"
+                  <div className="mt-1.5 w-44 space-y-1">
+                    <div className="bg-primary/20 relative h-2 w-full overflow-hidden rounded-full">
+                      <div
+                        className={cn('h-full transition-all', encumbranceTone)}
+                        style={{ width: `${encumbrancePct}%` }}
                       />
                     </div>
-                  ))}
+                    <div className="text-[11px] text-muted-foreground font-mono">
+                      {encumbrancePct.toFixed(0)}%
+                    </div>
+                  </div>
                 </div>
-                <div className="text-[11px] text-muted-foreground font-mono mt-1">
-                  Total: {(totalCurrencyCopper / 100).toFixed(2)} gp
+                <div>
+                  <div className="text-xs text-muted-foreground mb-0.5">Attunement</div>
+                  <div
+                    className={cn(
+                      'text-sm font-mono font-bold',
+                      attunedCount >= MAX_ATTUNEMENT_SLOTS && 'text-destructive',
+                    )}
+                  >
+                    {attunedCount} / {MAX_ATTUNEMENT_SLOTS}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-0.5">Armor Class</div>
+                  <div className="text-sm font-mono font-bold">{derivedAC}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground mb-0.5">Currency</div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {(
+                      [
+                        ['cp', 'CP'],
+                        ['sp', 'SP'],
+                        ['ep', 'EP'],
+                        ['gp', 'GP'],
+                        ['pp', 'PP'],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <div key={key} className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground font-semibold tracking-wide">
+                          {label}
+                        </span>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={currency[key]}
+                          onChange={(event) => {
+                            const raw = Number.parseInt(event.target.value, 10)
+                            updateCurrency(key, Number.isNaN(raw) ? 0 : raw)
+                          }}
+                          className="h-7 w-16 px-2 text-xs font-mono"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground font-mono mt-1">
+                    Total: {(totalCurrencyCopper / 100).toFixed(2)} gp
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Inventory list */}
         <Card className="w-full">
@@ -199,7 +236,10 @@ export function EquipmentPage() {
                 No items yet. Use Add Item to browse and add to inventory.
               </p>
             ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+              <div
+                className="space-y-2 overflow-y-auto pr-1"
+                style={{ maxHeight: inventoryListMaxHeight }}
+              >
                 {equipment.map((item) => (
                   <div
                     key={item.id}

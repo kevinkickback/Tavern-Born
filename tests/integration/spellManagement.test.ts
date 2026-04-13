@@ -243,11 +243,11 @@ describe('Spell Management - Integration Tests', () => {
 
     // Verify all slot levels exist
     for (let level = 1; level <= 9; level++) {
-      const slotKey = `level${level}` as const
-      expect(char?.spells.spellSlots[slotKey]).toHaveProperty('max')
-      expect(char?.spells.spellSlots[slotKey]).toHaveProperty('used')
-      expect(typeof char?.spells.spellSlots[slotKey].max === 'number').toBe(true)
-      expect(typeof char?.spells.spellSlots[slotKey].used === 'number').toBe(true)
+      const slot = char?.spells.spellSlots[level]
+      expect(slot).toHaveProperty('max')
+      expect(slot).toHaveProperty('used')
+      expect(typeof slot?.max === 'number').toBe(true)
+      expect(typeof slot?.used === 'number').toBe(true)
     }
   })
 })

@@ -9,13 +9,24 @@ import {
   evaluatePreparedSpellsFormula,
   getPreparedSpellLimit,
   inferClassSpellAttributionLevels,
+  isLevelOnlyPreparedCaster,
+  isPreparedCaster,
   isSpellOnClassList,
+  isTruePreparedCaster,
   SPECIAL_SPELL_PROFILE_ID,
   SPECIAL_SPELL_PROFILE_LABEL,
 } from '@/lib/calculations/spellProfiles'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { makeClassFixture } from '../fixtures/gameDataFixtures'
+import {
+  makeClassFixture,
+  makeXphbBardFixture,
+  makeXphbClericFixture,
+  makeXphbRangerFixture,
+  makeXphbSorcererFixture,
+  makeXphbWarlockFixture,
+  makeXphbWizardFixture,
+} from '../fixtures/gameDataFixtures'
 
 function makeBaseProvenance() {
   const provenance = makeCharacterFixture().provenance
@@ -201,15 +212,15 @@ describe('spellProfiles', () => {
       spells: {
         spellProfiles: [],
         spellSlots: {
-          level1: { max: 0, used: 2 },
-          level2: { max: 0, used: 1 },
-          level3: { max: 0, used: 0 },
-          level4: { max: 0, used: 0 },
-          level5: { max: 0, used: 0 },
-          level6: { max: 0, used: 0 },
-          level7: { max: 0, used: 0 },
-          level8: { max: 0, used: 0 },
-          level9: { max: 0, used: 0 },
+          1: { max: 0, used: 2 },
+          2: { max: 0, used: 1 },
+          3: { max: 0, used: 0 },
+          4: { max: 0, used: 0 },
+          5: { max: 0, used: 0 },
+          6: { max: 0, used: 0 },
+          7: { max: 0, used: 0 },
+          8: { max: 0, used: 0 },
+          9: { max: 0, used: 0 },
         },
       },
     })
@@ -996,5 +1007,200 @@ describe('spellProfiles', () => {
     expect(details).toHaveLength(1)
     expect(details[0].isPreparedCaster).toBe(true)
     expect(details[0].knownSpellLimit).toBe(9)
+  })
+
+  // ── XPHB classification ────────────────────────────────────────────
+
+  describe('XPHB isPreparedCaster', () => {
+    test('returns true for all XPHB casters', () => {
+      expect(isPreparedCaster(makeXphbSorcererFixture())).toBe(true)
+      expect(isPreparedCaster(makeXphbClericFixture())).toBe(true)
+      expect(isPreparedCaster(makeXphbWizardFixture())).toBe(true)
+      expect(isPreparedCaster(makeXphbWarlockFixture())).toBe(true)
+      expect(isPreparedCaster(makeXphbRangerFixture())).toBe(true)
+      expect(isPreparedCaster(makeXphbBardFixture())).toBe(true)
+    })
+  })
+
+  describe('XPHB isTruePreparedCaster', () => {
+    test('returns true for XPHB Cleric and Ranger (daily-prep, no spellbook)', () => {
+      expect(isTruePreparedCaster(makeXphbClericFixture())).toBe(true)
+      expect(isTruePreparedCaster(makeXphbRangerFixture())).toBe(true)
+    })
+
+    test('returns false for XPHB level-only casters (Sorcerer, Bard, Warlock)', () => {
+      expect(isTruePreparedCaster(makeXphbSorcererFixture())).toBe(false)
+      expect(isTruePreparedCaster(makeXphbBardFixture())).toBe(false)
+      expect(isTruePreparedCaster(makeXphbWarlockFixture())).toBe(false)
+    })
+
+    test('returns false for XPHB Wizard (has spellbook via spellsKnownProgressionFixed)', () => {
+      expect(isTruePreparedCaster(makeXphbWizardFixture())).toBe(false)
+    })
+  })
+
+  describe('XPHB isLevelOnlyPreparedCaster', () => {
+    test('returns true for XPHB Sorcerer, Bard, Warlock', () => {
+      expect(isLevelOnlyPreparedCaster(makeXphbSorcererFixture())).toBe(true)
+      expect(isLevelOnlyPreparedCaster(makeXphbBardFixture())).toBe(true)
+      expect(isLevelOnlyPreparedCaster(makeXphbWarlockFixture())).toBe(true)
+    })
+
+    test('returns false for XPHB Cleric (daily-prep)', () => {
+      expect(isLevelOnlyPreparedCaster(makeXphbClericFixture())).toBe(false)
+    })
+
+    test('returns false for XPHB Wizard (daily-prep with spellbook)', () => {
+      expect(isLevelOnlyPreparedCaster(makeXphbWizardFixture())).toBe(false)
+    })
+
+    test('returns false for XPHB Ranger (daily-prep)', () => {
+      expect(isLevelOnlyPreparedCaster(makeXphbRangerFixture())).toBe(false)
+    })
+
+    test('returns false for 2014 PHB classes', () => {
+      const phbWizard = makeClassFixture({
+        name: 'Wizard',
+        source: 'PHB',
+        casterProgression: 'full',
+        spellcastingAbility: 'int',
+        preparedSpells: '<$level$> + <$int_mod$>',
+      })
+      expect(isLevelOnlyPreparedCaster(phbWizard)).toBe(false)
+    })
+  })
+
+  // ── XPHB getPreparedSpellLimit ─────────────────────────────────────
+
+  describe('XPHB getPreparedSpellLimit', () => {
+    test('returns array value at level for XPHB Sorcerer', () => {
+      const sorc = makeXphbSorcererFixture()
+      expect(getPreparedSpellLimit(sorc, 1, 3)).toBe(2)
+      expect(getPreparedSpellLimit(sorc, 5, 3)).toBe(9)
+      expect(getPreparedSpellLimit(sorc, 20, 5)).toBe(22)
+    })
+
+    test('returns array value for XPHB Cleric regardless of ability mod', () => {
+      const cleric = makeXphbClericFixture()
+      // Array lookup ignores ability modifier
+      expect(getPreparedSpellLimit(cleric, 1, 0)).toBe(4)
+      expect(getPreparedSpellLimit(cleric, 1, 5)).toBe(4)
+      expect(getPreparedSpellLimit(cleric, 10, 4)).toBe(15)
+    })
+
+    test('returns array value for XPHB Wizard', () => {
+      const wiz = makeXphbWizardFixture()
+      expect(getPreparedSpellLimit(wiz, 1, 3)).toBe(4)
+      expect(getPreparedSpellLimit(wiz, 20, 5)).toBe(25)
+    })
+
+    test('returns last array element when level exceeds array length', () => {
+      const sorc = makeXphbSorcererFixture()
+      // Array has 20 entries, level 21 should return the last element
+      expect(getPreparedSpellLimit(sorc, 21, 3)).toBe(22)
+    })
+  })
+
+  // ── XPHB buildSpellcastingClassDetails ─────────────────────────────
+
+  describe('XPHB buildSpellcastingClassDetails', () => {
+    test('sets isLevelOnlyPreparedCaster and knownSpellLimit for XPHB Sorcerer', () => {
+      const character = characterPersistenceSchema.parse(
+        makeCharacterFixture({
+          classProgression: [{ name: 'Sorcerer', source: 'XPHB', levels: 5 }],
+          abilityScores: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 10,
+            wisdom: 10,
+            charisma: 16,
+          },
+        }),
+      )
+      const classesById = new Map([['class:Sorcerer|XPHB', makeXphbSorcererFixture()]])
+      const details = buildSpellcastingClassDetails(character, classesById)
+      expect(details).toHaveLength(1)
+      expect(details[0].isLevelOnlyPreparedCaster).toBe(true)
+      expect(details[0].isTruePreparedCaster).toBe(false)
+      expect(details[0].knownSpellLimit).toBe(9) // preparedSpellsProgression[4]
+      expect(details[0].preparedSpellLimit).toBeNull() // level-only → null
+    })
+
+    test('sets isTruePreparedCaster and preparedSpellLimit for XPHB Cleric', () => {
+      const character = characterPersistenceSchema.parse(
+        makeCharacterFixture({
+          classProgression: [{ name: 'Cleric', source: 'XPHB', levels: 3 }],
+          abilityScores: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 10,
+            wisdom: 16,
+            charisma: 10,
+          },
+        }),
+      )
+      const classesById = new Map([['class:Cleric|XPHB', makeXphbClericFixture()]])
+      const details = buildSpellcastingClassDetails(character, classesById)
+      expect(details).toHaveLength(1)
+      expect(details[0].isTruePreparedCaster).toBe(true)
+      expect(details[0].isLevelOnlyPreparedCaster).toBe(false)
+      expect(details[0].preparedSpellLimit).toBe(6) // preparedSpellsProgression[2]
+      expect(details[0].knownSpellLimit).toBe(6) // same as prepared for true-prepared
+    })
+
+    test('sets isLevelOnlyPreparedCaster for XPHB Warlock with pact progression', () => {
+      const character = characterPersistenceSchema.parse(
+        makeCharacterFixture({
+          classProgression: [{ name: 'Warlock', source: 'XPHB', levels: 9 }],
+          abilityScores: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 10,
+            wisdom: 10,
+            charisma: 16,
+          },
+        }),
+      )
+      const classesById = new Map([['class:Warlock|XPHB', makeXphbWarlockFixture()]])
+      const details = buildSpellcastingClassDetails(character, classesById)
+      expect(details).toHaveLength(1)
+      expect(details[0].isLevelOnlyPreparedCaster).toBe(true)
+      expect(details[0].casterProgression).toBe('pact')
+      expect(details[0].knownSpellLimit).toBe(10) // preparedSpellsProgression[8]
+      expect(details[0].preparedSpellLimit).toBeNull()
+    })
+
+    test('preserves 2014 PHB Wizard behavior unchanged', () => {
+      const character = characterPersistenceSchema.parse(
+        makeCharacterFixture({
+          classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
+          abilityScores: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 16,
+            wisdom: 10,
+            charisma: 10,
+          },
+        }),
+      )
+      const phbWizard = makeClassFixture({
+        name: 'Wizard',
+        source: 'PHB',
+        casterProgression: 'full',
+        spellcastingAbility: 'int',
+        preparedSpells: '<$level$> + <$int_mod$>',
+        spellsKnownProgression: [6, 8, 10, 12, 14],
+      })
+      const classesById = new Map([['class:Wizard|PHB', phbWizard]])
+      const details = buildSpellcastingClassDetails(character, classesById)
+      expect(details).toHaveLength(1)
+      expect(details[0].isLevelOnlyPreparedCaster).toBe(false)
+      expect(details[0].isPreparedCaster).toBe(true)
+      expect(details[0].knownSpellLimit).toBe(8) // 5 + 3
+    })
   })
 })

@@ -1,7 +1,7 @@
 import { Image } from '@phosphor-icons/react'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
-import { Card } from '@/components/ui/card'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
+import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
 
 export function PortraitPage() {
@@ -9,17 +9,7 @@ export function PortraitPage() {
   const updateActiveCharacter = useCharacterStore((state) => state.updateActiveCharacter)
 
   if (!activeCharacter) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Card className="p-8 text-center max-w-md">
-          <Image className="h-12 w-12 mx-auto mb-4 text-muted-foreground" weight="duotone" />
-          <h2 className="font-display text-2xl font-bold mb-2">No Character Selected</h2>
-          <p className="text-muted-foreground">
-            Please select or create a character to manage their portrait.
-          </p>
-        </Card>
-      </div>
-    )
+    return <NoCharCard icon={<Image weight="duotone" />} noun="manage their portrait" />
   }
 
   return (

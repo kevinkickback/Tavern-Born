@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   featCategoryToFull,
+  getClassSpellGainAtLevel,
   getFeatureTypes,
   getOptFeatureTotal,
   isNormallySelectableFeat,
@@ -8,6 +9,13 @@ import {
   optFeatureTypeToFull,
   resolveSubclassFeatureRefs,
 } from '@/lib/5etools/classData'
+import {
+  makeClassFixture,
+  makeXphbBardFixture,
+  makeXphbClericFixture,
+  makeXphbSorcererFixture,
+  makeXphbWarlockFixture,
+} from '../../fixtures/gameDataFixtures'
 
 const ABJURATION_REF = {
   type: 'refSubclassFeature',
@@ -144,6 +152,65 @@ describe('featCategoryToFull', () => {
   test('passes unknown category abbreviations through unchanged', () => {
     expect(featCategoryToFull('UNKNOWN')).toBe('UNKNOWN')
     expect(featCategoryToFull('')).toBe('')
+  })
+})
+
+describe('getClassSpellGainAtLevel', () => {
+  test('returns zero for non-caster classes', () => {
+    const fighter = makeClassFixture({ name: 'Fighter', source: 'PHB' })
+    const gain = getClassSpellGainAtLevel(fighter, 1)
+    expect(gain.cantrips).toBe(0)
+    expect(gain.spells).toBe(0)
+    expect(gain.canSwap).toBe(false)
+  })
+
+  test('returns spell gain from spellsKnownProgression for PHB known casters', () => {
+    const sorcerer = makeClassFixture({
+      name: 'Sorcerer',
+      source: 'PHB',
+      casterProgression: 'full',
+      spellcastingAbility: 'cha',
+      spellsKnownProgression: [
+        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12, 13, 13, 14, 14, 15, 15, 15, 15,
+      ],
+      cantripProgression: [4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
+    })
+    expect(getClassSpellGainAtLevel(sorcerer, 1).spells).toBe(2)
+    expect(getClassSpellGainAtLevel(sorcerer, 2).spells).toBe(1) // 3 - 2
+    expect(getClassSpellGainAtLevel(sorcerer, 1).cantrips).toBe(4)
+    expect(getClassSpellGainAtLevel(sorcerer, 4).cantrips).toBe(1) // 5 - 4
+    expect(getClassSpellGainAtLevel(sorcerer, 2).canSwap).toBe(true)
+  })
+
+  test('returns spell gain from preparedSpellsProgression for XPHB level-only casters', () => {
+    const sorc = makeXphbSorcererFixture()
+    expect(getClassSpellGainAtLevel(sorc, 1).spells).toBe(2)
+    expect(getClassSpellGainAtLevel(sorc, 2).spells).toBe(2) // 4 - 2
+    expect(getClassSpellGainAtLevel(sorc, 5).spells).toBe(2) // 9 - 7
+    expect(getClassSpellGainAtLevel(sorc, 1).cantrips).toBe(4)
+  })
+
+  test('returns spell gain from preparedSpellsProgression for XPHB true-prepared casters', () => {
+    const cleric = makeXphbClericFixture()
+    expect(getClassSpellGainAtLevel(cleric, 1).spells).toBe(4)
+    expect(getClassSpellGainAtLevel(cleric, 2).spells).toBe(1) // 5 - 4
+    expect(getClassSpellGainAtLevel(cleric, 5).spells).toBe(2) // 9 - 7
+  })
+
+  test('canSwap is true for XPHB level-only casters at level 2+', () => {
+    const sorc = makeXphbSorcererFixture()
+    const bard = makeXphbBardFixture()
+    const warlock = makeXphbWarlockFixture()
+    expect(getClassSpellGainAtLevel(sorc, 1).canSwap).toBe(false)
+    expect(getClassSpellGainAtLevel(sorc, 2).canSwap).toBe(true)
+    expect(getClassSpellGainAtLevel(bard, 3).canSwap).toBe(true)
+    expect(getClassSpellGainAtLevel(warlock, 5).canSwap).toBe(true)
+  })
+
+  test('canSwap is false for XPHB true-prepared casters', () => {
+    const cleric = makeXphbClericFixture()
+    expect(getClassSpellGainAtLevel(cleric, 2).canSwap).toBe(false)
+    expect(getClassSpellGainAtLevel(cleric, 5).canSwap).toBe(false)
   })
 })
 

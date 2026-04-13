@@ -436,17 +436,17 @@ export const spellSlotLevelSchema = z
     path: ['used'],
   })
 
-export const spellSlotsSchema = z.object({
-  level1: spellSlotLevelSchema,
-  level2: spellSlotLevelSchema,
-  level3: spellSlotLevelSchema,
-  level4: spellSlotLevelSchema,
-  level5: spellSlotLevelSchema,
-  level6: spellSlotLevelSchema,
-  level7: spellSlotLevelSchema,
-  level8: spellSlotLevelSchema,
-  level9: spellSlotLevelSchema,
-})
+const spellSlotLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
+
+export const spellSlotsSchema = z
+  .record(z.coerce.number().int(), spellSlotLevelSchema)
+  .transform((slots) => {
+    const normalized: Record<number, z.infer<typeof spellSlotLevelSchema>> = {}
+    for (const level of spellSlotLevels) {
+      normalized[level] = slots[level] ?? { max: 0, used: 0 }
+    }
+    return normalized
+  })
 
 export const raceSpellChoiceSchema = z.object({
   id: z.string().min(1),

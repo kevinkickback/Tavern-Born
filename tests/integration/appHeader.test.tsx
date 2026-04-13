@@ -71,7 +71,7 @@ describe('app header character summary', () => {
     render(<AppHeader />)
 
     expect(screen.getByText('Aelar')).toBeTruthy()
-    expect(screen.getByText('Elf . Fighter 3 / Wizard 2')).toBeTruthy()
+    expect(screen.getByText('Elf - Fighter 3 - Wizard 2')).toBeTruthy()
   })
 
   test('should show current AC and max HP in icon badges', () => {

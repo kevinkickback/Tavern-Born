@@ -126,7 +126,7 @@ export function CompendiumPage() {
               <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search by name, type, or source..."
+                placeholder="Search names, descriptions, traits, features, and sources..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-background"

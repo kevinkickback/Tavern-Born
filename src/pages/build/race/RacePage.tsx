@@ -1,6 +1,9 @@
-import { CaretLeft, CaretRight, PersonSimple } from '@phosphor-icons/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { CaretLeft, CaretRight, Check, PersonSimple, Star } from '@phosphor-icons/react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
+import type { ActiveFilters } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -14,6 +17,8 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { featCategoryToFull } from '@/lib/5etools/classData'
+import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
   getAsiDisplay,
   getAvailableSubraces,
@@ -24,12 +29,13 @@ import {
   getSpeedDisplay,
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
+import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { InfoTile, NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Race5e } from '@/types/5etools'
+import type { Feat5e, Race5e } from '@/types/5etools'
 
 export function BuildRacePage() {
   const character = useCharacterStore((s) => {
@@ -38,10 +44,13 @@ export function BuildRacePage() {
     return s.characters.find((c) => c.id === s.activeCharacterId) ?? null
   })
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { races } = useFilteredGameData()
-  const { applyRaceSelection, applySubraceChange } = useProvenance()
+  const { races, feats } = useFilteredGameData()
+  const { applyRaceSelection, applySubraceChange, resolveFeatChoiceSelection, ledger } =
+    useProvenance()
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [raceSearch, setRaceSearch] = useState('')
+  const [featModalOpen, setFeatModalOpen] = useState(false)
+  const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
   const selectedRaceRef = useRef<HTMLDivElement | null>(null)
   const isInitialLoadRef = useRef(true)
   const previousSearchRef = useRef('')
@@ -109,6 +118,84 @@ export function BuildRacePage() {
     })
     applySubraceChange(selectedRace, firstSubrace)
   }, [applySubraceChange, character, selectedRace, selectedSubrace, subraces, updateCharacter])
+
+  // Racial feat choices from provenance
+  const racialFeatChoices = useMemo(
+    () =>
+      ledger.choices.filter(
+        (c) =>
+          c.domain === 'feats' &&
+          (c.sourceTag.sourceType === 'race' || c.sourceTag.sourceType === 'subrace'),
+      ),
+    [ledger.choices],
+  )
+
+  const activeFeatChoice = useMemo(
+    () => racialFeatChoices.find((c) => c.id === activeFeatChoiceId),
+    [racialFeatChoices, activeFeatChoiceId],
+  )
+
+  const featModalFeats = useMemo(() => {
+    if (!activeFeatChoice) return []
+    const pool = activeFeatChoice.optionPool
+    if (pool.length === 0) return feats as Feat5e[]
+    const categoryPrefixes = pool.filter((p) => p.startsWith('category:'))
+    if (categoryPrefixes.length > 0) {
+      const allowedCategories = new Set(categoryPrefixes.map((p) => p.replace('category:', '')))
+      return (feats as Feat5e[]).filter((f) => f.category && allowedCategories.has(f.category))
+    }
+    const poolLower = new Set(pool.map((p) => p.toLowerCase()))
+    return (feats as Feat5e[]).filter((f) => poolLower.has(f.name.toLowerCase()))
+  }, [activeFeatChoice, feats])
+
+  const featModalInitialFilters = useMemo<ActiveFilters | undefined>(() => {
+    if (!activeFeatChoice) return undefined
+    const cats = activeFeatChoice.optionPool
+      .filter((p) => p.startsWith('category:'))
+      .map((p) => p.replace('category:', ''))
+    if (cats.length > 0) return { featCategory: new Set(cats) }
+    return undefined
+  }, [activeFeatChoice])
+
+  const profileSpells = character
+    ? collectKnownSpells(ensureSpellProfiles(character))
+    : { cantrips: [], spellsKnown: [], preparedSpells: [] }
+
+  const characterSnapshot: PrereqCharacterSnapshot = {
+    level: character?.level ?? 0,
+    class: character?.class ?? '',
+    race: character?.race ?? '',
+    abilityScores: character?.abilityScores ?? {
+      strength: 10,
+      dexterity: 10,
+      constitution: 10,
+      intelligence: 10,
+      wisdom: 10,
+      charisma: 10,
+    },
+    features: character?.features ?? [],
+    spells: {
+      cantrips: profileSpells.cantrips,
+      spellsKnown: profileSpells.spellsKnown,
+      preparedSpells: profileSpells.preparedSpells,
+    },
+  }
+
+  const handleOpenFeatModal = useCallback((choiceId: string) => {
+    setActiveFeatChoiceId(choiceId)
+    setFeatModalOpen(true)
+  }, [])
+
+  const handleFeatModalConfirm = useCallback(
+    (selectedFeats: Feat5e[]) => {
+      if (!activeFeatChoiceId || selectedFeats.length === 0) return
+      const feat = selectedFeats[0]
+      resolveFeatChoiceSelection(activeFeatChoiceId, { name: feat.name, source: feat.source })
+      setFeatModalOpen(false)
+      setActiveFeatChoiceId(null)
+    },
+    [activeFeatChoiceId, resolveFeatChoiceSelection],
+  )
 
   if (!character) {
     return <NoCharCard icon={<PersonSimple weight="duotone" />} noun="choose a race" />
@@ -251,6 +338,64 @@ export function BuildRacePage() {
                               </>
                             )}
                           </div>
+                          {isSelected &&
+                            (() => {
+                              const raceChoices = racialFeatChoices.filter(
+                                (c) =>
+                                  c.sourceTag.sourceName === race.name ||
+                                  c.sourceTag.sourceName === character.subrace,
+                              )
+                              if (raceChoices.length === 0) return null
+                              return raceChoices.map((choice) => {
+                                const isResolved = choice.selected.length > 0
+                                const poolLabel = choice.optionPool
+                                  .filter((p) => p.startsWith('category:'))
+                                  .map((p) => featCategoryToFull(p.replace('category:', '')))
+                                  .join(', ')
+                                const resolvedFeat = isResolved
+                                  ? (feats as Feat5e[]).find(
+                                      (f) =>
+                                        f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                                    )
+                                  : undefined
+                                return (
+                                  <div
+                                    key={choice.id}
+                                    className="flex items-center gap-1.5 flex-shrink-0"
+                                  >
+                                    {isResolved ? (
+                                      <>
+                                        <Badge
+                                          variant="outline"
+                                          className="text-xs px-1.5 py-0 h-5 text-success border-success/50 gap-1"
+                                        >
+                                          <Check className="h-2.5 w-2.5" />
+                                          {resolvedFeat?.name ?? choice.selected[0]}
+                                        </Badge>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 text-xs px-1.5"
+                                          onClick={() => handleOpenFeatModal(choice.id)}
+                                        >
+                                          Change
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-xs gap-1"
+                                        onClick={() => handleOpenFeatModal(choice.id)}
+                                      >
+                                        <Star className="h-3 w-3" weight="duotone" />
+                                        {poolLabel ? `Choose ${poolLabel} Feat` : 'Choose Feat'}
+                                      </Button>
+                                    )}
+                                  </div>
+                                )
+                              })
+                            })()}
                         </div>
                       )
                     })}
@@ -388,6 +533,20 @@ export function BuildRacePage() {
           </Card>
         </div>
       </div>
+
+      <FeatSelectionModal
+        open={featModalOpen}
+        onOpenChange={(open) => {
+          setFeatModalOpen(open)
+          if (!open) setActiveFeatChoiceId(null)
+        }}
+        feats={featModalFeats}
+        maxSelections={1}
+        characterSnapshot={characterSnapshot}
+        onConfirm={handleFeatModalConfirm}
+        initialFilters={featModalInitialFilters}
+        allowIgnoreLimit={false}
+      />
     </div>
   )
 }

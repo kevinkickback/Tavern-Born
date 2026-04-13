@@ -68,3 +68,108 @@ export function makeSpellFixture(overrides: Partial<Spell5e> = {}): Spell5e {
     ...overrides,
   }
 }
+
+// ---------- XPHB (2024) class fixtures ----------
+
+/** XPHB Sorcerer: level-only prepared caster (preparedSpellsChange = "level"). */
+export function makeXphbSorcererFixture(overrides: Partial<Class5e> = {}): Class5e {
+  return makeClassFixture({
+    name: 'Sorcerer',
+    source: 'XPHB',
+    hd: { faces: 6, number: 1 },
+    casterProgression: 'full',
+    spellcastingAbility: 'cha',
+    preparedSpellsProgression: [
+      2, 4, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22,
+    ],
+    preparedSpellsChange: 'level',
+    cantripProgression: [4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6],
+    ...overrides,
+  })
+}
+
+/** XPHB Cleric: daily-prep true prepared caster (preparedSpellsChange = "restLong"). */
+export function makeXphbClericFixture(overrides: Partial<Class5e> = {}): Class5e {
+  return makeClassFixture({
+    name: 'Cleric',
+    source: 'XPHB',
+    hd: { faces: 8, number: 1 },
+    casterProgression: 'full',
+    spellcastingAbility: 'wis',
+    preparedSpellsProgression: [
+      4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22,
+    ],
+    preparedSpellsChange: 'restLong',
+    cantripProgression: [3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    ...overrides,
+  })
+}
+
+/** XPHB Wizard: daily-prep + spellbook (preparedSpellsProgression + spellsKnownProgressionFixed). */
+export function makeXphbWizardFixture(overrides: Partial<Class5e> = {}): Class5e {
+  return makeClassFixture({
+    name: 'Wizard',
+    source: 'XPHB',
+    hd: { faces: 6, number: 1 },
+    casterProgression: 'full',
+    spellcastingAbility: 'int',
+    preparedSpellsProgression: [
+      4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 18, 19, 21, 22, 23, 24, 25,
+    ],
+    preparedSpellsChange: 'restLong',
+    cantripProgression: [3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    spellsKnownProgressionFixed: [6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+    spellsKnownProgressionFixedAllowLowerLevel: true,
+    ...overrides,
+  })
+}
+
+/** XPHB Warlock: level-only prepared + pact caster. */
+export function makeXphbWarlockFixture(overrides: Partial<Class5e> = {}): Class5e {
+  return makeClassFixture({
+    name: 'Warlock',
+    source: 'XPHB',
+    hd: { faces: 8, number: 1 },
+    casterProgression: 'pact',
+    spellcastingAbility: 'cha',
+    preparedSpellsProgression: [
+      2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15,
+    ],
+    preparedSpellsChange: 'level',
+    cantripProgression: [2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+    ...overrides,
+  })
+}
+
+/** XPHB Ranger: daily-prep true prepared caster with artificer rounding. */
+export function makeXphbRangerFixture(overrides: Partial<Class5e> = {}): Class5e {
+  return makeClassFixture({
+    name: 'Ranger',
+    source: 'XPHB',
+    hd: { faces: 10, number: 1 },
+    casterProgression: 'artificer',
+    spellcastingAbility: 'wis',
+    preparedSpellsProgression: [
+      2, 3, 4, 5, 6, 6, 7, 7, 9, 9, 10, 10, 11, 11, 12, 12, 14, 14, 15, 15,
+    ],
+    preparedSpellsChange: 'restLong',
+    ...overrides,
+  })
+}
+
+/** XPHB Bard: level-only prepared caster. */
+export function makeXphbBardFixture(overrides: Partial<Class5e> = {}): Class5e {
+  return makeClassFixture({
+    name: 'Bard',
+    source: 'XPHB',
+    hd: { faces: 8, number: 1 },
+    casterProgression: 'full',
+    spellcastingAbility: 'cha',
+    preparedSpellsProgression: [
+      4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22,
+    ],
+    preparedSpellsChange: 'level',
+    cantripProgression: [2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+    ...overrides,
+  })
+}

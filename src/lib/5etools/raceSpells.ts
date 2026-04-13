@@ -1,4 +1,5 @@
 import type { RaceAdditionalSpells } from '@/types/5etools'
+import { parseSpellToken } from './spellTokens'
 
 export interface RaceSpellGrant {
   spellName: string
@@ -22,15 +23,6 @@ export interface ParsedRaceSpellBlock {
   choices: RaceSpellChoiceDescriptor[]
   ability?: string
   abilityOptions?: string[]
-}
-
-function parseSpellToken(raw: string): { name: string; isCantrip: boolean } {
-  const token = raw.trim()
-  const isCantrip = token.toLowerCase().endsWith('#c')
-  return {
-    name: isCantrip ? token.slice(0, -2).trim() : token,
-    isCantrip,
-  }
 }
 
 /**

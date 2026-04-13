@@ -125,6 +125,7 @@ If you're modifying character mutations, be aware:
 - Class profiles are keyed by `class:<name>|<source>` and hold class-owned cantrips/spells/prepared flags.
 - The unrestricted profile is `special:unrestricted` and is always prepared by definition.
 - Spell slots remain persisted in `character.spells.spellSlots` as mutable runtime usage state.
+- `character.spells.spellSlots` is stored as a numeric-keyed map (`1..9`) where each key is `{ max, used }`.
 - Class-level spell source attribution is tracked in provenance spell source tags.
 - Attribution may be exact (class page level picker) or inferred (spells page lowest-eligible assignment).
 - Class-page per-level spell displays are derived from provenance attribution metadata.

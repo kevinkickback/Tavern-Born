@@ -164,7 +164,7 @@ describe('characterStore', () => {
     expect(state.activeCharacter).toBeNull()
   })
 
-  test('persist rehydrate callback leaves active character unselected', () => {
+  test('persist rehydrate callback restores active character from active id', () => {
     const persisted = makeCharacterFixture({ id: 'c8', name: 'Persisted' })
     delete persisted.provenance
 
@@ -197,11 +197,11 @@ describe('characterStore', () => {
     onRehydrate?.(rehydrateState)
 
     expect(rehydrateState.characters[0]?.provenance).toEqual(emptyProvenance())
-    expect(rehydrateState.activeCharacterId).toBeNull()
-    expect(rehydrateState.activeCharacter).toBeNull()
+    expect(rehydrateState.activeCharacterId).toBe(persisted.id)
+    expect(rehydrateState.activeCharacter?.id).toBe(persisted.id)
   })
 
-  test('persist partialize stores only characters', () => {
+  test('persist partialize stores characters and active character id', () => {
     const fixture = makeCharacterFixture({ id: 'persist-id', name: 'Persist' })
     useCharacterStore.setState({
       characters: [fixture],
@@ -212,13 +212,18 @@ describe('characterStore', () => {
     const storeWithPersist = useCharacterStore as unknown as {
       persist: {
         getOptions: () => {
-          partialize?: (state: { characters: (typeof fixture)[] }) => {
+          partialize?: (state: {
             characters: (typeof fixture)[]
+            activeCharacterId: string | null
+          }) => {
+            characters: (typeof fixture)[]
+            activeCharacterId: string | null
           }
         }
       }
       getState: () => {
         characters: (typeof fixture)[]
+        activeCharacterId: string | null
       }
     }
 
@@ -226,6 +231,6 @@ describe('characterStore', () => {
     expect(partialize).toBeTypeOf('function')
 
     const persisted = partialize?.(storeWithPersist.getState())
-    expect(persisted).toEqual({ characters: [fixture] })
+    expect(persisted).toEqual({ characters: [fixture], activeCharacterId: fixture.id })
   })
 })

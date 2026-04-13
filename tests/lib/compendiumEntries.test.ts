@@ -75,4 +75,31 @@ describe('compendiumEntries', () => {
     expect(filtered).toHaveLength(1)
     expect(filtered[0]?.name).toBe('Magic Missile')
   })
+
+  test('filterCompendiumEntries ignores unrelated deep payload text', () => {
+    const entries = buildCompendiumEntries({
+      classes: [
+        {
+          name: 'Wizard',
+          source: 'PHB',
+          fluff: { entries: ['Arcane scholar'] },
+        },
+      ],
+      items: [
+        {
+          name: 'Longsword',
+          source: 'PHB',
+          type: 'weapon',
+          entries: ['Martial melee weapon'],
+          metadata: {
+            unrelated: ['wizard', 'spellbook'],
+          },
+        },
+      ],
+    })
+
+    const filtered = filterCompendiumEntries(entries, 'wizard', new Set(), new Set())
+
+    expect(filtered.map((entry) => entry.name)).toEqual(['Wizard'])
+  })
 })

@@ -1,4 +1,5 @@
 import type { Class5e } from '@/types/5etools'
+import type { Character, CharacterClassEntry } from '@/types/character'
 import type { AbilityBonuses, AbilityScores } from './calculations/abilityScores'
 import {
   getAbilityModifier,
@@ -20,6 +21,32 @@ export interface ClassEntry {
 
 export interface Progression {
   classes: ClassEntry[]
+}
+
+export function getCharacterClassEntries(
+  character:
+    | Pick<
+        Character,
+        'classProgression' | 'class' | 'classSource' | 'subclass' | 'subclassSource' | 'level'
+      >
+    | null
+    | undefined,
+): CharacterClassEntry[] {
+  if (!character) return []
+  if (character.classProgression && character.classProgression.length > 0) {
+    return character.classProgression
+  }
+  if (!character.class) return []
+
+  return [
+    {
+      name: character.class,
+      source: character.classSource,
+      levels: character.level,
+      subclass: character.subclass,
+      subclassSource: character.subclassSource,
+    },
+  ]
 }
 
 /** Total character level summed across all class entries. */

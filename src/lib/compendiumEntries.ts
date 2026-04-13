@@ -3,6 +3,7 @@ export interface CompendiumEntry {
   type: string
   source: string
   description?: string
+  searchText?: string
   data: Record<string, unknown>
 }
 
@@ -32,6 +33,85 @@ function asCollection(value: unknown): unknown[] {
   return []
 }
 
+function toSpacedLowerKey(key: string): string {
+  return key.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase()
+}
+
+function extractSearchText(value: unknown, depth = 0): string {
+  if (value == null || depth > 6) return ''
+
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+
+  if (Array.isArray(value)) {
+    return value.map((item) => extractSearchText(item, depth + 1)).join(' ')
+  }
+
+  if (typeof value === 'object') {
+    return Object.entries(value)
+      .map(([key, nested]) => {
+        if (depth > 1 && !['name', 'entries', 'entry', 'source', 'type'].includes(key)) {
+          return extractSearchText(nested, depth + 1)
+        }
+        return `${toSpacedLowerKey(key)} ${extractSearchText(nested, depth + 1)}`
+      })
+      .join(' ')
+  }
+
+  return ''
+}
+
+function normalizeSearchText(...parts: Array<string | undefined>): string {
+  return parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+function getPreviewDescription(value: unknown): string {
+  if (typeof value === 'string') return value
+
+  if (Array.isArray(value) && value.length > 0) {
+    const first = value[0]
+    if (typeof first === 'string') return first
+    return extractSearchText(first)
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    return extractSearchText(value)
+  }
+
+  return ''
+}
+
+function buildEntry(
+  name: string,
+  type: string,
+  source: string,
+  description: string,
+  data: Record<string, unknown>,
+): CompendiumEntry {
+  return {
+    name,
+    type,
+    source,
+    description,
+    searchText: normalizeSearchText(name, type, source, description),
+    data,
+  }
+}
+
+function tokenizeSearchQuery(searchQuery: string): string[] {
+  return searchQuery
+    .toLowerCase()
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+}
+
+function matchesSearchTerm(entry: CompendiumEntry, term: string): boolean {
+  return [entry.name, entry.type, entry.source, entry.description, entry.searchText]
+    .filter((value): value is string => Boolean(value))
+    .some((value) => value.toLowerCase().includes(term))
+}
+
 export function buildCompendiumEntries(
   gameData: CompendiumGameData | null | undefined,
 ): CompendiumEntry[] {
@@ -43,13 +123,16 @@ export function buildCompendiumEntries(
     asCollection(gameData.races).forEach((race) => {
       const raceObj = asObj(race)
       const entriesList = Array.isArray(raceObj.entries) ? raceObj.entries : []
-      entries.push({
-        name: String(raceObj.name ?? ''),
-        type: 'Race',
-        source: String(raceObj.source ?? 'Unknown'),
-        description: String(entriesList[0] ?? ''),
-        data: raceObj,
-      })
+      const description = getPreviewDescription(entriesList)
+      entries.push(
+        buildEntry(
+          String(raceObj.name ?? ''),
+          'Race',
+          String(raceObj.source ?? 'Unknown'),
+          description,
+          raceObj,
+        ),
+      )
     })
   }
 
@@ -59,26 +142,39 @@ export function buildCompendiumEntries(
       const fluffEntries = Array.isArray(asObj(clsObj.fluff).entries)
         ? (asObj(clsObj.fluff).entries as unknown[])
         : []
-      entries.push({
-        name: String(clsObj.name ?? ''),
-        type: 'Class',
-        source: String(clsObj.source ?? 'Unknown'),
-        description: String(fluffEntries[0] ?? ''),
-        data: clsObj,
-      })
+      const classFluffEntries = Array.isArray(clsObj.fluffEntries) ? clsObj.fluffEntries : []
+      const classFluffSections = Array.isArray(clsObj.classFluffSections)
+        ? clsObj.classFluffSections
+        : []
+      const description =
+        getPreviewDescription(classFluffEntries) ||
+        getPreviewDescription(classFluffSections) ||
+        getPreviewDescription(fluffEntries)
+      entries.push(
+        buildEntry(
+          String(clsObj.name ?? ''),
+          'Class',
+          String(clsObj.source ?? 'Unknown'),
+          description,
+          clsObj,
+        ),
+      )
     })
   }
 
   if (gameData.spells) {
     asCollection(gameData.spells).forEach((spell) => {
       const spellObj = asObj(spell)
-      entries.push({
-        name: String(spellObj.name ?? ''),
-        type: 'Spell',
-        source: String(spellObj.source ?? 'Unknown'),
-        description: `Level ${String(spellObj.level ?? '?')} ${String(spellObj.school ?? '')}`,
-        data: spellObj,
-      })
+      const description = `Level ${String(spellObj.level ?? '?')} ${String(spellObj.school ?? '')}`
+      entries.push(
+        buildEntry(
+          String(spellObj.name ?? ''),
+          'Spell',
+          String(spellObj.source ?? 'Unknown'),
+          description,
+          spellObj,
+        ),
+      )
     })
   }
 
@@ -86,13 +182,16 @@ export function buildCompendiumEntries(
     gameData.items.forEach((item) => {
       const itemObj = asObj(item)
       const itemEntries = Array.isArray(itemObj.entries) ? itemObj.entries : []
-      entries.push({
-        name: String(itemObj.name ?? ''),
-        type: 'Item',
-        source: String(itemObj.source ?? 'Unknown'),
-        description: String(itemEntries[0] ?? itemObj.type ?? ''),
-        data: itemObj,
-      })
+      const description = getPreviewDescription(itemEntries) || String(itemObj.type ?? '')
+      entries.push(
+        buildEntry(
+          String(itemObj.name ?? ''),
+          'Item',
+          String(itemObj.source ?? 'Unknown'),
+          description,
+          itemObj,
+        ),
+      )
     })
   }
 
@@ -100,13 +199,16 @@ export function buildCompendiumEntries(
     asCollection(gameData.backgrounds).forEach((bg) => {
       const bgObj = asObj(bg)
       const bgEntries = Array.isArray(bgObj.entries) ? bgObj.entries : []
-      entries.push({
-        name: String(bgObj.name ?? ''),
-        type: 'Background',
-        source: String(bgObj.source ?? 'Unknown'),
-        description: String(bgEntries[0] ?? ''),
-        data: bgObj,
-      })
+      const description = getPreviewDescription(bgEntries)
+      entries.push(
+        buildEntry(
+          String(bgObj.name ?? ''),
+          'Background',
+          String(bgObj.source ?? 'Unknown'),
+          description,
+          bgObj,
+        ),
+      )
     })
   }
 
@@ -114,13 +216,16 @@ export function buildCompendiumEntries(
     Object.values(gameData.feats).forEach((feat) => {
       const featObj = asObj(feat)
       const featEntries = Array.isArray(featObj.entries) ? featObj.entries : []
-      entries.push({
-        name: String(featObj.name ?? ''),
-        type: 'Feat',
-        source: String(featObj.source ?? 'Unknown'),
-        description: String(featEntries[0] ?? ''),
-        data: featObj,
-      })
+      const description = getPreviewDescription(featEntries)
+      entries.push(
+        buildEntry(
+          String(featObj.name ?? ''),
+          'Feat',
+          String(featObj.source ?? 'Unknown'),
+          description,
+          featObj,
+        ),
+      )
     })
   }
 
@@ -128,13 +233,16 @@ export function buildCompendiumEntries(
     Object.values(gameData.skills).forEach((skill) => {
       const skillObj = asObj(skill)
       const skillEntries = Array.isArray(skillObj.entries) ? skillObj.entries : []
-      entries.push({
-        name: String(skillObj.name ?? ''),
-        type: 'Skill',
-        source: String(skillObj.source ?? 'Unknown'),
-        description: String(skillEntries[0] ?? ''),
-        data: skillObj,
-      })
+      const description = getPreviewDescription(skillEntries)
+      entries.push(
+        buildEntry(
+          String(skillObj.name ?? ''),
+          'Skill',
+          String(skillObj.source ?? 'Unknown'),
+          description,
+          skillObj,
+        ),
+      )
     })
   }
 
@@ -142,13 +250,16 @@ export function buildCompendiumEntries(
     gameData.actions.forEach((action) => {
       const actionObj = asObj(action)
       const actionEntries = Array.isArray(actionObj.entries) ? actionObj.entries : []
-      entries.push({
-        name: String(actionObj.name ?? ''),
-        type: 'Action',
-        source: String(actionObj.source ?? 'Unknown'),
-        description: String(actionEntries[0] ?? ''),
-        data: actionObj,
-      })
+      const description = getPreviewDescription(actionEntries)
+      entries.push(
+        buildEntry(
+          String(actionObj.name ?? ''),
+          'Action',
+          String(actionObj.source ?? 'Unknown'),
+          description,
+          actionObj,
+        ),
+      )
     })
   }
 
@@ -156,13 +267,16 @@ export function buildCompendiumEntries(
     gameData.conditions.forEach((condition) => {
       const conditionObj = asObj(condition)
       const conditionEntries = Array.isArray(conditionObj.entries) ? conditionObj.entries : []
-      entries.push({
-        name: String(conditionObj.name ?? ''),
-        type: 'Condition',
-        source: String(conditionObj.source ?? 'Unknown'),
-        description: String(conditionEntries[0] ?? ''),
-        data: conditionObj,
-      })
+      const description = getPreviewDescription(conditionEntries)
+      entries.push(
+        buildEntry(
+          String(conditionObj.name ?? ''),
+          'Condition',
+          String(conditionObj.source ?? 'Unknown'),
+          description,
+          conditionObj,
+        ),
+      )
     })
   }
 
@@ -170,26 +284,32 @@ export function buildCompendiumEntries(
     Object.values(gameData.languages).forEach((language) => {
       const languageObj = asObj(language)
       const languageEntries = Array.isArray(languageObj.entries) ? languageObj.entries : []
-      entries.push({
-        name: String(languageObj.name ?? ''),
-        type: 'Language',
-        source: String(languageObj.source ?? 'Unknown'),
-        description: String(languageEntries[0] ?? languageObj.type ?? ''),
-        data: languageObj,
-      })
+      const description = getPreviewDescription(languageEntries) || String(languageObj.type ?? '')
+      entries.push(
+        buildEntry(
+          String(languageObj.name ?? ''),
+          'Language',
+          String(languageObj.source ?? 'Unknown'),
+          description,
+          languageObj,
+        ),
+      )
     })
   }
 
   if (gameData.deities) {
     gameData.deities.forEach((deity) => {
       const deityObj = asObj(deity)
-      entries.push({
-        name: String(deityObj.name ?? ''),
-        type: 'Deity',
-        source: String(deityObj.source ?? 'Unknown'),
-        description: String(deityObj.title ?? deityObj.alignment ?? ''),
-        data: deityObj,
-      })
+      const description = String(deityObj.title ?? deityObj.alignment ?? '')
+      entries.push(
+        buildEntry(
+          String(deityObj.name ?? ''),
+          'Deity',
+          String(deityObj.source ?? 'Unknown'),
+          description,
+          deityObj,
+        ),
+      )
     })
   }
 
@@ -213,12 +333,9 @@ export function filterCompendiumEntries(
   }
 
   if (searchQuery) {
-    const query = searchQuery.toLowerCase()
-    filtered = filtered.filter(
-      (entry) =>
-        entry.name.toLowerCase().includes(query) ||
-        entry.type.toLowerCase().includes(query) ||
-        entry.source.toLowerCase().includes(query),
+    const queryTerms = tokenizeSearchQuery(searchQuery)
+    filtered = filtered.filter((entry) =>
+      queryTerms.every((term) => matchesSearchTerm(entry, term)),
     )
   }
 

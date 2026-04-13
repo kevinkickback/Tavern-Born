@@ -203,17 +203,7 @@ export interface SpellProfile {
   spellSwaps?: Record<number, { removed: string; added: string }>
 }
 
-export interface SpellSlots {
-  level1: { max: number; used: number }
-  level2: { max: number; used: number }
-  level3: { max: number; used: number }
-  level4: { max: number; used: number }
-  level5: { max: number; used: number }
-  level6: { max: number; used: number }
-  level7: { max: number; used: number }
-  level8: { max: number; used: number }
-  level9: { max: number; used: number }
-}
+export type SpellSlots = Partial<Record<number, { max: number; used: number }>>
 
 export interface Equipment {
   id: string
