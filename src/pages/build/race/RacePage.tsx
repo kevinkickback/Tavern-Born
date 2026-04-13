@@ -206,7 +206,7 @@ export function BuildRacePage() {
       <div className="px-6 pt-6 pb-4">
         <div className="max-w-7xl mx-auto">
           <h1 className="font-display text-2xl font-bold flex items-center gap-3">
-            <PersonSimple className="h-6 w-6 text-accent" weight="duotone" />
+            <PersonSimple className="h-6 w-6 text-primary" weight="duotone" />
             Race
           </h1>
         </div>
@@ -278,7 +278,9 @@ export function BuildRacePage() {
                             <div
                               className={cn(
                                 'h-3.5 w-3.5 rounded-full border-2 flex-shrink-0',
-                                isSelected ? 'bg-accent border-accent' : 'border-muted-foreground',
+                                isSelected
+                                  ? 'bg-primary border-primary'
+                                  : 'border-muted-foreground',
                               )}
                             />
                             <span className="font-medium text-sm truncate">{race.name}</span>
@@ -490,7 +492,7 @@ export function BuildRacePage() {
 
                         {getRaceTraits(displayRace).length > 0 && (
                           <div>
-                            <h4 className="text-xs font-bold text-accent uppercase tracking-wider mb-3">
+                            <h4 className="text-xs font-bold text-accent-foreground uppercase tracking-wider mb-3">
                               Traits
                             </h4>
                             <div className="space-y-3">

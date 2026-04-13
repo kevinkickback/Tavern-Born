@@ -127,7 +127,7 @@ export function BuildProficienciesPage() {
       <div className="px-6 pt-6 pb-4">
         <div className="max-w-7xl mx-auto">
           <h1 className="font-display text-2xl font-bold flex items-center gap-3">
-            <Certificate className="h-6 w-6 text-accent" weight="duotone" />
+            <Certificate className="h-6 w-6 text-primary" weight="duotone" />
             Proficiencies
           </h1>
         </div>

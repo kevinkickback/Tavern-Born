@@ -94,7 +94,7 @@ export function CharacteristicsPage() {
   return (
     <div className="max-w-7xl mx-auto w-full space-y-6">
       <h1 className="font-display text-4xl font-bold flex items-center gap-3">
-        <Sparkle className="h-8 w-8 text-accent" weight="duotone" />
+        <Sparkle className="h-8 w-8 text-primary" weight="duotone" />
         Characteristics
       </h1>
 

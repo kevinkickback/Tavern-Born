@@ -87,7 +87,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden transition-colors hover:border-accent/30">
       <div className="flex items-start gap-3 p-4">
-        <Star className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" weight="duotone" />
+        <Star className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" weight="duotone" />
         <div className="flex-1 min-w-0">
           {/* Name row */}
           <div className="flex items-center gap-2 flex-wrap mb-1.5">
@@ -114,7 +114,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
               </Badge>
             )}
             {grantLabel && (
-              <Badge className="text-xs px-1.5 py-0 h-5 bg-accent/20 text-accent border border-accent/40">
+              <Badge className="text-xs px-1.5 py-0 h-5 bg-accent/20 text-accent-foreground border border-accent/40">
                 <Sparkle className="h-2.5 w-2.5 mr-0.5" weight="duotone" />
                 {grantLabel}
               </Badge>
@@ -150,7 +150,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="flex items-center gap-1 mt-1.5 text-xs text-accent hover:text-accent/80 transition-colors"
+              className="flex items-center gap-1 mt-1.5 text-xs text-accent-foreground hover:text-accent-foreground/80 transition-colors"
             >
               <CaretDown className={cn('h-3 w-3 transition-transform', expanded && 'rotate-180')} />
               {expanded ? 'Show less' : 'Show more'}

@@ -125,7 +125,7 @@ export function CharacterSheetPage() {
       <Card className="w-full">
         <CardHeader className="pb-4">
           <CardTitle className="flex flex-wrap items-center gap-2 text-lg sm:text-xl">
-            <FilePdf className="h-6 w-6 text-accent" weight="duotone" />
+            <FilePdf className="h-6 w-6 text-primary" weight="duotone" />
             Character Sheet PDF
           </CardTitle>
         </CardHeader>

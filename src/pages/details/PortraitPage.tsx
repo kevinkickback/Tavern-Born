@@ -1,5 +1,6 @@
 import { Image } from '@phosphor-icons/react'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
+import { Card } from '@/components/ui/card'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'

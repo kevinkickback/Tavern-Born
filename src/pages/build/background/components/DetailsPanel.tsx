@@ -95,7 +95,7 @@ export function BuildBackgroundDetailsPanel({
               {getBackgroundEntries(selectedBackground).map((section) => (
                 <div key={section.name ?? JSON.stringify(section.entries)}>
                   {section.name && (
-                    <h4 className="text-xs font-bold text-accent uppercase tracking-wider mb-2 mt-3">
+                    <h4 className="text-xs font-bold text-accent-foreground uppercase tracking-wider mb-2 mt-3">
                       {section.name}
                     </h4>
                   )}

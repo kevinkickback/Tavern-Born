@@ -226,7 +226,7 @@ export function EquipmentPage() {
         <Card className="w-full">
           <CardHeader>
             <CardTitle className="font-display text-xl flex items-center gap-2">
-              <Backpack className="h-5 w-5 text-accent" weight="duotone" />
+              <Backpack className="h-5 w-5 text-primary" weight="duotone" />
               Inventory ({equipment.length})
             </CardTitle>
           </CardHeader>
@@ -245,7 +245,7 @@ export function EquipmentPage() {
                     key={item.id}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2 rounded-lg border',
-                      item.equipped ? 'border-accent/40 bg-accent/5' : 'border-border',
+                      item.equipped ? 'border-accent bg-accent' : 'border-border',
                     )}
                   >
                     <div className="flex-1 min-w-0">

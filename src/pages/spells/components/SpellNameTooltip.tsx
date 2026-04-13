@@ -129,7 +129,7 @@ export function SpellNameTooltip({
                   }}
                   className={cn(
                     'h-7 w-7 rounded border border-border bg-card hover:bg-muted/40 flex items-center justify-center',
-                    pinned ? 'text-accent border-accent/60' : 'text-muted-foreground',
+                    pinned ? 'text-accent-foreground border-accent/60' : 'text-muted-foreground',
                   )}
                   title={pinned ? 'Unpin tooltip' : 'Pin tooltip'}
                 >
@@ -186,7 +186,7 @@ export function SpellNameTooltip({
 
             <div className="px-3 py-1.5 border-t border-border text-xs text-muted-foreground">
               <div className="flex items-start justify-between gap-3">
-                <div className="text-accent text-left">
+                <div className="text-accent-foreground text-left">
                   {sourceContext ? `Source: ${sourceContext}` : ''}
                 </div>
                 <div className="italic text-right">

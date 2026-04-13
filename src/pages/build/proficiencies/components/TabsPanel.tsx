@@ -114,8 +114,8 @@ export function BuildProficienciesTabsPanel({
   isStandardLanguage,
 }: BuildProficienciesTabsPanelProps) {
   const choiceSelectedClass =
-    'border-2 border-accent border-dashed bg-accent/10 text-accent-foreground hover:bg-accent/15'
-  const fixedSelectedClass = 'border-accent bg-accent/20 text-accent-foreground hover:bg-accent/30'
+    'border-2 border-accent border-dashed bg-accent/25 text-accent-foreground hover:bg-accent/30'
+  const fixedSelectedClass = 'border-accent bg-accent text-accent-foreground hover:bg-accent/80'
 
   return (
     <Tabs defaultValue="skills">
@@ -253,7 +253,7 @@ export function BuildProficienciesTabsPanel({
                 className={cn(
                   'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left',
                   isSelected
-                    ? 'border-accent bg-accent/20 text-accent-foreground hover:bg-accent/30'
+                    ? 'border-accent bg-accent text-accent-foreground hover:bg-accent/80'
                     : 'border-border bg-card text-muted-foreground opacity-50',
                   isFocused && 'ring-2 ring-accent ring-offset-2',
                 )}
