@@ -61,7 +61,8 @@ describe('migrateCharacter', () => {
     expect(result.id).toBe('test-id')
     expect(result.name).toBe('Test Hero')
     // The 0→1 migration chain stamps the version as '1.0.0'
-    expect(result.version).toBe('1.0.0')
+    expect(result.version).toBe('2.0.0')
+    expect(result.originSystem).toBe('2014')
   })
 
   it('is a no-op when character is already at current version', () => {
@@ -78,6 +79,20 @@ describe('migrateCharacter', () => {
     const result = migrateCharacter(withExtras, 0)
     expect((result as unknown as Record<string, unknown>).race).toBe('Elf')
     expect((result as unknown as Record<string, unknown>).level).toBe(5)
+  })
+
+  it('infers 2024 origin system from background-origin provenance', () => {
+    const result = migrateCharacter(
+      {
+        ...baseCharacter,
+        version: 1,
+        backgroundAsiBlockIndex: 0,
+      },
+      1,
+    )
+
+    expect(result.originSystem).toBe('2024')
+    expect(result.version).toBe('2.0.0')
   })
 
   it('throws when migration result is missing required fields (id/name)', () => {

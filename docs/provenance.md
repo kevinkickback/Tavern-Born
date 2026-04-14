@@ -56,9 +56,15 @@ The UI for choosing ability blocks and slots lives in `src/pages/build/backgroun
 ## Grant Application Pattern
 
 1. Resolve selected source entity (race/class/background/feat/etc).
-2. Apply grants to character fields.
-3. Register source tags in ledger for every applied grant.
-4. Save via character store mutation APIs.
+2. For race/background origin entities, normalize the selected data against `character.originSystem` before applying grants.
+3. Apply grants to character fields.
+4. Register source tags in ledger for every applied grant.
+5. Save via character store mutation APIs.
+
+Origin-system normalization behavior:
+- `2014`: race/subrace retains origin ASI, background origin ASI and background origin feat are stripped.
+- `2024`: background retains origin ASI and exactly one origin feat, race/subrace origin ASI and starting feat are stripped.
+- Missing canonical origin data is synthesized only at normalization time (for example: fallback 2014 race ASI choice, fallback 2024 background ASI/feat choice).
 
 Mutation hooks should stay separate from row-derivation hooks: grant/reconciliation callbacks belong in the mutation layer, while UI-facing source rows and collapse-state helpers belong in the derived-view layer.
 

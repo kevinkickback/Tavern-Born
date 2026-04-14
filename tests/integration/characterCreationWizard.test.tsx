@@ -56,6 +56,7 @@ describe('character creation and proficiencies validation', () => {
   })
 
   test('wizard defaults start at minimum scores for non-standard methods', () => {
+    expect(INITIAL_CHARACTER_DATA.originSystem).toBe('')
     expect(INITIAL_CHARACTER_DATA.abilityScoreMethod).toBe('point-buy')
     expect(INITIAL_CHARACTER_DATA.abilityScores).toEqual({
       strength: 8,
@@ -65,6 +66,23 @@ describe('character creation and proficiencies validation', () => {
       wisdom: 8,
       charisma: 8,
     })
+  })
+
+  test('wizard rules validation requires an origin system selection', async () => {
+    const { validateStep } = await import('@/components/character/wizard/validation')
+
+    const result = validateStep(
+      2,
+      {
+        ...INITIAL_CHARACTER_DATA,
+        originSystem: '',
+        allowedSources: ['PHB'],
+      },
+      undefined,
+    )
+
+    expect(result.valid).toBe(false)
+    expect(result.fields).toContain('originSystem')
   })
 
   test('createNewCharacter with class proficiencies produces valid character with string proficiencies', () => {

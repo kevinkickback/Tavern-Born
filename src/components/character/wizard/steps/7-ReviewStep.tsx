@@ -11,6 +11,11 @@ import {
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
+import {
+  getOriginSystemLabel,
+  normalizeRaceSelectionForOriginSystem,
+  usesRaceOriginBenefits,
+} from '@/lib/calculations/originSystem'
 import { cn } from '@/lib/utils'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
@@ -71,6 +76,9 @@ function InfoRow({ label, value, warn }: { label: string; value?: string; warn?:
 
 export function ReviewStep({ data }: ReviewStepProps) {
   const gameData = useGameDataStore((s) => s.gameData)
+  const showRaceOriginBonuses = usesRaceOriginBenefits(
+    (data.originSystem || '2014') as '2014' | '2024',
+  )
 
   const missingFields: string[] = []
   if (!data.name) missingFields.push('Name')
@@ -85,17 +93,31 @@ export function ReviewStep({ data }: ReviewStepProps) {
     (sr) =>
       sr.name === data.subrace && (sr.source ?? '') === (data.subraceSource ?? sr.source ?? ''),
   )
-  const displayRace = raceObj && subraceObj ? mergeRaceWithSubrace(raceObj, subraceObj) : raceObj
+  const normalizedSelection = normalizeRaceSelectionForOriginSystem(
+    raceObj,
+    subraceObj,
+    (data.originSystem || '2014') as '2014' | '2024',
+  )
+  const displayRace =
+    normalizedSelection.race && normalizedSelection.subrace
+      ? mergeRaceWithSubrace(normalizedSelection.race, normalizedSelection.subrace)
+      : normalizedSelection.race
 
-  const raceAsiData = getRaceAbilityData(raceObj, subraceObj, data.raceAsiBlockIndex ?? 0)
   const racialBonuses: Partial<Record<AbilityName, number>> = {}
-  for (const fb of raceAsiData.fixed) {
-    racialBonuses[fb.ability] = (racialBonuses[fb.ability] ?? 0) + fb.value
-  }
-  for (const [blockIdx, block] of raceAsiData.choices.entries()) {
-    for (const raw of data.raceAsiChoices?.[blockIdx] ?? []) {
-      const ab = normalizeAbilityName(raw)
-      if (ab) racialBonuses[ab] = (racialBonuses[ab] ?? 0) + block.amount
+  if (showRaceOriginBonuses) {
+    const raceAsiData = getRaceAbilityData(
+      normalizedSelection.race,
+      normalizedSelection.subrace,
+      data.raceAsiBlockIndex ?? 0,
+    )
+    for (const fb of raceAsiData.fixed) {
+      racialBonuses[fb.ability] = (racialBonuses[fb.ability] ?? 0) + fb.value
+    }
+    for (const [blockIdx, block] of raceAsiData.choices.entries()) {
+      for (const raw of data.raceAsiChoices?.[blockIdx] ?? []) {
+        const ab = normalizeAbilityName(raw)
+        if (ab) racialBonuses[ab] = (racialBonuses[ab] ?? 0) + block.amount
+      }
     }
   }
 
@@ -177,6 +199,11 @@ export function ReviewStep({ data }: ReviewStepProps) {
                     Character Snapshot
                   </div>
                   <InfoRow label="Background" value={data.background} warn={!data.background} />
+                  <InfoRow
+                    label="Ruleset"
+                    value={data.originSystem ? getOriginSystemLabel(data.originSystem) : undefined}
+                    warn={!data.originSystem}
+                  />
                   <InfoRow label="Size" value={sizeValue} />
                   <InfoRow label="Speed" value={speedValue} />
                   <div className="flex items-center justify-between gap-2 py-1.5 border-b border-border/50">

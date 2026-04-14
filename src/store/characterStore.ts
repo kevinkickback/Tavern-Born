@@ -150,8 +150,9 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
 
   return {
     id: generateId(),
-    version: '1.0.0',
+    version: '2.0.0',
     name: '',
+    originSystem: '2014',
     race: '',
     class: '',
     background: '',

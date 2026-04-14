@@ -99,9 +99,10 @@ Entry points:
 
 Flow:
 1. Selection changes (race/class/background/feat/optional feature) trigger grant application helpers.
-2. Helpers mutate both materialized character fields and provenance ledger tags.
-3. Reconciliation removes prior-source grants when a source entity is changed.
-4. Resulting character sheet stays aligned with source-attributed grants.
+2. Race/background selection paths normalize selected content against `character.originSystem` before origin grants are applied.
+3. Helpers mutate both materialized character fields and provenance ledger tags.
+4. Reconciliation removes prior-source grants when a source entity is changed.
+5. Resulting character sheet stays aligned with source-attributed grants.
 
 Background equipment detail:
 - Background starting equipment is resolved from 5etools `startingEquipment` blocks using persisted per-block choice keys (`backgroundEquipmentChoices`, an array of lowercase keys like `['a', 'b']`).

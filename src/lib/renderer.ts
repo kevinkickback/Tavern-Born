@@ -99,6 +99,15 @@ export function renderEntry(entry: unknown): string {
       return sanitizeRenderedHtml(result)
     }
 
+    if (entryObj.type === 'item') {
+      const itemObj = entryObj as { name?: string; entry?: string; entries?: unknown[] }
+      let result = ''
+      if (itemObj.name) result += `<strong>${renderTags(itemObj.name)}</strong> `
+      if (itemObj.entry) result += renderTags(itemObj.entry)
+      else if (itemObj.entries) result += itemObj.entries.map(renderEntry).join(' ')
+      return sanitizeRenderedHtml(result)
+    }
+
     if (entryObj.type === 'list') {
       const items = (entryObj.items ?? []).map((item) => `<li>${renderEntry(item)}</li>`).join('')
       return sanitizeRenderedHtml(`<ul>${items}</ul>`)

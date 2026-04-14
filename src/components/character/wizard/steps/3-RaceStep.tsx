@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import { getRaceSummary } from '@/lib/calculations/entrySummary'
+import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import {
   getAsiDisplay,
   getDamageTraitDisplay,
@@ -115,10 +116,16 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
     })
   }, [data.subrace, data.subraceSource, onChange, selectedRace, selectedSubrace, subraces])
 
-  const displayRace =
-    selectedSubrace && selectedRace
-      ? mergeRaceWithSubrace(selectedRace, selectedSubrace)
-      : selectedSubrace || selectedRace
+  const displayRace = (() => {
+    const normalizedSelection = normalizeRaceSelectionForOriginSystem(
+      selectedRace,
+      selectedSubrace,
+      (data.originSystem || '2014') as '2014' | '2024',
+    )
+    return normalizedSelection.race && normalizedSelection.subrace
+      ? mergeRaceWithSubrace(normalizedSelection.race, normalizedSelection.subrace)
+      : normalizedSelection.subrace || normalizedSelection.race
+  })()
 
   const handleSelectRace = (race: Race5e) => {
     const firstSubrace = getAvailableSubraces(race)[0]

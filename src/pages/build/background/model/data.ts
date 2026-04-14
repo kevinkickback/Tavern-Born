@@ -13,10 +13,15 @@ export function getBackgroundEntries(
   return ((background.entries as unknown[]) ?? [])
     .filter((entry) => {
       const typedEntry = entry as BackgroundEntry
-      return typeof entry === 'object' && typedEntry.type === 'entries'
+      return (
+        typeof entry === 'object' && (typedEntry.type === 'entries' || typedEntry.type === 'list')
+      )
     })
     .map((entry) => {
       const typedEntry = entry as BackgroundEntry
+      if (typedEntry.type === 'list') {
+        return { name: undefined, entries: [entry] }
+      }
       return {
         name: typedEntry.name,
         entries: typedEntry.entries ?? [],

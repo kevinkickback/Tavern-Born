@@ -25,7 +25,7 @@ export function applyBackgroundGrants(
     feats?: unknown[]
   },
   ledger: ProvenanceLedger,
-  options?: { itemLookup?: Map<string, Item5e> },
+  options?: { itemLookup?: Map<string, Item5e>; suppressLanguageGrants?: boolean },
 ): ProvenanceLedger {
   let result = ledger
   const bgTag = makeSourceTag('background', bg.name, 'fixed', bg.source)
@@ -38,13 +38,15 @@ export function applyBackgroundGrants(
     bgTag,
     prefix,
   )
-  result = applyProficiencyBlocks(
-    result,
-    'languages',
-    toProficiencyBlocks(bg.languageProficiencies),
-    bgTag,
-    prefix,
-  )
+  if (!options?.suppressLanguageGrants) {
+    result = applyProficiencyBlocks(
+      result,
+      'languages',
+      toProficiencyBlocks(bg.languageProficiencies),
+      bgTag,
+      prefix,
+    )
+  }
   result = applyProficiencyBlocks(
     result,
     'tools',

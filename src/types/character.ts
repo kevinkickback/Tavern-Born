@@ -2,6 +2,8 @@ import type { ProvenanceLedger } from '@/lib/provenance/types'
 
 export type { ProvenanceLedger }
 
+export type OriginSystem = '2014' | '2024'
+
 export type AbilityName =
   | 'strength'
   | 'dexterity'
@@ -22,6 +24,7 @@ export interface Character {
   id: string
   version: string
   name: string
+  originSystem: OriginSystem
   race: string
   raceSource?: string
   subrace?: string

@@ -14,7 +14,7 @@ interface RulesStepProps extends StepProps {
   }
 }
 
-export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
+export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStepProps) {
   const optionalClassFeaturesId = useId()
   const averageHitPointsId = useId()
   const bladesingerAnyRaceId = useId()
@@ -152,6 +152,58 @@ export function RulesStep({ data, onChange, gameData }: RulesStepProps) {
   return (
     <TooltipProvider>
       <div className="flex flex-col h-full gap-4">
+        <div className="shrink-0 rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+          <div className="flex items-center gap-2 pb-1 border-b border-border">
+            <Sparkle className="h-4 w-4 text-accent" weight="fill" />
+            <h3 className="font-semibold">Ruleset</h3>
+          </div>
+
+          <div
+            className={cn(
+              'grid gap-3 md:grid-cols-2',
+              invalidFields?.has('originSystem') && 'rounded-lg ring-1 ring-destructive',
+            )}
+          >
+            {[
+              {
+                value: '2014' as const,
+                label: '2014 Origin Rules',
+                description:
+                  'Origin ASIs come from race or subrace. Background origin feats and background ASIs are removed.',
+              },
+              {
+                value: '2024' as const,
+                label: '2024 Origin Rules',
+                description:
+                  'Origin ASIs and the single origin feat come from background. Race origin ASIs and starting feats are removed.',
+              },
+            ].map((option) => {
+              const selected = data.originSystem === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onChange({ originSystem: option.value })}
+                  className={cn(
+                    'rounded-lg border px-4 py-3 text-left transition-colors',
+                    selected
+                      ? 'border-accent bg-accent/10 shadow-sm'
+                      : 'border-border bg-card hover:border-accent/40 hover:bg-accent/5',
+                  )}
+                >
+                  <div className="font-semibold text-sm">{option.label}</div>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    {option.description}
+                  </p>
+                </button>
+              )
+            })}
+          </div>
+          {invalidFields?.has('originSystem') && (
+            <p className="text-xs text-destructive">Please select an origin system to continue.</p>
+          )}
+        </div>
+
         <div className="shrink-0 grid grid-cols-2 gap-6 w-full">
           <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
             <div className="flex items-center gap-2 pb-1 border-b border-border">

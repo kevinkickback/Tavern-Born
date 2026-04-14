@@ -1,4 +1,5 @@
 import { parseRaceSpells } from '@/lib/5etools/raceSpells'
+import { hasFlexibleRaceOriginAsi } from '@/lib/calculations/abilityScores'
 import type { Item5e } from '@/types/5etools'
 import { applyFeatGrantBlocks } from './applyFeatAndOptionalFeatureGrants'
 import {
@@ -143,6 +144,8 @@ export function applyRaceGrants(
     name: string
     source?: string
     lineage?: string | boolean
+    _tavernBornFlexibleAsi?: boolean
+    _tavernBornSuppressFlexibleAsi?: boolean
     skillProficiencies?: unknown[]
     languageProficiencies?: unknown[]
     toolProficiencies?: unknown[]
@@ -171,9 +174,10 @@ export function applyRaceGrants(
   resolveFilterOptions?: (domain: RaceFilterDomain, fromFilter: string) => string[],
   lineageAsiBlockIndex: 0 | 1 = 0,
   totalCharacterLevel = 1,
+  options?: { suppressLanguageGrants?: boolean },
 ): ProvenanceLedger {
   let result = ledger
-  const usesTashasLineageAsi = race.lineage === true || typeof race.lineage === 'string'
+  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(race)
 
   const raceTag = makeSourceTag('race', race.name, 'fixed', race.source)
 
@@ -185,14 +189,16 @@ export function applyRaceGrants(
     `race:${normalizeKey(race.name)}`,
   )
 
-  result = applyProficiencyBlocks(
-    result,
-    'languages',
-    getLineageLanguageBlocks(race.lineage, race.languageProficiencies),
-    raceTag,
-    `race:${normalizeKey(race.name)}`,
-    resolveFilterOptions,
-  )
+  if (!options?.suppressLanguageGrants) {
+    result = applyProficiencyBlocks(
+      result,
+      'languages',
+      getLineageLanguageBlocks(race.lineage, race.languageProficiencies),
+      raceTag,
+      `race:${normalizeKey(race.name)}`,
+      resolveFilterOptions,
+    )
+  }
 
   result = applyProficiencyBlocks(
     result,
@@ -356,14 +362,16 @@ export function applyRaceGrants(
       `subrace:${normalizeKey(subrace.name)}`,
       resolveFilterOptions,
     )
-    result = applyProficiencyBlocks(
-      result,
-      'languages',
-      toProficiencyBlocks(subrace.languageProficiencies),
-      subraceTag,
-      `subrace:${normalizeKey(subrace.name)}`,
-      resolveFilterOptions,
-    )
+    if (!options?.suppressLanguageGrants) {
+      result = applyProficiencyBlocks(
+        result,
+        'languages',
+        toProficiencyBlocks(subrace.languageProficiencies),
+        subraceTag,
+        `subrace:${normalizeKey(subrace.name)}`,
+        resolveFilterOptions,
+      )
+    }
     result = applyProficiencyBlocks(
       result,
       'tools',

@@ -8,12 +8,16 @@ import {
   resolveClassStartingEquipment,
 } from '@/lib/5etools/startingEquipment'
 import { ABILITY_SCORE_MIN, POINT_BUY_MIN, STANDARD_ARRAY } from '@/lib/calculations/gameRules'
+import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
 import {
-  addGrant,
+  ensureOriginSystemInvariants,
+  normalizeBackgroundForOriginSystem,
+  normalizeRaceSelectionForOriginSystem,
+} from '@/lib/calculations/originSystem'
+import {
   applyBackgroundGrants,
   applyClassGrants,
   applyRaceGrants,
-  makeSourceTag,
   resolveRaceGrantFilterOptions,
 } from '@/lib/provenance'
 import { stripItemTag } from '@/lib/provenance/normalization'
@@ -182,12 +186,19 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         b.name === characterData.background &&
         (!characterData.backgroundSource || b.source === characterData.backgroundSource),
     )
+    const originSystem = characterData.originSystem as '2014' | '2024'
+    const normalizedRaceSelection = normalizeRaceSelectionForOriginSystem(
+      raceObj,
+      subraceObj,
+      originSystem,
+    )
+    const normalizedBackground = normalizeBackgroundForOriginSystem(bgObj, originSystem)
 
     let provenance = emptyProvenance()
-    if (raceObj) {
+    if (normalizedRaceSelection.race) {
       provenance = applyRaceGrants(
-        raceObj,
-        subraceObj,
+        normalizedRaceSelection.race,
+        normalizedRaceSelection.subrace,
         provenance,
         (domain, fromFilter) =>
           resolveRaceGrantFilterOptions(domain, fromFilter, {
@@ -196,20 +207,21 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
             allowedSources: characterData.allowedSources,
           }),
         characterData.raceAsiBlockIndex,
+        1,
+        { suppressLanguageGrants: originSystem === '2024' },
       )
     }
     if (classObj) {
       provenance = applyClassGrants(classObj, undefined, provenance, { itemLookup })
     }
-    if (bgObj) {
-      provenance = applyBackgroundGrants(bgObj, provenance, { itemLookup })
+    if (normalizedBackground) {
+      provenance = applyBackgroundGrants(normalizedBackground, provenance, {
+        itemLookup,
+        suppressLanguageGrants: originSystem === '2024',
+      })
     }
-    provenance = addGrant(
-      provenance,
-      'languages',
-      'Common',
-      makeSourceTag('manual', 'Default', 'fixed'),
-    )
+    provenance = ensureOriginLanguageBaseline(provenance, originSystem)
+    ensureOriginSystemInvariants(provenance, originSystem)
 
     const classProficiencies = classObj?.startingProficiencies ?? {}
     const startingEquipment = [
@@ -238,6 +250,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
 
     const character = createNewCharacter({
       name: characterData.name,
+      originSystem,
       race: characterData.race,
       raceSource: characterData.raceSource || undefined,
       subrace: characterData.subrace,
@@ -335,6 +348,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
                   data={characterData}
                   onChange={updateCharacterData}
                   gameData={gameData ?? undefined}
+                  invalidFields={invalidFields}
                 />
               )}
               {currentStep === 3 && (

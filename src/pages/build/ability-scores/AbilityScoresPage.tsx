@@ -20,7 +20,12 @@ import {
   buildBackgroundBonuses,
   getBackgroundAbilityData,
   getRaceAbilityData,
+  hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
+import {
+  normalizeBackgroundForOriginSystem,
+  normalizeRaceSelectionForOriginSystem,
+} from '@/lib/calculations/originSystem'
 import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
 import { NoCharCard } from '@/pages/_shared'
@@ -59,17 +64,31 @@ export function BuildAbilityScoresPage() {
     (sr: Race5e) =>
       sr.name === character?.subrace && (sr.source ?? '') === (character?.subraceSource ?? ''),
   ) as Race5e | undefined
+  const normalizedRaceSelection = normalizeRaceSelectionForOriginSystem(
+    selectedRace,
+    subraceData,
+    character?.originSystem ?? '2014',
+  )
   const raceAsiBlockIndex = (character?.raceAsiBlockIndex ?? 0) as 0 | 1
-  const raceAsiData = getRaceAbilityData(selectedRace, subraceData, raceAsiBlockIndex)
+  const raceAsiData = getRaceAbilityData(
+    normalizedRaceSelection.race,
+    normalizedRaceSelection.subrace,
+    raceAsiBlockIndex,
+  )
   const raceAsiChoices: string[][] = character?.raceAsiChoices ?? []
-  const isLineageRaceAsiFallback =
-    selectedRace?.lineage === true || typeof selectedRace?.lineage === 'string'
+  const isLineageRaceAsiFallback = hasFlexibleRaceOriginAsi(normalizedRaceSelection.race)
   const hasDataDrivenRacialBonuses = raceAsiData.fixed.length > 0 || raceAsiData.choices.length > 0
 
   const selectedBg = backgrounds.find((b) =>
     matchesGameDataEntry(character?.background, character?.backgroundSource, b),
   )
-  const bgAsiData = getBackgroundAbilityData(selectedBg as { ability?: unknown[] } | undefined)
+  const normalizedBackground = normalizeBackgroundForOriginSystem(
+    selectedBg,
+    character?.originSystem ?? '2014',
+  )
+  const bgAsiData = getBackgroundAbilityData(
+    normalizedBackground as { ability?: unknown[] } | undefined,
+  )
   const backgroundBonuses = useMemo(
     () =>
       buildBackgroundBonuses(

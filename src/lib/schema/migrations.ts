@@ -11,7 +11,7 @@ import type { Character } from '@/types/character'
  * Current character schema version.
  * Increment when making breaking changes to the character format.
  */
-export const CURRENT_SCHEMA_VERSION = 1
+export const CURRENT_SCHEMA_VERSION = 2
 
 /**
  * Migration handler: transform character from version N to N+1.
@@ -182,5 +182,49 @@ registerMigration({
     const c = character as unknown as Record<string, unknown>
     const { version: _v, ...rest } = c
     return rest
+  },
+})
+
+registerMigration({
+  fromVersion: 1,
+  toVersion: 2,
+  description: 'Add required originSystem field and infer a safe default from origin provenance.',
+  up: (character) => {
+    const c = character as Record<string, unknown>
+    const provenance = (c.provenance ?? {}) as {
+      abilityBonuses?: Array<{ sourceTag?: { sourceType?: string } }>
+      feats?: Record<string, Array<{ sourceType?: string }>>
+      choices?: Array<{ domain?: string; sourceTag?: { sourceType?: string } }>
+    }
+
+    const hasBackgroundAbilityBonus = (provenance.abilityBonuses ?? []).some(
+      (record) => record.sourceTag?.sourceType === 'background',
+    )
+    const hasBackgroundFeatGrant = Object.values(provenance.feats ?? {}).some((tags) =>
+      tags.some((tag) => tag.sourceType === 'background'),
+    )
+    const hasBackgroundOriginChoices = (provenance.choices ?? []).some(
+      (choice) =>
+        choice.sourceTag?.sourceType === 'background' &&
+        (choice.domain === 'abilityBonuses' || choice.domain === 'feats'),
+    )
+    const hasExplicitBackgroundAsi =
+      typeof c.backgroundAsiBlockIndex === 'number' ||
+      (Array.isArray(c.backgroundAsiChoices) && c.backgroundAsiChoices.length > 0)
+
+    const originSystem =
+      hasBackgroundAbilityBonus ||
+      hasBackgroundFeatGrant ||
+      hasBackgroundOriginChoices ||
+      hasExplicitBackgroundAsi
+        ? '2024'
+        : '2014'
+
+    return { ...c, originSystem, version: '2.0.0' } as Character
+  },
+  down: (character) => {
+    const c = character as unknown as Record<string, unknown>
+    const { originSystem: _originSystem, ...rest } = c
+    return { ...rest, version: '1.0.0' }
   },
 })

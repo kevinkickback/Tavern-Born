@@ -25,6 +25,7 @@ const baseData = {
   classSource: '',
   background: '',
   backgroundSource: '',
+  originSystem: '2014' as const,
   abilityScoreMethod: 'pointBuy',
   abilityScores: {
     str: 10,
@@ -36,7 +37,6 @@ const baseData = {
   },
   portrait: '/portrait.png',
   portraitTransform: { ...DEFAULT_PORTRAIT_TRANSFORM },
-  rulesMode: 'legacy',
   allowedSources: [],
   raceAsiChoices: [],
   raceAsiBlockIndex: 0 as const,

@@ -3,6 +3,7 @@ import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
   getRaceAbilityData,
+  hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
 import type { Race5e } from '@/types/5etools'
 
@@ -146,7 +147,7 @@ export function getAsiDisplay(
   raceAsiChoices?: string[][],
 ): string[] {
   if (!race) return []
-  if (race.lineage === true || typeof race.lineage === 'string') {
+  if (hasFlexibleRaceOriginAsi(race)) {
     return ['Choose: +1/+2 (any 2 abilities)', 'Choose: +1 (any 3 abilities)']
   }
   const { fixed, choices } = getRaceAbilityData(race, undefined, raceAsiBlockIndex)

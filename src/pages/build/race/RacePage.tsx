@@ -18,6 +18,11 @@ import { Separator } from '@/components/ui/separator'
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
+import {
+  getOriginAsiSourceLabel,
+  getOriginSystemLabel,
+  normalizeRaceSelectionForOriginSystem,
+} from '@/lib/calculations/originSystem'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
   getAsiDisplay,
@@ -86,10 +91,15 @@ export function BuildRacePage() {
     (sr) =>
       sr.name === character?.subrace && (sr.source ?? '') === (character?.subraceSource ?? ''),
   )
+  const normalizedSelection = normalizeRaceSelectionForOriginSystem(
+    selectedRace,
+    selectedSubrace,
+    character?.originSystem ?? '2014',
+  )
   const displayRace =
-    selectedSubrace && selectedRace
-      ? mergeRaceWithSubrace(selectedRace, selectedSubrace)
-      : (selectedSubrace ?? selectedRace)
+    normalizedSelection.race && normalizedSelection.subrace
+      ? mergeRaceWithSubrace(normalizedSelection.race, normalizedSelection.subrace)
+      : (normalizedSelection.subrace ?? normalizedSelection.race)
   const selectedRaceKey = selectedRace ? `${selectedRace.name}|${selectedRace.source ?? ''}` : null
 
   useEffect(() => {
@@ -209,6 +219,16 @@ export function BuildRacePage() {
             <PersonSimple className="h-6 w-6 text-primary" weight="duotone" />
             Race
           </h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Origin System:{' '}
+            <span className="font-semibold text-foreground">
+              {getOriginSystemLabel(character.originSystem)}
+            </span>
+            {' · '}ASI Source:{' '}
+            <span className="font-semibold text-foreground">
+              {getOriginAsiSourceLabel(character.originSystem)}
+            </span>
+          </p>
         </div>
       </div>
 
