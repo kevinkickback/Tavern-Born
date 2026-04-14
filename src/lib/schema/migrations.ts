@@ -11,7 +11,7 @@ import type { Character } from '@/types/character'
  * Current character schema version.
  * Increment when making breaking changes to the character format.
  */
-export const CURRENT_SCHEMA_VERSION = 0
+export const CURRENT_SCHEMA_VERSION = 1
 
 /**
  * Migration handler: transform character from version N to N+1.

@@ -153,14 +153,19 @@ export function BuildClassLevelsPanel({
       <div className="p-4 border-b border-border flex-shrink-0">
         {classProgression.length > 1 ? (
           <Tabs
-            value={selectedClassTab || classProgression[0]?.name}
+            value={
+              selectedClassTab ||
+              (classProgression[0]
+                ? `${classProgression[0].name}|${classProgression[0].source ?? ''}`
+                : '')
+            }
             onValueChange={(value) => onSelectClassTab(value)}
           >
             <TabsList className="w-full">
               {classProgression.map((entry) => (
                 <TabsTrigger
                   key={`${entry.name}|${entry.source ?? ''}`}
-                  value={entry.name}
+                  value={`${entry.name}|${entry.source ?? ''}`}
                   className="flex-1 gap-1.5 text-xs"
                 >
                   {entry.name}

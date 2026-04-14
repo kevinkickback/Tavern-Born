@@ -6,7 +6,8 @@ This document covers the ingestion pipeline from source configuration to parsed 
 
 Core modules:
 - src/lib/5etools/dataLoader.ts
-- src/lib/5etools/parsers.ts
+- src/lib/5etools/parsers/index.ts
+- src/lib/5etools/parsers/*
 - src/lib/5etools/classData.ts
 - src/lib/5etools/validator.ts
 - src/lib/5etools/schemas.ts
@@ -99,9 +100,9 @@ Spells in 5etools carry metadata about which classes can use them. This system i
 1. **Loading** — `gendata-spell-source-lookup.json` is loaded as part of spell resource ingestion.
 
 2. **Parsing** — For each spell during `parseSpells()`:
-   - `enrichSpellFromLookup()` (line 156 in parsers.ts) retrieves the lookup entry
-   - `mergeSpellClassList()` (line 63) extracts class associations and builds `spell.classes.fromClassList[]`
-   - `mergeSpellSubclassList()` (line 104) extracts subclass associations and builds `spell.classes.fromSubclass[]`
+  - `enrichSpellFromLookup()` in `src/lib/5etools/parsers/spells.ts` retrieves the lookup entry
+  - `mergeSpellClassList()` in `src/lib/5etools/parsers/spells.ts` extracts class associations and builds `spell.classes.fromClassList[]`
+  - `mergeSpellSubclassList()` in `src/lib/5etools/parsers/spells.ts` extracts subclass associations and builds `spell.classes.fromSubclass[]`
 
 3. **Canonical Storage** — Each `Spell5e` object carries its enriched class list:
    ```ts
@@ -134,7 +135,7 @@ When a user selects spells for a multiclass character:
 ## Extending Ingestion for a New Data Type
 
 1. Add schema(s) in src/lib/5etools/schemas.ts.
-2. Add parser in src/lib/5etools/parsers.ts.
+2. Add parser module/function under src/lib/5etools/parsers/ and re-export via src/lib/5etools/parsers/index.ts.
 3. Wire resource loading in src/lib/5etools/dataLoader.ts.
 4. Add lookup support in src/lib/5etools/lookups.ts if entities are referenced by key.
 5. Expose consumption via hook(s) in src/hooks/data.

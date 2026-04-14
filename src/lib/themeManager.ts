@@ -1,7 +1,7 @@
 const ACCENT_STORAGE_KEY = 'tb.theme.accent'
 const APPEARANCE_STORAGE_KEY = 'tb.theme.appearance'
 
-export const ACCENT_THEMES = ['blue', 'violet', 'green', 'tomato'] as const
+export const ACCENT_THEMES = ['blue', 'violet', 'green', 'rose'] as const
 export type AccentTheme = (typeof ACCENT_THEMES)[number]
 
 export const APPEARANCE_THEMES = ['light', 'dark'] as const
@@ -18,6 +18,10 @@ const isAppearanceTheme = (value: string): value is AppearanceTheme => {
 export function getStoredAccentTheme(): AccentTheme {
   try {
     const storedAccent = localStorage.getItem(ACCENT_STORAGE_KEY)
+    // Backward compatibility for previously stored accent key.
+    if (storedAccent === 'tomato') {
+      return 'rose'
+    }
     return storedAccent && isAccentTheme(storedAccent) ? storedAccent : 'blue'
   } catch {
     return 'blue'

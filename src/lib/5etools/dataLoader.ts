@@ -21,7 +21,7 @@ import {
   parseSkills,
   parseSpells,
   parseVariantRules,
-} from './parsers'
+} from './parsers/index'
 
 export interface DataLoaderOptions {
   onProgress?: (current: number, total: number, resource: string) => void

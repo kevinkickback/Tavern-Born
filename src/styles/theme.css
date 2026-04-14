@@ -53,8 +53,6 @@
 @import "@radix-ui/colors/mint-dark.css" layer(base);
 @import "@radix-ui/colors/sky.css" layer(base);
 @import "@radix-ui/colors/sky-dark.css" layer(base);
-@import "@radix-ui/colors/tomato.css" layer(base);
-@import "@radix-ui/colors/tomato-dark.css" layer(base);
 @import "@radix-ui/colors/gray.css" layer(base);
 @import "@radix-ui/colors/gray-dark.css" layer(base);
 @import "@radix-ui/colors/mauve.css" layer(base);
@@ -89,7 +87,6 @@
 @layer base {
   :root,
   #root {
-    --tomato-contrast: #fff;
     --red-contrast: #fff;
     --ruby-contrast: #fff;
     --crimson-contrast: #fff;
@@ -315,8 +312,8 @@
     --color-accent-contrast: var(--green-contrast);
   }
 
-  :root[data-accent="tomato"],
-  #root[data-accent="tomato"] {
+  :root[data-accent="rose"],
+  #root[data-accent="rose"] {
     --color-accent-1: var(--crimson-1);
     --color-accent-2: var(--crimson-2);
     --color-accent-3: var(--crimson-3);

@@ -1,4 +1,4 @@
-import { CaretLeft, CaretRight, Check, Scroll, Star } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight, Check, Scroll, Star, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import type { ActiveFilters } from '@/components/modals/SelectionModal'
@@ -29,6 +29,7 @@ import {
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
+import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel'
@@ -40,6 +41,17 @@ import {
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Background5e, Feat5e } from '@/types/5etools'
+
+const BACKGROUND_ASI_HINT_ID = 'background-asi-banner'
+const BACKGROUND_ASI_SELECTOR = '[data-background-asi-header="true"]'
+const BACKGROUND_ASI_HINT_WIDTH = 360
+const BACKGROUND_ASI_HINT_ESTIMATED_HEIGHT = 112
+
+interface HintPosition {
+  top: number
+  left: number
+  arrowLeft: number
+}
 
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -57,6 +69,12 @@ export function BuildBackgroundPage() {
   const selectedBackgroundRef = useRef<HTMLDivElement | null>(null)
   const [featModalOpen, setFeatModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
+  const [showBackgroundAsiHint, setShowBackgroundAsiHint] = useState(
+    () => !isHintDismissed(BACKGROUND_ASI_HINT_ID),
+  )
+  const [backgroundAsiHintPosition, setBackgroundAsiHintPosition] = useState<HintPosition | null>(
+    null,
+  )
   const isInitialLoadRef = useRef(true)
   const previousSearchRef = useRef('')
 
@@ -85,8 +103,8 @@ export function BuildBackgroundPage() {
 
   const selectedBg = character
     ? (backgrounds.find((b) =>
-        matchesGameDataEntry(character.background, character.backgroundSource, b),
-      ) as Background5e | undefined)
+      matchesGameDataEntry(character.background, character.backgroundSource, b),
+    ) as Background5e | undefined)
     : undefined
   const selectedBackgroundKey = selectedBg ? `${selectedBg.name}|${selectedBg.source ?? ''}` : null
 
@@ -182,6 +200,50 @@ export function BuildBackgroundPage() {
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
 
+  const bgAsiData = getBackgroundAbilityData(selectedBg)
+  const hasBackgroundAsiFooter = !!selectedBg && bgAsiData.blocks.length > 0
+
+  const handleDismissBackgroundAsiHint = () => {
+    setShowBackgroundAsiHint(false)
+    setHintDismissed(BACKGROUND_ASI_HINT_ID, true)
+  }
+
+  useEffect(() => {
+    if (!showBackgroundAsiHint || !hasBackgroundAsiFooter) {
+      setBackgroundAsiHintPosition(null)
+      return
+    }
+
+    const updateHintPosition = () => {
+      const asiFooter = document.querySelector<HTMLElement>(BACKGROUND_ASI_SELECTOR)
+      if (!asiFooter) {
+        setBackgroundAsiHintPosition(null)
+        return
+      }
+
+      const rect = asiFooter.getBoundingClientRect()
+      const maxLeft = Math.max(16, window.innerWidth - BACKGROUND_ASI_HINT_WIDTH - 16)
+      const left = Math.min(
+        Math.max(rect.left + rect.width / 2 - BACKGROUND_ASI_HINT_WIDTH / 2, 16),
+        maxLeft,
+      )
+      const top = Math.max(16, rect.top - BACKGROUND_ASI_HINT_ESTIMATED_HEIGHT - 12)
+      const centerX = rect.left + rect.width / 2
+      const arrowLeft = Math.min(Math.max(centerX - left, 18), BACKGROUND_ASI_HINT_WIDTH - 18)
+
+      setBackgroundAsiHintPosition({ top, left, arrowLeft })
+    }
+
+    updateHintPosition()
+    window.addEventListener('resize', updateHintPosition)
+    window.addEventListener('scroll', updateHintPosition, true)
+
+    return () => {
+      window.removeEventListener('resize', updateHintPosition)
+      window.removeEventListener('scroll', updateHintPosition, true)
+    }
+  }, [showBackgroundAsiHint, hasBackgroundAsiFooter])
+
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
   }
@@ -203,7 +265,6 @@ export function BuildBackgroundPage() {
   const skills = getBackgroundSkillNames(selectedBg)
   const langs = getBackgroundLanguageNames(selectedBg)
   const tools = getBackgroundToolNames(selectedBg)
-  const bgAsiData = getBackgroundAbilityData(selectedBg)
   const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0
   const bgChoices = character.backgroundAsiChoices ?? []
   const bgEquipmentChoices = character.backgroundEquipmentChoices ?? []
@@ -218,6 +279,33 @@ export function BuildBackgroundPage() {
           </h1>
         </div>
       </div>
+
+      {showBackgroundAsiHint && backgroundAsiHintPosition ? (
+        <div
+          className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 duration-300"
+          style={{ top: backgroundAsiHintPosition.top, left: backgroundAsiHintPosition.left }}
+        >
+          <div className="pointer-events-auto animate-hint-bounce relative w-[360px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
+            <div
+              className="absolute -bottom-[7px] h-3.5 w-3.5 rotate-45 border-b border-r border-accent/50 bg-accent"
+              style={{ left: backgroundAsiHintPosition.arrowLeft - 7 }}
+            />
+            <button
+              type="button"
+              className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
+              onClick={handleDismissBackgroundAsiHint}
+              aria-label="Dismiss background page hint"
+              title="Dismiss hint"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            <p className="leading-snug text-accent-foreground/95 pr-8">
+              2024 backgrounds handle Ability Score Improvements here. 2014 rules usually apply ASIs
+              through race selection instead.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex-1 overflow-hidden px-6 pb-6">
         <div className="max-w-7xl mx-auto h-full">
@@ -349,9 +437,9 @@ export function BuildBackgroundPage() {
                                   .join(', ')
                                 const resolvedFeat = isResolved
                                   ? (feats as Feat5e[]).find(
-                                      (f) =>
-                                        f.name.toLowerCase() === choice.selected[0].toLowerCase(),
-                                    )
+                                    (f) =>
+                                      f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                                  )
                                   : undefined
                                 return (
                                   <div
@@ -399,7 +487,10 @@ export function BuildBackgroundPage() {
                 {selectedBg && bgAsiData.blocks.length > 0 && (
                   <div className="border-t border-border p-4 space-y-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      <span
+                        className="text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+                        data-background-asi-header="true"
+                      >
                         Ability Score Improvements
                       </span>
                       {bgAsiData.blocks.length > 1 && (

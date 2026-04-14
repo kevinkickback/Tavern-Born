@@ -115,7 +115,8 @@ export function BuildClassPage() {
   const classProgression = buildClassProgression(character)
 
   const viewingEntry =
-    classProgression.find((e) => e.name === selectedClassTab) ?? classProgression[0]
+    classProgression.find((entry) => `${entry.name}|${entry.source ?? ''}` === selectedClassTab) ??
+    classProgression[0]
   const viewingClass = viewingEntry?.name ?? character?.class
   const viewingClassSource = viewingEntry?.source ?? character?.classSource
   const viewingClassLevel = viewingEntry?.levels ?? character?.level ?? 1

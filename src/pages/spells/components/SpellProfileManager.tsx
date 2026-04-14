@@ -60,25 +60,109 @@ function getLevelHeaderTone(_level: number): string {
   return 'bg-accent/10'
 }
 
-function createSyntheticSpellItem(
-  profileId: string,
-  profileLabel: string,
-  className: string | undefined,
-  classSource: string | undefined,
-  spell: Spell5e,
-  isPrepared: boolean,
-): SpellListItem {
-  return {
-    profileId,
-    profileLabel,
-    className,
-    classSource,
-    name: spell.name,
-    level: spell.level,
-    kind: 'spell',
-    prepared: isPrepared,
-    isPreparedCaster: true,
-  }
+interface CantripGroupProps {
+  items: SpellListItem[]
+  span: { xlSpan: number; xxlSpan: number }
+  swappedByAddedName: Map<string, { removed: string; level: number }>
+  selectionSourceByProfileAndSpell: Map<string, string>
+  getSpellByName: (spellName: string) => Spell5e | undefined
+  renderSpellName: (params: {
+    item: SpellListItem
+    spell?: Spell5e
+    sourceContext?: string
+  }) => ReactNode
+  onRemoveSpell: (item: SpellListItem) => void
+}
+
+function CantripGroup({
+  items,
+  span,
+  swappedByAddedName,
+  selectionSourceByProfileAndSpell,
+  getSpellByName,
+  renderSpellName,
+  onRemoveSpell,
+}: CantripGroupProps) {
+  const cantripItems = items.filter((item) => item.level === 0)
+
+  return (
+    <div
+      className={cn(
+        'rounded-lg border border-border/70 bg-card overflow-hidden',
+        getColSpanClasses(span),
+      )}
+    >
+      <div
+        className={cn(
+          'px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60',
+          getLevelHeaderTone(0),
+        )}
+      >
+        Cantrips
+      </div>
+      <div
+        className={cn(
+          'border-y border-border/60 divide-y divide-border/60',
+          getInnerColumnClasses(span),
+        )}
+      >
+        {cantripItems.map((item) => {
+          const spell = getSpellByName(item.name)
+          return (
+            <div
+              key={`${item.profileId}|${item.kind}|${item.name}`}
+              className="px-4 py-2.5 flex items-center justify-between gap-3 break-inside-avoid hover:bg-muted/20 transition-colors"
+            >
+              <div className="min-w-0">
+                {renderSpellName({
+                  item,
+                  spell,
+                  sourceContext: selectionSourceByProfileAndSpell.get(
+                    `${item.profileId}|${item.name}`,
+                  ),
+                })}
+              </div>
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const swap = swappedByAddedName.get(item.name)
+                  if (!swap) return null
+                  return (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground">
+                          <ArrowsLeftRight className="h-3.5 w-3.5" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        Swapped from {swap.removed} at level {swap.level}
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })()}
+                {item.isFixed ? (
+                  <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => onRemoveSpell(item)}
+                  >
+                    <Trash className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          )
+        })}
+        {cantripItems.length === 0 ? (
+          <div className="px-4 py-2.5 text-sm text-muted-foreground/80 break-inside-avoid">
+            No cantrips in this list.
+          </div>
+        ) : null}
+      </div>
+    </div>
+  )
 }
 
 export interface SpellListItem {
@@ -93,6 +177,11 @@ export interface SpellListItem {
   kind: 'cantrip' | 'spell'
   prepared: boolean
   isFixed?: boolean
+}
+
+export interface PreparedCasterSpellItem {
+  spell: Spell5e
+  item: SpellListItem
 }
 
 interface SpellProfileLike {
@@ -125,7 +214,7 @@ interface SpellProfileManagerProps {
   detailsByProfileId: Map<string, SpellcastingDetailLike>
   groupedItems: Map<string, SpellListItem[]>
   selectionSourceByProfileAndSpell: Map<string, string>
-  preparedCasterSpellsByProfile?: Map<string, Spell5e[]>
+  preparedCasterItemsByProfile?: Map<string, PreparedCasterSpellItem[]>
   getSpellByName: (spellName: string) => Spell5e | undefined
   onTogglePrepared: (profileId: string, spellName: string) => void
   onRemoveSpell: (item: SpellListItem) => void
@@ -144,7 +233,7 @@ export function SpellProfileManager({
   detailsByProfileId,
   groupedItems,
   selectionSourceByProfileAndSpell,
-  preparedCasterSpellsByProfile,
+  preparedCasterItemsByProfile,
   getSpellByName,
   onTogglePrepared,
   onRemoveSpell,
@@ -203,9 +292,10 @@ export function SpellProfileManager({
 
                 // True prepared casters show the full class spell list inline
                 const isTruePrepared = profile.type === 'class' && !!detail?.isTruePreparedCaster
-                const availableClassSpells = isTruePrepared
-                  ? (preparedCasterSpellsByProfile?.get(profile.id) ?? [])
+                const availableClassItems = isTruePrepared
+                  ? (preparedCasterItemsByProfile?.get(profile.id) ?? [])
                   : []
+                const availableClassSpells = availableClassItems.map(({ spell }) => spell)
 
                 // For true prepared casters, prepared state lives in profile.preparedSpells
                 // (not in items, since spellsKnown is empty for them).
@@ -395,95 +485,24 @@ export function SpellProfileManager({
                                 {levels.includes(0)
                                   ? (() => {
                                       const span = getSpanForGroup(groupIndex++, totalGroups)
-                                      const cantripItems = items.filter((item) => item.level === 0)
                                       return (
-                                        <div
-                                          className={cn(
-                                            'rounded-lg border border-border/70 bg-card overflow-hidden',
-                                            getColSpanClasses(span),
-                                          )}
-                                        >
-                                          <div
-                                            className={cn(
-                                              'px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60',
-                                              getLevelHeaderTone(0),
-                                            )}
-                                          >
-                                            Cantrips
-                                          </div>
-                                          <div
-                                            className={cn(
-                                              'border-y border-border/60 divide-y divide-border/60',
-                                              getInnerColumnClasses(span),
-                                            )}
-                                          >
-                                            {cantripItems.map((item) => {
-                                              const spell = getSpellByName(item.name)
-                                              return (
-                                                <div
-                                                  key={`${item.profileId}|${item.kind}|${item.name}`}
-                                                  className="px-4 py-2.5 flex items-center justify-between gap-3 break-inside-avoid hover:bg-muted/20 transition-colors"
-                                                >
-                                                  <div className="min-w-0">
-                                                    {renderSpellName({
-                                                      item,
-                                                      spell,
-                                                      sourceContext:
-                                                        selectionSourceByProfileAndSpell.get(
-                                                          `${item.profileId}|${item.name}`,
-                                                        ),
-                                                    })}
-                                                  </div>
-                                                  <div className="flex items-center gap-2">
-                                                    {(() => {
-                                                      const swap = swappedByAddedName.get(item.name)
-                                                      if (!swap) return null
-                                                      return (
-                                                        <Tooltip>
-                                                          <TooltipTrigger asChild>
-                                                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground">
-                                                              <ArrowsLeftRight className="h-3.5 w-3.5" />
-                                                            </span>
-                                                          </TooltipTrigger>
-                                                          <TooltipContent
-                                                            side="top"
-                                                            className="text-xs"
-                                                          >
-                                                            Swapped from {swap.removed} at level{' '}
-                                                            {swap.level}
-                                                          </TooltipContent>
-                                                        </Tooltip>
-                                                      )
-                                                    })()}
-                                                    {item.isFixed ? (
-                                                      <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                                                    ) : (
-                                                      <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                                        onClick={() => onRemoveSpell(item)}
-                                                      >
-                                                        <Trash className="h-3.5 w-3.5" />
-                                                      </Button>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              )
-                                            })}
-                                            {cantripItems.length === 0 ? (
-                                              <div className="px-4 py-2.5 text-sm text-muted-foreground/80 break-inside-avoid">
-                                                No cantrips in this list.
-                                              </div>
-                                            ) : null}
-                                          </div>
-                                        </div>
+                                        <CantripGroup
+                                          items={items}
+                                          span={span}
+                                          swappedByAddedName={swappedByAddedName}
+                                          selectionSourceByProfileAndSpell={
+                                            selectionSourceByProfileAndSpell
+                                          }
+                                          getSpellByName={getSpellByName}
+                                          renderSpellName={renderSpellName}
+                                          onRemoveSpell={onRemoveSpell}
+                                        />
                                       )
                                     })()
                                   : null}
                                 {availLevels.map((spellLevel) => {
-                                  const spellsAtLevel = availableClassSpells.filter(
-                                    (s) => s.level === spellLevel,
+                                  const itemsAtLevel = availableClassItems.filter(
+                                    ({ spell }) => spell.level === spellLevel,
                                   )
                                   const span = getSpanForGroup(groupIndex++, totalGroups)
                                   return (
@@ -508,20 +527,12 @@ export function SpellProfileManager({
                                           getInnerColumnClasses(span),
                                         )}
                                       >
-                                        {spellsAtLevel.map((spell) => {
-                                          const isPrepared = preparedSet.has(spell.name)
+                                        {itemsAtLevel.map(({ spell, item }) => {
+                                          const isPrepared = preparedSet.has(item.name)
                                           const atLimit =
                                             !isPrepared &&
                                             preparedTotal > 0 &&
                                             preparedCount >= preparedTotal
-                                          const syntheticItem = createSyntheticSpellItem(
-                                            profile.id,
-                                            profile.label,
-                                            profile.className,
-                                            profile.classSource,
-                                            spell,
-                                            isPrepared,
-                                          )
 
                                           return (
                                             <div
@@ -535,7 +546,7 @@ export function SpellProfileManager({
                                             >
                                               <div className="min-w-0">
                                                 {renderSpellName({
-                                                  item: syntheticItem,
+                                                  item,
                                                   spell,
                                                 })}
                                               </div>
@@ -543,7 +554,7 @@ export function SpellProfileManager({
                                                 type="button"
                                                 disabled={atLimit}
                                                 onClick={() =>
-                                                  onTogglePrepared(profile.id, spell.name)
+                                                  onTogglePrepared(profile.id, item.name)
                                                 }
                                                 className={cn(
                                                   'h-4 w-4 rounded-full border-2 transition-colors flex-shrink-0',
@@ -564,7 +575,7 @@ export function SpellProfileManager({
                                             </div>
                                           )
                                         })}
-                                        {spellsAtLevel.length === 0 ? (
+                                        {itemsAtLevel.length === 0 ? (
                                           <div className="px-4 py-2.5 text-sm text-muted-foreground/80 break-inside-avoid">
                                             No spells in this level.
                                           </div>
@@ -589,89 +600,18 @@ export function SpellProfileManager({
                                 {levels.includes(0)
                                   ? (() => {
                                       const span = getSpanForGroup(groupIndex++, totalGroups)
-                                      const cantripItems = items.filter((item) => item.level === 0)
                                       return (
-                                        <div
-                                          className={cn(
-                                            'rounded-lg border border-border/70 bg-card overflow-hidden',
-                                            getColSpanClasses(span),
-                                          )}
-                                        >
-                                          <div
-                                            className={cn(
-                                              'px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60',
-                                              getLevelHeaderTone(0),
-                                            )}
-                                          >
-                                            Cantrips
-                                          </div>
-                                          <div
-                                            className={cn(
-                                              'border-y border-border/60 divide-y divide-border/60',
-                                              getInnerColumnClasses(span),
-                                            )}
-                                          >
-                                            {cantripItems.map((item) => {
-                                              const spell = getSpellByName(item.name)
-                                              return (
-                                                <div
-                                                  key={`${item.profileId}|${item.kind}|${item.name}`}
-                                                  className="px-4 py-2.5 flex items-center justify-between gap-3 break-inside-avoid hover:bg-muted/20 transition-colors"
-                                                >
-                                                  <div className="min-w-0">
-                                                    {renderSpellName({
-                                                      item,
-                                                      spell,
-                                                      sourceContext:
-                                                        selectionSourceByProfileAndSpell.get(
-                                                          `${item.profileId}|${item.name}`,
-                                                        ),
-                                                    })}
-                                                  </div>
-                                                  <div className="flex items-center gap-2">
-                                                    {(() => {
-                                                      const swap = swappedByAddedName.get(item.name)
-                                                      if (!swap) return null
-                                                      return (
-                                                        <Tooltip>
-                                                          <TooltipTrigger asChild>
-                                                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground">
-                                                              <ArrowsLeftRight className="h-3.5 w-3.5" />
-                                                            </span>
-                                                          </TooltipTrigger>
-                                                          <TooltipContent
-                                                            side="top"
-                                                            className="text-xs"
-                                                          >
-                                                            Swapped from {swap.removed} at level{' '}
-                                                            {swap.level}
-                                                          </TooltipContent>
-                                                        </Tooltip>
-                                                      )
-                                                    })()}
-                                                    {item.isFixed ? (
-                                                      <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                                                    ) : (
-                                                      <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                                                        onClick={() => onRemoveSpell(item)}
-                                                      >
-                                                        <Trash className="h-3.5 w-3.5" />
-                                                      </Button>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              )
-                                            })}
-                                            {cantripItems.length === 0 ? (
-                                              <div className="px-4 py-2.5 text-sm text-muted-foreground/80 break-inside-avoid">
-                                                No cantrips in this list.
-                                              </div>
-                                            ) : null}
-                                          </div>
-                                        </div>
+                                        <CantripGroup
+                                          items={items}
+                                          span={span}
+                                          swappedByAddedName={swappedByAddedName}
+                                          selectionSourceByProfileAndSpell={
+                                            selectionSourceByProfileAndSpell
+                                          }
+                                          getSpellByName={getSpellByName}
+                                          renderSpellName={renderSpellName}
+                                          onRemoveSpell={onRemoveSpell}
+                                        />
                                       )
                                     })()
                                   : null}

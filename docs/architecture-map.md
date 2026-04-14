@@ -18,7 +18,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 4. Data ingestion and indexing
 - Purpose: load and parse 5etools data from local or remote source, then build lookups.
-- Key files: src/lib/5etools/dataLoader.ts, src/lib/5etools/parsers.ts, src/lib/5etools/classData.ts, src/lib/5etools/validator.ts, src/lib/5etools/schemas.ts, src/lib/5etools/lookups.ts, src/lib/5etools/filters.ts, src/lib/5etools/urlUtils.ts, src/lib/5etools/sourceFallbacks.ts, src/lib/5etools/index.ts.
+- Key files: src/lib/5etools/dataLoader.ts, src/lib/5etools/parsers/index.ts, src/lib/5etools/parsers/*, src/lib/5etools/classData.ts, src/lib/5etools/validator.ts, src/lib/5etools/schemas.ts, src/lib/5etools/lookups.ts, src/lib/5etools/filters.ts, src/lib/5etools/urlUtils.ts, src/lib/5etools/sourceFallbacks.ts, src/lib/5etools/index.ts.
 
 5. Domain logic
 - Purpose: pure calculations and game rules.
@@ -67,11 +67,11 @@ Primary definition: src/App.tsx.
 ## Where To Put New Code
 
 - New game rule or stat logic: src/lib/calculations or src/lib/characterUtils.ts.
-- New parser behavior: src/lib/5etools/parsers.ts plus validator/schemas updates.
+- New parser behavior: src/lib/5etools/parsers/* (barrel: src/lib/5etools/parsers/index.ts) plus validator/schemas updates.
 - New ingestion lookup: src/lib/5etools/lookups.ts plus hook-level usage.
 - New state field or mutation lifecycle: relevant store in src/store/*.ts.
 - New route-level user flow: src/pages/* with extracted component logic under src/components/*.
-- Page-specific pure helper logic for a single route: colocate under that route folder (for example src/pages/build/class/model/*, src/pages/feats/model/*, or src/pages/compendium/*) and keep it framework-free when possible.
+- Page-specific pure helper logic for a single route: colocate under that route folder (for example src/pages/build/class/model/*, src/pages/build/background/model/*, or src/pages/compendium/*) and keep it framework-free when possible.
 
 ## Drift Watch
 

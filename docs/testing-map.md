@@ -33,8 +33,6 @@ Key scripts in package.json:
 	- src/pages/build/proficiencies/model/data.ts
 	- src/pages/build/class/model/levelsUtils.ts
 	- Grouped tool-choice expansion coverage (gaming set/musical instrument/artisan's tools/any-tool)
-- Feat selection helpers:
-	- src/pages/feats/model/selection.ts
 - Compendium entry shaping and filtering in src/lib/compendiumEntries.ts
 - Integration workflows: home page, startup modals, level-up modal (tests/integration/*)
 - Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
@@ -47,12 +45,18 @@ Key scripts in package.json:
 - Spell page no-character E2E baseline in tests/e2e/spells.spec.ts
 - Character lifecycle E2E (import -> portrait edit -> save -> reload) in tests/e2e/lifecycle.spec.ts
 - Active-character spell workflow E2E (profile switching, add/remove, prepared toggle) in tests/e2e/spells-active.spec.ts
+- Startup cache-branch full coverage in tests/hooks/useDataInit.test.tsx (unconfigured, stale, fresh, offline, source-changed, direct-load)
+- Provenance reconciliation edge cases in tests/lib/provenance/reconciliation.test.ts (mixed-source retention, background choice removal, multiclass-safe class reconciliation)
+- Ingestion missing-file resilience in tests/lib/5etools/dataLoader.test.ts (continues when indexed class file returns 404)
+- Ingestion malformed-payload resilience in tests/lib/5etools/dataLoader.test.ts (drops non-array entity payloads and malformed spell payloads without failing load)
+- Ingestion empty-object payload resilience in tests/lib/5etools/dataLoader.test.ts (absent entity keys treated as empty collections)
+- Ingestion partial spell index resilience in tests/lib/5etools/dataLoader.test.ts (valid spell files load when some indexed files are malformed)
+- Ingestion null entity array resilience in tests/lib/5etools/dataLoader.test.ts (class files with null entity arrays handled gracefully)
 
 ## High-Priority Gaps
 
-1. **Broader provenance reconciliation**: Coverage for all grant pathways and multiclass profile interactions.
-2. **Ingestion integration**: Real-world 5etools structure validation and error-path testing.
-3. **Error-path tests**: Malformed JSON, missing resources, corrupted character recovery.
+1. **Corrupted character recovery**: Import of invalid/schema-mismatched characters beyond the valid+invalid payload cases already covered.
+2. **SpellProfileManager decomposition**: Large component (~783 lines); defer until next feature touch.
 
 ## Test Coverage by Layer
 
@@ -60,9 +64,9 @@ Key scripts in package.json:
 |-------|--------|--------------|-------|
 | Calculations (lib) | ✅ Excellent | ✅ Complete | 34+ unit tests, all passing |
 | Stores | ✅ Good | ✅ Good | Validation, rehydrate safety tested |
-| Hooks (char) | ✅ Good | ⚠️ Growing | Spell hooks expanded; more coverage needed for UI-dependent hooks |
+| Hooks (char) | ✅ Good | ⚠️ Growing | Spell hooks + startup data-init branch coverage; UI-dependent hooks still limited |
 | Spell workflows | ✅ Good | ✅ Good | Unit/integration + active-character E2E coverage now in place |
-| Provenance | ✅ Good | ⚠️ Needs expansion | Core logic tested; multiclass reconciliation gaps remain |
+| Provenance | ✅ Good | ✅ Good | Core logic + multiclass/mix-source edge cases tested |
 | Pages/Components | ⚠️ Minimal | ⚠️ Minimal | Mostly snapshot/smoke tested; full interaction E2E planned |
 | Schema migrations | ✅ Good | ✅ Good | Dedicated unit coverage in tests/lib/migrations.test.ts |
 

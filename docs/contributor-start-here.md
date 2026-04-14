@@ -20,7 +20,7 @@ This guide is the fastest path to make safe changes in Tavern-Born.
 6. src/lib/storage/dataCache.ts
 7. src/hooks/data/useDataInit.ts
 8. src/lib/5etools/dataLoader.ts
-9. src/lib/5etools/parsers.ts
+9. src/lib/5etools/parsers/index.ts
 10. src/lib/5etools/validator.ts
 11. src/types/5etools.ts
 12. src/types/character.ts

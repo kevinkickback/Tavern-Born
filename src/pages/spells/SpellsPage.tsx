@@ -10,6 +10,7 @@ import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.const
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
 import { SpellNameTooltip } from '@/pages/spells/components/SpellNameTooltip'
 import {
+  type PreparedCasterSpellItem,
   type SpellListItem,
   SpellProfileManager,
 } from '@/pages/spells/components/SpellProfileManager'
@@ -109,13 +110,15 @@ export function SpellsPage() {
     [spellcastingDetails],
   )
 
-  /** For true prepared casters (Cleric/Druid/Paladin), pre-compute all castable class spells grouped by profile. */
-  const preparedCasterSpellsByProfile = useMemo(() => {
-    const map = new Map<string, Spell5e[]>()
+  /** For true prepared casters (Cleric/Druid/Paladin), pre-compute all castable class spells and list items grouped by profile. */
+  const preparedCasterItemsByProfile = useMemo(() => {
+    const map = new Map<string, PreparedCasterSpellItem[]>()
     for (const detail of spellcastingDetails) {
       if (!detail.isTruePreparedCaster || detail.maxSpellLevel < 1) continue
       const profile = spellProfiles.find((p) => p.id === detail.profileId)
       if (!profile || profile.type !== 'class') continue
+
+      const preparedSet = new Set(profile.preparedSpells ?? [])
 
       const available = allSpells.filter(
         (spell) =>
@@ -124,7 +127,23 @@ export function SpellsPage() {
           isSpellOnClassList(spell, profile.className, profile.classSource),
       )
       available.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
-      map.set(detail.profileId, available)
+      map.set(
+        detail.profileId,
+        available.map((spell) => ({
+          spell,
+          item: {
+            profileId: profile.id,
+            profileLabel: profile.label,
+            className: profile.className,
+            classSource: profile.classSource,
+            name: spell.name,
+            level: spell.level,
+            kind: 'spell',
+            prepared: preparedSet.has(spell.name),
+            isPreparedCaster: true,
+          },
+        })),
+      )
     }
     return map
   }, [allSpells, spellcastingDetails, spellProfiles])
@@ -377,7 +396,7 @@ export function SpellsPage() {
           detailsByProfileId={detailsByProfileId}
           groupedItems={groupedItems}
           selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}
-          preparedCasterSpellsByProfile={preparedCasterSpellsByProfile}
+          preparedCasterItemsByProfile={preparedCasterItemsByProfile}
           getSpellByName={(spellName) => spellByName.get(getEntityKey(spellName))}
           onTogglePrepared={togglePrepared}
           onRemoveSpell={handleRemoveSpell}

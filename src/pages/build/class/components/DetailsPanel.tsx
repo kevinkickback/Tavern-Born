@@ -226,7 +226,7 @@ export function BuildClassDetailsPanel({
                 </h4>
                 <div className="space-y-4">
                   {(viewingClassData.classFluffSections ?? []).map((section) => (
-                    <div key={section.name}>
+                    <div key={`${section.name}|${JSON.stringify(section.entries)}`}>
                       <h5 className="text-sm font-semibold mb-2">{section.name}</h5>
                       <div className="space-y-2">
                         {section.entries.map((entry) => (
