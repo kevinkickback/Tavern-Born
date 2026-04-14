@@ -25,6 +25,7 @@ export const INITIAL_CHARACTER_DATA = {
   classSource: '',
   background: '',
   backgroundSource: '',
+  originSystem: '' as const,
   abilityScoreMethod: 'point-buy',
   abilityScores: {
     strength: 8,
@@ -36,7 +37,6 @@ export const INITIAL_CHARACTER_DATA = {
   },
   portrait: PLACEHOLDER_PORTRAITS[0] ?? '',
   portraitTransform: DEFAULT_PORTRAIT_TRANSFORM,
-  rulesMode: 'strict',
   allowedSources: [] as string[],
   raceAsiChoices: [] as string[][],
   raceAsiBlockIndex: 0 as 0 | 1,

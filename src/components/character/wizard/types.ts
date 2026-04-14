@@ -1,4 +1,4 @@
-import type { PortraitTransform } from '@/types/character'
+import type { OriginSystem, PortraitTransform } from '@/types/character'
 
 export interface WizardStep {
   id: number
@@ -19,11 +19,11 @@ export interface CharacterWizardData {
   classSource: string
   background: string
   backgroundSource: string
+  originSystem: OriginSystem | ''
   abilityScoreMethod: string
   abilityScores: Record<string, number>
   portrait: string
   portraitTransform: PortraitTransform
-  rulesMode: string
   allowedSources: string[]
   raceAsiChoices: string[][]
   raceAsiBlockIndex: 0 | 1

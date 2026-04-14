@@ -41,6 +41,8 @@ export const abilityNameSchema = z.enum([
   'charisma',
 ])
 
+export const originSystemSchema = z.enum(['2014', '2024'])
+
 /** Accepts both abbreviations and full names, normalises to lowercase full name. */
 export const abilityNameLooseSchema = z
   .enum([
@@ -394,7 +396,9 @@ export const provenanceLedgerSchema = z.object({
   choices: z.array(choiceRecordSchema),
 })
 
-export const abilityScoreMethodSchema = z.enum(['point-buy', 'standard-array', 'manual'])
+export const abilityScoreMethodSchema = z
+  .enum(['point-buy', 'standard-array', 'custom', 'manual'])
+  .transform((method) => (method === 'manual' ? 'custom' : method))
 
 export const wizardStep1Schema = z.object({
   name: z
@@ -404,6 +408,7 @@ export const wizardStep1Schema = z.object({
 })
 
 export const wizardStep2Schema = z.object({
+  originSystem: originSystemSchema,
   abilityScoreMethod: abilityScoreMethodSchema.refine((v) => !!v, {
     message: 'Please select an ability score generation method',
   }),
@@ -533,7 +538,7 @@ export const asiChoiceSchema = z.object({
 export const characterSchema = z
   .object({
     id: z.string().min(1),
-    version: z.string().default('1.0.0'),
+    version: z.string().default('2.0.0'),
     name: z
       .string()
       .min(1)
@@ -541,6 +546,7 @@ export const characterSchema = z
       .refine((s) => s.trim().length > 0, {
         message: 'Character name cannot be only whitespace',
       }),
+    originSystem: originSystemSchema,
     race: z.string(),
     raceSource: z.string().optional(),
     subrace: z.string().optional(),

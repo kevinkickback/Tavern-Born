@@ -161,6 +161,23 @@ export interface RaceAbilityData {
   choices: ChoosableAbilityBonus[]
 }
 
+type FlexibleRaceAbilitySource = {
+  lineage?: string | boolean
+  _tavernBornFlexibleAsi?: boolean
+  _tavernBornSuppressFlexibleAsi?: boolean
+}
+
+export function hasFlexibleRaceOriginAsi(race?: FlexibleRaceAbilitySource | null): boolean {
+  if (race?._tavernBornSuppressFlexibleAsi === true) {
+    return false
+  }
+  return (
+    race?._tavernBornFlexibleAsi === true ||
+    race?.lineage === true ||
+    typeof race?.lineage === 'string'
+  )
+}
+
 export type RaceLineageAsiBlockIndex = 0 | 1
 
 type RaceAbilityEntry = Partial<Record<string, number>> & {
@@ -259,13 +276,18 @@ export function buildBackgroundBonuses(
  * Extract fixed bonuses and choosable bonuses from 5etools race/subrace ability arrays.
  */
 export function getRaceAbilityData(
-  race?: { ability?: RaceAbilityEntry[]; lineage?: string | boolean } | null,
+  race?: {
+    ability?: RaceAbilityEntry[]
+    lineage?: string | boolean
+    _tavernBornFlexibleAsi?: boolean
+    _tavernBornSuppressFlexibleAsi?: boolean
+  } | null,
   subrace?: { ability?: RaceAbilityEntry[] } | null,
   lineageAsiBlockIndex: RaceLineageAsiBlockIndex = 0,
 ): RaceAbilityData {
   const fixed: FixedAbilityBonus[] = []
   const choices: ChoosableAbilityBonus[] = []
-  const usesTashasLineageAsi = race?.lineage === true || typeof race?.lineage === 'string'
+  const usesTashasLineageAsi = hasFlexibleRaceOriginAsi(race)
 
   function processEntries(entries: RaceAbilityEntry[] | undefined, source: 'race' | 'subrace') {
     if (!entries) return

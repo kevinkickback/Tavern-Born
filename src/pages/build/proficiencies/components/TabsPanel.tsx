@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { is2024OriginLanguageTag } from '@/lib/calculations/languageOrigin'
 import { SKILL_TO_ABILITY } from '@/lib/calculations/skills'
 import { normalizeKey } from '@/lib/provenance'
 import type { ChoiceRecord, ProficiencyProvenance } from '@/lib/provenance/types'
@@ -74,6 +75,7 @@ interface BuildProficienciesTabsPanelProps {
     choiceId?: string,
   ) => void
   isStandardLanguage: (name: string) => boolean
+  defaultTab?: 'skills' | 'saving-throws' | 'armor' | 'weapons' | 'tools' | 'languages'
 }
 
 function formatProfLabel(value: string): string {
@@ -112,13 +114,22 @@ export function BuildProficienciesTabsPanel({
   onExpandDetails,
   onResolveChoiceSelection,
   isStandardLanguage,
+  defaultTab,
 }: BuildProficienciesTabsPanelProps) {
   const choiceSelectedClass =
     'border-2 border-accent border-dashed bg-accent/25 text-accent-foreground hover:bg-accent/30'
   const fixedSelectedClass = 'border-accent bg-accent text-accent-foreground hover:bg-accent/80'
+  const originLanguageChoices = ledger.choices.filter(
+    (choice) => choice.domain === 'languages' && is2024OriginLanguageTag(choice.sourceTag),
+  )
+  const hasOriginLanguageChoices = originLanguageChoices.length > 0
+  const originLanguageRemaining = originLanguageChoices.reduce(
+    (total, choice) => total + Math.max(0, choice.chooseCount - choice.selected.length),
+    0,
+  )
 
   return (
-    <Tabs defaultValue="skills">
+    <Tabs defaultValue={defaultTab ?? 'skills'}>
       <TabsList className="mb-4 flex-wrap h-auto gap-1">
         <TabsTrigger value="skills" className="inline-flex items-center gap-1.5">
           Skills
@@ -530,75 +541,85 @@ export function BuildProficienciesTabsPanel({
       </TabsContent>
 
       <TabsContent value="languages">
-        <div className="flex flex-wrap gap-2">
-          {availableLanguages.length > 0 ? (
-            availableLanguages.map((languageName) => {
-              const normLang = normalizeKey(languageName)
-              const hasLedgerGrant = (ledger.proficiencies.languages[normLang] ?? []).length > 0
-              const isSelected =
-                hasProfInArray(currentProficiencies.languages, languageName) || hasLedgerGrant
-              const isFixed = (ledger.proficiencies.languages[normLang] ?? []).some(
-                (tag) => tag.grantType === 'fixed',
-              )
-              const isChoiceSelected = ledger.choices.some(
-                (choice) =>
-                  choice.domain === 'languages' &&
-                  choice.selected.some((selected) => normalizeKey(selected) === normLang),
-              )
-              const canSelect =
-                !isSelected &&
-                ledger.choices.some(
+        <div className="space-y-3">
+          {hasOriginLanguageChoices ? (
+            <div className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm">
+              {originLanguageRemaining > 0
+                ? `2024 Origin Languages: choose ${originLanguageRemaining} more Standard language${originLanguageRemaining === 1 ? '' : 's'}.`
+                : '2024 Origin Languages complete. Additional non-standard languages require explicit grants.'}
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            {availableLanguages.length > 0 ? (
+              availableLanguages.map((languageName) => {
+                const normLang = normalizeKey(languageName)
+                const hasLedgerGrant = (ledger.proficiencies.languages[normLang] ?? []).length > 0
+                const isSelected =
+                  hasProfInArray(currentProficiencies.languages, languageName) || hasLedgerGrant
+                const isFixed = (ledger.proficiencies.languages[normLang] ?? []).some(
+                  (tag) => tag.grantType === 'fixed',
+                )
+                const isChoiceSelected = ledger.choices.some(
                   (choice) =>
                     choice.domain === 'languages' &&
-                    choice.selected.length < choice.chooseCount &&
-                    ((choice.optionPool.length > 0 &&
-                      choice.optionPool.some(
-                        (poolEntry) => normalizeKey(poolEntry) === normLang,
-                      )) ||
-                      (choice.optionPool.length === 0 && isStandardLanguage(languageName))),
+                    choice.selected.some((selected) => normalizeKey(selected) === normLang),
                 )
-              const canDeselect = isChoiceSelected && !isFixed
+                const canSelect =
+                  !isSelected &&
+                  ledger.choices.some(
+                    (choice) =>
+                      choice.domain === 'languages' &&
+                      choice.selected.length < choice.chooseCount &&
+                      ((choice.optionPool.length > 0 &&
+                        choice.optionPool.some(
+                          (poolEntry) => normalizeKey(poolEntry) === normLang,
+                        )) ||
+                        (choice.optionPool.length === 0 && isStandardLanguage(languageName))),
+                  )
+                const canDeselect = isChoiceSelected && !isFixed
 
-              return (
-                <button
-                  key={languageName}
-                  type="button"
-                  onClick={() => {
-                    if (canDeselect) onResolveChoiceSelection('languages', languageName, false)
-                    else if (canSelect) onResolveChoiceSelection('languages', languageName, true)
-                    onFocusChange({
-                      type: 'item',
-                      category: 'Language',
-                      name: languageName,
-                    })
-                    onExpandDetails()
-                  }}
-                  className={cn(
-                    'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2',
-                    isChoiceSelected
-                      ? choiceSelectedClass
-                      : isSelected
-                        ? fixedSelectedClass
-                        : canSelect
-                          ? 'border-border bg-card text-foreground hover:border-accent cursor-pointer'
-                          : 'border-border bg-card text-muted-foreground opacity-50',
-                    focused?.type === 'item' &&
-                      focused.name === languageName &&
-                      'ring-2 ring-accent/70 ring-offset-2',
-                  )}
-                >
-                  {isSelected ? (
-                    <Check className="h-3.5 w-3.5" />
-                  ) : (
-                    <GlobeHemisphereWest className="h-3.5 w-3.5" />
-                  )}
-                  {formatProfLabel(languageName)}
-                </button>
-              )
-            })
-          ) : (
-            <p className="text-muted-foreground text-sm">No languages available in game data</p>
-          )}
+                return (
+                  <button
+                    key={languageName}
+                    type="button"
+                    onClick={() => {
+                      if (canDeselect) onResolveChoiceSelection('languages', languageName, false)
+                      else if (canSelect) onResolveChoiceSelection('languages', languageName, true)
+                      onFocusChange({
+                        type: 'item',
+                        category: 'Language',
+                        name: languageName,
+                      })
+                      onExpandDetails()
+                    }}
+                    className={cn(
+                      'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2',
+                      isChoiceSelected
+                        ? choiceSelectedClass
+                        : isSelected
+                          ? fixedSelectedClass
+                          : canSelect
+                            ? 'border-border bg-card text-foreground hover:border-accent cursor-pointer'
+                            : 'border-border bg-card text-muted-foreground opacity-50',
+                      focused?.type === 'item' &&
+                        focused.name === languageName &&
+                        'ring-2 ring-accent/70 ring-offset-2',
+                    )}
+                  >
+                    {isSelected ? (
+                      <Check className="h-3.5 w-3.5" />
+                    ) : (
+                      <GlobeHemisphereWest className="h-3.5 w-3.5" />
+                    )}
+                    {formatProfLabel(languageName)}
+                  </button>
+                )
+              })
+            ) : (
+              <p className="text-muted-foreground text-sm">No languages available in game data</p>
+            )}
+          </div>
         </div>
       </TabsContent>
     </Tabs>

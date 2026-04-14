@@ -12,8 +12,9 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
 
   const baseCharacter = {
     id: 'lifecycle-seed-1',
-    version: '1.0.0',
+    version: '2.0.0',
     name: 'Seed Character',
+    originSystem: '2014',
     race: 'Human',
     class: 'Fighter',
     background: 'Soldier',

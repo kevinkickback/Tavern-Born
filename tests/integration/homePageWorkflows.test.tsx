@@ -230,7 +230,8 @@ describe('home page integration workflows', () => {
       .characters.find((c) => c.id === legacyCharacter.id)
 
     expect(imported).toBeTruthy()
-    expect(imported?.version).toBe('1.0.0')
+    expect(imported?.version).toBe('2.0.0')
+    expect(imported?.originSystem).toBe('2014')
   })
 
   test('rejects invalid character file on import', async () => {

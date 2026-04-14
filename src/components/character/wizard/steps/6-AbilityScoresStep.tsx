@@ -16,6 +16,7 @@ import {
   ABILITY_NAMES,
   type AbilityName,
   getRaceAbilityData,
+  hasFlexibleRaceOriginAsi,
   isValidStandardArrayAssignment,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
@@ -27,6 +28,10 @@ import {
   POINT_BUY_MIN,
   STANDARD_ARRAY,
 } from '@/lib/calculations/gameRules'
+import {
+  normalizeRaceSelectionForOriginSystem,
+  usesRaceOriginBenefits,
+} from '@/lib/calculations/originSystem'
 import { cn } from '@/lib/utils'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { StepProps } from '../types'
@@ -384,6 +389,9 @@ function CustomPanel({
 export function AbilityScoresStep({ data, onChange }: StepProps) {
   const gameData = useGameDataStore((s) => s.gameData)
   const method = (data.abilityScoreMethod ?? 'point-buy') as string
+  const showRaceOriginBonuses = usesRaceOriginBenefits(
+    (data.originSystem || '2014') as '2014' | '2024',
+  )
   const fallbackScores =
     method === 'standard-array'
       ? DEFAULT_STANDARD_SCORES
@@ -396,13 +404,21 @@ export function AbilityScoresStep({ data, onChange }: StepProps) {
     (r) => r.name === data.race && (!data.raceSource || r.source === data.raceSource),
   )
   const subraceObj = raceObj?.subraces?.find((sr) => sr.name === data.subrace)
-  const raceAsiData = getRaceAbilityData(
+  const normalizedSelection = normalizeRaceSelectionForOriginSystem(
     raceObj,
     subraceObj,
+    (data.originSystem || '2014') as '2014' | '2024',
+  )
+  const raceAsiData = getRaceAbilityData(
+    normalizedSelection.race,
+    normalizedSelection.subrace,
     (data.raceAsiBlockIndex ?? 0) as 0 | 1,
   )
-  const isLineageRaceAsiFallback = raceObj?.lineage === true || typeof raceObj?.lineage === 'string'
-  const racialBonuses = buildRacialBonuses(raceAsiData, data.raceAsiChoices ?? [])
+  const isLineageRaceAsiFallback =
+    showRaceOriginBonuses && hasFlexibleRaceOriginAsi(normalizedSelection.race)
+  const racialBonuses = showRaceOriginBonuses
+    ? buildRacialBonuses(raceAsiData, data.raceAsiChoices ?? [])
+    : {}
 
   const setAllScores = (next: Partial<Record<AbilityName, number>>) => {
     onChange({ abilityScores: next as Record<string, number> })
@@ -429,12 +445,14 @@ export function AbilityScoresStep({ data, onChange }: StepProps) {
           <CustomPanel scores={scores} racialBonuses={racialBonuses} setScore={setScore} />
         </TabsContent>
       </Tabs>
-      <RaceAsiBonuses
-        data={data}
-        onChange={onChange}
-        raceAsiData={raceAsiData}
-        isLineageRaceAsiFallback={isLineageRaceAsiFallback}
-      />
+      {showRaceOriginBonuses ? (
+        <RaceAsiBonuses
+          data={data}
+          onChange={onChange}
+          raceAsiData={raceAsiData}
+          isLineageRaceAsiFallback={isLineageRaceAsiFallback}
+        />
+      ) : null}
     </div>
   )
 }

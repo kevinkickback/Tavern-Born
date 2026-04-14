@@ -6,6 +6,12 @@ import {
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
 import { getBackgroundAbilityData, normalizeAbilityName } from '@/lib/calculations/abilityScores'
+import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
+import {
+  ensureOriginSystemInvariants,
+  normalizeBackgroundForOriginSystem,
+  normalizeRaceSelectionForOriginSystem,
+} from '@/lib/calculations/originSystem'
 import {
   addAbilityBonus,
   addGrant,
@@ -26,7 +32,7 @@ import {
 } from '@/lib/provenance'
 import { normalizeKey, stripItemTag } from '@/lib/provenance/normalization'
 import type { ChoiceDomain, ProvenanceLedger } from '@/lib/provenance/types'
-import type { Item5e } from '@/types/5etools'
+import type { Item5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
 const CURRENCY_KEYS = ['cp', 'sp', 'ep', 'gp', 'pp'] as const
@@ -229,16 +235,28 @@ export function useProvenanceMutations({
       raceAsiBlockIndex: 0 | 1 = 0,
     ) => {
       if (!character) return
+      const normalizedSelection = normalizeRaceSelectionForOriginSystem(
+        race,
+        subrace,
+        character.originSystem,
+      )
+      const normalizedRace = normalizedSelection.race
+      const normalizedSubrace = normalizedSelection.subrace
+      if (!normalizedRace) return
       const oldRaceName = character.race || undefined
       const oldSubraceName = character.subrace || undefined
       let newLedger = reconcileRaceChange(ledger, oldRaceName, oldSubraceName)
       newLedger = applyRaceGrants(
-        race,
-        subrace,
+        normalizedRace,
+        normalizedSubrace,
         newLedger,
         resolveRaceChoiceOptions,
         raceAsiBlockIndex,
+        1,
+        { suppressLanguageGrants: character.originSystem === '2024' },
       )
+      newLedger = ensureOriginLanguageBaseline(newLedger, character.originSystem)
+      ensureOriginSystemInvariants(newLedger, character.originSystem)
 
       let nextProficiencies = { ...character.proficiencies }
       const nextSkills = { ...(character.skills ?? {}) }
@@ -272,24 +290,35 @@ export function useProvenanceMutations({
         }
       }
 
-      const raceSkills = extractProficiencyBlockNames(race.skillProficiencies ?? [], {
+      const raceSkills = extractProficiencyBlockNames(normalizedRace.skillProficiencies ?? [], {
         includeAnyStandard: false,
       }).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const raceLanguages = extractProficiencyBlockNames(getEffectiveRaceLanguageBlocks(race), {
-        includeAnyStandard: false,
-      }).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const subraceSkills = extractProficiencyBlockNames(subrace?.skillProficiencies ?? [], {
-        includeAnyStandard: false,
-      }).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const subraceLanguages = extractProficiencyBlockNames(subrace?.languageProficiencies ?? [], {
-        includeAnyStandard: false,
-      }).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const raceTools = extractFixedGrantNames(race.toolProficiencies)
-      const raceWeapons = extractFixedGrantNames(race.weaponProficiencies)
-      const raceArmor = extractFixedGrantNames(race.armorProficiencies)
-      const subraceTools = extractFixedGrantNames(subrace?.toolProficiencies)
-      const subraceWeapons = extractFixedGrantNames(subrace?.weaponProficiencies)
-      const subraceArmor = extractFixedGrantNames(subrace?.armorProficiencies)
+      const raceLanguages = extractProficiencyBlockNames(
+        getEffectiveRaceLanguageBlocks(normalizedRace),
+        {
+          includeAnyStandard: false,
+        },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '))
+      const subraceSkills = extractProficiencyBlockNames(
+        normalizedSubrace?.skillProficiencies ?? [],
+        {
+          includeAnyStandard: false,
+        },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '))
+      const subraceLanguages = extractProficiencyBlockNames(
+        normalizedSubrace?.languageProficiencies ?? [],
+        {
+          includeAnyStandard: false,
+        },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '))
+      const languagesToApply =
+        character.originSystem === '2024' ? [] : [...raceLanguages, ...subraceLanguages]
+      const raceTools = extractFixedGrantNames(normalizedRace.toolProficiencies)
+      const raceWeapons = extractFixedGrantNames(normalizedRace.weaponProficiencies)
+      const raceArmor = extractFixedGrantNames(normalizedRace.armorProficiencies)
+      const subraceTools = extractFixedGrantNames(normalizedSubrace?.toolProficiencies)
+      const subraceWeapons = extractFixedGrantNames(normalizedSubrace?.weaponProficiencies)
+      const subraceArmor = extractFixedGrantNames(normalizedSubrace?.armorProficiencies)
 
       nextProficiencies = {
         ...nextProficiencies,
@@ -300,9 +329,7 @@ export function useProvenanceMutations({
             ...subraceSkills.map(normalizeKey),
           ]),
         ],
-        languages: [
-          ...new Set([...nextProficiencies.languages, ...raceLanguages, ...subraceLanguages]),
-        ],
+        languages: [...new Set([...nextProficiencies.languages, ...languagesToApply])],
         tools: [...new Set([...nextProficiencies.tools, ...raceTools, ...subraceTools])],
         weapons: [...new Set([...nextProficiencies.weapons, ...raceWeapons, ...subraceWeapons])],
         armor: [...new Set([...nextProficiencies.armor, ...raceArmor, ...subraceArmor])],
@@ -319,17 +346,23 @@ export function useProvenanceMutations({
       }
 
       // Apply darkvision from race/subrace
-      const darkvisionRange = subrace?.darkvision ?? race.darkvision
+      const darkvisionRange = normalizedSubrace?.darkvision ?? normalizedRace.darkvision
       const nextVisions = (character.visions ?? []).filter((v) => v.type !== 'darkvision')
       if (typeof darkvisionRange === 'number' && darkvisionRange > 0) {
         nextVisions.push({ type: 'darkvision', range: darkvisionRange })
       }
 
-      const damageResistances = dedupeValues([...(race.resist ?? []), ...(subrace?.resist ?? [])])
-      const damageImmunities = dedupeValues([...(race.immune ?? []), ...(subrace?.immune ?? [])])
+      const damageResistances = dedupeValues([
+        ...(normalizedRace.resist ?? []),
+        ...(normalizedSubrace?.resist ?? []),
+      ])
+      const damageImmunities = dedupeValues([
+        ...(normalizedRace.immune ?? []),
+        ...(normalizedSubrace?.immune ?? []),
+      ])
       const conditionImmunities = dedupeValues([
-        ...(race.conditionImmune ?? []),
-        ...(subrace?.conditionImmune ?? []),
+        ...(normalizedRace.conditionImmune ?? []),
+        ...(normalizedSubrace?.conditionImmune ?? []),
       ])
 
       updateCharacter(character.id, {
@@ -376,9 +409,15 @@ export function useProvenanceMutations({
       },
     ) => {
       if (!character) return
+      const normalizedSelection = normalizeRaceSelectionForOriginSystem(
+        race as Race5e,
+        subrace,
+        character.originSystem,
+      )
+      const normalizedSubrace = normalizedSelection.subrace
       const oldSubraceName = character.subrace || undefined
       let newLedger = reconcileSubraceChange(ledger, oldSubraceName)
-      if (subrace) {
+      if (normalizedSubrace) {
         newLedger = applyRaceGrants(
           {
             name: race.name,
@@ -390,12 +429,16 @@ export function useProvenanceMutations({
             armorProficiencies: [],
             ability: [],
           },
-          subrace,
+          normalizedSubrace,
           newLedger,
           resolveRaceChoiceOptions,
           (character.raceAsiBlockIndex ?? 0) as 0 | 1,
+          1,
+          { suppressLanguageGrants: character.originSystem === '2024' },
         )
       }
+      newLedger = ensureOriginLanguageBaseline(newLedger, character.originSystem)
+      ensureOriginSystemInvariants(newLedger, character.originSystem)
 
       let nextProficiencies = { ...character.proficiencies }
       const nextSkills = { ...(character.skills ?? {}) }
@@ -425,20 +468,27 @@ export function useProvenanceMutations({
         }
       }
 
-      const subraceSkills = extractProficiencyBlockNames(subrace?.skillProficiencies ?? [], {
-        includeAnyStandard: false,
-      }).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const subraceLanguages = extractProficiencyBlockNames(subrace?.languageProficiencies ?? [], {
-        includeAnyStandard: false,
-      }).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const subraceTools = extractFixedGrantNames(subrace?.toolProficiencies)
-      const subraceWeapons = extractFixedGrantNames(subrace?.weaponProficiencies)
-      const subraceArmor = extractFixedGrantNames(subrace?.armorProficiencies)
+      const subraceSkills = extractProficiencyBlockNames(
+        normalizedSubrace?.skillProficiencies ?? [],
+        {
+          includeAnyStandard: false,
+        },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '))
+      const subraceLanguages = extractProficiencyBlockNames(
+        normalizedSubrace?.languageProficiencies ?? [],
+        {
+          includeAnyStandard: false,
+        },
+      ).filter((name) => !name.toLowerCase().startsWith('choose '))
+      const subraceLanguagesToApply = character.originSystem === '2024' ? [] : subraceLanguages
+      const subraceTools = extractFixedGrantNames(normalizedSubrace?.toolProficiencies)
+      const subraceWeapons = extractFixedGrantNames(normalizedSubrace?.weaponProficiencies)
+      const subraceArmor = extractFixedGrantNames(normalizedSubrace?.armorProficiencies)
 
       nextProficiencies = {
         ...nextProficiencies,
         skills: [...new Set([...nextProficiencies.skills, ...subraceSkills.map(normalizeKey)])],
-        languages: [...new Set([...nextProficiencies.languages, ...subraceLanguages])],
+        languages: [...new Set([...nextProficiencies.languages, ...subraceLanguagesToApply])],
         tools: [...new Set([...nextProficiencies.tools, ...subraceTools])],
         weapons: [...new Set([...nextProficiencies.weapons, ...subraceWeapons])],
         armor: [...new Set([...nextProficiencies.armor, ...subraceArmor])],
@@ -456,16 +506,22 @@ export function useProvenanceMutations({
 
       // Apply darkvision from subrace (overrides race darkvision)
       const subraceVisions = (character.visions ?? []).filter((v) => v.type !== 'darkvision')
-      const darkvisionRange = subrace?.darkvision ?? race.darkvision
+      const darkvisionRange = normalizedSubrace?.darkvision ?? race.darkvision
       if (typeof darkvisionRange === 'number' && darkvisionRange > 0) {
         subraceVisions.push({ type: 'darkvision', range: darkvisionRange })
       }
 
-      const damageResistances = dedupeValues([...(race.resist ?? []), ...(subrace?.resist ?? [])])
-      const damageImmunities = dedupeValues([...(race.immune ?? []), ...(subrace?.immune ?? [])])
+      const damageResistances = dedupeValues([
+        ...(race.resist ?? []),
+        ...(normalizedSubrace?.resist ?? []),
+      ])
+      const damageImmunities = dedupeValues([
+        ...(race.immune ?? []),
+        ...(normalizedSubrace?.immune ?? []),
+      ])
       const conditionImmunities = dedupeValues([
         ...(race.conditionImmune ?? []),
-        ...(subrace?.conditionImmune ?? []),
+        ...(normalizedSubrace?.conditionImmune ?? []),
       ])
 
       updateCharacter(character.id, {
@@ -623,10 +679,19 @@ export function useProvenanceMutations({
       blockChoices: string[] = [],
     ) => {
       if (!character) return
+      const normalizedBg = normalizeBackgroundForOriginSystem(bg, character.originSystem)
+      if (!normalizedBg) return
       const oldBgName = character.background || undefined
+      const isBackgroundChanged =
+        oldBgName !== bg.name || (character.backgroundSource ?? '') !== (bg.source ?? '')
 
       let newLedger = reconcileBackgroundChange(ledger, oldBgName)
-      newLedger = applyBackgroundGrants(bg, newLedger, { itemLookup })
+      newLedger = applyBackgroundGrants(normalizedBg, newLedger, {
+        itemLookup,
+        suppressLanguageGrants: character.originSystem === '2024',
+      })
+      newLedger = ensureOriginLanguageBaseline(newLedger, character.originSystem)
+      ensureOriginSystemInvariants(newLedger, character.originSystem)
 
       let newProfs = { ...character.proficiencies }
       const newSkills = { ...(character.skills ?? {}) }
@@ -669,19 +734,23 @@ export function useProvenanceMutations({
         newEquipment = removeSourceGrantedEquipment(newEquipment, backgroundEquipmentToRemove)
       }
 
-      const skills: string[] = extractProficiencyBlockNames(bg.skillProficiencies ?? [], {
+      const skills: string[] = extractProficiencyBlockNames(normalizedBg.skillProficiencies ?? [], {
         includeAnyStandard: false,
       }).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const languages: string[] = extractProficiencyBlockNames(bg.languageProficiencies ?? [], {
-        includeAnyStandard: false,
-      })
-      const tools: string[] = extractProficiencyBlockNames(bg.toolProficiencies ?? [], {
+      const languages: string[] = extractProficiencyBlockNames(
+        normalizedBg.languageProficiencies ?? [],
+        {
+          includeAnyStandard: false,
+        },
+      )
+      const languagesToApply = character.originSystem === '2024' ? [] : languages
+      const tools: string[] = extractProficiencyBlockNames(normalizedBg.toolProficiencies ?? [], {
         includeAnyStandard: false,
       })
       newProfs = {
         ...newProfs,
         skills: [...new Set([...(newProfs.skills ?? []), ...skills])],
-        languages: [...new Set([...newProfs.languages, ...languages])],
+        languages: [...new Set([...newProfs.languages, ...languagesToApply])],
         tools: [...new Set([...newProfs.tools, ...tools])],
       }
 
@@ -732,6 +801,18 @@ export function useProvenanceMutations({
         currency: nextCurrency,
         backgroundCurrencyGrant: resolvedBackgroundPackage.currency,
         backgroundEquipmentChoices: blockChoices,
+        backgroundAsiBlockIndex:
+          character.originSystem === '2024'
+            ? isBackgroundChanged
+              ? 0
+              : character.backgroundAsiBlockIndex
+            : undefined,
+        backgroundAsiChoices:
+          character.originSystem === '2024'
+            ? isBackgroundChanged
+              ? []
+              : character.backgroundAsiChoices
+            : undefined,
       })
     },
     [character, ledger, updateCharacter, itemLookup],
@@ -1054,10 +1135,31 @@ export function useProvenanceMutations({
     (choiceId: string, feat: { name: string; source?: string }) => {
       if (!character) return
       const choice = ledger.choices.find((c) => c.id === choiceId && c.domain === 'feats')
-      if (!choice || choice.selected.length >= choice.chooseCount) return
+      if (!choice) return
 
-      const newSelected = [...choice.selected, feat.name]
-      let newLedger = resolveChoice(ledger, choiceId, newSelected)
+      let newLedger = ledger
+
+      // If already resolved, remove previous selections from feats map before replacing
+      if (choice.selected.length > 0) {
+        for (const prevName of choice.selected) {
+          const normKey = normalizeKey(prevName)
+          const tags = newLedger.feats[normKey] ?? []
+          const filtered = tags.filter(
+            (t) => !(t.grantType === 'choice' && t.sourceName === choice.sourceTag.sourceName),
+          )
+          const newFeats =
+            filtered.length > 0
+              ? { ...newLedger.feats, [normKey]: filtered }
+              : Object.fromEntries(Object.entries(newLedger.feats).filter(([k]) => k !== normKey))
+          newLedger = { ...newLedger, feats: newFeats }
+        }
+        newLedger = resolveChoice(newLedger, choiceId, [feat.name])
+      } else if (choice.selected.length < choice.chooseCount) {
+        newLedger = resolveChoice(newLedger, choiceId, [...choice.selected, feat.name])
+      } else {
+        return
+      }
+
       const tag = makeSourceTag(
         choice.sourceTag.sourceType,
         choice.sourceTag.sourceName,
@@ -1253,7 +1355,12 @@ export function useProvenanceMutations({
       choices: string[],
     ) => {
       if (!character) return
-      const bgData = getBackgroundAbilityData(bg)
+      if (character.originSystem !== '2024') {
+        return
+      }
+      const normalizedBg = normalizeBackgroundForOriginSystem(bg, character.originSystem)
+      if (!normalizedBg) return
+      const bgData = getBackgroundAbilityData(normalizedBg)
       const block = bgData.blocks[blockIndex]
       if (!block) return
 
@@ -1266,7 +1373,7 @@ export function useProvenanceMutations({
         abilityBonuses: cleanedBonuses,
       }
 
-      const bgTag = makeSourceTag('background', bg.name, 'choice', bg.source)
+      const bgTag = makeSourceTag('background', normalizedBg.name, 'choice', normalizedBg.source)
       const seen = new Set<string>()
       for (let i = 0; i < block.weights.length; i++) {
         const ability = normalizeAbilityName(choices[i] ?? '')

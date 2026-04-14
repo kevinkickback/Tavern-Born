@@ -65,6 +65,7 @@ describe('characterStore', () => {
     const state = useCharacterStore.getState()
 
     expect(created.name).toBe('New Hero')
+    expect(created.originSystem).toBe('2014')
     expect(state.characters).toHaveLength(1)
     expect(state.characters[0]?.id).toBe(created.id)
   })

@@ -42,8 +42,9 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
 
   return {
     id: 'character-1',
-    version: '1.0.0',
+    version: '2.0.0',
     name: 'Fixture Character',
+    originSystem: '2014',
     race: 'Human',
     class: 'Fighter',
     background: 'Soldier',

@@ -52,6 +52,7 @@ Stored examples (mutable runtime):
 - current HP, temporary HP
 - spell slot usage
 - spell profile selections (class profiles + special unrestricted profile)
+- selected origin system (`2014` or `2024`)
 - user-entered detail fields and choices
 - inventory currency counters (`cp`, `sp`, `ep`, `gp`, `pp`)
 - selected background equipment options per block (`backgroundEquipmentChoices`)
@@ -140,6 +141,11 @@ When adding new character state:
 3. Decide if field is persisted or derived.
 4. Expose and consume through hooks when needed.
 5. Add store/unit/integration tests.
+
+Origin system note:
+- `character.originSystem` is a required persisted field that controls whether origin ASIs and starting origin feats come from race (`2014`) or background (`2024`).
+- New characters must choose it in the wizard rules step.
+- Race/background provenance application must normalize selected content against `originSystem` before grants are applied.
 
 ## Character Schema Versioning and Migrations
 
