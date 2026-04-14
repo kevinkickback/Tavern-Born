@@ -34,7 +34,8 @@ Game data load and cache:
 
 5etools parsing and filtering:
 - src/lib/5etools/dataLoader.ts
-- src/lib/5etools/parsers.ts
+- src/lib/5etools/parsers/index.ts
+- src/lib/5etools/parsers/*
 - src/lib/5etools/classData.ts
 - src/lib/5etools/validator.ts
 - src/lib/5etools/schemas.ts
@@ -80,9 +81,6 @@ Build flow orchestration helpers:
 Compendium normalization and detail rendering:
 - src/lib/compendiumEntries.ts
 - src/pages/compendium/CompendiumEntryDetails.tsx
-
-Feat page selection helpers:
-- src/pages/feats/model/selection.ts
 
 Feats page UI orchestration:
 - src/pages/feats/FeatsPage.tsx — Character/Bonus feat accordions, warning badges, and tooltips for potential feat sources

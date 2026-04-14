@@ -41,7 +41,7 @@ Entry points:
 Flow:
 1. loadGameData starts foreground or background mode.
 2. Loader reads required resources (books, races, classes, spells, feats, items, and others).
-3. Parsed arrays are produced by parser functions in src/lib/5etools/parsers.ts.
+3. Parsed arrays are produced by parser functions in src/lib/5etools/parsers/* (barrel export: src/lib/5etools/parsers/index.ts).
 4. Source list is built and lookup maps are created in src/lib/5etools/lookups.ts.
 5. Store state is updated and cache metadata set to fetched.
 

@@ -29,14 +29,14 @@ const ACCENT_LABELS: Record<AccentTheme, string> = {
   blue: 'Blue',
   violet: 'Violet',
   green: 'Green',
-  tomato: 'Rose',
+  rose: 'Rose',
 }
 
 const ACCENT_DOT_COLORS: Record<AccentTheme, string> = {
   blue: 'bg-blue-500',
   violet: 'bg-violet-500',
   green: 'bg-green-600',
-  tomato: 'bg-pink-500',
+  rose: 'bg-pink-500',
 }
 
 export function AppPreferencesPanel() {

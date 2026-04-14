@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import { addGrant, emptyProvenance } from '@/lib/provenance/ledger'
+import {
+  addAbilityBonus,
+  addChoicePlaceholder,
+  addGrant,
+  emptyProvenance,
+} from '@/lib/provenance/ledger'
 import {
   diffProficiencyGrants,
   reconcileBackgroundChange,
@@ -28,6 +33,13 @@ const classTag: SourceTag = {
   sourceName: 'Wizard',
   grantType: 'fixed',
   label: 'Wizard',
+}
+
+const classTagCleric: SourceTag = {
+  sourceType: 'class',
+  sourceName: 'Cleric',
+  grantType: 'fixed',
+  label: 'Cleric',
 }
 
 const subclassTag: SourceTag = {
@@ -96,5 +108,62 @@ describe('provenance/reconciliation', () => {
     const diff = diffProficiencyGrants(ledger, 'skills', 'class', 'Wizard')
 
     expect(diff.toRemove).toEqual(['arcana'])
+  })
+
+  test('reconcileRaceChange preserves grants still attributed to other sources', () => {
+    let ledger = emptyProvenance()
+    ledger = addGrant(ledger, 'skills', 'History', raceTag)
+    ledger = addGrant(ledger, 'skills', 'History', classTag)
+    ledger = addGrant(ledger, 'skills', 'Perception', raceTag)
+
+    const reconciled = reconcileRaceChange(ledger, 'Elf', undefined)
+
+    expect(reconciled.proficiencies.skills.history).toEqual([classTag])
+    expect(reconciled.proficiencies.skills.perception).toBeUndefined()
+  })
+
+  test('reconcileBackgroundChange removes background choices and ability bonuses', () => {
+    let ledger = emptyProvenance()
+    ledger = addAbilityBonus(ledger, {
+      ability: 'wisdom',
+      value: 1,
+      sourceTag: backgroundTag,
+    })
+    ledger = addChoicePlaceholder(ledger, {
+      id: 'background:skill:acolyte',
+      domain: 'skills',
+      sourceTag: backgroundTag,
+      chooseCount: 2,
+      optionPool: ['Insight', 'Religion'],
+      selected: ['Insight'],
+      status: 'partially-resolved',
+    })
+    ledger = addChoicePlaceholder(ledger, {
+      id: 'class:skill:wizard',
+      domain: 'skills',
+      sourceTag: classTag,
+      chooseCount: 2,
+      optionPool: ['Arcana', 'History'],
+      selected: ['Arcana'],
+      status: 'partially-resolved',
+    })
+
+    const reconciled = reconcileBackgroundChange(ledger, 'Acolyte')
+
+    expect(reconciled.abilityBonuses).toEqual([])
+    expect(reconciled.choices).toHaveLength(1)
+    expect(reconciled.choices[0]?.sourceTag.sourceType).toBe('class')
+    expect(reconciled.choices[0]?.sourceTag.sourceName).toBe('Wizard')
+  })
+
+  test('reconcileClassChange removes only the replaced class in multiclass state', () => {
+    let ledger = emptyProvenance()
+    ledger = addGrant(ledger, 'spells', 'Magic Missile', classTag)
+    ledger = addGrant(ledger, 'spells', 'Cure Wounds', classTagCleric)
+
+    const reconciled = reconcileClassChange(ledger, 'Wizard', undefined)
+
+    expect(reconciled.spells['magic missile']).toBeUndefined()
+    expect(reconciled.spells['cure wounds']).toEqual([classTagCleric])
   })
 })

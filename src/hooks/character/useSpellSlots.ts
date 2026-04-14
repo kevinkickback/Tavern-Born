@@ -302,6 +302,9 @@ export function useSpellSlots(): SpellSlotsState {
     [character, patchSpells, spellProfiles],
   )
 
+  /**
+   * @deprecated Use addSpellToProfile(profileId, name, 'cantrip') directly.
+   */
   const addCantrip = useCallback(
     (name: string, profileId?: string) => {
       const targetId = profileId ?? getDefaultProfileId(spellProfiles)
@@ -310,6 +313,9 @@ export function useSpellSlots(): SpellSlotsState {
     [addSpellToProfile, spellProfiles],
   )
 
+  /**
+   * @deprecated Use removeSpellFromProfile(profileId, name, 'cantrip') directly.
+   */
   const removeCantrip = useCallback(
     (name: string, profileId?: string) => {
       const targetId = profileId ?? getDefaultProfileId(spellProfiles)
@@ -318,6 +324,9 @@ export function useSpellSlots(): SpellSlotsState {
     [removeSpellFromProfile, spellProfiles],
   )
 
+  /**
+   * @deprecated Use addSpellToProfile(profileId, name, 'spell') directly.
+   */
   const addSpellKnown = useCallback(
     (name: string, profileId?: string) => {
       const targetId = profileId ?? getDefaultProfileId(spellProfiles)
@@ -326,6 +335,9 @@ export function useSpellSlots(): SpellSlotsState {
     [addSpellToProfile, spellProfiles],
   )
 
+  /**
+   * @deprecated Use removeSpellFromProfile(profileId, name, 'spell') directly.
+   */
   const removeSpellKnown = useCallback(
     (name: string, profileId?: string) => {
       const targetId = profileId ?? getDefaultProfileId(spellProfiles)
