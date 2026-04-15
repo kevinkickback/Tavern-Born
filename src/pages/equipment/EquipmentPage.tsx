@@ -111,8 +111,8 @@ export function EquipmentPage() {
       typeof ResizeObserver === 'undefined'
         ? null
         : new ResizeObserver(() => {
-            updateInventoryListMaxHeight()
-          })
+          updateInventoryListMaxHeight()
+        })
 
     if (summaryCardRef.current && resizeObserver) {
       resizeObserver.observe(summaryCardRef.current)
