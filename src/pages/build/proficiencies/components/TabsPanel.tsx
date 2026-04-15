@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { is2024OriginLanguageTag } from '@/lib/calculations/languageOrigin'
 import { SKILL_TO_ABILITY } from '@/lib/calculations/skills'
 import { normalizeKey } from '@/lib/provenance'
 import type { ChoiceRecord, ProficiencyProvenance } from '@/lib/provenance/types'
@@ -119,15 +118,6 @@ export function BuildProficienciesTabsPanel({
   const choiceSelectedClass =
     'border-2 border-accent border-dashed bg-accent/25 text-accent-foreground hover:bg-accent/30'
   const fixedSelectedClass = 'border-accent bg-accent text-accent-foreground hover:bg-accent/80'
-  const originLanguageChoices = ledger.choices.filter(
-    (choice) => choice.domain === 'languages' && is2024OriginLanguageTag(choice.sourceTag),
-  )
-  const hasOriginLanguageChoices = originLanguageChoices.length > 0
-  const originLanguageRemaining = originLanguageChoices.reduce(
-    (total, choice) => total + Math.max(0, choice.chooseCount - choice.selected.length),
-    0,
-  )
-
   return (
     <Tabs defaultValue={defaultTab ?? 'skills'}>
       <TabsList className="mb-4 flex-wrap h-auto gap-1">
@@ -542,14 +532,6 @@ export function BuildProficienciesTabsPanel({
 
       <TabsContent value="languages">
         <div className="space-y-3">
-          {hasOriginLanguageChoices ? (
-            <div className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm">
-              {originLanguageRemaining > 0
-                ? `2024 Origin Languages: choose ${originLanguageRemaining} more Standard language${originLanguageRemaining === 1 ? '' : 's'}.`
-                : '2024 Origin Languages complete. Additional non-standard languages require explicit grants.'}
-            </div>
-          ) : null}
-
           <div className="flex flex-wrap gap-2">
             {availableLanguages.length > 0 ? (
               availableLanguages.map((languageName) => {

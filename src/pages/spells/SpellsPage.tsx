@@ -3,9 +3,11 @@ import { useCallback, useMemo, useState } from 'react'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { buildSpellSelectionSourceMap } from '@/lib/calculations/spellProfiles.attribution'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
+import { getTotalLevel } from '@/lib/characterUtils'
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
 import { SpellNameTooltip } from '@/pages/spells/components/SpellNameTooltip'
 import {
@@ -20,15 +22,27 @@ import {
   type TooltipEntityLike,
 } from '@/pages/spells/components/spellTooltipUtils'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
 import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
 
 export function SpellsPage() {
-  const gameData = useGameDataStore((state) => state.gameData)
   const character = useCharacterStore((s) => s.activeCharacter)
-  const { spells, items, feats, races, classes, backgrounds, optionalfeatures } =
-    useFilteredGameData()
+  const {
+    spells,
+    items,
+    feats,
+    races,
+    classes,
+    backgrounds,
+    optionalfeatures,
+    actions,
+    conditions,
+    deities,
+    skills,
+    senses,
+    variantrules,
+    languages,
+  } = useFilteredGameData()
   const ledger = character?.provenance ?? emptyProvenance()
   const {
     spellProfiles,
@@ -36,8 +50,8 @@ export function SpellsPage() {
     sharedSlots,
     pactSlots,
     isSpellcaster,
-    addSpellToProfile,
     removeSpellFromProfile,
+    setProfileSpells,
     togglePrepared,
     selectRacialSpell,
     removeRacialSpell,
@@ -78,25 +92,25 @@ export function SpellsPage() {
       classes: buildNameMap(classes as TooltipEntityLike[]),
       backgrounds: buildNameMap(backgrounds as TooltipEntityLike[]),
       optionalfeatures: buildNameMap(optionalfeatures as TooltipEntityLike[]),
-      actions: buildNameMap((gameData?.actions as TooltipEntityLike[]) ?? []),
-      conditions: buildNameMap((gameData?.conditions as TooltipEntityLike[]) ?? []),
-      deities: buildNameMap((gameData?.deities as TooltipEntityLike[]) ?? []),
-      skills: buildNameMap((gameData?.skills as TooltipEntityLike[]) ?? []),
-      senses: buildNameMap((gameData?.senses as TooltipEntityLike[]) ?? []),
-      variantrules: buildNameMap((gameData?.variantrules as TooltipEntityLike[]) ?? []),
-      languages: buildNameMap((gameData?.languages as TooltipEntityLike[]) ?? []),
+      actions: buildNameMap(actions as TooltipEntityLike[]),
+      conditions: buildNameMap(conditions as TooltipEntityLike[]),
+      deities: buildNameMap(deities as TooltipEntityLike[]),
+      skills: buildNameMap(skills as TooltipEntityLike[]),
+      senses: buildNameMap(senses as TooltipEntityLike[]),
+      variantrules: buildNameMap(variantrules as TooltipEntityLike[]),
+      languages: buildNameMap(languages as TooltipEntityLike[]),
     }),
     [
       backgrounds,
       classes,
       feats,
-      gameData?.actions,
-      gameData?.conditions,
-      gameData?.deities,
-      gameData?.languages,
-      gameData?.senses,
-      gameData?.skills,
-      gameData?.variantrules,
+      actions,
+      conditions,
+      deities,
+      languages,
+      senses,
+      skills,
+      variantrules,
       items,
       optionalfeatures,
       races,
@@ -224,6 +238,24 @@ export function SpellsPage() {
 
   const hasMultipleSpellcastingClasses = spellcastingDetails.length > 1
 
+  const racialProfiles = useMemo(
+    () => spellProfiles.filter((p) => p.type === 'racial'),
+    [spellProfiles],
+  )
+
+  const proficiencyBonus = useMemo(
+    () => getProficiencyBonus(getTotalLevel({ classes: character?.classProgression ?? [] })),
+    [character],
+  )
+
+  const abilityModifiers = useMemo(() => {
+    const scores = character?.abilityScores
+    if (!scores) return {} as Record<string, number>
+    return Object.fromEntries(
+      Object.entries(scores).map(([key, val]) => [key, getAbilityModifier(val as number)]),
+    ) as Record<string, number>
+  }, [character])
+
   const characterSpellNames = useMemo(() => {
     const names = new Set<string>()
     for (const profile of spellProfiles) {
@@ -260,7 +292,14 @@ export function SpellsPage() {
         initialFilters: poolAllowedLevels
           ? { level: poolAllowedLevels, school: new Set<string>(), type: new Set<string>() }
           : undefined,
-        categories: undefined,
+        categories: [
+          {
+            key: 'selection',
+            label: activeRacialChoice.isCantrip ? 'cantrips' : 'spells',
+            max: activeRacialChoice.count,
+            test: () => true,
+          },
+        ],
       }
     }
 
@@ -280,7 +319,14 @@ export function SpellsPage() {
           school: new Set<string>(),
           type: new Set<string>(),
         },
-        categories: undefined,
+        categories: [
+          {
+            key: 'selection',
+            label: level === 0 ? 'cantrips' : 'spells',
+            max: activeRacialChoice.count,
+            test: () => true,
+          },
+        ],
       }
     }
 
@@ -295,7 +341,14 @@ export function SpellsPage() {
       initialFilters: activeRacialChoice.isCantrip
         ? { level: new Set(['0']), school: new Set<string>(), type: new Set<string>() }
         : undefined,
-      categories: undefined,
+      categories: [
+        {
+          key: 'selection',
+          label: activeRacialChoice.isCantrip ? 'cantrips' : 'spells',
+          max: activeRacialChoice.count,
+          test: () => true,
+        },
+      ],
     }
   }, [activeRacialChoice, spellProfiles])
 
@@ -329,6 +382,14 @@ export function SpellsPage() {
   }
 
   const handleRemoveSpell = (item: SpellListItem) => {
+    const profile = spellProfiles.find((p) => p.id === item.profileId)
+    if (profile?.type === 'racial' && profile.choices) {
+      const choice = profile.choices.find((c) => c.selected.includes(item.name))
+      if (choice) {
+        removeRacialSpell(item.profileId, choice.id, item.name)
+        return
+      }
+    }
     removeSpellFromProfile(item.profileId, item.name, item.kind)
   }
 
@@ -357,14 +418,20 @@ export function SpellsPage() {
       return
     }
 
+    const newCantrips: string[] = []
+    const newSpells: string[] = []
     for (const name of names) {
       const spell = spellByName.get(getEntityKey(name))
       if (spell?.level === 0) {
-        addSpellToProfile(SPECIAL_SPELL_PROFILE_ID, name, 'cantrip')
+        newCantrips.push(name)
       } else {
-        addSpellToProfile(SPECIAL_SPELL_PROFILE_ID, name, 'spell')
+        newSpells.push(name)
       }
     }
+
+    const mergedCantrips = [...new Set([...bonusProfile.cantrips, ...newCantrips])]
+    const mergedSpells = [...new Set([...bonusProfile.spellsKnown, ...newSpells])]
+    setProfileSpells(SPECIAL_SPELL_PROFILE_ID, mergedCantrips, mergedSpells)
 
     setBonusSpellModalOpen(false)
   }
@@ -385,7 +452,6 @@ export function SpellsPage() {
             if (profileId !== SPECIAL_SPELL_PROFILE_ID) return
             setBonusSpellModalOpen(true)
           }}
-          onSetRacialCastingAbility={setRacialCastingAbility}
           onOpenRacialChoice={handleOpenRacialChoiceModal}
           renderSpellName={({ item, spell, sourceContext }) => (
             <SpellNameTooltip
@@ -431,6 +497,10 @@ export function SpellsPage() {
         <SpellcastingDetailsCard
           isSpellcaster={isSpellcaster}
           spellcastingDetails={spellcastingDetails}
+          racialProfiles={racialProfiles}
+          proficiencyBonus={proficiencyBonus}
+          abilityModifiers={abilityModifiers}
+          onSetRacialCastingAbility={setRacialCastingAbility}
           hasMultipleSpellcastingClasses={hasMultipleSpellcastingClasses}
           hasWarlockClass={hasWarlockClass}
           sharedSlots={sharedSlots}

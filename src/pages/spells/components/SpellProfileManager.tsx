@@ -9,13 +9,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import { formatSpellLevel } from '@/lib/calculations/spellUtils'
@@ -219,7 +212,6 @@ interface SpellProfileManagerProps {
   onTogglePrepared: (profileId: string, spellName: string) => void
   onRemoveSpell: (item: SpellListItem) => void
   onAddSpell?: (profileId: string) => void
-  onSetRacialCastingAbility?: (profileId: string, ability: string) => void
   onOpenRacialChoice?: (profileId: string, choiceId: string) => void
   renderSpellName: (params: {
     item: SpellListItem
@@ -238,7 +230,6 @@ export function SpellProfileManager({
   onTogglePrepared,
   onRemoveSpell,
   onAddSpell,
-  onSetRacialCastingAbility,
   onOpenRacialChoice,
   renderSpellName,
 }: SpellProfileManagerProps) {
@@ -258,16 +249,16 @@ export function SpellProfileManager({
             Spell List
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1">
+        <CardContent className="flex-1 p-0">
           {spellProfiles.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
+            <p className="px-6 text-sm text-muted-foreground text-center py-8">
               No spells assigned yet.
             </p>
           ) : (
             <Accordion
               type="multiple"
               defaultValue={spellProfiles.map((profile) => profile.id)}
-              className="space-y-4 overflow-y-auto pr-1 pb-2"
+              className="overflow-y-auto space-y-2 pb-2"
               style={{ maxHeight: getViewportBoundedMaxHeight(18) }}
             >
               {spellProfiles.map((profile) => {
@@ -349,19 +340,12 @@ export function SpellProfileManager({
                   .filter(Boolean)
                   .join(', ')
                 const showDefaultEmptyState =
-                  items.length === 0 &&
-                  availableClassSpells.length === 0 &&
-                  !hasMissingSpells &&
-                  !hasUnfulfilledChoices
+                  items.length === 0 && availableClassSpells.length === 0 && !hasUnfulfilledChoices
                 const isClassWithoutSpellcasting = profile.type === 'class' && !detail
 
                 return (
-                  <AccordionItem
-                    key={profile.id}
-                    value={profile.id}
-                    className="rounded-lg border border-border bg-card overflow-hidden last:border-b"
-                  >
-                    <AccordionTrigger className="px-3.5 py-2.5 bg-muted/30 hover:no-underline">
+                  <AccordionItem key={profile.id} value={profile.id} className="border-b-0">
+                    <AccordionTrigger className="px-6 py-2.5 bg-muted/30 rounded-none hover:no-underline">
                       <div className="flex items-center gap-2 text-left w-full min-w-0">
                         <span className="font-medium text-sm">{profile.label}</span>
                         <div className="ml-auto flex items-center gap-2 pr-1">
@@ -442,7 +426,7 @@ export function SpellProfileManager({
                     </AccordionTrigger>
                     <AccordionContent className="pb-1">
                       {isBonusProfile && !showDefaultEmptyState ? (
-                        <div className="px-3 py-2 bg-muted/10 flex items-center justify-end">
+                        <div className="px-6 py-2 bg-muted/10 flex items-center justify-end">
                           <Button
                             size="sm"
                             variant="outline"
@@ -454,35 +438,9 @@ export function SpellProfileManager({
                           </Button>
                         </div>
                       ) : null}
-                      {/* Racial profile: casting ability selector */}
-                      {isRacial &&
-                      profile.castingAbilityOptions &&
-                      profile.castingAbilityOptions.length > 1 ? (
-                        <div className="px-3 py-2 border-b border-border/60 bg-muted/10 flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground font-medium">
-                            Casting Ability:
-                          </span>
-                          <Select
-                            value={profile.castingAbility ?? ''}
-                            onValueChange={(value) =>
-                              onSetRacialCastingAbility?.(profile.id, value)
-                            }
-                          >
-                            <SelectTrigger className="h-7 w-[100px] text-xs">
-                              <SelectValue placeholder="Choose..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {profile.castingAbilityOptions.map((opt) => (
-                                <SelectItem key={opt} value={opt} className="text-xs uppercase">
-                                  {opt.toUpperCase()}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      ) : null}
+
                       {showDefaultEmptyState ? (
-                        <div className="px-3.5 pb-3.5">
+                        <div className="px-6 pb-3.5">
                           <div className="min-h-40 flex flex-col items-center justify-center text-center p-6">
                             <BookOpen
                               className="h-6 w-6 text-muted-foreground mb-2"
@@ -498,7 +456,9 @@ export function SpellProfileManager({
                                 ? 'Bonus spells are optional and do not use your class spell selection limits or spell slots.'
                                 : isClassWithoutSpellcasting
                                   ? 'This class does not currently grant spellcasting. If a subclass grants spellcasting, this section will update automatically.'
-                                  : 'This spell list is currently empty.'}
+                                  : hasMissingSpells
+                                    ? 'Visit the Class page to select your spells.'
+                                    : 'This spell list is currently empty.'}
                             </p>
                             {isBonusProfile ? (
                               <Button
@@ -518,7 +478,7 @@ export function SpellProfileManager({
                       items.length === 0 &&
                       availableClassSpells.length === 0 &&
                       hasUnfulfilledChoices ? (
-                        <div className="px-3.5 pb-3.5">
+                        <div className="px-6 pb-3.5">
                           <div className="min-h-40 flex flex-col items-center justify-center text-center p-6">
                             <BookOpen
                               className="h-6 w-6 text-muted-foreground mb-2"
@@ -551,7 +511,7 @@ export function SpellProfileManager({
                             let groupIndex = 0
 
                             return (
-                              <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3 p-3.5">
+                              <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3 px-6 py-3.5">
                                 {levels.includes(0)
                                   ? (() => {
                                       const span = getSpanForGroup(groupIndex++, totalGroups)
@@ -666,7 +626,7 @@ export function SpellProfileManager({
                             let groupIndex = 0
 
                             return (
-                              <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3 p-3.5">
+                              <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3 px-6 py-3.5">
                                 {levels.includes(0)
                                   ? (() => {
                                       const span = getSpanForGroup(groupIndex++, totalGroups)

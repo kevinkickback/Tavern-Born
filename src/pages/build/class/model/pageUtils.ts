@@ -6,7 +6,6 @@ import {
   ensureSpellProfiles,
   isSpellOnClassList,
 } from '@/lib/calculations/spellProfiles'
-import { getCharacterClassEntries } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 
@@ -41,10 +40,6 @@ interface BuildFeatModalFeatsParams<T extends { name: string; source?: string }>
   availableFeats: T[]
   selectedFeats: Array<{ name: string; source?: string }>
   createFallback: (selected: { name: string; source?: string }) => T
-}
-
-export function buildClassProgression(character: Character | null): CharacterClassEntry[] {
-  return getCharacterClassEntries(character)
 }
 
 function resolveClassForEntry(

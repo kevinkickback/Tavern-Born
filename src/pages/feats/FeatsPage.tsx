@@ -85,7 +85,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
   const hasMore = allEntries.length > 2
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden transition-colors hover:border-accent/30">
+    <div className="rounded-xl border border-border bg-card overflow-hidden transition-colors hover:border-accent/30 max-w-sm">
       <div className="flex items-start gap-3 p-4">
         <Star className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" weight="duotone" />
         <div className="flex-1 min-w-0">
@@ -284,11 +284,6 @@ export function FeatsPage() {
     resolvedRacialChoices.length > 0 ||
     originFixedFeats.length > 0 ||
     resolvedOriginChoices.length > 0
-  const showCharacterSection =
-    hasCharacterSection ||
-    remainingASI > 0 ||
-    pendingRacialChoices.length > 0 ||
-    pendingOriginChoices.length > 0
   const characterFeatCount =
     (character?.feats?.length ?? 0) +
     racialFixedFeats.length +
@@ -374,94 +369,91 @@ export function FeatsPage() {
             className="space-y-4"
           >
             {/* Character Feats accordion */}
-            {showCharacterSection && (
-              <AccordionItem
-                value="character-feats"
-                className="rounded-lg border border-border bg-card overflow-hidden last:border-b"
-              >
-                <AccordionTrigger className="px-3.5 py-2.5 bg-muted/30 hover:no-underline">
-                  <div className="flex items-center gap-2 text-left w-full min-w-0">
-                    <span className="font-medium text-sm">Character Feats</span>
-                    <div className="ml-auto flex items-center gap-2 pr-1">
-                      {remainingASI > 0 && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-warning/40 bg-warning/10 text-warning"
-                            >
-                              <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
-                              {remainingASI} potential feat{remainingASI !== 1 ? 's' : ''}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
-                            <p>
-                              You have {remainingASI} Ability Score Improvement
-                              {remainingASI !== 1 ? 's' : ''} available from level-up.
-                            </p>
-                            <p className="mt-1 text-muted-foreground">
-                              Each ASI can be used for a feat instead of a stat increase. Visit the
-                              Class page to make your choice.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      {pendingRacialChoices.length > 0 && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-warning/40 bg-warning/10 text-warning"
-                            >
-                              <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
-                              {pendingRacialChoices.length} potential racial feat
-                              {pendingRacialChoices.length !== 1 ? 's' : ''}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
-                            <p>
-                              You have {pendingRacialChoices.length} feat choice
-                              {pendingRacialChoices.length !== 1 ? 's' : ''} from your race.
-                            </p>
-                            <p className="mt-1 text-muted-foreground">
-                              Visit the Race page to select{' '}
-                              {pendingRacialChoices.length !== 1 ? 'them' : 'it'}.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      {pendingOriginChoices.length > 0 && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-warning/40 bg-warning/10 text-warning"
-                            >
-                              <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
-                              {pendingOriginChoices.length} potential origin feat
-                              {pendingOriginChoices.length !== 1 ? 's' : ''}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
-                            <p>
-                              You have {pendingOriginChoices.length} feat choice
-                              {pendingOriginChoices.length !== 1 ? 's' : ''} from your background.
-                            </p>
-                            <p className="mt-1 text-muted-foreground">
-                              Visit the Background page to select{' '}
-                              {pendingOriginChoices.length !== 1 ? 'them' : 'it'}.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                      <Badge variant="outline" className="text-xs">
-                        Total: {characterFeatCount}
-                      </Badge>
-                    </div>
+            <AccordionItem value="character-feats" className="-mx-6 -mt-6 border-b-0">
+              <AccordionTrigger className="px-6 py-2.5 bg-muted/30 rounded-none hover:no-underline">
+                <div className="flex items-center gap-2 text-left w-full min-w-0">
+                  <span className="font-medium text-sm">Character Feats</span>
+                  <div className="ml-auto flex items-center gap-2 pr-1">
+                    {remainingASI > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-warning/40 bg-warning/10 text-warning"
+                          >
+                            <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
+                            {remainingASI} potential feat{remainingASI !== 1 ? 's' : ''}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+                          <p>
+                            You have {remainingASI} Ability Score Improvement
+                            {remainingASI !== 1 ? 's' : ''} available from level-up.
+                          </p>
+                          <p className="mt-1 text-muted-foreground">
+                            Each ASI can be used for a feat instead of a stat increase. Visit the
+                            Class page to make your choice.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {pendingRacialChoices.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-warning/40 bg-warning/10 text-warning"
+                          >
+                            <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
+                            {pendingRacialChoices.length} potential racial feat
+                            {pendingRacialChoices.length !== 1 ? 's' : ''}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+                          <p>
+                            You have {pendingRacialChoices.length} feat choice
+                            {pendingRacialChoices.length !== 1 ? 's' : ''} from your race.
+                          </p>
+                          <p className="mt-1 text-muted-foreground">
+                            Visit the Race page to select{' '}
+                            {pendingRacialChoices.length !== 1 ? 'them' : 'it'}.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {pendingOriginChoices.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-warning/40 bg-warning/10 text-warning"
+                          >
+                            <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
+                            {pendingOriginChoices.length} potential origin feat
+                            {pendingOriginChoices.length !== 1 ? 's' : ''}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+                          <p>
+                            You have {pendingOriginChoices.length} feat choice
+                            {pendingOriginChoices.length !== 1 ? 's' : ''} from your background.
+                          </p>
+                          <p className="mt-1 text-muted-foreground">
+                            Visit the Background page to select{' '}
+                            {pendingOriginChoices.length !== 1 ? 'them' : 'it'}.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    <Badge variant="outline" className="text-xs">
+                      Total: {characterFeatCount}
+                    </Badge>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent className="pb-1">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3.5">
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pb-1">
+                {hasCharacterSection ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-6 py-3.5">
                     {(character.feats ?? []).map((feat) => {
                       const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
                       return (
@@ -545,16 +537,26 @@ export function FeatsPage() {
                       }),
                     )}
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-            )}
+                ) : (
+                  <div className="px-6 pb-3.5">
+                    <div className="min-h-52 flex flex-col items-center justify-center text-center p-6">
+                      <Star className="h-6 w-6 text-muted-foreground mb-2" weight="duotone" />
+                      <h3 className="text-sm font-semibold">No Character Feats</h3>
+                      <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+                        Feats are gained from class ASI selections, your race, or background.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
 
             {/* Bonus Feats accordion */}
             <AccordionItem
               value="bonus-feats"
-              className="rounded-lg border border-border bg-card overflow-hidden last:border-b"
+              className="-mx-6 -mb-6 border-b-0 data-[state=closed]:pb-6"
             >
-              <AccordionTrigger className="px-3.5 py-2.5 bg-muted/30 hover:no-underline">
+              <AccordionTrigger className="px-6 py-2.5 bg-muted/30 rounded-none hover:no-underline">
                 <div className="flex items-center gap-2 text-left w-full min-w-0">
                   <span className="font-medium text-sm">Bonus Feats</span>
                   <div className="ml-auto flex items-center gap-2 pr-1">
@@ -566,7 +568,7 @@ export function FeatsPage() {
               </AccordionTrigger>
               <AccordionContent className="pb-1">
                 {bonusFeats.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3.5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-6 py-3.5">
                     {bonusFeats.map((feat) => {
                       const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
                       return (
@@ -593,7 +595,7 @@ export function FeatsPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="px-3.5 pb-3.5">
+                  <div className="pb-3.5">
                     <div className="min-h-52 flex flex-col items-center justify-center text-center p-6">
                       <Sparkle className="h-6 w-6 text-muted-foreground mb-2" weight="duotone" />
                       <h3 className="text-sm font-semibold">No Bonus Feats Selected</h3>

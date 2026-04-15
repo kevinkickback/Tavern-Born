@@ -1,3 +1,4 @@
+import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 import { buildGameDataLookups } from './lookups'
 import {
@@ -189,6 +190,9 @@ export class FiveEToolsDataLoader {
               gameData.skills.forEach((item) => {
                 this.addItemSource(item, sourcesSet)
               })
+              if (import.meta.env.DEV) {
+                validateSkillToAbilityMap(gameData.skills)
+              }
               break
             case 'senses':
               gameData.senses = parseSenses(data)
@@ -222,6 +226,10 @@ export class FiveEToolsDataLoader {
               break
           }
         } catch (error) {
+          const isAbort =
+            (error instanceof DOMException && error.name === 'AbortError') ||
+            (error instanceof Error && error.name === 'AbortError')
+          if (isAbort) throw error
           console.warn(`Failed to load ${resource.file}:`, error)
         } finally {
           completedResources += 1
@@ -231,6 +239,8 @@ export class FiveEToolsDataLoader {
         }
       }),
     )
+
+    if (options?.signal?.aborted) return gameData
 
     if (classIndexData) {
       await this.loadClassData(classIndexData, gameData, sourcesSet, options)
@@ -242,6 +252,8 @@ export class FiveEToolsDataLoader {
         return summary ? { ...race, fluffEntries: [summary] } : race
       })
     }
+
+    if (options?.signal?.aborted) return gameData
 
     if (spellIndexData) {
       await this.loadSpellData(spellIndexData, gameData, sourcesSet, options, spellSourceLookupData)

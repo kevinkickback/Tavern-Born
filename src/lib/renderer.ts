@@ -74,7 +74,7 @@ function sanitizeRenderedHtml(html: string): string {
 
 export function renderEntry(entry: unknown): string {
   if (typeof entry === 'string') {
-    return renderTags(entry)
+    return sanitizeRenderedHtml(renderTags(entry))
   }
 
   if (typeof entry === 'object' && entry !== null) {

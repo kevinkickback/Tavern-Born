@@ -1,5 +1,10 @@
 import type { AbilityName, AbilityScores } from '@/types/character'
 import {
+  ABILITY_ABBREV_ORDER,
+  ABILITY_ABBREV_TO_FULL,
+  ABILITY_ABBREV_TO_TITLE,
+} from './abilityNames'
+import {
   ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MAX,
   getAbilityModifier,
@@ -12,23 +17,18 @@ import {
 
 export type { AbilityName, AbilityScores } from '@/types/character'
 
-export const ABILITY_NAMES: readonly AbilityName[] = [
-  'strength',
-  'dexterity',
-  'constitution',
-  'intelligence',
-  'wisdom',
-  'charisma',
-]
+/** All six D&D ability names in standard order — derived from the canonical abbreviation table. */
+export const ABILITY_NAMES: readonly AbilityName[] = ABILITY_ABBREV_ORDER.map(
+  (abv) => ABILITY_ABBREV_TO_FULL[abv] as AbilityName,
+)
 
-export const ABILITY_ABBREVIATIONS: Readonly<Record<AbilityName, string>> = {
-  strength: 'STR',
-  dexterity: 'DEX',
-  constitution: 'CON',
-  intelligence: 'INT',
-  wisdom: 'WIS',
-  charisma: 'CHA',
-}
+/** Maps each full ability name to its uppercase abbreviation — derived from the canonical abbreviation table. */
+export const ABILITY_ABBREVIATIONS: Readonly<Record<AbilityName, string>> = Object.fromEntries(
+  ABILITY_ABBREV_ORDER.map((abv) => [
+    ABILITY_ABBREV_TO_FULL[abv],
+    ABILITY_ABBREV_TO_TITLE[abv].toUpperCase().slice(0, 3),
+  ]),
+) as Readonly<Record<AbilityName, string>>
 
 /** A bonus applied to an ability from a named source (race, feat, ASI, etc.). */
 export interface AbilityBonus {

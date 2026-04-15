@@ -2,7 +2,13 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { loadDataFromSource } from '@/lib/5etools'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
-import { clearGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
+import {
+  clearGameDataCache,
+  isCacheForSource,
+  isCacheStale,
+  readGameDataCache,
+  writeGameDataCache,
+} from '@/lib/storage/dataCache'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import type { DataSourceConfig, GameData, Item5e } from '@/types/5etools'
 
@@ -49,6 +55,12 @@ interface GameDataState {
   setHasHydrated: (v: boolean) => void
 
   /**
+   * Read from IDB cache and populate store state. Returns a hint for which
+   * toast (if any) the caller should display — the store does not import UI libs.
+   */
+  loadFromCache: () => Promise<{ needsToast?: 'stale' | 'offline' }>
+
+  /**
    * Fetch data from `config`, write to IDB cache, update store.
    * Pass `background = true` to do a silent refresh without blocking UI.
    */
@@ -73,7 +85,11 @@ export const useGameDataStore = create<GameDataState>()(
       cacheStatus: 'unknown',
       hasHydrated: false,
 
-      setGameData: (data) => set({ gameData: data, itemLookup: buildItemLookup(data.items ?? []) }),
+      setGameData: (data) =>
+        set({
+          gameData: data,
+          itemLookup: buildItemLookup([...(data.items ?? []), ...(data.itemsBase ?? [])]),
+        }),
       setCacheStatus: (status) => set({ cacheStatus: status }),
       setDataSourceConfig: (config) => set({ dataSourceConfig: config }),
       setLoading: (loading) => set({ isLoading: loading }),
@@ -81,6 +97,55 @@ export const useGameDataStore = create<GameDataState>()(
       setError: (error) => set({ error }),
       setLastDataChangedAt: (iso) => set({ lastDataChangedAt: iso }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
+
+      loadFromCache: async () => {
+        const {
+          dataSourceConfig,
+          loadGameData,
+          setGameData,
+          setCacheStatus,
+          setLastDataChangedAt,
+        } = get()
+        const cache = await readGameDataCache()
+
+        if (!cache && !dataSourceConfig) {
+          setCacheStatus('unconfigured')
+          return {}
+        }
+
+        if (cache && dataSourceConfig) {
+          if (!isCacheForSource(cache, dataSourceConfig)) {
+            await loadGameData(dataSourceConfig)
+            return {}
+          }
+          if (isCacheStale(cache.cachedAt)) {
+            setGameData(cache.data)
+            setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
+            setCacheStatus('stale')
+            loadGameData(dataSourceConfig, true)
+            return { needsToast: 'stale' }
+          }
+          setGameData(cache.data)
+          setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
+          setCacheStatus('fresh')
+          loadGameData(dataSourceConfig, true)
+          return {}
+        }
+
+        if (cache && !dataSourceConfig) {
+          setGameData(cache.data)
+          setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
+          setCacheStatus('offline')
+          return { needsToast: 'offline' }
+        }
+
+        if (!cache && dataSourceConfig) {
+          await loadGameData(dataSourceConfig)
+          return {}
+        }
+
+        return {}
+      },
 
       loadGameData: async (config, background = false) => {
         const requestId = ++activeLoadRequestId
@@ -121,7 +186,9 @@ export const useGameDataStore = create<GameDataState>()(
           const contentChanged = cacheEntry.lastDataChangedAt !== prevChangedAt
           set({
             gameData: contentChanged ? data : get().gameData,
-            itemLookup: contentChanged ? buildItemLookup(data.items ?? []) : get().itemLookup,
+            itemLookup: contentChanged
+              ? buildItemLookup([...(data.items ?? []), ...(data.itemsBase ?? [])])
+              : get().itemLookup,
             dataSourceConfig: { ...config, isValid: true, lastLoaded: now },
             isLoading: false,
             isBackgroundRefreshing: false,

@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
+import { mergeSkillState } from '@/lib/calculations/skills'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Proficiencies, Skills } from '@/types/character'
+import type { Proficiencies } from '@/types/character'
 
 export type ProficiencyCategory = keyof Proficiencies
 
@@ -55,31 +56,6 @@ export function useProficiencies(): ProficienciesState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
-  const mergeSkillState = useCallback((current: Skills, proficiencies: string[]) => {
-    const normalized = new Set(proficiencies.map((name) => name.toLowerCase()))
-    const next: Skills = {}
-
-    for (const [name, entry] of Object.entries(current)) {
-      const isProficient = normalized.has(name.toLowerCase())
-      next[name] = {
-        ...entry,
-        proficient: isProficient,
-        expertise: isProficient ? entry.expertise : false,
-      }
-    }
-
-    for (const name of normalized) {
-      if (next[name]) continue
-      next[name] = {
-        proficient: true,
-        expertise: false,
-        bonus: 0,
-      }
-    }
-
-    return next
-  }, [])
-
   const patch = useCallback(
     (category: ProficiencyCategory, names: string[]) => {
       if (!character) return
@@ -100,7 +76,7 @@ export function useProficiencies(): ProficienciesState {
         proficiencies: { ...character.proficiencies, [category]: names },
       })
     },
-    [character, mergeSkillState, updateCharacter],
+    [character, updateCharacter],
   )
 
   const hasProficiency = useCallback(
@@ -178,7 +154,7 @@ export function useProficiencies(): ProficienciesState {
         ),
       })
     },
-    [character, mergeSkillState, updateCharacter],
+    [character, updateCharacter],
   )
 
   const applyClassProficiencies = useCallback(
@@ -240,7 +216,7 @@ export function useProficiencies(): ProficienciesState {
         ),
       })
     },
-    [character, mergeSkillState, updateCharacter],
+    [character, updateCharacter],
   )
 
   const proficiencies: Proficiencies = useMemo(

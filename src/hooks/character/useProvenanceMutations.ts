@@ -13,6 +13,7 @@ import {
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
 import { computeApplyClassSelectionUpdates } from '@/lib/character/commands/classSelectionOrchestrationCommand'
+import { generateEquipmentId } from '@/lib/character/ids'
 import {
   addAbilityBonus,
   addGrant,
@@ -65,10 +66,6 @@ function extractFixedGrantNames(blocks: unknown[] | undefined): string[] {
   })
     .filter((name) => !name.toLowerCase().startsWith('choose '))
     .map((name) => stripItemTag(name))
-}
-
-function generateEquipmentId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
 function removeSourceGrantedEquipment(

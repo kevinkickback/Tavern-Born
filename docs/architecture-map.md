@@ -22,7 +22,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 5. Domain logic
 - Purpose: pure calculations and game rules.
-- Key files: src/lib/characterUtils.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
+- Key files: src/lib/characterUtils.ts, src/lib/character/ids.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
 
 6. Provenance system
 - Purpose: track source of grants and reconcile when race/class/features change.
@@ -33,7 +33,8 @@ This document describes the current Tavern-Born runtime architecture and where r
 - Key files: src/hooks/character/*, src/hooks/data/*.
 
 Spellcasting note:
-- `src/hooks/character/useSpellSlots.ts` now derives spell list/detail data from profile-based spell state and multiclass slot breakdown helpers.
+- `src/hooks/character/useSpellSlots.ts` is a read-only hook: exposes spell slots, profiles, and spellcasting detail per profile. It composes `useSpellProfileMutations` for backward-compatible mutation access.
+- `src/hooks/character/useSpellProfileMutations.ts` owns all spell mutation callbacks (add/remove spells, toggle prepared, racial spells, profile sync).
 
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.

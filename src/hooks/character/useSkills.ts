@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { ABILITY_NAMES, type AbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { ALL_SKILLS, deriveAllSkills, type SkillResult } from '@/lib/calculations/skills'
+import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
 
 export type { SkillResult }
@@ -23,7 +24,7 @@ export function useSkills(): SkillsState {
   const activeCharacter = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
-  const level = activeCharacter?.level ?? 1
+  const level = useMemo(() => getTotalCharacterLevel(activeCharacter), [activeCharacter])
   const abilityScores = activeCharacter?.abilityScores
   const storedSkills = activeCharacter?.skills ?? {}
 

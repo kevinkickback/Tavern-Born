@@ -14,9 +14,11 @@ export function stripItemTag(value: string): string {
  * Normalize a proficiency/item name to a stable lowercase key.
  * Strips 5etools tags so that "{@item thieves' tools|PHB}" and "thieves' tools"
  * produce the same key — preventing duplicate ledger entries.
+ * Non-string values return an empty string.
  */
-export function normalizeKey(name: string): string {
-  return stripItemTag(String(name)).toLowerCase().trim()
+export function normalizeKey(name: unknown): string {
+  if (typeof name !== 'string') return ''
+  return stripItemTag(name).toLowerCase().trim()
 }
 
 /**

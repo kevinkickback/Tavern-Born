@@ -146,7 +146,7 @@ export function EquipmentPage() {
         <div ref={summaryCardRef}>
           <Card className="w-full">
             <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex items-center justify-between gap-x-6 gap-y-4 flex-wrap">
                 <div>
                   <div className="text-xs text-muted-foreground mb-0.5">Weight</div>
                   <div
@@ -238,7 +238,7 @@ export function EquipmentPage() {
               </p>
             ) : (
               <div
-                className="space-y-2 overflow-y-auto pr-1"
+                className="grid grid-cols-1 lg:grid-cols-2 gap-2 overflow-y-auto pr-1"
                 style={{ maxHeight: inventoryListMaxHeight }}
               >
                 {equipment.map((item) => (

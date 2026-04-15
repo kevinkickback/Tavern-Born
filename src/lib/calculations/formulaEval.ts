@@ -70,5 +70,8 @@ export function safeEvalArithmetic(expr: string): number {
   if (pos !== cleaned.length) {
     throw new Error(`Unexpected trailing input: '${cleaned.slice(pos)}'`)
   }
+  if (!Number.isFinite(result)) {
+    throw new Error(`Expression evaluated to non-finite value: ${result}`)
+  }
   return result
 }

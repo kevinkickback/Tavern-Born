@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   buildCharacterSnapshot,
-  buildClassProgression,
   buildFeatModalFeats,
   buildLevelsToShow,
   countTotalAsiAcrossClasses,
@@ -27,7 +27,7 @@ function makeLookup(classes: Class5e[]): {
 }
 
 describe('buildClassPageUtils', () => {
-  test('buildClassProgression uses classProgression when present', () => {
+  test('getCharacterClassEntries uses classProgression when present', () => {
     const character = makeCharacterFixture({
       classProgression: [
         { name: 'Fighter', source: 'PHB', levels: 3 },
@@ -35,10 +35,10 @@ describe('buildClassPageUtils', () => {
       ],
     })
 
-    expect(buildClassProgression(character)).toEqual(character.classProgression)
+    expect(getCharacterClassEntries(character)).toEqual(character.classProgression)
   })
 
-  test('buildClassProgression falls back to primary class fields', () => {
+  test('getCharacterClassEntries falls back to primary class fields', () => {
     const character = makeCharacterFixture({
       class: 'Rogue',
       classSource: 'PHB',
@@ -46,7 +46,9 @@ describe('buildClassPageUtils', () => {
       classProgression: undefined,
     })
 
-    expect(buildClassProgression(character)).toEqual([{ name: 'Rogue', source: 'PHB', levels: 4 }])
+    expect(getCharacterClassEntries(character)).toEqual([
+      { name: 'Rogue', source: 'PHB', levels: 4 },
+    ])
   })
 
   test('countTotalAsiAcrossClasses sums ASI levels across multiclass progression', () => {
@@ -100,7 +102,7 @@ describe('buildClassPageUtils', () => {
 
     expect(
       countTotalAsiAcrossClasses({
-        classProgression: buildClassProgression(character),
+        classProgression: getCharacterClassEntries(character),
         character,
         classLookup: byKey,
         fallbackClassByName: fallback,
@@ -151,7 +153,7 @@ describe('buildClassPageUtils', () => {
 
     expect(
       countTotalFeatSlots({
-        classProgression: buildClassProgression(character),
+        classProgression: getCharacterClassEntries(character),
         character,
         classLookup: byKey,
         fallbackClassByName: fallback,
@@ -203,7 +205,7 @@ describe('buildClassPageUtils', () => {
 
     const snapshot = buildCharacterSnapshot({
       character,
-      classProgression: buildClassProgression(character),
+      classProgression: getCharacterClassEntries(character),
       viewingClass: 'Wizard',
     })
 

@@ -134,6 +134,12 @@ function validateFallbackProgression(className: string, parsedCasterProgression?
 /** Return the standard (non-pact) spell slot maximums for a given `casterLevel`. */
 export function getStandardSpellSlots(casterLevel: number): SpellSlotsResult {
   if (casterLevel < 1 || casterLevel > 20) return {}
+  if (import.meta.env.DEV) {
+    console.warn(
+      `[spellSlots] getStandardSpellSlots: using fallback table for caster level ${casterLevel}. ` +
+        'Prefer getSpellSlotsFromClassData when class data is available.',
+    )
+  }
   const row = FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL[casterLevel] ?? []
   const result: SpellSlotsResult = {}
   for (let sl = 1; sl <= 9; sl++) {
@@ -146,6 +152,12 @@ export function getStandardSpellSlots(casterLevel: number): SpellSlotsResult {
 /** Return pact magic slot maximums for a Warlock of the given `level`. */
 export function getPactMagicSlots(level: number): SpellSlotsResult {
   if (level < 1 || level > 20) return {}
+  if (import.meta.env.DEV) {
+    console.warn(
+      `[spellSlots] getPactMagicSlots: using fallback table for level ${level}. ` +
+        'Prefer getPactMagicSlotsFromClassData when class data is available.',
+    )
+  }
   const count = FALLBACK_PACT_SLOT_COUNT[level]
   const slotLevel = FALLBACK_PACT_SLOT_LEVEL[level]
   if (!count) return {}
@@ -271,8 +283,15 @@ export function calculateSpellSlots(
 
   const progression: CasterProgression =
     (casterProgression as CasterProgression) ??
-    FALLBACK_CLASS_CASTER_PROGRESSION[className] ??
-    'none'
+    (() => {
+      if (import.meta.env.DEV && className) {
+        console.warn(
+          `[spellSlots] calculateSpellSlots: no casterProgression supplied for "${className}"; ` +
+            'falling back to FALLBACK_CLASS_CASTER_PROGRESSION. Pass class data for accurate results.',
+        )
+      }
+      return FALLBACK_CLASS_CASTER_PROGRESSION[className] ?? 'none'
+    })()
 
   if (progression === 'none') return {}
   if (progression === 'pact') return getPactMagicSlots(level)
@@ -291,7 +310,16 @@ export function isSpellcaster(className: string, casterProgression?: string): bo
   validateFallbackProgression(className, casterProgression)
 
   const prog =
-    (casterProgression as CasterProgression) ?? FALLBACK_CLASS_CASTER_PROGRESSION[className]
+    (casterProgression as CasterProgression) ??
+    (() => {
+      if (import.meta.env.DEV && className) {
+        console.warn(
+          `[spellSlots] isSpellcaster: no casterProgression supplied for "${className}"; ` +
+            'falling back to FALLBACK_CLASS_CASTER_PROGRESSION. Pass class data for accurate results.',
+        )
+      }
+      return FALLBACK_CLASS_CASTER_PROGRESSION[className]
+    })()
   return !!prog && prog !== 'none'
 }
 

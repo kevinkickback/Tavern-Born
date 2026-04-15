@@ -28,14 +28,22 @@ const TYPE_OPTIONS: Array<{ value: ItemCategory; label: string }> = [
   { value: 'scrolls', label: 'Scrolls' },
 ]
 
-const RARITY_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'common', label: 'Common' },
-  { value: 'uncommon', label: 'Uncommon' },
-  { value: 'rare', label: 'Rare' },
-  { value: 'very rare', label: 'Very Rare' },
-  { value: 'legendary', label: 'Legendary' },
-  { value: 'artifact', label: 'Artifact' },
-]
+/**
+ * Canonical rarity ordering used to sort dynamically derived rarity filter options.
+ * Rarities of 'none' (mundane items) are intentionally omitted — they are filtered
+ * by the "no rarity filter active" default rather than as a selectable tier.
+ */
+const RARITY_ORDER = [
+  'common',
+  'uncommon',
+  'rare',
+  'very rare',
+  'legendary',
+  'artifact',
+  'varies',
+  'unknown',
+  'unknown (magic)',
+] as const
 
 const PROPERTY_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'magic', label: 'Magic' },
@@ -45,6 +53,8 @@ const PROPERTY_OPTIONS: Array<{ value: string; label: string }> = [
 
 const ITEM_PROPERTY_LABELS: Record<string, string> = {
   A: 'Ammunition',
+  AF: 'Ammunition (Firearms)',
+  BF: 'Burst Fire',
   F: 'Finesse',
   H: 'Heavy',
   L: 'Light',
@@ -78,7 +88,8 @@ function getItemDescription(item: Item5e): string {
 }
 
 function getPropertyLabel(tag: string): string {
-  const key = tag.trim().toUpperCase()
+  // Strip optional source suffix (e.g. "A|XPHB" → "A") before map lookup.
+  const key = tag.trim().split('|')[0].toUpperCase()
   return ITEM_PROPERTY_LABELS[key] ?? tag
 }
 
@@ -154,15 +165,11 @@ function matchItem(item: Item5e, search: string, activeFilters: ActiveFilters): 
   }
 
   const rarity = (item.rarity ?? '').toLowerCase()
-  if (!rarity || !RARITY_OPTIONS.some((option) => option.value === rarity)) {
-    if (activeFilters.rarity?.size) {
-      return false
-    }
-  }
-
   const raritySet = activeFilters.rarity
-  if (raritySet && raritySet.size > 0 && !raritySet.has(rarity)) {
-    return false
+  if (raritySet && raritySet.size > 0) {
+    // Items with rarity 'none' (mundane) are excluded when any rarity filter is active.
+    if (!rarity || rarity === 'none') return false
+    if (!raritySet.has(rarity)) return false
   }
 
   const propertySet = activeFilters.property
@@ -257,6 +264,23 @@ export function ItemSelectionModal({
     [items],
   )
 
+  // Derive rarity filter options from the actual items in the prop, ordered by RARITY_ORDER.
+  // This ensures options stay in sync with the data without manual maintenance.
+  const rarityOptions = useMemo(() => {
+    const seen = new Set<string>()
+    for (const item of filteredItems) {
+      const r = (item.rarity ?? '').toLowerCase()
+      if (r && r !== 'none') seen.add(r)
+    }
+    return RARITY_ORDER.filter((r) => seen.has(r)).map((r) => ({
+      value: r,
+      label: r
+        .split(' ')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' '),
+    }))
+  }, [filteredItems])
+
   const filterSections: FilterSection[] = [
     {
       key: 'type',
@@ -270,7 +294,7 @@ export function ItemSelectionModal({
       label: 'Rarity',
       type: 'checkboxes',
       columns: 1,
-      options: RARITY_OPTIONS,
+      options: rarityOptions,
     },
     {
       key: 'property',

@@ -7,6 +7,7 @@ import { useProvenance } from '@/hooks/character/useProvenance'
 import { useSavingThrows } from '@/hooks/character/useSavingThrows'
 import { useSkills } from '@/hooks/character/useSkills'
 import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildProficienciesDetailsPanel } from '@/pages/build/proficiencies/components/DetailsPanel'
 import { BuildProficienciesTabsPanel } from '@/pages/build/proficiencies/components/TabsPanel'
@@ -24,7 +25,6 @@ import {
 } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 import { useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
 
 export function BuildProficienciesPage() {
   const character = useCharacterStore((state) => {
@@ -32,7 +32,7 @@ export function BuildProficienciesPage() {
     if (!state.activeCharacterId) return null
     return state.characters.find((entry) => entry.id === state.activeCharacterId) ?? null
   })
-  const gameData = useGameDataStore((s) => s.gameData)
+  const { skills: skillDefs, items, itemsBase } = useFilteredGameData()
   const { skills } = useSkills()
   const { savingThrows } = useSavingThrows()
   const { ledger, resolveChoiceSelection, getSourcesRowsBySection } = useProvenance()
@@ -41,21 +41,18 @@ export function BuildProficienciesPage() {
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [focused, setFocused] = useState<ProfFocus | null>(null)
 
-  const skillDescriptions = useMemo(
-    () => buildSkillDescriptions(gameData?.skills),
-    [gameData?.skills],
-  )
+  const skillDescriptions = useMemo(() => buildSkillDescriptions(skillDefs), [skillDefs])
 
   const choiceCounts = useMemo(() => buildChoiceCounts(ledger.choices), [ledger.choices])
 
   const toolSubtypeOptionsByKind = useMemo(
     () =>
       buildToolSubtypeOptionsByKind({
-        itemsBase: gameData?.itemsBase,
-        items: gameData?.items,
+        itemsBase,
+        items,
         allowedSources: character?.allowedSources,
       }),
-    [character?.allowedSources, gameData?.items, gameData?.itemsBase],
+    [character?.allowedSources, items, itemsBase],
   )
 
   const toolChoiceSlots = useMemo(

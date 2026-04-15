@@ -18,6 +18,7 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { NoCharCard } from '@/pages/_shared'
 import {
@@ -33,7 +34,6 @@ import type {
 } from '@/pages/build/class/model/levelsUtils'
 import {
   buildCharacterSnapshot,
-  buildClassProgression,
   buildFeatModalFeats,
   buildLevelsToShow,
   countTotalAsiAcrossClasses,
@@ -109,7 +109,7 @@ export function BuildClassPage() {
     setAsiMode,
     clearAsiMode,
   } = useClassPageState()
-  const classProgression = buildClassProgression(character)
+  const classProgression = getCharacterClassEntries(character)
 
   const viewingEntry =
     classProgression.find((entry) => `${entry.name}|${entry.source ?? ''}` === selectedClassTab) ??

@@ -4,13 +4,19 @@ import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
-export function useFilteredGameData() {
+interface FilterParams {
+  allowedSources?: string[]
+  preferNewerPrintings?: boolean
+}
+
+/**
+ * Core game data filtering hook. Accepts explicit filter parameters so callers
+ * without an active character (settings pages, compendium) can pass their own
+ * source lists without coupling to `characterStore`.
+ */
+export function useFilteredGameDataParams(params: FilterParams) {
   const gameData = useGameDataStore((state) => state.gameData)
-  const activeCharacter = useCharacterStore((state) => {
-    if (state.activeCharacter) return state.activeCharacter
-    if (!state.activeCharacterId) return null
-    return state.characters.find((character) => character.id === state.activeCharacterId) ?? null
-  })
+  const { allowedSources, preferNewerPrintings = false } = params
 
   const filteredData = useMemo(() => {
     if (!gameData) {
@@ -25,11 +31,17 @@ export function useFilteredGameData() {
         classFeatures: [],
         optionalfeatures: [],
         sources: [],
+        actions: [],
+        conditions: [],
+        deities: [],
+        skills: [],
+        senses: [],
+        languages: [],
+        magicvariants: [],
+        variantrules: [],
       }
     }
 
-    const allowedSources = activeCharacter?.allowedSources
-    const preferNewerPrintings = activeCharacter?.variantRules?.preferNewerPrintings ?? false
     const races = gameData.races ?? []
     const classes = gameData.classes ?? []
     const backgrounds = gameData.backgrounds ?? []
@@ -79,6 +91,7 @@ export function useFilteredGameData() {
       : undefined
 
     return {
+      ...gameData,
       races: DataFilter.filterRaces(races, {
         sources: allowedSources,
         suppressedKeys,
@@ -122,12 +135,20 @@ export function useFilteredGameData() {
       }),
       sources,
     }
-  }, [
-    gameData,
-    activeCharacter?.allowedSources,
-
-    activeCharacter?.variantRules?.preferNewerPrintings,
-  ])
+  }, [gameData, allowedSources, preferNewerPrintings])
 
   return filteredData
+}
+
+/**
+ * Game data filtered by the active character's source settings.
+ * Thin wrapper around {@link useFilteredGameDataParams} that reads filter
+ * params from the active character in `characterStore`.
+ */
+export function useFilteredGameData() {
+  const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
+  const preferNewerPrintings = useCharacterStore(
+    (state) => state.activeCharacter?.variantRules?.preferNewerPrintings ?? false,
+  )
+  return useFilteredGameDataParams({ allowedSources, preferNewerPrintings })
 }
