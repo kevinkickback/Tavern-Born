@@ -1,4 +1,5 @@
 import type { Equipment } from '@/types/character'
+import { getAbilityModifier } from './gameRules'
 
 export type ArmorCategory = 'light' | 'medium' | 'heavy' | 'shield' | 'none'
 
@@ -13,7 +14,9 @@ const ARMOR_TYPE_MAP: Record<string, ArmorCategory> = {
 export function getArmorCategory(item: Equipment): ArmorCategory {
   // An explicit armorType wins (set when importing from game data)
   if (item.armorType) return item.armorType
-  return ARMOR_TYPE_MAP[item.type?.toUpperCase() ?? ''] ?? 'none'
+  const typeKey = item.type?.toUpperCase() ?? ''
+  if (typeKey === 'SHIELD') return 'shield'
+  return ARMOR_TYPE_MAP[typeKey] ?? 'none'
 }
 
 export function isArmorOrShield(item: Equipment): boolean {
@@ -69,4 +72,45 @@ export function computeArmorClass(equipment: Equipment[], dexModifier: number): 
  */
 export function resolveArmorType(item5eType: string): ArmorCategory {
   return ARMOR_TYPE_MAP[item5eType?.toUpperCase() ?? ''] ?? 'none'
+}
+
+/**
+ * Backward-compatible AC calculator used by integration tests and legacy callers.
+ *
+ * `mode` is retained for compatibility and currently ignored.
+ */
+export function calculateAC(
+  character: {
+    equipment?: Equipment[]
+    abilityScores?: { dexterity?: number; dex?: number }
+  },
+  _mode?: 'base' | 'stored' | string,
+): number {
+  const dexScore = character.abilityScores?.dexterity ?? character.abilityScores?.dex ?? 10
+  const dexModifier = getAbilityModifier(dexScore)
+  return computeArmorClass(character.equipment ?? [], dexModifier)
+}
+
+/**
+ * Canonical AC read for character consumers.
+ *
+ * Uses explicit override when present, otherwise derives AC from equipped items.
+ */
+export function computeEffectiveCharacterArmorClass(character: {
+  equipment?: Equipment[]
+  abilityScores?: { dexterity?: number; dex?: number }
+  armorClass?: number
+  armorClassOverride?: number
+}): number {
+  if (typeof character.armorClassOverride === 'number') {
+    return Math.max(0, Math.trunc(character.armorClassOverride))
+  }
+
+  if (typeof character.armorClass === 'number') {
+    return Math.max(0, Math.trunc(character.armorClass))
+  }
+
+  const dexScore = character.abilityScores?.dexterity ?? character.abilityScores?.dex ?? 10
+  const dexModifier = getAbilityModifier(dexScore)
+  return computeArmorClass(character.equipment ?? [], dexModifier)
 }

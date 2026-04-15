@@ -60,8 +60,10 @@ Provenance and source attribution:
 Build flow orchestration helpers:
 - src/pages/build/ability-scores/model/data.ts
 - src/pages/build/class/model/pageUtils.ts
-- src/pages/build/class/model/mutations.ts
 - src/pages/build/class/model/asi.ts
+- src/lib/character/commands/classCommands.ts
+- src/lib/character/commands/classSelectionOrchestrationCommand.ts
+- src/hooks/character/useUnifiedClassSelection.ts
 - src/pages/build/proficiencies/model/data.ts
 - src/pages/build/proficiencies/model/types.ts
 - src/pages/build/background/model/data.ts
@@ -88,6 +90,9 @@ Feats page UI orchestration:
 Spells page UI orchestration:
 - src/pages/spells/SpellsPage.tsx
 - src/pages/spells/components/SpellProfileManager.tsx — spell profile accordions and warning badges/tooltips
+- src/lib/character/commands/spellCommands.ts — canonical spell mutation commands for profile/provenance coordination
+- src/hooks/character/useSpellSlots.ts — command-backed spell workflow wrapper used by page UI
+- src/hooks/character/useSpellMutations.ts — thin unified spell mutation adapter when command-style spell writes are needed outside the main spell hook
 
 5etools rich text rendering:
 - src/lib/renderer.ts

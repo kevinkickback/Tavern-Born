@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   computeArmorClass,
+  computeEffectiveCharacterArmorClass,
   getArmorCategory,
   isArmorOrShield,
   resolveArmorType,
@@ -30,7 +31,7 @@ describe('armorClass', () => {
     expect(isArmorOrShield(makeItem({ type: 'S' }))).toBe(true)
   })
 
-  test('computeArmorClass uses no-armor baseline and shield bonus', () => {
+  test('computeArmorClass uses the unarmored default and shield bonus', () => {
     const equipment = [
       makeItem({ type: 'S', equipped: true }),
       makeItem({ type: 'G', equipped: true }),
@@ -63,5 +64,27 @@ describe('armorClass', () => {
     expect(resolveArmorType('HA')).toBe('heavy')
     expect(resolveArmorType('S')).toBe('shield')
     expect(resolveArmorType('X')).toBe('none')
+  })
+
+  test('computeEffectiveCharacterArmorClass prefers override when present', () => {
+    const effective = computeEffectiveCharacterArmorClass({
+      armorClassOverride: 19,
+      abilityScores: { dexterity: 18 },
+      equipment: [makeItem({ type: 'LA', ac: 11, equipped: true })],
+    })
+
+    expect(effective).toBe(19)
+  })
+
+  test('computeEffectiveCharacterArmorClass derives from equipment when no override exists', () => {
+    const effective = computeEffectiveCharacterArmorClass({
+      abilityScores: { dexterity: 14 },
+      equipment: [
+        makeItem({ type: 'LA', ac: 11, equipped: true }),
+        makeItem({ type: 'S', equipped: true }),
+      ],
+    })
+
+    expect(effective).toBe(15)
   })
 })

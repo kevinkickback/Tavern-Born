@@ -30,27 +30,45 @@ export function useFilteredGameData() {
 
     const allowedSources = activeCharacter?.allowedSources
     const preferNewerPrintings = activeCharacter?.variantRules?.preferNewerPrintings ?? false
+    const races = gameData.races ?? []
+    const classes = gameData.classes ?? []
+    const backgrounds = gameData.backgrounds ?? []
+    const spells = gameData.spells ?? []
+    const feats = gameData.feats ?? []
+    const items = gameData.items ?? []
+    const itemsBase = gameData.itemsBase ?? []
+    const classFeatures = gameData.classFeatures ?? []
+    const optionalfeatures = gameData.optionalfeatures ?? []
+    const sources = gameData.sources ?? []
 
     if (!allowedSources || allowedSources.length === 0) {
       return {
         ...gameData,
-        items: gameData.items,
-        itemsBase: gameData.itemsBase ?? [],
+        races,
+        classes,
+        backgrounds,
+        spells,
+        feats,
+        items,
+        itemsBase,
+        classFeatures,
+        optionalfeatures,
+        sources,
       }
     }
 
     const suppressedKeys = preferNewerPrintings
       ? buildSuppressedKeys(
           [
-            ...gameData.races,
-            ...gameData.classes,
-            ...gameData.backgrounds,
-            ...gameData.spells,
-            ...gameData.feats,
-            ...gameData.items,
-            ...(gameData.itemsBase ?? []),
-            ...gameData.classFeatures,
-            ...((gameData.optionalfeatures ?? []) as Array<{
+            ...races,
+            ...classes,
+            ...backgrounds,
+            ...spells,
+            ...feats,
+            ...items,
+            ...itemsBase,
+            ...classFeatures,
+            ...(optionalfeatures as Array<{
               name?: unknown
               source?: unknown
               reprintedAs?: unknown
@@ -61,40 +79,40 @@ export function useFilteredGameData() {
       : undefined
 
     return {
-      races: DataFilter.filterRaces(gameData.races, {
+      races: DataFilter.filterRaces(races, {
         sources: allowedSources,
         suppressedKeys,
       }),
-      classes: DataFilter.filterClasses(gameData.classes, {
+      classes: DataFilter.filterClasses(classes, {
         sources: allowedSources,
         suppressedKeys,
       }),
-      backgrounds: DataFilter.filterBackgrounds(gameData.backgrounds, {
+      backgrounds: DataFilter.filterBackgrounds(backgrounds, {
         sources: allowedSources,
         suppressedKeys,
       }),
-      spells: DataFilter.filterSpells(gameData.spells, {
+      spells: DataFilter.filterSpells(spells, {
         sources: allowedSources,
         suppressedKeys,
       }),
-      feats: DataFilter.filterFeats(gameData.feats, {
+      feats: DataFilter.filterFeats(feats, {
         sources: allowedSources,
         suppressedKeys,
       }),
-      items: DataFilter.filterItems(gameData.items, {
+      items: DataFilter.filterItems(items, {
         sources: allowedSources,
         suppressedKeys,
       }),
-      itemsBase: DataFilter.filterItems(gameData.itemsBase ?? [], {
+      itemsBase: DataFilter.filterItems(itemsBase, {
         sources: allowedSources,
         suppressedKeys,
       }),
-      classFeatures: gameData.classFeatures.filter(
+      classFeatures: classFeatures.filter(
         (cf) =>
           allowedSources.includes(cf.source) &&
           !(suppressedKeys?.has(`${cf.name}|${cf.source}`) ?? false),
       ),
-      optionalfeatures: (gameData.optionalfeatures ?? []).filter((of: unknown) => {
+      optionalfeatures: optionalfeatures.filter((of: unknown) => {
         const optionalFeature = of as { name?: string; source?: string }
         const source = optionalFeature.source ?? ''
         if (!allowedSources.includes(source)) {
@@ -102,7 +120,7 @@ export function useFilteredGameData() {
         }
         return !(suppressedKeys?.has(`${optionalFeature.name}|${source}`) ?? false)
       }),
-      sources: gameData.sources,
+      sources,
     }
   }, [
     gameData,

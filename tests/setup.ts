@@ -1,3 +1,5 @@
+import 'fake-indexeddb/auto'
+
 global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}

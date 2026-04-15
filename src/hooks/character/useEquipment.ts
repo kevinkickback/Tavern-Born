@@ -27,8 +27,6 @@ export interface EquipmentState {
   carryCapacity: number
   isEncumbered: boolean
   attunedCount: number
-  /** AC derived from currently equipped armour + DEX. */
-  derivedAC: number
   currency: Currency
   totalCurrencyCopper: number
   addItem: (item: Partial<Equipment> & Pick<Equipment, 'name' | 'type'>) => void
@@ -64,8 +62,6 @@ export function useEquipment(): EquipmentState {
 
   const attunedCount = useMemo(() => equipment.filter((e) => e.attuned).length, [equipment])
 
-  const derivedAC = useMemo(() => computeArmorClass(equipment, dexMod), [equipment, dexMod])
-
   const totalCurrencyCopper = useMemo(
     () =>
       currency.cp + currency.sp * 10 + currency.ep * 50 + currency.gp * 100 + currency.pp * 1000,
@@ -75,9 +71,10 @@ export function useEquipment(): EquipmentState {
   const patchEquipment = useCallback(
     (list: Equipment[]) => {
       if (!character) return
+      const syncedArmorClass = computeArmorClass(list, dexMod)
       updateCharacter(character.id, {
         equipment: list,
-        armorClass: computeArmorClass(list, dexMod),
+        armorClass: syncedArmorClass,
       })
     },
     [character, updateCharacter, dexMod],
@@ -185,7 +182,6 @@ export function useEquipment(): EquipmentState {
     carryCapacity,
     isEncumbered: totalWeight > carryCapacity,
     attunedCount,
-    derivedAC,
     currency,
     totalCurrencyCopper,
     addItem,

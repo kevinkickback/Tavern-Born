@@ -1,7 +1,6 @@
 import { MagicWand } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
-import { useProvenance } from '@/hooks/character/useProvenance'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
@@ -20,7 +19,7 @@ import {
   type RecursiveLookup,
   type TooltipEntityLike,
 } from '@/pages/spells/components/spellTooltipUtils'
-import { useCharacterStore } from '@/store/characterStore'
+import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
@@ -30,22 +29,22 @@ export function SpellsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const { spells, items, feats, races, classes, backgrounds, optionalfeatures } =
     useFilteredGameData()
-  const { ledger, applyManualSpellGrant, removeSpellProvenance } = useProvenance()
+  const ledger = character?.provenance ?? emptyProvenance()
   const {
     spellProfiles,
     spellcastingDetails,
     sharedSlots,
     pactSlots,
     isSpellcaster,
+    addSpellToProfile,
     removeSpellFromProfile,
-    setProfileSpells,
     togglePrepared,
     selectRacialSpell,
     removeRacialSpell,
     setRacialCastingAbility,
   } = useSpellSlots()
 
-  const [_racialChoiceModalOpen, setRacialChoiceModalOpen] = useState(false)
+  const [racialChoiceModalOpen, setRacialChoiceModalOpen] = useState(false)
   const [bonusSpellModalOpen, setBonusSpellModalOpen] = useState(false)
   const [activeRacialChoice, setActiveRacialChoice] = useState<{
     profileId: string
@@ -234,7 +233,7 @@ export function SpellsPage() {
     return names
   }, [spellProfiles])
 
-  const _racialChoiceModalConfig = useMemo(() => {
+  const racialChoiceModalConfig = useMemo(() => {
     if (!activeRacialChoice) return null
 
     const initialSelectedNames = activeRacialChoice.selected ?? []
@@ -285,10 +284,22 @@ export function SpellsPage() {
       }
     }
 
-    return null
+    return {
+      title: `Choose ${activeRacialChoice.count} ${activeRacialChoice.isCantrip ? 'Cantrip' : 'Spell'}${activeRacialChoice.count > 1 ? 's' : ''}`,
+      initialSelectedNames,
+      allowedLevels: activeRacialChoice.isCantrip ? new Set(['0']) : undefined,
+      lockedNames,
+      className: undefined as string | undefined,
+      classSource: undefined as string | undefined,
+      classListOverrides: undefined as Set<string> | undefined,
+      initialFilters: activeRacialChoice.isCantrip
+        ? { level: new Set(['0']), school: new Set<string>(), type: new Set<string>() }
+        : undefined,
+      categories: undefined,
+    }
   }, [activeRacialChoice, spellProfiles])
 
-  const _handleConfirmRacialChoice = useCallback(
+  const handleConfirmRacialChoice = useCallback(
     (names: string[]) => {
       if (!activeRacialChoice) return
 
@@ -298,34 +309,19 @@ export function SpellsPage() {
       for (const name of names) {
         if (!previousSelected.has(name)) {
           selectRacialSpell(activeRacialChoice.profileId, activeRacialChoice.choiceId, name)
-          applyManualSpellGrant(name)
         }
       }
 
       for (const name of activeRacialChoice.selected) {
         if (!nextSelected.has(name)) {
           removeRacialSpell(activeRacialChoice.profileId, activeRacialChoice.choiceId, name)
-          const existsElsewhere = spellProfiles.some((profile) => {
-            if (profile.id === activeRacialChoice.profileId) return false
-            return profile.cantrips.includes(name) || profile.spellsKnown.includes(name)
-          })
-          if (!existsElsewhere) {
-            removeSpellProvenance(name)
-          }
         }
       }
 
       setRacialChoiceModalOpen(false)
       setActiveRacialChoice(null)
     },
-    [
-      activeRacialChoice,
-      selectRacialSpell,
-      removeRacialSpell,
-      applyManualSpellGrant,
-      removeSpellProvenance,
-      spellProfiles,
-    ],
+    [activeRacialChoice, selectRacialSpell, removeRacialSpell],
   )
 
   if (!character) {
@@ -334,15 +330,6 @@ export function SpellsPage() {
 
   const handleRemoveSpell = (item: SpellListItem) => {
     removeSpellFromProfile(item.profileId, item.name, item.kind)
-
-    const existsElsewhere = spellProfiles.some((profile) => {
-      if (profile.id === item.profileId) return false
-      return profile.cantrips.includes(item.name) || profile.spellsKnown.includes(item.name)
-    })
-
-    if (!existsElsewhere) {
-      removeSpellProvenance(item.name)
-    }
   }
 
   const handleOpenRacialChoiceModal = (profileId: string, choiceId: string) => {
@@ -370,20 +357,14 @@ export function SpellsPage() {
       return
     }
 
-    const nextCantrips = new Set(bonusProfile.cantrips)
-    const nextSpellsKnown = new Set(bonusProfile.spellsKnown)
-
     for (const name of names) {
       const spell = spellByName.get(getEntityKey(name))
       if (spell?.level === 0) {
-        nextCantrips.add(name)
+        addSpellToProfile(SPECIAL_SPELL_PROFILE_ID, name, 'cantrip')
       } else {
-        nextSpellsKnown.add(name)
+        addSpellToProfile(SPECIAL_SPELL_PROFILE_ID, name, 'spell')
       }
-      applyManualSpellGrant(name)
     }
-
-    setProfileSpells(SPECIAL_SPELL_PROFILE_ID, [...nextCantrips], [...nextSpellsKnown])
 
     setBonusSpellModalOpen(false)
   }
@@ -414,6 +395,28 @@ export function SpellsPage() {
               sourceContext={sourceContext}
             />
           )}
+        />
+
+        <SpellSelectionModal
+          open={racialChoiceModalOpen && !!racialChoiceModalConfig}
+          onOpenChange={(open) => {
+            setRacialChoiceModalOpen(open)
+            if (!open) {
+              setActiveRacialChoice(null)
+            }
+          }}
+          title={racialChoiceModalConfig?.title}
+          spells={allSpells}
+          lockedNames={racialChoiceModalConfig?.lockedNames}
+          characterSpellNames={characterSpellNames}
+          categories={racialChoiceModalConfig?.categories}
+          initialSelectedNames={racialChoiceModalConfig?.initialSelectedNames}
+          initialFilters={racialChoiceModalConfig?.initialFilters}
+          allowedLevels={racialChoiceModalConfig?.allowedLevels}
+          className={racialChoiceModalConfig?.className}
+          classSource={racialChoiceModalConfig?.classSource}
+          classListOverrides={racialChoiceModalConfig?.classListOverrides}
+          onConfirm={handleConfirmRacialChoice}
         />
 
         <SpellSelectionModal

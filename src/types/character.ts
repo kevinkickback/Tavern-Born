@@ -54,7 +54,10 @@ export interface Character {
   visions?: Array<{ type: string; range?: number }>
 
   hitPoints: HitPoints
+  /** Canonical persisted AC value (typically synchronized from calculated AC). */
   armorClass: number
+  /** Optional manual override that takes precedence over calculated AC in UI reads. */
+  armorClassOverride?: number
   initiative: number
   speed: number
 

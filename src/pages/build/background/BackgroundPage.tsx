@@ -26,10 +26,7 @@ import {
   type AbilityName,
   getBackgroundAbilityData,
 } from '@/lib/calculations/abilityScores'
-import {
-  getOriginSystemLabel,
-  normalizeBackgroundForOriginSystem,
-} from '@/lib/calculations/originSystem'
+import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
@@ -237,12 +234,6 @@ export function BuildBackgroundPage() {
             <Scroll className="h-6 w-6 text-primary" weight="duotone" />
             Background
           </h1>
-          <p className="text-xs text-muted-foreground">
-            Origin System:{' '}
-            <span className="font-semibold text-foreground">
-              {getOriginSystemLabel(character.originSystem)}
-            </span>
-          </p>
           {showBackgroundAsiPanel ? (
             <div className="rounded-lg border border-border bg-muted/20 p-4 flex items-start gap-6">
               <div className="min-w-0 flex-1">

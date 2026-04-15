@@ -1,5 +1,6 @@
 import { PDFDocument, PDFName, PDFNumber } from '@cantoo/pdf-lib'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
+import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import type { Character } from '@/types/character'
@@ -223,6 +224,7 @@ function deriveCalculatedValues(character: Character) {
 
 function buildCharacterSheetFieldMap2024(character: Character): FieldMap {
   const values = deriveCalculatedValues(character)
+  const effectiveArmorClass = computeEffectiveCharacterArmorClass(character)
   const textFields: Record<string, string> = {
     Text_1: character.name || '',
     Text_2: getClassLevelSummary(character),
@@ -243,7 +245,7 @@ function buildCharacterSheetFieldMap2024(character: Character): FieldMap {
     Text_21: String(character.abilityScores.charisma),
     Text_29: formatModifier(values.abilityModifiers.charisma),
 
-    Text_14: String(character.armorClass),
+    Text_14: String(effectiveArmorClass),
     Text_7: formatModifier(values.proficiencyBonus),
     Text_8: formatModifier(values.abilityModifiers.dexterity),
     Text_9: `${character.speed || 30} ft`,
@@ -279,6 +281,7 @@ function buildCharacterSheetFieldMap2024(character: Character): FieldMap {
 
 function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
   const values = deriveCalculatedValues(character)
+  const effectiveArmorClass = computeEffectiveCharacterArmorClass(character)
 
   const textFields: Record<string, string> = {
     'PC Name': character.name || '',
@@ -293,7 +296,7 @@ function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
     ),
     'Initiative bonus': formatModifier(values.abilityModifiers.dexterity),
     Speed: `${character.speed || 30} ft`,
-    AC: String(character.armorClass),
+    AC: String(effectiveArmorClass),
     'HP Max': String(character.hitPoints.max || ''),
     'HP Current': String(character.hitPoints.current || ''),
     'HP Temp': String(character.hitPoints.temporary || ''),

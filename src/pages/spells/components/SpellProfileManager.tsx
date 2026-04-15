@@ -281,9 +281,15 @@ export function SpellProfileManager({
                 }
                 const isRacial = profile.type === 'racial'
                 const isBonusProfile = profile.id === SPECIAL_SPELL_PROFILE_ID
-                const hasUnfulfilledChoices = profile.choices?.some(
-                  (c) => c.selected.length < c.count,
+                const unfulfilledChoices = (profile.choices ?? []).filter(
+                  (choice) => choice.selected.length < choice.count,
                 )
+                const hasUnfulfilledChoices = unfulfilledChoices.length > 0
+                const totalUnchosenSpells = unfulfilledChoices.reduce(
+                  (sum, choice) => sum + (choice.count - choice.selected.length),
+                  0,
+                )
+                const firstUnfulfilledChoice = unfulfilledChoices[0]
                 if (isRacial && items.length === 0 && !hasUnfulfilledChoices) return null
                 const detail = detailsByProfileId.get(profile.id)
 
@@ -318,7 +324,11 @@ export function SpellProfileManager({
 
                 // Compute missing spells for class profiles
                 const currentCantrips = items.filter((item) => item.kind === 'cantrip').length
-                const currentSpells = items.filter((item) => item.kind === 'spell').length
+                // Known-spell limits should track only choosable class spells; always-prepared
+                // grants should not consume the "known" quota.
+                const currentSpells = items.filter(
+                  (item) => item.kind === 'spell' && !item.alwaysPrepared,
+                ).length
                 const missingCantrips =
                   detail?.cantripLimit != null
                     ? Math.max(0, detail.cantripLimit - currentCantrips)
@@ -338,6 +348,12 @@ export function SpellProfileManager({
                 ]
                   .filter(Boolean)
                   .join(', ')
+                const showDefaultEmptyState =
+                  items.length === 0 &&
+                  availableClassSpells.length === 0 &&
+                  !hasMissingSpells &&
+                  !hasUnfulfilledChoices
+                const isClassWithoutSpellcasting = profile.type === 'class' && !detail
 
                 return (
                   <AccordionItem
@@ -349,7 +365,7 @@ export function SpellProfileManager({
                       <div className="flex items-center gap-2 text-left w-full min-w-0">
                         <span className="font-medium text-sm">{profile.label}</span>
                         <div className="ml-auto flex items-center gap-2 pr-1">
-                          {hasMissingSpells ? (
+                          {hasMissingSpells || hasUnfulfilledChoices ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Badge
@@ -357,20 +373,52 @@ export function SpellProfileManager({
                                   className="text-xs border-accent bg-accent text-accent-foreground"
                                 >
                                   <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
-                                  Spell selection available
+                                  Spell Selection Available
                                 </Badge>
                               </TooltipTrigger>
                               <TooltipContent
                                 side="top"
                                 className="max-w-xs text-xs leading-relaxed"
                               >
-                                <p>This class still has unselected spell choices.</p>
-                                <p className="mt-1">Remaining: {missingSummary}.</p>
-                                <p className="mt-1 text-muted-foreground">
-                                  {isRacial
-                                    ? 'Use the Choose buttons in this section to complete picks.'
-                                    : 'Pick the remaining spells from the Class page.'}
-                                </p>
+                                {hasUnfulfilledChoices ? (
+                                  <>
+                                    <p>
+                                      This racial spell list still has unselected spell choices.
+                                    </p>
+                                    <p className="mt-1">
+                                      Remaining: {totalUnchosenSpells} unchosen spell
+                                      {totalUnchosenSpells !== 1 ? 's' : ''}.
+                                    </p>
+                                    <div className="mt-2 space-y-1 text-muted-foreground">
+                                      {unfulfilledChoices.map((choice) => {
+                                        const remaining = choice.count - choice.selected.length
+                                        const sourceHint = choice.filter?.classes
+                                          ? `from ${choice.filter.classes.join(', ')} list`
+                                          : choice.pool
+                                            ? `from ${choice.pool.length} options`
+                                            : ''
+                                        return (
+                                          <p key={choice.id}>
+                                            Choose {choice.count}{' '}
+                                            {choice.isCantrip ? 'cantrip' : 'spell'}
+                                            {choice.count !== 1 ? 's' : ''}
+                                            {sourceHint ? ` ${sourceHint}` : ''}
+                                            {' — '}
+                                            {remaining} remaining.
+                                          </p>
+                                        )
+                                      })}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p>This class still has unselected spell choices.</p>
+                                    <p className="mt-1">Remaining: {missingSummary}.</p>
+                                    <p className="mt-1 text-muted-foreground">
+                                      Pick the remaining spells from the Class page.
+                                    </p>
+                                  </>
+                                )}
                               </TooltipContent>
                             </Tooltip>
                           ) : null}
@@ -393,7 +441,7 @@ export function SpellProfileManager({
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="pb-1">
-                      {isBonusProfile ? (
+                      {isBonusProfile && !showDefaultEmptyState ? (
                         <div className="px-3 py-2 bg-muted/10 flex items-center justify-end">
                           <Button
                             size="sm"
@@ -433,45 +481,67 @@ export function SpellProfileManager({
                           </Select>
                         </div>
                       ) : null}
-                      {/* Racial profile: unfulfilled choice prompts */}
-                      {isRacial && profile.choices
-                        ? profile.choices
-                            .filter((choice) => choice.selected.length < choice.count)
-                            .map((choice) => (
-                              <div
-                                key={choice.id}
-                                className="px-3 py-2 border-b border-border/60 bg-accent flex items-center gap-2"
+                      {showDefaultEmptyState ? (
+                        <div className="px-3.5 pb-3.5">
+                          <div className="min-h-40 flex flex-col items-center justify-center text-center p-6">
+                            <BookOpen
+                              className="h-6 w-6 text-muted-foreground mb-2"
+                              weight="duotone"
+                            />
+                            <h3 className="text-sm font-semibold">
+                              {isClassWithoutSpellcasting
+                                ? 'Spellcasting Not Available'
+                                : 'No Spells Selected'}
+                            </h3>
+                            <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+                              {isBonusProfile
+                                ? 'Bonus spells are optional and do not use your class spell selection limits or spell slots.'
+                                : isClassWithoutSpellcasting
+                                  ? 'This class does not currently grant spellcasting. If a subclass grants spellcasting, this section will update automatically.'
+                                  : 'This spell list is currently empty.'}
+                            </p>
+                            {isBonusProfile ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs px-3 mt-4"
+                                onClick={() => onAddSpell?.(profile.id)}
                               >
-                                <span className="text-xs text-accent-foreground/80 flex-1">
-                                  ⚠ {choice.count - choice.selected.length} unchosen{' '}
-                                  {choice.isCantrip ? 'cantrip' : 'spell'}
-                                  {choice.count - choice.selected.length !== 1 ? 's' : ''}
-                                  {' — '}
-                                  Choose {choice.count} {choice.isCantrip ? 'cantrip' : 'spell'}
-                                  {choice.filter?.classes
-                                    ? ` from ${choice.filter.classes.join(', ')} list`
-                                    : choice.pool
-                                      ? ` from ${choice.pool.length} options`
-                                      : ''}
-                                </span>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-6 text-xs px-2"
-                                  onClick={() => onOpenRacialChoice?.(profile.id, choice.id)}
-                                >
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  Choose
-                                </Button>
-                              </div>
-                            ))
-                        : null}
-                      {items.length === 0 &&
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                                Add Spell
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+                      {isRacial &&
+                      items.length === 0 &&
                       availableClassSpells.length === 0 &&
-                      !hasMissingSpells &&
-                      !hasUnfulfilledChoices ? (
-                        <div className="px-3 py-4 text-center text-xs text-muted-foreground">
-                          No spells selected yet.
+                      hasUnfulfilledChoices ? (
+                        <div className="px-3.5 pb-3.5">
+                          <div className="min-h-40 flex flex-col items-center justify-center text-center p-6">
+                            <BookOpen
+                              className="h-6 w-6 text-muted-foreground mb-2"
+                              weight="duotone"
+                            />
+                            <h3 className="text-sm font-semibold">No Spells Selected</h3>
+                            <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+                              Choose racial spells to populate this list.
+                            </p>
+                            {firstUnfulfilledChoice ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs px-3 mt-4"
+                                onClick={() =>
+                                  onOpenRacialChoice?.(profile.id, firstUnfulfilledChoice.id)
+                                }
+                              >
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                                Choose Spell
+                              </Button>
+                            ) : null}
+                          </div>
                         </div>
                       ) : null}
                       {/* True prepared casters: cantrips + full class spell list with prepare toggles */}

@@ -12,11 +12,11 @@ import {
   normalizeBackgroundForOriginSystem,
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
+import { computeApplyClassSelectionUpdates } from '@/lib/character/commands/classSelectionOrchestrationCommand'
 import {
   addAbilityBonus,
   addGrant,
   applyBackgroundGrants,
-  applyClassGrants,
   applyClassSpellGrant,
   applyFeatGrant,
   applyOptionalFeatureGrant,
@@ -24,7 +24,6 @@ import {
   diffProficiencyGrants,
   makeSourceTag,
   reconcileBackgroundChange,
-  reconcileClassChange,
   reconcileRaceChange,
   reconcileSubraceChange,
   resolveChoice,
@@ -66,20 +65,6 @@ function extractFixedGrantNames(blocks: unknown[] | undefined): string[] {
   })
     .filter((name) => !name.toLowerCase().startsWith('choose '))
     .map((name) => stripItemTag(name))
-}
-
-const SAVING_THROW_NAME_BY_KEY: Record<string, string> = {
-  str: 'strength',
-  dex: 'dexterity',
-  con: 'constitution',
-  int: 'intelligence',
-  wis: 'wisdom',
-  cha: 'charisma',
-}
-
-function normalizeSavingThrowName(name: string): string {
-  const normalized = normalizeKey(name)
-  return SAVING_THROW_NAME_BY_KEY[normalized] ?? normalized
 }
 
 function generateEquipmentId(): string {
@@ -559,107 +544,13 @@ export function useProvenanceMutations({
     ) => {
       if (!character) return
 
-      const oldClassName = character.class || undefined
-      const oldSubclassName = character.subclass || undefined
-
-      let newLedger = reconcileClassChange(ledger, oldClassName, oldSubclassName)
-      newLedger = applyClassGrants(cls, subclass, newLedger, { itemLookup })
-
-      const updates: Partial<typeof character> = { provenance: newLedger }
-      let newProfs = { ...character.proficiencies }
-      const newSkills = { ...(character.skills ?? {}) }
-      let newEquipment = [...(character.equipment ?? [])]
-
-      if (oldClassName) {
-        const domains = ['armor', 'weapons', 'tools', 'savingThrows'] as const
-        for (const domain of domains) {
-          const { toRemove } = diffProficiencyGrants(ledger, domain, 'class', oldClassName)
-          if (toRemove.length > 0) {
-            if (domain === 'savingThrows') {
-              newProfs = {
-                ...newProfs,
-                savingThrows: newProfs.savingThrows.filter(
-                  (name) => !toRemove.includes(normalizeSavingThrowName(name)),
-                ),
-              }
-            } else {
-              const cased = character.proficiencies[domain as 'armor' | 'weapons' | 'tools']
-              newProfs = {
-                ...newProfs,
-                [domain]: cased.filter((name) => !toRemove.includes(normalizeKey(name))),
-              }
-            }
-          }
-        }
-
-        const classEquipmentToRemove = Object.entries(ledger.equipment)
-          .filter(
-            ([, tags]) =>
-              tags.length > 0 &&
-              tags.every((tag) => tag.sourceType === 'class' && tag.sourceName === oldClassName),
-          )
-          .map(([name]) => name)
-        newEquipment = removeSourceGrantedEquipment(newEquipment, classEquipmentToRemove)
-      }
-
-      const profs = cls.startingProficiencies ?? {}
-      const isNarrativeTool = (value: string) => /of your choice|choose|one type of/i.test(value)
-      const toolsFromArray = (profs.tools ?? [])
-        .filter((tool): tool is string => typeof tool === 'string')
-        .map((tool) => stripItemTag(tool))
-        .filter((tool) => tool && !isNarrativeTool(tool))
-      const toolsFromBlocks = extractProficiencyBlockNames(profs.toolProficiencies ?? [], {
-        includeAnyStandard: false,
-      })
-      newProfs = {
-        ...newProfs,
-        armor: [
-          ...new Set([
-            ...newProfs.armor,
-            ...(profs.armor ?? [])
-              .filter((armor): armor is string => typeof armor === 'string')
-              .map((armor) => stripItemTag(armor)),
-          ]),
-        ],
-        weapons: [
-          ...new Set([
-            ...newProfs.weapons,
-            ...(profs.weapons ?? [])
-              .filter((weapon): weapon is string => typeof weapon === 'string')
-              .map((weapon) => stripItemTag(weapon)),
-          ]),
-        ],
-        tools: [...new Set([...newProfs.tools, ...toolsFromArray, ...toolsFromBlocks])],
-        savingThrows: [
-          ...new Set([
-            ...newProfs.savingThrows,
-            ...(cls.proficiency ?? []).map(normalizeSavingThrowName),
-          ]),
-        ],
-      }
-      updates.proficiencies = newProfs
-      updates.skills = newSkills
-      const classChoiceKey = getClassChoiceKey(cls.name, cls.source)
-      const savedBlockChoices = character.classEquipmentChoices?.[classChoiceKey] ?? []
-      const classBlocks = getClassDefaultEquipmentBlocks(cls.startingEquipment)
-      const classEquipment = resolveEquipmentWithBlockChoices(
-        classBlocks,
+      const updates = computeApplyClassSelectionUpdates(
+        character,
+        ledger,
+        cls,
+        subclass,
         itemLookup,
-        savedBlockChoices,
       )
-      newLedger = replaceClassEquipmentGrants(
-        newLedger,
-        cls.name,
-        cls.source,
-        classEquipment.items.map((item) => item.name),
-      )
-      updates.provenance = newLedger
-      updates.equipment = upsertGrantedEquipment(newEquipment, classEquipment.items)
-      updates.classEquipmentChoices = {
-        ...(character.classEquipmentChoices ?? {}),
-        [classChoiceKey]: savedBlockChoices,
-      }
-
       updateCharacter(character.id, updates)
     },
     [character, ledger, updateCharacter, itemLookup],

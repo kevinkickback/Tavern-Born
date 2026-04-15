@@ -32,9 +32,9 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import { checkMulticlassRequirements, MAX_CHARACTER_LEVEL } from '@/lib/calculations/gameRules'
-import { applyMulticlassGrants, reconcileClassChange, stripItemTag } from '@/lib/provenance'
+import { addMulticlass, applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Class5e } from '@/types/5etools'
@@ -57,19 +57,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
   if (!character) return null
 
-  // classProgression is the authoritative progression model; top-level
-  // class/level fields remain mirrored summary fields for existing UI surfaces.
-  const classProgression: CharacterClassEntry[] = character.classProgression?.length
-    ? character.classProgression
-    : character.class
-      ? [
-          {
-            name: character.class,
-            source: character.classSource,
-            levels: character.level,
-          },
-        ]
-      : []
+  const classProgression: CharacterClassEntry[] = getCharacterClassEntries(character)
 
   const totalLevel = classProgression.reduce((sum, e) => sum + e.levels, 0) || character.level
   const isAtCap = totalLevel >= MAX_CHARACTER_LEVEL
@@ -101,29 +89,15 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
   function syncUpdate(char: typeof character, newProgression: CharacterClassEntry[]) {
     if (!char) return
-    const newTotal = newProgression.reduce((s, e) => s + e.levels, 0)
-
-    // Reconcile provenance for any class entries that were fully removed.
-    // This prevents orphaned grants (proficiencies, features, spells) from
-    // lingering after a multiclass entry is dropped.
-    const removedEntries = classProgression.filter(
-      (old) => !newProgression.some((n) => n.name === old.name),
+    const result = applyClassProgressionUpdate(
+      char,
+      char.provenance ?? emptyProvenance(),
+      newProgression,
     )
-    let updatedProvenance = char.provenance
-    if (removedEntries.length > 0 && updatedProvenance) {
-      for (const removed of removedEntries) {
-        updatedProvenance = reconcileClassChange(updatedProvenance, removed.name, undefined)
-      }
-    }
 
     updateCharacter(char.id, {
-      classProgression: newProgression,
-      level: newTotal,
-      class: newProgression[0]?.name ?? char.class,
-      classSource: newProgression[0]?.source ?? char.classSource,
-      ...(updatedProvenance && updatedProvenance !== char.provenance
-        ? { provenance: updatedProvenance }
-        : {}),
+      ...result.characterUpdate,
+      provenance: result.provenanceUpdate,
     })
   }
 
@@ -166,56 +140,28 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     }
 
     const newProgression = [...classProgression, newEntry]
-    const newTotal = newProgression.reduce((s, e) => s + e.levels, 0)
 
-    let nextProvenance = character.provenance ?? emptyProvenance()
-    if (selectedClass) {
-      nextProvenance = applyMulticlassGrants(selectedClass, nextProvenance)
-    }
+    const multiclassResult = selectedClass
+      ? addMulticlass(
+          character,
+          character.provenance ?? emptyProvenance(),
+          multiclassSelection,
+          selectedClass,
+          selectedClass.source,
+          1,
+        )
+      : null
 
-    const gained = selectedClass?.multiclassing?.proficienciesGained
-    const toolsFromBlocks = extractProficiencyBlockNames(gained?.toolProficiencies ?? [], {
-      includeAnyStandard: false,
-    })
-
-    const nextProficiencies = selectedClass
-      ? {
-          ...character.proficiencies,
-          armor: [
-            ...new Set([
-              ...character.proficiencies.armor,
-              ...(gained?.armor ?? [])
-                .filter((armor): armor is string => typeof armor === 'string')
-                .map((armor) => stripItemTag(armor)),
-            ]),
-          ],
-          weapons: [
-            ...new Set([
-              ...character.proficiencies.weapons,
-              ...(gained?.weapons ?? [])
-                .filter((weapon): weapon is string => typeof weapon === 'string')
-                .map((weapon) => stripItemTag(weapon)),
-            ]),
-          ],
-          tools: [
-            ...new Set([
-              ...character.proficiencies.tools,
-              ...(gained?.tools ?? [])
-                .filter((tool): tool is string => typeof tool === 'string')
-                .map((tool) => stripItemTag(tool)),
-              ...toolsFromBlocks,
-            ]),
-          ],
-        }
-      : character.proficiencies
+    const nextProficiencies =
+      multiclassResult?.characterUpdate.proficiencies ?? character.proficiencies
+    const nextProvenance =
+      multiclassResult?.provenanceUpdate ?? character.provenance ?? emptyProvenance()
+    const progressionResult = applyClassProgressionUpdate(character, nextProvenance, newProgression)
 
     updateCharacter(character.id, {
-      classProgression: newProgression,
-      level: newTotal,
-      class: newProgression[0]?.name ?? character.class,
-      classSource: newProgression[0]?.source ?? character.classSource,
+      ...progressionResult.characterUpdate,
       proficiencies: nextProficiencies,
-      provenance: nextProvenance,
+      provenance: progressionResult.provenanceUpdate,
     })
 
     toast.success(`Added ${multiclassSelection} (level 1).`)

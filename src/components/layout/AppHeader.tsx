@@ -12,7 +12,7 @@ export function AppHeader() {
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter)
   const [levelUpOpen, setLevelUpOpen] = useState(false)
-  const { storedAC } = useArmorClass()
+  const { effectiveAC } = useArmorClass()
   const { hitPoints, calculatedMaxHP } = useHitPoints()
 
   const classSummary = useMemo(() => {
@@ -20,14 +20,7 @@ export function AppHeader() {
       return ''
     }
 
-    const progression = activeCharacter.classProgression?.length
-      ? activeCharacter.classProgression
-      : [
-          {
-            name: activeCharacter.class,
-            levels: Math.max(activeCharacter.level || 1, 1),
-          },
-        ]
+    const progression = activeCharacter.classProgression ?? []
 
     const classes = progression.map((entry) => `${entry.name} ${entry.levels}`).join(' - ')
 
@@ -72,7 +65,7 @@ export function AppHeader() {
                 >
                   <Shield weight="fill" className="h-10 w-10" />
                   <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-card-foreground leading-none">
-                    {storedAC}
+                    {effectiveAC}
                   </span>
                 </div>
                 <div

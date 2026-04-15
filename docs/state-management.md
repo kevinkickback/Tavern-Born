@@ -229,3 +229,61 @@ Increment `CURRENT_SCHEMA_VERSION` and create a new migration when:
 ❌ Don't assume old data structure on import — always migrate  
 ❌ Don't forget the `down()` path — breaks export/compatibility  
 ❌ Don't skip intermediate versions — will cause migration chain failures
+
+## Current Domain Workflows
+
+### Spell Mutation Workflow
+
+**Current State:**
+- `character.spells.spellProfiles[]` — canonical storage of known/prepared spells per class
+- `character.provenance.spells` (ledger) — attribution/source tracking for spells
+
+**Current Workflow:**
+- Domain commands in `src/lib/character/commands/spellCommands.ts` coordinate profile updates and provenance ledger changes together.
+- `useSpellSlots()` is the primary UI-facing hook and applies spell command results atomically to `character.spells` and `character.provenance`.
+- `useSpellMutations()` is the thin adapter when command-backed spell mutations are needed outside the main spell hook.
+
+**Caller Impact:** Controllers should route spell changes through the command-backed hooks rather than sequencing profile and provenance updates manually.
+```typescript
+// In page or modal code:
+addSpellToProfile(profileId, name, 'spell')
+// Command-backed hook updates both spell profiles and provenance together
+```
+
+**Schema/Persistence:** Spell profiles and provenance are still stored separately on the character, but normal mutation flows now update them together.
+
+### Armor Class Ownership Model
+
+**Current State:**
+- `character.armorClass` — persisted synchronized AC value.
+- `character.armorClassOverride` — optional manual override.
+- Derived AC — calculated from equipment, armor type, dex cap, and ability scores when needed.
+- `useArmorClass()` exposes calculated, stored, override, and effective AC views.
+
+**Current Rules:**
+1. Effective AC prefers manual override when present.
+2. Equipment mutations synchronize `character.armorClass`.
+3. Consumers should read AC through `computeEffectiveCharacterArmorClass()` or `useArmorClass()`.
+
+**Current Behavior:** Equipment changes update stored AC, and UI/PDF consumers read the effective AC path instead of reading `character.armorClass` directly.
+
+**Schema:** AC is a top-level field on character. No validation locks AC to a particular model.
+
+### Class Progression State
+
+**Current State:**
+- `character.class`, `character.classSource` — top-level fields from legacy creation
+- `character.subclass`, `character.subclassSource` — top-level fields from legacy creation
+- `character.level` — top-level field
+- `character.classProgression[]` — array of `{ name, source, levels, subclass?, subclassSource? }`
+
+**Current Approach:** `character.classProgression` is the authoritative progression structure for level math and class-driven derivation. The top-level class fields remain persisted mirrors for summary/compatibility surfaces.
+
+**Mutation Workflow:**
+- Domain commands in `src/lib/character/commands/classCommands.ts` coordinate progression updates and mirrored top-level class fields.
+- `useUnifiedClassSelection()` and Level Up flows use the command layer instead of the deleted patch-builder path.
+- Class selection provenance orchestration is delegated through `src/lib/character/commands/classSelectionOrchestrationCommand.ts`.
+
+**Schema:** characterSchema validates both, but doesn't enforce which is canonical during mutations.
+
+Progression-sensitive reads use shared selectors across class page, model, and provenance callsites, while mirrored top-level fields remain as persisted compatibility data.
