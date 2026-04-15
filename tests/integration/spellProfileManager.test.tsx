@@ -24,7 +24,7 @@ describe('SpellProfileManager', () => {
     )
 
     expect(screen.getByText('Bonus Spells')).toBeTruthy()
-    expect(screen.getByText('No spells selected yet.')).toBeTruthy()
+    expect(screen.getByText('No Spells Selected')).toBeTruthy()
   })
 
   test('shows add spell button for bonus profile and triggers callback', () => {

@@ -1,5 +1,6 @@
-import type { AbilityName } from './abilityScores'
-import { formatModifier } from './abilityScores'
+import type { Skills } from '@/types/character'
+import { ABILITY_ABBREV_TO_FULL } from './abilityNames'
+import { ABILITY_NAMES, type AbilityName, formatModifier } from './abilityScores'
 
 export { formatModifier }
 
@@ -26,18 +27,57 @@ export const SKILL_TO_ABILITY: Readonly<Record<string, AbilityName>> = {
 
 export const ALL_SKILLS = Object.keys(SKILL_TO_ABILITY) as readonly string[]
 
+/**
+ * Validate that the static SKILL_TO_ABILITY map matches skills loaded from
+ * `data/skills.json` at runtime. Call once after game data is loaded in dev mode.
+ * Logs warnings for any discrepancies so they surface during development.
+ */
+export function validateSkillToAbilityMap(parsedSkills: unknown[]): void {
+  const seen = new Set<string>()
+
+  for (const skill of parsedSkills) {
+    if (!skill || typeof skill !== 'object') continue
+    const s = skill as Record<string, unknown>
+    const name = typeof s.name === 'string' ? s.name.toLowerCase().trim() : null
+    const abbrv = typeof s.ability === 'string' ? s.ability.toLowerCase().trim() : null
+    if (!name || !abbrv) continue
+    if (seen.has(name)) continue // deduplicate PHB/XPHB entries
+    seen.add(name)
+
+    const fullAbility = ABILITY_ABBREV_TO_FULL[abbrv] as AbilityName | undefined
+    if (!fullAbility) {
+      console.warn(
+        `[skills] validateSkillToAbilityMap: unknown ability abbreviation "${abbrv}" for skill "${name}"`,
+      )
+      continue
+    }
+
+    const staticAbility = SKILL_TO_ABILITY[name]
+    if (!staticAbility) {
+      console.warn(
+        `[skills] validateSkillToAbilityMap: skill "${name}" found in JSON but missing from SKILL_TO_ABILITY`,
+      )
+    } else if (staticAbility !== fullAbility) {
+      console.warn(
+        `[skills] validateSkillToAbilityMap: mismatch for "${name}": static=${staticAbility}, json=${fullAbility}`,
+      )
+    }
+  }
+
+  for (const staticSkill of ALL_SKILLS) {
+    if (!seen.has(staticSkill)) {
+      console.warn(
+        `[skills] validateSkillToAbilityMap: skill "${staticSkill}" in SKILL_TO_ABILITY but not found in JSON`,
+      )
+    }
+  }
+}
+
 export function getSkillAbility(skillName: string): AbilityName | null {
   return SKILL_TO_ABILITY[skillName.toLowerCase().trim()] ?? null
 }
 
-export const SAVING_THROW_ABILITIES: readonly AbilityName[] = [
-  'strength',
-  'dexterity',
-  'constitution',
-  'intelligence',
-  'wisdom',
-  'charisma',
-]
+export const SAVING_THROW_ABILITIES: readonly AbilityName[] = ABILITY_NAMES
 
 export function calculateSavingThrowModifier(
   abilityModifier: number,
@@ -139,4 +179,33 @@ export function deriveAllSkills(
       modifierString: formatModifier(modifier),
     }
   })
+}
+
+/**
+ * Produce a new `character.skills` map that reflects the given list of proficient skill names.
+ *
+ * Preserves existing expertise and per-skill bonus values. The `proficient` flag is updated
+ * to match `proficiencies`; `expertise` is cleared if proficiency is being removed.
+ *
+ * Use this whenever `character.proficiencies.skills` changes so both structures stay in sync.
+ */
+export function mergeSkillState(current: Skills, proficiencies: string[]): Skills {
+  const normalized = new Set(proficiencies.map((name) => name.toLowerCase()))
+  const next: Skills = {}
+
+  for (const [name, entry] of Object.entries(current)) {
+    const isProficient = normalized.has(name.toLowerCase())
+    next[name] = {
+      ...entry,
+      proficient: isProficient,
+      expertise: isProficient ? entry.expertise : false,
+    }
+  }
+
+  for (const name of normalized) {
+    if (next[name]) continue
+    next[name] = { proficient: true, expertise: false, bonus: 0 }
+  }
+
+  return next
 }

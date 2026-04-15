@@ -14,6 +14,7 @@ This document defines state ownership, mutation rules, and persistence behavior.
 - File: src/store/gameDataStore.ts
 - Owns: parsed gameData, source config, load progress, cache status, hydration flag.
 - Primary write API: loadGameData(config, background?).
+- Cache bootstrap API: loadFromCache() — reads IDB cache and runs the startup decision branch; returns { needsToast? } for UI callers to act on. UI notification logic stays in useDataInit.
 
 3. App preferences store
 - File: src/store/appPreferencesStore.ts
@@ -70,7 +71,7 @@ Derived examples (do not store as canonical):
 - `character.proficiencies` is the canonical persisted list model for armor, weapons, tools, skills, languages, and saving throw proficiencies.
 - `character.proficiencies.skills` is required and stores the set of proficient skill names.
 - `character.skills` stores per-skill runtime detail (`proficient`, `expertise`, `bonus`) and must stay synchronized with `character.proficiencies.skills`.
-- Current code should write both structures together when skill proficiencies change. Missing `proficiencies.skills` is invalid current-schema data and is not silently repaired at runtime.
+- Both structures must be written together when skill proficiencies change. Use `mergeSkillState()` from `src/lib/calculations/skills.ts` to produce the combined patch. Missing `proficiencies.skills` is invalid current-schema data and is not silently repaired at runtime.
 
 ## Unsaved Changes and App Close Safety
 

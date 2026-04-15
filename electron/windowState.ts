@@ -124,7 +124,17 @@ export async function loadWindowState(): Promise<WindowState> {
     const displays = screen.getAllDisplays()
     const workAreas = displays.map((display) => display.workArea)
     const coerced = coerceWindowStateToVisibleArea(parsed, workAreas)
-    return clampWindowStateToWorkArea(coerced, workAreas[0])
+    const targetDisplay =
+      displays.find(
+        (d) =>
+          coerced.x !== undefined &&
+          coerced.y !== undefined &&
+          coerced.x >= d.workArea.x &&
+          coerced.x < d.workArea.x + d.workArea.width &&
+          coerced.y >= d.workArea.y &&
+          coerced.y < d.workArea.y + d.workArea.height,
+      ) ?? displays[0]
+    return clampWindowStateToWorkArea(coerced, targetDisplay?.workArea)
   } catch {
     const workArea = screen.getAllDisplays()[0]?.workArea
     return clampWindowStateToWorkArea(defaultWindowState(), workArea)

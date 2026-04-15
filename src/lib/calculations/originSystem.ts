@@ -1,25 +1,17 @@
 import type { Background5e, Race5e } from '@/types/5etools'
 import type { OriginSystem } from '@/types/character'
+import { ABILITY_NAMES } from './abilityScores'
 import {
   count2024OriginLanguageChoiceUnits,
   ORIGIN_2024_BASE_LANGUAGE,
   ORIGIN_2024_LANGUAGE_CHOICE_COUNT,
 } from './languageOrigin'
 
-const ALL_ABILITIES = [
-  'strength',
-  'dexterity',
-  'constitution',
-  'intelligence',
-  'wisdom',
-  'charisma',
-] as const
-
 const SYNTHETIC_BACKGROUND_ABILITY = [
   {
     choose: {
       weighted: {
-        from: [...ALL_ABILITIES],
+        from: [...ABILITY_NAMES],
         weights: [2, 1],
       },
     },
@@ -27,7 +19,7 @@ const SYNTHETIC_BACKGROUND_ABILITY = [
   {
     choose: {
       weighted: {
-        from: [...ALL_ABILITIES],
+        from: [...ABILITY_NAMES],
         weights: [1, 1, 1],
       },
     },
@@ -65,8 +57,8 @@ function hasAbilityEntries(entity?: { ability?: unknown[] } | null): boolean {
   return Array.isArray(entity?.ability) && entity.ability.length > 0
 }
 
-function hasFeatEntries(entity?: { feats?: unknown[] } | null): boolean {
-  return Array.isArray(entity?.feats) && entity.feats.length > 0
+function hasFeatEntries(entity?: Record<string, unknown> | null): boolean {
+  return Array.isArray(entity?.feats) && (entity.feats as unknown[]).length > 0
 }
 
 function stripRaceOriginFeats<T extends Race5e | undefined>(race: T): T {

@@ -55,6 +55,27 @@ export function getTotalLevel(progression: Progression | undefined | null): numb
   return progression.classes.reduce((sum, c) => sum + (c.levels || 0), 0)
 }
 
+/**
+ * Derive total character level from a character object.
+ *
+ * Uses `classProgression` when present, otherwise falls back gracefully to
+ * the flat `character.level` field (preserved for single-class characters).
+ * Preferred over reading `character.level` directly in hooks and selectors
+ * so that multiclass progression is always honoured.
+ */
+export function getTotalCharacterLevel(
+  character:
+    | Pick<
+        Character,
+        'classProgression' | 'class' | 'classSource' | 'subclass' | 'subclassSource' | 'level'
+      >
+    | null
+    | undefined,
+): number {
+  const entries = getCharacterClassEntries(character)
+  return entries.reduce((sum, e) => sum + (e.levels || 0), 0) || 1
+}
+
 /** The primary (first) class entry, or null for a brand-new character. */
 export function getPrimaryClass(progression: Progression | undefined | null): ClassEntry | null {
   if (!progression?.classes?.length) return null
@@ -103,44 +124,68 @@ export function countAvailableASIs(
 }
 
 /**
+ * Per-level HP breakdown for a character.
+ *
+ * Index 0 is always 0 (unused sentinel). Index n contains the HP gained at level n.
+ * Rules: full hit die at level 1 of the primary class, average (or max when
+ * `averageHp` is false) at every subsequent level; minimum 1 per level.
+ *
+ * Pass `classesData` for accurate per-class hit dice; without it, falls back to
+ * `entry.hitDice` string or d8.
+ */
+export function calculateHPBreakdown(
+  progression: Progression | undefined | null,
+  conModifier: number,
+  options?: { averageHp?: boolean; classesData?: Class5e[] },
+): number[] {
+  const { averageHp = true, classesData } = options ?? {}
+  const breakdown: number[] = [0] // index 0 unused
+  const classes = progression?.classes ?? []
+  let firstLevel = true
+
+  for (const entry of classes) {
+    const classLevels = Math.max(0, entry.levels || 0)
+    if (classLevels <= 0) continue
+
+    // Source-aware lookup, fall back to name-only
+    const classData =
+      classesData?.find(
+        (c) => c.name === entry.name && (entry.source == null || c.source === entry.source),
+      ) ?? classesData?.find((c) => c.name === entry.name)
+    const entryDie = entry.hitDice ? parseHitDice(entry.hitDice) : null
+    const die = entryDie ?? getHitDiceFromClass(classData)
+    const avgRoll = Math.floor(die / 2) + 1
+
+    for (let lv = 1; lv <= classLevels; lv++) {
+      if (firstLevel && lv === 1) {
+        breakdown.push(Math.max(1, die + conModifier))
+        firstLevel = false
+      } else {
+        breakdown.push(Math.max(1, (averageHp ? avgRoll : die) + conModifier))
+      }
+    }
+  }
+
+  return breakdown
+}
+
+/**
  * Calculate maximum hit points for a character.
  *
- * Rules:
- * - Level 1 of primary class: max hit die + CON modifier
- * - Each subsequent level: average hit die + CON modifier  (or max if averageHp = false)
- * - Multiclass into another class: average/max of that class's hit die + CON modifier per level
+ * Sums the per-level breakdown from {@link calculateHPBreakdown}.
+ * Returns at least 1 even with no class data.
  *
  * Pass `classesData` (from the game data store) for accurate per-class hit dice;
- * without it, falls back to `entry.hitDice` string or 8.
+ * without it, falls back to `entry.hitDice` string or d8.
  */
 export function calculateMaxHP(
   progression: Progression | undefined | null,
   conModifier: number,
   options?: { averageHp?: boolean; classesData?: Class5e[] },
 ): number {
-  const { averageHp = true, classesData } = options ?? {}
-  const classes = progression?.classes ?? []
-  if (!classes.length) return 1 + conModifier
-
-  let total = 0
-  let firstLevel = true
-
-  for (const entry of classes) {
-    const cls = classesData?.find((c) => c.name === entry.name)
-    const entryDie = entry.hitDice ? parseHitDice(entry.hitDice) : null
-    const die = entryDie ?? getHitDiceFromClass(cls)
-    const avgRoll = averageHp ? Math.floor(die / 2) + 1 : die
-
-    for (let lvl = 1; lvl <= (entry.levels || 0); lvl++) {
-      if (firstLevel) {
-        total += die + conModifier
-        firstLevel = false
-      } else {
-        total += Math.max(1, avgRoll + conModifier)
-      }
-    }
-  }
-
+  const breakdown = calculateHPBreakdown(progression, conModifier, options)
+  // breakdown[0] is the unused sentinel (0), so summing it is harmless
+  const total = breakdown.reduce((sum, v) => sum + v, 0)
   return Math.max(1, total)
 }
 

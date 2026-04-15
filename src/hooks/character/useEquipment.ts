@@ -5,11 +5,10 @@ import {
   getCarryCapacity,
   MAX_ATTUNEMENT_SLOTS,
 } from '@/lib/calculations/gameRules'
+import { generateEquipmentId } from '@/lib/character/ids'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
 import type { Currency, Equipment } from '@/types/character'
-
-const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
 const DEFAULT_CURRENCY: Currency = {
   cp: 0,
@@ -84,7 +83,7 @@ export function useEquipment(): EquipmentState {
     (item: Partial<Equipment> & Pick<Equipment, 'name' | 'type'>) => {
       if (!character) return
       const newItem: Equipment = {
-        id: generateId(),
+        id: generateEquipmentId(),
         quantity: 1,
         equipped: false,
         attuned: false,
@@ -100,7 +99,7 @@ export function useEquipment(): EquipmentState {
       if (!character) return
       const armorType = resolveArmorType(item5e.type ?? '')
       const newItem: Equipment = {
-        id: generateId(),
+        id: generateEquipmentId(),
         name: item5e.name,
         type: item5e.type ?? 'G',
         quantity: 1,

@@ -261,16 +261,13 @@ export function buildSpellcastingClassDetails(
       // Determine known spell limit
       let knownSpellLimit: number | null
       const progressionKnownSpellLimit = getKnownSpellLimit(classData, entry.levels)
-      if (progressionKnownSpellLimit != null) {
-        // Prefer explicit known-spell progression (e.g. Wizard spellbook additions)
-        // over prepared limits so "selection available" reflects creation/level picks.
+      if (preparedCaster || levelOnlyPrepared) {
+        // Prepared casters: known limit equals prepared count. Fall back to
+        // progression only when no formula is available (e.g. ability score unknown).
+        knownSpellLimit = preparedSpellLimit ?? progressionKnownSpellLimit
+      } else if (progressionKnownSpellLimit != null) {
+        // Known casters (Bard, Ranger …): use explicit spells-known progression.
         knownSpellLimit = progressionKnownSpellLimit
-      } else if (levelOnlyPrepared) {
-        // XPHB level-only casters: their "prepared" count IS their "known" count.
-        knownSpellLimit = preparedSpellLimit
-      } else if (preparedCaster) {
-        // Prepared-only casters without known progression use prepared count as cap.
-        knownSpellLimit = preparedSpellLimit
       } else {
         knownSpellLimit = null
       }

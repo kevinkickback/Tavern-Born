@@ -41,6 +41,10 @@ export interface Class5e {
   name: string
   source: string
   page?: number
+  /** Primary ability scores for the class (XPHB format). Each array item is an
+   *  alternative group (OR); within a group all listed abilities are required (AND).
+   *  Used to derive multiclassing prerequisites when requirements are absent. */
+  primaryAbility?: Array<Record<string, boolean>>
   fluffEntries?: unknown[]
   classFluffSections?: ClassFluffSection[]
   classFluffImages?: ClassFluffImage[]
@@ -54,7 +58,7 @@ export interface Class5e {
       toolProficiencies?: Array<
         Record<string, boolean | number | { choose?: { from?: string[]; count?: number } }>
       >
-      skills?: { choose?: { from: string[]; count: number } }
+      skills?: Array<string | Record<string, unknown>>
     }
   }
   proficiency?: string[]
@@ -62,7 +66,7 @@ export interface Class5e {
     armor?: string[]
     weapons?: string[]
     tools?: string[]
-    skills?: { choose?: { from: string[]; count: number } }
+    skills?: Array<string | Record<string, unknown>>
   }
   startingEquipment?: unknown
   classTableGroups?: unknown[]

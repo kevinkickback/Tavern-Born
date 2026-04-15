@@ -185,6 +185,81 @@ describe('gameRules', () => {
     ).toBe(false)
   })
 
+  test('checkMulticlassRequirements falls back to primaryAbility for XPHB classes (OR groups)', () => {
+    // XPHB Fighter: STR 13 or DEX 13
+    const xphbFighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'XPHB',
+      primaryAbility: [{ str: true }, { dex: true }],
+      multiclassing: { proficienciesGained: { armor: ['light'] } },
+    })
+
+    expect(
+      checkMulticlassRequirements(xphbFighter, {
+        strength: 13,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      }),
+    ).toEqual({ meetsRequirements: true, requirementText: 'Strength 13 or Dexterity 13' })
+
+    expect(
+      checkMulticlassRequirements(xphbFighter, {
+        strength: 10,
+        dexterity: 13,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      }).meetsRequirements,
+    ).toBe(true)
+
+    expect(
+      checkMulticlassRequirements(xphbFighter, {
+        strength: 10,
+        dexterity: 10,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      }).meetsRequirements,
+    ).toBe(false)
+  })
+
+  test('checkMulticlassRequirements falls back to primaryAbility for XPHB classes (AND groups)', () => {
+    // XPHB Monk: DEX 13 AND WIS 13
+    const xphbMonk = makeClassFixture({
+      name: 'Monk',
+      source: 'XPHB',
+      primaryAbility: [{ dex: true, wis: true }],
+      multiclassing: {},
+    })
+
+    expect(
+      checkMulticlassRequirements(xphbMonk, {
+        strength: 10,
+        dexterity: 13,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 13,
+        charisma: 10,
+      }),
+    ).toEqual({ meetsRequirements: true, requirementText: 'Dexterity 13, Wisdom 13' })
+
+    expect(
+      checkMulticlassRequirements(xphbMonk, {
+        strength: 10,
+        dexterity: 13,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 12,
+        charisma: 10,
+      }).meetsRequirements,
+    ).toBe(false)
+  })
+
   test('getProficiencyBonus clamps out-of-range levels and applies breakpoints', () => {
     expect(getProficiencyBonus(0)).toBe(2)
     expect(getProficiencyBonus(1)).toBe(2)

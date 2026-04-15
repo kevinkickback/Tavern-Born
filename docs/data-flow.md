@@ -12,15 +12,16 @@ Entry points:
 Flow:
 1. App mounts and calls useDataInit().
 2. Hook waits for gameDataStore hydration from IndexedDB (hasHydrated).
-3. Hook reads data source config from gameDataStore and cache snapshot from dataCache.
-4. Decision branch:
+3. Hook calls gameDataStore.loadFromCache(), which owns all cache-read decision logic.
+4. Decision branch (inside loadFromCache):
 - No cache and no source: set cacheStatus to unconfigured.
 - Cache and source, same source, fresh cache: serve cache immediately and run a background source verification check.
-- Cache and source, same source, stale cache: serve cache and trigger background refresh.
+- Cache and source, same source, stale cache: serve cache and trigger background refresh — returns { needsToast: 'stale' }.
 - Cache and source, different source: fetch fresh and replace cache.
-- Cache without source: serve offline cache and warn.
+- Cache without source: serve offline cache — returns { needsToast: 'offline' }.
 - Source without cache: fetch fresh.
-5. On successful fetch, parsed gameData is written to cache and store.
+5. useDataInit shows the appropriate toast based on the returned needsToast value.
+6. On successful fetch, parsed gameData is written to cache and store.
 
 Startup preference behavior:
 - Theme is applied immediately from localStorage before React renders, then reconciled with the persisted app preferences store after IndexedDB hydration.

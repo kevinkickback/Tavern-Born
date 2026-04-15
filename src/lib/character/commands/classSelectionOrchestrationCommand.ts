@@ -3,6 +3,8 @@ import {
   getClassDefaultEquipmentBlocks,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
+import { mergeSkillState } from '@/lib/calculations/skills'
+import { generateEquipmentId } from '@/lib/character/ids'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   addGrant,
@@ -14,7 +16,7 @@ import {
 import { normalizeKey, stripItemTag } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Item5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Character, Skills } from '@/types/character'
 
 const SAVING_THROW_NAME_BY_KEY: Record<string, string> = {
   str: 'strength',
@@ -30,8 +32,91 @@ function normalizeSavingThrowName(name: string): string {
   return SAVING_THROW_NAME_BY_KEY[normalized] ?? normalized
 }
 
-function generateEquipmentId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+const isNarrativeTool = (value: string) => /of your choice|choose|one type of/i.test(value)
+
+/**
+ * Derive the starting proficiencies and skills map for a brand-new character.
+ *
+ * This is the single source of truth for converting class + background entities
+ * into the `character.proficiencies` array fields and `character.skills` map used
+ * by the character builder.  Call it from `CharacterCreationWizard` so the wizard
+ * produces the same result as the individual `applyClassSelection` /
+ * `applyBackgroundSelection` mutation hooks.
+ */
+export function buildInitialCharacterProficiencies(
+  cls:
+    | {
+        proficiency?: string[]
+        startingProficiencies?: {
+          armor?: string[]
+          weapons?: string[]
+          tools?: string[]
+          toolProficiencies?: Record<
+            string,
+            number | boolean | { choose?: { from?: string[]; count?: number } }
+          >[]
+        }
+      }
+    | undefined,
+  normalizedBackground:
+    | {
+        skillProficiencies?: unknown[]
+        languageProficiencies?: unknown[]
+        toolProficiencies?: unknown[]
+      }
+    | undefined,
+): {
+  proficiencies: {
+    armor: string[]
+    weapons: string[]
+    tools: string[]
+    skills: string[]
+    languages: string[]
+    savingThrows: string[]
+  }
+  skills: Skills
+} {
+  const clsProfs = cls?.startingProficiencies ?? {}
+
+  const armor = (clsProfs.armor ?? [])
+    .filter((a): a is string => typeof a === 'string')
+    .map(stripItemTag)
+  const weapons = (clsProfs.weapons ?? [])
+    .filter((w): w is string => typeof w === 'string')
+    .map(stripItemTag)
+  const classTools = [
+    ...(clsProfs.tools ?? [])
+      .filter((t): t is string => typeof t === 'string')
+      .map(stripItemTag)
+      .filter((t) => t && !isNarrativeTool(t)),
+    ...extractProficiencyBlockNames((clsProfs.toolProficiencies as unknown[]) ?? [], {
+      includeAnyStandard: false,
+    }),
+  ]
+  const savingThrows = [...new Set((cls?.proficiency ?? []).map(normalizeSavingThrowName))]
+
+  const bgSkills = extractProficiencyBlockNames(
+    (normalizedBackground?.skillProficiencies as unknown[]) ?? [],
+    { includeAnyStandard: false },
+  ).filter((name) => !name.toLowerCase().startsWith('choose '))
+
+  const bgLanguages = extractProficiencyBlockNames(
+    (normalizedBackground?.languageProficiencies as unknown[]) ?? [],
+    { includeAnyStandard: false },
+  )
+  const bgTools = extractProficiencyBlockNames(
+    (normalizedBackground?.toolProficiencies as unknown[]) ?? [],
+    { includeAnyStandard: false },
+  )
+
+  const tools = [...new Set([...classTools, ...bgTools])]
+  const skills = [...new Set(bgSkills.map((s) => s.toLowerCase()))]
+  const languages = [...new Set(['Common', ...bgLanguages])]
+
+  return {
+    proficiencies: { armor, weapons, tools, skills, languages, savingThrows },
+    skills: mergeSkillState({}, skills),
+  }
 }
 
 function removeSourceGrantedEquipment(
@@ -188,7 +273,6 @@ export function computeApplyClassSelectionUpdates(
   }
 
   const profs = cls.startingProficiencies ?? {}
-  const isNarrativeTool = (value: string) => /of your choice|choose|one type of/i.test(value)
   const toolsFromArray = (profs.tools ?? [])
     .filter((tool): tool is string => typeof tool === 'string')
     .map((tool) => stripItemTag(tool))

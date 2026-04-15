@@ -3,7 +3,13 @@ import { OptionalFeatureSelectionModal } from '@/components/modals/OptionalFeatu
 import type { ActiveFilters, CategoryLimit } from '@/components/modals/SelectionModal'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { SubclassSelectionModal } from '@/components/modals/SubclassSelectionModal'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { getFeatureTypes, type OptionalFeatureLike } from '@/lib/5etools/classData'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
@@ -536,6 +542,9 @@ export function BuildClassModals({
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
                     <DialogTitle>Replace a Known Spell</DialogTitle>
+                    <DialogDescription className="sr-only">
+                      Select a spell to replace with a new one.
+                    </DialogDescription>
                   </DialogHeader>
                   <p className="text-sm text-muted-foreground mb-3">
                     Select a spell to replace. You may swap one spell each time you gain a level.

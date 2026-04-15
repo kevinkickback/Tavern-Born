@@ -39,6 +39,9 @@ export const OPT_FEATURE_TYPE_TO_FULL: Readonly<Record<string, string>> = {
 
 /** Convert a 5etools optional feature type abbreviation to its full display name. */
 export function optFeatureTypeToFull(type: string): string {
+  if (import.meta.env.DEV && !(type in OPT_FEATURE_TYPE_TO_FULL)) {
+    console.warn(`[classData] optFeatureTypeToFull: unknown optional feature type code "${type}"`)
+  }
   return OPT_FEATURE_TYPE_TO_FULL[type] ?? type
 }
 
@@ -60,6 +63,9 @@ const NON_STANDARD_FEAT_SELECTION_CATEGORIES = new Set(['O', 'EB', 'FS:P', 'FS:R
 
 /** Convert a 5etools feat category abbreviation to its full display name. */
 export function featCategoryToFull(category: string): string {
+  if (import.meta.env.DEV && !(category in FEAT_CATEGORY_TO_FULL)) {
+    console.warn(`[classData] featCategoryToFull: unknown feat category code "${category}"`)
+  }
   return FEAT_CATEGORY_TO_FULL[category] ?? category
 }
 

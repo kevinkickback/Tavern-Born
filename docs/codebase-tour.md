@@ -24,7 +24,7 @@ UI utilities:
 Game data load and cache:
 - src/store/gameDataStore.ts
 - src/hooks/data/useDataInit.ts
-- src/hooks/data/useFilteredGameData.ts
+- src/hooks/data/useFilteredGameData.ts — use useFilteredGameDataParams({ allowedSources, preferNewerPrintings }) when filtering outside a character context
 - src/hooks/data/useGameData.ts
 - src/hooks/data/useAvailableProficiencies.ts
 - src/hooks/data/useSeedData.ts
@@ -48,6 +48,7 @@ Game data load and cache:
 Game rules and derived calculations:
 - src/lib/calculations/*
 - src/lib/characterUtils.ts
+- src/lib/character/ids.ts — generateEquipmentId() for all equipment item ID creation
 
 Provenance and source attribution:
 - src/lib/provenance/*
@@ -91,7 +92,8 @@ Spells page UI orchestration:
 - src/pages/spells/SpellsPage.tsx
 - src/pages/spells/components/SpellProfileManager.tsx — spell profile accordions and warning badges/tooltips
 - src/lib/character/commands/spellCommands.ts — canonical spell mutation commands for profile/provenance coordination
-- src/hooks/character/useSpellSlots.ts — command-backed spell workflow wrapper used by page UI
+- src/hooks/character/useSpellSlots.ts — read state: spell slots, profiles, spellcasting detail (no mutations)
+- src/hooks/character/useSpellProfileMutations.ts — all spell mutation callbacks (add/remove/prepare/racial spells)
 - src/hooks/character/useSpellMutations.ts — thin unified spell mutation adapter when command-style spell writes are needed outside the main spell hook
 
 5etools rich text rendering:

@@ -307,7 +307,12 @@ export function addMulticlass(
         ...(fallback.savingThrows ?? []),
       ]),
     ],
-    skills: [...new Set([...(character.proficiencies.skills ?? []), ...(fallback.skills ?? [])])],
+    skills: [
+      ...new Set([
+        ...(character.proficiencies.skills ?? []),
+        ...(fallback.skills ?? []).filter((skill): skill is string => typeof skill === 'string'),
+      ]),
+    ],
   }
 
   const characterUpdate: Partial<Character> = {

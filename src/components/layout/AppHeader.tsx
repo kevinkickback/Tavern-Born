@@ -22,7 +22,10 @@ export function AppHeader() {
 
     const progression = activeCharacter.classProgression ?? []
 
-    const classes = progression.map((entry) => `${entry.name} ${entry.levels}`).join(' - ')
+    const classes =
+      progression.length > 0
+        ? progression.map((entry) => `${entry.name} ${entry.levels}`).join(' - ')
+        : (activeCharacter.class ?? '')
 
     return `${activeCharacter.race} - ${classes}`
   }, [activeCharacter])

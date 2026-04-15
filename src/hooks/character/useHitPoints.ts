@@ -1,9 +1,8 @@
-import { useCallback, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useClasses } from '@/hooks/data/useGameData'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
-import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { calculateHPBreakdown, getCharacterClassEntries } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Class5e } from '@/types/5etools'
 import type { HitPoints } from '@/types/character'
 
 export interface HitPointsState {
@@ -28,34 +27,19 @@ export function useHitPoints(): HitPointsState {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const classes = useClasses()
 
-  const classByKey = useMemo(() => {
-    const byKey = new Map<string, Class5e>()
-    classes.forEach((cls) => {
-      byKey.set(`${cls.name}|${cls.source ?? ''}`, cls)
-    })
-    return byKey
-  }, [classes])
-
   const resolvedProgression = useMemo(() => {
     return getCharacterClassEntries(character)
   }, [character])
 
-  const getClassHitDie = useCallback(
-    (name: string, source?: string) => {
-      const classData = classByKey.get(`${name}|${source ?? ''}`)
-      if (classData) return getHitDiceFromClass(classData)
-      const fallback = classes.find((cls) => cls.name === name)
-      return getHitDiceFromClass(fallback)
-    },
-    [classByKey, classes],
-  )
-
   const hitDie = useMemo(() => {
     const primary = resolvedProgression[0]
-    return primary
-      ? getClassHitDie(primary.name, primary.source)
-      : getClassHitDie(character?.class ?? '', character?.classSource)
-  }, [character?.class, character?.classSource, resolvedProgression, getClassHitDie])
+    const name = primary?.name ?? character?.class ?? ''
+    const source = primary?.source ?? character?.classSource
+    const found =
+      classes.find((c) => c.name === name && (source == null || c.source === source)) ??
+      classes.find((c) => c.name === name)
+    return getHitDiceFromClass(found)
+  }, [character?.class, character?.classSource, resolvedProgression, classes])
 
   const conMod = useMemo(
     () => getAbilityModifier(character?.abilityScores.constitution ?? 10),
@@ -64,30 +48,15 @@ export function useHitPoints(): HitPointsState {
 
   const useAverage = character?.variantRules?.averageHitPoints !== false
   const levelsHPBreakdown = useMemo(() => {
-    const breakdown: number[] = [0] // index 0 unused
-    let firstLevel = true
-
-    for (const classEntry of resolvedProgression) {
-      const classLevels = Math.max(0, classEntry.levels || 0)
-      if (classLevels <= 0) continue
-
-      const classHitDie = getClassHitDie(classEntry.name, classEntry.source)
-      const classAveragePerLevel = Math.floor(classHitDie / 2) + 1
-
-      for (let lv = 1; lv <= classLevels; lv++) {
-        const dieRoll =
-          firstLevel && lv === 1 ? classHitDie : useAverage ? classAveragePerLevel : classHitDie
-        breakdown.push(Math.max(1, dieRoll + conMod))
-        firstLevel = false
-      }
-    }
-
+    const breakdown = calculateHPBreakdown({ classes: resolvedProgression }, conMod, {
+      averageHp: useAverage,
+      classesData: classes,
+    })
     if (breakdown.length === 1) {
       breakdown.push(Math.max(1, hitDie + conMod))
     }
-
     return breakdown
-  }, [resolvedProgression, hitDie, conMod, useAverage, getClassHitDie])
+  }, [resolvedProgression, conMod, useAverage, classes, hitDie])
 
   const calculatedMaxHP = useMemo(
     () => levelsHPBreakdown.reduce((sum, v) => sum + v, 0),

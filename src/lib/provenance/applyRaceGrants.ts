@@ -1,5 +1,6 @@
 import { parseRaceSpells } from '@/lib/5etools/raceSpells'
 import { hasFlexibleRaceOriginAsi } from '@/lib/calculations/abilityScores'
+import { ARMOR_CATEGORY_LABEL_TO_CODE } from '@/lib/calculations/armorClass'
 import type { Item5e } from '@/types/5etools'
 import { applyFeatGrantBlocks } from './applyFeatAndOptionalFeatureGrants'
 import {
@@ -80,16 +81,7 @@ export function resolveRaceGrantFilterOptions(
   }
 
   if (domain === 'armor') {
-    const armorPrefix =
-      typeFilter === 'light armor'
-        ? 'LA'
-        : typeFilter === 'medium armor'
-          ? 'MA'
-          : typeFilter === 'heavy armor'
-            ? 'HA'
-            : typeFilter === 'shield'
-              ? 'S'
-              : ''
+    const armorPrefix = ARMOR_CATEGORY_LABEL_TO_CODE[typeFilter] ?? ''
 
     for (const item of filteredPool) {
       if (!item?.name) continue

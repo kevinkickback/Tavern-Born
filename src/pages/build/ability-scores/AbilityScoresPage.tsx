@@ -42,14 +42,12 @@ import {
   updateRaceAsiChoices,
 } from '@/pages/build/ability-scores/model/data'
 import { useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
 import type { Race5e } from '@/types/5etools'
 
 export function BuildAbilityScoresPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const gameData = useGameDataStore((s) => s.gameData)
-  const { races, backgrounds } = useFilteredGameData()
+  const { races, backgrounds, skills } = useFilteredGameData()
   const { scores, setScore, setAllScores, pointBuyTotal, pointBuyRemaining } = useAbilityScores()
   const { getSourcesRowsBySection, applyRaceSelection } = useProvenance()
   const [detailCollapsed, setDetailCollapsed] = useState(false)
@@ -158,7 +156,7 @@ export function BuildAbilityScoresPage() {
     return merged
   }, [asiBonuses, backgroundBonuses, racialBonuses])
 
-  const skillDetailsMap = useMemo(() => buildSkillDetailsMap(gameData?.skills), [gameData?.skills])
+  const skillDetailsMap = useMemo(() => buildSkillDetailsMap(skills), [skills])
 
   const selectedSkills = useMemo(
     () => ALL_SKILLS.filter((skill) => getSkillAbility(skill) === selectedAbility),

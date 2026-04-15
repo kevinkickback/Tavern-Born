@@ -12,7 +12,6 @@ const syncUnsavedStateToElectron = () => {
   window.electronAPI?.setUnsavedChanges?.(hasUnsavedChanges)
 }
 
-syncUnsavedStateToElectron()
 useCharacterStore.subscribe(() => {
   syncUnsavedStateToElectron()
 })

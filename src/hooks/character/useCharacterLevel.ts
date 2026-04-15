@@ -5,6 +5,7 @@ import {
   getProficiencyBonus,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
 
 /** Derived level and proficiency state for the active character. */
@@ -22,7 +23,7 @@ export interface CharacterLevelState {
 export function useCharacterLevel(): CharacterLevelState {
   const activeCharacter = useCharacterStore((s) => s.activeCharacter)
 
-  const level = activeCharacter?.level ?? 1
+  const level = useMemo(() => getTotalCharacterLevel(activeCharacter), [activeCharacter])
   const dexScore = activeCharacter?.abilityScores?.dexterity ?? 10
 
   const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level])

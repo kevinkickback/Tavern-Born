@@ -2,7 +2,13 @@ import { Warning } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   resolveBackgroundStartingEquipment,
   resolveClassStartingEquipment,
@@ -14,13 +20,14 @@ import {
   normalizeBackgroundForOriginSystem,
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
+import { buildInitialCharacterProficiencies } from '@/lib/character/commands/classSelectionOrchestrationCommand'
+import { generateEquipmentId } from '@/lib/character/ids'
 import {
   applyBackgroundGrants,
   applyClassGrants,
   applyRaceGrants,
   resolveRaceGrantFilterOptions,
 } from '@/lib/provenance'
-import { stripItemTag } from '@/lib/provenance/normalization'
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -223,30 +230,14 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     provenance = ensureOriginLanguageBaseline(provenance, originSystem)
     ensureOriginSystemInvariants(provenance, originSystem)
 
-    const classProficiencies = classObj?.startingProficiencies ?? {}
+    const { proficiencies, skills: initialSkills } = buildInitialCharacterProficiencies(
+      classObj,
+      normalizedBackground,
+    )
     const startingEquipment = [
       ...resolveClassStartingEquipment(classObj?.startingEquipment, itemLookup),
       ...resolveBackgroundStartingEquipment(bgObj?.startingEquipment, itemLookup),
     ]
-    const proficiencies = {
-      armor: (classProficiencies.armor ?? [])
-        .filter((a): a is string => typeof a === 'string')
-        .map(stripItemTag),
-      weapons: (classProficiencies.weapons ?? [])
-        .filter((w): w is string => typeof w === 'string')
-        .map(stripItemTag),
-      tools: (classProficiencies.tools ?? [])
-        .filter(
-          (t: unknown): t is string =>
-            typeof t === 'string' &&
-            !t.toLowerCase().includes('choose') &&
-            !t.toLowerCase().includes('any'),
-        )
-        .map(stripItemTag),
-      skills: [],
-      languages: ['Common'],
-      savingThrows: [],
-    }
 
     const character = createNewCharacter({
       name: characterData.name,
@@ -276,8 +267,9 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
       },
       provenance,
       proficiencies,
-      equipment: startingEquipment.map((item, index) => ({
-        id: `starter-${index}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      skills: initialSkills,
+      equipment: startingEquipment.map((item) => ({
+        id: generateEquipmentId(),
         equipped: false,
         attuned: false,
         ...item,
@@ -322,6 +314,9 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
           <DialogTitle className="font-display text-2xl font-bold">
             Create New Character
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Step through the wizard to configure your new character.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-1 overflow-hidden min-h-0">

@@ -85,6 +85,14 @@ export function getASILevelsFromClass(cls: Class5e | undefined | null): number[]
     }
   }
 
+  if (import.meta.env.DEV) {
+    console.warn(
+      `[gameRules] getASILevelsFromClass: no ASI levels found in classFeatureRefs for ${
+        cls?.name ?? 'unknown'
+      }; using standard Fighter/Rogue fallback [4,8,12,16,19]. ` +
+        'This may be wrong for classes with more than 5 ASIs (e.g. Fighter, Barbarian).',
+    )
+  }
   return [4, 8, 12, 16, 19]
 }
 
@@ -117,9 +125,6 @@ export function checkMulticlassRequirements(
   cls: Class5e,
   abilityScores: AbilityScores,
 ): { meetsRequirements: boolean; requirementText: string } {
-  const reqs = cls.multiclassing?.requirements
-  if (!reqs) return { meetsRequirements: true, requirementText: '' }
-
   const scores = abilityScores as unknown as Record<string, number>
   const getScore = (ab: string): number => {
     const full = ABILITY_ABBREV_TO_FULL[ab.toLowerCase()] ?? ab.toLowerCase()
@@ -128,6 +133,31 @@ export function checkMulticlassRequirements(
 
   const checkGroup = (group: Record<string, number>) =>
     sortedAbilityReqEntries(group).every(([ab, min]) => getScore(ab) >= min)
+
+  const reqs = cls.multiclassing?.requirements
+  if (!reqs) {
+    // XPHB/2024-edition classes omit multiclassing.requirements but encode
+    // prerequisites in primaryAbility. Each array item is an alternative group
+    // (OR between items); within a group all listed abilities must be >= 13.
+    const primaryAbility = cls.primaryAbility as Array<Record<string, unknown>> | undefined
+    if (!Array.isArray(primaryAbility) || primaryAbility.length === 0) {
+      return { meetsRequirements: true, requirementText: '' }
+    }
+    const SCORE_REQ = 13
+    const groups: Array<Record<string, number>> = primaryAbility.map((group) =>
+      Object.fromEntries(
+        Object.keys(group)
+          .filter((k) => group[k] === true && normalizeReqKeyToAbilityAbv(k))
+          .map((k) => [k, SCORE_REQ]),
+      ),
+    )
+    const meetsRequirements = groups.some(checkGroup)
+    const requirementText = groups
+      .map((g) => formatAbilityRequirementGroup(g))
+      .filter(Boolean)
+      .join(' or ')
+    return { meetsRequirements, requirementText }
+  }
 
   const baseGroup = Object.fromEntries(
     Object.entries(reqs).filter(

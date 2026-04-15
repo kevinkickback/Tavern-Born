@@ -54,7 +54,7 @@ function renderPanel(languageChoice: ChoiceRecord) {
 }
 
 describe('BuildProficienciesTabsPanel origin language messaging', () => {
-  test('shows remaining origin picks when 2024 language choices are unresolved', () => {
+  test('renders language tab without status notes', () => {
     renderPanel({
       id: 'origin:2024:languages',
       domain: 'languages',
@@ -70,31 +70,6 @@ describe('BuildProficienciesTabsPanel origin language messaging', () => {
       status: 'pending',
     })
 
-    expect(
-      screen.getByText(/2024 Origin Languages: choose 2 more Standard languages\./),
-    ).toBeTruthy()
-  })
-
-  test('shows completion message when all origin picks are resolved', () => {
-    renderPanel({
-      id: 'origin:2024:languages',
-      domain: 'languages',
-      sourceTag: {
-        sourceType: 'manual',
-        sourceName: '2024 Origin Languages',
-        grantType: 'placeholder',
-        label: 'User Choice',
-      },
-      chooseCount: 2,
-      optionPool: [],
-      selected: ['Elvish', 'Dwarvish'],
-      status: 'resolved',
-    })
-
-    expect(
-      screen.getByText(
-        /2024 Origin Languages complete\. Additional non-standard languages require explicit grants\./,
-      ),
-    ).toBeTruthy()
+    expect(screen.queryByText(/2024 Origin Languages/)).toBeNull()
   })
 })

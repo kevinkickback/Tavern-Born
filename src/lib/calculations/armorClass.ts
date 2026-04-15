@@ -3,11 +3,24 @@ import { getAbilityModifier } from './gameRules'
 
 export type ArmorCategory = 'light' | 'medium' | 'heavy' | 'shield' | 'none'
 
-const ARMOR_TYPE_MAP: Record<string, ArmorCategory> = {
+/** Maps 5etools item type codes to internal armor categories. */
+export const ARMOR_TYPE_MAP: Readonly<Record<string, ArmorCategory>> = {
   LA: 'light',
   MA: 'medium',
   HA: 'heavy',
   S: 'shield',
+}
+
+/**
+ * Reverse map: armor category display names (as used in 5etools filter strings)
+ * to their corresponding item type code.  Kept alongside ARMOR_TYPE_MAP so both
+ * stay in sync from a single source.
+ */
+export const ARMOR_CATEGORY_LABEL_TO_CODE: Readonly<Record<string, string>> = {
+  'light armor': 'LA',
+  'medium armor': 'MA',
+  'heavy armor': 'HA',
+  shield: 'S',
 }
 
 /** Returns the armour category derived from a 5etools item type code. */
