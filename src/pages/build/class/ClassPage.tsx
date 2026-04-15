@@ -2,6 +2,7 @@ import { CaretLeft, CaretRight, Sword, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { useProvenance } from '@/hooks/character/useProvenance'
+import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup, useOptionalFeatureLookup, useSubclass } from '@/hooks/data/useGameData'
 import type { OptionalFeatureLike } from '@/lib/5etools/classData'
@@ -30,10 +31,6 @@ import type {
   ClassFeatProgression,
   OptionalFeatureProgression,
 } from '@/pages/build/class/model/levelsUtils'
-import {
-  buildClassSelectionPatch,
-  buildSubclassSelectionPatch,
-} from '@/pages/build/class/model/mutations'
 import {
   buildCharacterSnapshot,
   buildClassProgression,
@@ -70,8 +67,8 @@ export function BuildClassPage() {
   const { classes, classFeatures, optionalfeatures, spells, feats } = useFilteredGameData()
   const classLookup = useClassLookup()
   const optionalFeatureLookup = useOptionalFeatureLookup()
+  const { selectClass, selectSubclass } = useUnifiedClassSelection()
   const {
-    applyClassSelection,
     applyClassEquipmentChoice,
     applyOptionalFeatureSelection,
     replaceFeatSelections,
@@ -117,9 +114,9 @@ export function BuildClassPage() {
   const viewingEntry =
     classProgression.find((entry) => `${entry.name}|${entry.source ?? ''}` === selectedClassTab) ??
     classProgression[0]
-  const viewingClass = viewingEntry?.name ?? character?.class
-  const viewingClassSource = viewingEntry?.source ?? character?.classSource
-  const viewingClassLevel = viewingEntry?.levels ?? character?.level ?? 1
+  const viewingClass = viewingEntry?.name
+  const viewingClassSource = viewingEntry?.source
+  const viewingClassLevel = viewingEntry?.levels ?? 1
   const fallbackClassByName = useMemo(
     () => new Map((classes as Class5e[]).map((cls) => [cls.name, cls])),
     [classes],
@@ -145,15 +142,7 @@ export function BuildClassPage() {
 
   const handleClassChange = (className: string, classSource?: string) => {
     if (!character) return
-    const { classEntity: cls, patch } = buildClassSelectionPatch({
-      character,
-      className,
-      classSource,
-      classLookup,
-      fallbackClassByName,
-    })
-    if (cls) applyClassSelection(cls, undefined)
-    updateCharacter(character.id, patch)
+    selectClass(className, classSource, classLookup, fallbackClassByName)
     handleClassSelectionApplied()
   }
   const allClassFeatures = useMemo(() => {
@@ -298,9 +287,7 @@ export function BuildClassPage() {
       ? viewingClassData.subclassTitle
       : 'Subclass'
   const viewingSubclass = viewingEntry
-    ? classProgression.length > 1
-      ? viewingEntry.subclass
-      : (viewingEntry.subclass ?? character?.subclass)
+    ? (viewingEntry.subclass ?? character?.subclass)
     : character?.subclass
   const viewingSubclassData = useSubclass(
     viewingClass ?? '',
@@ -311,15 +298,7 @@ export function BuildClassPage() {
 
   const handleSubclassSelect = (sc: SubclassOption) => {
     if (!character) return
-    if (viewingClassData) applyClassSelection(viewingClassData, sc)
-    const patch = buildSubclassSelectionPatch({
-      character,
-      classProgression,
-      viewingEntry,
-      subclassName: sc.name,
-      subclassSource: sc.source,
-    })
-    updateCharacter(character.id, patch)
+    selectSubclass(sc.name, sc.source ?? '', classProgression, viewingEntry)
     handleSubclassSelectionApplied({
       name: sc.name,
       source: sc.source,

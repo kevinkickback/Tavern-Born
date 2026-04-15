@@ -83,11 +83,8 @@ export function countTotalAsiAcrossClasses({
 }: CountAsiAndFeatSlotsParams): number {
   if (!character) return 0
 
-  const progressions =
-    classProgression.length > 0 ? classProgression : getCharacterClassEntries(character)
-
   let count = 0
-  for (const entry of progressions) {
+  for (const entry of classProgression) {
     const cls = resolveClassForEntry(entry, classLookup, fallbackClassByName)
     const levels = getASILevelsFromClass(cls)
     count += levels.filter((level) => level <= (entry.levels ?? 0)).length
@@ -103,11 +100,8 @@ export function countTotalFeatSlots({
 }: CountAsiAndFeatSlotsParams): number {
   if (!character) return 0
 
-  const progressions =
-    classProgression.length > 0 ? classProgression : getCharacterClassEntries(character)
-
   let count = 0
-  for (const entry of progressions) {
+  for (const entry of classProgression) {
     const cls = resolveClassForEntry(entry, classLookup, fallbackClassByName)
     const earned = getASILevelsFromClass(cls).filter((level) => level <= (entry.levels ?? 0))
     const usedForAsi = (character.asiChoices ?? []).filter(
@@ -124,9 +118,10 @@ export function buildCharacterSnapshot({
   viewingClass,
 }: BuildCharacterSnapshotParams): PrereqCharacterSnapshot {
   const profileSpells = character ? collectKnownSpells(ensureSpellProfiles(character)) : null
+  const progressionLevel = classProgression.reduce((sum, entry) => sum + (entry.levels ?? 0), 0)
 
   return {
-    level: character?.level ?? 0,
+    level: progressionLevel > 0 ? progressionLevel : (character?.level ?? 0),
     class: viewingClass,
     race: character?.race,
     abilityScores: character?.abilityScores,

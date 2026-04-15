@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useClasses } from '@/hooks/data/useGameData'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e } from '@/types/5etools'
 import type { HitPoints } from '@/types/character'
@@ -36,17 +37,7 @@ export function useHitPoints(): HitPointsState {
   }, [classes])
 
   const resolvedProgression = useMemo(() => {
-    if (!character) return []
-    if (character.classProgression?.length) {
-      return character.classProgression
-    }
-    return [
-      {
-        name: character.class,
-        source: character.classSource,
-        levels: Math.max(1, character.level || 1),
-      },
-    ]
+    return getCharacterClassEntries(character)
   }, [character])
 
   const getClassHitDie = useCallback(

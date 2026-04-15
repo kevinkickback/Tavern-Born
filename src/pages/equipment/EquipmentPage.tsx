@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -56,7 +57,6 @@ export function EquipmentPage() {
     carryCapacity,
     isEncumbered,
     attunedCount,
-    derivedAC,
     currency,
     totalCurrencyCopper,
     addFromGameData,
@@ -66,6 +66,7 @@ export function EquipmentPage() {
     toggleAttune,
     updateCurrency,
   } = useEquipment()
+  const { effectiveAC } = useArmorClass()
   const equipmentItems = useMemo(() => {
     const merged = new Map<string, Item5e>()
 
@@ -182,7 +183,7 @@ export function EquipmentPage() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-0.5">Armor Class</div>
-                  <div className="text-sm font-mono font-bold">{derivedAC}</div>
+                  <div className="text-sm font-mono font-bold">{effectiveAC}</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground mb-0.5">Currency</div>

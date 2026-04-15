@@ -23,6 +23,9 @@ Without provenance, changing race/class/background can leave stale proficiencies
 - src/hooks/character/useProvenanceRows.ts
 - src/hooks/character/useProvenance.ts
 
+Current orchestration note:
+- The provenance hook remains the UI-facing mutation surface, but class-selection orchestration is now delegated to `src/lib/character/commands/classSelectionOrchestrationCommand.ts` so the hook no longer owns that business logic inline.
+
 ## Ledger Model
 
 The character carries a provenance ledger with source-tagged grant maps for:

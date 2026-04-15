@@ -565,18 +565,7 @@ export function FeatsPage() {
                 </div>
               </AccordionTrigger>
               <AccordionContent className="pb-1">
-                <div className="px-3.5 pt-2 pb-1 flex items-center justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5"
-                    onClick={() => setBonusModalOpen(true)}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add Feat
-                  </Button>
-                </div>
-                {bonusFeats.length > 0 && (
+                {bonusFeats.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3.5">
                     {bonusFeats.map((feat) => {
                       const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
@@ -591,6 +580,36 @@ export function FeatsPage() {
                         />
                       )
                     })}
+                    <button
+                      type="button"
+                      onClick={() => setBonusModalOpen(true)}
+                      className="rounded-xl border border-dashed border-border bg-card p-4 min-h-40 flex flex-col items-center justify-center text-center transition-colors hover:border-accent/40 hover:bg-muted/20"
+                    >
+                      <Plus className="h-5 w-5 text-primary mb-2" />
+                      <span className="text-sm font-semibold">Add Bonus Feat</span>
+                      <span className="mt-1 text-xs text-muted-foreground max-w-xs">
+                        Bonus feats are optional and don&apos;t use your normal feat slots.
+                      </span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="px-3.5 pb-3.5">
+                    <div className="min-h-52 flex flex-col items-center justify-center text-center p-6">
+                      <Sparkle className="h-6 w-6 text-muted-foreground mb-2" weight="duotone" />
+                      <h3 className="text-sm font-semibold">No Bonus Feats Selected</h3>
+                      <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+                        Bonus feats are optional and don&apos;t use your normal feat slots.
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 mt-4"
+                        onClick={() => setBonusModalOpen(true)}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Feat
+                      </Button>
+                    </div>
                   </div>
                 )}
               </AccordionContent>

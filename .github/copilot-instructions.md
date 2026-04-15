@@ -12,7 +12,7 @@ Use industry best practices for every engineering decision unless a repository i
 - Prefer the simplest design that keeps responsibilities separated and behavior explicit.
 - Preserve type safety and data integrity over convenience.
 - Prefer small, composable units over large multi-purpose files.
-- Keep public APIs stable during refactors unless the change requires an intentional contract update.
+- Keep public APIs stable during larger changes unless the change requires an intentional contract update.
 - Favor maintainability, testability, and clear ownership boundaries when choosing between valid implementations.
 
 ### 0. Docs routing for large-codebase navigation
@@ -59,10 +59,10 @@ All data access goes through hooks — never import JSON directly in a component
 All business logic (modifiers, costs, slots, bonuses, prereq checks, AC, HP) goes in `src/lib/` as pure functions with no React/Zustand imports. **Search before writing** — the function may already exist.
 
 Start with these common locations:
-- `src/lib/5etools/parsers.ts` / `src/lib/5etools/filters.ts`
-- `src/lib/skills.ts` / `src/lib/abilityScores.ts`
-- `src/lib/characterUtils.ts` / `src/lib/gameRules.ts`
-- `src/lib/prerequisites.ts` / `src/lib/spellSlots.ts`
+- `src/lib/5etools/parsers/` (directory: `basic.ts`, `classes.ts`, `races.ts`, `spells.ts`, `shared.ts`, `index.ts`) / `src/lib/5etools/filters.ts`
+- `src/lib/calculations/skills.ts` / `src/lib/calculations/abilityScores.ts`
+- `src/lib/characterUtils.ts` / `src/lib/calculations/gameRules.ts`
+- `src/lib/calculations/prerequisites.ts` / `src/lib/calculations/spellSlots.ts`
 
 Hooks in `src/hooks/` should remain thin wrappers that connect lib functions to state.
 
@@ -89,7 +89,7 @@ All writes go through `updateCharacter(id, patch)` from `useCharacterStore`. Nev
 	- Use `cn()` for conditional classes.
 
 ### 9. Always use `renderEntry` for 5etools content
-Never render raw JSON to the user. All entry content goes through `renderEntry()` / `FormattedTextRenderer` from `src/lib/renderer.ts`.
+Never render raw JSON to the user. All entry content goes through `renderEntry()` from `src/lib/renderer.ts` or `FormattedTextRenderer` from `src/components/editor/FormattedTextRenderer.tsx`.
 
 ### 10. Content pages use max-width container
 Settings, Compendium, and all Details sub-nav pages should use a centered `max-w-7xl` container and full-width card content by default:
@@ -98,7 +98,7 @@ Settings, Compendium, and all Details sub-nav pages should use a centered `max-w
 ```
 
 Equivalent wrapper structure is acceptable if it preserves the same layout behavior.
-Exceptions: character cards, sidebar, Portrait page (full-bleed).
+Exceptions: character cards, sidebar (full-bleed).
 
 ### 11. Lint and fix after every change
 Linting is enforced automatically via Copilot hooks (Biome).

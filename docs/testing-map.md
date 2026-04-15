@@ -29,7 +29,9 @@ Key scripts in package.json:
 - Build flow extracted helpers:
 	- src/pages/build/ability-scores/model/data.ts
 	- src/pages/build/class/model/asi.ts
-	- src/pages/build/class/model/mutations.ts
+	- src/pages/build/class/model/pageUtils.ts
+	- src/lib/character/commands/classCommands.ts
+	- src/lib/character/commands/spellCommands.ts
 	- src/pages/build/proficiencies/model/data.ts
 	- src/pages/build/class/model/levelsUtils.ts
 	- Grouped tool-choice expansion coverage (gaming set/musical instrument/artisan's tools/any-tool)
@@ -38,11 +40,13 @@ Key scripts in package.json:
 - Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
 - Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
 - Spell hook behavior coverage in tests/hooks/useSpellSlots.test.tsx (add/remove spells, profile management, prepared toggles)
+- Command-layer spell and class coverage in tests/unit/spellCommands.test.ts and tests/unit/classCommands.test.ts
 - Schema migrations in src/lib/schema/migrations.ts with dedicated unit coverage in tests/lib/migrations.test.ts
 - Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)
+- Current workflow coverage in tests/integration/spellOperations.test.tsx, tests/integration/multiclassUpdates.test.tsx, tests/integration/contentFiltering.test.tsx, and tests/integration/armorClass.test.tsx
 - Spell page E2E no-character scenarios in tests/e2e/spells.spec.ts
 - Basic E2E startup/navigation smoke
-- Spell page no-character E2E baseline in tests/e2e/spells.spec.ts
+- Spell page no-character E2E coverage in tests/e2e/spells.spec.ts
 - Character lifecycle E2E (import -> portrait edit -> save -> reload) in tests/e2e/lifecycle.spec.ts
 - Active-character spell workflow E2E (profile switching, add/remove, prepared toggle) in tests/e2e/spells-active.spec.ts
 - Startup cache-branch full coverage in tests/hooks/useDataInit.test.tsx (unconfigured, stale, fresh, offline, source-changed, direct-load)
