@@ -448,12 +448,17 @@ export function BuildClassPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 pt-6 pb-4">
+      <div className="px-6 py-5 page-header-band mb-6">
         <div className="max-w-7xl mx-auto">
-          <h1 className="font-display text-2xl font-bold flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <Sword className="h-6 w-6 text-accent" weight="duotone" />
-            Class
-          </h1>
+            <div>
+              <h1 className="text-2xl font-display font-bold">Class</h1>
+              <p className="text-sm text-muted-foreground">
+                Choose your class and manage level progression
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

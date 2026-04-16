@@ -150,7 +150,7 @@ export function BuildClassLevelsPanel({
 
   return (
     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-      <div className="p-4 border-b border-border flex-shrink-0">
+      <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex-shrink-0">
         {classProgression.length > 1 ? (
           <Tabs
             value={
@@ -171,7 +171,7 @@ export function BuildClassLevelsPanel({
                   {entry.name}
                   <Badge
                     variant="secondary"
-                    className="font-mono h-4 px-1 text-[10px] pointer-events-none"
+                    className="font-mono h-4 px-1 text-xs pointer-events-none"
                   >
                     {entry.levels}
                   </Badge>

@@ -189,12 +189,17 @@ export function BuildAbilityScoresPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 pt-6 pb-4">
+      <div className="px-6 py-5 page-header-band mb-6">
         <div className="max-w-7xl mx-auto">
-          <h1 className="font-display text-2xl font-bold flex items-center gap-3">
+          <div className="flex items-center gap-3">
             <Barbell className="h-6 w-6 text-primary" weight="duotone" />
-            Ability Scores
-          </h1>
+            <div>
+              <h1 className="text-2xl font-display font-bold">Ability Scores</h1>
+              <p className="text-sm text-muted-foreground">
+                Set and assign your six core ability scores
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 

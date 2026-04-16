@@ -211,7 +211,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                   )}
                 >
                   <div className="font-semibold truncate">{race.name}</div>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                     <span className="font-mono">{race.source}</span>
                     {raceSubraces.length > 0 && (
                       <span>
@@ -261,7 +261,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-1.5 mb-2">
                     <BookOpen className="h-3.5 w-3.5 text-accent" weight="fill" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Race Overview
                     </span>
                   </div>
@@ -272,7 +272,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
               {/* Subrace selector */}
               {subraces.length > 0 && (
                 <div className="rounded-lg border border-border bg-card/50 p-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Subrace
                   </span>
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -302,19 +302,19 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
               {/* Quick stats */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="flex flex-col items-center px-3 py-2 rounded-lg bg-card border border-border">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Size
                   </span>
                   <span className="text-sm font-semibold mt-0.5">{size.join(' / ') || '—'}</span>
                 </div>
                 <div className="flex flex-col items-center px-3 py-2 rounded-lg bg-card border border-border">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Speed
                   </span>
                   <span className="text-sm font-semibold mt-0.5">{speed || '—'}</span>
                 </div>
                 <div className="flex flex-col items-center px-3 py-2 rounded-lg bg-card border border-border">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Darkvision
                   </span>
                   <span className="text-sm font-semibold mt-0.5">
@@ -327,7 +327,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
               <div className="rounded-lg border border-border bg-card p-3">
                 <div className="flex items-center gap-1.5 mb-2">
                   <ChartBar className="h-3.5 w-3.5 text-accent" weight="fill" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Ability Scores
                   </span>
                 </div>
@@ -385,7 +385,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
               <div className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center gap-1.5 mb-3">
                   <Eye className="h-3.5 w-3.5 text-accent" weight="fill" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Racial Traits
                   </span>
                 </div>

@@ -124,7 +124,7 @@ export function BuildProficienciesTabsPanel({
         <TabsTrigger value="skills" className="inline-flex items-center gap-1.5">
           Skills
           {choiceCounts.skills > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] leading-none">
+            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs leading-none">
               {choiceCounts.skills}
             </Badge>
           )}
@@ -133,7 +133,7 @@ export function BuildProficienciesTabsPanel({
         <TabsTrigger value="armor" className="inline-flex items-center gap-1.5">
           Armor
           {choiceCounts.armor > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] leading-none">
+            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs leading-none">
               {choiceCounts.armor}
             </Badge>
           )}
@@ -141,7 +141,7 @@ export function BuildProficienciesTabsPanel({
         <TabsTrigger value="weapons" className="inline-flex items-center gap-1.5">
           Weapons
           {choiceCounts.weapons > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] leading-none">
+            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs leading-none">
               {choiceCounts.weapons}
             </Badge>
           )}
@@ -149,7 +149,7 @@ export function BuildProficienciesTabsPanel({
         <TabsTrigger value="tools" className="inline-flex items-center gap-1.5">
           Tools
           {choiceCounts.tools > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] leading-none">
+            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs leading-none">
               {choiceCounts.tools}
             </Badge>
           )}
@@ -157,7 +157,7 @@ export function BuildProficienciesTabsPanel({
         <TabsTrigger value="languages" className="inline-flex items-center gap-1.5">
           Languages
           {choiceCounts.languages > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] leading-none">
+            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs leading-none">
               {choiceCounts.languages}
             </Badge>
           )}

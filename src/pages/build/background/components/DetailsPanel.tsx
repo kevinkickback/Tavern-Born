@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { InfoTile } from '@/pages/_shared'
@@ -51,13 +50,6 @@ function BackgroundDetails2024({
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-display font-bold">{background.name}</h2>
-        <Badge variant="outline" className="mt-2">
-          {background.source}
-        </Badge>
-      </div>
-      <Separator />
       <div className="grid grid-cols-1 gap-3">
         <InfoTile title="Skill Proficiencies">
           {skillNames.length > 0 ? (
@@ -135,13 +127,6 @@ function BackgroundDetails2014({
   const entries = getBackgroundEntries(background)
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-2xl font-display font-bold">{background.name}</h2>
-        <Badge variant="outline" className="mt-2">
-          {background.source}
-        </Badge>
-      </div>
-      <Separator />
       <div className="grid grid-cols-1 gap-3">
         <InfoTile title="Skill Proficiencies">
           {skillNames.length > 0 ? (
@@ -219,10 +204,24 @@ export function BuildBackgroundDetailsPanel({
         detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'w-1/2 min-w-[320px]',
       )}
     >
-      <div className="p-4 border-b border-border">
-        <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+      <div className="bg-gradient-to-r from-accent/10 to-transparent border-b border-border px-4 py-3 flex flex-col gap-2">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Details
         </span>
+        <div className="flex items-center gap-2 min-h-8">
+          {selectedBackground ? (
+            <>
+              <span className="text-sm font-bold font-display leading-tight">
+                {selectedBackground.name}
+              </span>
+              <Badge variant="outline" className="text-xs shrink-0">
+                {selectedBackground.source}
+              </Badge>
+            </>
+          ) : (
+            <span className="text-sm text-muted-foreground">Select a background…</span>
+          )}
+        </div>
       </div>
       <ScrollArea className="flex-1 overflow-hidden">
         <div className="p-4">

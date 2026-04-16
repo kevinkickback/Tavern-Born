@@ -1,4 +1,4 @@
-import { CheckSquare, Plus, SlidersHorizontal, Trash, Upload } from '@phosphor-icons/react'
+import { CheckSquare, Plus, Trash, Upload, Users } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { CharacterCard } from '@/components/character/CharacterCard'
@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
@@ -22,12 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Slider } from '@/components/ui/slider'
-import {
-  MAX_HOME_CARD_SIZE,
-  MIN_HOME_CARD_SIZE,
-  useAppPreferencesStore,
-} from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Character } from '@/types/character'
 
@@ -39,8 +34,6 @@ export function HomePage() {
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const deleteCharacter = useCharacterStore((state) => state.deleteCharacter)
-  const cardSize = useAppPreferencesStore((state) => state.homeCardSize)
-  const setHomeCardSize = useAppPreferencesStore((state) => state.setHomeCardSize)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(null)
   const [confirmSwitchOpen, setConfirmSwitchOpen] = useState(false)
@@ -50,7 +43,6 @@ export function HomePage() {
   const [sortBy, setSortBy] = useState<SortOption>('recent')
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
-  const [toolbarOpen, setToolbarOpen] = useState(false)
 
   const sortedCharacters = useMemo(() => {
     const sorted = [...characters]
@@ -213,95 +205,68 @@ export function HomePage() {
 
   return (
     <div>
-      {characters.length > 0 && (
-        <div className="relative mb-8 flex flex-col gap-2">
-          {/* Main toolbar row */}
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="default"
-              size="lg"
-              onClick={() => setShowCreateWizard(true)}
-              className="gap-2 bg-accent hover:bg-accent/90"
-            >
-              <Plus />
-              New Character
-            </Button>
-            <Button variant="outline" size="lg" onClick={handleImportCharacter} className="gap-2">
-              <Upload />
-              Import Character
-            </Button>
-
-            <div className="ml-auto relative shrink-0">
-              <div className="relative">
-                <Button
-                  variant={toolbarOpen ? 'default' : 'outline'}
-                  size="lg"
-                  className="h-10 px-3"
-                  onClick={() => setToolbarOpen((v) => !v)}
-                  title="Toolbar"
-                >
-                  <SlidersHorizontal className="size-6" weight="bold" />
-                  <span className="sr-only">Toolbar</span>
-                </Button>
-
-                {toolbarOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-2 flex flex-col gap-2 rounded-lg border bg-background/95 px-1.5 py-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 xl:right-full xl:top-1/2 xl:mt-0 xl:mr-3 xl:flex-row xl:flex-nowrap xl:items-center xl:-translate-y-1/2 xl:px-2 xl:py-2">
-                    <div className="flex h-8 items-center gap-2 rounded-md border bg-card px-2">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">Sort</span>
-                      <Select
-                        value={sortBy}
-                        onValueChange={(value) => setSortBy(value as SortOption)}
-                      >
-                        <SelectTrigger className="!h-4 min-h-0 w-28 gap-1 border-0 bg-transparent px-0 py-0 text-[11px] leading-none shadow-none ring-0 focus:ring-0 focus:ring-offset-0 [&_svg]:size-3">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-card border-border">
-                          <SelectItem value="recent">Recently Modified</SelectItem>
-                          <SelectItem value="name-asc">Name (A-Z)</SelectItem>
-                          <SelectItem value="name-desc">Name (Z-A)</SelectItem>
-                          <SelectItem value="level-desc">Level (High-Low)</SelectItem>
-                          <SelectItem value="level-asc">Level (Low-High)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="hidden xl:block h-8 w-px bg-border" />
-
-                    <div className="flex h-8 items-center gap-2 rounded-md border bg-card px-2">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        Card Size
-                      </span>
-                      <div className="w-20">
-                        <Slider
-                          min={MIN_HOME_CARD_SIZE}
-                          max={MAX_HOME_CARD_SIZE}
-                          step={10}
-                          value={[cardSize]}
-                          onValueChange={(value) => setHomeCardSize(value[0])}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="hidden xl:block h-8 w-px bg-border" />
-
-                    <Button
-                      variant={selectionMode ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-8 shrink-0 gap-1.5 bg-card"
-                      onClick={handleToggleSelectionMode}
-                    >
-                      <CheckSquare size={16} />
-                      Multi Select
-                    </Button>
-                  </div>
-                )}
-              </div>
+      <div className="px-6 py-5 page-header-band mb-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <Users className="h-6 w-6 text-primary" weight="duotone" />
+            <div>
+              <h1 className="text-2xl font-display font-bold">Home</h1>
+              <p className="text-sm text-muted-foreground">
+                Manage and switch between your characters
+              </p>
             </div>
           </div>
+          {characters.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                <SelectTrigger className="h-9 w-44 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Recently Modified</SelectItem>
+                  <SelectItem value="name-asc">Name (A–Z)</SelectItem>
+                  <SelectItem value="name-desc">Name (Z–A)</SelectItem>
+                  <SelectItem value="level-desc">Level (High–Low)</SelectItem>
+                  <SelectItem value="level-asc">Level (Low–High)</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant={selectionMode ? 'default' : 'outline'}
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={handleToggleSelectionMode}
+              >
+                <CheckSquare size={15} />
+                Select
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5"
+                onClick={handleImportCharacter}
+              >
+                <Upload size={15} />
+                Import
+              </Button>
+              <Button
+                size="sm"
+                className="h-9 gap-1.5 bg-accent hover:bg-accent/90"
+                onClick={() => setShowCreateWizard(true)}
+              >
+                <Plus size={15} />
+                New Character
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
 
-          {/* Selection controls row */}
+      <div className="max-w-7xl mx-auto w-full flex flex-col gap-8">
+        {/* Characters section */}
+        <div>
+          {/* Selection banner */}
           {selectionMode && (
-            <div className="mt-2 flex items-center gap-3 rounded-lg border bg-card px-4 py-2">
+            <div className="mb-4 flex items-center gap-3 rounded-lg border bg-card px-4 py-2">
               <div className="flex items-center gap-2">
                 <Checkbox checked={allSelected} onCheckedChange={handleToggleAllSelection} />
                 <span className="text-sm text-muted-foreground">
@@ -323,119 +288,135 @@ export function HomePage() {
               </span>
             </div>
           )}
-        </div>
-      )}
 
-      {characters.length === 0 ? (
-        <div className="flex flex-col items-center justify-center text-center min-h-[60vh]">
-          <div className="w-32 h-32 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center">
-            <Plus className="text-6xl text-muted-foreground" />
-          </div>
-          <h2 className="font-display text-2xl font-semibold mb-2">No Characters Yet</h2>
-          <p className="text-muted-foreground mb-6">
-            Create your first character to begin your adventure
-          </p>
-          <Button
-            variant="default"
-            size="lg"
-            onClick={() => setShowCreateWizard(true)}
-            className="gap-2"
-          >
-            <Plus />
-            Create First Character
-          </Button>
+          {/* Character grid or empty state */}
+          {characters.length === 0 ? (
+            <Card className="border border-dashed border-border shadow-none max-w-7xl mx-auto w-full">
+              <CardContent className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+                  <Users className="size-10 text-muted-foreground" weight="duotone" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-semibold">No Characters Yet</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Create your first character to begin your adventure
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={handleImportCharacter}
+                  >
+                    <Upload size={15} />
+                    Import
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-1.5 bg-accent hover:bg-accent/90"
+                    onClick={() => setShowCreateWizard(true)}
+                  >
+                    <Plus size={15} />
+                    New Character
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div
+              className="grid gap-6"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 360px), 1fr))',
+              }}
+            >
+              {sortedCharacters.map((character) => (
+                <CharacterCard
+                  key={character.id}
+                  character={character}
+                  onLoad={handleLoadCharacter}
+                  onDelete={handleDeleteCharacter}
+                  onExport={handleExportCharacter}
+                  isActive={character.id === activeCharacterId}
+                  selectionMode={selectionMode}
+                  isSelected={selectedCharacterIds.includes(character.id)}
+                  onToggleSelect={handleToggleCharacterSelection}
+                  cardSize={360}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      ) : (
-        <div
-          className="grid gap-6 justify-start"
-          style={{
-            gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${cardSize}px), ${cardSize}px))`,
-            maxWidth: '100%',
+
+        <CharacterCreationWizard open={showCreateWizard} onOpenChange={setShowCreateWizard} />
+
+        <AlertDialog open={confirmSwitchOpen} onOpenChange={setConfirmSwitchOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You have unsaved changes on the current character. Switching characters will discard
+                them.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingCharacterId(null)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={confirmSwitchCharacter}>
+                Discard & Switch
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog
+          open={confirmDeleteOpen}
+          onOpenChange={(open) => {
+            setConfirmDeleteOpen(open)
+            if (!open) {
+              setPendingDeleteCharacterId(null)
+            }
           }}
         >
-          {sortedCharacters.map((character) => (
-            <CharacterCard
-              key={character.id}
-              character={character}
-              onLoad={handleLoadCharacter}
-              onDelete={handleDeleteCharacter}
-              onExport={handleExportCharacter}
-              isActive={character.id === activeCharacterId}
-              selectionMode={selectionMode}
-              isSelected={selectedCharacterIds.includes(character.id)}
-              onToggleSelect={handleToggleCharacterSelection}
-              cardSize={cardSize}
-            />
-          ))}
-        </div>
-      )}
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete character?</AlertDialogTitle>
+              <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={confirmDeleteCharacter}
+              >
+                Delete Character
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-      <CharacterCreationWizard open={showCreateWizard} onOpenChange={setShowCreateWizard} />
-
-      <AlertDialog open={confirmSwitchOpen} onOpenChange={setConfirmSwitchOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes on the current character. Switching characters will discard
-              them.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingCharacterId(null)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmSwitchCharacter}>Discard & Switch</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={confirmDeleteOpen}
-        onOpenChange={(open) => {
-          setConfirmDeleteOpen(open)
-          if (!open) {
-            setPendingDeleteCharacterId(null)
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete character?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={confirmDeleteCharacter}
-            >
-              Delete Character
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmBulkDeleteOpen} onOpenChange={setConfirmBulkDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete selected characters?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Delete {selectedCharacterIds.length} selected character(s)? This action cannot be
-              undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={confirmDeleteSelected}
-            >
-              Delete Selected
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <AlertDialog open={confirmBulkDeleteOpen} onOpenChange={setConfirmBulkDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete selected characters?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Delete {selectedCharacterIds.length} selected character(s)? This action cannot be
+                undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={confirmDeleteSelected}
+              >
+                Delete Selected
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </div>
   )
 }

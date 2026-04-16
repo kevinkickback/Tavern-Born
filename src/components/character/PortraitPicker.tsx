@@ -80,7 +80,7 @@ export function PortraitPicker({
   return (
     <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
       {/* Left: preview + image controls always together */}
-      <div className="w-full lg:w-1/2 space-y-3">
+      <div className="w-full max-w-sm mx-auto lg:max-w-none lg:w-1/2 lg:mx-0 space-y-3">
         <Label className="flex items-center gap-2">
           <Image className="h-5 w-5" />
           Card Preview
@@ -181,7 +181,7 @@ export function PortraitPicker({
               className="relative aspect-square rounded-lg border-2 border-dashed border-border hover:border-accent/60 transition-all flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-accent-foreground"
             >
               <Upload className="h-5 w-5" />
-              <span className="text-[10px] leading-tight">Upload</span>
+              <span className="text-xs leading-tight">Upload</span>
             </button>
 
             {PLACEHOLDER_PORTRAITS.map((src, i) => (

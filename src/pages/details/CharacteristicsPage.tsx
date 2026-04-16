@@ -92,191 +92,202 @@ export function CharacteristicsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full space-y-6">
-      <h1 className="font-display text-4xl font-bold flex items-center gap-3">
-        <Sparkle className="h-8 w-8 text-primary" weight="duotone" />
-        Characteristics
-      </h1>
-
-      <Card className="w-full">
-        <CardContent className="pt-6">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
-            Identity
-          </h3>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl">
-            <div className="space-y-1.5">
-              <Label htmlFor={charNameId}>Character Name</Label>
-              <Input
-                id={charNameId}
-                value={charName}
-                onChange={(e) => {
-                  setCharName(e.target.value)
-                  updateCharacter(activeCharacter.id, { name: e.target.value })
-                }}
-                placeholder="Character name"
-              />
+    <div>
+      <div className="px-6 py-5 page-header-band mb-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <Sparkle className="h-6 w-6 text-primary" weight="duotone" />
+            <div>
+              <h1 className="text-2xl font-display font-bold">Characteristics</h1>
+              <p className="text-sm text-muted-foreground">
+                Personality traits, ideals, bonds, and flaws
+              </p>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor={playerNameId}>Player Name</Label>
-              <Input
-                id={playerNameId}
-                value={playerName}
-                onChange={(e) => {
-                  setPlayerName(e.target.value)
-                  updateActiveCharacterDetails({ playerName: e.target.value })
-                }}
-                placeholder="Player name"
-              />
-            </div>
+      <div className="max-w-7xl mx-auto w-full space-y-6">
+        <Card className="w-full">
+          <CardContent className="pt-6">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
+              Identity
+            </h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl">
+              <div className="space-y-1.5">
+                <Label htmlFor={charNameId}>Character Name</Label>
+                <Input
+                  id={charNameId}
+                  value={charName}
+                  onChange={(e) => {
+                    setCharName(e.target.value)
+                    updateCharacter(activeCharacter.id, { name: e.target.value })
+                  }}
+                  placeholder="Character name"
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor={genderId}>Gender</Label>
-              <Select
-                value={gender}
-                onValueChange={(value) => {
-                  setGender(value)
-                  updateActiveCharacterDetails({ gender: value })
-                }}
-              >
-                <SelectTrigger id={genderId}>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                  <SelectItem value="Non-binary">Non-binary</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor={playerNameId}>Player Name</Label>
+                <Input
+                  id={playerNameId}
+                  value={playerName}
+                  onChange={(e) => {
+                    setPlayerName(e.target.value)
+                    updateActiveCharacterDetails({ playerName: e.target.value })
+                  }}
+                  placeholder="Player name"
+                />
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor={deityId}>Deity</Label>
-              <Input
-                ref={deityInputRef}
-                id={deityId}
-                list={deityListId}
-                value={faith}
-                onChange={(e) => {
-                  setFaith(e.target.value)
-                  updateActiveCharacterDetails({ faith: e.target.value })
-                }}
-                placeholder="Enter or select deity"
-              />
-              <datalist id={deityListId}>
-                {deityNames.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
-            </div>
+              <div className="space-y-1.5">
+                <Label htmlFor={genderId}>Gender</Label>
+                <Select
+                  value={gender}
+                  onValueChange={(value) => {
+                    setGender(value)
+                    updateActiveCharacterDetails({ gender: value })
+                  }}
+                >
+                  <SelectTrigger id={genderId}>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Non-binary">Non-binary</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor={xpId}>Experience Points</Label>
-              <Input
-                id={xpId}
-                type="number"
-                min={0}
-                step={1}
-                value={xp || ''}
-                onChange={(e) => {
-                  const raw = e.target.value
-                  if (raw === '') {
-                    setXp(0)
-                    updateCharacter(activeCharacter.id, { experiencePoints: 0 })
-                    return
-                  }
-                  const parsed = Number.parseInt(raw, 10)
-                  if (Number.isNaN(parsed)) return
-                  const val = Math.max(0, parsed)
-                  setXp(val)
-                  updateCharacter(activeCharacter.id, { experiencePoints: val })
-                }}
-                placeholder="0"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor={alignmentId}>Alignment</Label>
-              <Select
-                value={alignment}
-                onValueChange={(value) => {
-                  setAlignment(value)
-                  updateActiveCharacterDetails({ alignment: value })
-                }}
-              >
-                <SelectTrigger id={alignmentId}>
-                  <SelectValue placeholder="Select alignment" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ALIGNMENTS.map((align) => (
-                    <SelectItem key={align} value={align.toLowerCase().replace(' ', '-')}>
-                      {align}
-                    </SelectItem>
+              <div className="space-y-1.5">
+                <Label htmlFor={deityId}>Deity</Label>
+                <Input
+                  ref={deityInputRef}
+                  id={deityId}
+                  list={deityListId}
+                  value={faith}
+                  onChange={(e) => {
+                    setFaith(e.target.value)
+                    updateActiveCharacterDetails({ faith: e.target.value })
+                  }}
+                  placeholder="Enter or select deity"
+                />
+                <datalist id={deityListId}>
+                  {deityNames.map((name) => (
+                    <option key={name} value={name} />
                   ))}
-                </SelectContent>
-              </Select>
+                </datalist>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor={xpId}>Experience Points</Label>
+                <Input
+                  id={xpId}
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={xp || ''}
+                  onChange={(e) => {
+                    const raw = e.target.value
+                    if (raw === '') {
+                      setXp(0)
+                      updateCharacter(activeCharacter.id, { experiencePoints: 0 })
+                      return
+                    }
+                    const parsed = Number.parseInt(raw, 10)
+                    if (Number.isNaN(parsed)) return
+                    const val = Math.max(0, parsed)
+                    setXp(val)
+                    updateCharacter(activeCharacter.id, { experiencePoints: val })
+                  }}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor={alignmentId}>Alignment</Label>
+                <Select
+                  value={alignment}
+                  onValueChange={(value) => {
+                    setAlignment(value)
+                    updateActiveCharacterDetails({ alignment: value })
+                  }}
+                >
+                  <SelectTrigger id={alignmentId}>
+                    <SelectValue placeholder="Select alignment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALIGNMENTS.map((align) => (
+                      <SelectItem key={align} value={align.toLowerCase().replace(' ', '-')}>
+                        {align}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card className="w-full">
-        <CardContent className="pt-6">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-5">
-            Personality
-          </h3>
-          <div className="grid md:grid-cols-2 gap-6">
-            <RichTextArea
-              id={personalityTraitsId}
-              label="Personality Traits"
-              value={personalityTraits}
-              onChange={(value) => {
-                setPersonalityTraits(value)
-                updateActiveCharacterDetails({ personalityTraits: value })
-              }}
-              placeholder="Describe your character's personality traits."
-              rows={6}
-            />
+        <Card className="w-full">
+          <CardContent className="pt-6">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-5">
+              Personality
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <RichTextArea
+                id={personalityTraitsId}
+                label="Personality Traits"
+                value={personalityTraits}
+                onChange={(value) => {
+                  setPersonalityTraits(value)
+                  updateActiveCharacterDetails({ personalityTraits: value })
+                }}
+                placeholder="Describe your character's personality traits."
+                rows={6}
+              />
 
-            <RichTextArea
-              id={idealsId}
-              label="Ideals"
-              value={ideals}
-              onChange={(value) => {
-                setIdeals(value)
-                updateActiveCharacterDetails({ ideals: value })
-              }}
-              placeholder="What does your character believe in?"
-              rows={6}
-            />
+              <RichTextArea
+                id={idealsId}
+                label="Ideals"
+                value={ideals}
+                onChange={(value) => {
+                  setIdeals(value)
+                  updateActiveCharacterDetails({ ideals: value })
+                }}
+                placeholder="What does your character believe in?"
+                rows={6}
+              />
 
-            <RichTextArea
-              id={bondsId}
-              label="Bonds"
-              value={bonds}
-              onChange={(value) => {
-                setBonds(value)
-                updateActiveCharacterDetails({ bonds: value })
-              }}
-              placeholder="What ties bind your character to the world?"
-              rows={6}
-            />
+              <RichTextArea
+                id={bondsId}
+                label="Bonds"
+                value={bonds}
+                onChange={(value) => {
+                  setBonds(value)
+                  updateActiveCharacterDetails({ bonds: value })
+                }}
+                placeholder="What ties bind your character to the world?"
+                rows={6}
+              />
 
-            <RichTextArea
-              id={flawsId}
-              label="Flaws"
-              value={flaws}
-              onChange={(value) => {
-                setFlaws(value)
-                updateActiveCharacterDetails({ flaws: value })
-              }}
-              placeholder="What weaknesses does your character have?"
-              rows={6}
-            />
-          </div>
-        </CardContent>
-      </Card>
+              <RichTextArea
+                id={flawsId}
+                label="Flaws"
+                value={flaws}
+                onChange={(value) => {
+                  setFlaws(value)
+                  updateActiveCharacterDetails({ flaws: value })
+                }}
+                placeholder="What weaknesses does your character have?"
+                rows={6}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -353,284 +353,293 @@ export function FeatsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full space-y-6">
-      <div className="flex items-center gap-4 flex-wrap">
-        <h1 className="font-display text-4xl font-bold flex items-center gap-3">
-          <Star className="h-8 w-8 text-accent" weight="duotone" />
-          Feats
-        </h1>
+    <div>
+      <div className="px-6 py-5 page-header-band mb-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <Star className="h-6 w-6 text-accent" weight="duotone" />
+            <div>
+              <h1 className="text-2xl font-display font-bold">Feats</h1>
+              <p className="text-sm text-muted-foreground">
+                Manage your feats and ability score improvements
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <Card className="w-full">
-        <CardContent className="pt-6">
-          <Accordion
-            type="multiple"
-            defaultValue={['character-feats', 'bonus-feats']}
-            className="space-y-4"
-          >
-            {/* Character Feats accordion */}
-            <AccordionItem value="character-feats" className="-mx-6 -mt-6 border-b-0">
-              <AccordionTrigger className="px-6 py-2.5 bg-muted/30 rounded-none hover:no-underline">
-                <div className="flex items-center gap-2 text-left w-full min-w-0">
-                  <span className="font-medium text-sm">Character Feats</span>
-                  <div className="ml-auto flex items-center gap-2 pr-1">
-                    {remainingASI > 0 && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-warning/40 bg-warning/10 text-warning"
-                          >
-                            <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
-                            {remainingASI} potential feat{remainingASI !== 1 ? 's' : ''}
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
-                          <p>
-                            You have {remainingASI} Ability Score Improvement
-                            {remainingASI !== 1 ? 's' : ''} available from level-up.
-                          </p>
-                          <p className="mt-1 text-muted-foreground">
-                            Each ASI can be used for a feat instead of a stat increase. Visit the
-                            Class page to make your choice.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    {pendingRacialChoices.length > 0 && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-warning/40 bg-warning/10 text-warning"
-                          >
-                            <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
-                            {pendingRacialChoices.length} potential racial feat
-                            {pendingRacialChoices.length !== 1 ? 's' : ''}
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
-                          <p>
-                            You have {pendingRacialChoices.length} feat choice
-                            {pendingRacialChoices.length !== 1 ? 's' : ''} from your race.
-                          </p>
-                          <p className="mt-1 text-muted-foreground">
-                            Visit the Race page to select{' '}
-                            {pendingRacialChoices.length !== 1 ? 'them' : 'it'}.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    {pendingOriginChoices.length > 0 && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Badge
-                            variant="outline"
-                            className="text-xs border-warning/40 bg-warning/10 text-warning"
-                          >
-                            <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
-                            {pendingOriginChoices.length} potential origin feat
-                            {pendingOriginChoices.length !== 1 ? 's' : ''}
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
-                          <p>
-                            You have {pendingOriginChoices.length} feat choice
-                            {pendingOriginChoices.length !== 1 ? 's' : ''} from your background.
-                          </p>
-                          <p className="mt-1 text-muted-foreground">
-                            Visit the Background page to select{' '}
-                            {pendingOriginChoices.length !== 1 ? 'them' : 'it'}.
-                          </p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
-                    <Badge variant="outline" className="text-xs">
-                      Total: {characterFeatCount}
-                    </Badge>
-                  </div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pb-1">
-                {hasCharacterSection ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-6 py-3.5">
-                    {(character.feats ?? []).map((feat) => {
-                      const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
-                      return (
-                        <FeatDetailCard
-                          key={feat.id}
-                          feat={feat}
-                          featData={featData}
-                          characterSnapshot={characterSnapshot}
-                          onRemove={handleRemoveFeat}
-                        />
-                      )
-                    })}
-                    {racialFixedFeats.map((granted) => (
-                      <FeatDetailCard
-                        key={`fixed-${granted.name}|${granted.source}`}
-                        feat={{
-                          id: `fixed-${granted.name}`,
-                          name: granted.name,
-                          source: granted.source,
-                        }}
-                        featData={granted.featData}
-                        characterSnapshot={characterSnapshot}
-                        grantedBy={granted.sourceLabel}
-                      />
-                    ))}
-                    {resolvedRacialChoices.flatMap((choice) =>
-                      choice.selected.map((selectedName) => {
-                        const data = (feats as Feat5e[]).find(
-                          (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
-                        )
-                        return (
-                          <FeatDetailCard
-                            key={`choice-${choice.id}-${selectedName}`}
-                            feat={{
-                              id: `choice-${choice.id}-${selectedName}`,
-                              name: data?.name ?? selectedName,
-                              source: data?.source ?? '',
-                            }}
-                            featData={data}
-                            characterSnapshot={characterSnapshot}
-                            grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
-                            onRemove={() => handleRemoveGrantedChoice(choice.id, selectedName)}
-                          />
-                        )
-                      }),
-                    )}
-                    {originFixedFeats.map((granted) => (
-                      <FeatDetailCard
-                        key={`fixed-${granted.name}|${granted.source}`}
-                        feat={{
-                          id: `fixed-${granted.name}`,
-                          name: granted.name,
-                          source: granted.source,
-                        }}
-                        featData={granted.featData}
-                        characterSnapshot={characterSnapshot}
-                        grantedBy={granted.sourceLabel}
-                        isOrigin
-                      />
-                    ))}
-                    {resolvedOriginChoices.flatMap((choice) =>
-                      choice.selected.map((selectedName) => {
-                        const data = (feats as Feat5e[]).find(
-                          (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
-                        )
-                        return (
-                          <FeatDetailCard
-                            key={`choice-${choice.id}-${selectedName}`}
-                            feat={{
-                              id: `choice-${choice.id}-${selectedName}`,
-                              name: data?.name ?? selectedName,
-                              source: data?.source ?? '',
-                            }}
-                            featData={data}
-                            characterSnapshot={characterSnapshot}
-                            grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
-                            onRemove={() => handleRemoveGrantedChoice(choice.id, selectedName)}
-                            isOrigin
-                          />
-                        )
-                      }),
-                    )}
-                  </div>
-                ) : (
-                  <div className="px-6 pb-3.5">
-                    <div className="min-h-52 flex flex-col items-center justify-center text-center p-6">
-                      <Star className="h-6 w-6 text-muted-foreground mb-2" weight="duotone" />
-                      <h3 className="text-sm font-semibold">No Character Feats</h3>
-                      <p className="mt-1 text-xs text-muted-foreground max-w-sm">
-                        Feats are gained from class ASI selections, your race, or background.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Bonus Feats accordion */}
-            <AccordionItem
-              value="bonus-feats"
-              className="-mx-6 -mb-6 border-b-0 data-[state=closed]:pb-6"
+      <div className="max-w-7xl mx-auto w-full space-y-6">
+        <Card className="w-full">
+          <CardContent className="pt-6">
+            <Accordion
+              type="multiple"
+              defaultValue={['character-feats', 'bonus-feats']}
+              className="space-y-4"
             >
-              <AccordionTrigger className="px-6 py-2.5 bg-muted/30 rounded-none hover:no-underline">
-                <div className="flex items-center gap-2 text-left w-full min-w-0">
-                  <span className="font-medium text-sm">Bonus Feats</span>
-                  <div className="ml-auto flex items-center gap-2 pr-1">
-                    <Badge variant="outline" className="text-xs">
-                      Total: {bonusFeats.length}
-                    </Badge>
-                  </div>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pb-1">
-                {bonusFeats.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-6 py-3.5">
-                    {bonusFeats.map((feat) => {
-                      const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
-                      return (
-                        <FeatDetailCard
-                          key={feat.id}
-                          feat={feat}
-                          featData={featData}
-                          characterSnapshot={characterSnapshot}
-                          onRemove={handleRemoveBonusFeat}
-                          isBonus
-                        />
-                      )
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => setBonusModalOpen(true)}
-                      className="rounded-xl border border-dashed border-border bg-card p-4 min-h-40 flex flex-col items-center justify-center text-center transition-colors hover:border-accent/40 hover:bg-muted/20"
-                    >
-                      <Plus className="h-5 w-5 text-primary mb-2" />
-                      <span className="text-sm font-semibold">Add Bonus Feat</span>
-                      <span className="mt-1 text-xs text-muted-foreground max-w-xs">
-                        Bonus feats are optional and don&apos;t use your normal feat slots.
-                      </span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="pb-3.5">
-                    <div className="min-h-52 flex flex-col items-center justify-center text-center p-6">
-                      <Sparkle className="h-6 w-6 text-muted-foreground mb-2" weight="duotone" />
-                      <h3 className="text-sm font-semibold">No Bonus Feats Selected</h3>
-                      <p className="mt-1 text-xs text-muted-foreground max-w-sm">
-                        Bonus feats are optional and don&apos;t use your normal feat slots.
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5 mt-4"
-                        onClick={() => setBonusModalOpen(true)}
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add Feat
-                      </Button>
+              {/* Character Feats accordion */}
+              <AccordionItem value="character-feats" className="-mx-6 -mt-6 border-b-0">
+                <AccordionTrigger className="px-6 py-2.5 bg-muted/30 rounded-none hover:no-underline">
+                  <div className="flex items-center gap-2 text-left w-full min-w-0">
+                    <span className="font-medium text-sm">Character Feats</span>
+                    <div className="ml-auto flex items-center gap-2 pr-1">
+                      {remainingASI > 0 && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-warning/40 bg-warning/10 text-warning"
+                            >
+                              <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
+                              {remainingASI} potential feat{remainingASI !== 1 ? 's' : ''}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+                            <p>
+                              You have {remainingASI} Ability Score Improvement
+                              {remainingASI !== 1 ? 's' : ''} available from level-up.
+                            </p>
+                            <p className="mt-1 text-muted-foreground">
+                              Each ASI can be used for a feat instead of a stat increase. Visit the
+                              Class page to make your choice.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      {pendingRacialChoices.length > 0 && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-warning/40 bg-warning/10 text-warning"
+                            >
+                              <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
+                              {pendingRacialChoices.length} potential racial feat
+                              {pendingRacialChoices.length !== 1 ? 's' : ''}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+                            <p>
+                              You have {pendingRacialChoices.length} feat choice
+                              {pendingRacialChoices.length !== 1 ? 's' : ''} from your race.
+                            </p>
+                            <p className="mt-1 text-muted-foreground">
+                              Visit the Race page to select{' '}
+                              {pendingRacialChoices.length !== 1 ? 'them' : 'it'}.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      {pendingOriginChoices.length > 0 && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-warning/40 bg-warning/10 text-warning"
+                            >
+                              <WarningCircle className="h-3.5 w-3.5 mr-1" weight="fill" />
+                              {pendingOriginChoices.length} potential origin feat
+                              {pendingOriginChoices.length !== 1 ? 's' : ''}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs text-xs leading-relaxed">
+                            <p>
+                              You have {pendingOriginChoices.length} feat choice
+                              {pendingOriginChoices.length !== 1 ? 's' : ''} from your background.
+                            </p>
+                            <p className="mt-1 text-muted-foreground">
+                              Visit the Background page to select{' '}
+                              {pendingOriginChoices.length !== 1 ? 'them' : 'it'}.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                      <Badge variant="outline" className="text-xs">
+                        Total: {characterFeatCount}
+                      </Badge>
                     </div>
                   </div>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </CardContent>
-      </Card>
+                </AccordionTrigger>
+                <AccordionContent className="pb-1">
+                  {hasCharacterSection ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-6 py-3.5">
+                      {(character.feats ?? []).map((feat) => {
+                        const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
+                        return (
+                          <FeatDetailCard
+                            key={feat.id}
+                            feat={feat}
+                            featData={featData}
+                            characterSnapshot={characterSnapshot}
+                            onRemove={handleRemoveFeat}
+                          />
+                        )
+                      })}
+                      {racialFixedFeats.map((granted) => (
+                        <FeatDetailCard
+                          key={`fixed-${granted.name}|${granted.source}`}
+                          feat={{
+                            id: `fixed-${granted.name}`,
+                            name: granted.name,
+                            source: granted.source,
+                          }}
+                          featData={granted.featData}
+                          characterSnapshot={characterSnapshot}
+                          grantedBy={granted.sourceLabel}
+                        />
+                      ))}
+                      {resolvedRacialChoices.flatMap((choice) =>
+                        choice.selected.map((selectedName) => {
+                          const data = (feats as Feat5e[]).find(
+                            (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
+                          )
+                          return (
+                            <FeatDetailCard
+                              key={`choice-${choice.id}-${selectedName}`}
+                              feat={{
+                                id: `choice-${choice.id}-${selectedName}`,
+                                name: data?.name ?? selectedName,
+                                source: data?.source ?? '',
+                              }}
+                              featData={data}
+                              characterSnapshot={characterSnapshot}
+                              grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
+                              onRemove={() => handleRemoveGrantedChoice(choice.id, selectedName)}
+                            />
+                          )
+                        }),
+                      )}
+                      {originFixedFeats.map((granted) => (
+                        <FeatDetailCard
+                          key={`fixed-${granted.name}|${granted.source}`}
+                          feat={{
+                            id: `fixed-${granted.name}`,
+                            name: granted.name,
+                            source: granted.source,
+                          }}
+                          featData={granted.featData}
+                          characterSnapshot={characterSnapshot}
+                          grantedBy={granted.sourceLabel}
+                          isOrigin
+                        />
+                      ))}
+                      {resolvedOriginChoices.flatMap((choice) =>
+                        choice.selected.map((selectedName) => {
+                          const data = (feats as Feat5e[]).find(
+                            (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
+                          )
+                          return (
+                            <FeatDetailCard
+                              key={`choice-${choice.id}-${selectedName}`}
+                              feat={{
+                                id: `choice-${choice.id}-${selectedName}`,
+                                name: data?.name ?? selectedName,
+                                source: data?.source ?? '',
+                              }}
+                              featData={data}
+                              characterSnapshot={characterSnapshot}
+                              grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
+                              onRemove={() => handleRemoveGrantedChoice(choice.id, selectedName)}
+                              isOrigin
+                            />
+                          )
+                        }),
+                      )}
+                    </div>
+                  ) : (
+                    <div className="px-6 pb-3.5">
+                      <div className="min-h-52 flex flex-col items-center justify-center text-center p-6">
+                        <Star className="h-6 w-6 text-muted-foreground mb-2" weight="duotone" />
+                        <h3 className="text-sm font-semibold">No Character Feats</h3>
+                        <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+                          Feats are gained from class ASI selections, your race, or background.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
 
-      {/* Bonus feat modal  no selection limit */}
-      <FeatSelectionModal
-        open={bonusModalOpen}
-        onOpenChange={setBonusModalOpen}
-        feats={feats as Feat5e[]}
-        maxSelections={999}
-        initialSelectedIds={bonusInitialSelectedIds}
-        characterSnapshot={characterSnapshot}
-        onConfirm={handleBonusModalConfirm}
-        allowIgnoreLimit={false}
-      />
+              {/* Bonus Feats accordion */}
+              <AccordionItem
+                value="bonus-feats"
+                className="-mx-6 -mb-6 border-b-0 data-[state=closed]:pb-6"
+              >
+                <AccordionTrigger className="px-6 py-2.5 bg-muted/30 rounded-none hover:no-underline">
+                  <div className="flex items-center gap-2 text-left w-full min-w-0">
+                    <span className="font-medium text-sm">Bonus Feats</span>
+                    <div className="ml-auto flex items-center gap-2 pr-1">
+                      <Badge variant="outline" className="text-xs">
+                        Total: {bonusFeats.length}
+                      </Badge>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-1">
+                  {bonusFeats.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-6 py-3.5">
+                      {bonusFeats.map((feat) => {
+                        const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
+                        return (
+                          <FeatDetailCard
+                            key={feat.id}
+                            feat={feat}
+                            featData={featData}
+                            characterSnapshot={characterSnapshot}
+                            onRemove={handleRemoveBonusFeat}
+                            isBonus
+                          />
+                        )
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => setBonusModalOpen(true)}
+                        className="rounded-xl border border-dashed border-border bg-card p-4 min-h-40 flex flex-col items-center justify-center text-center transition-colors hover:border-accent/40 hover:bg-muted/20"
+                      >
+                        <Plus className="h-5 w-5 text-primary mb-2" />
+                        <span className="text-sm font-semibold">Add Bonus Feat</span>
+                        <span className="mt-1 text-xs text-muted-foreground max-w-xs">
+                          Bonus feats are optional and don&apos;t use your normal feat slots.
+                        </span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="pb-3.5">
+                      <div className="min-h-52 flex flex-col items-center justify-center text-center p-6">
+                        <Sparkle className="h-6 w-6 text-muted-foreground mb-2" weight="duotone" />
+                        <h3 className="text-sm font-semibold">No Bonus Feats Selected</h3>
+                        <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+                          Bonus feats are optional and don&apos;t use your normal feat slots.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 mt-4"
+                          onClick={() => setBonusModalOpen(true)}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add Feat
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </CardContent>
+        </Card>
+
+        {/* Bonus feat modal  no selection limit */}
+        <FeatSelectionModal
+          open={bonusModalOpen}
+          onOpenChange={setBonusModalOpen}
+          feats={feats as Feat5e[]}
+          maxSelections={999}
+          initialSelectedIds={bonusInitialSelectedIds}
+          characterSnapshot={characterSnapshot}
+          onConfirm={handleBonusModalConfirm}
+          allowIgnoreLimit={false}
+        />
+      </div>
     </div>
   )
 }

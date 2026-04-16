@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -121,87 +121,94 @@ export function CharacterSheetPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full space-y-4 pb-8">
-      <Card className="w-full">
-        <CardHeader className="pb-4">
-          <CardTitle className="flex flex-wrap items-center gap-2 text-lg sm:text-xl">
+    <div>
+      <div className="px-6 py-5 page-header-band mb-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
             <FilePdf className="h-6 w-6 text-primary" weight="duotone" />
-            Character Sheet PDF
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Auto-filled preview for {characterName}. This uses the selected
-            {` ${selectedTemplate.name} `}
-            template.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm text-muted-foreground">Template</span>
-            <Select
-              value={selectedTemplateId}
-              onValueChange={(value) => setSelectedTemplateId(value as CharacterSheetTemplateId)}
-            >
-              <SelectTrigger className="w-[260px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CHARACTER_SHEET_TEMPLATES.map((template) => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setRefreshNonce((n) => n + 1)}
-              disabled={isGenerating}
-            >
-              <ArrowsClockwise className="h-4 w-4" weight="bold" />
-              Regenerate
-            </Button>
-            <Button type="button" onClick={handleDownload} disabled={isGenerating || !pdfBytes}>
-              <DownloadSimple className="h-4 w-4" weight="bold" />
-              Download PDF
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="w-full overflow-hidden">
-        <CardContent className="p-0">
-          {isGenerating && (
-            <div className="flex h-[70vh] items-center justify-center bg-muted/30">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Sparkle className="h-4 w-4 animate-pulse" weight="duotone" />
-                Generating PDF preview...
-              </div>
+            <div>
+              <h1 className="text-2xl font-display font-bold">Character Sheet</h1>
+              <p className="text-sm text-muted-foreground">Export a filled PDF character sheet</p>
             </div>
-          )}
+          </div>
+        </div>
+      </div>
 
-          {!isGenerating && errorMessage && (
-            <div className="flex h-[70vh] items-center justify-center px-6">
-              <div className="max-w-md space-y-3 text-center">
-                <p className="text-sm text-destructive">{errorMessage}</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setRefreshNonce((n) => n + 1)}
-                >
-                  Try Again
-                </Button>
-              </div>
+      <div className="max-w-7xl mx-auto w-full space-y-4 pb-8">
+        <Card className="w-full">
+          <CardContent className="space-y-4 pt-6">
+            <p className="text-sm text-muted-foreground">
+              Auto-filled preview for {characterName}. This uses the selected
+              {` ${selectedTemplate.name} `}
+              template.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm text-muted-foreground">Template</span>
+              <Select
+                value={selectedTemplateId}
+                onValueChange={(value) => setSelectedTemplateId(value as CharacterSheetTemplateId)}
+              >
+                <SelectTrigger className="w-[260px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHARACTER_SHEET_TEMPLATES.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
 
-          {!isGenerating && !errorMessage && pdfBytes && <PdfCanvasPreview pdfBytes={pdfBytes} />}
-        </CardContent>
-      </Card>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setRefreshNonce((n) => n + 1)}
+                disabled={isGenerating}
+              >
+                <ArrowsClockwise className="h-4 w-4" weight="bold" />
+                Regenerate
+              </Button>
+              <Button type="button" onClick={handleDownload} disabled={isGenerating || !pdfBytes}>
+                <DownloadSimple className="h-4 w-4" weight="bold" />
+                Download PDF
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="w-full overflow-hidden">
+          <CardContent className="p-0">
+            {isGenerating && (
+              <div className="flex h-[70vh] items-center justify-center bg-muted/30">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Sparkle className="h-4 w-4 animate-pulse" weight="duotone" />
+                  Generating PDF preview...
+                </div>
+              </div>
+            )}
+
+            {!isGenerating && errorMessage && (
+              <div className="flex h-[70vh] items-center justify-center px-6">
+                <div className="max-w-md space-y-3 text-center">
+                  <p className="text-sm text-destructive">{errorMessage}</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setRefreshNonce((n) => n + 1)}
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {!isGenerating && !errorMessage && pdfBytes && <PdfCanvasPreview pdfBytes={pdfBytes} />}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

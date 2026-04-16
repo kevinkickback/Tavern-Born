@@ -75,7 +75,7 @@ const FeatCard = memo(function FeatCard({
       {descHtml && (
         <div
           className={cn(
-            'text-[13px] text-muted-foreground line-clamp-3 leading-snug',
+            'text-sm text-muted-foreground line-clamp-3 leading-snug',
             !prereqMet && !isSelected && 'opacity-70',
           )}
           // renderEntry outputs safe HTML from structured 5etools entries.
