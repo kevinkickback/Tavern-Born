@@ -146,13 +146,13 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
     const multiclassResult = selectedClass
       ? addMulticlass(
-        character,
-        character.provenance ?? emptyProvenance(),
-        multiclassSelection,
-        selectedClass,
-        selectedClass.source,
-        1,
-      )
+          character,
+          character.provenance ?? emptyProvenance(),
+          multiclassSelection,
+          selectedClass,
+          selectedClass.source,
+          1,
+        )
       : null
 
     const nextProficiencies =
