@@ -109,12 +109,12 @@ export function CompendiumPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-6 border-b border-border bg-card/50">
+      <div className="p-6 page-header-band">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3 mb-4">
-            <Book className="text-3xl text-primary" weight="duotone" />
+            <Book className="text-2xl text-primary" weight="duotone" />
             <div>
-              <h1 className="text-3xl font-display font-bold">Compendium</h1>
+              <h1 className="text-2xl font-display font-bold">Compendium</h1>
               <p className="text-sm text-muted-foreground">
                 Search and explore all loaded D&D 5e content
               </p>

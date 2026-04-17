@@ -143,7 +143,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
                   )}
                 >
                   <div className="font-semibold truncate">{cls.name}</div>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                     <span className="font-mono">{cls.source}</span>
                     <span>· d{cls.hd?.faces ?? 6}</span>
                     {cls.spellcastingAbility && <span>· Spellcaster</span>}
@@ -181,7 +181,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-1.5 mb-2">
                     <BookOpen className="h-3.5 w-3.5 text-accent" weight="fill" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Class Overview
                     </span>
                   </div>
@@ -191,7 +191,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div className="flex flex-col items-center px-3 py-2 rounded-lg bg-card border border-border">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Hit Dice
                   </span>
                   <span className="text-sm font-semibold mt-0.5 font-mono">
@@ -218,7 +218,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-1.5 mb-3">
                     <MagicWand className="h-3.5 w-3.5 text-accent" weight="fill" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Signature Features
                     </span>
                   </div>

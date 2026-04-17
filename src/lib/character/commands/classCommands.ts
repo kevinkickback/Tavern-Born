@@ -90,11 +90,14 @@ export function selectBaseClass(
     savingThrows: [
       ...new Set([
         ...(character.proficiencies.savingThrows ?? []),
-        ...(startingProfs.savingThrows ?? []),
+        ...(classEntity.proficiency ?? []),
       ]),
     ],
     skills: [
-      ...new Set([...(character.proficiencies.skills ?? []), ...(startingProfs.skills ?? [])]),
+      ...new Set([
+        ...(character.proficiencies.skills ?? []),
+        ...(startingProfs.skills ?? []).filter((s): s is string => typeof s === 'string'),
+      ]),
     ],
   }
 
@@ -301,12 +304,7 @@ export function addMulticlass(
         ...toolsFromBlocks,
       ]),
     ],
-    savingThrows: [
-      ...new Set([
-        ...(character.proficiencies.savingThrows ?? []),
-        ...(fallback.savingThrows ?? []),
-      ]),
-    ],
+    savingThrows: [...(character.proficiencies.savingThrows ?? [])],
     skills: [
       ...new Set([
         ...(character.proficiencies.skills ?? []),

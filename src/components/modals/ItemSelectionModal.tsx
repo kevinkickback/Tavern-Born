@@ -226,19 +226,19 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
           <Badge
             key={prop}
             variant="outline"
-            className={cn('text-[11px] px-1.5 py-0 h-5')}
+            className={cn('text-xs px-1.5 py-0 h-5')}
             title={getPropertyLabel(prop)}
           >
             {getPropertyLabel(prop)}
           </Badge>
         ))}
         {properties.length > 6 && (
-          <Badge variant="outline" className="text-[11px] px-1.5 py-0 h-5">
+          <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">
             +{properties.length - 6}
           </Badge>
         )}
         {item.weight !== undefined && (
-          <Badge variant="outline" className="text-[11px] px-1.5 py-0 h-5">
+          <Badge variant="outline" className="text-xs px-1.5 py-0 h-5">
             {item.weight} lb
           </Badge>
         )}

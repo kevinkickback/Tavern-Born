@@ -199,6 +199,22 @@ export function BuildBackgroundPage() {
 
   const bgAsiData = getBackgroundAbilityData(normalizedSelectedBg)
 
+  const currentAsiBlock =
+    bgAsiData.blocks[character?.backgroundAsiBlockIndex ?? 0] ?? bgAsiData.blocks[0]
+  const isXphbAutoAssign =
+    selectedBg?.source === 'XPHB' &&
+    !!currentAsiBlock &&
+    currentAsiBlock.from.length === currentAsiBlock.weights.length
+
+  useEffect(() => {
+    if (!isXphbAutoAssign || !character || !selectedBg || !currentAsiBlock) return
+    const blockIndex = character.backgroundAsiBlockIndex ?? 0
+    const choices = character.backgroundAsiChoices ?? []
+    const alreadySet = currentAsiBlock.from.every((a, i) => choices[i] === a)
+    if (alreadySet) return
+    applyBackgroundAbilityChoices(selectedBg, blockIndex, [...currentAsiBlock.from])
+  }, [isXphbAutoAssign, character, selectedBg, currentAsiBlock, applyBackgroundAbilityChoices])
+
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
   }
@@ -223,18 +239,29 @@ export function BuildBackgroundPage() {
   const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0
   const bgChoices = character.backgroundAsiChoices ?? []
   const bgEquipmentChoices = character.backgroundEquipmentChoices ?? []
+  const chosenOriginFeat = originFeatChoices.find((c) => c.selected.length > 0)?.selected[0] ?? null
   const showBackgroundAsiPanel = character.originSystem === '2024'
   const showBackgroundAsiCard = !!selectedBg && bgAsiData.blocks.length > 0
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 pt-6 pb-4">
-        <div className="max-w-7xl mx-auto space-y-3">
-          <h1 className="font-display text-2xl font-bold flex items-center gap-3">
+      <div className="px-6 py-5 page-header-band mb-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
             <Scroll className="h-6 w-6 text-primary" weight="duotone" />
-            Background
-          </h1>
-          {showBackgroundAsiPanel ? (
+            <div>
+              <h1 className="text-2xl font-display font-bold">Background</h1>
+              <p className="text-sm text-muted-foreground">
+                Your character's origin, skills, and starting equipment
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showBackgroundAsiPanel ? (
+        <div className="px-6 mb-4">
+          <div className="max-w-7xl mx-auto">
             <div className="rounded-lg border border-border bg-muted/20 p-4 flex items-start gap-6">
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -258,7 +285,16 @@ export function BuildBackgroundPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => applyBackgroundAbilityChoices(selectedBg, 1, [])}
+                          onClick={() => {
+                            const block1 = bgAsiData.blocks[1]
+                            const autoChoices =
+                              selectedBg?.source === 'XPHB' &&
+                              block1 &&
+                              block1.from.length === block1.weights.length
+                                ? [...block1.from]
+                                : []
+                            applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
+                          }}
                           className={cn(
                             'px-3 h-full border-l border-border transition-colors',
                             bgBlockIndex === 1
@@ -289,6 +325,7 @@ export function BuildBackgroundPage() {
                               </span>
                               <Select
                                 value={currentChoice}
+                                disabled={isXphbAutoAssign}
                                 onValueChange={(val) => {
                                   const newChoices = Array.from<string>({
                                     length: block.weights.length,
@@ -350,9 +387,7 @@ export function BuildBackgroundPage() {
                         {name}
                       </Badge>
                     ))}
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Provided by background
-                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Provided by background</p>
                   </div>
                 ) : originFeatChoices.length > 0 ? (
                   <div className="mt-2 flex flex-col gap-1.5">
@@ -406,9 +441,9 @@ export function BuildBackgroundPage() {
                 )}
               </div>
             </div>
-          ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="flex-1 overflow-hidden px-6 pb-6">
         <div className="max-w-7xl mx-auto h-full">
@@ -428,8 +463,8 @@ export function BuildBackgroundPage() {
                 )}
               </button>{' '}
               <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-                <div className="p-4 border-b border-border flex flex-col gap-2">
-                  <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex flex-col gap-2">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                     Backgrounds ({filteredBackgrounds.length}
                     {bgSearch ? ` of ${backgrounds.length}` : ''})
                   </span>
@@ -452,24 +487,31 @@ export function BuildBackgroundPage() {
                           key={bgKey}
                           ref={isSelected ? selectedBackgroundRef : null}
                           className={cn(
-                            'w-full p-3 rounded-lg border transition-colors hover:border-accent flex items-center justify-between gap-2',
-                            isSelected ? 'border-accent bg-accent/10' : 'border-border bg-card',
+                            'w-full flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors border-l-4 [scroll-margin-top:8px]',
+                            isSelected
+                              ? 'bg-accent/10 border-accent'
+                              : 'border-transparent hover:bg-muted/40',
                           )}
                         >
                           <button
                             type="button"
                             onClick={() => handleBackground(bg.name, bg.source ?? undefined)}
-                            className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                            className="flex items-center gap-3 min-w-0 flex-1 text-left"
                           >
                             <div
                               className={cn(
-                                'h-3.5 w-3.5 rounded-full border-2 flex-shrink-0',
+                                'h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold shadow-sm select-none',
                                 isSelected
-                                  ? 'bg-primary border-primary'
-                                  : 'border-muted-foreground',
+                                  ? 'bg-primary/20 text-primary'
+                                  : 'bg-muted text-muted-foreground',
                               )}
-                            />
-                            <span className="font-medium text-sm truncate">{bg.name}</span>
+                            >
+                              {bg.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-sm truncate">{bg.name}</div>
+                              <div className="text-xs text-muted-foreground">{bg.source}</div>
+                            </div>
                           </button>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             {isSelected && rowChoiceBlocks.length > 0 ? (
@@ -538,6 +580,13 @@ export function BuildBackgroundPage() {
                 skillNames={skills}
                 languageNames={langs}
                 toolNames={tools}
+                equipmentBlocks={equipmentBlocks}
+                bgEquipmentChoices={bgEquipmentChoices}
+                fixedBgFeats={fixedBgFeats}
+                chosenOriginFeat={chosenOriginFeat}
+                bgAsiData={bgAsiData}
+                bgBlockIndex={bgBlockIndex}
+                bgChoices={bgChoices}
               />
             </div>
           </Card>

@@ -49,28 +49,35 @@ export function BuildClassDetailsPanel({
         detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'w-1/2 min-w-[320px]',
       )}
     >
-      <div className="p-4 border-b border-border flex-shrink-0">
-        {selectedFeature ? (
-          <>
-            <button
-              type="button"
-              onClick={onClearSelection}
-              className="text-xs text-accent hover:underline flex items-center gap-1 mb-2"
-            >
-              <CaretLeft className="h-3 w-3" /> All features
-            </button>
-            <h3 className="text-lg font-display font-bold">{selectedFeature.name}</h3>
-            {selectedFeature.source && (
-              <span className="text-xs text-muted-foreground">
-                Source: {selectedFeature.source}
-              </span>
-            )}
-          </>
-        ) : (
-          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Details
-          </span>
-        )}
+      <div className="bg-gradient-to-r from-accent/10 to-transparent border-b border-border px-4 py-3 flex-shrink-0 flex flex-col gap-2">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+          Details
+        </span>
+        <div className="flex items-start gap-2 min-h-8">
+          {selectedFeature ? (
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-bold font-display leading-tight">
+                  {selectedFeature.name}
+                </span>
+                {selectedFeature.source && (
+                  <Badge variant="outline" className="text-xs shrink-0">
+                    {selectedFeature.source}
+                  </Badge>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={onClearSelection}
+                className="text-xs text-accent hover:underline flex items-center gap-0.5 mt-1"
+              >
+                <CaretLeft className="h-3 w-3" /> All features
+              </button>
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">Select a feature…</span>
+          )}
+        </div>
       </div>
 
       {selectedFeature ? (

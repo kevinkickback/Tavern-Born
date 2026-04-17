@@ -164,9 +164,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
                   )}
                 >
                   <div className="font-semibold truncate">{bg.name}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">
-                    {bg.source}
-                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">{bg.source}</div>
                 </button>
               )
             })
@@ -199,7 +197,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
               <div className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center gap-1.5 mb-2">
                   <BookOpen className="h-3.5 w-3.5 text-accent" weight="fill" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Background Overview
                   </span>
                 </div>
@@ -235,7 +233,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
               <div className="rounded-lg border border-border bg-card p-4 space-y-2">
                 <div className="flex items-center gap-1.5">
                   <BookOpen className="h-3.5 w-3.5 text-accent" weight="fill" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Details
                   </span>
                 </div>

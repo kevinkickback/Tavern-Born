@@ -258,7 +258,7 @@ function SelectionModalInner<T>({
                       <Label
                         htmlFor={filterId}
                         className={cn(
-                          'text-[13px] font-normal leading-none',
+                          'text-sm font-normal leading-none',
                           disabled ? 'cursor-not-allowed' : 'cursor-pointer',
                         )}
                       >
@@ -281,7 +281,7 @@ function SelectionModalInner<T>({
                         checked={enabled}
                         onCheckedChange={(c) => handleSwitch(section.key, opt.value, c)}
                       />
-                      <Label htmlFor={switchId} className="text-[13px] font-normal cursor-pointer">
+                      <Label htmlFor={switchId} className="text-sm font-normal cursor-pointer">
                         {opt.label}
                       </Label>
                     </div>
@@ -412,9 +412,7 @@ function SelectionModalInner<T>({
       <div className="flex-shrink-0 border-t border-border px-5 py-3 flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-              Selected
-            </span>
+            <span className="text-xs font-semibold uppercase text-muted-foreground">Selected</span>
             {categoryCounts.length > 0 ? (
               categoryCounts.map((cat) => {
                 const full = cat.max !== Number.POSITIVE_INFINITY && cat.selected >= cat.max
@@ -438,9 +436,7 @@ function SelectionModalInner<T>({
               </Badge>
             )}
           </div>
-          <p className="text-[13px] text-muted-foreground truncate leading-none mt-1">
-            {statusText}
-          </p>
+          <p className="text-xs text-muted-foreground truncate leading-none mt-1">{statusText}</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
