@@ -76,7 +76,6 @@ const navItems: NavItem[] = [
         path: '/details/characteristics',
         icon: null,
       },
-      { label: 'Backstory & Appearance', path: '/details/backstory', icon: null },
     ],
   },
   {

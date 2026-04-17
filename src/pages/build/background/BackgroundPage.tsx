@@ -199,6 +199,22 @@ export function BuildBackgroundPage() {
 
   const bgAsiData = getBackgroundAbilityData(normalizedSelectedBg)
 
+  const currentAsiBlock =
+    bgAsiData.blocks[character?.backgroundAsiBlockIndex ?? 0] ?? bgAsiData.blocks[0]
+  const isXphbAutoAssign =
+    selectedBg?.source === 'XPHB' &&
+    !!currentAsiBlock &&
+    currentAsiBlock.from.length === currentAsiBlock.weights.length
+
+  useEffect(() => {
+    if (!isXphbAutoAssign || !character || !selectedBg || !currentAsiBlock) return
+    const blockIndex = character.backgroundAsiBlockIndex ?? 0
+    const choices = character.backgroundAsiChoices ?? []
+    const alreadySet = currentAsiBlock.from.every((a, i) => choices[i] === a)
+    if (alreadySet) return
+    applyBackgroundAbilityChoices(selectedBg, blockIndex, [...currentAsiBlock.from])
+  }, [isXphbAutoAssign, character, selectedBg, currentAsiBlock, applyBackgroundAbilityChoices])
+
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
   }
@@ -223,13 +239,14 @@ export function BuildBackgroundPage() {
   const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0
   const bgChoices = character.backgroundAsiChoices ?? []
   const bgEquipmentChoices = character.backgroundEquipmentChoices ?? []
+  const chosenOriginFeat = originFeatChoices.find((c) => c.selected.length > 0)?.selected[0] ?? null
   const showBackgroundAsiPanel = character.originSystem === '2024'
   const showBackgroundAsiCard = !!selectedBg && bgAsiData.blocks.length > 0
 
   return (
     <div className="h-full flex flex-col">
       <div className="px-6 py-5 page-header-band mb-6">
-        <div className="max-w-7xl mx-auto space-y-3">
+        <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <Scroll className="h-6 w-6 text-primary" weight="duotone" />
             <div>
@@ -239,7 +256,12 @@ export function BuildBackgroundPage() {
               </p>
             </div>
           </div>
-          {showBackgroundAsiPanel ? (
+        </div>
+      </div>
+
+      {showBackgroundAsiPanel ? (
+        <div className="px-6 mb-4">
+          <div className="max-w-7xl mx-auto">
             <div className="rounded-lg border border-border bg-muted/20 p-4 flex items-start gap-6">
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -263,7 +285,16 @@ export function BuildBackgroundPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => applyBackgroundAbilityChoices(selectedBg, 1, [])}
+                          onClick={() => {
+                            const block1 = bgAsiData.blocks[1]
+                            const autoChoices =
+                              selectedBg?.source === 'XPHB' &&
+                              block1 &&
+                              block1.from.length === block1.weights.length
+                                ? [...block1.from]
+                                : []
+                            applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
+                          }}
                           className={cn(
                             'px-3 h-full border-l border-border transition-colors',
                             bgBlockIndex === 1
@@ -294,6 +325,7 @@ export function BuildBackgroundPage() {
                               </span>
                               <Select
                                 value={currentChoice}
+                                disabled={isXphbAutoAssign}
                                 onValueChange={(val) => {
                                   const newChoices = Array.from<string>({
                                     length: block.weights.length,
@@ -409,9 +441,9 @@ export function BuildBackgroundPage() {
                 )}
               </div>
             </div>
-          ) : null}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="flex-1 overflow-hidden px-6 pb-6">
         <div className="max-w-7xl mx-auto h-full">
@@ -455,7 +487,7 @@ export function BuildBackgroundPage() {
                           key={bgKey}
                           ref={isSelected ? selectedBackgroundRef : null}
                           className={cn(
-                            'w-full flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors border-l-4',
+                            'w-full flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors border-l-4 [scroll-margin-top:8px]',
                             isSelected
                               ? 'bg-accent/10 border-accent'
                               : 'border-transparent hover:bg-muted/40',
@@ -548,6 +580,13 @@ export function BuildBackgroundPage() {
                 skillNames={skills}
                 languageNames={langs}
                 toolNames={tools}
+                equipmentBlocks={equipmentBlocks}
+                bgEquipmentChoices={bgEquipmentChoices}
+                fixedBgFeats={fixedBgFeats}
+                chosenOriginFeat={chosenOriginFeat}
+                bgAsiData={bgAsiData}
+                bgBlockIndex={bgBlockIndex}
+                bgChoices={bgChoices}
               />
             </div>
           </Card>

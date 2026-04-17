@@ -23,7 +23,6 @@ import { BuildProficienciesPage } from '@/pages/build/proficiencies/Proficiencie
 import { BuildRacePage } from '@/pages/build/race/RacePage'
 import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
 import { CompendiumPage } from '@/pages/compendium/CompendiumPage'
-import { BackstoryAppearancePage } from '@/pages/details/BackstoryAppearancePage'
 import { CharacteristicsPage } from '@/pages/details/CharacteristicsPage'
 import { PortraitPage } from '@/pages/details/PortraitPage'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
@@ -87,7 +86,6 @@ function App() {
             <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
             <Route path="/details/portrait" element={<PortraitPage />} />
             <Route path="/details/characteristics" element={<CharacteristicsPage />} />
-            <Route path="/details/backstory" element={<BackstoryAppearancePage />} />
             <Route path="/character-sheet" element={<CharacterSheetPage />} />
             <Route path="/compendium" element={<CompendiumPage />} />
             <Route path="/settings" element={<SettingsPage />} />

@@ -28,10 +28,19 @@ export function BuildProficienciesDetailsPanel({
         detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'w-[40%] min-w-[280px]',
       )}
     >
-      <div className="p-4 border-b border-border">
-        <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+      <div className="bg-gradient-to-r from-accent/30 via-accent/15 to-transparent border-b border-border/40 px-4 py-3 flex-shrink-0 flex flex-col gap-2">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Details
         </span>
+        <div className="flex items-center gap-2 min-h-8">
+          {focused ? (
+            <span className="text-sm font-bold font-display leading-tight capitalize">
+              {'name' in focused ? focused.name : focused.ability}
+            </span>
+          ) : (
+            <span className="text-sm text-muted-foreground">Select a proficiency…</span>
+          )}
+        </div>
       </div>
       <ScrollArea className="flex-1 overflow-hidden">
         <div className="p-4">

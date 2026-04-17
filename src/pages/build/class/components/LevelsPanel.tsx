@@ -150,40 +150,46 @@ export function BuildClassLevelsPanel({
 
   return (
     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-      <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex-shrink-0">
-        {classProgression.length > 1 ? (
-          <Tabs
-            value={
-              selectedClassTab ||
-              (classProgression[0]
-                ? `${classProgression[0].name}|${classProgression[0].source ?? ''}`
-                : '')
-            }
-            onValueChange={(value) => onSelectClassTab(value)}
-          >
-            <TabsList className="w-full">
-              {classProgression.map((entry) => (
-                <TabsTrigger
-                  key={`${entry.name}|${entry.source ?? ''}`}
-                  value={`${entry.name}|${entry.source ?? ''}`}
-                  className="flex-1 gap-1.5 text-xs"
-                >
-                  {entry.name}
-                  <Badge
-                    variant="secondary"
-                    className="font-mono h-4 px-1 text-xs pointer-events-none"
+      <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex-shrink-0 flex flex-col gap-2">
+        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+          Features
+        </span>
+        <div className="min-h-8 flex items-center">
+          {classProgression.length > 1 ? (
+            <Tabs
+              value={
+                selectedClassTab ||
+                (classProgression[0]
+                  ? `${classProgression[0].name}|${classProgression[0].source ?? ''}`
+                  : '')
+              }
+              onValueChange={(value) => onSelectClassTab(value)}
+              className="w-full"
+            >
+              <TabsList className="w-full">
+                {classProgression.map((entry) => (
+                  <TabsTrigger
+                    key={`${entry.name}|${entry.source ?? ''}`}
+                    value={`${entry.name}|${entry.source ?? ''}`}
+                    className="flex-1 gap-1.5 text-xs"
                   >
-                    {entry.levels}
-                  </Badge>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        ) : (
-          <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            {character.class ? `${character.class} Features` : 'Class Features'}
-          </span>
-        )}
+                    {entry.name}
+                    <Badge
+                      variant="secondary"
+                      className="font-mono h-4 px-1 text-xs pointer-events-none"
+                    >
+                      {entry.levels}
+                    </Badge>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          ) : (
+            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              {character.class ? `${character.class} Features` : 'Class Features'}
+            </span>
+          )}
+        </div>
       </div>
 
       <ScrollArea className="flex-1 overflow-hidden">

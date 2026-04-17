@@ -20,6 +20,8 @@ lerna-debug.log*
 .vscode/*
 !.vscode/extensions.json
 .github/copilot-instructions.md
+.claude/
+.mcp.json
 
 # Environment and local config
 .env

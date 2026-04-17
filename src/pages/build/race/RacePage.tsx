@@ -274,7 +274,7 @@ export function BuildRacePage() {
                           key={raceKey}
                           ref={isSelected ? selectedRaceRef : null}
                           className={cn(
-                            'w-full flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors border-l-4',
+                            'w-full flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors border-l-4 [scroll-margin-top:8px]',
                             isSelected
                               ? 'bg-accent/10 border-accent'
                               : 'border-transparent hover:bg-muted/40',

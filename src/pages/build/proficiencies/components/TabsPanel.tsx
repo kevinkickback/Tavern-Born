@@ -1,3 +1,4 @@
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import {
   Brain,
   Check,
@@ -7,7 +8,7 @@ import {
   Sword,
   Wrench,
 } from '@phosphor-icons/react'
-import { Badge } from '@/components/ui/badge'
+import { useState } from 'react'
 import {
   Select,
   SelectContent,
@@ -15,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { SKILL_TO_ABILITY } from '@/lib/calculations/skills'
 import { normalizeKey } from '@/lib/provenance'
 import type { ChoiceRecord, ProficiencyProvenance } from '@/lib/provenance/types'
@@ -27,6 +28,69 @@ import {
   type ToolChoiceSlot,
 } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
+
+type TabValue = 'skills' | 'saving-throws' | 'armor' | 'weapons' | 'tools' | 'languages'
+
+type ChoiceCounts = Record<'skills' | 'armor' | 'weapons' | 'tools' | 'languages', number>
+
+interface CategoryConfig {
+  value: TabValue
+  label: string
+  icon: PhosphorIcon
+  gradient: string
+  iconColor: string
+  choiceKey?: keyof ChoiceCounts
+}
+
+const CATEGORIES: CategoryConfig[] = [
+  {
+    value: 'skills',
+    label: 'Skills',
+    icon: Brain,
+    gradient: 'from-violet-500/50 to-violet-500/10',
+    iconColor: 'text-violet-400',
+    choiceKey: 'skills',
+  },
+  {
+    value: 'saving-throws',
+    label: 'Saves',
+    icon: ShieldCheck,
+    gradient: 'from-blue-500/50 to-blue-500/10',
+    iconColor: 'text-blue-400',
+  },
+  {
+    value: 'armor',
+    label: 'Armor',
+    icon: Shield,
+    gradient: 'from-slate-500/50 to-slate-500/10',
+    iconColor: 'text-slate-400',
+    choiceKey: 'armor',
+  },
+  {
+    value: 'weapons',
+    label: 'Weapons',
+    icon: Sword,
+    gradient: 'from-red-500/50 to-red-500/10',
+    iconColor: 'text-red-400',
+    choiceKey: 'weapons',
+  },
+  {
+    value: 'tools',
+    label: 'Tools',
+    icon: Wrench,
+    gradient: 'from-amber-500/50 to-amber-500/10',
+    iconColor: 'text-amber-400',
+    choiceKey: 'tools',
+  },
+  {
+    value: 'languages',
+    label: 'Languages',
+    icon: GlobeHemisphereWest,
+    gradient: 'from-emerald-500/50 to-emerald-500/10',
+    iconColor: 'text-emerald-400',
+    choiceKey: 'languages',
+  },
+]
 
 interface SkillRow {
   name: string
@@ -115,54 +179,57 @@ export function BuildProficienciesTabsPanel({
   isStandardLanguage,
   defaultTab,
 }: BuildProficienciesTabsPanelProps) {
+  const [activeTab, setActiveTab] = useState<TabValue>(defaultTab ?? 'skills')
+
   const choiceSelectedClass =
-    'border-2 border-accent border-dashed bg-accent/25 text-accent-foreground hover:bg-accent/30'
-  const fixedSelectedClass = 'border-accent bg-accent text-accent-foreground hover:bg-accent/80'
+    'border-2 border-accent border-dashed bg-accent/15 text-accent-foreground hover:bg-accent/25'
+  const fixedSelectedClass =
+    'border-accent/60 bg-accent/80 text-accent-foreground hover:bg-accent/70'
+
   return (
-    <Tabs defaultValue={defaultTab ?? 'skills'}>
-      <TabsList className="mb-4 flex-wrap h-auto gap-1">
-        <TabsTrigger value="skills" className="inline-flex items-center gap-1.5">
-          Skills
-          {choiceCounts.skills > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs leading-none">
-              {choiceCounts.skills}
-            </Badge>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="saving-throws">Saves</TabsTrigger>
-        <TabsTrigger value="armor" className="inline-flex items-center gap-1.5">
-          Armor
-          {choiceCounts.armor > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs leading-none">
-              {choiceCounts.armor}
-            </Badge>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="weapons" className="inline-flex items-center gap-1.5">
-          Weapons
-          {choiceCounts.weapons > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs leading-none">
-              {choiceCounts.weapons}
-            </Badge>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="tools" className="inline-flex items-center gap-1.5">
-          Tools
-          {choiceCounts.tools > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs leading-none">
-              {choiceCounts.tools}
-            </Badge>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="languages" className="inline-flex items-center gap-1.5">
-          Languages
-          {choiceCounts.languages > 0 && (
-            <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs leading-none">
-              {choiceCounts.languages}
-            </Badge>
-          )}
-        </TabsTrigger>
-      </TabsList>
+    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
+      {/* MTD-style category icon cards */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5">
+        {CATEGORIES.map(({ value, label, icon: Icon, gradient, iconColor, choiceKey }) => {
+          const count = choiceKey ? (choiceCounts[choiceKey] ?? 0) : 0
+          const isActive = activeTab === value
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setActiveTab(value)}
+              className={cn(
+                'relative flex flex-col items-center gap-2 py-3 px-2 rounded-xl border transition-all duration-200',
+                isActive
+                  ? 'border-accent bg-card shadow-sm ring-1 ring-accent/20'
+                  : 'border-border bg-muted/20 hover:border-accent/40 hover:bg-card/60',
+              )}
+            >
+              <div
+                className={cn(
+                  'w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br shrink-0',
+                  gradient,
+                )}
+              >
+                <Icon className={cn('h-4.5 w-4.5', iconColor)} weight="bold" />
+              </div>
+              <span
+                className={cn(
+                  'text-[11px] font-semibold leading-tight text-center',
+                  isActive ? 'text-foreground' : 'text-muted-foreground',
+                )}
+              >
+                {label}
+              </span>
+              {count > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center px-1 leading-none">
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
 
       <TabsContent value="skills">
         <div className="flex flex-wrap gap-2">
@@ -436,7 +503,6 @@ export function BuildProficienciesTabsPanel({
               ))}
             </div>
           )}
-
           {visibleToolCandidates.length > 0 ? (
             visibleToolCandidates.map((toolName) => {
               const normTool = normalizeKey(toolName)

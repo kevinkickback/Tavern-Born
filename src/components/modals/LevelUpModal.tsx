@@ -1,4 +1,4 @@
-import { Minus, Plus, Scroll, Users } from '@phosphor-icons/react'
+import { ArrowDown, Plus, Scroll, Users } from '@phosphor-icons/react'
 import { useId, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -11,7 +11,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -29,7 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { checkMulticlassRequirements, MAX_CHARACTER_LEVEL } from '@/lib/calculations/gameRules'
@@ -53,6 +51,8 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const [ignoreRestrictions, setIgnoreRestrictions] = useState(false)
   const [multiclassSelection, setMulticlassSelection] = useState('')
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
+  // Tracks which class index received the most recent level-up so Remove targets the right class
+  const [lastLeveledIndex, setLastLeveledIndex] = useState<number | null>(null)
   const ignoreRestrictionsId = useId()
 
   if (!character) return null
@@ -62,11 +62,13 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const totalLevel = classProgression.reduce((sum, e) => sum + e.levels, 0) || character.level
   const isAtCap = totalLevel >= MAX_CHARACTER_LEVEL
 
-  // Classes available to add — deduplicate by name (same class can appear from multiple sources),
-  // then exclude classes already in the progression
+  const SIDEKICK_NAMES = new Set(['Expert Sidekick', 'Warrior Sidekick', 'Spellcaster Sidekick'])
+
+  // Classes available to add — deduplicate by name, exclude sidekick classes
   const seenClassNames = new Set<string>()
   const multiclassOptions = (classes as Class5e[])
     .filter((cls) => {
+      if (SIDEKICK_NAMES.has(cls.name)) return false
       if (seenClassNames.has(cls.name)) return false
       seenClassNames.add(cls.name)
       return true
@@ -110,6 +112,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       i === index ? { ...e, levels: e.levels + 1 } : e,
     )
     syncUpdate(character, newProgression)
+    setLastLeveledIndex(index)
     toast.success(
       `${classProgression[index].name} is now level ${classProgression[index].levels + 1}.`,
     )
@@ -143,13 +146,13 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
     const multiclassResult = selectedClass
       ? addMulticlass(
-          character,
-          character.provenance ?? emptyProvenance(),
-          multiclassSelection,
-          selectedClass,
-          selectedClass.source,
-          1,
-        )
+        character,
+        character.provenance ?? emptyProvenance(),
+        multiclassSelection,
+        selectedClass,
+        selectedClass.source,
+        1,
+      )
       : null
 
     const nextProficiencies =
@@ -166,6 +169,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
     toast.success(`Added ${multiclassSelection} (level 1).`)
     setMulticlassSelection('')
+    setLastLeveledIndex(newProgression.length - 1)
   }
 
   const handleRemoveLastLevel = () => {
@@ -174,76 +178,102 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       setConfirmRemoveOpen(false)
       return
     }
-    const lastIdx = classProgression.length - 1
+    // Use tracked last-leveled index; fall back to last entry if no level-up happened this session
+    const targetIdx = lastLeveledIndex ?? classProgression.length - 1
     let newProgression = classProgression.map((e, i) =>
-      i === lastIdx ? { ...e, levels: e.levels - 1 } : e,
+      i === targetIdx ? { ...e, levels: e.levels - 1 } : e,
     )
-    const removedClass = classProgression[lastIdx].name
+    const removedClass = classProgression[targetIdx].name
     // Drop the class entirely if it hits 0 levels
-    if (newProgression[lastIdx].levels <= 0) {
-      newProgression = newProgression.slice(0, -1)
+    if (newProgression[targetIdx].levels <= 0) {
+      newProgression = newProgression.filter((_, i) => i !== targetIdx)
     }
     syncUpdate(character, newProgression)
+    // After removal, the tracked index may be out of bounds — reset it
+    setLastLeveledIndex(null)
     toast.success(`Removed a level from ${removedClass}.`)
     setConfirmRemoveOpen(false)
   }
 
-  const lastClassName = classProgression.length
-    ? classProgression[classProgression.length - 1].name
-    : ''
+  const effectiveLastIdx = lastLeveledIndex ?? classProgression.length - 1
+  const lastClassName = classProgression[effectiveLastIdx]?.name ?? ''
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-2xl flex flex-col gap-0 p-0 overflow-hidden max-h-[90vh]">
-          <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-border">
-            <DialogTitle className="font-display text-xl flex items-center gap-2">
-              <Scroll className="h-5 w-5 text-primary" weight="duotone" />
-              Level Up Character
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              Manage character levels and multiclassing
-            </DialogDescription>
+        <DialogContent className="sm:max-w-lg flex flex-col gap-0 p-0 overflow-hidden max-h-[90vh]">
+          <div className="h-12 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-5 shrink-0">
+            <Scroll className="h-4 w-4 text-indigo-400" weight="duotone" />
+            <span className="text-sm font-bold">Level Up</span>
+            <span className="text-sm text-muted-foreground truncate min-w-0">{character.name}</span>
+            <div className="ml-auto mr-8 flex items-center gap-2 shrink-0">
+              <span className="text-xs text-muted-foreground">Total Level</span>
+              <span className="inline-flex items-center justify-center h-6 min-w-[1.5rem] px-1.5 rounded-md bg-indigo-500/20 text-indigo-300 text-xs font-bold tabular-nums">
+                {totalLevel}
+              </span>
+            </div>
+          </div>
+
+          <DialogHeader className="sr-only">
+            <DialogTitle>Level Up Character</DialogTitle>
+            <DialogDescription>Manage character levels and multiclassing</DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="flex-1 overflow-hidden">
-            <div className="px-6 py-5 space-y-6">
-              <section>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Scroll className="h-3.5 w-3.5" />
+            <div className="px-5 py-4 space-y-4">
+              {/* Your Classes */}
+              <div>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Scroll className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     Your Classes
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Character Level</span>
-                    <Badge className="font-mono">{totalLevel}</Badge>
-                  </div>
+                  </span>
                 </div>
 
                 {classProgression.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    {classProgression.map((entry, index) => (
-                      <div
-                        key={`${entry.name}|${entry.source ?? ''}`}
-                        className="border border-border rounded-xl p-4 bg-card/50 flex items-center justify-between gap-3"
-                      >
-                        <div className="min-w-0">
-                          <div className="font-semibold font-display truncate">{entry.name}</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            Class Level {entry.levels}
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          disabled={isAtCap}
-                          onClick={() => handleAddLevel(index)}
-                          className="flex-shrink-0 gap-1"
+                  <div className="border border-border rounded-xl overflow-hidden">
+                    {classProgression.map((entry, index) => {
+                      const colors = [
+                        'from-indigo-500 to-indigo-600/60',
+                        'from-violet-500 to-violet-600/60',
+                        'from-teal-500 to-teal-600/60',
+                        'from-amber-500 to-amber-600/60',
+                        'from-rose-500 to-rose-600/60',
+                      ]
+                      const gradient = colors[index % colors.length]
+                      return (
+                        <div
+                          key={`${entry.name}|${entry.source ?? ''}`}
+                          className="flex items-center gap-3 px-4 py-3 border-b border-border/40 last:border-b-0 hover:bg-muted/20 transition-colors"
                         >
-                          <Plus className="h-3.5 w-3.5" />
-                          Add Level
-                        </Button>
-                      </div>
-                    ))}
+                          <div
+                            className={cn(
+                              'h-9 w-9 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0 text-white text-xs font-bold',
+                              gradient,
+                            )}
+                          >
+                            {entry.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-sm leading-tight truncate">
+                              {entry.name}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              Level {entry.levels}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            disabled={isAtCap}
+                            onClick={() => handleAddLevel(index)}
+                            className="h-8 gap-1 shrink-0"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Level Up
+                          </Button>
+                        </div>
+                      )
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-3">
@@ -251,114 +281,112 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                   </p>
                 )}
 
-                {classProgression.length > 0 && totalLevel > 1 && (
-                  <div className="flex justify-center mt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive border-destructive/40 hover:bg-destructive/10 gap-1"
+                <div className="flex items-center justify-between mt-2 min-h-[28px]">
+                  {classProgression.length > 0 && totalLevel > 1 ? (
+                    <button
+                      type="button"
+                      className="flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive font-medium transition-colors"
                       onClick={() => setConfirmRemoveOpen(true)}
                     >
-                      <Minus className="h-3.5 w-3.5" />
-                      Remove Last Level
-                      {lastClassName && (
-                        <span className="text-muted-foreground font-normal ml-0.5">
-                          ({lastClassName})
-                        </span>
-                      )}
-                    </Button>
-                  </div>
-                )}
+                      <ArrowDown className="h-3 w-3" />
+                      Remove last level
+                      {lastClassName && <span className="opacity-80">({lastClassName})</span>}
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+                  {isAtCap && (
+                    <span className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-md px-2 py-1">
+                      Level cap reached ({MAX_CHARACTER_LEVEL})
+                    </span>
+                  )}
+                </div>
+              </div>
 
-                {isAtCap && (
-                  <p className="text-xs text-warning text-center mt-3 border border-warning/30 bg-warning/5 rounded-lg py-2 px-3">
-                    Character is already level {MAX_CHARACTER_LEVEL}. Remove a level to add more.
-                  </p>
-                )}
-              </section>
-
-              <Separator />
-
-              <section>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5" />
-                    Add Class
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <Label
-                      htmlFor={ignoreRestrictionsId}
-                      className="text-xs text-muted-foreground cursor-pointer"
-                    >
-                      Ignore Restrictions
-                    </Label>
-                    <Switch
-                      id={ignoreRestrictionsId}
-                      checked={ignoreRestrictions}
-                      onCheckedChange={setIgnoreRestrictions}
-                    />
-                  </div>
+              {/* Add Multiclass */}
+              <div>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Add Multiclass
+                  </span>
                 </div>
 
                 {isAtCap ? (
-                  <p className="text-xs text-muted-foreground text-center py-3">
+                  <p className="text-xs text-muted-foreground text-center py-3 border border-border/50 rounded-xl bg-muted/10">
                     Maximum level reached.
                   </p>
                 ) : (
-                  <div className="flex gap-2">
-                    <Select value={multiclassSelection} onValueChange={setMulticlassSelection}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Choose a class..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {multiclassOptions.map(
-                          ({ cls, meetsRequirements, requirementText, already }) => {
-                            const disabled = already || (!ignoreRestrictions && !meetsRequirements)
-                            return (
-                              <SelectItem
-                                key={`${cls.name}|${cls.source ?? ''}`}
-                                value={cls.name}
-                                disabled={disabled}
-                                className={cn(
-                                  !meetsRequirements && !ignoreRestrictions ? 'opacity-50' : '',
-                                )}
-                              >
-                                <span>{cls.name}</span>
-                                {already && (
-                                  <span className="ml-1 text-muted-foreground text-xs">
-                                    (already taken)
-                                  </span>
-                                )}
-                                {!already &&
-                                  requirementText &&
-                                  !meetsRequirements &&
-                                  !ignoreRestrictions && (
+                  <div className="border border-border rounded-xl p-3 bg-muted/5 space-y-2.5">
+                    <div className="flex gap-2">
+                      <Select value={multiclassSelection} onValueChange={setMulticlassSelection}>
+                        <SelectTrigger className="flex-1 h-9">
+                          <SelectValue placeholder="Choose a class..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {multiclassOptions.map(
+                            ({ cls, meetsRequirements, requirementText, already }) => {
+                              const disabled =
+                                already || (!ignoreRestrictions && !meetsRequirements)
+                              return (
+                                <SelectItem
+                                  key={`${cls.name}|${cls.source ?? ''}`}
+                                  value={cls.name}
+                                  disabled={disabled}
+                                  className={cn(
+                                    !meetsRequirements && !ignoreRestrictions ? 'opacity-50' : '',
+                                  )}
+                                >
+                                  <span>{cls.name}</span>
+                                  {already && (
                                     <span className="ml-1 text-muted-foreground text-xs">
-                                      ({requirementText})
+                                      (already taken)
                                     </span>
                                   )}
-                              </SelectItem>
-                            )
-                          },
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      onClick={handleAddMulticlass}
-                      disabled={!multiclassSelection}
-                      className="flex-shrink-0 gap-1"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Add Class
-                    </Button>
+                                  {!already &&
+                                    requirementText &&
+                                    !meetsRequirements &&
+                                    !ignoreRestrictions && (
+                                      <span className="ml-1 text-muted-foreground text-xs">
+                                        ({requirementText})
+                                      </span>
+                                    )}
+                                </SelectItem>
+                              )
+                            },
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        onClick={handleAddMulticlass}
+                        disabled={!multiclassSelection}
+                        className="h-9 shrink-0 gap-1"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-between pt-0.5">
+                      <Label
+                        htmlFor={ignoreRestrictionsId}
+                        className="text-xs text-muted-foreground cursor-pointer select-none"
+                      >
+                        Ignore ability score requirements
+                      </Label>
+                      <Switch
+                        id={ignoreRestrictionsId}
+                        checked={ignoreRestrictions}
+                        onCheckedChange={setIgnoreRestrictions}
+                      />
+                    </div>
                   </div>
                 )}
-              </section>
+              </div>
             </div>
           </ScrollArea>
 
-          <div className="px-6 py-4 border-t border-border flex justify-end flex-shrink-0">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="gap-1.5">
+          <div className="px-5 py-3 border-t border-border/40 flex justify-end shrink-0">
+            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Close
             </Button>
           </div>

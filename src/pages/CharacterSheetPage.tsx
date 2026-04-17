@@ -1,9 +1,9 @@
-import { ArrowsClockwise, DownloadSimple, FilePdf, Sparkle } from '@phosphor-icons/react'
+import { ArrowsClockwise, DownloadSimple, Eye, FilePdf, Sparkle } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -123,69 +123,92 @@ export function CharacterSheetPage() {
   return (
     <div>
       <div className="px-6 py-5 page-header-band mb-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <FilePdf className="h-6 w-6 text-primary" weight="duotone" />
-            <div>
-              <h1 className="text-2xl font-display font-bold">Character Sheet</h1>
-              <p className="text-sm text-muted-foreground">Export a filled PDF character sheet</p>
-            </div>
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          <FilePdf className="h-6 w-6 text-primary" weight="duotone" />
+          <div>
+            <h1 className="text-2xl font-display font-bold">Character Sheet</h1>
+            <p className="text-sm text-muted-foreground">Export a filled PDF character sheet</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto w-full space-y-4 pb-8">
-        <Card className="w-full">
-          <CardContent className="space-y-4 pt-6">
-            <p className="text-sm text-muted-foreground">
-              Auto-filled preview for {characterName}. This uses the selected
-              {` ${selectedTemplate.name} `}
-              template.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-sm text-muted-foreground">Template</span>
-              <Select
-                value={selectedTemplateId}
-                onValueChange={(value) => setSelectedTemplateId(value as CharacterSheetTemplateId)}
-              >
-                <SelectTrigger className="w-[260px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHARACTER_SHEET_TEMPLATES.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <div className="px-6 pb-6">
+        <div className="max-w-7xl mx-auto w-full space-y-4">
+          {/* ── Export Options ── */}
+          <Card className="w-full overflow-hidden">
+            <div className="h-10 bg-gradient-to-r from-rose-500/20 via-rose-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-4 shrink-0">
+              <FilePdf className="h-4 w-4 text-rose-400" weight="duotone" />
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Export Options
+              </span>
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setRefreshNonce((n) => n + 1)}
+                  disabled={isGenerating}
+                  className="h-7 text-xs gap-1.5"
+                >
+                  <ArrowsClockwise className="h-3.5 w-3.5" weight="bold" />
+                  Regenerate
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleDownload}
+                  disabled={isGenerating || !pdfBytes}
+                  className="h-7 text-xs gap-1.5"
+                >
+                  <DownloadSimple className="h-3.5 w-3.5" weight="bold" />
+                  Download PDF
+                </Button>
+              </div>
+            </div>
+            <div className="p-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground shrink-0">Template</span>
+                <Select
+                  value={selectedTemplateId}
+                  onValueChange={(value) =>
+                    setSelectedTemplateId(value as CharacterSheetTemplateId)
+                  }
+                >
+                  <SelectTrigger className="w-[260px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CHARACTER_SHEET_TEMPLATES.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Auto-filled for <span className="font-medium text-foreground">{characterName}</span>{' '}
+                using the{' '}
+                <span className="font-medium text-foreground">{selectedTemplate.name}</span>{' '}
+                template.
+              </p>
+            </div>
+          </Card>
+
+          {/* ── PDF Preview ── */}
+          <Card className="w-full overflow-hidden">
+            <div className="h-10 bg-gradient-to-r from-slate-500/20 via-slate-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-4 shrink-0">
+              <Eye className="h-4 w-4 text-slate-400" weight="duotone" />
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Preview
+              </span>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setRefreshNonce((n) => n + 1)}
-                disabled={isGenerating}
-              >
-                <ArrowsClockwise className="h-4 w-4" weight="bold" />
-                Regenerate
-              </Button>
-              <Button type="button" onClick={handleDownload} disabled={isGenerating || !pdfBytes}>
-                <DownloadSimple className="h-4 w-4" weight="bold" />
-                Download PDF
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="w-full overflow-hidden">
-          <CardContent className="p-0">
             {isGenerating && (
               <div className="flex h-[70vh] items-center justify-center bg-muted/30">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Sparkle className="h-4 w-4 animate-pulse" weight="duotone" />
-                  Generating PDF preview...
+                  Generating PDF preview…
                 </div>
               </div>
             )}
@@ -197,6 +220,7 @@ export function CharacterSheetPage() {
                   <Button
                     type="button"
                     variant="outline"
+                    size="sm"
                     onClick={() => setRefreshNonce((n) => n + 1)}
                   >
                     Try Again
@@ -206,8 +230,8 @@ export function CharacterSheetPage() {
             )}
 
             {!isGenerating && !errorMessage && pdfBytes && <PdfCanvasPreview pdfBytes={pdfBytes} />}
-          </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   )

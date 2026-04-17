@@ -1,4 +1,11 @@
-import { Barbell, CaretLeft, CaretRight } from '@phosphor-icons/react'
+import {
+  Barbell,
+  CaretLeft,
+  CaretRight,
+  Coins,
+  ListNumbers,
+  PencilSimple,
+} from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Card } from '@/components/ui/card'
@@ -28,6 +35,7 @@ import {
 } from '@/lib/calculations/originSystem'
 import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
+import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildAbilityScoresDetailsPanel } from '@/pages/build/ability-scores/components/DetailsPanel'
 import {
@@ -235,11 +243,71 @@ export function BuildAbilityScoresPage() {
                           })
                         }
                       >
-                        <TabsList className="mb-6">
-                          <TabsTrigger value="point-buy">Point Buy</TabsTrigger>
-                          <TabsTrigger value="standard-array">Standard Array</TabsTrigger>
-                          <TabsTrigger value="custom">Custom</TabsTrigger>
-                        </TabsList>
+                        {/* Method switcher — segmented pill */}
+                        <div className="flex bg-muted/50 border border-border rounded-xl p-1 gap-1 mb-5">
+                          {(
+                            [
+                              {
+                                value: 'point-buy',
+                                label: 'Point Buy',
+                                icon: Coins,
+                                desc: '27 pts',
+                              },
+                              {
+                                value: 'standard-array',
+                                label: 'Standard Array',
+                                icon: ListNumbers,
+                                desc: 'Preset values',
+                              },
+                              {
+                                value: 'custom',
+                                label: 'Custom',
+                                icon: PencilSimple,
+                                desc: 'Any scores',
+                              },
+                            ] as const
+                          ).map(({ value: v, label, icon: Icon, desc }) => {
+                            const active = method === v
+                            return (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() =>
+                                  updateCharacter(character.id, {
+                                    variantRules: {
+                                      ...character.variantRules,
+                                      abilityScoreMethod: v,
+                                    },
+                                  })
+                                }
+                                className={cn(
+                                  'flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-200',
+                                  active
+                                    ? 'bg-background shadow-sm border border-border text-foreground'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50',
+                                )}
+                              >
+                                <Icon
+                                  className={cn('h-4 w-4 shrink-0', active ? 'text-accent' : '')}
+                                  weight={active ? 'fill' : 'regular'}
+                                />
+                                <div className="min-w-0">
+                                  <div
+                                    className={cn(
+                                      'text-xs font-semibold leading-tight truncate',
+                                      active ? 'text-foreground' : '',
+                                    )}
+                                  >
+                                    {label}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground leading-tight truncate">
+                                    {desc}
+                                  </div>
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
 
                         <TabsContent value="point-buy">
                           <BuildAbilityScoresPointBuyPanel
@@ -274,94 +342,98 @@ export function BuildAbilityScoresPage() {
                         </TabsContent>
                       </Tabs>
                       {raceAsiData.choices.length > 0 && (
-                        <div className="mt-3 p-3 rounded-lg bg-muted/20 border border-border flex flex-col items-center gap-2">
-                          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Racial Bonuses
+                        <div className="mt-4 border border-border rounded-xl overflow-hidden bg-card/50">
+                          <div className="h-8 bg-gradient-to-r from-emerald-500/25 via-emerald-500/12 to-transparent border-b border-border/40 flex items-center px-3">
+                            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                              Racial Bonuses
+                            </span>
                           </div>
-                          {isLineageRaceAsiFallback && (
-                            <Tabs
-                              value={String(raceAsiBlockIndex)}
-                              onValueChange={(value) => {
-                                const nextIndex = (Number(value) === 1 ? 1 : 0) as 0 | 1
-                                updateCharacter(character.id, {
-                                  raceAsiBlockIndex: nextIndex,
-                                  raceAsiChoices: [],
-                                })
-                                if (selectedRace) {
-                                  applyRaceSelection(selectedRace, subraceData, nextIndex)
-                                }
-                              }}
-                            >
-                              <TabsList className="h-9 w-full max-w-xs">
-                                <TabsTrigger value="0" className="text-xs px-3">
-                                  +2/+1 (2 abilities)
-                                </TabsTrigger>
-                                <TabsTrigger value="1" className="text-xs px-3">
-                                  +1/+1/+1 (3 abilities)
-                                </TabsTrigger>
-                              </TabsList>
-                            </Tabs>
-                          )}
-                          <div className="flex flex-wrap justify-center gap-2">
-                            {raceAsiData.fixed.map((fb) => (
-                              <span
-                                key={`${fb.ability}|${fb.value}`}
-                                className="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded px-2 py-0.5 font-semibold"
+                          <div className="p-3 flex flex-col items-center gap-2">
+                            {isLineageRaceAsiFallback && (
+                              <Tabs
+                                value={String(raceAsiBlockIndex)}
+                                onValueChange={(value) => {
+                                  const nextIndex = (Number(value) === 1 ? 1 : 0) as 0 | 1
+                                  updateCharacter(character.id, {
+                                    raceAsiBlockIndex: nextIndex,
+                                    raceAsiChoices: [],
+                                  })
+                                  if (selectedRace) {
+                                    applyRaceSelection(selectedRace, subraceData, nextIndex)
+                                  }
+                                }}
                               >
-                                {ABILITY_ABBREVIATIONS[fb.ability]} +{fb.value}
-                              </span>
-                            ))}
-                            {raceAsiChoiceRenderBlocks.map(({ block, blockIndex, slots }) => {
-                              const selections = raceAsiChoices[blockIndex] ?? []
-                              return slots.map(({ slotId, slotIndex }) => {
-                                const selected = selections[slotIndex] ?? ''
-                                const takenByOthers = new Set([
-                                  ...selections.filter((s, si) => si !== slotIndex && s !== ''),
-                                  ...raceAsiData.choices.flatMap((_, bi) =>
-                                    bi !== blockIndex
-                                      ? (raceAsiChoices[bi] ?? []).filter((s) => s !== '')
-                                      : [],
-                                  ),
-                                ])
-                                return (
-                                  <div key={slotId} className="flex items-center gap-1">
-                                    <span className="text-xs text-muted-foreground">
-                                      +{block.amount}
-                                    </span>
-                                    <Select
-                                      value={selected}
-                                      onValueChange={(v) => {
-                                        const next = updateRaceAsiChoices(
-                                          raceAsiChoices,
-                                          blockIndex,
-                                          slotIndex,
-                                          v,
-                                        )
-                                        updateCharacter(character.id, {
-                                          raceAsiChoices: next,
-                                        })
-                                      }}
-                                    >
-                                      <SelectTrigger className="h-7 w-24 px-2 text-xs">
-                                        <SelectValue placeholder="Choose…" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {block.from.map((ab) => (
-                                          <SelectItem
-                                            key={ab}
-                                            value={ab}
-                                            disabled={takenByOthers.has(ab)}
-                                            className="text-xs"
-                                          >
-                                            {ABILITY_ABBREVIATIONS[ab]}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                )
-                              })
-                            })}
+                                <TabsList className="h-9 w-full max-w-xs">
+                                  <TabsTrigger value="0" className="text-xs px-3">
+                                    +2/+1 (2 abilities)
+                                  </TabsTrigger>
+                                  <TabsTrigger value="1" className="text-xs px-3">
+                                    +1/+1/+1 (3 abilities)
+                                  </TabsTrigger>
+                                </TabsList>
+                              </Tabs>
+                            )}
+                            <div className="flex flex-wrap justify-center gap-2">
+                              {raceAsiData.fixed.map((fb) => (
+                                <span
+                                  key={`${fb.ability}|${fb.value}`}
+                                  className="text-xs bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded px-2 py-0.5 font-semibold"
+                                >
+                                  {ABILITY_ABBREVIATIONS[fb.ability]} +{fb.value}
+                                </span>
+                              ))}
+                              {raceAsiChoiceRenderBlocks.map(({ block, blockIndex, slots }) => {
+                                const selections = raceAsiChoices[blockIndex] ?? []
+                                return slots.map(({ slotId, slotIndex }) => {
+                                  const selected = selections[slotIndex] ?? ''
+                                  const takenByOthers = new Set([
+                                    ...selections.filter((s, si) => si !== slotIndex && s !== ''),
+                                    ...raceAsiData.choices.flatMap((_, bi) =>
+                                      bi !== blockIndex
+                                        ? (raceAsiChoices[bi] ?? []).filter((s) => s !== '')
+                                        : [],
+                                    ),
+                                  ])
+                                  return (
+                                    <div key={slotId} className="flex items-center gap-1">
+                                      <span className="text-xs text-muted-foreground">
+                                        +{block.amount}
+                                      </span>
+                                      <Select
+                                        value={selected}
+                                        onValueChange={(v) => {
+                                          const next = updateRaceAsiChoices(
+                                            raceAsiChoices,
+                                            blockIndex,
+                                            slotIndex,
+                                            v,
+                                          )
+                                          updateCharacter(character.id, {
+                                            raceAsiChoices: next,
+                                          })
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-7 w-24 px-2 text-xs">
+                                          <SelectValue placeholder="Choose…" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {block.from.map((ab) => (
+                                            <SelectItem
+                                              key={ab}
+                                              value={ab}
+                                              disabled={takenByOthers.has(ab)}
+                                              className="text-xs"
+                                            >
+                                              {ABILITY_ABBREVIATIONS[ab]}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )
+                                })
+                              })}
+                            </div>
                           </div>
                         </div>
                       )}

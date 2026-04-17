@@ -206,20 +206,29 @@ export function HomePage() {
   return (
     <div>
       <div className="px-6 py-5 page-header-band mb-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <Users className="h-6 w-6 text-primary" weight="duotone" />
-            <div>
-              <h1 className="text-2xl font-display font-bold">Home</h1>
-              <p className="text-sm text-muted-foreground">
-                Manage and switch between your characters
-              </p>
-            </div>
+        <div className="max-w-7xl mx-auto flex items-center gap-3">
+          <Users className="h-6 w-6 text-primary" weight="duotone" />
+          <div>
+            <h1 className="text-2xl font-display font-bold">Home</h1>
+            <p className="text-sm text-muted-foreground">
+              Manage and switch between your characters
+            </p>
           </div>
           {characters.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
+            <span className="ml-2 inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+              {characters.length}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="px-6 pb-6">
+        <div className="max-w-7xl mx-auto w-full flex flex-col gap-4">
+          {/* Toolbar — only when characters exist */}
+          {characters.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 shadow-sm">
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-                <SelectTrigger className="h-9 w-44 text-sm">
+                <SelectTrigger className="h-8 w-44 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -230,43 +239,41 @@ export function HomePage() {
                   <SelectItem value="level-asc">Level (Low–High)</SelectItem>
                 </SelectContent>
               </Select>
+
+              <div className="h-5 w-px bg-border mx-1 hidden sm:block" />
+
               <Button
                 variant={selectionMode ? 'default' : 'outline'}
                 size="sm"
-                className="h-9 gap-1.5"
+                className="h-8 text-xs gap-1.5"
                 onClick={handleToggleSelectionMode}
               >
-                <CheckSquare size={15} />
+                <CheckSquare size={14} />
                 Select
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 gap-1.5"
+                className="h-8 text-xs gap-1.5"
                 onClick={handleImportCharacter}
               >
-                <Upload size={15} />
+                <Upload size={14} />
                 Import
               </Button>
+
               <Button
                 size="sm"
-                className="h-9 gap-1.5 bg-accent hover:bg-accent/90"
+                className="h-8 text-xs gap-1.5 bg-accent hover:bg-accent/90 ml-auto"
                 onClick={() => setShowCreateWizard(true)}
               >
-                <Plus size={15} />
+                <Plus size={14} />
                 New Character
               </Button>
             </div>
           )}
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto w-full flex flex-col gap-8">
-        {/* Characters section */}
-        <div>
           {/* Selection banner */}
           {selectionMode && (
-            <div className="mb-4 flex items-center gap-3 rounded-lg border bg-card px-4 py-2">
+            <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-2.5 shadow-sm">
               <div className="flex items-center gap-2">
                 <Checkbox checked={allSelected} onCheckedChange={handleToggleAllSelection} />
                 <span className="text-sm text-muted-foreground">
@@ -276,7 +283,7 @@ export function HomePage() {
               <Button
                 variant="destructive"
                 size="sm"
-                className="gap-2"
+                className="gap-2 h-8 text-xs"
                 disabled={selectedCharacterIds.length === 0}
                 onClick={handleDeleteSelected}
               >

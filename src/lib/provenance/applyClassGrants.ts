@@ -29,7 +29,7 @@ export function applyClassGrants(
         toolProficiencies?: Array<
           Record<string, boolean | number | { choose?: { from?: string[]; count?: number } }>
         >
-        skills?: { choose?: { from: string[]; count: number } }
+        skills?: Array<string | Record<string, unknown>>
       }
     }
     proficiency?: string[]
@@ -40,7 +40,7 @@ export function applyClassGrants(
       toolProficiencies?: Array<
         Record<string, boolean | number | { choose?: { from?: string[]; count?: number } }>
       >
-      skills?: { choose?: { from: string[]; count: number } }
+      skills?: Array<string | Record<string, unknown>>
     }
   },
   subclass:
@@ -96,14 +96,16 @@ export function applyClassGrants(
     `class:${normalizeKey(cls.name)}`,
   )
 
-  const skillChoice = profs.skills
-  if (skillChoice?.choose) {
+  const skillChoiceEntry = (profs.skills ?? []).find(
+    (s): s is Record<string, unknown> => typeof s === 'object' && s !== null && 'choose' in s,
+  ) as { choose?: { from: string[]; count: number } } | undefined
+  if (skillChoiceEntry?.choose) {
     const choiceRecord: ChoiceRecord = {
       id: `class:${normalizeKey(cls.name)}:skills:choose`,
       domain: 'skills',
       sourceTag: { ...clsTag, grantType: 'placeholder' },
-      chooseCount: skillChoice.choose.count ?? 2,
-      optionPool: skillChoice.choose.from ?? [],
+      chooseCount: skillChoiceEntry.choose.count ?? 2,
+      optionPool: skillChoiceEntry.choose.from ?? [],
       selected: [],
       status: 'pending',
     }

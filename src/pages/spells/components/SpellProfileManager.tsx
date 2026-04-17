@@ -8,27 +8,40 @@ import {
 } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
-import { formatSpellLevel } from '@/lib/calculations/spellUtils'
+import { formatSpellLevel, getSchoolName } from '@/lib/calculations/spellUtils'
 import { getViewportBoundedMaxHeight } from '@/lib/layoutHeights'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 import type { RaceSpellChoice } from '@/types/character'
 
-function getSpanForGroup(index: number, totalGroups: number) {
-  // At 2xl: 3 columns. At xl: 2 columns. Below: 1 column.
-  // Last group fills remaining columns on its row.
+const SCHOOL_STYLES: Record<string, string> = {
+  A: 'bg-blue-500/10 text-blue-400',
+  C: 'bg-amber-500/10 text-amber-400',
+  D: 'bg-cyan-500/10 text-cyan-400',
+  E: 'bg-pink-500/10 text-pink-400',
+  V: 'bg-orange-500/10 text-orange-400',
+  I: 'bg-violet-500/10 text-violet-400',
+  N: 'bg-emerald-500/10 text-emerald-400',
+  T: 'bg-teal-500/10 text-teal-400',
+}
+
+function getSchoolStyle(school: string | undefined): string {
+  return SCHOOL_STYLES[school?.toUpperCase() ?? ''] ?? 'bg-muted/20 text-muted-foreground'
+}
+
+function getSpanForGroup(index: number, totalGroups: number, itemCount: number) {
   const isLast = index === totalGroups - 1
   if (!isLast) return { xlSpan: 1, xxlSpan: 1 }
-
   const xlRemainder = totalGroups % 2
   const xxlRemainder = totalGroups % 3
-
+  const rawXl = xlRemainder === 1 ? 2 : 1
+  const rawXxl = xxlRemainder === 1 ? 3 : xxlRemainder === 2 ? 2 : 1
   return {
-    xlSpan: xlRemainder === 1 ? 2 : 1,
-    xxlSpan: xxlRemainder === 1 ? 3 : xxlRemainder === 2 ? 2 : 1,
+    xlSpan: Math.min(rawXl, Math.max(1, itemCount)),
+    xxlSpan: Math.min(rawXxl, Math.max(1, itemCount)),
   }
 }
 
@@ -41,16 +54,10 @@ function getColSpanClasses(span: { xlSpan: number; xxlSpan: number }) {
 }
 
 function getInnerColumnClasses(span: { xlSpan: number; xxlSpan: number }) {
-  // Base/md: always multi-column (grid is single column so full width is available)
-  // xl/2xl: match inner columns to the group's grid span
   const xlCols = span.xlSpan >= 2 ? 'xl:columns-2' : 'xl:columns-1'
   const xxlCols =
     span.xxlSpan >= 3 ? '2xl:columns-3' : span.xxlSpan >= 2 ? '2xl:columns-2' : '2xl:columns-1'
   return `columns-2 md:columns-3 ${xlCols} ${xxlCols}`
-}
-
-function getLevelHeaderTone(_level: number): string {
-  return 'bg-accent/10'
 }
 
 interface CantripGroupProps {
@@ -85,12 +92,7 @@ function CantripGroup({
         getColSpanClasses(span),
       )}
     >
-      <div
-        className={cn(
-          'px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60',
-          getLevelHeaderTone(0),
-        )}
-      >
+      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60 bg-accent/10">
         Cantrips
       </div>
       <div
@@ -104,9 +106,9 @@ function CantripGroup({
           return (
             <div
               key={`${item.profileId}|${item.kind}|${item.name}`}
-              className="px-4 py-2.5 flex items-center justify-between gap-3 break-inside-avoid hover:bg-muted/20 transition-colors"
+              className="px-4 py-2 flex items-center gap-3 break-inside-avoid hover:bg-muted/20 transition-colors"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 {renderSpellName({
                   item,
                   spell,
@@ -115,7 +117,17 @@ function CantripGroup({
                   ),
                 })}
               </div>
-              <div className="flex items-center gap-2">
+              {spell?.school ? (
+                <span
+                  className={cn(
+                    'text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0',
+                    getSchoolStyle(spell.school),
+                  )}
+                >
+                  {getSchoolName(spell.school).slice(0, 3)}
+                </span>
+              ) : null}
+              <div className="flex items-center gap-1.5 shrink-0">
                 {(() => {
                   const swap = swappedByAddedName.get(item.name)
                   if (!swap) return null
@@ -149,7 +161,7 @@ function CantripGroup({
           )
         })}
         {cantripItems.length === 0 ? (
-          <div className="px-4 py-2.5 text-sm text-muted-foreground/80 break-inside-avoid">
+          <div className="px-4 py-2 text-sm text-muted-foreground/80 break-inside-avoid">
             No cantrips in this list.
           </div>
         ) : null}
@@ -234,13 +246,15 @@ export function SpellProfileManager({
   renderSpellName,
 }: SpellProfileManagerProps) {
   return (
-    <Card className="w-full flex flex-col">
-      <CardHeader>
-        <CardTitle className="font-display text-xl flex items-center gap-2">
-          <BookOpen className="h-5 w-5 text-primary" weight="duotone" />
-          Spell List
-        </CardTitle>
-      </CardHeader>
+    <Card className="w-full flex flex-col overflow-hidden">
+      <div className="h-10 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent border-b border-border/40 flex items-center px-4 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-indigo-400" weight="duotone" />
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Spell List
+          </span>
+        </div>
+      </div>
       <CardContent className="flex-1 p-0">
         {spellProfiles.length === 0 ? (
           <p className="px-6 text-sm text-muted-foreground text-center py-8">
@@ -334,8 +348,12 @@ export function SpellProfileManager({
               const isClassWithoutSpellcasting = profile.type === 'class' && !detail
 
               return (
-                <AccordionItem key={profile.id} value={profile.id} className="border-b-0">
-                  <AccordionTrigger className="px-6 py-2.5 bg-muted/30 rounded-none hover:no-underline">
+                <AccordionItem
+                  key={profile.id}
+                  value={profile.id}
+                  className="border-b border-border/30"
+                >
+                  <AccordionTrigger className="px-6 py-2.5 bg-muted/50 rounded-none hover:no-underline hover:bg-muted/70 transition-colors">
                     <div className="flex items-center gap-2 text-left w-full min-w-0">
                       <span className="font-medium text-sm">{profile.label}</span>
                       <div className="ml-auto flex items-center gap-2 pr-1">
@@ -409,9 +427,9 @@ export function SpellProfileManager({
                       </div>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="pb-1">
+                  <AccordionContent className="pb-1 border-t border-border/30 bg-muted/10">
                     {isBonusProfile && !showDefaultEmptyState ? (
-                      <div className="px-6 py-2 bg-muted/10 flex items-center justify-end">
+                      <div className="px-5 py-2 bg-muted/10 flex items-center justify-end">
                         <Button
                           size="sm"
                           variant="outline"
@@ -425,7 +443,7 @@ export function SpellProfileManager({
                     ) : null}
 
                     {showDefaultEmptyState ? (
-                      <div className="px-6 pb-3.5">
+                      <div className="px-5 pb-3.5">
                         <div className="min-h-40 flex flex-col items-center justify-center text-center p-6">
                           <BookOpen
                             className="h-6 w-6 text-muted-foreground mb-2"
@@ -463,7 +481,7 @@ export function SpellProfileManager({
                     items.length === 0 &&
                     availableClassSpells.length === 0 &&
                     hasUnfulfilledChoices ? (
-                      <div className="px-6 pb-3.5">
+                      <div className="px-5 pb-3.5">
                         <div className="min-h-40 flex flex-col items-center justify-center text-center p-6">
                           <BookOpen
                             className="h-6 w-6 text-muted-foreground mb-2"
@@ -494,12 +512,16 @@ export function SpellProfileManager({
                       ? (() => {
                           const totalGroups = (levels.includes(0) ? 1 : 0) + availLevels.length
                           let groupIndex = 0
-
                           return (
                             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3 px-6 py-3.5">
                               {levels.includes(0)
                                 ? (() => {
-                                    const span = getSpanForGroup(groupIndex++, totalGroups)
+                                    const cantripCount = items.filter((i) => i.level === 0).length
+                                    const span = getSpanForGroup(
+                                      groupIndex++,
+                                      totalGroups,
+                                      cantripCount,
+                                    )
                                     return (
                                       <CantripGroup
                                         items={items}
@@ -519,7 +541,11 @@ export function SpellProfileManager({
                                 const itemsAtLevel = availableClassItems.filter(
                                   ({ spell }) => spell.level === spellLevel,
                                 )
-                                const span = getSpanForGroup(groupIndex++, totalGroups)
+                                const span = getSpanForGroup(
+                                  groupIndex++,
+                                  totalGroups,
+                                  itemsAtLevel.length,
+                                )
                                 return (
                                   <div
                                     key={`${profile.id}|avail|${spellLevel}`}
@@ -528,12 +554,7 @@ export function SpellProfileManager({
                                       getColSpanClasses(span),
                                     )}
                                   >
-                                    <div
-                                      className={cn(
-                                        'px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60',
-                                        getLevelHeaderTone(spellLevel),
-                                      )}
-                                    >
+                                    <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60 bg-accent/10">
                                       {formatSpellLevel(spellLevel)}s
                                     </div>
                                     <div
@@ -548,23 +569,27 @@ export function SpellProfileManager({
                                           !isPrepared &&
                                           preparedTotal > 0 &&
                                           preparedCount >= preparedTotal
-
                                         return (
                                           <div
                                             key={`${profile.id}|avail|${spell.name}|${spell.source ?? ''}`}
                                             className={cn(
-                                              'px-4 py-2.5 flex items-center justify-between gap-3 break-inside-avoid transition-colors',
-                                              isPrepared
-                                                ? 'bg-accent/10'
-                                                : 'bg-card hover:bg-muted/20',
+                                              'px-4 py-2 flex items-center gap-3 break-inside-avoid transition-colors',
+                                              isPrepared ? 'bg-accent/10' : 'hover:bg-muted/20',
                                             )}
                                           >
-                                            <div className="min-w-0">
-                                              {renderSpellName({
-                                                item,
-                                                spell,
-                                              })}
+                                            <div className="min-w-0 flex-1">
+                                              {renderSpellName({ item, spell })}
                                             </div>
+                                            {spell.school ? (
+                                              <span
+                                                className={cn(
+                                                  'text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0',
+                                                  getSchoolStyle(spell.school),
+                                                )}
+                                              >
+                                                {getSchoolName(spell.school).slice(0, 3)}
+                                              </span>
+                                            ) : null}
                                             <button
                                               type="button"
                                               disabled={atLimit}
@@ -591,7 +616,7 @@ export function SpellProfileManager({
                                         )
                                       })}
                                       {itemsAtLevel.length === 0 ? (
-                                        <div className="px-4 py-2.5 text-sm text-muted-foreground/80 break-inside-avoid">
+                                        <div className="px-4 py-2 text-sm text-muted-foreground/80 break-inside-avoid">
                                           No spells in this level.
                                         </div>
                                       ) : null}
@@ -609,12 +634,16 @@ export function SpellProfileManager({
                       ? (() => {
                           const totalGroups = levels.length
                           let groupIndex = 0
-
                           return (
                             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3 px-6 py-3.5">
                               {levels.includes(0)
                                 ? (() => {
-                                    const span = getSpanForGroup(groupIndex++, totalGroups)
+                                    const cantripCount = items.filter((i) => i.level === 0).length
+                                    const span = getSpanForGroup(
+                                      groupIndex++,
+                                      totalGroups,
+                                      cantripCount,
+                                    )
                                     return (
                                       <CantripGroup
                                         items={items}
@@ -634,7 +663,11 @@ export function SpellProfileManager({
                                 .filter((level) => level > 0)
                                 .map((level) => {
                                   const levelItems = items.filter((item) => item.level === level)
-                                  const span = getSpanForGroup(groupIndex++, totalGroups)
+                                  const span = getSpanForGroup(
+                                    groupIndex++,
+                                    totalGroups,
+                                    levelItems.length,
+                                  )
                                   return (
                                     <div
                                       key={`${profile.id}|level|${level}`}
@@ -643,12 +676,7 @@ export function SpellProfileManager({
                                         getColSpanClasses(span),
                                       )}
                                     >
-                                      <div
-                                        className={cn(
-                                          'px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60',
-                                          getLevelHeaderTone(level),
-                                        )}
-                                      >
+                                      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60 bg-accent/10">
                                         {formatSpellLevel(level)}s
                                       </div>
                                       <div
@@ -665,13 +693,12 @@ export function SpellProfileManager({
                                             !item.alwaysPrepared &&
                                             !!item.isPreparedCaster
                                           const spell = getSpellByName(item.name)
-
                                           return (
                                             <div
                                               key={`${item.profileId}|${item.kind}|${item.name}`}
-                                              className="px-4 py-2.5 flex items-center justify-between gap-3 break-inside-avoid hover:bg-muted/20 transition-colors"
+                                              className="px-4 py-2 flex items-center gap-3 break-inside-avoid hover:bg-muted/20 transition-colors"
                                             >
-                                              <div className="min-w-0">
+                                              <div className="min-w-0 flex-1">
                                                 {renderSpellName({
                                                   item,
                                                   spell,
@@ -681,7 +708,17 @@ export function SpellProfileManager({
                                                     ),
                                                 })}
                                               </div>
-                                              <div className="flex items-center gap-2">
+                                              {spell?.school ? (
+                                                <span
+                                                  className={cn(
+                                                    'text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0',
+                                                    getSchoolStyle(spell.school),
+                                                  )}
+                                                >
+                                                  {getSchoolName(spell.school).slice(0, 3)}
+                                                </span>
+                                              ) : null}
+                                              <div className="flex items-center gap-1.5 shrink-0">
                                                 {(() => {
                                                   const swap = swappedByAddedName.get(item.name)
                                                   if (!swap) return null
@@ -736,7 +773,7 @@ export function SpellProfileManager({
                                           )
                                         })}
                                         {levelItems.length === 0 ? (
-                                          <div className="px-4 py-2.5 text-sm text-muted-foreground/80 break-inside-avoid">
+                                          <div className="px-4 py-2 text-sm text-muted-foreground/80 break-inside-avoid">
                                             No spells in this level.
                                           </div>
                                         ) : null}

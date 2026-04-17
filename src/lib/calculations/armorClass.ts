@@ -23,11 +23,19 @@ export const ARMOR_CATEGORY_LABEL_TO_CODE: Readonly<Record<string, string>> = {
   shield: 'S',
 }
 
+/**
+ * Strips the optional 5etools source suffix from a type code.
+ * e.g. "HA|XPHB" → "HA", "S|XPHB" → "S"
+ */
+function normalizeTypeCode(raw: string): string {
+  return raw.split('|')[0]
+}
+
 /** Returns the armour category derived from a 5etools item type code. */
 export function getArmorCategory(item: Equipment): ArmorCategory {
   // An explicit armorType wins (set when importing from game data)
   if (item.armorType) return item.armorType
-  const typeKey = item.type?.toUpperCase() ?? ''
+  const typeKey = normalizeTypeCode(item.type ?? '').toUpperCase()
   if (typeKey === 'SHIELD') return 'shield'
   return ARMOR_TYPE_MAP[typeKey] ?? 'none'
 }
@@ -84,7 +92,8 @@ export function computeArmorClass(equipment: Equipment[], dexModifier: number): 
  * to store on an `Equipment` record at import time.
  */
 export function resolveArmorType(item5eType: string): ArmorCategory {
-  return ARMOR_TYPE_MAP[item5eType?.toUpperCase() ?? ''] ?? 'none'
+  const code = normalizeTypeCode(item5eType ?? '').toUpperCase()
+  return ARMOR_TYPE_MAP[code] ?? 'none'
 }
 
 /**
