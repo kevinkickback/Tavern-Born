@@ -19,8 +19,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { validateDataSource } from '@/lib/5etools'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 type ValidationStatus = 'idle' | 'validating' | 'valid' | 'invalid'
@@ -41,6 +43,8 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
   const loadGameData = useGameDataStore((state) => state.loadGameData)
   const clearGameData = useGameDataStore((state) => state.clearGameData)
   const hasActiveDataSource = dataSourceConfig?.isValid && gameData !== null
+  const autoRefreshGameData = useAppPreferencesStore((state) => state.autoRefreshGameData)
+  const setAutoRefreshGameData = useAppPreferencesStore((state) => state.setAutoRefreshGameData)
 
   const [sourceType, setSourceType] = useState<'local' | 'remote'>(
     dataSourceConfig?.type || 'remote',
@@ -268,14 +272,14 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
+        <CardHeader className="border-b border-border pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
               <Database size={24} className="text-primary" />
             </div>
             <div>
               <CardTitle>Data Source Configuration</CardTitle>
-              <CardDescription>Configure where to load 5etools game data from</CardDescription>
+              <CardDescription>Configure where to load game data from</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -505,6 +509,22 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
           </div>
         </CardContent>
       </Card>
+
+      {!selectorOnly && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Auto-refresh on launch</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Automatically check for game data updates when the app starts.
+                </p>
+              </div>
+              <Switch checked={autoRefreshGameData} onCheckedChange={setAutoRefreshGameData} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading && loadProgress && (
         <Card className="border-primary/50">

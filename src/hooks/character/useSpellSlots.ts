@@ -11,6 +11,7 @@ import {
 } from '@/lib/calculations/spellProfiles'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e, Race5e } from '@/types/5etools'
+import type { SpellProfile } from '@/types/character'
 
 export interface SpellSlotInfo {
   level: number

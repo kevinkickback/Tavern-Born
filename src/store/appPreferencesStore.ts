@@ -13,6 +13,14 @@ import {
   setThemePreferences,
 } from '@/lib/themeManager'
 
+export const UI_SCALE_OPTIONS = [80, 90, 100, 110, 120] as const
+export type UiScale = (typeof UI_SCALE_OPTIONS)[number]
+export const DEFAULT_UI_SCALE: UiScale = 100
+
+function applyUiScale(scale: UiScale) {
+  document.documentElement.style.fontSize = `${scale}%`
+}
+
 export const MIN_HOME_CARD_SIZE = 360
 export const MAX_HOME_CARD_SIZE = 560
 export const DEFAULT_HOME_CARD_SIZE = MIN_HOME_CARD_SIZE
@@ -36,10 +44,14 @@ interface AppPreferencesState {
   themeAccent: AccentTheme
   themeAppearance: AppearanceTheme
   autoRefreshGameData: boolean
+  uiScale: UiScale
+  sidebarOpen: boolean
   setHomeCardSize: (size: number) => void
   setThemeAccent: (accent: AccentTheme) => void
   setThemeAppearance: (appearance: AppearanceTheme) => void
   setAutoRefreshGameData: (enabled: boolean) => void
+  setUiScale: (scale: UiScale) => void
+  setSidebarOpen: (open: boolean) => void
 }
 
 export const useAppPreferencesStore = create<AppPreferencesState>()(
@@ -49,8 +61,16 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
       themeAccent: getStoredAccentTheme(),
       themeAppearance: getStoredAppearanceTheme(),
       autoRefreshGameData: true,
+      uiScale: DEFAULT_UI_SCALE,
+      sidebarOpen: false,
 
       setHomeCardSize: (size) => set({ homeCardSize: clampHomeCardSize(size) }),
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
+      setUiScale: (scale) => {
+        applyUiScale(scale)
+        set({ uiScale: scale })
+      },
 
       setThemeAccent: (accent) => {
         applyAccentTheme(accent)
@@ -72,6 +92,7 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         themeAccent: state.themeAccent,
         themeAppearance: state.themeAppearance,
         autoRefreshGameData: state.autoRefreshGameData,
+        uiScale: state.uiScale,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) {
@@ -82,8 +103,11 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         state.themeAccent = normalizeAccentTheme(state.themeAccent)
         state.themeAppearance = normalizeAppearanceTheme(state.themeAppearance)
         state.autoRefreshGameData = state.autoRefreshGameData !== false
+        const validScales: number[] = [...UI_SCALE_OPTIONS]
+        state.uiScale = validScales.includes(state.uiScale) ? state.uiScale : DEFAULT_UI_SCALE
 
         setThemePreferences(state.themeAccent, state.themeAppearance)
+        applyUiScale(state.uiScale)
       },
     },
   ),

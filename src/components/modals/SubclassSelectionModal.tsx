@@ -34,7 +34,7 @@ const SubclassCard = memo(function SubclassCard({ subclass, isSelected }: Subcla
           )}
         </div>
       </div>
-      {introText && <p className="text-[13px] text-muted-foreground leading-snug">{introText}</p>}
+      {introText && <p className="text-sm text-muted-foreground leading-snug">{introText}</p>}
     </div>
   )
 })

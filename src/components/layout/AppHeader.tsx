@@ -1,16 +1,19 @@
-import { FloppyDisk, Heart, Shield, TrendUp } from '@phosphor-icons/react'
+import { FloppyDisk, Heart, List, Shield, TrendUp } from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
 import { Button } from '@/components/ui/button'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
 
 export function AppHeader() {
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter)
+  const setSidebarOpen = useAppPreferencesStore((state) => state.setSidebarOpen)
+  const sidebarOpen = useAppPreferencesStore((state) => state.sidebarOpen)
   const [levelUpOpen, setLevelUpOpen] = useState(false)
   const { effectiveAC } = useArmorClass()
   const { hitPoints, calculatedMaxHP } = useHitPoints()
@@ -53,12 +56,21 @@ export function AppHeader() {
 
   return (
     <>
-      <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
-        <div className="flex-1 flex items-center">
-          <h1 className="font-display text-2xl font-bold text-primary">Tavern Born</h1>
+      <nav className="mb-6 grid grid-cols-3 items-center rounded-xl bg-card/80 backdrop-blur-sm px-4 py-3 shadow-md border border-border">
+        {/* Hamburger — mobile only (left slot) */}
+        <div className="flex items-center">
+          <button
+            type="button"
+            aria-label="Open sidebar"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground xl:hidden"
+          >
+            <List className="h-6 w-6" />
+          </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Character info — center slot */}
+        <div className="flex items-center justify-center gap-3">
           {activeCharacter ? (
             <>
               <div className="flex items-center gap-2">
@@ -81,10 +93,12 @@ export function AppHeader() {
                   </span>
                 </div>
               </div>
-              <div className="flex flex-col items-center">
-                <h2 className="font-display text-lg font-bold">{activeCharacter.name}</h2>
+              <div className="flex flex-col items-center text-center">
+                <h2 className="font-display text-lg font-bold leading-tight">
+                  {activeCharacter.name}
+                </h2>
                 <p
-                  className="text-xs text-muted-foreground max-w-[34rem] truncate"
+                  className="text-xs text-muted-foreground max-w-[24rem] truncate"
                   title={classSummary}
                 >
                   {classSummary}
@@ -96,10 +110,11 @@ export function AppHeader() {
           )}
         </div>
 
-        <div className="flex-1 flex items-center justify-end gap-2">
+        {/* Actions — right slot */}
+        <div className="flex items-center justify-end gap-2">
           {activeCharacter && (
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               className="gap-2"
               data-level-up-button="true"
@@ -123,7 +138,7 @@ export function AppHeader() {
             Save
           </Button>
         </div>
-      </header>
+      </nav>
 
       <LevelUpModal open={levelUpOpen} onOpenChange={setLevelUpOpen} />
     </>

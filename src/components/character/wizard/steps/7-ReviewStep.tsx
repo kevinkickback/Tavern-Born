@@ -180,8 +180,8 @@ export function ReviewStep({ data }: ReviewStepProps) {
       <div className="flex-1 min-h-0 overflow-y-auto pr-1">
         <div className="space-y-4">
           <div className="rounded-xl border border-border bg-muted/20 p-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-              <div className="w-full lg:w-[420px] shrink-0">
+            <div className="flex gap-4 items-stretch">
+              <div className="w-[420px] shrink-0">
                 <PortraitCardPreview
                   image={data.portrait}
                   name={data.name}
@@ -193,9 +193,9 @@ export function ReviewStep({ data }: ReviewStepProps) {
                 />
               </div>
 
-              <div className="flex-1 grid gap-4 md:grid-cols-2">
-                <div className="rounded-lg border border-border bg-card/60 p-3 min-w-xs">
-                  <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+              <div className="flex-1 min-w-0">
+                <div className="rounded-lg border border-border bg-card/60 p-3 h-full">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
                     Character Snapshot
                   </div>
                   <InfoRow label="Background" value={data.background} warn={!data.background} />
@@ -250,12 +250,12 @@ export function ReviewStep({ data }: ReviewStepProps) {
                       key={ability}
                       className="border rounded-lg bg-card/60 border-border flex flex-col items-center justify-center gap-0.5 p-2"
                     >
-                      <div className="text-[10px] font-bold text-accent uppercase tracking-wider">
+                      <div className="text-xs font-semibold text-accent uppercase">
                         {ABILITY_ABBREVIATIONS[ability]}
                       </div>
                       <div className="text-2xl font-bold font-mono leading-none">{total}</div>
                       {bonus !== 0 && (
-                        <div className="text-[10px] text-emerald-500 font-semibold leading-none">
+                        <div className="text-xs text-emerald-500 font-semibold leading-none">
                           {base}+{bonus}
                         </div>
                       )}
@@ -320,11 +320,9 @@ export function ReviewStep({ data }: ReviewStepProps) {
                       key={sourceLine}
                       className="inline-flex items-center gap-2 rounded-md border border-border bg-card/60 px-2.5 py-1"
                     >
-                      <span className="text-[11px] font-semibold font-mono">{abbr}</span>
+                      <span className="text-xs font-semibold font-mono">{abbr}</span>
                       {rest.length > 0 && (
-                        <span className="text-[11px] text-muted-foreground">
-                          {rest.join(' - ')}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{rest.join(' - ')}</span>
                       )}
                     </div>
                   )

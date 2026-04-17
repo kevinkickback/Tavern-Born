@@ -35,7 +35,7 @@ const FightingStyleCard = memo(function FightingStyleCard({
 
       {descHtml && (
         <div
-          className="text-[13px] text-muted-foreground line-clamp-3 leading-snug"
+          className="text-sm text-muted-foreground line-clamp-3 leading-snug"
           // renderEntry outputs safe HTML from structured 5etools entries.
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: descHtml }}

@@ -206,7 +206,7 @@ export function SpellNameTooltip({
               >
                 <div className="font-semibold text-sm leading-tight">{recursiveHint.title}</div>
                 {recursiveHint.subtitle ? (
-                  <div className="text-[11px] text-muted-foreground mt-0.5 mb-1">
+                  <div className="text-xs text-muted-foreground mt-0.5 mb-1">
                     {recursiveHint.subtitle}
                   </div>
                 ) : null}
@@ -222,7 +222,7 @@ export function SpellNameTooltip({
             ) : null}
           </>
         ) : (
-          <div className="px-3 py-2 text-[11px] text-muted-foreground">Details unavailable.</div>
+          <div className="px-3 py-2 text-xs text-muted-foreground">Details unavailable.</div>
         )}
       </TooltipContent>
     </Tooltip>

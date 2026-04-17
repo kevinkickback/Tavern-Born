@@ -66,6 +66,18 @@ describe('armorClass', () => {
     expect(resolveArmorType('X')).toBe('none')
   })
 
+  test('resolveArmorType handles compound XPHB type codes with source suffix', () => {
+    expect(resolveArmorType('HA|XPHB')).toBe('heavy')
+    expect(resolveArmorType('S|XPHB')).toBe('shield')
+    expect(resolveArmorType('LA|XPHB')).toBe('light')
+    expect(resolveArmorType('MA|XPHB')).toBe('medium')
+  })
+
+  test('getArmorCategory handles compound XPHB type codes on stored Equipment', () => {
+    expect(getArmorCategory(makeItem({ type: 'HA|XPHB' }))).toBe('heavy')
+    expect(getArmorCategory(makeItem({ type: 'S|XPHB' }))).toBe('shield')
+  })
+
   test('computeEffectiveCharacterArmorClass prefers override when present', () => {
     const effective = computeEffectiveCharacterArmorClass({
       armorClassOverride: 19,

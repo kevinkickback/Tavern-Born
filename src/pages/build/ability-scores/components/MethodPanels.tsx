@@ -1,4 +1,6 @@
+import { Barbell } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
+import { AbilityScoreCard } from '@/components/character/AbilityScoreCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
@@ -10,14 +12,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
   type AbilityName,
-  formatModifier,
   isValidStandardArrayAssignment,
 } from '@/lib/calculations/abilityScores'
 import {
-  getAbilityModifier,
   POINT_BUY_BUDGET,
   POINT_BUY_COSTS,
   POINT_BUY_MAX,
@@ -52,91 +51,77 @@ export function BuildAbilityScoresPointBuyPanel({
   const budgetPct = Math.min(100, (pointBuyTotal / POINT_BUY_BUDGET) * 100)
 
   return (
-    <div className="space-y-4">
-      <div className="p-4 rounded-lg bg-accent/10 border border-accent/30">
-        <div className="flex justify-between text-sm font-semibold mb-2">
-          <span>Points Used</span>
-          <span className={cn(pointBuyRemaining < 0 && 'text-destructive font-bold')}>
+    <div className="flex flex-col gap-5">
+      {/* Points Used — dashboard stat card style */}
+      <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+        <div className="h-9 bg-gradient-to-r from-accent/60 via-accent/30 to-transparent border-b border-border/40 flex items-center px-3 gap-2">
+          <Barbell className="h-4 w-4 text-accent/80" weight="bold" />
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Points Used
+          </span>
+          <span
+            className={cn(
+              'ml-auto text-sm font-bold font-mono',
+              pointBuyRemaining < 0 ? 'text-destructive' : 'text-foreground',
+            )}
+          >
             {pointBuyTotal} / {POINT_BUY_BUDGET}
-            <span className="text-muted-foreground font-normal ml-2">
-              (
-              {pointBuyRemaining >= 0
-                ? `${pointBuyRemaining} remaining`
-                : `${-pointBuyRemaining} over budget`}
-              )
-            </span>
           </span>
         </div>
-        <Progress value={budgetPct} className="h-2" />
+        <div className="px-4 pt-3 pb-3">
+          <Progress value={budgetPct} className="h-1.5" />
+          <p
+            className={cn(
+              'text-xs mt-1.5 text-right',
+              pointBuyRemaining < 0 ? 'text-destructive font-semibold' : 'text-muted-foreground',
+            )}
+          >
+            {pointBuyRemaining >= 0
+              ? `${pointBuyRemaining} remaining`
+              : `${Math.abs(pointBuyRemaining)} over budget`}
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* Ability score cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {ABILITY_NAMES.map((ability) => {
-          const score = scores[ability] ?? 8
+          const score = scores[ability] ?? POINT_BUY_MIN
           const racial = racialBonuses[ability] ?? 0
-          const total = score + racial
-          const modifier = formatModifier(getAbilityModifier(total))
           const cost = POINT_BUY_COSTS[score] ?? 0
           const nextCost = POINT_BUY_COSTS[score + 1] ?? 999
           const canDecrease = score > POINT_BUY_MIN
           const canIncrease = score < POINT_BUY_MAX && pointBuyRemaining >= nextCost - cost
 
           return (
-            <div
+            <AbilityScoreCard
               key={ability}
-              className={cn(
-                'w-full max-w-[320px] mx-auto border rounded-lg p-4 bg-card/50 rounded-lg border transition-colors',
-                selectedAbility === ability
-                  ? 'border-accent bg-accent/10'
-                  : 'border-border hover:border-accent/60',
-              )}
+              ability={ability}
+              score={score}
+              bonus={racial}
+              interactive
+              selected={selectedAbility === ability}
+              onSelect={() => onSelectAbility(ability)}
             >
-              <button
-                type="button"
-                className="flex w-full items-center justify-between mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => onSelectAbility(ability)}
-              >
-                <div className="text-sm font-bold text-accent uppercase tracking-wider">
-                  {ABILITY_ABBREVIATIONS[ability]}
-                </div>
-                {racial !== 0 && (
-                  <div className="text-sm font-semibold text-emerald-500">
-                    {racial > 0 ? '+' : ''}
-                    {racial}
-                  </div>
-                )}
-              </button>
-              <button
-                type="button"
-                className="w-full text-center mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => onSelectAbility(ability)}
-              >
-                <div className="text-3xl font-bold font-mono leading-none">{total}</div>
-                <div className="text-xl font-semibold mt-1">{modifier}</div>
-              </button>
               <div className="flex items-center justify-center gap-2">
                 <Button
                   variant="outline"
                   size="icon"
                   className={cn(
-                    'h-8 w-8 p-0 text-base font-bold',
-                    canDecrease
-                      ? 'border-accent/45 bg-accent/5 text-accent hover:bg-accent/10 hover:border-accent/60'
-                      : 'opacity-35 cursor-not-allowed',
+                    'h-7 w-7 shrink-0 text-base font-bold border-accent/30 bg-accent/5 text-accent hover:bg-accent/15 hover:border-accent/50',
+                    !canDecrease && 'opacity-30 cursor-not-allowed',
                   )}
                   onClick={() => setScore(ability, Math.max(POINT_BUY_MIN, score - 1))}
                   disabled={!canDecrease}
                 >
-                  -
+                  −
                 </Button>
                 <Button
                   variant="outline"
                   size="icon"
                   className={cn(
-                    'h-8 w-8 p-0 text-base font-bold',
-                    canIncrease
-                      ? 'border-accent/45 bg-accent/5 text-accent hover:bg-accent/10 hover:border-accent/60'
-                      : 'opacity-35 cursor-not-allowed',
+                    'h-7 w-7 shrink-0 text-base font-bold border-accent/30 bg-accent/5 text-accent hover:bg-accent/15 hover:border-accent/50',
+                    !canIncrease && 'opacity-30 cursor-not-allowed',
                   )}
                   onClick={() => setScore(ability, Math.min(POINT_BUY_MAX, score + 1))}
                   disabled={!canIncrease}
@@ -144,7 +129,7 @@ export function BuildAbilityScoresPointBuyPanel({
                   +
                 </Button>
               </div>
-            </div>
+            </AbilityScoreCard>
           )
         })}
       </div>
@@ -206,68 +191,41 @@ export function BuildAbilityScoresStandardArrayPanel({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {ABILITY_NAMES.map((ability) => {
-          const racial = racialBonuses[ability] ?? 0
-          const base = assignments[ability]
-          const total = base !== undefined ? base + racial : undefined
-          const modifier = total !== undefined ? formatModifier(getAbilityModifier(total)) : '—'
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {ABILITY_NAMES.map((ability) => {
+        const racial = racialBonuses[ability] ?? 0
+        const base = assignments[ability]
 
-          return (
-            <div
-              key={ability}
-              className={cn(
-                'w-full max-w-[320px] mx-auto border rounded-lg p-4 bg-card/50 rounded-lg border transition-colors',
-                selectedAbility === ability
-                  ? 'border-accent bg-accent/10'
-                  : 'border-border hover:border-accent/60',
-              )}
-            >
-              <button
-                type="button"
-                className="flex w-full items-center justify-between mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => onSelectAbility(ability)}
+        return (
+          <AbilityScoreCard
+            key={ability}
+            ability={ability}
+            score={base ?? 8}
+            bonus={racial}
+            interactive
+            selected={selectedAbility === ability}
+            onSelect={() => onSelectAbility(ability)}
+          >
+            <div className="flex justify-center">
+              <Select
+                value={base !== undefined ? String(base) : ''}
+                onValueChange={(value) => assign(ability, value)}
               >
-                <div className="text-sm font-bold text-accent uppercase tracking-wider">
-                  {ABILITY_ABBREVIATIONS[ability]}
-                </div>
-                {racial !== 0 && (
-                  <div className="text-sm font-semibold text-emerald-500">
-                    {racial > 0 ? '+' : ''}
-                    {racial}
-                  </div>
-                )}
-              </button>
-              <button
-                type="button"
-                className="w-full text-center mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() => onSelectAbility(ability)}
-              >
-                <div className="text-3xl font-bold font-mono leading-none">{total ?? '—'}</div>
-                <div className="text-xl font-semibold mt-1">{modifier}</div>
-              </button>
-              <div className="flex justify-center">
-                <Select
-                  value={base !== undefined ? String(base) : ''}
-                  onValueChange={(value) => assign(ability, value)}
-                >
-                  <SelectTrigger className="h-9 w-[84px] px-2 text-sm [&_span]:truncate">
-                    <SelectValue placeholder="Choose..." />
-                  </SelectTrigger>
-                  <SelectContent className="w-[84px] min-w-[84px]">
-                    {available.map((value) => (
-                      <SelectItem key={value} value={String(value)} className="pr-6">
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <SelectTrigger className="h-8 w-[84px] px-2 text-sm [&_span]:truncate">
+                  <SelectValue placeholder="Choose..." />
+                </SelectTrigger>
+                <SelectContent className="w-[84px] min-w-[84px]">
+                  {available.map((value) => (
+                    <SelectItem key={value} value={String(value)} className="pr-6">
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )
-        })}
-      </div>
+          </AbilityScoreCard>
+        )
+      })}
     </div>
   )
 }
@@ -284,60 +242,35 @@ export function BuildAbilityScoresCustomScoresPanel({
   onSelectAbility,
 }: CustomScoresPanelProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {ABILITY_NAMES.map((ability) => {
         const value = scores[ability] ?? 10
         const racial = racialBonuses[ability] ?? 0
-        const total = value + racial
-        const modifier = formatModifier(getAbilityModifier(total))
 
         return (
-          <div
+          <AbilityScoreCard
             key={ability}
-            className={cn(
-              'w-full max-w-[320px] mx-auto border rounded-lg p-4 bg-card/50 rounded-lg border transition-colors',
-              selectedAbility === ability
-                ? 'border-accent bg-accent/10'
-                : 'border-border hover:border-accent/60',
-            )}
+            ability={ability}
+            score={value}
+            bonus={racial}
+            interactive
+            selected={selectedAbility === ability}
+            onSelect={() => onSelectAbility(ability)}
           >
-            <button
-              type="button"
-              className="flex w-full items-center justify-between mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
-              onClick={() => onSelectAbility(ability)}
-            >
-              <div className="text-sm font-bold text-accent uppercase tracking-wider">
-                {ABILITY_ABBREVIATIONS[ability]}
-              </div>
-              {racial !== 0 && (
-                <div className="text-sm font-semibold text-emerald-500">
-                  {racial > 0 ? '+' : ''}
-                  {racial}
-                </div>
-              )}
-            </button>
-            <button
-              type="button"
-              className="w-full text-center mb-2 bg-transparent border-0 p-0 cursor-pointer hover:opacity-80 transition-opacity"
-              onClick={() => onSelectAbility(ability)}
-            >
-              <div className="text-3xl font-bold font-mono leading-none">{total}</div>
-              <div className="text-xl font-semibold mt-1">{modifier}</div>
-            </button>
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center">
               <Input
                 type="number"
                 min={1}
                 max={30}
                 value={value}
-                className="h-10 w-24 text-center font-mono font-bold text-base"
+                className="h-8 w-20 text-center font-mono font-bold text-sm"
                 onChange={(event) => {
                   const next = Math.min(30, Math.max(1, Number(event.target.value) || 1))
                   setScore(ability, next)
                 }}
               />
             </div>
-          </div>
+          </AbilityScoreCard>
         )
       })}
     </div>

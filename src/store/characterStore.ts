@@ -258,13 +258,13 @@ function coerceCharacterShape(character: unknown): Character | null {
         typeof slot.max === 'number' &&
         typeof slot.used === 'number'
       ) {
-        acc[level as keyof typeof baseline.spells.spellSlots] = {
+        acc[Number(level) as keyof typeof baseline.spells.spellSlots] = {
           max: slot.max,
           used: Math.min(slot.used, slot.max),
         } as never
       } else {
-        acc[level as keyof typeof baseline.spells.spellSlots] =
-          baseline.spells.spellSlots[level as keyof typeof baseline.spells.spellSlots]
+        acc[Number(level) as keyof typeof baseline.spells.spellSlots] =
+          baseline.spells.spellSlots[Number(level) as keyof typeof baseline.spells.spellSlots]
       }
       return acc
     },

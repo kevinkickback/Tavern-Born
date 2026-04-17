@@ -32,7 +32,7 @@ import {
 } from '@/lib/provenance'
 import { normalizeKey, stripItemTag } from '@/lib/provenance/normalization'
 import type { ChoiceDomain, ProvenanceLedger } from '@/lib/provenance/types'
-import type { Item5e, Race5e } from '@/types/5etools'
+import type { Background5e, Item5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
 const CURRENCY_KEYS = ['cp', 'sp', 'ep', 'gp', 'pp'] as const
@@ -218,8 +218,8 @@ export function useProvenanceMutations({
     ) => {
       if (!character) return
       const normalizedSelection = normalizeRaceSelectionForOriginSystem(
-        race,
-        subrace,
+        race as Race5e,
+        subrace as Race5e | undefined,
         character.originSystem,
       )
       const normalizedRace = normalizedSelection.race
@@ -393,7 +393,7 @@ export function useProvenanceMutations({
       if (!character) return
       const normalizedSelection = normalizeRaceSelectionForOriginSystem(
         race as Race5e,
-        subrace,
+        subrace as Race5e | undefined,
         character.originSystem,
       )
       const normalizedSubrace = normalizedSelection.subrace
@@ -534,7 +534,7 @@ export function useProvenanceMutations({
             string,
             number | boolean | { choose?: { from?: string[]; count?: number } }
           >[]
-          skills?: { choose?: { from: string[]; count: number } }
+          skills?: Array<string | Record<string, unknown>>
         }
       },
       subclass?: { name: string; source?: string },
@@ -567,7 +567,10 @@ export function useProvenanceMutations({
       blockChoices: string[] = [],
     ) => {
       if (!character) return
-      const normalizedBg = normalizeBackgroundForOriginSystem(bg, character.originSystem)
+      const normalizedBg = normalizeBackgroundForOriginSystem(
+        bg as Background5e,
+        character.originSystem,
+      )
       if (!normalizedBg) return
       const oldBgName = character.background || undefined
       const isBackgroundChanged =
@@ -1246,7 +1249,10 @@ export function useProvenanceMutations({
       if (character.originSystem !== '2024') {
         return
       }
-      const normalizedBg = normalizeBackgroundForOriginSystem(bg, character.originSystem)
+      const normalizedBg = normalizeBackgroundForOriginSystem(
+        bg as Background5e,
+        character.originSystem,
+      )
       if (!normalizedBg) return
       const bgData = getBackgroundAbilityData(normalizedBg)
       const block = bgData.blocks[blockIndex]

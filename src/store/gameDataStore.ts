@@ -101,6 +101,7 @@ export const useGameDataStore = create<GameDataState>()(
       loadFromCache: async () => {
         const {
           dataSourceConfig,
+          lastUpdateCheckAt,
           loadGameData,
           setGameData,
           setCacheStatus,
@@ -128,7 +129,14 @@ export const useGameDataStore = create<GameDataState>()(
           setGameData(cache.data)
           setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
           setCacheStatus('fresh')
-          loadGameData(dataSourceConfig, true)
+          // Only verify source in background if we haven't checked recently (within 1 hour).
+          const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
+          const checkedRecently =
+            lastUpdateCheckAt &&
+            Date.now() - new Date(lastUpdateCheckAt).getTime() < UPDATE_CHECK_INTERVAL_MS
+          if (!checkedRecently) {
+            loadGameData(dataSourceConfig, true)
+          }
           return {}
         }
 

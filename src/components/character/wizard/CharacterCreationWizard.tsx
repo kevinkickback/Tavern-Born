@@ -2,13 +2,7 @@ import { Warning } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import {
   resolveBackgroundStartingEquipment,
   resolveClassStartingEquipment,
@@ -310,70 +304,62 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="character-wizard-modal p-0 gap-0 bg-card border-border flex flex-col">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
-          <DialogTitle className="font-display text-2xl font-bold">
-            Create New Character
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            Step through the wizard to configure your new character.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogTitle className="sr-only">Create New Character</DialogTitle>
+        <DialogDescription className="sr-only">
+          Step through the wizard to configure your new character.
+        </DialogDescription>
 
-        <div className="flex flex-1 overflow-hidden min-h-0">
-          <WizardNavigation steps={WIZARD_STEPS} currentStep={currentStep} />
+        <WizardNavigation steps={WIZARD_STEPS} currentStep={currentStep} />
 
-          <div className="flex-1 flex flex-col min-w-0">
-            <div className="flex-1 overflow-y-auto px-8 py-6 min-h-0">
-              {validationError && invalidFields.size === 0 && (
-                <Alert variant="destructive" className="mb-4">
-                  <Warning className="h-4 w-4" />
-                  <AlertDescription>{validationError}</AlertDescription>
-                </Alert>
-              )}
+        <div className="flex-1 overflow-y-auto px-8 py-6 min-h-0">
+          {validationError && invalidFields.size === 0 && (
+            <Alert variant="destructive" className="mb-4">
+              <Warning className="h-4 w-4" />
+              <AlertDescription>{validationError}</AlertDescription>
+            </Alert>
+          )}
 
-              {currentStep === 1 && (
-                <BasicsStep
-                  data={characterData}
-                  onChange={updateCharacterData}
-                  invalidFields={invalidFields}
-                />
-              )}
-              {currentStep === 2 && (
-                <RulesStep
-                  data={characterData}
-                  onChange={updateCharacterData}
-                  gameData={gameData ?? undefined}
-                  invalidFields={invalidFields}
-                />
-              )}
-              {currentStep === 3 && (
-                <RaceStep data={characterData} onChange={updateCharacterData} races={races} />
-              )}
-              {currentStep === 4 && (
-                <ClassStep data={characterData} onChange={updateCharacterData} classes={classes} />
-              )}
-              {currentStep === 5 && (
-                <BackgroundStep
-                  data={characterData}
-                  onChange={updateCharacterData}
-                  backgrounds={backgrounds}
-                />
-              )}
-              {currentStep === 6 && (
-                <AbilityScoresStep data={characterData} onChange={updateCharacterData} />
-              )}
-              {currentStep === 7 && <ReviewStep data={characterData} />}
-            </div>
-
-            <WizardFooter
-              currentStep={currentStep}
-              totalSteps={WIZARD_STEPS.length}
-              onBack={handleBack}
-              onNext={handleNext}
-              onCancel={handleClose}
+          {currentStep === 1 && (
+            <BasicsStep
+              data={characterData}
+              onChange={updateCharacterData}
+              invalidFields={invalidFields}
             />
-          </div>
+          )}
+          {currentStep === 2 && (
+            <RulesStep
+              data={characterData}
+              onChange={updateCharacterData}
+              gameData={gameData ?? undefined}
+              invalidFields={invalidFields}
+            />
+          )}
+          {currentStep === 3 && (
+            <RaceStep data={characterData} onChange={updateCharacterData} races={races} />
+          )}
+          {currentStep === 4 && (
+            <ClassStep data={characterData} onChange={updateCharacterData} classes={classes} />
+          )}
+          {currentStep === 5 && (
+            <BackgroundStep
+              data={characterData}
+              onChange={updateCharacterData}
+              backgrounds={backgrounds}
+            />
+          )}
+          {currentStep === 6 && (
+            <AbilityScoresStep data={characterData} onChange={updateCharacterData} />
+          )}
+          {currentStep === 7 && <ReviewStep data={characterData} />}
         </div>
+
+        <WizardFooter
+          currentStep={currentStep}
+          totalSteps={WIZARD_STEPS.length}
+          onBack={handleBack}
+          onNext={handleNext}
+          onCancel={handleClose}
+        />
       </DialogContent>
     </Dialog>
   )

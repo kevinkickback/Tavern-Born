@@ -222,7 +222,7 @@ export function computeApplyClassSelectionUpdates(
         string,
         number | boolean | { choose?: { from?: string[]; count?: number } }
       >[]
-      skills?: { choose?: { from: string[]; count: number } }
+      skills?: Array<string | Record<string, unknown>>
     }
   },
   subclass: { name: string; source?: string } | undefined,

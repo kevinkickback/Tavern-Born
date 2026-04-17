@@ -24,28 +24,14 @@ function hashStringFnv1a(value: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0')
 }
 
-function stableSerialize(value: unknown): string {
-  if (value === null || typeof value !== 'object') {
-    return JSON.stringify(value)
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => stableSerialize(item)).join(',')}]`
-  }
-
-  const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
-    a.localeCompare(b),
-  )
-  return `{${entries
-    .map(([key, item]) => `${JSON.stringify(key)}:${stableSerialize(item)}`)
-    .join(',')}}`
-}
-
 function computeContentFingerprint(data: GameData): string {
+  // Exclude runtime-only lookups from fingerprint. Parser output key order is
+  // deterministic, so native JSON.stringify is safe and far faster than the
+  // previous recursive stableSerialize approach.
   const { lookups: _lookups, ...fingerprintData } = data as GameData & {
     lookups?: unknown
   }
-  return hashStringFnv1a(stableSerialize(fingerprintData))
+  return hashStringFnv1a(JSON.stringify(fingerprintData))
 }
 
 export async function readGameDataCache(): Promise<GameDataCacheEntry | null> {

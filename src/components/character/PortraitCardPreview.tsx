@@ -57,14 +57,14 @@ export function PortraitCardPreview({
         <div className="absolute inset-y-0 right-0 z-[1] flex w-[63%] flex-col items-end p-3.5 text-right">
           <div className="ml-auto flex max-w-full flex-col items-end">
             <div className="flex min-w-0 flex-col items-end">
-              <h3 className="max-w-full whitespace-normal break-normal [overflow-wrap:normal] hyphens-none text-right font-display text-[1.3rem] font-bold leading-tight text-foreground">
+              <h3 className="max-w-full whitespace-normal break-normal [overflow-wrap:normal] hyphens-none text-right font-display text-xl font-bold leading-tight text-foreground">
                 {name || 'Unnamed Character'}
               </h3>
             </div>
           </div>
 
           {typeof level === 'number' ? (
-            <div className="mt-auto flex w-full flex-col items-end gap-3 text-[0.95rem]">
+            <div className="mt-auto flex w-full flex-col items-end gap-3 text-sm">
               <div className="flex flex-col items-end gap-1.5">
                 <div className="flex items-center gap-2 text-foreground/90">
                   <span className="font-semibold">Level {level}</span>
@@ -105,7 +105,7 @@ export function PortraitCardPreview({
                 </div>
 
                 {lastModified && (
-                  <span className="flex items-center gap-1 whitespace-nowrap text-[10px] italic text-muted-foreground">
+                  <span className="flex items-center gap-1 whitespace-nowrap text-xs italic text-muted-foreground">
                     <Clock size={12} />
                     Last modified: {new Date(lastModified).toLocaleDateString()}
                   </span>
@@ -113,7 +113,7 @@ export function PortraitCardPreview({
               </div>
             </div>
           ) : (
-            <div className="mt-auto text-[11px] italic text-muted-foreground">
+            <div className="mt-auto text-xs italic text-muted-foreground">
               {gender || 'Unspecified'}
             </div>
           )}

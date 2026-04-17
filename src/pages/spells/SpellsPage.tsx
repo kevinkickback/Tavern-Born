@@ -437,75 +437,91 @@ export function SpellsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto w-full space-y-6">
-      <div className="space-y-6">
-        <SpellProfileManager
-          spellProfiles={spellProfiles}
-          detailsByProfileId={detailsByProfileId}
-          groupedItems={groupedItems}
-          selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}
-          preparedCasterItemsByProfile={preparedCasterItemsByProfile}
-          getSpellByName={(spellName) => spellByName.get(getEntityKey(spellName))}
-          onTogglePrepared={togglePrepared}
-          onRemoveSpell={handleRemoveSpell}
-          onAddSpell={(profileId) => {
-            if (profileId !== SPECIAL_SPELL_PROFILE_ID) return
-            setBonusSpellModalOpen(true)
-          }}
-          onOpenRacialChoice={handleOpenRacialChoiceModal}
-          renderSpellName={({ item, spell, sourceContext }) => (
-            <SpellNameTooltip
-              name={item.name}
-              spell={spell}
-              recursiveLookup={recursiveLookup}
-              sourceContext={sourceContext}
-            />
-          )}
-        />
+    <div>
+      <div className="px-6 py-5 page-header-band mb-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center gap-3">
+            <MagicWand className="h-6 w-6 text-primary" weight="duotone" />
+            <div>
+              <h1 className="text-2xl font-display font-bold">Spells</h1>
+              <p className="text-sm text-muted-foreground">
+                Browse and manage your character's spells
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <SpellSelectionModal
-          open={racialChoiceModalOpen && !!racialChoiceModalConfig}
-          onOpenChange={(open) => {
-            setRacialChoiceModalOpen(open)
-            if (!open) {
-              setActiveRacialChoice(null)
-            }
-          }}
-          title={racialChoiceModalConfig?.title}
-          spells={allSpells}
-          lockedNames={racialChoiceModalConfig?.lockedNames}
-          characterSpellNames={characterSpellNames}
-          categories={racialChoiceModalConfig?.categories}
-          initialSelectedNames={racialChoiceModalConfig?.initialSelectedNames}
-          initialFilters={racialChoiceModalConfig?.initialFilters}
-          allowedLevels={racialChoiceModalConfig?.allowedLevels}
-          className={racialChoiceModalConfig?.className}
-          classSource={racialChoiceModalConfig?.classSource}
-          classListOverrides={racialChoiceModalConfig?.classListOverrides}
-          onConfirm={handleConfirmRacialChoice}
-        />
+      <div className="max-w-7xl mx-auto w-full space-y-6">
+        <div className="space-y-6">
+          <SpellProfileManager
+            spellProfiles={spellProfiles}
+            detailsByProfileId={detailsByProfileId}
+            groupedItems={groupedItems}
+            selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}
+            preparedCasterItemsByProfile={preparedCasterItemsByProfile}
+            getSpellByName={(spellName) => spellByName.get(getEntityKey(spellName))}
+            onTogglePrepared={togglePrepared}
+            onRemoveSpell={handleRemoveSpell}
+            onAddSpell={(profileId) => {
+              if (profileId !== SPECIAL_SPELL_PROFILE_ID) return
+              setBonusSpellModalOpen(true)
+            }}
+            onOpenRacialChoice={handleOpenRacialChoiceModal}
+            renderSpellName={({ item, spell, sourceContext }) => (
+              <SpellNameTooltip
+                name={item.name}
+                spell={spell}
+                recursiveLookup={recursiveLookup}
+                sourceContext={sourceContext}
+              />
+            )}
+          />
 
-        <SpellSelectionModal
-          open={bonusSpellModalOpen}
-          onOpenChange={setBonusSpellModalOpen}
-          title="Add Bonus Spells"
-          spells={allSpells}
-          characterSpellNames={characterSpellNames}
-          onConfirm={handleConfirmBonusSpells}
-        />
+          <SpellSelectionModal
+            open={racialChoiceModalOpen && !!racialChoiceModalConfig}
+            onOpenChange={(open) => {
+              setRacialChoiceModalOpen(open)
+              if (!open) {
+                setActiveRacialChoice(null)
+              }
+            }}
+            title={racialChoiceModalConfig?.title}
+            spells={allSpells}
+            lockedNames={racialChoiceModalConfig?.lockedNames}
+            characterSpellNames={characterSpellNames}
+            categories={racialChoiceModalConfig?.categories}
+            initialSelectedNames={racialChoiceModalConfig?.initialSelectedNames}
+            initialFilters={racialChoiceModalConfig?.initialFilters}
+            allowedLevels={racialChoiceModalConfig?.allowedLevels}
+            className={racialChoiceModalConfig?.className}
+            classSource={racialChoiceModalConfig?.classSource}
+            classListOverrides={racialChoiceModalConfig?.classListOverrides}
+            onConfirm={handleConfirmRacialChoice}
+          />
 
-        <SpellcastingDetailsCard
-          isSpellcaster={isSpellcaster}
-          spellcastingDetails={spellcastingDetails}
-          racialProfiles={racialProfiles}
-          proficiencyBonus={proficiencyBonus}
-          abilityModifiers={abilityModifiers}
-          onSetRacialCastingAbility={setRacialCastingAbility}
-          hasMultipleSpellcastingClasses={hasMultipleSpellcastingClasses}
-          hasWarlockClass={hasWarlockClass}
-          sharedSlots={sharedSlots}
-          pactSlots={pactSlots}
-        />
+          <SpellSelectionModal
+            open={bonusSpellModalOpen}
+            onOpenChange={setBonusSpellModalOpen}
+            title="Add Bonus Spells"
+            spells={allSpells}
+            characterSpellNames={characterSpellNames}
+            onConfirm={handleConfirmBonusSpells}
+          />
+
+          <SpellcastingDetailsCard
+            isSpellcaster={isSpellcaster}
+            spellcastingDetails={spellcastingDetails}
+            racialProfiles={racialProfiles}
+            proficiencyBonus={proficiencyBonus}
+            abilityModifiers={abilityModifiers}
+            onSetRacialCastingAbility={setRacialCastingAbility}
+            hasMultipleSpellcastingClasses={hasMultipleSpellcastingClasses}
+            hasWarlockClass={hasWarlockClass}
+            sharedSlots={sharedSlots}
+            pactSlots={pactSlots}
+          />
+        </div>
       </div>
     </div>
   )

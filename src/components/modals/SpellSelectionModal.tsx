@@ -204,7 +204,7 @@ const SpellCard = memo(function SpellCard({
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="min-w-0">
           <span className="font-semibold text-base leading-tight">{spell.name}</span>
-          <span className="text-[13px] text-muted-foreground ml-2 leading-tight">
+          <span className="text-sm text-muted-foreground ml-2 leading-tight">
             {formatSpellLevel(spell.level)} · {getSchoolName(spell.school)}
           </span>
         </div>
@@ -258,7 +258,7 @@ const SpellCard = memo(function SpellCard({
       </div>
       {descHtml && (
         <div
-          className="text-[13px] text-muted-foreground line-clamp-3 leading-snug"
+          className="text-sm text-muted-foreground line-clamp-3 leading-snug"
           // renderEntry returns safe HTML produced from structured 5etools data.
           // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: descHtml }}

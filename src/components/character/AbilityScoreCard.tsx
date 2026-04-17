@@ -9,13 +9,14 @@ interface AbilityScoreCardProps {
   bonus?: number
   children?: React.ReactNode
   interactive?: boolean
+  selected?: boolean
   onSelect?: () => void
 }
 
 /**
  * Reusable ability score card component for displaying a single ability score.
- * Shows the ability abbreviation, total score, bonus (if any) in top right,
- * and the derived modifier. Optionally interactive with click handler.
+ * Features a gradient header strip with the ability abbreviation, a large centered
+ * score + colored modifier, and an optional controls slot via children.
  */
 export function AbilityScoreCard({
   ability,
@@ -23,53 +24,87 @@ export function AbilityScoreCard({
   bonus = 0,
   children,
   interactive = false,
+  selected = false,
   onSelect,
 }: AbilityScoreCardProps) {
   const total = score + bonus
   const mod = getAbilityModifier(total)
 
-  const containerClass = cn(
-    'border rounded-lg p-3 bg-card/50 border-border flex flex-col items-center justify-between min-h-0',
-    interactive && 'cursor-pointer hover:border-accent/60 transition-colors',
+  const scoreBody = (
+    <div className="flex-1 flex flex-col items-center justify-center py-3 px-3">
+      <div className="text-4xl font-bold font-mono leading-none tabular-nums">{total}</div>
+      <div
+        className={cn(
+          'text-base font-bold mt-2 tabular-nums',
+          mod >= 0 ? 'text-emerald-500' : 'text-destructive',
+        )}
+      >
+        {formatModifier(mod)}
+      </div>
+    </div>
   )
 
-  const cardContent = (
-    <>
-      <div className="w-full flex items-center justify-between">
-        <div className="text-xs font-bold text-accent-foreground uppercase tracking-wider">
+  return (
+    <div
+      className={cn(
+        'flex flex-col border rounded-xl overflow-hidden bg-card transition-all duration-200',
+        selected
+          ? 'border-accent ring-1 ring-accent/20 shadow-md shadow-accent/10'
+          : interactive
+            ? 'border-border hover:border-accent/40 hover:shadow-sm'
+            : 'border-border',
+      )}
+    >
+      {/* Gradient header strip with ability abbreviation */}
+      <div
+        className={cn(
+          'h-8 flex items-center px-3 border-b transition-colors',
+          selected
+            ? 'bg-gradient-to-r from-accent/70 via-accent/30 to-transparent border-accent/30'
+            : 'bg-gradient-to-r from-accent/35 via-accent/15 to-transparent border-border/40',
+        )}
+      >
+        <span className="text-xs font-black tracking-widest uppercase text-foreground/90">
           {ABILITY_ABBREVIATIONS[ability]}
-        </div>
+        </span>
         {bonus !== 0 && (
-          <div className="text-sm font-semibold text-emerald-500">
+          <span
+            className={cn(
+              'ml-auto text-[11px] font-bold rounded px-1.5 py-0.5 leading-none',
+              bonus > 0
+                ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/25'
+                : 'text-destructive bg-destructive/10 border border-destructive/20',
+            )}
+          >
             {bonus > 0 ? '+' : ''}
             {bonus}
-          </div>
+          </span>
         )}
       </div>
 
-      <div className="text-center">
-        <div className="text-3xl font-bold font-mono leading-none">{total}</div>
-        <div
-          className={cn(
-            'text-base font-semibold mt-0.5',
-            mod >= 0 ? 'text-success' : 'text-destructive',
-          )}
+      {/* Score and modifier — button when interactive, plain div otherwise */}
+      {interactive ? (
+        <button
+          type="button"
+          onClick={onSelect}
+          className="flex-1 flex flex-col items-center justify-center py-3 px-3 bg-transparent border-0 w-full hover:bg-accent/5 transition-colors cursor-pointer"
         >
-          {formatModifier(mod)}
-        </div>
-      </div>
+          <div className="text-4xl font-bold font-mono leading-none tabular-nums">{total}</div>
+          <div
+            className={cn(
+              'text-base font-bold mt-2 tabular-nums',
+              mod >= 0 ? 'text-emerald-500' : 'text-destructive',
+            )}
+          >
+            {formatModifier(mod)}
+          </div>
+        </button>
+      ) : (
+        scoreBody
+      )}
 
-      {children && <div>{children}</div>}
-    </>
+      {/* Controls slot */}
+      {children && <div className="px-3 pb-3 pt-2 border-t border-border/40">{children}</div>}
+    </div>
   )
-
-  if (interactive) {
-    return (
-      <button type="button" onClick={onSelect} className={`${containerClass} max-h-[160px]`}>
-        {cardContent}
-      </button>
-    )
-  }
-
-  return <div className={`${containerClass} max-h-[160px]`}>{cardContent}</div>
 }

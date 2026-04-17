@@ -168,7 +168,10 @@ export function swapSpellOnCharacter(
   })
 
   const afterAdd = addSpellToCharacter(
-    { ...character, spells: afterRemove.profileUpdate.spells as Character['spells'] },
+    {
+      ...character,
+      spells: { ...character.spells, ...afterRemove.profileUpdate } as Character['spells'],
+    },
     afterRemove.provenanceUpdate,
     addedSpellName,
     'spell',
@@ -299,10 +302,7 @@ export function selectRacialSpell(
     }
   })
 
-  const sourceTag = makeSourceTag('race', choiceId.split(':')[0] ?? 'Race', 'choice') as Record<
-    string,
-    unknown
-  >
+  const sourceTag = makeSourceTag('race', choiceId.split(':')[0] ?? 'Race', 'choice')
 
   const updatedLedger = addGrant(ledger, 'spells', spellName, sourceTag)
 
