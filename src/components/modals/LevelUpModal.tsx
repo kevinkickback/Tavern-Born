@@ -1,4 +1,4 @@
-import { ArrowDown, Plus, Scroll, Users } from '@phosphor-icons/react'
+import { ArrowDown, Plus, Scroll, Sword, Users } from '@phosphor-icons/react'
 import { useId, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -32,7 +32,10 @@ import { Switch } from '@/components/ui/switch'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { checkMulticlassRequirements, MAX_CHARACTER_LEVEL } from '@/lib/calculations/gameRules'
 import { addMulticlass, applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
+import { removeSpellFromCharacter } from '@/lib/character/commands/spellCommands'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { getClassIconUrl } from '@/lib/classIcons'
+import { getSpellsGrantedAtLevel, removeSpellChoicesAtLevel } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Class5e } from '@/types/5etools'
@@ -51,8 +54,12 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const [ignoreRestrictions, setIgnoreRestrictions] = useState(false)
   const [multiclassSelection, setMulticlassSelection] = useState('')
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
-  // Tracks which class index received the most recent level-up so Remove targets the right class
-  const [lastLeveledIndex, setLastLeveledIndex] = useState<number | null>(null)
+  // Ordered history of levels added this session: [{className, classLevel}]
+  // classLevel is the class's own level count (1-based) at the moment it was added.
+  // Popping from this stack drives Remove Last Level targeting.
+  const [levelHistory, setLevelHistory] = useState<
+    Array<{ className: string; classLevel: number }>
+  >([])
   const ignoreRestrictionsId = useId()
 
   if (!character) return null
@@ -62,13 +69,11 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const totalLevel = classProgression.reduce((sum, e) => sum + e.levels, 0) || character.level
   const isAtCap = totalLevel >= MAX_CHARACTER_LEVEL
 
-  const SIDEKICK_NAMES = new Set(['Expert Sidekick', 'Warrior Sidekick', 'Spellcaster Sidekick'])
-
   // Classes available to add — deduplicate by name, exclude sidekick classes
   const seenClassNames = new Set<string>()
   const multiclassOptions = (classes as Class5e[])
     .filter((cls) => {
-      if (SIDEKICK_NAMES.has(cls.name)) return false
+      if (cls.isSidekick) return false
       if (seenClassNames.has(cls.name)) return false
       seenClassNames.add(cls.name)
       return true
@@ -108,14 +113,14 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       toast.warning(`Character is already level ${MAX_CHARACTER_LEVEL}.`)
       return
     }
+    const entry = classProgression[index]
+    const newClassLevel = entry.levels + 1
     const newProgression = classProgression.map((e, i) =>
-      i === index ? { ...e, levels: e.levels + 1 } : e,
+      i === index ? { ...e, levels: newClassLevel } : e,
     )
     syncUpdate(character, newProgression)
-    setLastLeveledIndex(index)
-    toast.success(
-      `${classProgression[index].name} is now level ${classProgression[index].levels + 1}.`,
-    )
+    setLevelHistory((prev) => [...prev, { className: entry.name, classLevel: newClassLevel }])
+    toast.success(`${entry.name} is now level ${newClassLevel}.`)
   }
 
   const handleAddMulticlass = () => {
@@ -164,12 +169,13 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     updateCharacter(character.id, {
       ...progressionResult.characterUpdate,
       proficiencies: nextProficiencies,
+      skills: multiclassResult?.characterUpdate.skills ?? character.skills,
       provenance: progressionResult.provenanceUpdate,
     })
 
     toast.success(`Added ${multiclassSelection} (level 1).`)
     setMulticlassSelection('')
-    setLastLeveledIndex(newProgression.length - 1)
+    setLevelHistory((prev) => [...prev, { className: multiclassSelection, classLevel: 1 }])
   }
 
   const handleRemoveLastLevel = () => {
@@ -178,25 +184,69 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       setConfirmRemoveOpen(false)
       return
     }
-    // Use tracked last-leveled index; fall back to last entry if no level-up happened this session
-    const targetIdx = lastLeveledIndex ?? classProgression.length - 1
+
+    // Determine which class+level to remove.
+    // If we have history from this session, pop the last entry.
+    // Otherwise fall back to the last class in progression at its current level.
+    const lastHistoryEntry = levelHistory[levelHistory.length - 1]
+    const targetClassName =
+      lastHistoryEntry?.className ?? classProgression[classProgression.length - 1].name
+    const targetClassLevel =
+      lastHistoryEntry?.classLevel ?? classProgression[classProgression.length - 1].levels
+
+    const targetIdx = classProgression.findIndex((e) => e.name === targetClassName)
+    if (targetIdx === -1) {
+      toast.error('Could not find the target class to remove a level from.')
+      setConfirmRemoveOpen(false)
+      return
+    }
+
+    // Remove spells and spell choice placeholders attributed to this class at this class level.
+    const ledger = character.provenance ?? emptyProvenance()
+    const affectedSpells = getSpellsGrantedAtLevel(ledger, targetClassName, targetClassLevel)
+    let updatedLedger = removeSpellChoicesAtLevel(ledger, targetClassName, targetClassLevel)
+    let spellProfileUpdate: Parameters<typeof updateCharacter>[1] = {}
+    if (affectedSpells.length > 0) {
+      let updatedChar = character
+      for (const spellName of affectedSpells) {
+        const result = removeSpellFromCharacter(updatedChar, updatedLedger, spellName)
+        updatedChar = {
+          ...updatedChar,
+          spells: { ...updatedChar.spells, ...result.profileUpdate },
+        } as typeof character
+        updatedLedger = result.provenanceUpdate
+      }
+      spellProfileUpdate = { spells: updatedChar.spells }
+    }
+
     let newProgression = classProgression.map((e, i) =>
       i === targetIdx ? { ...e, levels: e.levels - 1 } : e,
     )
-    const removedClass = classProgression[targetIdx].name
     // Drop the class entirely if it hits 0 levels
     if (newProgression[targetIdx].levels <= 0) {
       newProgression = newProgression.filter((_, i) => i !== targetIdx)
     }
-    syncUpdate(character, newProgression)
-    // After removal, the tracked index may be out of bounds — reset it
-    setLastLeveledIndex(null)
-    toast.success(`Removed a level from ${removedClass}.`)
+
+    const progressionResult = applyClassProgressionUpdate(character, updatedLedger, newProgression)
+    updateCharacter(character.id, {
+      ...progressionResult.characterUpdate,
+      provenance: progressionResult.provenanceUpdate,
+      ...spellProfileUpdate,
+    })
+
+    setLevelHistory((prev) => prev.slice(0, -1))
+
+    const removedMsg =
+      affectedSpells.length > 0
+        ? ` Removed ${affectedSpells.length} spell${affectedSpells.length > 1 ? 's' : ''} gained at that level.`
+        : ''
+    toast.success(`Removed a level from ${targetClassName}.${removedMsg}`)
     setConfirmRemoveOpen(false)
   }
 
-  const effectiveLastIdx = lastLeveledIndex ?? classProgression.length - 1
-  const lastClassName = classProgression[effectiveLastIdx]?.name ?? ''
+  const lastHistoryEntry = levelHistory[levelHistory.length - 1]
+  const lastClassName =
+    lastHistoryEntry?.className ?? classProgression[classProgression.length - 1]?.name ?? ''
 
   return (
     <>
@@ -248,11 +298,23 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                         >
                           <div
                             className={cn(
-                              'h-9 w-9 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0 text-white text-xs font-bold',
+                              'h-9 w-9 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0',
                               gradient,
                             )}
                           >
-                            {entry.name.slice(0, 2).toUpperCase()}
+                            {(() => {
+                              const iconUrl = getClassIconUrl(entry.name)
+                              return iconUrl ? (
+                                <img
+                                  src={iconUrl}
+                                  alt={entry.name}
+                                  className="h-5 w-5"
+                                  style={{ filter: 'brightness(0) invert(1)' }}
+                                />
+                              ) : (
+                                <Sword className="h-4 w-4 text-white" weight="bold" />
+                              )
+                            })()}
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="font-semibold text-sm leading-tight truncate">
@@ -398,7 +460,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
             <AlertDialogTitle>Remove Level</AlertDialogTitle>
             <AlertDialogDescription>
               {lastClassName
-                ? `Remove a level from ${lastClassName}${classProgression[classProgression.length - 1]?.levels === 1 ? ' - this will remove the class entirely' : ''}?`
+                ? `Remove a level from ${lastClassName}${classProgression.find((e) => e.name === lastClassName)?.levels === 1 ? ' - this will remove the class entirely' : ''}?`
                 : 'Are you sure you want to remove the last level?'}
             </AlertDialogDescription>
           </AlertDialogHeader>

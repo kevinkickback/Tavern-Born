@@ -213,7 +213,6 @@ const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
       current: 0,
       temporary: 0,
     },
-    armorClass: 10,
     initiative: 0,
     speed: 30,
     savingThrows: {

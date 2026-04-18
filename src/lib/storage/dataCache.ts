@@ -25,13 +25,15 @@ function hashStringFnv1a(value: string): string {
 }
 
 function computeContentFingerprint(data: GameData): string {
-  // Exclude runtime-only lookups from fingerprint. Parser output key order is
-  // deterministic, so native JSON.stringify is safe and far faster than the
-  // previous recursive stableSerialize approach.
+  // Exclude runtime-only lookups from fingerprint. Sort top-level keys before
+  // serializing to guard against insertion-order differences across parser versions.
   const { lookups: _lookups, ...fingerprintData } = data as GameData & {
     lookups?: unknown
   }
-  return hashStringFnv1a(JSON.stringify(fingerprintData))
+  const sorted = Object.fromEntries(
+    Object.entries(fingerprintData).sort(([a], [b]) => a.localeCompare(b)),
+  )
+  return hashStringFnv1a(JSON.stringify(sorted))
 }
 
 export async function readGameDataCache(): Promise<GameDataCacheEntry | null> {

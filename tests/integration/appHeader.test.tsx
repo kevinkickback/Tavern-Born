@@ -19,9 +19,7 @@ vi.mock('@/components/modals/LevelUpModal', () => ({
 vi.mock('@/hooks/character/useArmorClass', () => ({
   useArmorClass: () => ({
     calculatedAC: 17,
-    storedAC: 18,
     effectiveAC: 18,
-    syncAC: vi.fn(),
     setAC: vi.fn(),
   }),
 }))

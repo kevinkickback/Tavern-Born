@@ -1,10 +1,6 @@
 import { useCallback, useMemo } from 'react'
-import { computeArmorClass, resolveArmorType } from '@/lib/calculations/armorClass'
-import {
-  getAbilityModifier,
-  getCarryCapacity,
-  MAX_ATTUNEMENT_SLOTS,
-} from '@/lib/calculations/gameRules'
+import { resolveArmorType } from '@/lib/calculations/armorClass'
+import { getCarryCapacity, MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { generateEquipmentId } from '@/lib/character/ids'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
@@ -44,11 +40,6 @@ export function useEquipment(): EquipmentState {
   const equipment = character?.equipment ?? []
   const currency = character?.currency ?? DEFAULT_CURRENCY
 
-  const dexMod = useMemo(
-    () => getAbilityModifier(character?.abilityScores.dexterity ?? 10),
-    [character?.abilityScores.dexterity],
-  )
-
   const totalWeight = useMemo(
     () => equipment.reduce((sum, e) => sum + (e.weight ?? 0) * e.quantity, 0),
     [equipment],
@@ -70,13 +61,9 @@ export function useEquipment(): EquipmentState {
   const patchEquipment = useCallback(
     (list: Equipment[]) => {
       if (!character) return
-      const syncedArmorClass = computeArmorClass(list, dexMod)
-      updateCharacter(character.id, {
-        equipment: list,
-        armorClass: syncedArmorClass,
-      })
+      updateCharacter(character.id, { equipment: list })
     },
-    [character, updateCharacter, dexMod],
+    [character, updateCharacter],
   )
 
   const addItem = useCallback(

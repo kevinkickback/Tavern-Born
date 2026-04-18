@@ -585,7 +585,7 @@ export const characterSchema = z
       )
       .optional(),
     hitPoints: hitPointsSchema,
-    armorClass: z.number().int().min(0),
+    armorClass: z.number().int().min(0).optional(),
     armorClassOverride: z.number().int().min(0).optional(),
     initiative: z.number().int(),
     speed: z.number().int(),

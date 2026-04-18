@@ -6,8 +6,6 @@ import {
   type AccentTheme,
   APPEARANCE_THEMES,
   type AppearanceTheme,
-  setAccentTheme as applyAccentTheme,
-  setAppearanceTheme as applyAppearanceTheme,
   getStoredAccentTheme,
   getStoredAppearanceTheme,
   setThemePreferences,
@@ -17,7 +15,7 @@ export const UI_SCALE_OPTIONS = [80, 90, 100, 110, 120] as const
 export type UiScale = (typeof UI_SCALE_OPTIONS)[number]
 export const DEFAULT_UI_SCALE: UiScale = 100
 
-function applyUiScale(scale: UiScale) {
+export function applyUiScale(scale: UiScale) {
   document.documentElement.style.fontSize = `${scale}%`
 }
 
@@ -67,20 +65,11 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
       setHomeCardSize: (size) => set({ homeCardSize: clampHomeCardSize(size) }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
-      setUiScale: (scale) => {
-        applyUiScale(scale)
-        set({ uiScale: scale })
-      },
+      setUiScale: (scale) => set({ uiScale: scale }),
 
-      setThemeAccent: (accent) => {
-        applyAccentTheme(accent)
-        set({ themeAccent: accent })
-      },
+      setThemeAccent: (accent) => set({ themeAccent: accent }),
 
-      setThemeAppearance: (appearance) => {
-        applyAppearanceTheme(appearance)
-        set({ themeAppearance: appearance })
-      },
+      setThemeAppearance: (appearance) => set({ themeAppearance: appearance }),
 
       setAutoRefreshGameData: (enabled) => set({ autoRefreshGameData: enabled }),
     }),

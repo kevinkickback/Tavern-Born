@@ -116,7 +116,9 @@ export function calculateAC(
 /**
  * Canonical AC read for character consumers.
  *
- * Uses explicit override when present, otherwise derives AC from equipped items.
+ * Uses explicit override when present, otherwise derives AC live from equipped
+ * items and ability scores. The stored `character.armorClass` field is intentionally
+ * ignored — it exists only for migration compatibility and is never written to.
  */
 export function computeEffectiveCharacterArmorClass(character: {
   equipment?: Equipment[]
@@ -126,10 +128,6 @@ export function computeEffectiveCharacterArmorClass(character: {
 }): number {
   if (typeof character.armorClassOverride === 'number') {
     return Math.max(0, Math.trunc(character.armorClassOverride))
-  }
-
-  if (typeof character.armorClass === 'number') {
-    return Math.max(0, Math.trunc(character.armorClass))
   }
 
   const dexScore = character.abilityScores?.dexterity ?? character.abilityScores?.dex ?? 10

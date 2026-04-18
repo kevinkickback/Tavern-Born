@@ -10,6 +10,7 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 }))
 
 import { useEquipment } from '@/hooks/character/useEquipment'
+import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -29,7 +30,6 @@ describe('useEquipment hook', () => {
   test('toggleEquip should sync armor class for equipped armor', () => {
     const character = makeCharacterFixture({
       id: 'equip-hook-armor',
-      armorClass: 10,
       abilityScores: {
         strength: 10,
         dexterity: 14,
@@ -63,21 +63,24 @@ describe('useEquipment hook', () => {
       result.current.toggleEquip('armor-1')
     })
 
-    expect(useCharacterStore.getState().activeCharacter?.armorClass).toBe(13)
+    expect(computeEffectiveCharacterArmorClass(useCharacterStore.getState().activeCharacter!)).toBe(
+      13,
+    )
     expect(useCharacterStore.getState().activeCharacter?.equipment[0]?.equipped).toBe(true)
 
     act(() => {
       result.current.toggleEquip('armor-1')
     })
 
-    expect(useCharacterStore.getState().activeCharacter?.armorClass).toBe(12)
+    expect(computeEffectiveCharacterArmorClass(useCharacterStore.getState().activeCharacter!)).toBe(
+      12,
+    )
     expect(useCharacterStore.getState().activeCharacter?.equipment[0]?.equipped).toBe(false)
   })
 
   test('toggleEquip should include shield bonus in synced armor class', () => {
     const character = makeCharacterFixture({
       id: 'equip-hook-shield',
-      armorClass: 10,
       abilityScores: {
         strength: 10,
         dexterity: 12,
@@ -120,7 +123,9 @@ describe('useEquipment hook', () => {
       result.current.toggleEquip('shield-1')
     })
 
-    expect(useCharacterStore.getState().activeCharacter?.armorClass).toBe(18)
+    expect(computeEffectiveCharacterArmorClass(useCharacterStore.getState().activeCharacter!)).toBe(
+      18,
+    )
   })
 
   test('updateCurrency should persist denomination counters', () => {
