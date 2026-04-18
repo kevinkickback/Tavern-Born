@@ -131,9 +131,11 @@ export const useGameDataStore = create<GameDataState>()(
           setCacheStatus('fresh')
           // Only verify source in background if we haven't checked recently (within 1 hour).
           const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
+          const lastCheckedMs = lastUpdateCheckAt
+            ? new Date(lastUpdateCheckAt).getTime()
+            : Number.NaN
           const checkedRecently =
-            lastUpdateCheckAt &&
-            Date.now() - new Date(lastUpdateCheckAt).getTime() < UPDATE_CHECK_INTERVAL_MS
+            Number.isFinite(lastCheckedMs) && Date.now() - lastCheckedMs < UPDATE_CHECK_INTERVAL_MS
           if (!checkedRecently) {
             loadGameData(dataSourceConfig, true)
           }

@@ -372,8 +372,9 @@ export function BuildProficienciesTabsPanel({
                   else if (canSelect) onResolveChoiceSelection('armor', armorKey, true)
                   onFocusChange({
                     type: 'item',
-                    category: 'Armor',
+                    category: 'armor',
                     name: armorKey,
+                    isProficient: isSelected,
                   })
                   onExpandDetails()
                 }}
@@ -437,8 +438,9 @@ export function BuildProficienciesTabsPanel({
                   else if (canSelect) onResolveChoiceSelection('weapons', weaponKey, true)
                   onFocusChange({
                     type: 'item',
-                    category: 'Weapon',
+                    category: 'weapons',
                     name: weaponKey,
+                    isProficient: isSelected,
                   })
                   onExpandDetails()
                 }}
@@ -481,8 +483,9 @@ export function BuildProficienciesTabsPanel({
                       onResolveChoiceSelection('tools', value, true, slot.choiceId)
                       onFocusChange({
                         type: 'item',
-                        category: 'Tool',
+                        category: 'tools',
                         name: value,
+                        isProficient: true,
                       })
                       onExpandDetails()
                     }}
@@ -546,8 +549,9 @@ export function BuildProficienciesTabsPanel({
                     if (isGenericKind) {
                       onFocusChange({
                         type: 'item',
-                        category: 'Tool',
+                        category: 'tools',
                         name: toolName,
+                        isProficient: isSelected,
                       })
                       onExpandDetails()
                       return
@@ -558,8 +562,9 @@ export function BuildProficienciesTabsPanel({
                       onResolveChoiceSelection('tools', toolName, true, artisanChoiceId)
                     onFocusChange({
                       type: 'item',
-                      category: 'Tool',
+                      category: 'tools',
                       name: toolName,
+                      isProficient: isSelected,
                     })
                     onExpandDetails()
                   }}
@@ -636,8 +641,9 @@ export function BuildProficienciesTabsPanel({
                       else if (canSelect) onResolveChoiceSelection('languages', languageName, true)
                       onFocusChange({
                         type: 'item',
-                        category: 'Language',
+                        category: 'languages',
                         name: languageName,
+                        isProficient: isSelected,
                       })
                       onExpandDetails()
                     }}

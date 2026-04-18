@@ -73,6 +73,7 @@ export interface Class5e {
   classFeatures?: string[] | ClassFeature[]
   classFeatureRefs?: ClassFeatureReference[]
   subclasses?: Subclass5e[]
+  isSidekick?: boolean
   spellcastingAbility?: string
   casterProgression?: string
   isSpellcaster?: boolean

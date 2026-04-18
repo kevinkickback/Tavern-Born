@@ -168,14 +168,14 @@ export function SpellcastingDetailsCard({
                           <SelectContent>
                             {profile.castingAbilityOptions?.map((opt) => (
                               <SelectItem key={opt} value={opt} className="text-xs uppercase">
-                                {opt.toUpperCase()}
+                                {normalizeAbilityName(opt) ?? opt}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       ) : ability ? (
                         <Badge variant="secondary" className="text-[10px] uppercase shrink-0">
-                          {ability}
+                          {normalizedAbility ?? ability}
                         </Badge>
                       ) : null}
                     </div>

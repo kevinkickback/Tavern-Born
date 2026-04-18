@@ -234,5 +234,46 @@ export function clearChoiceSelectionsBySource(
   return { ...ledger, choices }
 }
 
+/**
+ * Return the display-names of all spells attributed to a specific class at a specific
+ * character level (via spellGrantedAtLevel). Used to identify spells that should be
+ * removed when a character loses that level.
+ */
+export function getSpellsGrantedAtLevel(
+  ledger: ProvenanceLedger,
+  className: string,
+  level: number,
+): string[] {
+  const results: string[] = []
+  for (const [key, tags] of Object.entries(ledger.spells)) {
+    const match = tags.some(
+      (t) =>
+        t.sourceType === 'class' && t.sourceName === className && t.spellGrantedAtLevel === level,
+    )
+    if (match) results.push(key)
+  }
+  return results
+}
+
+/**
+ * Remove from the ledger's choice records any spell choice placeholder associated
+ * with a specific class at a specific character level.
+ */
+export function removeSpellChoicesAtLevel(
+  ledger: ProvenanceLedger,
+  className: string,
+  level: number,
+): ProvenanceLedger {
+  const choices = ledger.choices.filter(
+    (c) =>
+      !(
+        c.sourceTag.sourceType === 'class' &&
+        c.sourceTag.sourceName === className &&
+        c.id.includes(`level${level}`)
+      ),
+  )
+  return { ...ledger, choices }
+}
+
 /** Return an empty fresh ledger. Re-exported convenience alias. */
 export { emptyProvenance }

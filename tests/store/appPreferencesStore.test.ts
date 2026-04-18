@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-const { setThemePreferencesMock, setAccentThemeMock, setAppearanceThemeMock } = vi.hoisted(() => ({
+const { setThemePreferencesMock } = vi.hoisted(() => ({
   setThemePreferencesMock: vi.fn(),
-  setAccentThemeMock: vi.fn(),
-  setAppearanceThemeMock: vi.fn(),
 }))
 
 vi.mock('@/lib/storage/idb-storage', () => ({
@@ -20,8 +18,8 @@ vi.mock('@/lib/themeManager', () => ({
   getStoredAccentTheme: () => 'blue',
   getStoredAppearanceTheme: () => 'light',
   setThemePreferences: setThemePreferencesMock,
-  setAccentTheme: setAccentThemeMock,
-  setAppearanceTheme: setAppearanceThemeMock,
+  setAccentTheme: vi.fn(),
+  setAppearanceTheme: vi.fn(),
 }))
 
 import {
@@ -58,15 +56,13 @@ describe('appPreferencesStore', () => {
     expect(useAppPreferencesStore.getState().homeCardSize).toBe(MIN_HOME_CARD_SIZE)
   })
 
-  test('theme setters update persisted preferences and apply theme side effects', () => {
+  test('theme setters update persisted preferences', () => {
     useAppPreferencesStore.getState().setThemeAccent('green')
     useAppPreferencesStore.getState().setThemeAppearance('dark')
 
     const state = useAppPreferencesStore.getState()
     expect(state.themeAccent).toBe('green')
     expect(state.themeAppearance).toBe('dark')
-    expect(setAccentThemeMock).toHaveBeenCalledWith('green')
-    expect(setAppearanceThemeMock).toHaveBeenCalledWith('dark')
   })
 
   test('settings changes do not create character unsaved state', () => {
@@ -103,6 +99,7 @@ describe('appPreferencesStore', () => {
       themeAccent: 'blue',
       themeAppearance: 'light',
       autoRefreshGameData: true,
+      uiScale: 100,
     })
   })
 

@@ -6,6 +6,7 @@
  */
 
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
+import { mergeSkillState } from '@/lib/calculations/skills'
 import { applyMulticlassGrants, reconcileClassChange, stripItemTag } from '@/lib/provenance'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { Class5e } from '@/types/5etools'
@@ -126,6 +127,7 @@ export function selectBaseClass(
     subclass: undefined,
     subclassSource: undefined,
     proficiencies: updatedProficiencies,
+    skills: mergeSkillState(character.skills ?? {}, updatedProficiencies.skills),
     classProgression: updatedProgression,
   }
 
@@ -316,6 +318,7 @@ export function addMulticlass(
   const characterUpdate: Partial<Character> = {
     classProgression: updatedProgression,
     proficiencies: updatedProficiencies,
+    skills: mergeSkillState(character.skills ?? {}, updatedProficiencies.skills),
   }
 
   const provenanceUpdate = applyMulticlassGrants(classEntity, ledger)

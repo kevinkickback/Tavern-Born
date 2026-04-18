@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
-import { calculateAC } from '@/lib/calculations/armorClass'
+import { calculateAC, computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -207,9 +207,9 @@ describe('Armor Class Behavior', () => {
   })
 
   describe('AC override / manual adjustment', () => {
-    test('character with armorClass override uses override value', () => {
+    test('character with armorClassOverride uses override value', () => {
       const character = makeCharacterFixture({
-        armorClass: 17, // Explicit override (e.g., from Permanent Bracers of Protection)
+        armorClassOverride: 17, // Explicit override (e.g., from Permanent Bracers of Protection)
         abilityScores: {
           str: 10,
           dex: 14,
@@ -233,9 +233,8 @@ describe('Armor Class Behavior', () => {
         ],
       })
 
-      // If override exists, should use it
-      const acWithOverride = character.armorClass ?? calculateAC(character, 'base')
-      expect(acWithOverride).toBe(17)
+      // When armorClassOverride is set it takes precedence over calculated AC
+      expect(computeEffectiveCharacterArmorClass(character)).toBe(17)
     })
   })
 

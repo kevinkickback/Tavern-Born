@@ -9,6 +9,7 @@ import { describe, expect, test } from 'vitest'
 import {
   addSpellToCharacter,
   removeSpellFromCharacter,
+  swapSpellOnCharacter,
 } from '@/lib/character/commands/spellCommands'
 import { emptyProvenance } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -142,6 +143,63 @@ describe('Spell Commands', () => {
 
       // Provenance grant should be removed
       expect(result.provenanceUpdate.spells['fire bolt']).toBeUndefined()
+    })
+  })
+
+  describe('swapSpellOnCharacter', () => {
+    test('removed spell is absent and added spell is present after a swap', () => {
+      const profileId = 'class:Bard|PHB'
+      const character = makeCharacterFixture({
+        class: 'Bard',
+        spells: {
+          spellProfiles: [
+            {
+              id: profileId,
+              type: 'class' as const,
+              label: 'Bard',
+              className: 'Bard',
+              classSource: 'PHB',
+              cantrips: [],
+              spellsKnown: ['Faerie Fire', 'Healing Word'],
+              preparedSpells: [],
+              alwaysPrepared: false,
+            },
+          ],
+          spellSlots: makeCharacterFixture().spells.spellSlots,
+        },
+      })
+
+      // Seed the ledger with a grant for the spell being swapped out.
+      const ledgerWithGrant = addSpellToCharacter(
+        character,
+        character.provenance ?? emptyProvenance(),
+        'Faerie Fire',
+        'spell',
+        profileId,
+        { sourceType: 'class', source: 'Bard', grantedAtLevel: 1 },
+      ).provenanceUpdate
+
+      const result = swapSpellOnCharacter(
+        character,
+        ledgerWithGrant,
+        'Faerie Fire',
+        'Thunderwave',
+        profileId,
+      )
+
+      const updatedProfile = result.profileUpdate.spellProfiles?.find((p) => p.id === profileId)
+
+      // Removed spell must be gone from the profile
+      expect(updatedProfile?.spellsKnown).not.toContain('Faerie Fire')
+      // Added spell must be present in the profile
+      expect(updatedProfile?.spellsKnown).toContain('Thunderwave')
+      // Untouched spell must still be present
+      expect(updatedProfile?.spellsKnown).toContain('Healing Word')
+
+      // Provenance: removed spell's grant should be absent
+      expect(result.provenanceUpdate.spells['faerie fire']).toBeUndefined()
+      // Provenance: added spell must have a grant
+      expect(result.provenanceUpdate.spells['thunderwave']).toBeDefined()
     })
   })
 })

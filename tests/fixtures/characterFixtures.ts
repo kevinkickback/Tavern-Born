@@ -117,7 +117,6 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
       current: 10,
       temporary: 0,
     },
-    armorClass: 10,
     initiative: 0,
     speed: 30,
     savingThrows: {

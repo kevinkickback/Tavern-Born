@@ -96,12 +96,14 @@ export function useSpellSlots(): SpellSlotsState {
 
     // Find the subrace entry nested inside the parent
     let subraceMatch: Race5e | undefined
+    let subraceIsNested = false
     if (character.subrace && parentMatch?.subraces) {
       subraceMatch = parentMatch.subraces.find(
         (sr) =>
           sr.name === character.subrace &&
           (!character.subraceSource || (sr.source ?? '') === (character.subraceSource ?? '')),
       )
+      if (subraceMatch) subraceIsNested = true
     }
 
     // Also check for subraces promoted to top-level entries (e.g. MPMM lineage races)
@@ -129,9 +131,13 @@ export function useSpellSlots(): SpellSlotsState {
 
     if (mergedSpells.length === 0) return undefined
 
-    // Use the most specific name for the profile label
+    // Use the most specific name for the profile label.
+    // For nested subraces (e.g. "High" inside "Elf"), combine with the parent race name
+    // so the card reads "High Elf" instead of just "High".
     const displayName =
-      subraceMatch?.name ?? character.subrace ?? parentMatch?.name ?? character.race
+      subraceIsNested && subraceMatch
+        ? `${subraceMatch.name} ${parentMatch?.name ?? character.race ?? ''}`
+        : (subraceMatch?.name ?? character.subrace ?? parentMatch?.name ?? character.race)
     const displaySource = subraceMatch?.source ?? parentMatch?.source
 
     return { name: displayName, source: displaySource, additionalSpells: mergedSpells }

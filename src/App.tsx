@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { useDataInit } from '@/hooks/data/useDataInit'
+import { setAccentTheme, setAppearanceTheme } from '@/lib/themeManager'
 import { BuildAbilityScoresPage } from '@/pages/build/ability-scores/AbilityScoresPage'
 import { BuildBackgroundPage } from '@/pages/build/background/BackgroundPage'
 import { BuildClassPage } from '@/pages/build/class/ClassPage'
@@ -30,6 +31,7 @@ import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { HomePage } from '@/pages/HomePage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
+import { applyUiScale, useAppPreferencesStore } from '@/store/appPreferencesStore'
 
 function CloseConfirmDialog() {
   const [open, setOpen] = useState(false)
@@ -67,6 +69,22 @@ function CloseConfirmDialog() {
 
 function App() {
   useDataInit()
+
+  const themeAccent = useAppPreferencesStore((s) => s.themeAccent)
+  const themeAppearance = useAppPreferencesStore((s) => s.themeAppearance)
+  const uiScale = useAppPreferencesStore((s) => s.uiScale)
+
+  useLayoutEffect(() => {
+    setAccentTheme(themeAccent)
+  }, [themeAccent])
+
+  useLayoutEffect(() => {
+    setAppearanceTheme(themeAppearance)
+  }, [themeAppearance])
+
+  useLayoutEffect(() => {
+    applyUiScale(uiScale)
+  }, [uiScale])
 
   return (
     <TooltipProvider delayDuration={300}>

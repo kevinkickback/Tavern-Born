@@ -391,7 +391,7 @@ export function EquipmentPage() {
             </div>
 
             {/* Item list */}
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 overflow-hidden">
               <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-2">
                 {filteredEquipment.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-12">

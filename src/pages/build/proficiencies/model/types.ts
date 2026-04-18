@@ -1,3 +1,5 @@
+import type { Item5e, Language5e } from '@/types/5etools'
+
 export type ProfFocus =
   | {
       type: 'skill'
@@ -13,4 +15,11 @@ export type ProfFocus =
       proficient: boolean
       modifierString: string
     }
-  | { type: 'item'; category: string; name: string }
+  | {
+      type: 'item'
+      category: 'armor' | 'weapons' | 'tools' | 'languages'
+      name: string
+      isProficient: boolean
+      itemData?: Item5e | null
+      languageData?: Language5e | null
+    }

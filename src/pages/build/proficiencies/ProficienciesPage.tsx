@@ -1,5 +1,5 @@
 import { CaretLeft, CaretRight, Certificate } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -32,7 +32,7 @@ export function BuildProficienciesPage() {
     if (!state.activeCharacterId) return null
     return state.characters.find((entry) => entry.id === state.activeCharacterId) ?? null
   })
-  const { skills: skillDefs, items, itemsBase } = useFilteredGameData()
+  const { skills: skillDefs, items, itemsBase, languages } = useFilteredGameData()
   const { skills } = useSkills()
   const { savingThrows } = useSavingThrows()
   const { ledger, resolveChoiceSelection, getSourcesRowsBySection } = useProvenance()
@@ -40,6 +40,40 @@ export function BuildProficienciesPage() {
 
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [focused, setFocused] = useState<ProfFocus | null>(null)
+
+  const itemsByName = useMemo(() => {
+    const map = new Map<string, (typeof itemsBase)[0]>()
+    for (const item of [...itemsBase, ...items]) {
+      if (item.name) map.set(item.name.toLowerCase(), item)
+    }
+    return map
+  }, [itemsBase, items])
+
+  const languagesByName = useMemo(() => {
+    const map = new Map<string, (typeof languages)[0]>()
+    for (const lang of languages) {
+      if (lang.name) map.set(lang.name.toLowerCase(), lang)
+    }
+    return map
+  }, [languages])
+
+  const handleFocusChange = useCallback(
+    (focus: ProfFocus) => {
+      if (focus.type === 'item') {
+        const cat = focus.category.toLowerCase()
+        if (cat === 'languages') {
+          const languageData = languagesByName.get(focus.name.toLowerCase()) ?? null
+          setFocused({ ...focus, languageData })
+        } else {
+          const itemData = itemsByName.get(focus.name.toLowerCase()) ?? null
+          setFocused({ ...focus, itemData })
+        }
+      } else {
+        setFocused(focus)
+      }
+    },
+    [itemsByName, languagesByName],
+  )
 
   const skillDescriptions = useMemo(() => buildSkillDescriptions(skillDefs), [skillDefs])
 
@@ -180,7 +214,7 @@ export function BuildProficienciesPage() {
                       visibleToolCandidates={visibleToolCandidates}
                       artisanChoiceByNorm={artisanChoiceByNorm}
                       focused={focused}
-                      onFocusChange={setFocused}
+                      onFocusChange={handleFocusChange}
                       onExpandDetails={() => {
                         if (detailCollapsed) setDetailCollapsed(false)
                       }}
@@ -199,7 +233,6 @@ export function BuildProficienciesPage() {
               <BuildProficienciesDetailsPanel
                 focused={focused}
                 detailCollapsed={detailCollapsed}
-                character={character}
                 skillDescriptions={skillDescriptions}
               />
             </div>

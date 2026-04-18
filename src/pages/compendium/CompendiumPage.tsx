@@ -38,6 +38,9 @@ const ENTRY_TYPES = [
 const MAX_DISPLAY = 200
 
 export function CompendiumPage() {
+  // Intentional direct store access: the Compendium is a universal reference browser
+  // and must show all available data regardless of the active character's allowed sources.
+  // useFilteredGameData() would incorrectly narrow results by character source settings.
   const gameData = useGameDataStore((state) => state.gameData)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set())
