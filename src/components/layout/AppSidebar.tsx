@@ -1,16 +1,23 @@
 import {
   Backpack,
+  Barbell,
   Bell,
-  BookOpen,
-  CaretDown,
-  FileText,
+  Book,
+  CaretRight,
+  Certificate,
+  FilePdf,
   Gear,
-  House,
+  Image,
   MagicWand,
   Moon,
+  PersonSimple,
+  Scroll,
+  Sparkle,
   Star,
   Sword,
   User,
+  Users,
+  Wrench,
   X,
 } from '@phosphor-icons/react'
 import { useState } from 'react'
@@ -36,18 +43,18 @@ const navItems: NavItem[] = [
   {
     label: 'Home',
     path: '/',
-    icon: <House />,
+    icon: <Users />,
   },
   {
     label: 'Build',
     path: '/build',
-    icon: <Sword />,
+    icon: <Wrench />,
     children: [
-      { label: 'Race', path: '/build/race', icon: null },
-      { label: 'Class', path: '/build/class', icon: null },
-      { label: 'Background', path: '/build/background', icon: null },
-      { label: 'Ability Scores', path: '/build/ability-scores', icon: null },
-      { label: 'Proficiencies', path: '/build/proficiencies', icon: null },
+      { label: 'Race', path: '/build/race', icon: <PersonSimple /> },
+      { label: 'Class', path: '/build/class', icon: <Sword /> },
+      { label: 'Background', path: '/build/background', icon: <Scroll /> },
+      { label: 'Ability Scores', path: '/build/ability-scores', icon: <Barbell /> },
+      { label: 'Proficiencies', path: '/build/proficiencies', icon: <Certificate /> },
     ],
   },
   {
@@ -70,18 +77,18 @@ const navItems: NavItem[] = [
     path: '/details',
     icon: <User />,
     children: [
-      { label: 'Portrait', path: '/details/portrait', icon: null },
+      { label: 'Portrait', path: '/details/portrait', icon: <Image /> },
       {
         label: 'Characteristics',
         path: '/details/characteristics',
-        icon: null,
+        icon: <Sparkle />,
       },
     ],
   },
   {
     label: 'Character Sheet',
     path: '/character-sheet',
-    icon: <FileText />,
+    icon: <FilePdf />,
   },
   {
     label: 'Settings',
@@ -93,7 +100,7 @@ const navItems: NavItem[] = [
 export function AppSidebar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [expandedSections, setExpandedSections] = useState<string[]>([])
+  const [expandedSections, setExpandedSections] = useState<string[]>(['Build'])
   const [activeFooterAction, setActiveFooterAction] = useState<string | null>(null)
   const sidebarOpen = useAppPreferencesStore((state) => state.sidebarOpen)
   const setSidebarOpen = useAppPreferencesStore((state) => state.setSidebarOpen)
@@ -102,7 +109,7 @@ export function AppSidebar() {
     {
       id: 'compendium',
       label: 'Compendium',
-      icon: <BookOpen className="text-lg" />,
+      icon: <Book className="text-lg" />,
       onClick: () => navigate('/compendium'),
     },
     {
@@ -118,8 +125,12 @@ export function AppSidebar() {
   ]
 
   const toggleSection = (label: string) => {
-    setExpandedSections((prev) => (prev.includes(label) ? [] : [label]))
+    setExpandedSections((prev) =>
+      prev.includes(label) ? prev.filter((l) => l !== label) : [...prev, label],
+    )
   }
+
+  const isExactActive = (path: string) => location.pathname === path
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/'
@@ -170,69 +181,94 @@ export function AppSidebar() {
 
         <div className="mx-4 border-t border-border" />
 
-        <nav className="flex-1 overflow-y-auto p-4">
-          <ul className="space-y-1">
-            {navItems.map((item) => (
-              <li key={item.path}>
-                {item.children ? (
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => toggleSection(item.label)}
-                      className={cn(
-                        'w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                        isActive(item.path)
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-foreground hover:bg-secondary hover:text-secondary-foreground',
-                      )}
-                    >
-                      <span className="flex items-center gap-3">
-                        <span className="text-lg">{item.icon}</span>
-                        {item.label}
-                      </span>
-                      <CaretDown
+        <nav className="flex-1 overflow-y-auto p-2">
+          <ul className="flex flex-col gap-px">
+            {navItems.map((item) => {
+              const active = item.children ? isExactActive(item.path) : isActive(item.path)
+              const childActive = item.children?.some((c) => isActive(c.path)) ?? false
+              const expanded = expandedSections.includes(item.label)
+
+              return (
+                <li key={item.path}>
+                  {/* Parent row */}
+                  <div className="relative">
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-primary" />
+                    )}
+                    {item.children ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleSection(item.label)}
                         className={cn(
-                          'transition-transform text-base',
-                          expandedSections.includes(item.label) && 'rotate-180',
+                          'w-full flex items-center gap-2.5 pl-3 pr-2.5 py-2 rounded-lg text-base font-medium transition-colors',
+                          active
+                            ? 'bg-secondary text-primary'
+                            : childActive
+                              ? 'text-primary/70 hover:bg-secondary hover:text-foreground'
+                              : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
                         )}
-                      />
-                    </button>
-                    {expandedSections.includes(item.label) && (
-                      <ul className="mt-1 ml-4 space-y-1">
-                        {item.children.map((child) => (
-                          <li key={child.path}>
-                            <Link
-                              to={child.path}
-                              className={cn(
-                                'block px-4 py-2 rounded-lg text-sm transition-colors',
-                                isActive(child.path)
-                                  ? 'bg-accent text-accent-foreground font-medium'
-                                  : 'text-muted-foreground hover:bg-secondary hover:text-secondary-foreground',
-                              )}
-                            >
-                              {child.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
+                      >
+                        <span className="flex items-center shrink-0 text-xl">{item.icon}</span>
+                        <span className="flex-1 text-left">{item.label}</span>
+                        <CaretRight
+                          className={cn(
+                            'shrink-0 text-base text-muted-foreground transition-transform duration-200',
+                            expanded && 'rotate-90',
+                            (active || childActive) && 'text-current',
+                          )}
+                        />
+                      </button>
+                    ) : (
+                      <Link
+                        to={item.path}
+                        className={cn(
+                          'flex items-center gap-2.5 pl-3 pr-2.5 py-2 rounded-lg text-base font-medium transition-colors',
+                          active
+                            ? 'bg-secondary text-primary'
+                            : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
+                        )}
+                      >
+                        <span className="flex items-center shrink-0 text-xl">{item.icon}</span>
+                        <span className="flex-1">{item.label}</span>
+                      </Link>
                     )}
                   </div>
-                ) : (
-                  <Link
-                    to={item.path}
-                    className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-                      isActive(item.path)
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-foreground hover:bg-secondary hover:text-secondary-foreground',
-                    )}
-                  >
-                    <span className="text-lg">{item.icon}</span>
-                    {item.label}
-                  </Link>
-                )}
-              </li>
-            ))}
+
+                  {/* Sub-nav with vertical track */}
+                  {item.children && expanded && (
+                    <div className="flex mt-0.5">
+                      <div className="w-px ml-[19px] my-1 bg-gradient-to-b from-border to-transparent shrink-0" />
+                      <ul className="flex-1 flex flex-col gap-px py-0.5 pl-1">
+                        {item.children.map((child) => {
+                          const childIsActive = isActive(child.path)
+                          return (
+                            <li key={child.path} className="relative">
+                              {childIsActive && (
+                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-primary" />
+                              )}
+                              <Link
+                                to={child.path}
+                                className={cn(
+                                  'flex items-center gap-2 pl-3 pr-2.5 py-1.5 rounded-lg text-[15px] transition-colors',
+                                  childIsActive
+                                    ? 'bg-secondary text-primary font-medium'
+                                    : 'text-muted-foreground/80 hover:bg-secondary hover:text-foreground',
+                                )}
+                              >
+                                <span className="flex items-center shrink-0 text-base">
+                                  {child.icon}
+                                </span>
+                                <span>{child.label}</span>
+                              </Link>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         </nav>
 
@@ -254,7 +290,7 @@ export function AppSidebar() {
                   onFocus={() => setActiveFooterAction(action.id)}
                   onBlur={() => setActiveFooterAction(null)}
                   className={cn(
-                    'cursor-pointer flex h-10 items-center overflow-hidden rounded-xl text-sm font-medium transition-all duration-200 ease-out',
+                    'flex h-10 items-center overflow-hidden rounded-xl text-sm font-medium transition-all duration-200 ease-out',
                     isExpanded
                       ? 'w-36 gap-2 bg-secondary px-3 text-secondary-foreground shadow-sm'
                       : 'w-10 justify-center text-muted-foreground hover:bg-secondary/70 hover:text-secondary-foreground',

@@ -1,10 +1,9 @@
-import { Books, Code, GithubLogo, Globe, Heart, Info, Shield } from '@phosphor-icons/react'
+import { Books, Code, GithubLogo, Globe, Heart, Info } from '@phosphor-icons/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
 const TECH_STACK = [
   { icon: Code, label: 'Electron + React 18' },
-  { icon: Shield, label: 'D&D 5e (SRD + published sources)' },
   { icon: Books, label: 'Radix UI + Tailwind CSS v4' },
 ]
 

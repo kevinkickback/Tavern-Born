@@ -5,6 +5,7 @@ import {
   CloudArrowDown,
   Database,
   FolderOpen,
+  Repeat,
   Trash,
   Warning,
   XCircle,
@@ -273,15 +274,11 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
     <div className="space-y-6">
       <Card>
         <CardHeader className="border-b border-border pb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Database size={24} className="text-primary" />
-            </div>
-            <div>
-              <CardTitle>Data Source Configuration</CardTitle>
-              <CardDescription>Configure where to load game data from</CardDescription>
-            </div>
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4 text-primary" weight="duotone" />
+            <CardTitle className="text-base">Data Source Configuration</CardTitle>
           </div>
+          <p className="text-sm text-muted-foreground">Configure where to load game data from</p>
         </CardHeader>
         <CardContent className="space-y-6">
           {!selectorOnly && hasActiveDataSource && !isSelectingDataSource ? (
@@ -364,7 +361,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                         id={remotePathId}
                         value={sourcePath}
                         onChange={(e) => handleUrlChange(e.target.value)}
-                        placeholder="https://raw.githubusercontent.com/5etools-mirror-3/5etools-src/master"
+                        placeholder="https://github.com/username/example-data"
                         disabled={isLoading}
                         className={`pr-10 ${getValidationBorderClass()}`}
                       />
@@ -395,7 +392,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                     )}
                     {validationStatus === 'idle' && (
                       <p className="text-sm text-muted-foreground">
-                        URL to the 5etools GitHub repository or mirror
+                        Enter URL to a 5etools data repository
                       </p>
                     )}
                   </div>
@@ -433,7 +430,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                     )}
                     {validationStatus === 'idle' && (
                       <p className="text-sm text-muted-foreground">
-                        Path to the directory containing 5etools JSON files
+                        Path to the directory containing 5etools data files
                       </p>
                     )}
                   </div>
@@ -512,14 +509,18 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
 
       {!selectorOnly && (
         <Card>
+          <CardHeader className="border-b border-border pb-4">
+            <div className="flex items-center gap-2">
+              <Repeat className="h-4 w-4 text-primary" weight="duotone" />
+              <CardTitle className="text-base">Auto-refresh on Launch</CardTitle>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Automatically check for game data updates when the app starts.
+            </p>
+          </CardHeader>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium">Auto-refresh on launch</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Automatically check for game data updates when the app starts.
-                </p>
-              </div>
+              <p className="text-sm font-medium">Enable auto-refresh</p>
               <Switch checked={autoRefreshGameData} onCheckedChange={setAutoRefreshGameData} />
             </div>
           </CardContent>

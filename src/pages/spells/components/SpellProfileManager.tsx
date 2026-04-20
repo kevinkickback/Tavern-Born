@@ -346,6 +346,7 @@ export function SpellProfileManager({
               const showDefaultEmptyState =
                 items.length === 0 && availableClassSpells.length === 0 && !hasUnfulfilledChoices
               const isClassWithoutSpellcasting = profile.type === 'class' && !detail
+              if (isClassWithoutSpellcasting) return null
 
               return (
                 <AccordionItem
@@ -456,7 +457,7 @@ export function SpellProfileManager({
                           </h3>
                           <p className="mt-1 text-xs text-muted-foreground max-w-sm">
                             {isBonusProfile
-                              ? 'Bonus spells are optional and do not use your class spell selection limits or spell slots.'
+                              ? "Bonus spells are optional and do not count against your class's spell limits."
                               : isClassWithoutSpellcasting
                                 ? 'This class does not currently grant spellcasting. If a subclass grants spellcasting, this section will update automatically.'
                                 : hasMissingSpells

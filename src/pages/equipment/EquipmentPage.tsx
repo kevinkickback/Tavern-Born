@@ -343,7 +343,7 @@ export function EquipmentPage() {
           <Card className="w-full h-full flex flex-col overflow-hidden">
             {/* Gradient header band */}
             <div className="h-10 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent border-b border-border flex items-center gap-3 px-4 shrink-0">
-              <Backpack className="h-4 w-4 text-accent/80" weight="duotone" />
+              <Backpack className="h-4 w-4 text-primary/80" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Inventory
               </span>
@@ -430,7 +430,7 @@ export function EquipmentPage() {
                         <ItemIcon
                           className={cn(
                             'h-4 w-4 shrink-0',
-                            item.equipped ? 'text-accent' : 'text-muted-foreground',
+                            item.equipped ? 'text-primary' : 'text-muted-foreground',
                           )}
                           weight={item.equipped ? 'fill' : 'regular'}
                         />

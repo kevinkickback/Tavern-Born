@@ -121,8 +121,8 @@
     background: linear-gradient(
       to right,
       transparent,
-      color-mix(in oklch, var(--color-card) 50%, transparent) 18%,
-      color-mix(in oklch, var(--color-card) 50%, transparent) 82%,
+      color-mix(in srgb, var(--color-card) 50%, transparent) 18%,
+      color-mix(in srgb, var(--color-card) 50%, transparent) 82%,
       transparent
     );
 

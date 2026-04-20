@@ -44,7 +44,7 @@ export function SettingsPage() {
                 type="button"
                 onClick={() => setActiveTab(id)}
                 className={cn(
-                  'flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors -mb-px',
+                  'flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                   activeTab === id
                     ? 'border-primary text-primary'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',

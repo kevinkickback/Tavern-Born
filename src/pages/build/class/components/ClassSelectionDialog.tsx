@@ -72,7 +72,7 @@ export function ClassSelectionDialog({
                   type="button"
                   onClick={() => onClassSelect(cls.name, cls.source ?? undefined)}
                   className={cn(
-                    'p-3 rounded-lg border-2 text-left transition-all hover:scale-[1.01]',
+                    'p-3 rounded-lg border-2 text-left transition-all hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                     isSelected
                       ? 'border-accent bg-accent/10'
                       : 'border-border hover:border-accent/50',
