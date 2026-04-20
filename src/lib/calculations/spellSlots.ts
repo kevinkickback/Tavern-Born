@@ -192,9 +192,21 @@ function getPactMagicSlotsFromClassData(
     if (!Array.isArray(row)) continue
 
     const slotCount = row[slotsIndex]
-    const pactSlotLevel = row[slotLevelIndex]
+    const rawSlotLevel = row[slotLevelIndex]
     if (typeof slotCount !== 'number' || slotCount <= 0) return {}
-    if (typeof pactSlotLevel !== 'number' || pactSlotLevel <= 0) return {}
+
+    // Slot level may be a number or a 5etools filter tag like "{@filter 1st|spells|level=1|...}"
+    let pactSlotLevel: number
+    if (typeof rawSlotLevel === 'number') {
+      pactSlotLevel = rawSlotLevel
+    } else if (typeof rawSlotLevel === 'string') {
+      const match = rawSlotLevel.match(/level=(\d+)/)
+      if (!match) return null
+      pactSlotLevel = Number.parseInt(match[1], 10)
+    } else {
+      return null
+    }
+    if (pactSlotLevel <= 0) return {}
 
     return {
       [pactSlotLevel]: {

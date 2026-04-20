@@ -17,6 +17,7 @@ import {
   type CompendiumEntry,
   filterCompendiumEntries,
 } from '@/lib/compendiumEntries'
+import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -29,10 +30,16 @@ const ENTRY_TYPES = [
   'Background',
   'Feat',
   'Skill',
+  'Sense',
   'Action',
   'Condition',
   'Language',
   'Deity',
+  'Optional Feature',
+  'Variant Rule',
+  'Trap / Hazard',
+  'Reward',
+  'Cult / Boon',
 ] as const
 
 const MAX_DISPLAY = 200
@@ -257,7 +264,7 @@ export function CompendiumPage() {
                     </span>
                   </div>
                 </div>
-                <ScrollArea className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden">
                   <div className="p-4 space-y-2">
                     {filteredEntries.length === 0 ? (
                       <div className="text-center py-12 text-muted-foreground">
@@ -280,14 +287,15 @@ export function CompendiumPage() {
                           )}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 overflow-hidden">
                               <h3 className="font-semibold truncate">{entry.name}</h3>
                               {entry.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-1">
-                                  {typeof entry.description === 'string'
-                                    ? entry.description
-                                    : JSON.stringify(entry.description)}
-                                </p>
+                                <p
+                                  className="text-sm text-muted-foreground line-clamp-1"
+                                  dangerouslySetInnerHTML={{
+                                    __html: renderEntry(entry.description),
+                                  }}
+                                />
                               )}
                             </div>
                             <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -303,7 +311,7 @@ export function CompendiumPage() {
                       ))
                     )}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
 
               {/* Right pane — collapses to 0 width via CSS transition, same as forge .info-panel */}

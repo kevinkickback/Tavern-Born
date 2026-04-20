@@ -15,10 +15,16 @@ interface CompendiumGameData {
   backgrounds?: unknown
   feats?: unknown
   skills?: unknown
+  senses?: unknown[]
   actions?: unknown[]
   conditions?: unknown[]
   languages?: unknown
   deities?: unknown[]
+  optionalfeatures?: unknown[]
+  variantrules?: unknown[]
+  trapHazards?: unknown[]
+  rewards?: unknown[]
+  cultsBoons?: unknown[]
 }
 
 function asObj(value: unknown): Record<string, unknown> {
@@ -65,13 +71,20 @@ function normalizeSearchText(...parts: Array<string | undefined>): string {
   return parts.filter(Boolean).join(' ').replace(/\s+/g, ' ').trim().toLowerCase()
 }
 
+function isRawTag(s: string): boolean {
+  return s.startsWith('{@')
+}
+
 function getPreviewDescription(value: unknown): string {
-  if (typeof value === 'string') return value
+  if (typeof value === 'string') return isRawTag(value) ? '' : value
 
   if (Array.isArray(value) && value.length > 0) {
-    const first = value[0]
-    if (typeof first === 'string') return first
-    return extractSearchText(first)
+    for (const item of value) {
+      if (typeof item === 'string' && !isRawTag(item) && item.trim()) return item
+    }
+    const firstNonString = value.find((item) => typeof item !== 'string')
+    if (firstNonString !== undefined) return extractSearchText(firstNonString)
+    return ''
   }
 
   if (typeof value === 'object' && value !== null) {
@@ -110,6 +123,33 @@ function matchesSearchTerm(entry: CompendiumEntry, term: string): boolean {
   return [entry.name, entry.type, entry.source, entry.description, entry.searchText]
     .filter((value): value is string => Boolean(value))
     .some((value) => value.toLowerCase().includes(term))
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function scoreEntry(entry: CompendiumEntry, queryLower: string, terms: string[]): number {
+  const nameLower = entry.name.toLowerCase()
+  let score = 0
+
+  if (nameLower === queryLower) return 200
+
+  if (nameLower.startsWith(queryLower)) score += 80
+
+  let nameMatches = 0
+  for (const term of terms) {
+    if (nameLower.includes(term)) {
+      nameMatches++
+      score += 10
+      if (new RegExp(`\\b${escapeRegex(term)}\\b`).test(nameLower)) score += 8
+    }
+  }
+
+  // Bonus when all terms hit the name (vs only some)
+  if (nameMatches === terms.length) score += 20
+
+  return score
 }
 
 export function buildCompendiumEntries(
@@ -313,6 +353,110 @@ export function buildCompendiumEntries(
     })
   }
 
+  if (gameData.senses) {
+    gameData.senses.forEach((sense) => {
+      const senseObj = asObj(sense)
+      const senseEntries = Array.isArray(senseObj.entries) ? senseObj.entries : []
+      const description = getPreviewDescription(senseEntries)
+      entries.push(
+        buildEntry(
+          String(senseObj.name ?? ''),
+          'Sense',
+          String(senseObj.source ?? 'Unknown'),
+          description,
+          senseObj,
+        ),
+      )
+    })
+  }
+
+  if (gameData.optionalfeatures) {
+    gameData.optionalfeatures.forEach((feature) => {
+      const featureObj = asObj(feature)
+      const featureEntries = Array.isArray(featureObj.entries) ? featureObj.entries : []
+      const description = getPreviewDescription(featureEntries)
+      entries.push(
+        buildEntry(
+          String(featureObj.name ?? ''),
+          'Optional Feature',
+          String(featureObj.source ?? 'Unknown'),
+          description,
+          featureObj,
+        ),
+      )
+    })
+  }
+
+  if (gameData.variantrules) {
+    gameData.variantrules.forEach((rule) => {
+      const ruleObj = asObj(rule)
+      const ruleEntries = Array.isArray(ruleObj.entries) ? ruleObj.entries : []
+      const description = getPreviewDescription(ruleEntries)
+      entries.push(
+        buildEntry(
+          String(ruleObj.name ?? ''),
+          'Variant Rule',
+          String(ruleObj.source ?? 'Unknown'),
+          description,
+          ruleObj,
+        ),
+      )
+    })
+  }
+
+  if (gameData.trapHazards) {
+    gameData.trapHazards.forEach((trap) => {
+      const trapObj = asObj(trap)
+      const trapEntries = Array.isArray(trapObj.entries) ? trapObj.entries : []
+      const description = getPreviewDescription(trapEntries)
+      entries.push(
+        buildEntry(
+          String(trapObj.name ?? ''),
+          'Trap / Hazard',
+          String(trapObj.source ?? 'Unknown'),
+          description,
+          trapObj,
+        ),
+      )
+    })
+  }
+
+  if (gameData.rewards) {
+    gameData.rewards.forEach((reward) => {
+      const rewardObj = asObj(reward)
+      const rewardEntries = Array.isArray(rewardObj.entries) ? rewardObj.entries : []
+      const description =
+        (typeof rewardObj.type === 'string' ? rewardObj.type : '') ||
+        getPreviewDescription(rewardEntries)
+      entries.push(
+        buildEntry(
+          String(rewardObj.name ?? ''),
+          'Reward',
+          String(rewardObj.source ?? 'Unknown'),
+          description,
+          rewardObj,
+        ),
+      )
+    })
+  }
+
+  if (gameData.cultsBoons) {
+    gameData.cultsBoons.forEach((entry) => {
+      const obj = asObj(entry)
+      const entryList = Array.isArray(obj.entries) ? obj.entries : []
+      const description = getPreviewDescription(entryList)
+      entries.push(
+        buildEntry(
+          String(obj.name ?? ''),
+          'Cult / Boon',
+          String(obj.source ?? 'Unknown'),
+          description,
+          obj,
+        ),
+      )
+    })
+  }
+
   return entries
 }
 
@@ -334,9 +478,14 @@ export function filterCompendiumEntries(
 
   if (searchQuery) {
     const queryTerms = tokenizeSearchQuery(searchQuery)
+    const queryLower = searchQuery.toLowerCase()
     filtered = filtered.filter((entry) =>
       queryTerms.every((term) => matchesSearchTerm(entry, term)),
     )
+    return filtered.sort((a, b) => {
+      const diff = scoreEntry(b, queryLower, queryTerms) - scoreEntry(a, queryLower, queryTerms)
+      return diff !== 0 ? diff : a.name.localeCompare(b.name)
+    })
   }
 
   return filtered.sort((a, b) => a.name.localeCompare(b.name))

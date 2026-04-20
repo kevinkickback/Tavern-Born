@@ -33,17 +33,21 @@
 */
 :root {
   --radius: 0.625rem;
+  /* Dark light-theme: slate-7 page base with raised cards (cards lighter than
+     background). theme.css defaults --color-bg to neutral-5; override here.
+     Dark theme is unaffected — .dark overrides these with oklch values directly. */
+  --color-bg: var(--color-neutral-7);
   --background: var(--color-bg);
   --foreground: var(--color-fg);
   --card: var(--color-neutral-6);
   --card-foreground: var(--color-fg);
-  --popover: var(--color-bg-overlay);
+  --popover: var(--color-neutral-4);
   --popover-foreground: var(--color-fg);
   --primary: var(--color-accent-9);
   --primary-foreground: var(--color-accent-contrast);
-  --secondary: var(--color-neutral-7);
+  --secondary: var(--color-neutral-8);
   --secondary-foreground: var(--color-fg);
-  --muted: var(--color-neutral-6);
+  --muted: var(--color-neutral-8);
   --muted-foreground: var(--color-fg-secondary);
   --accent: var(--color-accent-6);
   --accent-foreground: var(--color-accent-11);
@@ -56,21 +60,21 @@
   --info-foreground: var(--blue-12);
   --accent-secondary: var(--color-accent-secondary-9);
   --accent-secondary-foreground: var(--color-accent-secondary-12);
-  --border: var(--color-neutral-7);
-  --input: var(--color-neutral-7);
+  --border: var(--color-neutral-8);
+  --input: var(--color-neutral-8);
   --ring: var(--color-focus-ring);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: var(--color-neutral-2);
+  --sidebar: var(--color-neutral-7);
   --sidebar-foreground: var(--color-fg);
   --sidebar-primary: var(--color-accent-9);
   --sidebar-primary-foreground: var(--color-accent-contrast);
   --sidebar-accent: var(--color-accent-4);
   --sidebar-accent-foreground: var(--color-accent-11);
-  --sidebar-border: var(--color-neutral-6);
+  --sidebar-border: var(--color-neutral-8);
   --sidebar-ring: var(--color-focus-ring);
 }
 
