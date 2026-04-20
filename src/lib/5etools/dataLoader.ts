@@ -10,6 +10,7 @@ import {
   parseClassFluff,
   parseClassFluffSummaries,
   parseConditions,
+  parseCultsBoons,
   parseDeities,
   parseFeats,
   parseItems,
@@ -18,9 +19,11 @@ import {
   parseOptionalFeatures,
   parseRaceFluffSummaries,
   parseRaces,
+  parseRewards,
   parseSenses,
   parseSkills,
   parseSpells,
+  parseTrapHazards,
   parseVariantRules,
 } from './parsers/index'
 
@@ -72,6 +75,9 @@ export class FiveEToolsDataLoader {
       { key: 'magicvariants', file: 'magicvariants.json' },
       { key: 'optionalfeatures', file: 'optionalfeatures.json' },
       { key: 'variantrules', file: 'variantrules.json' },
+      { key: 'trapHazards', file: 'trapshazards.json' },
+      { key: 'rewards', file: 'rewards.json' },
+      { key: 'cultsBoons', file: 'cultsboons.json' },
     ]
 
     const gameData: GameData = {
@@ -92,6 +98,9 @@ export class FiveEToolsDataLoader {
       magicvariants: [],
       optionalfeatures: [],
       variantrules: [],
+      trapHazards: [],
+      rewards: [],
+      cultsBoons: [],
       sources: [],
     }
 
@@ -221,6 +230,24 @@ export class FiveEToolsDataLoader {
             case 'variantrules':
               gameData.variantrules = parseVariantRules(data)
               gameData.variantrules.forEach((item) => {
+                this.addItemSource(item, sourcesSet)
+              })
+              break
+            case 'trapHazards':
+              gameData.trapHazards = parseTrapHazards(data)
+              gameData.trapHazards.forEach((item) => {
+                this.addItemSource(item, sourcesSet)
+              })
+              break
+            case 'rewards':
+              gameData.rewards = parseRewards(data)
+              gameData.rewards.forEach((item) => {
+                this.addItemSource(item, sourcesSet)
+              })
+              break
+            case 'cultsBoons':
+              gameData.cultsBoons = parseCultsBoons(data)
+              gameData.cultsBoons.forEach((item) => {
                 this.addItemSource(item, sourcesSet)
               })
               break

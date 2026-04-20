@@ -94,6 +94,30 @@ export function parseVariantRules(data: unknown): unknown[] {
   return []
 }
 
+export function parseTrapHazards(data: unknown): unknown[] {
+  const obj = asObject(data)
+  if (obj.trap) return asArray(obj.trap)
+  if (Array.isArray(data)) return data
+  return []
+}
+
+export function parseRewards(data: unknown): unknown[] {
+  const obj = asObject(data)
+  if (obj.reward) return asArray(obj.reward)
+  if (Array.isArray(data)) return data
+  return []
+}
+
+export function parseCultsBoons(data: unknown): unknown[] {
+  const obj = asObject(data)
+  const results: unknown[] = []
+  if (obj.cult) results.push(...asArray(obj.cult))
+  if (obj.boon) results.push(...asArray(obj.boon))
+  if (results.length > 0) return results
+  if (Array.isArray(data)) return data
+  return []
+}
+
 export function parseBooks(data: unknown): unknown[] {
   const obj = asObject(data)
   if (!data) return []

@@ -411,6 +411,9 @@ export interface GameData {
   magicvariants: unknown[]
   optionalfeatures: unknown[]
   variantrules: unknown[]
+  trapHazards: unknown[]
+  rewards: unknown[]
+  cultsBoons: unknown[]
   sources: SourceBook[]
   lookups?: GameDataLookups
 }
