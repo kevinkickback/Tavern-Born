@@ -319,7 +319,7 @@ export function BuildProficienciesTabsPanel({
                   onExpandDetails()
                 }}
                 className={cn(
-                  'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left',
+                  'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                   isSelected
                     ? 'border-accent bg-accent text-accent-foreground hover:bg-accent/80'
                     : 'border-border bg-card text-muted-foreground opacity-50',
@@ -379,13 +379,13 @@ export function BuildProficienciesTabsPanel({
                   onExpandDetails()
                 }}
                 className={cn(
-                  'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2',
+                  'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                   isChoiceSelected
                     ? choiceSelectedClass
                     : isSelected
                       ? fixedSelectedClass
                       : canSelect
-                        ? 'border-border bg-card text-foreground hover:border-accent cursor-pointer'
+                        ? 'border-border bg-card text-foreground hover:border-accent'
                         : 'border-border bg-card text-muted-foreground opacity-50',
                   focused?.type === 'item' &&
                     focused.name === armorKey &&
@@ -445,13 +445,13 @@ export function BuildProficienciesTabsPanel({
                   onExpandDetails()
                 }}
                 className={cn(
-                  'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2',
+                  'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                   isChoiceSelected
                     ? choiceSelectedClass
                     : isSelected
                       ? fixedSelectedClass
                       : canSelect
-                        ? 'border-border bg-card text-foreground hover:border-accent cursor-pointer'
+                        ? 'border-border bg-card text-foreground hover:border-accent'
                         : 'border-border bg-card text-muted-foreground opacity-50',
                   focused?.type === 'item' &&
                     focused.name === weaponKey &&
@@ -569,7 +569,7 @@ export function BuildProficienciesTabsPanel({
                     onExpandDetails()
                   }}
                   className={cn(
-                    'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2',
+                    'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                     isGenericKind
                       ? hasOptionalChoiceForKind
                         ? 'border-border border-dashed bg-card text-foreground/80 cursor-default'
@@ -579,7 +579,7 @@ export function BuildProficienciesTabsPanel({
                         : isSelected
                           ? fixedSelectedClass
                           : canSelect
-                            ? 'border-border bg-card text-foreground hover:border-accent cursor-pointer'
+                            ? 'border-border bg-card text-foreground hover:border-accent'
                             : 'border-border bg-card text-muted-foreground opacity-50',
                     focused?.type === 'item' &&
                       focused.name === toolName &&
@@ -648,13 +648,13 @@ export function BuildProficienciesTabsPanel({
                       onExpandDetails()
                     }}
                     className={cn(
-                      'px-3 py-2 rounded-lg border text-sm transition-all font-medium flex items-center gap-2',
+                      'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                       isChoiceSelected
                         ? choiceSelectedClass
                         : isSelected
                           ? fixedSelectedClass
                           : canSelect
-                            ? 'border-border bg-card text-foreground hover:border-accent cursor-pointer'
+                            ? 'border-border bg-card text-foreground hover:border-accent'
                             : 'border-border bg-card text-muted-foreground opacity-50',
                       focused?.type === 'item' &&
                         focused.name === languageName &&

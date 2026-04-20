@@ -416,7 +416,7 @@ export function renderTags(text: string): string {
       return label // strip unsafe link, keep display text
     }
     const safeUrl = trimmed.replace(/"/g, '%22').replace(/'/g, '%27')
-    return `<a href="${safeUrl}" class="text-primary underline cursor-pointer">${label}</a>`
+    return `<a href="${safeUrl}" class="text-primary underline">${label}</a>`
   })
   result = result.replace(
     /{@5etools ([^|}]+)(?:\|[^}]*)?}/g,

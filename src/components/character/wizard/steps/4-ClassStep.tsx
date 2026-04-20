@@ -90,7 +90,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
       <div className="w-72 flex-shrink-0 flex flex-col rounded-lg border border-border bg-muted/20">
         <div className="p-3 border-b border-border">
           <div className="flex items-center gap-2 mb-2">
-            <MagicWand className="h-4 w-4 text-accent" weight="fill" />
+            <MagicWand className="h-4 w-4 text-primary" weight="fill" />
             <h3 className="font-semibold text-sm">
               Classes
               <span className="text-muted-foreground font-normal ml-1">
@@ -180,7 +180,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
               {classSummary && (
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-1.5 mb-2">
-                    <BookOpen className="h-3.5 w-3.5 text-accent" weight="fill" />
+                    <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Class Overview
                     </span>
@@ -217,7 +217,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
               {classFeatures.length > 0 && (
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-1.5 mb-3">
-                    <MagicWand className="h-3.5 w-3.5 text-accent" weight="fill" />
+                    <MagicWand className="h-3.5 w-3.5 text-primary" weight="fill" />
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Signature Features
                     </span>

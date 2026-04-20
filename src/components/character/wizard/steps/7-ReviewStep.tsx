@@ -232,7 +232,7 @@ export function ReviewStep({ data }: ReviewStepProps) {
             <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <Sparkle className="h-4 w-4 text-accent" weight="fill" />
+                  <Sparkle className="h-4 w-4 text-primary" weight="fill" />
                   <h4 className="text-sm font-semibold">Ability Scores</h4>
                 </div>
                 <Badge variant="secondary" className="font-mono">
@@ -250,7 +250,7 @@ export function ReviewStep({ data }: ReviewStepProps) {
                       key={ability}
                       className="border rounded-lg bg-card/60 border-border flex flex-col items-center justify-center gap-0.5 p-2"
                     >
-                      <div className="text-xs font-semibold text-accent uppercase">
+                      <div className="text-xs font-semibold text-primary uppercase">
                         {ABILITY_ABBREVIATIONS[ability]}
                       </div>
                       <div className="text-2xl font-bold font-mono leading-none">{total}</div>
@@ -275,7 +275,7 @@ export function ReviewStep({ data }: ReviewStepProps) {
 
             <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
               <div className="flex items-center gap-2">
-                <Sparkle className="h-4 w-4 text-accent" weight="fill" />
+                <Sparkle className="h-4 w-4 text-primary" weight="fill" />
                 <h4 className="text-sm font-semibold">Variant Rules</h4>
               </div>
               <div className="space-y-1">
@@ -302,7 +302,7 @@ export function ReviewStep({ data }: ReviewStepProps) {
 
           <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-accent" weight="fill" />
+              <BookOpen className="h-4 w-4 text-primary" weight="fill" />
               <h4 className="text-sm font-semibold">Allowed Sources</h4>
               {hasRestrictedSources && (
                 <Badge variant="secondary" className="font-mono">

@@ -413,7 +413,7 @@ export function FeatsPage() {
       <div className="px-6 py-5 page-header-band mb-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
-            <Star className="h-6 w-6 text-accent" weight="duotone" />
+            <Star className="h-6 w-6 text-primary" weight="duotone" />
             <div>
               <h1 className="text-2xl font-display font-bold">Feats</h1>
               <p className="text-sm text-muted-foreground">

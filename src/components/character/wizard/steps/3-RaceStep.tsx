@@ -164,7 +164,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
       <div className="w-72 flex-shrink-0 flex flex-col rounded-lg border border-border bg-muted/20">
         <div className="p-3 border-b border-border">
           <div className="flex items-center gap-2 mb-2">
-            <Users className="h-4 w-4 text-accent" weight="fill" />
+            <Users className="h-4 w-4 text-primary" weight="fill" />
             <h3 className="font-semibold text-sm">
               Races
               <span className="text-muted-foreground font-normal ml-1">
@@ -244,7 +244,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                 <h2 className="font-display text-xl font-bold">
                   {selectedRace.name}
                   {selectedSubrace && (
-                    <span className="text-accent ml-1.5">({selectedSubrace.name})</span>
+                    <span className="text-primary ml-1.5">({selectedSubrace.name})</span>
                   )}
                 </h2>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -260,7 +260,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
               {raceSummary && (
                 <div className="rounded-lg border border-border bg-card p-4">
                   <div className="flex items-center gap-1.5 mb-2">
-                    <BookOpen className="h-3.5 w-3.5 text-accent" weight="fill" />
+                    <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
                     <span className="text-xs font-semibold uppercase text-muted-foreground">
                       Race Overview
                     </span>
@@ -326,7 +326,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
               {/* Ability Scores */}
               <div className="rounded-lg border border-border bg-card p-3">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <ChartBar className="h-3.5 w-3.5 text-accent" weight="fill" />
+                  <ChartBar className="h-3.5 w-3.5 text-primary" weight="fill" />
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Ability Scores
                   </span>
@@ -384,7 +384,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
               {/* Traits */}
               <div className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center gap-1.5 mb-3">
-                  <Eye className="h-3.5 w-3.5 text-accent" weight="fill" />
+                  <Eye className="h-3.5 w-3.5 text-primary" weight="fill" />
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Racial Traits
                   </span>

@@ -68,18 +68,18 @@ export function PortraitCardPreview({
               <div className="flex flex-col items-end gap-1.5">
                 <div className="flex items-center gap-2 text-foreground/90">
                   <span className="font-semibold">Level {level}</span>
-                  <Crown className="size-4 text-accent" weight="fill" />
+                  <Crown className="size-4 text-primary" weight="fill" />
                 </div>
                 {race && (
                   <div className="flex items-center gap-2 text-foreground/90">
                     <span className="font-medium">{race}</span>
-                    <User className="size-4 text-accent" weight="fill" />
+                    <User className="size-4 text-primary" weight="fill" />
                   </div>
                 )}
                 {characterClass && (
                   <div className="flex items-center gap-2 text-foreground/90">
                     <span className="font-medium">{characterClass}</span>
-                    <Sword className="size-4 text-accent" weight="fill" />
+                    <Sword className="size-4 text-primary" weight="fill" />
                   </div>
                 )}
               </div>

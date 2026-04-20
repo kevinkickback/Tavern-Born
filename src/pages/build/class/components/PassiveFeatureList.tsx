@@ -39,7 +39,7 @@ export function BuildClassPassiveFeatureList({
             if (detailCollapsed) onExpandDetails()
           }}
           className={cn(
-            'w-full text-left px-3 py-2 rounded-md hover:bg-accent/10 hover:text-accent transition-colors group flex items-center justify-between',
+            'w-full text-left px-3 py-2 rounded-md hover:bg-accent/10 hover:text-accent transition-colors group flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
             selectedFeature?.name === feature.name && 'bg-accent/10 text-accent',
           )}
         >

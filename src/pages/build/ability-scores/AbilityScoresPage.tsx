@@ -281,14 +281,14 @@ export function BuildAbilityScoresPage() {
                                   })
                                 }
                                 className={cn(
-                                  'flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-200',
+                                  'flex-1 flex items-center justify-center gap-2.5 px-3 py-2 rounded-lg text-center transition-all duration-200',
                                   active
                                     ? 'bg-background shadow-sm border border-border text-foreground'
                                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50',
                                 )}
                               >
                                 <Icon
-                                  className={cn('h-4 w-4 shrink-0', active ? 'text-accent' : '')}
+                                  className={cn('h-4 w-4 shrink-0', active ? 'text-primary' : '')}
                                   weight={active ? 'fill' : 'regular'}
                                 />
                                 <div className="min-w-0">

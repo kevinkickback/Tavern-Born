@@ -106,7 +106,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
       <div className="w-72 flex-shrink-0 flex flex-col rounded-lg border border-border bg-muted/20">
         <div className="p-3 border-b border-border">
           <div className="flex items-center gap-2 mb-2">
-            <BookOpen className="h-4 w-4 text-accent" weight="fill" />
+            <BookOpen className="h-4 w-4 text-primary" weight="fill" />
             <h3 className="font-semibold text-sm">
               Backgrounds
               <span className="text-muted-foreground font-normal ml-1">
@@ -196,7 +196,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
               <div className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <BookOpen className="h-3.5 w-3.5 text-accent" weight="fill" />
+                  <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Background Overview
                   </span>
@@ -232,7 +232,7 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
 
               <div className="rounded-lg border border-border bg-card p-4 space-y-2">
                 <div className="flex items-center gap-1.5">
-                  <BookOpen className="h-3.5 w-3.5 text-accent" weight="fill" />
+                  <BookOpen className="h-3.5 w-3.5 text-primary" weight="fill" />
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
                     Details
                   </span>

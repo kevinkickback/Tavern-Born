@@ -154,7 +154,7 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
       <div className="flex flex-col h-full gap-4">
         <div className="shrink-0 rounded-lg border border-border bg-muted/20 p-4 space-y-3">
           <div className="flex items-center gap-2 pb-1 border-b border-border">
-            <Sparkle className="h-4 w-4 text-accent" weight="fill" />
+            <Sparkle className="h-4 w-4 text-primary" weight="fill" />
             <h3 className="font-semibold">Ruleset</h3>
           </div>
 
@@ -207,7 +207,7 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
         <div className="shrink-0 grid grid-cols-2 gap-6 w-full">
           <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
             <div className="flex items-center gap-2 pb-1 border-b border-border">
-              <Sparkle className="h-4 w-4 text-accent" weight="fill" />
+              <Sparkle className="h-4 w-4 text-primary" weight="fill" />
               <h3 className="font-semibold">Ability Score Generation</h3>
             </div>
 
@@ -237,7 +237,7 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
 
           <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
             <div className="flex items-center gap-2 pb-1 border-b border-border">
-              <Sparkle className="h-4 w-4 text-accent" weight="fill" />
+              <Sparkle className="h-4 w-4 text-primary" weight="fill" />
               <h3 className="font-semibold">Variant Rules</h3>
             </div>
 
@@ -312,10 +312,10 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
         <div className="flex-1 min-h-0 flex flex-col rounded-lg border border-border bg-muted/20 p-4">
           <div className="flex items-center justify-between mb-3 flex-shrink-0">
             <div className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-accent" weight="fill" />
+              <BookOpen className="h-5 w-5 text-primary" weight="fill" />
               <h4 className="font-semibold text-lg">Allowed Sources</h4>
               {allowedSources.length > 0 && (
-                <span className="inline-flex items-center justify-center rounded-full bg-accent/15 text-accent text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
+                <span className="inline-flex items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold px-2 py-0.5 min-w-[1.5rem]">
                   {allowedSources.length}
                 </span>
               )}
@@ -342,7 +342,7 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
                     type="button"
                     onClick={action.onClick}
                     className={cn(
-                      'font-medium text-accent hover:underline',
+                      'font-medium text-primary hover:underline',
                       action.active && 'underline',
                     )}
                     title={action.title}
@@ -390,7 +390,7 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
                               className={cn(
                                 'h-4 w-4 flex-shrink-0 mt-0.5',
                                 data.allowedSources?.includes(source.abbreviation)
-                                  ? 'text-accent'
+                                  ? 'text-primary'
                                   : 'text-muted-foreground',
                               )}
                             />

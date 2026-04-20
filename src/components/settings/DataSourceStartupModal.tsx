@@ -73,9 +73,27 @@ export function DataSourceStartupModal() {
             {isForced ? 'Data Source Setup' : 'Welcome to Tavern Born'}
           </DialogTitle>
           <DialogDescription>
-            {isForced
-              ? 'Reconfigure your data source. Close when done.'
-              : 'Configure a data source so the app can load 5etools game data (races, classes, spells, items, and more).'}
+            {isForced ? (
+              'Reconfigure your data source. Close when done.'
+            ) : (
+              <>
+                This application requires 5etools D&D data files to operate. These files are not
+                included and must be obtained separately. The{' '}
+                <a
+                  href="https://wiki.tercept.net/en/home"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  5etools wiki
+                </a>{' '}
+                may point to{' '}
+                <strong>
+                  <em className="text-primary">source code</em>
+                </strong>{' '}
+                where they can be found.
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 
