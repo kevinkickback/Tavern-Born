@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { Toaster } from 'sonner'
+import { Toaster, toast } from 'sonner'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
@@ -15,6 +15,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { ChangelogModal } from '@/components/updates/ChangelogModal'
+import { UpdateProgressModal } from '@/components/updates/UpdateProgressModal'
 import { useDataInit } from '@/hooks/data/useDataInit'
 import { setAccentTheme, setAppearanceTheme } from '@/lib/themeManager'
 import { BuildAbilityScoresPage } from '@/pages/build/ability-scores/AbilityScoresPage'
@@ -75,6 +77,14 @@ function App() {
   const themeAppearance = useAppPreferencesStore((s) => s.themeAppearance)
   const uiScale = useAppPreferencesStore((s) => s.uiScale)
 
+  const [updateData, setUpdateData] = useState<{
+    version: string
+    changelog: string | null
+    isPortable: boolean
+  } | null>(null)
+  const [changelogOpen, setChangelogOpen] = useState(false)
+  const [progressOpen, setProgressOpen] = useState(false)
+
   useLayoutEffect(() => {
     setAccentTheme(themeAccent)
   }, [themeAccent])
@@ -86,6 +96,25 @@ function App() {
   useLayoutEffect(() => {
     applyUiScale(uiScale)
   }, [uiScale])
+
+  // Start auto-check schedule based on persisted preference
+  useEffect(() => {
+    if (!window.electronAPI?.setAutoCheck) return
+    const { autoUpdate } = useAppPreferencesStore.getState()
+    void window.electronAPI.setAutoCheck(autoUpdate)
+  }, [])
+
+  // Listen for update-available events and show a toast
+  useEffect(() => {
+    if (!window.electronAPI?.onUpdateAvailable) return
+    return window.electronAPI.onUpdateAvailable((data) => {
+      setUpdateData(data)
+      toast.info(`Update v${data.version} available`, {
+        action: { label: 'View', onClick: () => setChangelogOpen(true) },
+        duration: 8000,
+      })
+    })
+  }, [])
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -115,6 +144,24 @@ function App() {
         <DataSourceStartupModal />
         <AppLoadingOverlay />
         <CloseConfirmDialog />
+        {updateData && (
+          <ChangelogModal
+            open={changelogOpen}
+            onOpenChange={setChangelogOpen}
+            version={updateData.version}
+            changelog={updateData.changelog}
+            onInstall={() => {
+              setChangelogOpen(false)
+              setProgressOpen(true)
+              void window.electronAPI?.downloadUpdate()
+            }}
+          />
+        )}
+        <UpdateProgressModal
+          open={progressOpen}
+          version={updateData?.version ?? ''}
+          onOpenChange={setProgressOpen}
+        />
       </BrowserRouter>
     </TooltipProvider>
   )

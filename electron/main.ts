@@ -2,6 +2,17 @@ import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, normalize, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
+import {
+  cancelDownload,
+  checkForUpdate,
+  downloadUpdate,
+  fetchChangelog,
+  getUpdateStatus,
+  initAutoUpdater,
+  installUpdate,
+  startAutoCheckSchedule,
+  stopAutoCheckSchedule,
+} from './updateManager'
 import { attachWindowStatePersistence, loadWindowState } from './windowState'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -96,6 +107,8 @@ async function createWindow(): Promise<void> {
       mainWindow?.webContents.send('app:confirmClose')
     }
   })
+
+  initAutoUpdater()
 }
 
 // --- Security: Content Security Policy ---
@@ -182,6 +195,53 @@ app.on('ready', () => {
   ipcMain.on('app:forceClose', () => {
     forceClose = true
     mainWindow?.close()
+  })
+
+  ipcMain.handle('update:check', async () => {
+    try {
+      const status = await checkForUpdate()
+      return { success: true, data: status, error: null }
+    } catch (err) {
+      return { success: false, data: null, error: (err as Error).message }
+    }
+  })
+
+  ipcMain.handle('update:download', async () => {
+    try {
+      await downloadUpdate()
+      return { success: true, data: null, error: null }
+    } catch (err) {
+      return { success: false, data: null, error: (err as Error).message }
+    }
+  })
+
+  ipcMain.handle('update:cancel', () => {
+    const cancelled = cancelDownload()
+    return { success: cancelled, data: null, error: cancelled ? null : 'No download in progress' }
+  })
+
+  ipcMain.handle('update:install', () => {
+    installUpdate()
+  })
+
+  ipcMain.handle('update:status', () => {
+    return getUpdateStatus()
+  })
+
+  ipcMain.handle('update:set-auto-check', (_event, enabled: unknown) => {
+    if (typeof enabled !== 'boolean') return
+    if (enabled) startAutoCheckSchedule()
+    else stopAutoCheckSchedule()
+  })
+
+  ipcMain.handle('update:get-version', () => {
+    return app.getVersion()
+  })
+
+  ipcMain.handle('update:get-current-changelog', async () => {
+    const version = app.getVersion()
+    const changelog = await fetchChangelog(version)
+    return { version, changelog }
   })
 })
 
