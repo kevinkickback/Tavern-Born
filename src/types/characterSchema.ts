@@ -330,6 +330,7 @@ export const sourceTypeSchema = z.enum([
   'feat',
   'optionalFeature',
   'manual',
+  'ASI',
 ])
 
 export const grantTypeSchema = z.enum(['fixed', 'choice', 'placeholder'])
@@ -600,6 +601,18 @@ export const characterSchema = z
     asiChoices: z.array(asiChoiceSchema).optional(),
     specialFeats: z.array(featSchema).optional(),
     provenance: provenanceLedgerSchema.optional(),
+    inspiration: z.boolean().optional(),
+    deathSaves: z
+      .object({
+        successes: z.number().int().min(0).max(3),
+        failures: z.number().int().min(0).max(3),
+      })
+      .optional(),
+    conditions: z.array(z.string()).optional(),
+    exhaustion: z.number().int().min(0).max(6).optional(),
+    hitDiceUsed: z.number().int().min(0).optional(),
+    ritualCasting: z.boolean().optional(),
+    classResources: z.record(z.number().int().min(0)).optional(),
     createdAt: z.string(),
     lastModified: z.string(),
   })

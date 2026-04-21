@@ -159,7 +159,7 @@ export function BuildClassPage() {
   const { subclassLevel, subclassFeatureName } = useMemo(() => {
     return getSubclassSelectionInfo(viewingClassData)
   }, [viewingClassData])
-  const asiLevels = getASILevelsFromClass(viewingClassData)
+  const asiLevels = viewingClassData ? getASILevelsFromClass(viewingClassData) : []
   const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
   const optFeatures = useMemo(
     () =>
@@ -348,33 +348,25 @@ export function BuildClassPage() {
 
   const handleAsiApply = (level: number, abilityChanges: Record<string, 1 | 2>) => {
     if (!character) return
-    const next = applyClassAsiChoice({
-      characterAbilityScores: character.abilityScores,
+    const asiChoices = applyClassAsiChoice({
       currentAsiChoices: character.asiChoices ?? [],
       className: viewingClass,
       level,
       abilityChanges,
     })
-    updateCharacter(character.id, {
-      abilityScores: next.abilityScores,
-      asiChoices: next.asiChoices,
-    })
+    updateCharacter(character.id, { asiChoices })
     setAsiPickerLevel(null)
   }
 
   const handleAsiReset = (level: number) => {
     if (!character) return
-    const next = resetClassAsiChoice({
-      characterAbilityScores: character.abilityScores,
+    const asiChoices = resetClassAsiChoice({
       currentAsiChoices: character.asiChoices ?? [],
       className: viewingClass,
       level,
     })
-    if (!next) return
-    updateCharacter(character.id, {
-      abilityScores: next.abilityScores,
-      asiChoices: next.asiChoices,
-    })
+    if (!asiChoices) return
+    updateCharacter(character.id, { asiChoices })
     const levelKey = `${level}|${viewingClass}`
     clearAsiMode(levelKey)
   }

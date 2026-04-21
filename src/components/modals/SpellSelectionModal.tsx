@@ -101,25 +101,16 @@ const TYPE_FILTER: FilterSection = {
   ],
 }
 
-const RESTRICTIONS_FILTER: FilterSection = {
-  key: 'restrictions',
-  label: 'Restrictions',
-  type: 'switches',
-  columns: 1,
-  options: [
-    {
-      value: 'ignore-class-list',
-      label: 'Ignore spell list restriction (show all spells)',
-    },
-  ],
-}
-
-const VISIBILITY_FILTER: FilterSection = {
-  key: 'visibility',
-  label: 'Visibility',
-  type: 'switches',
-  columns: 1,
-  options: [{ value: 'hide-known', label: 'Hide already-known spells' }],
+function buildVisibilityFilter(
+  hasCharSpells: boolean,
+  hasClassName: boolean,
+): FilterSection | null {
+  const options = [
+    ...(hasCharSpells ? [{ value: 'hide-known', label: 'Hide already-known spells' }] : []),
+    ...(hasClassName ? [{ value: 'ignore-class-list', label: 'Ignore class restrictions' }] : []),
+  ]
+  if (options.length === 0) return null
+  return { key: 'visibility', label: 'Visibility', type: 'switches', columns: 1, options }
 }
 
 function isRitualSpell(spell: Spell5e): boolean {
@@ -289,13 +280,14 @@ export function SpellSelectionModal({
   const spellIdsByName = new Map(spells.map((spell) => [spell.name, getItemId(spell)]))
   const initialSelectedIds = initialSelectedNames.map((name) => spellIdsByName.get(name) ?? name)
 
-  const hasCharSpells = characterSpellNames && characterSpellNames.size > 0
+  const hasCharSpells = !!(characterSpellNames && characterSpellNames.size > 0)
+  const hasClassName = !!className
+  const visibilityFilter = buildVisibilityFilter(hasCharSpells, hasClassName)
   const filterSections = [
     buildLevelFilter(allowedLevels),
     SCHOOL_FILTER,
     TYPE_FILTER,
-    ...(className ? [RESTRICTIONS_FILTER] : []),
-    ...(hasCharSpells ? [VISIBILITY_FILTER] : []),
+    ...(visibilityFilter ? [visibilityFilter] : []),
   ]
 
   const effectiveInitialFilters = hasCharSpells
@@ -348,7 +340,7 @@ export function SpellSelectionModal({
           className,
           classSource,
           classListOverrides,
-          !activeFilters.restrictions?.has('ignore-class-list'),
+          !activeFilters.visibility?.has('ignore-class-list'),
           !!allowedLevels,
           characterSpellNames,
         )
