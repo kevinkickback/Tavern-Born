@@ -22,6 +22,7 @@ If you are new to the repository, read these in order:
 - testing-map.md: Current coverage, gaps, and recommended test additions.
 - codebase-tour.md: Concern-to-file routing table for fast navigation.
 - contributor-start-here.md: Practical onboarding sequence and first-change checklist.
+- feat-update-system.md: Implementation plan for the auto-update system (electron-updater, startup check, changelog modal, settings toggle).
 
 ## Update Policy
 

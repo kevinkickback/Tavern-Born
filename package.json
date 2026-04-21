@@ -51,6 +51,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "dompurify": "^3.3.3",
+    "electron-updater": "^6.8.3",
     "idb-keyval": "^6.2.2",
     "lucide-react": "^0.484.0",
     "pdfjs-dist": "^4.10.38",
@@ -127,6 +128,11 @@
     },
     "linux": {
       "target": "AppImage"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "kevinkickback",
+      "repo": "Tavern-Born"
     }
   }
 }

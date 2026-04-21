@@ -42,12 +42,14 @@ interface AppPreferencesState {
   themeAccent: AccentTheme
   themeAppearance: AppearanceTheme
   autoRefreshGameData: boolean
+  autoUpdate: boolean
   uiScale: UiScale
   sidebarOpen: boolean
   setHomeCardSize: (size: number) => void
   setThemeAccent: (accent: AccentTheme) => void
   setThemeAppearance: (appearance: AppearanceTheme) => void
   setAutoRefreshGameData: (enabled: boolean) => void
+  setAutoUpdate: (enabled: boolean) => void
   setUiScale: (scale: UiScale) => void
   setSidebarOpen: (open: boolean) => void
 }
@@ -59,6 +61,7 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
       themeAccent: getStoredAccentTheme(),
       themeAppearance: getStoredAppearanceTheme(),
       autoRefreshGameData: true,
+      autoUpdate: true,
       uiScale: DEFAULT_UI_SCALE,
       sidebarOpen: false,
 
@@ -72,6 +75,8 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
       setThemeAppearance: (appearance) => set({ themeAppearance: appearance }),
 
       setAutoRefreshGameData: (enabled) => set({ autoRefreshGameData: enabled }),
+
+      setAutoUpdate: (enabled) => set({ autoUpdate: enabled }),
     }),
     {
       name: 'app-preferences-storage',
@@ -81,6 +86,7 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         themeAccent: state.themeAccent,
         themeAppearance: state.themeAppearance,
         autoRefreshGameData: state.autoRefreshGameData,
+        autoUpdate: state.autoUpdate,
         uiScale: state.uiScale,
       }),
       onRehydrateStorage: () => (state) => {
@@ -92,6 +98,7 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         state.themeAccent = normalizeAccentTheme(state.themeAccent)
         state.themeAppearance = normalizeAppearanceTheme(state.themeAppearance)
         state.autoRefreshGameData = state.autoRefreshGameData !== false
+        state.autoUpdate = state.autoUpdate !== false
         const validScales: number[] = [...UI_SCALE_OPTIONS]
         state.uiScale = validScales.includes(state.uiScale) ? state.uiScale : DEFAULT_UI_SCALE
 
