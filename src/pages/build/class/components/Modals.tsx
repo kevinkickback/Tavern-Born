@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import { getFeatureTypes, type OptionalFeatureLike } from '@/lib/5etools/classData'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
@@ -177,6 +178,7 @@ export function BuildClassModals({
   feats,
   featByCompositeId,
 }: BuildClassModalsProps) {
+  const totalAbilityScores = useTotalAbilityScores(character)
   return (
     <>
       <ClassSelectionDialog
@@ -271,6 +273,8 @@ export function BuildClassModals({
               }}
               title={title}
               spells={classSpells}
+              className={viewingClass}
+              classSource={viewingClassSource}
               initialSelectedNames={initialSelectedNames}
               lockedNames={lockedNames}
               characterSpellNames={characterSpellNames}
@@ -420,17 +424,21 @@ export function BuildClassModals({
           )
         })()}
 
-      {asiPickerLevel !== null && (
-        <AsiPickerDialog
-          open={true}
-          level={asiPickerLevel}
-          existingChanges={
-            appliedAsiChoicesForClass.find((ac) => ac.level === asiPickerLevel)?.abilityChanges
-          }
-          onApply={(changes) => onAsiApply(asiPickerLevel, changes)}
-          onClose={() => onAsiPickerLevelChange(null)}
-        />
-      )}
+      {asiPickerLevel !== null &&
+        (() => {
+          return (
+            <AsiPickerDialog
+              open={true}
+              level={asiPickerLevel}
+              abilityScores={totalAbilityScores}
+              existingChanges={
+                appliedAsiChoicesForClass.find((ac) => ac.level === asiPickerLevel)?.abilityChanges
+              }
+              onApply={(changes) => onAsiApply(asiPickerLevel, changes)}
+              onClose={() => onAsiPickerLevelChange(null)}
+            />
+          )
+        })()}
 
       <FeatSelectionModal
         open={featPickerOpen}

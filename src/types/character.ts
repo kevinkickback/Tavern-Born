@@ -114,6 +114,22 @@ export interface Character {
   /** Provenance ledger tracking the origin of every granted option. */
   provenance?: ProvenanceLedger
 
+  // ── Session state ────────────────────────────────────────────────────────
+  /** Whether the character currently has inspiration. */
+  inspiration?: boolean
+  /** Death save tally for the current unconscious episode. */
+  deathSaves?: { successes: number; failures: number }
+  /** Active conditions by name (e.g. "Poisoned", "Prone"). */
+  conditions?: string[]
+  /** Exhaustion level 0–6. */
+  exhaustion?: number
+  /** Hit dice expended (spent on short rests). Type and max are derived from class data. */
+  hitDiceUsed?: number
+  /** Whether the character can cast spells as rituals (derived from class, may be manually set). */
+  ritualCasting?: boolean
+  /** Current usage counts for class resources, keyed by stable ID. Label/max are derived. */
+  classResources?: Record<string, number>
+
   createdAt: string
   lastModified: string
 }

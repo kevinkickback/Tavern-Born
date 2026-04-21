@@ -8,6 +8,7 @@ import {
   FilePdf,
   Gear,
   Image,
+  Lightning,
   MagicWand,
   Moon,
   PersonSimple,
@@ -78,11 +79,8 @@ const navItems: NavItem[] = [
     icon: <User />,
     children: [
       { label: 'Portrait', path: '/details/portrait', icon: <Image /> },
-      {
-        label: 'Characteristics',
-        path: '/details/characteristics',
-        icon: <Sparkle />,
-      },
+      { label: 'Characteristics', path: '/details/characteristics', icon: <Sparkle /> },
+      { label: 'Conditions', path: '/details/conditions', icon: <Lightning /> },
     ],
   },
   {

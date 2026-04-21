@@ -7,6 +7,7 @@ export type SourceType =
   | 'feat'
   | 'optionalFeature'
   | 'manual'
+  | 'ASI'
 
 export type GrantType = 'fixed' | 'choice' | 'placeholder'
 

@@ -25,6 +25,7 @@ import { BuildRacePage } from '@/pages/build/race/RacePage'
 import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
 import { CompendiumPage } from '@/pages/compendium/CompendiumPage'
 import { CharacteristicsPage } from '@/pages/details/CharacteristicsPage'
+import { ConditionsPage } from '@/pages/details/ConditionsPage'
 import { PortraitPage } from '@/pages/details/PortraitPage'
 import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
@@ -104,6 +105,7 @@ function App() {
             <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
             <Route path="/details/portrait" element={<PortraitPage />} />
             <Route path="/details/characteristics" element={<CharacteristicsPage />} />
+            <Route path="/details/conditions" element={<ConditionsPage />} />
             <Route path="/character-sheet" element={<CharacterSheetPage />} />
             <Route path="/compendium" element={<CompendiumPage />} />
             <Route path="/settings" element={<SettingsPage />} />

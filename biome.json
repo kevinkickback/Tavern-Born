@@ -14,7 +14,8 @@
       "!dist",
       "!dist-electron",
       "!node_modules",
-      "!test-results"
+      "!test-results",
+      "!index.html"
     ]
   },
   "formatter": {
@@ -87,6 +88,11 @@
       "source": {
         "organizeImports": "on"
       }
+    }
+  },
+  "html": {
+    "formatter": {
+      "enabled": false
     }
   },
   "overrides": [

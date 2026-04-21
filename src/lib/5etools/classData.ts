@@ -168,6 +168,181 @@ export function getSubclassSelectionInfo(classData: Class5e | undefined): {
   }
 }
 
+// ── Class Resource Definitions ─────────────────────────────────────────────
+
+export interface ClassResourceDef {
+  id: string
+  label: string
+  /** Max uses at each level (index 0 = level 1). Length 20. */
+  maxPerLevel: readonly number[]
+  restType: 'short' | 'long'
+}
+
+/** Table column labels that are not limited-use resources (bonuses, dice, spell filters). */
+const RESOURCE_SKIP_LABELS = new Set([
+  'Martial Arts',
+  'Unarmored Movement',
+  'Rage Damage',
+  'Sneak Attack',
+  'Spell Slots',
+  'Slot Level',
+])
+
+/** Rest type for resources parsed from classTableGroups, keyed by column label. */
+const TABLE_RESOURCE_REST_TYPE: Record<string, 'short' | 'long'> = {
+  'Ki Points': 'short',
+  'Sorcery Points': 'long',
+  Rages: 'long',
+  'Infused Items': 'long',
+}
+
+/** Hardcoded resource tables for classes whose limited resources aren't in classTableGroups. */
+const HARDCODED_RESOURCES: Partial<Record<string, ClassResourceDef[]>> = {
+  Fighter: [
+    {
+      id: 'fighter-second-wind',
+      label: 'Second Wind',
+      maxPerLevel: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      restType: 'short',
+    },
+    {
+      id: 'fighter-action-surge',
+      label: 'Action Surge',
+      maxPerLevel: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
+      restType: 'short',
+    },
+    {
+      id: 'fighter-indomitable',
+      label: 'Indomitable',
+      maxPerLevel: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
+      restType: 'long',
+    },
+  ],
+  Paladin: [
+    {
+      id: 'paladin-channel-divinity',
+      label: 'Channel Divinity',
+      maxPerLevel: [0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3],
+      restType: 'short',
+    },
+    {
+      id: 'paladin-lay-on-hands',
+      label: 'Lay on Hands (HP)',
+      maxPerLevel: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+      restType: 'long',
+    },
+  ],
+  Cleric: [
+    {
+      id: 'cleric-channel-divinity',
+      label: 'Channel Divinity',
+      maxPerLevel: [0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3],
+      restType: 'short',
+    },
+  ],
+  Druid: [
+    {
+      id: 'druid-wild-shape',
+      label: 'Wild Shape',
+      maxPerLevel: [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+      restType: 'short',
+    },
+  ],
+}
+
+function parseResourceValue(value: unknown): number | null {
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    if (value.toLowerCase() === 'unlimited') return 999
+    const n = Number(value)
+    return Number.isNaN(n) ? null : n
+  }
+  return null
+}
+
+/**
+ * Derives limited-use class resource definitions from 5etools class data.
+ * Parsed from classTableGroups where possible; falls back to hardcoded tables.
+ * Returns only resources with max > 0 at the given level.
+ */
+export function getClassResourceDefs(
+  classData: Class5e | undefined,
+  level: number,
+): ClassResourceDef[] {
+  if (!classData) return []
+  const clampedLevel = Math.max(1, Math.min(20, level))
+  const idx = clampedLevel - 1
+  const results: ClassResourceDef[] = []
+  const seenIds = new Set<string>()
+
+  // Parse numeric columns from classTableGroups
+  const tableGroups = Array.isArray(classData.classTableGroups)
+    ? (classData.classTableGroups as unknown[])
+    : []
+
+  for (const group of tableGroups) {
+    if (typeof group !== 'object' || group === null) continue
+    const g = group as Record<string, unknown>
+    const colLabels = Array.isArray(g.colLabels) ? (g.colLabels as unknown[]) : []
+    const rows = Array.isArray(g.rows) ? (g.rows as unknown[][]) : []
+    if (rows.length < 20) continue
+
+    colLabels.forEach((rawLabel, colIdx) => {
+      const label = typeof rawLabel === 'string' ? rawLabel : ''
+      if (!label || label.includes('{@') || RESOURCE_SKIP_LABELS.has(label)) return
+
+      const values = rows.map((row) => parseResourceValue(row[colIdx]))
+      if (values.some((v) => v === null)) return
+      const maxValues = values as number[]
+      if (maxValues.every((v) => v === 0)) return
+
+      const id = `${classData.name.toLowerCase()}-${label
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')}`
+      if (seenIds.has(id)) return
+      seenIds.add(id)
+
+      results.push({
+        id,
+        label,
+        maxPerLevel: maxValues,
+        restType: TABLE_RESOURCE_REST_TYPE[label] ?? 'long',
+      })
+    })
+  }
+
+  // Add hardcoded resources for classes where table data is absent
+  const hardcoded = HARDCODED_RESOURCES[classData.name] ?? []
+  for (const def of hardcoded) {
+    if (!seenIds.has(def.id)) {
+      seenIds.add(def.id)
+      results.push(def)
+    }
+  }
+
+  // Return only resources that have max > 0 at the requested level
+  return results.filter((def) => (def.maxPerLevel[idx] ?? 0) > 0)
+}
+
+/** Classes that gain Ritual Casting as a class feature (2014 PHB). */
+const RITUAL_CASTING_CLASSES = new Set(['Bard', 'Cleric', 'Druid', 'Ranger', 'Wizard', 'Artificer'])
+
+/**
+ * Returns true when the class grants Ritual Casting, either by detecting the
+ * feature in classFeatureRefs or by matching the known hardcoded set.
+ */
+export function getClassHasRitualCasting(classData: Class5e | undefined): boolean {
+  if (!classData) return false
+  if (classData.classFeatureRefs) {
+    const found = classData.classFeatureRefs.some((ref) =>
+      ref.name.toLowerCase().includes('ritual casting'),
+    )
+    if (found) return true
+  }
+  return RITUAL_CASTING_CLASSES.has(classData.name)
+}
+
 export function getSubclassByName(
   classData: Class5e | undefined,
   subclassName?: string,

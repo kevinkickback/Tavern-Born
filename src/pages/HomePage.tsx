@@ -1,4 +1,4 @@
-import { CheckSquare, Plus, Trash, Upload, Users } from '@phosphor-icons/react'
+import { CheckSquare, Funnel, Plus, Trash, Upload, Users } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { CharacterCard } from '@/components/character/CharacterCard'
@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Character } from '@/types/character'
 
@@ -43,6 +44,7 @@ export function HomePage() {
   const [sortBy, setSortBy] = useState<SortOption>('recent')
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false)
 
   const sortedCharacters = useMemo(() => {
     const sorted = [...characters]
@@ -185,7 +187,6 @@ export function HomePage() {
         const text = await file.text()
         const character = JSON.parse(text)
 
-        // Validate full character structure before importing
         const { validateCharacterData } = await import('@/store/characterStore')
         const validationError = validateCharacterData(character)
         if (validationError) {
@@ -225,40 +226,44 @@ export function HomePage() {
       <div className="px-6 pb-6">
         <div className="max-w-7xl mx-auto w-full">
           <Card className="w-full overflow-hidden">
-            {/* Gradient header band */}
-            <div className="h-10 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border-b border-border/40 flex items-center gap-3 px-4 shrink-0">
-              <Users className="h-4 w-4 text-primary" weight="duotone" />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Characters
-              </span>
-            </div>
-            <div className="p-4 flex flex-col gap-4">
-              {/* Toolbar — only when characters exist */}
+            <div className="relative flex flex-row overflow-hidden -my-6">
+              {/* Toggle button — tracks panel open/closed position like race/background pages */}
               {characters.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-                    <SelectTrigger className="h-8 w-44 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="recent">Recently Modified</SelectItem>
-                      <SelectItem value="name-asc">Name (A–Z)</SelectItem>
-                      <SelectItem value="name-desc">Name (Z–A)</SelectItem>
-                      <SelectItem value="level-desc">Level (High–Low)</SelectItem>
-                      <SelectItem value="level-asc">Level (Low–High)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <button
+                  type="button"
+                  onClick={() => setFilterPanelOpen((o) => !o)}
+                  title={filterPanelOpen ? 'Hide filters' : 'Show filters'}
+                  className={cn(
+                    'absolute top-2 z-20 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all duration-300',
+                    filterPanelOpen ? 'right-[216px]' : 'right-2',
+                  )}
+                >
+                  <Funnel className="h-3.5 w-3.5" weight={filterPanelOpen ? 'fill' : 'regular'} />
+                </button>
+              )}
 
-                  <div className="h-5 w-px bg-border mx-1 hidden sm:block" />
+              {/* Main panel */}
+              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+                <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Characters
+                    {characters.length > 0 && (
+                      <span className="ml-1.5 font-normal normal-case tracking-normal">
+                        ({characters.length})
+                      </span>
+                    )}
+                  </span>
+                </div>
 
+                {/* Toolbar — New Character + Import */}
+                <div className="px-4 pt-3 pb-1 flex items-center gap-2">
                   <Button
-                    variant={selectionMode ? 'default' : 'outline'}
                     size="sm"
-                    className="h-8 text-xs gap-1.5"
-                    onClick={handleToggleSelectionMode}
+                    className="h-8 text-xs gap-1.5 bg-accent hover:bg-accent/90"
+                    onClick={() => setShowCreateWizard(true)}
                   >
-                    <CheckSquare size={14} />
-                    Select
+                    <Plus size={13} />
+                    New Character
                   </Button>
                   <Button
                     variant="outline"
@@ -266,100 +271,145 @@ export function HomePage() {
                     className="h-8 text-xs gap-1.5"
                     onClick={handleImportCharacter}
                   >
-                    <Upload size={14} />
+                    <Upload size={13} />
                     Import
                   </Button>
-
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs gap-1.5 bg-accent hover:bg-accent/90 ml-auto"
-                    onClick={() => setShowCreateWizard(true)}
-                  >
-                    <Plus size={14} />
-                    New Character
-                  </Button>
                 </div>
-              )}
-              {/* Selection banner */}
-              {selectionMode && (
-                <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-2.5">
-                  <div className="flex items-center gap-2">
-                    <Checkbox checked={allSelected} onCheckedChange={handleToggleAllSelection} />
-                    <span className="text-sm text-muted-foreground">
-                      {allSelected ? 'Deselect All' : 'Select All'}
+
+                {/* Selection banner */}
+                {selectionMode && (
+                  <div className="flex items-center gap-3 border-b border-border bg-muted/30 px-4 py-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox checked={allSelected} onCheckedChange={handleToggleAllSelection} />
+                      <span className="text-sm text-muted-foreground">
+                        {allSelected ? 'Deselect All' : 'Select All'}
+                      </span>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="gap-1.5 h-7 text-xs"
+                      disabled={selectedCharacterIds.length === 0}
+                      onClick={handleDeleteSelected}
+                    >
+                      <Trash size={13} />
+                      Delete ({selectedCharacterIds.length})
+                    </Button>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {selectedCharacterIds.length} selected
                     </span>
                   </div>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="gap-2 h-8 text-xs"
-                    disabled={selectedCharacterIds.length === 0}
-                    onClick={handleDeleteSelected}
-                  >
-                    <Trash size={14} />
-                    Delete ({selectedCharacterIds.length})
-                  </Button>
-                  <span className="text-xs text-muted-foreground ml-auto">
-                    {selectedCharacterIds.length} selected
-                  </span>
-                </div>
-              )}
+                )}
 
-              {/* Character grid or empty state */}
-              {characters.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
-                    <Users className="size-10 text-muted-foreground" weight="duotone" />
-                  </div>
-                  <div>
-                    <h3 className="font-display text-lg font-semibold">No Characters Yet</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Create your first character to begin your adventure
-                    </p>
-                  </div>
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={handleImportCharacter}
+                {/* Character grid or empty state */}
+                <div className="p-4">
+                  {characters.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+                        <Users className="size-10 text-muted-foreground" weight="duotone" />
+                      </div>
+                      <div>
+                        <h3 className="font-display text-lg font-semibold">No Characters Yet</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          Create your first character to begin your adventure
+                        </p>
+                      </div>
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={handleImportCharacter}
+                        >
+                          <Upload size={15} />
+                          Import
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="gap-1.5 bg-accent hover:bg-accent/90"
+                          onClick={() => setShowCreateWizard(true)}
+                        >
+                          <Plus size={15} />
+                          New Character
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="grid gap-6"
+                      style={{
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 360px), 1fr))',
+                      }}
                     >
-                      <Upload size={15} />
-                      Import
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="gap-1.5 bg-accent hover:bg-accent/90"
-                      onClick={() => setShowCreateWizard(true)}
-                    >
-                      <Plus size={15} />
-                      New Character
-                    </Button>
-                  </div>
+                      {sortedCharacters.map((character) => (
+                        <CharacterCard
+                          key={character.id}
+                          character={character}
+                          onLoad={handleLoadCharacter}
+                          onDelete={handleDeleteCharacter}
+                          onExport={handleExportCharacter}
+                          isActive={character.id === activeCharacterId}
+                          selectionMode={selectionMode}
+                          isSelected={selectedCharacterIds.includes(character.id)}
+                          onToggleSelect={handleToggleCharacterSelection}
+                          cardSize={360}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ) : (
+              </div>
+
+              {/* Zero-width flex child — stretches to container height so h-full works on the overlay */}
+              <div className="w-0 flex-shrink-0 relative">
                 <div
-                  className="grid gap-6"
-                  style={{
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 360px), 1fr))',
-                  }}
+                  className={cn(
+                    'absolute top-0 right-0 h-full w-52 flex flex-col border-l border-border bg-card z-10 transition-transform duration-300 ease-in-out',
+                    filterPanelOpen
+                      ? 'translate-x-0 shadow-xl'
+                      : 'translate-x-full pointer-events-none',
+                  )}
                 >
-                  {sortedCharacters.map((character) => (
-                    <CharacterCard
-                      key={character.id}
-                      character={character}
-                      onLoad={handleLoadCharacter}
-                      onDelete={handleDeleteCharacter}
-                      onExport={handleExportCharacter}
-                      isActive={character.id === activeCharacterId}
-                      selectionMode={selectionMode}
-                      isSelected={selectedCharacterIds.includes(character.id)}
-                      onToggleSelect={handleToggleCharacterSelection}
-                      cardSize={360}
-                    />
-                  ))}
+                  <div className="bg-gradient-to-r from-accent/10 to-transparent border-b border-border px-4 py-4 flex items-center gap-2">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Filters
+                    </span>
+                  </div>
+
+                  <div className="p-4 flex flex-col gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs text-muted-foreground font-medium">Sort by</span>
+                      <Select
+                        value={sortBy}
+                        onValueChange={(value) => setSortBy(value as SortOption)}
+                      >
+                        <SelectTrigger className="h-8 text-xs w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="recent">Recently Modified</SelectItem>
+                          <SelectItem value="name-asc">Name (A–Z)</SelectItem>
+                          <SelectItem value="name-desc">Name (Z–A)</SelectItem>
+                          <SelectItem value="level-desc">Level (High–Low)</SelectItem>
+                          <SelectItem value="level-asc">Level (Low–High)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="h-px bg-border" />
+
+                    <Button
+                      variant={selectionMode ? 'default' : 'outline'}
+                      size="sm"
+                      className="h-8 text-xs gap-1.5 w-full justify-start"
+                      onClick={handleToggleSelectionMode}
+                    >
+                      <CheckSquare size={14} />
+                      {selectionMode ? 'Cancel Multi-Select' : 'Multi-Select'}
+                    </Button>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           </Card>
         </div>

@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import { MAX_CHARACTER_SIZE, MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
 import { SPECIAL_SPELL_PROFILE_LABEL } from '@/lib/calculations/spellProfiles'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
+import { makeSourceTag } from '@/lib/provenance/sourceLabels'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import {
   CURRENT_SCHEMA_VERSION,
@@ -450,13 +451,46 @@ export const useCharacterStore = create<CharacterState>()(
         set((state) => {
           const now = new Date().toISOString()
 
+          // Helper to add provenance for class ASI choices
+          function withAsiProvenance(character: Character, updates: Partial<Character>): Character {
+            // Only update provenance if asiChoices is present in updates
+            if (!updates.asiChoices) return { ...character, ...updates }
+            const { asiChoices } = updates
+            let provenance = character.provenance ?? emptyProvenance()
+
+            // Remove all previous class ASI abilityBonuses
+            provenance = {
+              ...provenance,
+              abilityBonuses: provenance.abilityBonuses.filter(
+                (r) =>
+                  r.sourceTag.sourceType !== 'ASI' &&
+                  (r.sourceTag.sourceType !== 'class' || r.sourceTag.grantType !== 'choice'),
+              ),
+            }
+
+            // Add new records for each ASI choice
+            for (const asi of asiChoices) {
+              for (const [ability, value] of Object.entries(asi.abilityChanges)) {
+                provenance = {
+                  ...provenance,
+                  abilityBonuses: [
+                    ...provenance.abilityBonuses,
+                    {
+                      ability,
+                      value,
+                      sourceTag: makeSourceTag('ASI', asi.className, 'choice', undefined),
+                    },
+                  ],
+                }
+              }
+            }
+            return { ...character, ...updates, provenance }
+          }
+
           // Active character updates are treated as in-memory draft changes.
           if (state.activeCharacterId === id && state.activeCharacter) {
-            const next = {
-              ...state.activeCharacter,
-              ...updates,
-              lastModified: now,
-            }
+            let next = { ...state.activeCharacter, ...updates, lastModified: now }
+            next = withAsiProvenance(state.activeCharacter, updates)
             const parsed = parseCharacterData(next)
             if (!parsed.data) {
               console.error('updateCharacter validation failed:', {
@@ -475,11 +509,9 @@ export const useCharacterStore = create<CharacterState>()(
           // Fallback for non-active records: update persisted collection directly.
           const characters = state.characters.map((char) => {
             if (char.id !== id) return char
-            const parsed = parseCharacterData({
-              ...char,
-              ...updates,
-              lastModified: now,
-            })
+            let next = { ...char, ...updates, lastModified: now }
+            next = withAsiProvenance(char, updates)
+            const parsed = parseCharacterData(next)
             return parsed.data ?? char
           })
           return {
@@ -613,7 +645,6 @@ export const useCharacterStore = create<CharacterState>()(
       storage: createIdbStorage(),
       partialize: (state) => ({
         characters: state.characters,
-        activeCharacterId: state.activeCharacterId,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
@@ -626,10 +657,8 @@ export const useCharacterStore = create<CharacterState>()(
           // Direct assignment here is intentional and scoped to hydration only.
           state.characters = validatedCharacters
 
-          state.activeCharacter = resolveActiveCharacter(
-            validatedCharacters,
-            state.activeCharacterId,
-          )
+          state.activeCharacterId = null
+          state.activeCharacter = null
           state.hasUnsavedChangesFlag = false
         }
       },
