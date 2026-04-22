@@ -19,9 +19,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npx vite --host 127.0.0.1 --port 4174 --strictPort',
+    command: 'npx vite --config vite.config.e2e.ts --host 127.0.0.1 --port 4174 --strictPort',
     url: 'http://127.0.0.1:4174',
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
 })

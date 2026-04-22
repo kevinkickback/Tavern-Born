@@ -199,7 +199,7 @@ describe('Spell Commands', () => {
       // Provenance: removed spell's grant should be absent
       expect(result.provenanceUpdate.spells['faerie fire']).toBeUndefined()
       // Provenance: added spell must have a grant
-      expect(result.provenanceUpdate.spells['thunderwave']).toBeDefined()
+      expect(result.provenanceUpdate.spells.thunderwave).toBeDefined()
     })
   })
 })

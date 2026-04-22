@@ -166,7 +166,7 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
   await ensureStartupPromptResolved(page, 'e2e-lifecycle-seed')
 
   const fileChooserPromise = page.waitForEvent('filechooser')
-  await page.getByRole('button', { name: 'Import Character' }).click()
+  await page.getByRole('button', { name: 'Import' }).click()
   const fileChooser = await fileChooserPromise
   await fileChooser.setFiles(fixturePath)
 
