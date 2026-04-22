@@ -45,6 +45,9 @@ function setGameDataItems(
       magicvariants: [],
       optionalfeatures: [],
       variantrules: [],
+      trapHazards: [],
+      rewards: [],
+      cultsBoons: [],
       sources: [],
     },
   })

@@ -97,7 +97,7 @@ describe('character creation and proficiencies validation', () => {
         armor: ['light armor', 'medium armor', 'heavy armor', 'shields'],
         weapons: ['simple melee weapons', 'martial melee weapons'],
         tools: [],
-        skills: { choose: { from: ['Athletics', 'Acrobatics'], count: 2 } },
+        skills: ['Athletics', 'Acrobatics'],
       },
       proficiency: ['strength', 'constitution'],
     })
@@ -132,6 +132,9 @@ describe('character creation and proficiencies validation', () => {
         magicvariants: [],
         optionalfeatures: [],
         variantrules: [],
+        trapHazards: [],
+        rewards: [],
+        cultsBoons: [],
         sources: [],
       },
       hasHydrated: true,

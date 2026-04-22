@@ -77,7 +77,7 @@ describe('Class Commands', () => {
     })
 
     const ledger = character.provenance ?? emptyProvenance()
-    const viewingEntry = character.classProgression[1]
+    const viewingEntry = character.classProgression![1]
     const result = selectSubclass(character, ledger, 'Battle Master', 'PHB', undefined, {
       classProgression: character.classProgression,
       viewingEntry,
@@ -187,11 +187,7 @@ describe('Class Commands', () => {
       proficiencies: {
         ...(character.provenance?.proficiencies ?? emptyProvenance().proficiencies),
         armor: {
-          shield: [
-            makeSourceTag('class', 'Fighter', 'choice', {
-              sourceData: { className: 'Fighter', classSource: 'PHB' },
-            }),
-          ],
+          shield: [makeSourceTag('class', 'Fighter', 'choice', 'PHB')],
         },
       },
     }

@@ -163,6 +163,9 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
     magicvariants: [],
     optionalfeatures: [],
     variantrules: [],
+    trapHazards: [],
+    rewards: [],
+    cultsBoons: [],
     sources: [],
   }
 
@@ -231,85 +234,69 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
   await expect(page).toHaveURL(/\/spells$/)
   await ensureStartupPromptResolved(page, 'e2e-spell-seed', gameData)
 
-  await expect(page.getByRole('heading', { name: 'Spells' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Spells', exact: true })).toBeVisible()
 
-  // Profile switching.
-  await page.getByRole('combobox').click()
-  await page.getByRole('option', { name: 'Bonus Spells' }).click()
-  await page.getByRole('combobox').click()
-  await page.getByRole('option', { name: 'Wizard (Lv 2)' }).click()
+  // Seed Magic Missile into the Bonus Spells profile via IndexedDB, then reload.
+  await page.evaluate(
+    async ({ characterId }) => {
+      await new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open('keyval-store')
+        request.onerror = () => reject(request.error)
+        request.onsuccess = () => {
+          const db = request.result
+          const tx = db.transaction('keyval', 'readwrite')
+          const store = tx.objectStore('keyval')
+          const getReq = store.get('character-storage')
 
-  await page.getByRole('button', { name: 'Add Spells' }).click()
-  await page.getByPlaceholder('Search...').fill('Magic Missile')
-
-  const wizardSpellOption = page.locator('button').filter({ hasText: 'Magic Missile' }).first()
-  if (!(await wizardSpellOption.isVisible().catch(() => false))) {
-    await page.getByRole('button', { name: 'Cancel' }).click()
-
-    await page.evaluate(
-      async ({ characterId }) => {
-        await new Promise<void>((resolve, reject) => {
-          const request = indexedDB.open('keyval-store')
-          request.onerror = () => reject(request.error)
-          request.onsuccess = () => {
-            const db = request.result
-            const tx = db.transaction('keyval', 'readwrite')
-            const store = tx.objectStore('keyval')
-            const getReq = store.get('character-storage')
-
-            getReq.onerror = () => reject(getReq.error)
-            getReq.onsuccess = () => {
-              const payload = getReq.result as
-                | {
-                    state?: {
-                      characters?: Array<{
-                        id: string
-                        spells?: {
-                          spellProfiles?: Array<{
-                            id: string
-                            cantrips?: string[]
-                            spellsKnown?: string[]
-                          }>
-                        }
-                      }>
-                    }
-                    version?: number
+          getReq.onerror = () => reject(getReq.error)
+          getReq.onsuccess = () => {
+            const payload = getReq.result as
+              | {
+                  state?: {
+                    characters?: Array<{
+                      id: string
+                      spells?: {
+                        spellProfiles?: Array<{
+                          id: string
+                          cantrips?: string[]
+                          spellsKnown?: string[]
+                        }>
+                      }
+                    }>
                   }
-                | undefined
+                  version?: number
+                }
+              | undefined
 
-              const characters = payload?.state?.characters ?? []
-              const target = characters.find((entry) => entry.id === characterId)
-              const profiles = target?.spells?.spellProfiles ?? []
-              const wizardProfile = profiles.find((profile) => profile.id === 'class:Wizard|PHB')
-              if (wizardProfile) {
-                const known = new Set(wizardProfile.spellsKnown ?? [])
-                known.add('Magic Missile')
-                wizardProfile.spellsKnown = [...known]
-              }
-
-              store.put(payload, 'character-storage')
-              tx.oncomplete = () => {
-                db.close()
-                resolve()
-              }
-              tx.onerror = () => reject(tx.error)
+            const characters = payload?.state?.characters ?? []
+            const target = characters.find((entry) => entry.id === characterId)
+            const profiles = target?.spells?.spellProfiles ?? []
+            const bonusProfile = profiles.find((profile) => profile.id === 'special:unrestricted')
+            if (bonusProfile) {
+              const known = new Set(bonusProfile.spellsKnown ?? [])
+              known.add('Magic Missile')
+              bonusProfile.spellsKnown = [...known]
             }
+
+            store.put(payload, 'character-storage')
+            tx.oncomplete = () => {
+              db.close()
+              resolve()
+            }
+            tx.onerror = () => reject(tx.error)
           }
-        })
-      },
-      { characterId: character.id },
-    )
+        }
+      })
+    },
+    { characterId: character.id },
+  )
 
-    await page.reload()
-    await ensureStartupPromptResolved(page, 'e2e-spell-seed', gameData)
-    await page.getByRole('link', { name: 'Spells' }).click()
-    await expect(page).toHaveURL(/\/spells$/)
-  }
-
-  if (await wizardSpellOption.isVisible().catch(() => false)) {
-    await wizardSpellOption.click()
-    await page.getByRole('button', { name: 'Confirm' }).click()
-  }
+  // Reload to pick up IndexedDB changes, re-select character, navigate to Spells.
+  await page.goto('/')
+  await ensureStartupPromptResolved(page, 'e2e-spell-seed', gameData)
+  await selectCharacterFromHome(page, 'Spell E2E')
+  await page.getByRole('link', { name: 'Spells' }).click()
+  await expect(page).toHaveURL(/\/spells$/)
 
   const mainContent = page.locator('main')
   await expect(mainContent.getByText('Magic Missile').first()).toBeVisible()

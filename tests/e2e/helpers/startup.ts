@@ -19,6 +19,9 @@ const MINIMAL_GAME_DATA: GameData = {
   magicvariants: [],
   optionalfeatures: [],
   variantrules: [],
+  trapHazards: [],
+  rewards: [],
+  cultsBoons: [],
   sources: [],
 }
 
