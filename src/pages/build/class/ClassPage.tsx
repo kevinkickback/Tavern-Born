@@ -1,5 +1,6 @@
 import { CaretLeft, CaretRight, Sword, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
+import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { Card } from '@/components/ui/card'
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
@@ -15,6 +16,7 @@ import {
   resolveSubclassFeatureRefs,
 } from '@/lib/5etools/classData'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
+import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
@@ -72,6 +74,7 @@ export function BuildClassPage() {
     applyClassEquipmentChoice,
     applyOptionalFeatureSelection,
     replaceFeatSelections,
+    commitFeatWithOptions,
     applyBatchSpellSelections,
     removeSpellProvenance,
     swapSpellProvenance,
@@ -342,8 +345,13 @@ export function BuildClassPage() {
     [character?.asiChoices, viewingClass],
   )
 
+  const [optionsPendingFeat, setOptionsPendingFeat] = useState<Feat5e | null>(null)
+
   const handleFeatConfirm = (selectedFeats: Feat5e[]) => {
+    const prevNames = new Set((character?.feats ?? []).map((f) => f.name))
     replaceFeatSelections(selectedFeats)
+    const newlyAdded = selectedFeats.find((f) => !prevNames.has(f.name) && hasFeatOptions(f))
+    if (newlyAdded) setOptionsPendingFeat(newlyAdded)
   }
 
   const handleAsiApply = (level: number, abilityChanges: Record<string, 1 | 2>) => {
@@ -607,6 +615,22 @@ export function BuildClassPage() {
         onSpellSwapLevelChange={setSpellSwapLevel}
         onSpellSwapDropChange={setSpellSwapDrop}
       />
+
+      {optionsPendingFeat && (
+        <FeatOptionsModal
+          open={true}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setOptionsPendingFeat(null)
+          }}
+          feat={optionsPendingFeat}
+          proficientSkillNames={character.proficiencies?.skills ?? []}
+          onFinish={(selections) => {
+            commitFeatWithOptions(optionsPendingFeat, selections, allSpells)
+            setOptionsPendingFeat(null)
+          }}
+          onDismiss={() => setOptionsPendingFeat(null)}
+        />
+      )}
     </div>
   )
 }

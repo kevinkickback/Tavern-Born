@@ -4,15 +4,27 @@
 		"PostToolUse": [
 			{
 				"name": "biome-fix",
-				"command": "npx biome check --write ."
-			},
-			{
-				"name": "biome-check",
-				"command": "npx biome check ."
+				"command": "npx biome check --write .",
+				"include": [
+					"**/*.{ts,tsx,js,jsx}"
+				],
+				"exclude": [
+					"dist/**",
+					"build/**",
+					"node_modules/**"
+				]
 			},
 			{
 				"name": "ts-check",
-				"command": "npx tsc --noEmit"
+				"command": "npx tsc --noEmit --incremental --pretty false",
+				"include": [
+					"**/*.{ts,tsx}"
+				],
+				"exclude": [
+					"dist/**",
+					"build/**",
+					"node_modules/**"
+				]
 			}
 		],
 		"SessionEnd": [

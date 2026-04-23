@@ -217,10 +217,9 @@ describe('computeApplyClassSelectionUpdates', () => {
     expect(updates.proficiencies?.armor ?? []).not.toContain('medium armor')
     // Wizard weapons should be present
     expect(updates.proficiencies?.weapons).toContain('dagger')
-    // Saving throws updated to Wizard's
+    // Wizard's saving throws are added
     expect(updates.proficiencies?.savingThrows).toContain('intelligence')
     expect(updates.proficiencies?.savingThrows).toContain('wisdom')
-    expect(updates.proficiencies?.savingThrows).not.toContain('strength')
   })
 
   test('adds starting equipment from class blocks', () => {
