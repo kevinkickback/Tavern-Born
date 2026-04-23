@@ -189,12 +189,24 @@ export const featureSchema = z.object({
   level: z.number().int().optional(),
 })
 
+const featOptionSelectionsSchema = z.object({
+  spellcastingClass: z.string().optional(),
+  spells: z.array(z.string()).optional(),
+  skills: z.array(z.string()).optional(),
+  languages: z.array(z.string()).optional(),
+  tools: z.array(z.string()).optional(),
+  abilityScore: z.string().optional(),
+  optionalFeature: z.string().optional(),
+  expertiseSkill: z.string().optional(),
+})
+
 export const featSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   source: z.string().min(1),
   description: z.string(),
   prerequisites: z.string().optional(),
+  options: featOptionSelectionsSchema.optional(),
 })
 
 export const equipmentSchema = z.object({

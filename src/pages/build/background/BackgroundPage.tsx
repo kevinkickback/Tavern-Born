@@ -1,5 +1,6 @@
 import { CaretLeft, CaretRight, Scroll, Star } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import type { ActiveFilters } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
@@ -17,6 +18,7 @@ import {
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
+import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
   formatEquipmentOptionEntries,
   resolveBackgroundEquipmentBlocks,
@@ -40,12 +42,12 @@ import {
 } from '@/pages/build/background/model/data'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Background5e, Feat5e } from '@/types/5etools'
+import type { Background5e, Feat5e, Spell5e } from '@/types/5etools'
 
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { backgrounds, feats } = useFilteredGameData()
+  const { backgrounds, feats, spells } = useFilteredGameData()
   const itemLookup = useGameDataStore((s) => s.itemLookup)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [bgSearch, setBgSearch] = useState('')
@@ -53,11 +55,13 @@ export function BuildBackgroundPage() {
     applyBackgroundSelection,
     applyBackgroundAbilityChoices,
     resolveFeatChoiceSelection,
+    commitFeatWithOptions,
     ledger,
   } = useProvenance()
   const selectedBackgroundRef = useRef<HTMLDivElement | null>(null)
   const [featModalOpen, setFeatModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
+  const [optionsPendingFeat, setOptionsPendingFeat] = useState<Feat5e | null>(null)
   const isInitialLoadRef = useRef(true)
   const previousSearchRef = useRef('')
 
@@ -193,6 +197,7 @@ export function BuildBackgroundPage() {
       resolveFeatChoiceSelection(activeFeatChoiceId, { name: feat.name, source: feat.source })
       setFeatModalOpen(false)
       setActiveFeatChoiceId(null)
+      if (hasFeatOptions(feat)) setOptionsPendingFeat(feat)
     },
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
@@ -606,6 +611,22 @@ export function BuildBackgroundPage() {
         initialFilters={featModalInitialFilters}
         allowIgnoreLimit={false}
       />
+
+      {optionsPendingFeat && (
+        <FeatOptionsModal
+          open={true}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setOptionsPendingFeat(null)
+          }}
+          feat={optionsPendingFeat}
+          proficientSkillNames={character?.proficiencies?.skills ?? []}
+          onFinish={(selections) => {
+            commitFeatWithOptions(optionsPendingFeat, selections, spells as Spell5e[])
+            setOptionsPendingFeat(null)
+          }}
+          onDismiss={() => setOptionsPendingFeat(null)}
+        />
+      )}
     </div>
   )
 }

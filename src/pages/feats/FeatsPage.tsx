@@ -1,6 +1,8 @@
 import {
+  ArrowRight,
   CaretDown,
   Lightning,
+  PencilSimple,
   Plus,
   Sparkle,
   Star,
@@ -8,7 +10,18 @@ import {
   WarningCircle,
 } from '@phosphor-icons/react'
 import { memo, useCallback, useMemo, useState } from 'react'
+import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,6 +29,7 @@ import { useProvenance } from '@/hooks/character/useProvenance'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
+import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
@@ -26,7 +40,8 @@ import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
 import { countTotalFeatSlots } from '@/pages/build/class/model/pageUtils'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Class5e, Feat5e, Raw5ePrereq } from '@/types/5etools'
+import type { Class5e, Feat5e, Raw5ePrereq, Spell5e } from '@/types/5etools'
+import type { FeatOptionSelections } from '@/types/character'
 import { NoCharCard } from '../_shared'
 
 interface FeatDetailCardProps {
@@ -34,10 +49,17 @@ interface FeatDetailCardProps {
   featData: Feat5e | undefined
   characterSnapshot: PrereqCharacterSnapshot
   onRemove?: (name: string) => void
+  onCompleteSetup?: (name: string) => void
+  /** Triggered when user clicks "Edit Setup" on a feat with existing options. */
+  onEditSetup?: (name: string) => void
   isBonus?: boolean
   isOrigin?: boolean
   /** Shows a "Granted by …" badge instead of the remove button. */
   grantedBy?: string
+  /** True when this feat requires option selections that haven't been made yet. */
+  optionsPending?: boolean
+  /** True when this feat has been configured and can be re-edited. */
+  optionsConfigured?: boolean
 }
 
 const FeatDetailCard = memo(function FeatDetailCard({
@@ -45,9 +67,13 @@ const FeatDetailCard = memo(function FeatDetailCard({
   featData,
   characterSnapshot,
   onRemove,
+  onCompleteSetup,
+  onEditSetup,
   isBonus,
   isOrigin,
   grantedBy,
+  optionsPending,
+  optionsConfigured,
 }: FeatDetailCardProps) {
   const [expanded, setExpanded] = useState(false)
   const categoryLabel =
@@ -177,6 +203,11 @@ const FeatDetailCard = memo(function FeatDetailCard({
                     Prereqs unmet
                   </Badge>
                 )}
+                {optionsPending && (
+                  <Badge className="text-xs px-1.5 py-0 h-5 bg-warning/10 text-warning border border-warning/30">
+                    Setup pending
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -209,6 +240,29 @@ const FeatDetailCard = memo(function FeatDetailCard({
                 {expanded ? 'Show less' : 'Show more'}
               </button>
             )}
+
+            {optionsPending && onCompleteSetup && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 h-7 text-xs gap-1.5 border-warning/40 text-warning hover:bg-warning/10 hover:border-warning/60"
+                onClick={() => onCompleteSetup(feat.name)}
+              >
+                Complete Setup
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            )}
+            {optionsConfigured && onEditSetup && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="mt-2 h-7 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                onClick={() => onEditSetup(feat.name)}
+              >
+                <PencilSimple className="h-3 w-3" />
+                Edit Setup
+              </Button>
+            )}
           </div>
 
           {onRemove && (
@@ -231,9 +285,24 @@ const FeatDetailCard = memo(function FeatDetailCard({
 export function FeatsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { feats, classes } = useFilteredGameData()
-  const { replaceFeatSelections, removeFeatChoiceSelection, ledger } = useProvenance()
+  const { feats, spells, classes } = useFilteredGameData()
+  const {
+    replaceFeatSelections,
+    removeFeatChoiceSelection,
+    commitFeatWithOptions,
+    editFeatWithOptions,
+    ledger,
+  } = useProvenance()
   const [bonusModalOpen, setBonusModalOpen] = useState(false)
+  const [featOptionsTarget, setFeatOptionsTarget] = useState<Feat5e | null>(null)
+  const [featEditCandidate, setFeatEditCandidate] = useState<{
+    feat5e: Feat5e
+    priorOptions: FeatOptionSelections
+  } | null>(null)
+  const [featEditTarget, setFeatEditTarget] = useState<{
+    feat5e: Feat5e
+    priorOptions: FeatOptionSelections
+  } | null>(null)
   const classLookup = useClassLookup()
 
   // ASI calculations for the warning banner (multiclass-aware)
@@ -402,12 +471,84 @@ export function FeatsPage() {
     [character, updateCharacter],
   )
 
+  // Open the options wizard for a feat that needs setup
+  const handleCompleteSetup = useCallback(
+    (featName: string) => {
+      const feat5e = (feats as Feat5e[]).find((f) => f.name === featName)
+      if (feat5e) setFeatOptionsTarget(feat5e)
+    },
+    [feats],
+  )
+
+  const handleFeatOptionsFinish = useCallback(
+    (selections: FeatOptionSelections) => {
+      if (!featOptionsTarget) return
+      commitFeatWithOptions(featOptionsTarget, selections, spells as Spell5e[])
+      setFeatOptionsTarget(null)
+    },
+    [featOptionsTarget, commitFeatWithOptions, spells],
+  )
+
+  // Open edit confirmation for a feat that already has options
+  const handleEditSetup = useCallback(
+    (featName: string) => {
+      const feat5e = (feats as Feat5e[]).find((f) => f.name === featName)
+      const existing = (character?.feats ?? []).find((f) => f.name === featName)
+      if (feat5e && existing?.options) {
+        setFeatEditCandidate({ feat5e, priorOptions: existing.options })
+      }
+    },
+    [feats, character?.feats],
+  )
+
+  const handleEditConfirm = useCallback(() => {
+    if (!featEditCandidate) return
+    setFeatEditTarget(featEditCandidate)
+    setFeatEditCandidate(null)
+  }, [featEditCandidate])
+
+  const handleEditFinish = useCallback(
+    (selections: FeatOptionSelections) => {
+      if (!featEditTarget) return
+      editFeatWithOptions(
+        featEditTarget.feat5e,
+        featEditTarget.priorOptions,
+        selections,
+        spells as Spell5e[],
+      )
+      setFeatEditTarget(null)
+    },
+    [featEditTarget, editFeatWithOptions, spells],
+  )
+
+  // Feats with option-requiring data but no selections yet
+  const pendingOptionFeatNames = useMemo(() => {
+    return new Set(
+      (character?.feats ?? [])
+        .filter((f) => {
+          if (f.options) return false
+          const data = (feats as Feat5e[]).find((fd) => fd.name === f.name)
+          return data ? hasFeatOptions(data) : false
+        })
+        .map((f) => f.name),
+    )
+  }, [character?.feats, feats])
+
+  const proficientSkillNames = useMemo(
+    () => character?.proficiencies?.skills ?? [],
+    [character?.proficiencies?.skills],
+  )
+
   if (!character) {
     return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />
   }
 
+  const pendingOptionCount = pendingOptionFeatNames.size
   const hasPendingWarnings =
-    remainingASI > 0 || pendingRacialChoices.length > 0 || pendingOriginChoices.length > 0
+    remainingASI > 0 ||
+    pendingRacialChoices.length > 0 ||
+    pendingOriginChoices.length > 0 ||
+    pendingOptionCount > 0
   return (
     <div>
       <div className="px-6 py-5 page-header-band mb-6">
@@ -469,6 +610,19 @@ export function FeatsPage() {
                 </div>
               </div>
             )}
+            {pendingOptionCount > 0 && (
+              <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 flex items-center gap-3">
+                <WarningCircle className="h-4 w-4 text-warning flex-shrink-0" weight="fill" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-warning">
+                    {pendingOptionCount} feat{pendingOptionCount !== 1 ? 's' : ''} need setup
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-2">
+                    Use the "Complete Setup" button on each feat below.
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -490,6 +644,8 @@ export function FeatsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {(character.feats ?? []).map((feat) => {
                   const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
+                  const isPending = pendingOptionFeatNames.has(feat.name)
+                  const isConfigured = !isPending && !!feat.options
                   return (
                     <FeatDetailCard
                       key={feat.id}
@@ -497,6 +653,10 @@ export function FeatsPage() {
                       featData={featData}
                       characterSnapshot={characterSnapshot}
                       onRemove={handleRemoveFeat}
+                      onCompleteSetup={isPending ? handleCompleteSetup : undefined}
+                      onEditSetup={isConfigured ? handleEditSetup : undefined}
+                      optionsPending={isPending}
+                      optionsConfigured={isConfigured}
                     />
                   )
                 })}
@@ -667,6 +827,57 @@ export function FeatsPage() {
           onConfirm={handleBonusModalConfirm}
           allowIgnoreLimit={false}
         />
+
+        {/* Feat options wizard — opened via "Complete Setup" on a pending feat */}
+        {featOptionsTarget && (
+          <FeatOptionsModal
+            open={true}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) setFeatOptionsTarget(null)
+            }}
+            feat={featOptionsTarget}
+            proficientSkillNames={proficientSkillNames}
+            onFinish={handleFeatOptionsFinish}
+            onDismiss={() => setFeatOptionsTarget(null)}
+          />
+        )}
+
+        {/* Edit Setup confirmation dialog */}
+        <AlertDialog
+          open={!!featEditCandidate}
+          onOpenChange={(open) => {
+            if (!open) setFeatEditCandidate(null)
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Edit feat setup?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Changing spell or proficiency selections may affect your prepared spells. Your
+                current choices will be replaced. Continue?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleEditConfirm}>Continue</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Feat options wizard — opened after confirming Edit Setup */}
+        {featEditTarget && (
+          <FeatOptionsModal
+            open={true}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) setFeatEditTarget(null)
+            }}
+            feat={featEditTarget.feat5e}
+            proficientSkillNames={proficientSkillNames}
+            initialSelections={featEditTarget.priorOptions}
+            onFinish={handleEditFinish}
+            onDismiss={() => setFeatEditTarget(null)}
+          />
+        )}
       </div>
     </div>
   )

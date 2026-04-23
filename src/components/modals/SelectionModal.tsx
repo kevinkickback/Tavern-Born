@@ -80,6 +80,12 @@ export interface SelectionModalProps<T> {
   categories?: CategoryLimit<T>[]
   /** Override the default selection guard. Return false to block adding the item. */
   canSelect?: (item: T, selectedIds: Set<string>, allItems: T[]) => boolean
+  /**
+   * When true, clicking an at-limit item auto-deselects the earliest normal selection to make
+   * room — instead of showing a blocked-state toast. Items that would normally be greyed out
+   * still appear enabled so the user can click to swap directly.
+   */
+  swapOnLimit?: boolean
   /** IDs that are pre-selected when the dialog opens. Re-evaluated on every open. */
   initialSelectedIds?: string[]
   /** Active filter state to pre-apply when the dialog opens (e.g. level checkboxes). */
@@ -115,6 +121,7 @@ function SelectionModalInner<T>({
   filterSections = [],
   categories = [],
   canSelect,
+  swapOnLimit = false,
   initialSelectedIds = [],
   initialFilters,
   onConfirm,
@@ -174,6 +181,19 @@ function SelectionModalInner<T>({
       const id = getItemId(item)
       const alreadySelected = selectedIds.has(id)
       if (!alreadySelected && !checkCanSelect(item)) {
+        if (swapOnLimit) {
+          // Auto-deselect the first blocking selection and add the new item.
+          setSelectedIds((prev) => {
+            const next = new Set(prev)
+            for (const sid of next) {
+              next.delete(sid)
+              break
+            }
+            next.add(id)
+            return next
+          })
+          return
+        }
         toast.warning('Selection limit reached for this category.')
         return
       }
@@ -184,7 +204,7 @@ function SelectionModalInner<T>({
         return next
       })
     },
-    [getItemId, selectedIds, checkCanSelect],
+    [getItemId, selectedIds, checkCanSelect, swapOnLimit],
   )
 
   const handleCheckbox = useCallback(
@@ -376,7 +396,7 @@ function SelectionModalInner<T>({
               visibleItems.map((item) => {
                 const id = getItemId(item)
                 const isSelected = selectedIds.has(id)
-                const canSel = isSelected || checkCanSelect(item)
+                const canSel = isSelected || checkCanSelect(item) || swapOnLimit
                 return (
                   <button
                     key={id}

@@ -104,6 +104,8 @@ export interface FeatSelectionModalProps {
   initialFilters?: ActiveFilters
   /** When false, hides the "Ignore selection limit" switch (e.g. on BuildClassPage). Defaults to true. */
   allowIgnoreLimit?: boolean
+  /** When true, clicking an at-limit feat auto-swaps it with the current selection. Defaults to true. */
+  swapOnLimit?: boolean
   onConfirm: (selectedFeats: Feat5e[]) => void
 }
 
@@ -117,6 +119,7 @@ export function FeatSelectionModal({
   characterSnapshot,
   initialFilters,
   allowIgnoreLimit = true,
+  swapOnLimit = true,
   onConfirm,
 }: FeatSelectionModalProps) {
   const featCategoryOptions = useMemo(() => {
@@ -276,6 +279,7 @@ export function FeatSelectionModal({
       filterSections={filterSections}
       categories={categories}
       canSelect={canSelect}
+      swapOnLimit={swapOnLimit}
       initialSelectedIds={initialSelectedIds}
       initialFilters={initialFilters}
       onConfirm={(_ids, items) => onConfirm(items)}

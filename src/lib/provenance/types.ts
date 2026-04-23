@@ -26,6 +26,7 @@ export type ChoiceDomain =
   | 'feats'
   | 'abilityBonuses'
   | 'equipment'
+  | 'featOptions'
 
 /** Attribution metadata attached to a single granted item. */
 export interface SourceTag {

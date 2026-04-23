@@ -30,7 +30,7 @@ describe('safeEvalArithmetic', () => {
     test('round rounds to nearest', () => expect(safeEvalArithmetic('round(2.5)')).toBe(3))
     test('floor of negative', () => expect(safeEvalArithmetic('floor(-1/2)')).toBe(-1))
     test('floor in larger expression', () => expect(safeEvalArithmetic('floor(5/2)+1')).toBe(3))
-    test('nested floor(ceil(...))', () => expect(safeEvalArithmetic('floor(ceil(1.2))')).toBe(1))
+    test('nested floor(ceil(...))', () => expect(safeEvalArithmetic('floor(ceil(1.2))')).toBe(2))
     test('multiple functions in one expression', () =>
       expect(safeEvalArithmetic('floor(7/2)+ceil(3/2)')).toBe(5))
   })

@@ -118,51 +118,51 @@ describe('useClassResources', () => {
   })
 
   test('updateCurrent clamps value to [0, max]', () => {
-    const character = seedFighterCharacter(1)
+    seedFighterCharacter(1)
     const { result } = renderHook(() => useClassResources())
 
     act(() => {
       result.current.updateCurrent('fighter-second-wind', 999)
     })
 
-    const updated = useCharacterStore.getState().characters.find((c) => c.id === character.id)
+    const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.classResources?.['fighter-second-wind']).toBe(1) // clamped to max
   })
 
   test('updateCurrent clamps negative values to 0', () => {
-    const character = seedFighterCharacter(1)
+    seedFighterCharacter(1)
     const { result } = renderHook(() => useClassResources())
 
     act(() => {
       result.current.updateCurrent('fighter-second-wind', -5)
     })
 
-    const updated = useCharacterStore.getState().characters.find((c) => c.id === character.id)
+    const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.classResources?.['fighter-second-wind']).toBe(0)
   })
 
   test('updateCurrent is a no-op for unknown resource id', () => {
-    const character = seedFighterCharacter(1)
+    seedFighterCharacter(1)
     const { result } = renderHook(() => useClassResources())
 
-    const before = useCharacterStore.getState().characters.find((c) => c.id === character.id)
+    const before = useCharacterStore.getState().activeCharacter?.classResources
     act(() => {
       result.current.updateCurrent('nonexistent-resource', 1)
     })
-    const after = useCharacterStore.getState().characters.find((c) => c.id === character.id)
+    const after = useCharacterStore.getState().activeCharacter?.classResources
 
-    expect(after?.classResources).toEqual(before?.classResources)
+    expect(after).toEqual(before)
   })
 
   test('resetResource restores resource to its max', () => {
-    const character = seedFighterCharacter(1, { 'fighter-second-wind': 0 })
+    seedFighterCharacter(1, { 'fighter-second-wind': 0 })
     const { result } = renderHook(() => useClassResources())
 
     act(() => {
       result.current.resetResource('fighter-second-wind')
     })
 
-    const updated = useCharacterStore.getState().characters.find((c) => c.id === character.id)
+    const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.classResources?.['fighter-second-wind']).toBe(1)
   })
 

@@ -10,6 +10,7 @@ import {
   Star,
 } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import type { ActiveFilters } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
@@ -27,6 +28,7 @@ import {
 import { useProvenance } from '@/hooks/character/useProvenance'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
+import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
@@ -45,7 +47,7 @@ import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Feat5e, Race5e } from '@/types/5etools'
+import type { Feat5e, Race5e, Spell5e } from '@/types/5etools'
 
 export function BuildRacePage() {
   const character = useCharacterStore((s) => {
@@ -54,13 +56,19 @@ export function BuildRacePage() {
     return s.characters.find((c) => c.id === s.activeCharacterId) ?? null
   })
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { races, feats } = useFilteredGameData()
-  const { applyRaceSelection, applySubraceChange, resolveFeatChoiceSelection, ledger } =
-    useProvenance()
+  const { races, feats, spells } = useFilteredGameData()
+  const {
+    applyRaceSelection,
+    applySubraceChange,
+    resolveFeatChoiceSelection,
+    commitFeatWithOptions,
+    ledger,
+  } = useProvenance()
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [raceSearch, setRaceSearch] = useState('')
   const [featModalOpen, setFeatModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
+  const [optionsPendingFeat, setOptionsPendingFeat] = useState<Feat5e | null>(null)
   const selectedRaceRef = useRef<HTMLDivElement | null>(null)
   const isInitialLoadRef = useRef(true)
   const previousSearchRef = useRef('')
@@ -208,6 +216,7 @@ export function BuildRacePage() {
       resolveFeatChoiceSelection(activeFeatChoiceId, { name: feat.name, source: feat.source })
       setFeatModalOpen(false)
       setActiveFeatChoiceId(null)
+      if (hasFeatOptions(feat)) setOptionsPendingFeat(feat)
     },
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
@@ -610,6 +619,22 @@ export function BuildRacePage() {
         initialFilters={featModalInitialFilters}
         allowIgnoreLimit={false}
       />
+
+      {optionsPendingFeat && (
+        <FeatOptionsModal
+          open={true}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setOptionsPendingFeat(null)
+          }}
+          feat={optionsPendingFeat}
+          proficientSkillNames={character?.proficiencies?.skills ?? []}
+          onFinish={(selections) => {
+            commitFeatWithOptions(optionsPendingFeat, selections, spells as Spell5e[])
+            setOptionsPendingFeat(null)
+          }}
+          onDismiss={() => setOptionsPendingFeat(null)}
+        />
+      )}
     </div>
   )
 }
