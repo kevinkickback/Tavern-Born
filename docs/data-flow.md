@@ -175,6 +175,32 @@ Example breaking change requiring migration:
 See docs/contributor-start-here.md for schema migration guidelines.
 
 
+## 7) Auto-Update Lifecycle
+
+Entry points:
+- electron/updateManager.ts
+- electron/main.ts (IPC handler registration)
+- src/components/settings/GeneralPanel.tsx
+- src/components/updates/ChangelogModal.tsx
+- src/components/updates/UpdateProgressModal.tsx
+
+Flow:
+1. On app startup (3s delay) and every 24 hours, `updateManager` calls electron-updater's `checkForUpdates()` when auto-update is enabled.
+2. Renderer receives `onUpdateAvailable` event and shows an update-available notification.
+3. User confirms download; `update:download` IPC triggers the download. `onDownloadProgress` events relay percentage, bytes/sec, and total/transferred to the renderer.
+4. When download completes, `onUpdateDownloaded` fires and `UpdateProgressModal` starts a 3-second countdown before calling `update:install`.
+5. `electron-updater` quits and relaunches the app to apply the update.
+6. User can cancel an in-progress download via `update:cancel`; the modal resets.
+7. Changelog data is fetched from GitHub releases API and displayed in `ChangelogModal`.
+8. The `autoUpdate` preference is persisted in `appPreferencesStore` and toggled in Settings → General → Updates.
+
+Portable executable behavior:
+- In portable mode, auto-install is disabled; users download a new portable archive manually.
+- `updateManager` detects portable mode and adjusts behavior accordingly.
+
+IPC channels:
+- `update:check`, `update:download`, `update:cancel`, `update:install`, `update:status`, `update:set-auto-check`, `update:get-version`, `update:get-current-changelog`
+
 ## Data Flow Invariants
 
 - Mutable runtime state is persisted; pure derived values are computed on demand.

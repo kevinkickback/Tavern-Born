@@ -49,7 +49,7 @@ This guide is the fastest path to make safe changes in Tavern-Born.
 When making **breaking changes** to the character data format:
 
 1. **Understand the migration system**: See `src/lib/schema/migrations.ts` and `docs/data-flow.md`.
-2. **Increment `CURRENT_SCHEMA_VERSION`** in migrations.ts (currently v1).
+2. **Increment `CURRENT_SCHEMA_VERSION`** in migrations.ts (currently v2).
 3. **Implement migration handler**:
    ```typescript
    registerMigration({
