@@ -61,6 +61,8 @@ Key scripts in package.json:
 
 1. **Corrupted character recovery**: Import of invalid/schema-mismatched characters beyond the valid+invalid payload cases already covered.
 2. **SpellProfileManager decomposition**: Large component (~783 lines); defer until next feature touch.
+3. **FeatOptionsModal**: Multi-step feat-options wizard (~682 lines) has no dedicated test coverage. Add unit tests for step generation and selection persistence when next touched.
+4. **Auto-update flow**: electron/updateManager.ts has no unit tests. Key logic to cover: portable detection, event forwarding, cancel-in-flight guard.
 
 ## Test Coverage by Layer
 

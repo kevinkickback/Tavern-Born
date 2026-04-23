@@ -107,6 +107,17 @@ Settings and source configuration:
 Electron integration:
 - electron/main.ts
 - electron/preload.ts
+- electron/updateManager.ts — auto-update lifecycle (check/download/install/cancel via electron-updater)
+- electron/windowState.ts — persist and restore window bounds/maximized state
+
+Auto-update UI:
+- src/components/updates/ChangelogModal.tsx — GitHub release notes modal
+- src/components/updates/UpdateProgressModal.tsx — download progress + install countdown
+- src/components/settings/GeneralPanel.tsx — Settings panel for manual check and auto-update toggle
+
+Feat options wizard:
+- src/components/modals/FeatOptionsModal.tsx — multi-step wizard for feats with player choices
+- src/lib/5etools/parsers/featOptions.ts — derive step definitions from feat data
 
 ## Fast Navigation Sequence
 

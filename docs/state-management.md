@@ -18,8 +18,8 @@ This document defines state ownership, mutation rules, and persistence behavior.
 
 3. App preferences store
 - File: src/store/appPreferencesStore.ts
-- Owns: theme selection and home card size. Theme is configured in Settings; card size is configured via the slider on the home page.
-- Primary write API: store setter methods (`setThemeAccent`, `setThemeAppearance`, `setHomeCardSize`).
+- Owns: theme selection, home card size, auto-update enabled toggle, and other UI preferences. Theme is configured in Settings; card size is configured via the slider on the home page; auto-update toggle is in Settings → General → Updates.
+- Primary write API: store setter methods (`setThemeAccent`, `setThemeAppearance`, `setHomeCardSize`, `setAutoUpdate`).
 
 ## Persistence
 
@@ -59,6 +59,7 @@ Stored examples (mutable runtime):
 - selected background equipment options per block (`backgroundEquipmentChoices`)
 - selected class equipment option per class source (`classEquipmentChoices`)
 - race-applied trait state (`visions`, `damageResistances`, `damageImmunities`, `conditionImmunities`)
+- session state: `inspiration`, `deathSaves`, `conditions`, `exhaustion`, `hitDiceUsed`, `ritualCasting`, `classResources`
 
 Derived examples (do not store as canonical):
 - proficiency bonus

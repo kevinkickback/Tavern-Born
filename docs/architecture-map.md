@@ -5,8 +5,8 @@ This document describes the current Tavern-Born runtime architecture and where r
 ## Layered Architecture
 
 1. Electron host layer
-- Purpose: native window lifecycle, secure IPC bridge, filesystem access for local data source.
-- Key files: electron/main.ts, electron/preload.ts.
+- Purpose: native window lifecycle, secure IPC bridge, filesystem access for local data source, auto-update management.
+- Key files: electron/main.ts, electron/preload.ts, electron/updateManager.ts, electron/windowState.ts.
 
 2. Application shell and routing
 - Purpose: route composition, global providers, app-level overlays.
@@ -38,12 +38,24 @@ Spellcasting note:
 
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.
-- Key files: src/pages/*, src/components/*, src/pages/build/ability-scores/model/data.ts, src/pages/build/class/model/pageUtils.ts, src/pages/build/class/model/asi.ts, src/pages/build/class/model/levelsUtils.ts, src/lib/character/commands/classCommands.ts, src/lib/character/commands/classSelectionOrchestrationCommand.ts, src/hooks/character/useUnifiedClassSelection.ts, src/pages/build/proficiencies/model/data.ts, src/pages/build/proficiencies/model/types.ts, src/pages/build/background/model/data.ts, src/pages/build/ability-scores/components/MethodPanels.tsx, src/pages/build/ability-scores/components/DetailsPanel.tsx, src/pages/build/ability-scores/components/RacialBonusesPanel.tsx, src/pages/build/class/components/AsiSection.tsx, src/pages/build/class/components/SpellSection.tsx, src/pages/build/class/components/SubclassSection.tsx, src/pages/build/class/components/PassiveFeatureList.tsx, src/pages/build/class/components/ProgressionChoiceCard.tsx, src/pages/build/proficiencies/components/DetailsPanel.tsx, src/pages/build/proficiencies/components/TabsPanel.tsx, src/pages/build/background/components/DetailsPanel.tsx, src/pages/compendium/CompendiumPage.tsx, src/pages/compendium/CompendiumEntryDetails.tsx, src/lib/compendiumEntries.ts.
+- Key files: src/pages/*, src/components/*, src/pages/build/ability-scores/model/data.ts, src/pages/build/class/model/pageUtils.ts, src/pages/build/class/model/asi.ts, src/pages/build/class/model/levelsUtils.ts, src/lib/character/commands/classCommands.ts, src/lib/character/commands/classSelectionOrchestrationCommand.ts, src/hooks/character/useUnifiedClassSelection.ts, src/pages/build/proficiencies/model/data.ts, src/pages/build/proficiencies/model/types.ts, src/pages/build/background/model/data.ts, src/pages/build/ability-scores/components/MethodPanels.tsx, src/pages/build/ability-scores/components/DetailsPanel.tsx, src/pages/build/ability-scores/components/RacialBonusesPanel.tsx, src/pages/build/class/components/AsiSection.tsx, src/pages/build/class/components/SpellSection.tsx, src/pages/build/class/components/SubclassSection.tsx, src/pages/build/class/components/PassiveFeatureList.tsx, src/pages/build/class/components/ProgressionChoiceCard.tsx, src/pages/build/proficiencies/components/DetailsPanel.tsx, src/pages/build/proficiencies/components/TabsPanel.tsx, src/pages/build/background/components/DetailsPanel.tsx, src/pages/compendium/CompendiumPage.tsx, src/pages/compendium/CompendiumEntryDetails.tsx, src/lib/compendiumEntries.ts, src/components/modals/FeatOptionsModal.tsx, src/components/updates/ChangelogModal.tsx, src/components/updates/UpdateProgressModal.tsx.
 
 Current implementation notes:
 - Spell and class mutation flows are now command-backed at the domain layer.
 - Class-page orchestration runs through shared command helpers.
 - AC reads across UI and PDF surfaces are aligned on effective AC resolution.
+
+Auto-update note:
+- `electron/updateManager.ts` manages the full electron-updater lifecycle (check, download, install, cancel).
+- Update checking runs on startup (3s delay) and every 24 hours when auto-update is enabled.
+- `src/components/updates/ChangelogModal.tsx` shows GitHub release notes; `src/components/updates/UpdateProgressModal.tsx` shows download progress with a 3-second install countdown.
+- The `autoUpdate` toggle is persisted in `appPreferencesStore`.
+
+Feat options note:
+- `src/components/modals/FeatOptionsModal.tsx` is a multi-step wizard for feats with optional player choices (spell picks, proficiency selections, ability score bonuses, optional features, expertise).
+- Steps are generated dynamically from the feat's `additionalSpells` and option blocks; dynamic steps are injected after the user chooses a spellcasting class.
+- Completed selections are persisted on `character.feats[].options` as `FeatOptionSelections`.
+- Parsing support lives in `src/lib/5etools/parsers/featOptions.ts`.
 
 Character sheet PDF note:
 - Route src/pages/CharacterSheetPage.tsx renders the PDF preview/download workflow.
