@@ -255,26 +255,28 @@ export function HomePage() {
                   </span>
                 </div>
 
-                {/* Toolbar — New Character + Import */}
-                <div className="px-4 pt-3 pb-1 flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    className="h-8 text-xs gap-1.5 bg-accent hover:bg-accent/90"
-                    onClick={() => setShowCreateWizard(true)}
-                  >
-                    <Plus size={13} />
-                    New Character
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs gap-1.5"
-                    onClick={handleImportCharacter}
-                  >
-                    <Upload size={13} />
-                    Import
-                  </Button>
-                </div>
+                {/* Toolbar — New Character + Import (hidden in empty state; buttons are there instead) */}
+                {characters.length > 0 && (
+                  <div className="px-4 pt-3 pb-1 flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs gap-1.5 bg-accent hover:bg-accent/90"
+                      onClick={() => setShowCreateWizard(true)}
+                    >
+                      <Plus size={13} />
+                      New Character
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs gap-1.5"
+                      onClick={handleImportCharacter}
+                    >
+                      <Upload size={13} />
+                      Import
+                    </Button>
+                  </div>
+                )}
 
                 {/* Selection banner */}
                 {selectionMode && (
@@ -316,6 +318,14 @@ export function HomePage() {
                       </div>
                       <div className="flex gap-3">
                         <Button
+                          size="sm"
+                          className="gap-1.5 bg-accent hover:bg-accent/90"
+                          onClick={() => setShowCreateWizard(true)}
+                        >
+                          <Plus size={15} />
+                          New Character
+                        </Button>
+                        <Button
                           variant="outline"
                           size="sm"
                           className="gap-1.5"
@@ -323,14 +333,6 @@ export function HomePage() {
                         >
                           <Upload size={15} />
                           Import
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="gap-1.5 bg-accent hover:bg-accent/90"
-                          onClick={() => setShowCreateWizard(true)}
-                        >
-                          <Plus size={15} />
-                          New Character
                         </Button>
                       </div>
                     </div>

@@ -1,5 +1,6 @@
 import { Warning } from '@phosphor-icons/react'
 import { memo, useCallback, useMemo, useRef } from 'react'
+import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import {
   type ActiveFilters,
   type CategoryLimit,
@@ -7,14 +8,15 @@ import {
   SelectionModal,
 } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
+import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { extractUniqueFeatCategories } from '@/lib/5etools/filters'
 import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
-import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
+import type { RecursiveLookup } from '@/pages/spells/components/spellTooltipUtils'
 import type { Feat5e } from '@/types/5etools'
 
 interface FeatCardProps {
@@ -22,6 +24,7 @@ interface FeatCardProps {
   isSelected: boolean
   prereqMet: boolean
   prereqReasons: string[]
+  recursiveLookup: RecursiveLookup
 }
 
 const FeatCard = memo(function FeatCard({
@@ -29,9 +32,9 @@ const FeatCard = memo(function FeatCard({
   isSelected,
   prereqMet,
   prereqReasons,
+  recursiveLookup,
 }: FeatCardProps) {
   const firstEntry = feat.entries?.[0]
-  const descHtml = firstEntry ? renderEntryCached(firstEntry) : ''
   const categoryLabel =
     typeof feat.category === 'string' && feat.category.length > 0
       ? featCategoryToFull(feat.category)
@@ -72,15 +75,14 @@ const FeatCard = memo(function FeatCard({
         </div>
       )}
 
-      {descHtml && (
-        <div
+      {firstEntry != null && (
+        <RenderedEntryWithTooltip
+          entry={firstEntry}
           className={cn(
             'text-sm text-muted-foreground line-clamp-3 leading-snug',
             !prereqMet && !isSelected && 'opacity-70',
           )}
-          // renderEntry outputs safe HTML from structured 5etools entries.
-          // eslint-disable-next-line react/no-danger
-          dangerouslySetInnerHTML={{ __html: descHtml }}
+          recursiveLookup={recursiveLookup}
         />
       )}
     </div>
@@ -122,6 +124,8 @@ export function FeatSelectionModal({
   swapOnLimit = true,
   onConfirm,
 }: FeatSelectionModalProps) {
+  const recursiveLookup = useRecursiveLookup()
+
   const featCategoryOptions = useMemo(() => {
     return extractUniqueFeatCategories(feats)
       .map((code) => ({
@@ -261,10 +265,11 @@ export function FeatSelectionModal({
           isSelected={isSelected}
           prereqMet={prereq.met}
           prereqReasons={prereq.reasons}
+          recursiveLookup={recursiveLookup}
         />
       )
     },
-    [prereqMap],
+    [prereqMap, recursiveLookup],
   )
 
   return (

@@ -120,7 +120,7 @@ const MPMB_BUTTON_KEEP_PATTERNS = [
 ]
 
 const AMMO_CHECKBOX_PATTERN = /^Ammo(Left|Right)\.(Top|Base|Bullet|Icon)\./
-const CALCULATED_FIELDS = ['AC', 'Proficiency Bonus'] as const
+const CALCULATED_FIELDS = ['AC', 'Proficiency Bonus', 'HP Max'] as const
 
 function getLevel(character: Character): number {
   if (Array.isArray(character.classProgression) && character.classProgression.length > 0) {
@@ -285,7 +285,7 @@ function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
 
   const textFields: Record<string, string> = {
     'PC Name': character.name || '',
-    'Player Name': '',
+    'Player Name': character.details.playerName || '',
     'Class and Levels': getClassLevelSummary(character),
     'Character Level': String(values.level),
     Race: getRaceSummary(character),
@@ -300,6 +300,8 @@ function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
     'HP Max': String(character.hitPoints.max || ''),
     'HP Current': String(character.hitPoints.current || ''),
     'HP Temp': String(character.hitPoints.temporary || ''),
+    'Total Experience': String(character.experiencePoints || ''),
+    Sex: character.details.gender || '',
     Height: character.details.height || '',
     Weight: character.details.weight || '',
     Alignment: character.details.alignment || '',
@@ -325,7 +327,15 @@ function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
     textFields[mapping.modifier] = formatModifier(values.abilityModifiers[ability])
   }
 
-  const checkboxFields: Record<string, boolean> = {}
+  const checkboxFields: Record<string, boolean> = {
+    Inspiration: !!character.inspiration,
+    'Death Save Success1': (character.deathSaves?.successes ?? 0) >= 1,
+    'Death Save Success2': (character.deathSaves?.successes ?? 0) >= 2,
+    'Death Save Success3': (character.deathSaves?.successes ?? 0) >= 3,
+    'Death Save Fail1': (character.deathSaves?.failures ?? 0) >= 1,
+    'Death Save Fail2': (character.deathSaves?.failures ?? 0) >= 2,
+    'Death Save Fail3': (character.deathSaves?.failures ?? 0) >= 3,
+  }
 
   for (const [ability, mapping] of Object.entries(MPMB_2014_SAVE_FIELD_MAP) as Array<
     [AbilityName, { modifier: string; proficiency: string }]
