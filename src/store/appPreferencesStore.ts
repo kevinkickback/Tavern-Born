@@ -34,7 +34,7 @@ function normalizeAccentTheme(value: string): AccentTheme {
 function normalizeAppearanceTheme(value: string): AppearanceTheme {
   return (APPEARANCE_THEMES as readonly string[]).includes(value)
     ? (value as AppearanceTheme)
-    : 'light'
+    : 'dark'
 }
 
 interface AppPreferencesState {

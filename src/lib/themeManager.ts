@@ -31,9 +31,9 @@ export function getStoredAccentTheme(): AccentTheme {
 export function getStoredAppearanceTheme(): AppearanceTheme {
   try {
     const storedAppearance = localStorage.getItem(APPEARANCE_STORAGE_KEY)
-    return storedAppearance && isAppearanceTheme(storedAppearance) ? storedAppearance : 'light'
+    return storedAppearance && isAppearanceTheme(storedAppearance) ? storedAppearance : 'dark'
   } catch {
-    return 'light'
+    return 'dark'
   }
 }
 
