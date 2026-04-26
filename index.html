@@ -33,12 +33,24 @@
       --tb-loader-track: rgba(243, 244, 246, 0.12);
     }
 
-    :root[data-accent="blue"]   { --tb-loader-bar: rgba(0, 144, 255, 0.70); }
-    :root[data-accent="violet"] { --tb-loader-bar: rgba(110, 100, 255, 0.70); }
-    :root[data-accent="green"]  { --tb-loader-bar: rgba(48, 164, 108, 0.70); }
-    :root[data-accent="rose"]   { --tb-loader-bar: rgba(236, 72, 153, 0.70); }
+    :root[data-accent="blue"] {
+      --tb-loader-bar: rgba(0, 144, 255, 0.70);
+    }
 
-    html, body {
+    :root[data-accent="violet"] {
+      --tb-loader-bar: rgba(110, 100, 255, 0.70);
+    }
+
+    :root[data-accent="green"] {
+      --tb-loader-bar: rgba(48, 164, 108, 0.70);
+    }
+
+    :root[data-accent="rose"] {
+      --tb-loader-bar: rgba(236, 72, 153, 0.70);
+    }
+
+    html,
+    body {
       margin: 0;
       min-height: 100%;
       background: var(--tb-loader-bg);
@@ -127,8 +139,13 @@
     }
 
     @keyframes tb-loader-indeterminate {
-      0%   { transform: translateX(-150%); }
-      100% { transform: translateX(400%); }
+      0% {
+        transform: translateX(-150%);
+      }
+
+      100% {
+        transform: translateX(400%);
+      }
     }
   </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">

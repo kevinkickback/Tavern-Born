@@ -78,13 +78,37 @@ function toPlainText(html: string): string {
     .trim()
 }
 
+function getArmorStatSummary(item: Item5e): string {
+  const typeCode = String(item.type ?? '')
+    .split('|')[0]
+    .toUpperCase()
+  const parts: string[] = []
+
+  if (typeCode === 'S' && item.ac !== undefined) {
+    parts.push(`Shield — +${item.ac} to AC while wielded.`)
+  } else if (typeCode === 'LA' && item.ac !== undefined) {
+    parts.push(`Light Armor — AC ${item.ac} + Dex modifier.`)
+  } else if (typeCode === 'MA' && item.ac !== undefined) {
+    parts.push(`Medium Armor — AC ${item.ac} + Dex modifier (max +2).`)
+  } else if (typeCode === 'HA' && item.ac !== undefined) {
+    parts.push(`Heavy Armor — AC ${item.ac}.`)
+  }
+
+  if (item.strength) parts.push(`Requires Strength ${item.strength}.`)
+  if (item.stealth) parts.push('Disadvantage on Stealth checks.')
+
+  return parts.join(' ')
+}
+
 function getItemDescription(item: Item5e): string {
   const entries = Array.isArray(item.entries) ? item.entries : []
-  if (entries.length === 0) return ''
+  if (entries.length > 0) {
+    const rendered = renderEntryCached(entries[0])
+    const plain = toPlainText(rendered)
+    return plain.length > 180 ? `${plain.slice(0, 177)}...` : plain
+  }
 
-  const rendered = renderEntryCached(entries[0])
-  const plain = toPlainText(rendered)
-  return plain.length > 180 ? `${plain.slice(0, 177)}...` : plain
+  return getArmorStatSummary(item)
 }
 
 function getPropertyLabel(tag: string): string {

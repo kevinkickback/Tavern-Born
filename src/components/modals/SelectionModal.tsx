@@ -475,27 +475,16 @@ function SelectionModalInner<T>({
 }
 
 // The Dialog wrapper is separate so DialogContent is always in the tree for
-// Radix animations. The inner content remounts on every open via `key` to give
-// fresh state without needing effect-based resets.
+// Radix animations. key={open} on the inner component remounts it with fresh
+// state each time the dialog opens, without an effect or counter.
 
 export function SelectionModal<T>(props: SelectionModalProps<T>) {
   const { open, onOpenChange, ...rest } = props
 
-  // Increment each time the dialog opens — forces SelectionModalInner to
-  // remount with fresh state while keeping the Dialog/DialogContent mounted
-  // for close animations.
-  const [mountKey, setMountKey] = useState(0)
-
-  useEffect(() => {
-    if (open) {
-      setMountKey((k) => k + 1)
-    }
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps — only track open transitions
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex flex-col gap-0 p-0 overflow-hidden max-h-[90vh] sm:max-w-5xl w-full">
-        <SelectionModalInner key={mountKey} {...rest} onClose={() => onOpenChange(false)} />
+        <SelectionModalInner key={String(open)} {...rest} onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>
   )

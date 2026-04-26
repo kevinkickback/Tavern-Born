@@ -105,6 +105,9 @@ export function useEquipment(): EquipmentState {
         properties: item5e.property,
         range: item5e.range,
         source: item5e.source,
+        wondrous: item5e.wondrous,
+        tattoo: item5e.tattoo,
+        focus: item5e.focus,
       }
       patchEquipment([...equipment, newItem])
     },

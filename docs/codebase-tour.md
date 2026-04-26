@@ -45,17 +45,31 @@ Game data load and cache:
 - src/lib/5etools/sourceFallbacks.ts
 - src/lib/5etools/index.ts
 
-Game rules and derived calculations:
-- src/lib/calculations/*
-- src/lib/characterUtils.ts
+Game rules and derived calculations (search here before adding new logic):
+- src/lib/calculations/skills.ts — skill modifier math, proficiency application
+- src/lib/calculations/abilityScores.ts — ability modifiers, ASI grants, background ability data
+- src/lib/calculations/gameRules.ts — proficiency bonus, level rules
+- src/lib/calculations/prerequisites.ts — feat/feature prerequisite checks
+- src/lib/calculations/spellSlots.ts — multiclass slot derivation
+- src/lib/calculations/armorClass.ts — AC computation
+- src/lib/calculations/itemEquippable.ts — isEquippable() predicate (type codes + wondrous/tattoo/focus flags)
+- src/lib/calculations/raceUtils.ts — race ASI and trait helpers
+- src/lib/characterUtils.ts — cross-cutting character helpers
 - src/lib/character/ids.ts — generateEquipmentId() for all equipment item ID creation
 
 Provenance and source attribution:
-- src/lib/provenance/*
-- src/components/provenance/*
-- src/hooks/character/useProvenance.ts
-- src/hooks/character/useProvenanceMutations.ts
-- src/hooks/character/useProvenanceRows.ts
+- src/lib/provenance/* — pure grant/reconciliation logic
+- src/components/provenance/* — provenance UI (ledger display)
+- src/hooks/character/useProvenance.ts — public hook (aggregates mutations + rows)
+- src/hooks/character/useProvenanceMutations.ts — thin aggregator; delegates to domain hooks
+- src/hooks/character/useRaceProvenance.ts — race and subrace grant mutations
+- src/hooks/character/useClassProvenance.ts — class selection and equipment mutations
+- src/hooks/character/useBackgroundProvenance.ts — background and ability score mutations
+- src/hooks/character/useSpellProvenance.ts — spell grant/swap/remove mutations
+- src/hooks/character/useFeatProvenance.ts — feat selection, options, choice resolution
+- src/hooks/character/useEquipmentProvenance.ts — manual equipment and proficiency toggles
+- src/hooks/character/provenanceHelpers.ts — shared pure helpers (extractFixedGrantNames, upsertGrantedEquipment, removeSourceGrantedEquipment)
+- src/hooks/character/useProvenanceRows.ts — ledger row derivation for the UI
 - src/lib/provenance/sectionRows.ts
 
 Build flow orchestration helpers:

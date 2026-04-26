@@ -13,7 +13,7 @@ import {
   startAutoCheckSchedule,
   stopAutoCheckSchedule,
 } from './updateManager'
-import { attachWindowStatePersistence, loadWindowState } from './windowState'
+import { attachWindowStatePersistence, loadWindowState, MIN_HEIGHT, MIN_WIDTH } from './windowState'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -37,11 +37,12 @@ async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
     width: windowState.width,
     height: windowState.height,
+    useContentSize: true,
     center: windowState.x === undefined || windowState.y === undefined,
     ...(windowState.x !== undefined ? { x: windowState.x } : {}),
     ...(windowState.y !== undefined ? { y: windowState.y } : {}),
-    minWidth: 900,
-    minHeight: 600,
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
     backgroundColor: '#111113',
     webPreferences: {
       preload: join(__dirname, 'preload.mjs'),

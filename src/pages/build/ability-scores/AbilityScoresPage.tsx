@@ -52,6 +52,8 @@ import {
 import { useCharacterStore } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 
+const EMPTY_RACE_ASI_CHOICES: string[][] = []
+
 export function BuildAbilityScoresPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
@@ -81,7 +83,7 @@ export function BuildAbilityScoresPage() {
     normalizedRaceSelection.subrace,
     raceAsiBlockIndex,
   )
-  const raceAsiChoices: string[][] = character?.raceAsiChoices ?? []
+  const raceAsiChoices: string[][] = character?.raceAsiChoices ?? EMPTY_RACE_ASI_CHOICES
   const isLineageRaceAsiFallback = hasFlexibleRaceOriginAsi(normalizedRaceSelection.race)
   const hasDataDrivenRacialBonuses = raceAsiData.fixed.length > 0 || raceAsiData.choices.length > 0
 

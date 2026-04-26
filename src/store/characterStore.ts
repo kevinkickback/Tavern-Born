@@ -76,49 +76,6 @@ export function normalizeCharacterProvenance(character: Character): Character {
   return { ...character, provenance: emptyProvenance() }
 }
 
-/**
- * Deep equality check that compares two objects structurally.
- * Handles nested objects, arrays, and primitive values.
- * More robust than JSON.stringify for property-order-insensitive comparison.
- */
-function deepEquals(a: unknown, b: unknown): boolean {
-  // Handle primitives and null/undefined
-  if (a === b) return true
-  if (a == null || b == null) return false
-  if (typeof a !== 'object' || typeof b !== 'object') return false
-
-  // Handle arrays
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false
-    return a.every((item, index) => deepEquals(item, b[index]))
-  }
-
-  // Handle objects
-  if (Array.isArray(a) !== Array.isArray(b)) return false
-
-  const keysA = Object.keys(a as Record<string, unknown>).sort()
-  const keysB = Object.keys(b as Record<string, unknown>).sort()
-
-  if (keysA.length !== keysB.length) return false
-  if (!keysA.every((key, index) => key === keysB[index])) return false
-
-  return keysA.every((key) =>
-    deepEquals((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]),
-  )
-}
-
-function isUnsavedComparedToPersisted(
-  activeCharacter: Character | null,
-  persistedCharacter: Character | undefined,
-): boolean {
-  if (!activeCharacter || !persistedCharacter) return false
-
-  const { lastModified: _activeLastModified, ...activeComparable } = activeCharacter
-  const { lastModified: _savedLastModified, ...savedComparable } = persistedCharacter
-
-  return !deepEquals(activeComparable, savedComparable)
-}
-
 function resolveActiveCharacter(
   characters: Character[],
   activeCharacterId: string | null,
@@ -128,11 +85,25 @@ function resolveActiveCharacter(
   return found ? normalizeCharacterProvenance(found) : null
 }
 
+/**
+ * Two-source-of-truth design (intentional):
+ *
+ * `characters[]`    — the persisted array, written only on explicit Save.
+ * `activeCharacter` — the in-memory draft for the currently open character.
+ *
+ * All edits go to `activeCharacter` only. `characters` stays at the last saved
+ * state. `hasUnsavedChanges()` detects drift by comparing `lastModified`
+ * timestamps: edits stamp a new time on `activeCharacter`; Save writes that
+ * same stamp into `characters`, making them equal again.
+ *
+ * Any code that needs the "current truth" for the active character should read
+ * `activeCharacter`, not `characters.find(...)`. The latter gives stale data
+ * during an unsaved editing session.
+ */
 interface CharacterState {
   characters: Character[]
   activeCharacterId: string | null
   activeCharacter: Character | null
-  hasUnsavedChangesFlag: boolean
   hasUnsavedChanges: () => boolean
 
   setCharacters: (characters: Character[]) => void
@@ -404,16 +375,13 @@ export const useCharacterStore = create<CharacterState>()(
       characters: [],
       activeCharacterId: null,
       activeCharacter: null,
-      hasUnsavedChangesFlag: false,
 
       hasUnsavedChanges: () => {
-        const { hasUnsavedChangesFlag, characters, activeCharacter, activeCharacterId } = get()
-        if (hasUnsavedChangesFlag) return true
+        const { characters, activeCharacter, activeCharacterId } = get()
         if (!activeCharacter || !activeCharacterId) return false
-        const persistedCharacter = characters.find(
-          (character) => character.id === activeCharacterId,
-        )
-        return isUnsavedComparedToPersisted(activeCharacter, persistedCharacter)
+        const persistedCharacter = characters.find((c) => c.id === activeCharacterId)
+        if (!persistedCharacter) return false
+        return activeCharacter.lastModified !== persistedCharacter.lastModified
       },
 
       setCharacters: (characters) =>
@@ -423,16 +391,9 @@ export const useCharacterStore = create<CharacterState>()(
             .filter((result) => result.data)
             .map((result) => result.data as Character)
           const activeCharacter = resolveActiveCharacter(validated, state.activeCharacterId)
-          const persistedCharacter = state.activeCharacterId
-            ? validated.find((c) => c.id === state.activeCharacterId)
-            : undefined
           return {
             characters: validated,
             activeCharacter,
-            hasUnsavedChangesFlag: isUnsavedComparedToPersisted(
-              activeCharacter,
-              persistedCharacter,
-            ),
           }
         }),
 
@@ -499,11 +460,7 @@ export const useCharacterStore = create<CharacterState>()(
               })
               return {}
             }
-            const persistedCharacter = state.characters.find((character) => character.id === id)
-            return {
-              activeCharacter: parsed.data,
-              hasUnsavedChangesFlag: isUnsavedComparedToPersisted(parsed.data, persistedCharacter),
-            }
+            return { activeCharacter: parsed.data }
           }
 
           // Fallback for non-active records: update persisted collection directly.
@@ -514,10 +471,7 @@ export const useCharacterStore = create<CharacterState>()(
             const parsed = parseCharacterData(next)
             return parsed.data ?? char
           })
-          return {
-            characters,
-            hasUnsavedChangesFlag: state.hasUnsavedChangesFlag,
-          }
+          return { characters }
         }),
 
       updateActiveCharacter: (updates) =>
@@ -533,14 +487,7 @@ export const useCharacterStore = create<CharacterState>()(
           })
           if (!parsed.data) return {}
 
-          const persistedCharacter = state.activeCharacterId
-            ? state.characters.find((c) => c.id === state.activeCharacterId)
-            : undefined
-
-          return {
-            activeCharacter: parsed.data,
-            hasUnsavedChangesFlag: isUnsavedComparedToPersisted(parsed.data, persistedCharacter),
-          }
+          return { activeCharacter: parsed.data }
         }),
 
       updateActiveCharacterDetails: (updates) =>
@@ -559,14 +506,7 @@ export const useCharacterStore = create<CharacterState>()(
           })
           if (!parsed.data) return {}
 
-          const persistedCharacter = state.activeCharacterId
-            ? state.characters.find((c) => c.id === state.activeCharacterId)
-            : undefined
-
-          return {
-            activeCharacter: parsed.data,
-            hasUnsavedChangesFlag: isUnsavedComparedToPersisted(parsed.data, persistedCharacter),
-          }
+          return { activeCharacter: parsed.data }
         }),
 
       deleteCharacter: (id) =>
@@ -576,7 +516,6 @@ export const useCharacterStore = create<CharacterState>()(
             characters: state.characters.filter((char) => char.id !== id),
             activeCharacterId: deletingActive ? null : state.activeCharacterId,
             activeCharacter: deletingActive ? null : state.activeCharacter,
-            hasUnsavedChangesFlag: deletingActive ? false : state.hasUnsavedChangesFlag,
           }
         }),
 
@@ -587,7 +526,6 @@ export const useCharacterStore = create<CharacterState>()(
           return {
             activeCharacterId: id,
             activeCharacter: character,
-            hasUnsavedChangesFlag: false,
           }
         }),
 
@@ -626,7 +564,6 @@ export const useCharacterStore = create<CharacterState>()(
             return {
               characters: [...state.characters, validatedCharacter],
               activeCharacter: validatedCharacter,
-              hasUnsavedChangesFlag: false,
             }
           }
 
@@ -636,7 +573,6 @@ export const useCharacterStore = create<CharacterState>()(
           return {
             characters,
             activeCharacter: validatedCharacter,
-            hasUnsavedChangesFlag: false,
           }
         }),
     }),
@@ -656,10 +592,8 @@ export const useCharacterStore = create<CharacterState>()(
           // Persist passes a mutable state snapshot into this callback.
           // Direct assignment here is intentional and scoped to hydration only.
           state.characters = validatedCharacters
-
           state.activeCharacterId = null
           state.activeCharacter = null
-          state.hasUnsavedChangesFlag = false
         }
       },
     },

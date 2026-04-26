@@ -73,9 +73,9 @@ export function AppHeader() {
         <div className="flex items-center justify-center gap-3">
           {activeCharacter ? (
             <>
-              <div className="flex items-center gap-2">
+<div className="flex items-center gap-2">
                 <div
-                  className="relative h-10 w-10 text-muted-foreground"
+                  className="relative h-10 w-10 text-accent"
                   data-testid="header-ac-badge"
                 >
                   <Shield weight="fill" className="h-10 w-10" />
@@ -84,7 +84,7 @@ export function AppHeader() {
                   </span>
                 </div>
                 <div
-                  className="relative h-10 w-10 text-muted-foreground"
+                  className="relative h-10 w-10 text-red-500"
                   data-testid="header-hp-badge"
                 >
                   <Heart weight="fill" className="h-10 w-10" />

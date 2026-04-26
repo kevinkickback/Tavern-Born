@@ -1,5 +1,5 @@
-import { MagicWand } from '@phosphor-icons/react'
-import { useCallback, useMemo, useState } from 'react'
+import { MagicWand, X } from '@phosphor-icons/react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -8,6 +8,7 @@ import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { buildSpellSelectionSourceMap } from '@/lib/calculations/spellProfiles.attribution'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import { getTotalLevel } from '@/lib/characterUtils'
+import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
 import { SpellNameTooltip } from '@/pages/spells/components/SpellNameTooltip'
 import {
@@ -24,6 +25,15 @@ import {
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
+
+const SPELLS_PREPARE_SELECTOR = '[data-spell-prepare-toggle="true"]'
+const SPELLS_HINT_WIDTH = 300
+
+interface HintPosition {
+  top: number
+  left: number
+  arrowLeft: number
+}
 
 export function SpellsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -238,6 +248,43 @@ export function SpellsPage() {
 
   const hasMultipleSpellcastingClasses = spellcastingDetails.length > 1
 
+  const hasTruePreparedCaster = spellcastingDetails.some((d) => d.isTruePreparedCaster)
+  const [showPreparedHint, setShowPreparedHint] = useState(
+    () => !isHintDismissed('spells-prepared-caster'),
+  )
+  const [hintPosition, setHintPosition] = useState<HintPosition | null>(null)
+
+  const handleDismissPreparedHint = () => {
+    setShowPreparedHint(false)
+    setHintDismissed('spells-prepared-caster', true)
+  }
+
+  useEffect(() => {
+    if (!showPreparedHint || !hasTruePreparedCaster) {
+      setHintPosition(null)
+      return
+    }
+
+    const update = () => {
+      const btn = document.querySelector<HTMLElement>(SPELLS_PREPARE_SELECTOR)
+      if (!btn) { setHintPosition(null); return }
+      const rect = btn.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const maxLeft = Math.max(16, window.innerWidth - SPELLS_HINT_WIDTH - 16)
+      const left = Math.min(Math.max(centerX - SPELLS_HINT_WIDTH / 2, 16), maxLeft)
+      const arrowLeft = Math.min(Math.max(centerX - left, 18), SPELLS_HINT_WIDTH - 18)
+      setHintPosition({ top: rect.bottom + 12, left, arrowLeft })
+    }
+
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [showPreparedHint, hasTruePreparedCaster])
+
   const racialProfiles = useMemo(
     () => spellProfiles.filter((p) => p.type === 'racial'),
     [spellProfiles],
@@ -451,6 +498,31 @@ export function SpellsPage() {
           </div>
         </div>
       </div>
+
+      {showPreparedHint && hintPosition ? (
+        <div
+          className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
+          style={{ top: hintPosition.top, left: hintPosition.left }}
+        >
+          <div className="pointer-events-auto animate-hint-bounce relative w-[300px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
+            <div
+              className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
+              style={{ left: hintPosition.arrowLeft - 7 }}
+            />
+            <button
+              type="button"
+              className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
+              onClick={handleDismissPreparedHint}
+              aria-label="Dismiss hint"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            <p className="leading-snug text-accent-foreground/95 pr-8">
+              Toggle this circle to mark a spell prepared — as a prepared caster you can freely swap prepared spells between rests.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="max-w-7xl mx-auto w-full space-y-6">
         <div className="space-y-6">
