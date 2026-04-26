@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, Check, MagicWand } from '@phosphor-icons/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -410,6 +410,41 @@ function seedStepSelections(steps: FeatOptionStep[], init: FeatOptionSelections)
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Compute the initial wizard steps and seeded selections in one pass.
+ * Called only once per mount via lazy useState initializers.
+ */
+function initWizardState(
+  feat: Feat5e,
+  initialSelections?: FeatOptionSelections,
+): { steps: FeatOptionStep[]; stepSels: StepSelections } {
+  let steps = deriveFeatOptionSteps(feat)
+
+  if (initialSelections?.spellcastingClass) {
+    const classIdx = steps.findIndex((s) => s.kind === 'spellcastingClass')
+    if (classIdx >= 0) {
+      const spellSteps = deriveSpellStepsForClass(feat, initialSelections.spellcastingClass).map(
+        ({ count, chooseFilter, label }): FeatOptionStep => ({
+          kind: 'spells',
+          label,
+          count,
+          chooseFilter,
+        }),
+      )
+      steps = [
+        ...steps.slice(0, classIdx + 1),
+        ...spellSteps,
+        ...steps.slice(classIdx + 1).filter((s) => s.kind !== 'spells'),
+      ]
+    }
+  }
+
+  return {
+    steps,
+    stepSels: initialSelections ? seedStepSelections(steps, initialSelections) : {},
+  }
+}
+
 export interface FeatOptionsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -435,36 +470,12 @@ export function FeatOptionsModal({
   const { spells, optionalfeatures } = useFilteredGameData()
 
   const [stepIndex, setStepIndex] = useState(0)
-  const [allSteps, setAllSteps] = useState<FeatOptionStep[]>(() => deriveFeatOptionSteps(feat))
-  const [stepSels, setStepSels] = useState<StepSelections>({})
-
-  useEffect(() => {
-    if (!open) return
-    let steps = deriveFeatOptionSteps(feat)
-
-    if (initialSelections?.spellcastingClass) {
-      const classIdx = steps.findIndex((s) => s.kind === 'spellcastingClass')
-      if (classIdx >= 0) {
-        const spellSteps = deriveSpellStepsForClass(feat, initialSelections.spellcastingClass).map(
-          ({ count, chooseFilter, label }): FeatOptionStep => ({
-            kind: 'spells',
-            label,
-            count,
-            chooseFilter,
-          }),
-        )
-        steps = [
-          ...steps.slice(0, classIdx + 1),
-          ...spellSteps,
-          ...steps.slice(classIdx + 1).filter((s) => s.kind !== 'spells'),
-        ]
-      }
-    }
-
-    setAllSteps(steps)
-    setStepIndex(0)
-    setStepSels(initialSelections ? seedStepSelections(steps, initialSelections) : {})
-  }, [open, feat, initialSelections])
+  const [allSteps, setAllSteps] = useState<FeatOptionStep[]>(
+    () => initWizardState(feat, initialSelections).steps,
+  )
+  const [stepSels, setStepSels] = useState<StepSelections>(
+    () => initWizardState(feat, initialSelections).stepSels,
+  )
 
   const currentStep = allSteps[stepIndex]
 

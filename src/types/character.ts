@@ -278,6 +278,12 @@ export interface Equipment {
   properties?: string[]
   /** Weapon range text. */
   range?: string
+  /** True for wondrous items (rings, amulets, cloaks, belts, etc.) — used to show equip toggle. */
+  wondrous?: boolean
+  /** True for magical tattoo items — used to show equip toggle. */
+  tattoo?: boolean
+  /** Classes for which this item can serve as a spellcasting focus. */
+  focus?: string[]
   /** True when a starting-equipment item reference could not be resolved from item data. */
   _unresolved?: boolean
 }

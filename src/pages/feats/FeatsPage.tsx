@@ -8,8 +8,9 @@ import {
   Star,
   Trash,
   WarningCircle,
+  X,
 } from '@phosphor-icons/react'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import {
@@ -37,12 +38,25 @@ import {
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntryCached } from '@/lib/entryRenderCache'
+import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { countTotalFeatSlots } from '@/pages/build/class/model/pageUtils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e, Feat5e, Raw5ePrereq, Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 import { NoCharCard } from '../_shared'
+
+const FEATS_SETUP_HINT_ID = 'feats-complete-setup'
+const FEATS_SETUP_BTN_SELECTOR = '[data-feat-setup-btn="true"]'
+const FEATS_HINT_WIDTH = 300
+
+interface HintPosition {
+  top: number
+  left: number
+  arrowLeft: number
+}
+
+const EMPTY_STRINGS: string[] = []
 
 interface FeatDetailCardProps {
   feat: { id: string; name: string; source: string }
@@ -245,6 +259,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
               <Button
                 size="sm"
                 variant="outline"
+                data-feat-setup-btn="true"
                 className="mt-2 h-7 text-xs gap-1.5 border-warning/40 text-warning hover:bg-warning/10 hover:border-warning/60"
                 onClick={() => onCompleteSetup(feat.name)}
               >
@@ -391,13 +406,14 @@ export function FeatsPage() {
       .filter((x): x is NonNullable<typeof x> => x !== null)
   }, [ledger.feats, feats])
 
-  // Split fixed grants by source type
-  const originFixedFeats = useMemo(
-    () => fixedGrantedFeats.filter((f) => f.sourceType === 'background'),
-    [fixedGrantedFeats],
-  )
-  const racialFixedFeats = useMemo(
-    () => fixedGrantedFeats.filter((f) => f.sourceType === 'race' || f.sourceType === 'subrace'),
+  // Split fixed grants by source type — one pass over the same array
+  const { originFixedFeats, racialFixedFeats } = useMemo(
+    () => ({
+      originFixedFeats: fixedGrantedFeats.filter((f) => f.sourceType === 'background'),
+      racialFixedFeats: fixedGrantedFeats.filter(
+        (f) => f.sourceType === 'race' || f.sourceType === 'subrace',
+      ),
+    }),
     [fixedGrantedFeats],
   )
 
@@ -417,8 +433,8 @@ export function FeatsPage() {
   // Bonus feats — DM-granted, stored in specialFeats, no selection limit
   const bonusFeats = character?.specialFeats ?? []
   const bonusInitialSelectedIds = useMemo(
-    () => bonusFeats.map((f) => `${f.name}|${f.source ?? ''}`),
-    [bonusFeats],
+    () => (character?.specialFeats ?? []).map((f) => `${f.name}|${f.source ?? ''}`),
+    [character?.specialFeats],
   )
 
   const handleRemoveFeat = useCallback(
@@ -534,10 +550,41 @@ export function FeatsPage() {
     )
   }, [character?.feats, feats])
 
-  const proficientSkillNames = useMemo(
-    () => character?.proficiencies?.skills ?? [],
-    [character?.proficiencies?.skills],
-  )
+  const proficientSkillNames = character?.proficiencies?.skills ?? EMPTY_STRINGS
+
+  const [showSetupHint, setShowSetupHint] = useState(() => !isHintDismissed(FEATS_SETUP_HINT_ID))
+  const [hintPosition, setHintPosition] = useState<HintPosition | null>(null)
+
+  const handleDismissSetupHint = () => {
+    setShowSetupHint(false)
+    setHintDismissed(FEATS_SETUP_HINT_ID, true)
+  }
+
+  useEffect(() => {
+    if (!showSetupHint || pendingOptionFeatNames.size === 0) {
+      setHintPosition(null)
+      return
+    }
+
+    const update = () => {
+      const btn = document.querySelector<HTMLElement>(FEATS_SETUP_BTN_SELECTOR)
+      if (!btn) { setHintPosition(null); return }
+      const rect = btn.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const maxLeft = Math.max(16, window.innerWidth - FEATS_HINT_WIDTH - 16)
+      const left = Math.min(Math.max(centerX - FEATS_HINT_WIDTH / 2, 16), maxLeft)
+      const arrowLeft = Math.min(Math.max(centerX - left, 18), FEATS_HINT_WIDTH - 18)
+      setHintPosition({ top: rect.bottom + 12, left, arrowLeft })
+    }
+
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [showSetupHint, pendingOptionFeatNames])
 
   if (!character) {
     return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />
@@ -566,6 +613,31 @@ export function FeatsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto w-full space-y-4">
+        {showSetupHint && hintPosition ? (
+          <div
+            className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
+            style={{ top: hintPosition.top, left: hintPosition.left }}
+          >
+            <div className="pointer-events-auto animate-hint-bounce relative w-[300px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
+              <div
+                className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
+                style={{ left: hintPosition.arrowLeft - 7 }}
+              />
+              <button
+                type="button"
+                className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
+                onClick={handleDismissSetupHint}
+                aria-label="Dismiss hint"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+              <p className="leading-snug text-accent-foreground/95 pr-8">
+                Some feats need extra setup — like choosing a cantrip, skill, or spell. Click <strong>Complete Setup</strong> to finish configuring this feat.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         {/* Pending choice warnings */}
         {hasPendingWarnings && (
           <div className="space-y-2">

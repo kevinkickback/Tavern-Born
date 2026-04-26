@@ -75,11 +75,11 @@ export function BuildClassAsiSection({
             <div className="text-xs text-muted-foreground">
               {isApplied
                 ? Object.entries(existingAsi?.abilityChanges ?? {})
-                    .map(
-                      ([ability, bonus]) =>
-                        `+${bonus} ${ability.charAt(0).toUpperCase() + ability.slice(1)}`,
-                    )
-                    .join(', ')
+                  .map(
+                    ([ability, bonus]) =>
+                      `+${bonus} ${ability.charAt(0).toUpperCase() + ability.slice(1)}`,
+                  )
+                  .join(', ')
                 : mode === 'asi'
                   ? 'Select ability scores to increase'
                   : usedASI > 0

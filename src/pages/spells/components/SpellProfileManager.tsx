@@ -593,6 +593,7 @@ export function SpellProfileManager({
                                             ) : null}
                                             <button
                                               type="button"
+                                              data-spell-prepare-toggle="true"
                                               disabled={atLimit}
                                               onClick={() =>
                                                 onTogglePrepared(profile.id, item.name)
@@ -743,6 +744,7 @@ export function SpellProfileManager({
                                                 {canPrepare ? (
                                                   <button
                                                     type="button"
+                                                    data-spell-prepare-toggle="true"
                                                     onClick={() =>
                                                       onTogglePrepared(item.profileId, item.name)
                                                     }

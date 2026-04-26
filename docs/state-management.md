@@ -76,40 +76,29 @@ Derived examples (do not store as canonical):
 
 ## Unsaved Changes and App Close Safety
 
-- hasUnsavedChanges is backed by a store-maintained dirty flag and updated when active draft mutations occur.
-- The dirty flag comparison excludes timestamp-only differences (`lastModified`).
+- `hasUnsavedChanges()` is O(1): it compares `activeCharacter.lastModified` against `characters[activeCharacterId].lastModified`. Every mutation updates `activeCharacter.lastModified`; saving writes `activeCharacter` back into `characters[]`, equalising the timestamps. A mismatch means unsaved changes exist.
 - src/main.tsx syncs unsaved state to Electron.
 - electron/main.ts shows close confirmation when unsaved edits exist.
 - App preferences and home-page layout changes do not participate in character dirty-state tracking.
 
 ## lastModified Timestamp Management
 
-**Design Pattern:** `lastModified` is updated in every character mutation but excluded from unsaved-change comparisons.
+**Design Pattern:** `lastModified` is updated in every character mutation and is the sole signal used by `hasUnsavedChanges()`.
 
 ### Why This Works
 
-`lastModified` serves **UI and UX** purposes only:
-- Display on character cards (HomePage, PortraitCardPreview)
-- Sort character lists by recent activity
-- Show last-edit timestamp in the character sheet UI
+Every mutation path (`updateCharacter`, `updateActiveCharacter`, `updateActiveCharacterDetails`, `saveActiveCharacter`) always sets `lastModified = new Date().toISOString()` on the active character draft. The persisted copy (`characters[]`) only receives a new `lastModified` when `saveActiveCharacter()` is called. A timestamp mismatch between the two copies reliably indicates unsaved changes.
 
-It does **not** affect save/restore behavior because:
-1. All character mutations call one of: `updateCharacter()`, `updateActiveCharacter()`, `updateActiveCharacterDetails()`, or `saveActiveCharacter()`.
-2. Each of these **always** sets `lastModified = new Date().toISOString()`.
-3. The `hasUnsavedChanges()` comparison intentionally **strips** `lastModified` before comparing:
-   ```ts
-   const { lastModified: _activeLastModified, ...activeComparable } = activeCharacter;
-   const { lastModified: _savedLastModified, ...savedComparable } = persistedCharacter;
-   return JSON.stringify(activeComparable) !== JSON.stringify(savedComparable);
-   ```
-4. This ensures that only **actual data changes** trigger the unsaved flag, not just timestamp drift.
+`lastModified` also serves UI display purposes:
+- Character cards (HomePage, PortraitCardPreview)
+- Sort order by recent activity
+- Last-edit timestamp in the character sheet UI
 
 ### Implications for Future Changes
 
-If you're modifying character mutations, be aware:
-- Don't skip setting `lastModified` — the UI relies on it for sorting/display.
-- Don't use `lastModified` to detect whether a character has unsaved changes — use `hasUnsavedChanges()` instead.
-- If you add a new mutation path that bypasses the existing three, ensure it also sets `lastModified`.
+- Don't skip setting `lastModified` — both the dirty-check and the UI rely on it.
+- Don't add a new mutation path that bypasses the existing three without also setting `lastModified`.
+- Don't replace the timestamp comparison in `hasUnsavedChanges()` with deep equality — the timestamp approach is intentional for O(1) performance.
 
 ## Hydration and Init Ordering
 

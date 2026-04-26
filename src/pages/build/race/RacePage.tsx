@@ -70,8 +70,6 @@ export function BuildRacePage() {
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
   const [optionsPendingFeat, setOptionsPendingFeat] = useState<Feat5e | null>(null)
   const selectedRaceRef = useRef<HTMLDivElement | null>(null)
-  const isInitialLoadRef = useRef(true)
-  const previousSearchRef = useRef('')
 
   const filteredRaces = useMemo(() => {
     const q = raceSearch.trim().toLowerCase()
@@ -79,21 +77,11 @@ export function BuildRacePage() {
     return races.filter((r) => r.name.toLowerCase().includes(q))
   }, [races, raceSearch])
 
+  // Scroll to the selected race row on mount and whenever search changes.
+  // Does not fire on race selection (raceSearch doesn't change when clicking).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: raceSearch is the DOM-update trigger
   useEffect(() => {
-    // Only scroll on initial mount or when search changes, not on selection change
-    const isSearchChanged = previousSearchRef.current !== raceSearch
-    const shouldScroll = isInitialLoadRef.current || isSearchChanged
-
-    if (shouldScroll && selectedRaceRef.current) {
-      selectedRaceRef.current.scrollIntoView({
-        behavior: 'auto',
-        block: 'start',
-        inline: 'nearest',
-      })
-    }
-
-    isInitialLoadRef.current = false
-    previousSearchRef.current = raceSearch
+    selectedRaceRef.current?.scrollIntoView({ behavior: 'auto', block: 'start', inline: 'nearest' })
   }, [raceSearch])
 
   const selectedRace = races.find((r) =>
@@ -115,32 +103,45 @@ export function BuildRacePage() {
       : (normalizedSelection.subrace ?? normalizedSelection.race)
   const selectedRaceKey = selectedRace ? `${selectedRace.name}|${selectedRace.source ?? ''}` : null
 
-  useEffect(() => {
-    if (!character) return
-    if (!selectedRace) return
+  // Refs let the effect read the latest values without making them dependencies,
+  // so the effect only fires when the selected race changes — not on every character update.
+  const characterRef = useRef(character)
+  characterRef.current = character
+  const currentRaceDataRef = useRef(selectedRace)
+  currentRaceDataRef.current = selectedRace
+  const currentSubracesRef = useRef(subraces)
+  currentSubracesRef.current = subraces
+  const hasSelectedSubraceRef = useRef(!!selectedSubrace)
+  hasSelectedSubraceRef.current = !!selectedSubrace
 
-    if (subraces.length === 0) {
-      if (character.subrace || character.subraceSource) {
-        updateCharacter(character.id, {
-          subrace: undefined,
-          subraceSource: undefined,
-        })
-        applySubraceChange(selectedRace, undefined)
+  // When the selected race changes, auto-select the first subrace if none is set,
+  // or clear a stale subrace if the new race has none.
+  useEffect(() => {
+    const char = characterRef.current
+    const race = currentRaceDataRef.current
+    const currentSubraces = currentSubracesRef.current
+    // selectedRaceKey being null means no race is selected — nothing to do.
+    if (!char || !race || !selectedRaceKey) return
+
+    if (currentSubraces.length === 0) {
+      if (char.subrace || char.subraceSource) {
+        updateCharacter(char.id, { subrace: undefined, subraceSource: undefined })
+        applySubraceChange(race, undefined)
       }
       return
     }
 
-    if (selectedSubrace) return
+    if (hasSelectedSubraceRef.current) return
 
-    const firstSubrace = subraces[0]
+    const firstSubrace = currentSubraces[0]
     if (!firstSubrace) return
 
-    updateCharacter(character.id, {
+    updateCharacter(char.id, {
       subrace: firstSubrace.name,
       subraceSource: firstSubrace.source ?? undefined,
     })
-    applySubraceChange(selectedRace, firstSubrace)
-  }, [applySubraceChange, character, selectedRace, selectedSubrace, subraces, updateCharacter])
+    applySubraceChange(race, firstSubrace)
+  }, [selectedRaceKey, applySubraceChange, updateCharacter])
 
   // Racial feat choices from provenance
   const racialFeatChoices = useMemo(

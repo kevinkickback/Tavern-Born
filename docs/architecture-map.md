@@ -26,7 +26,9 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 6. Provenance system
 - Purpose: track source of grants and reconcile when race/class/features change.
-- Key files: src/lib/provenance/types.ts, src/lib/provenance/ledger.ts, src/lib/provenance/reconciliation.ts, src/lib/provenance/normalization.ts, src/lib/provenance/sourceLabels.ts, src/lib/provenance/summaries.ts, src/lib/provenance/applyRaceGrants.ts, src/lib/provenance/applyClassGrants.ts, src/lib/provenance/applyBackgroundGrants.ts, src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts, src/lib/provenance/index.ts, src/lib/provenance/sectionRows.ts, src/hooks/character/useProvenance.ts, src/hooks/character/useProvenanceMutations.ts, src/hooks/character/useProvenanceRows.ts.
+- Key files: src/lib/provenance/types.ts, src/lib/provenance/ledger.ts, src/lib/provenance/reconciliation.ts, src/lib/provenance/normalization.ts, src/lib/provenance/sourceLabels.ts, src/lib/provenance/summaries.ts, src/lib/provenance/applyRaceGrants.ts, src/lib/provenance/applyClassGrants.ts, src/lib/provenance/applyBackgroundGrants.ts, src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts, src/lib/provenance/index.ts, src/lib/provenance/sectionRows.ts, src/hooks/character/useProvenance.ts, src/hooks/character/useProvenanceMutations.ts (thin aggregator), src/hooks/character/useProvenanceRows.ts.
+- Domain mutation hooks (add new provenance callbacks here, not to the aggregator directly): src/hooks/character/useRaceProvenance.ts, src/hooks/character/useClassProvenance.ts, src/hooks/character/useBackgroundProvenance.ts, src/hooks/character/useSpellProvenance.ts, src/hooks/character/useFeatProvenance.ts, src/hooks/character/useEquipmentProvenance.ts.
+- Shared pure helpers used across domain hooks: src/hooks/character/provenanceHelpers.ts.
 
 7. Hooks and view derivations
 - Purpose: thin wrappers from store state to UI-facing derived values.
@@ -68,7 +70,7 @@ Character sheet PDF note:
 - /: HomePage
 - /build/*: Race, Class, Background, Proficiencies, Ability Scores
 - /feats, /spells, /equipment
-- /details/*: Portrait, Characteristics, Appearance, Allies/Organizations, History
+- /details/*: Portrait, Characteristics, Conditions
 - /character-sheet, /compendium, /settings
 
 Primary definition: src/App.tsx.

@@ -289,6 +289,14 @@ export interface Item5e {
   ac?: number
   strength?: string
   stealth?: boolean
+  /** True for wondrous items (rings, amulets, cloaks, belts, etc.). */
+  wondrous?: boolean
+  /** True for magical tattoo items. */
+  tattoo?: boolean
+  /** Classes for which this item can serve as a spellcasting focus. */
+  focus?: string[]
+  /** Whether the item requires attunement; may be a class restriction string. */
+  reqAttune?: boolean | string
   [key: string]: unknown
 }
 

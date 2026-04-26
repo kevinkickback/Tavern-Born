@@ -12,8 +12,9 @@ import {
   Sword,
   Target,
   Trash,
+  X,
 } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Badge } from '@/components/ui/badge'
@@ -25,13 +26,25 @@ import { Switch } from '@/components/ui/switch'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
 import { useProvenance } from '@/hooks/character/useProvenance'
-import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
+import { isEquippable } from '@/lib/calculations/itemEquippable'
+import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e } from '@/types/5etools'
 import type { Equipment } from '@/types/character'
 import { NoCharCard } from '../_shared'
+
+const EQUIPMENT_EQUIP_HINT_ID = 'equipment-equip-toggle'
+const EQUIP_AC_TOGGLE_SELECTOR = '[data-equip-ac-toggle="true"]'
+const EQUIP_HINT_WIDTH = 300
+
+interface HintPosition {
+  top: number
+  left: number
+  arrowLeft: number
+}
 
 type ItemCategory = 'All' | 'Weapons' | 'Armor' | 'Ammunition' | 'Gear' | 'Potions' | 'Scrolls'
 
@@ -102,17 +115,76 @@ function getDamageSummary(item: Equipment): string | null {
   return `${item.dmg1}${damageType}`
 }
 
+const PROPERTY_LABELS: Record<string, string> = {
+  A: 'Ammunition',
+  AF: 'Ammunition (Firearms)',
+  BF: 'Burst Fire',
+  F: 'Finesse',
+  H: 'Heavy',
+  L: 'Light',
+  LD: 'Loading',
+  R: 'Reach',
+  RLD: 'Reload',
+  S: 'Special',
+  T: 'Thrown',
+  '2H': 'Two-Handed',
+  V: 'Versatile',
+}
+
+function resolvePropertyLabel(tag: string): string {
+  const key = tag.trim().split('|')[0].toUpperCase()
+  return PROPERTY_LABELS[key] ?? tag
+}
+
 function getPropertySummary(item: Equipment): string | null {
   if (!item.properties || item.properties.length === 0) return null
-  return item.properties.join(', ')
+  return item.properties.map(resolvePropertyLabel).join(', ')
 }
 
 export function EquipmentPage() {
   const [addItemOpen, setAddItemOpen] = useState(false)
+  const [showEquipHint, setShowEquipHint] = useState(
+    () => !isHintDismissed(EQUIPMENT_EQUIP_HINT_ID),
+  )
+  const [hintPosition, setHintPosition] = useState<HintPosition | null>(null)
+
+  const handleDismissEquipHint = () => {
+    setShowEquipHint(false)
+    setHintDismissed(EQUIPMENT_EQUIP_HINT_ID, true)
+  }
+
+  useEffect(() => {
+    if (!showEquipHint) {
+      setHintPosition(null)
+      return
+    }
+
+    const update = () => {
+      const toggle = document.querySelector<HTMLElement>(EQUIP_AC_TOGGLE_SELECTOR)
+      if (!toggle) {
+        setHintPosition(null)
+        return
+      }
+      const rect = toggle.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const maxLeft = Math.max(16, window.innerWidth - EQUIP_HINT_WIDTH - 16)
+      const left = Math.min(Math.max(centerX - EQUIP_HINT_WIDTH / 2, 16), maxLeft)
+      const arrowLeft = Math.min(Math.max(centerX - left, 18), EQUIP_HINT_WIDTH - 18)
+      setHintPosition({ top: rect.bottom + 12, left, arrowLeft })
+    }
+
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [showEquipHint])
   const [itemSearch, setItemSearch] = useState('')
   const [itemTypeFilter, setItemTypeFilter] = useState<ItemCategory>('All')
   const character = useCharacterStore((s) => s.activeCharacter)
-  const { items, itemsBase } = useFilteredGameData()
+  const gameData = useGameDataStore((s) => s.gameData)
   const { applyManualEquipmentGrant, removeEquipmentProvenance, getSourcesRowsBySection } =
     useProvenance()
   const {
@@ -133,16 +205,16 @@ export function EquipmentPage() {
   const { calculatedAC, overrideAC } = useArmorClass()
   const equipmentItems = useMemo(() => {
     const merged = new Map<string, Item5e>()
-    for (const item of items as Item5e[]) {
+    for (const item of (gameData?.items ?? []) as Item5e[]) {
       const key = `${item.name}|${item.source ?? ''}`
       merged.set(key, item)
     }
-    for (const item of (itemsBase ?? []) as Item5e[]) {
+    for (const item of (gameData?.itemsBase ?? []) as Item5e[]) {
       const key = `${item.name}|${item.source ?? ''}`
       if (!merged.has(key)) merged.set(key, item)
     }
     return Array.from(merged.values())
-  }, [items, itemsBase])
+  }, [gameData])
 
   const encumbrancePct = carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0
   const encumbranceTone =
@@ -174,7 +246,7 @@ export function EquipmentPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header band */}
-      <div className="px-6 py-5 page-header-band mb-6 shrink-0">
+      <div className="px-6 py-2 lg:py-5 page-header-band mb-2 lg:mb-6 shrink-0">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <Backpack className="h-6 w-6 text-primary" weight="duotone" />
@@ -188,14 +260,40 @@ export function EquipmentPage() {
         </div>
       </div>
 
+      {showEquipHint && hintPosition ? (
+        <div
+          className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
+          style={{ top: hintPosition.top, left: hintPosition.left }}
+        >
+          <div className="pointer-events-auto animate-hint-bounce relative w-[300px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
+            <div
+              className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
+              style={{ left: hintPosition.arrowLeft - 7 }}
+            />
+            <button
+              type="button"
+              className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
+              onClick={handleDismissEquipHint}
+              aria-label="Dismiss hint"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+            <p className="leading-snug text-accent-foreground/95 pr-8">
+              Toggle <strong>Equip</strong> on armor, shields, weapons, and worn magic items to mark
+              them active — armor and shields affect your Armor Class only when equipped.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {/* Stat tiles */}
-      <div className="px-6 mb-6 shrink-0">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="px-6 mb-2 lg:mb-6 shrink-0">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
           {/* Weight tile */}
           <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center justify-between p-4">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
-                <Scales className="h-5 w-5 text-primary-foreground" weight="bold" />
+            <div className="flex items-center justify-between p-2 lg:p-4">
+              <div className="h-8 w-8 lg:h-11 lg:w-11 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
+                <Scales className="h-4 w-4 lg:h-5 lg:w-5 text-primary-foreground" weight="bold" />
               </div>
               <div className="text-right">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -211,14 +309,14 @@ export function EquipmentPage() {
                 </p>
               </div>
             </div>
-            <div className="px-4 pb-3">
-              <div className="bg-primary/20 relative h-1.5 w-full overflow-hidden rounded-full">
+            <div className="px-2 lg:px-4 pb-2 lg:pb-3">
+              <div className="bg-primary relative h-1.5 w-full overflow-hidden rounded-full border border-primary/20">
                 <div
                   className={cn('h-full transition-all rounded-full', encumbranceTone)}
                   style={{ width: `${encumbrancePct}%` }}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground font-mono mt-1 text-right">
+              <p className="text-xs text-muted-foreground font-mono mt-1 text-right">
                 {isEncumbered ? 'Encumbered' : `${encumbrancePct.toFixed(0)}%`}
               </p>
             </div>
@@ -226,9 +324,9 @@ export function EquipmentPage() {
 
           {/* Attunement tile */}
           <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center justify-between p-4">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                <Diamond className="h-5 w-5 text-white" weight="bold" />
+            <div className="flex items-center justify-between p-2 lg:p-4">
+              <div className="h-8 w-8 lg:h-11 lg:w-11 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600/60 flex items-center justify-center shrink-0 shadow-sm">
+                <Diamond className="h-4 w-4 lg:h-5 lg:w-5 text-white" weight="bold" />
               </div>
               <div className="text-right">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -244,7 +342,7 @@ export function EquipmentPage() {
                 </p>
               </div>
             </div>
-            <div className="px-4 pb-3">
+            <div className="px-2 lg:px-4 pb-2 lg:pb-3">
               <div className="flex gap-1.5">
                 {(['first', 'second', 'third'] as const)
                   .slice(0, MAX_ATTUNEMENT_SLOTS)
@@ -262,7 +360,7 @@ export function EquipmentPage() {
                     />
                   ))}
               </div>
-              <p className="text-[10px] text-muted-foreground font-mono mt-1 text-right">
+              <p className="text-xs text-muted-foreground font-mono mt-1 text-right">
                 {MAX_ATTUNEMENT_SLOTS - attunedCount} slot
                 {MAX_ATTUNEMENT_SLOTS - attunedCount !== 1 ? 's' : ''} free
               </p>
@@ -271,9 +369,9 @@ export function EquipmentPage() {
 
           {/* Armor Class tile */}
           <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center justify-between p-4">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                <Shield className="h-5 w-5 text-white" weight="bold" />
+            <div className="flex items-center justify-between p-2 lg:p-4">
+              <div className="h-8 w-8 lg:h-11 lg:w-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600/60 flex items-center justify-center shrink-0 shadow-sm">
+                <Shield className="h-4 w-4 lg:h-5 lg:w-5 text-white" weight="bold" />
               </div>
               <div className="text-right">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -282,8 +380,8 @@ export function EquipmentPage() {
                 <p className="text-2xl font-bold font-mono text-foreground">{calculatedAC}</p>
               </div>
             </div>
-            <div className="px-4 pb-3">
-              <p className="text-[10px] text-muted-foreground text-right">
+            <div className="px-2 lg:px-4 pb-2 lg:pb-3">
+              <p className="text-xs text-muted-foreground text-right">
                 {overrideAC !== undefined ? 'override active' : 'from equipped armor'}
               </p>
             </div>
@@ -291,9 +389,9 @@ export function EquipmentPage() {
 
           {/* Currency tile */}
           <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center justify-between p-4">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                <Coins className="h-5 w-5 text-white" weight="bold" />
+            <div className="flex items-center justify-between p-2 lg:p-4">
+              <div className="h-8 w-8 lg:h-11 lg:w-11 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600/60 flex items-center justify-center shrink-0 shadow-sm">
+                <Coins className="h-4 w-4 lg:h-5 lg:w-5 text-white" weight="bold" />
               </div>
               <div className="text-right">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -304,8 +402,8 @@ export function EquipmentPage() {
                 </p>
               </div>
             </div>
-            <div className="px-3 pb-3 border-t border-border/60">
-              <div className="grid grid-cols-5 gap-1 pt-2">
+            <div className="px-1.5 lg:px-3 pb-2 lg:pb-3">
+              <div className="grid grid-cols-5 gap-0.5 lg:gap-1 pt-1 lg:pt-2">
                 {(
                   [
                     ['cp', 'CP'],
@@ -338,7 +436,7 @@ export function EquipmentPage() {
       </div>
 
       {/* Inventory card */}
-      <div className="px-6 pb-6 flex-1 min-h-0">
+      <div className="px-6 pb-3 lg:pb-6 flex-1 min-h-0">
         <div className="max-w-7xl mx-auto h-full">
           <Card className="w-full h-full flex flex-col overflow-hidden">
             {/* Gradient header band */}
@@ -505,14 +603,22 @@ export function EquipmentPage() {
                           </div>
 
                           {/* Equip */}
-                          <div className="flex items-center gap-1">
-                            <Switch
-                              checked={item.equipped}
-                              onCheckedChange={() => toggleEquip(item.id)}
-                              className="scale-[0.75]"
-                            />
-                            <span className="text-xs text-muted-foreground">Equip</span>
-                          </div>
+                          {(isEquippable(item) || item.equipped) && (
+                            <div
+                              className="flex items-center gap-1"
+                              {...(item.armorType ||
+                              ARMOR_TYPE_CODES.has((item.type ?? '').split('|')[0].toUpperCase())
+                                ? { 'data-equip-ac-toggle': 'true' }
+                                : {})}
+                            >
+                              <Switch
+                                checked={item.equipped}
+                                onCheckedChange={() => toggleEquip(item.id)}
+                                className="scale-[0.75]"
+                              />
+                              <span className="text-xs text-muted-foreground">Equip</span>
+                            </div>
+                          )}
 
                           {/* Attune */}
                           {item.reqAttune && (

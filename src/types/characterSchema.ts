@@ -230,6 +230,9 @@ export const equipmentSchema = z.object({
   dmgType: z.string().optional(),
   properties: z.array(z.string()).optional(),
   range: z.string().optional(),
+  wondrous: z.boolean().optional(),
+  tattoo: z.boolean().optional(),
+  focus: z.array(z.string()).optional(),
 })
 
 export const currencySchema = z.object({

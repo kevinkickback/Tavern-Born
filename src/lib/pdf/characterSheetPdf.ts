@@ -148,6 +148,17 @@ function getRaceSummary(character: Character): string {
   return `${character.subrace} ${character.race}`.trim()
 }
 
+function getBackgroundFeatDescription(character: Character): string {
+  const provenanceFeats = character.provenance?.feats ?? {}
+  const backgroundFeatName = Object.entries(provenanceFeats).find(([, tags]) =>
+    tags.some((tag) => tag.sourceType === 'background'),
+  )?.[0]
+  if (!backgroundFeatName) return ''
+  const feat = character.feats.find((f) => f.name === backgroundFeatName)
+  if (!feat) return ''
+  return feat.description ? `${feat.name}: ${feat.description}` : feat.name
+}
+
 function buildFeaturesSummary(character: Character): string {
   return character.features
     .map((feature) => {
@@ -297,10 +308,20 @@ function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
     'Initiative bonus': formatModifier(values.abilityModifiers.dexterity),
     Speed: `${character.speed || 30} ft`,
     AC: String(effectiveArmorClass),
-    'HP Max': String(character.hitPoints.max || ''),
-    'HP Current': String(character.hitPoints.current || ''),
-    'HP Temp': String(character.hitPoints.temporary || ''),
+    'HP Max': String(character.hitPoints.max),
+    'HP Current': String(character.hitPoints.current),
+    'HP Temp': String(character.hitPoints.temporary),
     'Total Experience': String(character.experiencePoints || ''),
+    'Copper Pieces': character.currency?.cp != null ? String(character.currency.cp) : '',
+    'Silver Pieces': character.currency?.sp != null ? String(character.currency.sp) : '',
+    'Electrum Pieces': character.currency?.ep != null ? String(character.currency.ep) : '',
+    'Gold Pieces': character.currency?.gp != null ? String(character.currency.gp) : '',
+    'Platinum Pieces': character.currency?.pp != null ? String(character.currency.pp) : '',
+    'Weight Carried': String(
+      character.equipment
+        .reduce((sum, item) => sum + (item.weight ?? 0) * (item.quantity ?? 1), 0)
+        .toFixed(1),
+    ),
     Sex: character.details.gender || '',
     Height: character.details.height || '',
     Weight: character.details.weight || '',
@@ -318,6 +339,8 @@ function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
     MoreProficiencies: buildProficienciesSummary(character),
     'Class Features': buildFeaturesSummary(character),
     'Racial Traits': character.race || '',
+    'Background Feature Description': getBackgroundFeatDescription(character),
+    'Background_Organisation.Left': character.details.alliesAndOrganizations || '',
   }
 
   for (const [ability, mapping] of Object.entries(MPMB_2014_ABILITY_FIELD_MAP) as Array<
@@ -426,9 +449,54 @@ export async function generateFilledCharacterSheetPdf(
 
   if (templateId === '2014') {
     stripCheckboxOffAppearances(form)
+    if (character.portrait) {
+      await embedPortraitImage(pdfDoc, form, character.portrait)
+    }
   }
 
   return pdfDoc.save({ updateFieldAppearances: false })
+}
+
+async function embedPortraitImage(
+  pdfDoc: PDFDocument,
+  form: ReturnType<PDFDocument['getForm']>,
+  portrait: string,
+): Promise<void> {
+  let button: { acroField: { getWidgets: () => unknown[] } } | null = null
+  try {
+    button = form.getButton('Portrait') as unknown as {
+      acroField: { getWidgets: () => unknown[] }
+    }
+  } catch {
+    return
+  }
+
+  const widgets = button.acroField.getWidgets() as Array<{
+    getRectangle: () => { x: number; y: number; width: number; height: number }
+  }>
+  if (widgets.length === 0) return
+
+  let rect: { x: number; y: number; width: number; height: number }
+  try {
+    rect = widgets[0].getRectangle()
+  } catch {
+    return
+  }
+
+  try {
+    const commaIdx = portrait.indexOf(',')
+    const base64 = commaIdx >= 0 ? portrait.slice(commaIdx + 1) : portrait
+    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+    const image = portrait.includes('image/png')
+      ? await pdfDoc.embedPng(bytes)
+      : await pdfDoc.embedJpg(bytes)
+    const pages = pdfDoc.getPages()
+    if (pages.length > 0) {
+      pages[0].drawImage(image, { x: rect.x, y: rect.y, width: rect.width, height: rect.height })
+    }
+  } catch {
+    // Portrait embedding is best-effort; skip silently on any failure.
+  }
 }
 
 function hideFieldWidgets(field: { acroField: { getWidgets: () => unknown[] } }) {

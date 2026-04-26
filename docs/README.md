@@ -19,6 +19,7 @@ If you are new to the repository, read these in order:
 - data-ingestion.md: 5etools loading/parsing/validation/caching pipeline.
 - state-management.md: Character and game-data store contracts, mutation rules, and derived data policy.
 - provenance.md: Grant tracking, reconciliation behavior, and key invariants.
+- react-patterns.md: React hook and rendering conventions (stable refs, key-prop reset, lazy initializers, empty-array fallbacks).
 - testing-map.md: Current coverage, gaps, and recommended test additions.
 - codebase-tour.md: Concern-to-file routing table for fast navigation.
 - contributor-start-here.md: Practical onboarding sequence and first-change checklist.
