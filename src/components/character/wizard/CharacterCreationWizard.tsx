@@ -105,8 +105,8 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         return prev
       }
 
-      const recommended2014 = SOURCE_PRESETS.find((preset) => preset.id === '2014-recommended')
-      if (!recommended2014) {
+      const recommended = SOURCE_PRESETS.find((preset) => preset.id === 'recommended')
+      if (!recommended) {
         return prev
       }
 
@@ -115,8 +115,8 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
       )
       const allowedSources =
         availableSourceSet.size > 0
-          ? recommended2014.abbreviations.filter((abbr) => availableSourceSet.has(abbr))
-          : recommended2014.abbreviations
+          ? recommended.abbreviations.filter((abbr) => availableSourceSet.has(abbr))
+          : recommended.abbreviations
 
       if (allowedSources.length === 0) {
         return prev

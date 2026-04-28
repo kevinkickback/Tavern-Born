@@ -60,7 +60,7 @@ export function DataSourceStartupModal() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="max-w-3xl max-h-[90vh] overflow-y-auto"
+        className="max-w-3xl max-h-[90vh] overflow-y-auto [&>button:last-child]:hidden"
         onPointerDownOutside={(e) => {
           if (!gameData && !isLoading && !isForced) e.preventDefault()
         }}
@@ -87,11 +87,7 @@ export function DataSourceStartupModal() {
                 >
                   5etools wiki
                 </a>{' '}
-                may point to{' '}
-                <strong>
-                  <em className="text-primary">source code</em>
-                </strong>{' '}
-                where they can be found.
+                (see: Download the Source code) might be helpful.
               </>
             )}
           </DialogDescription>

@@ -153,8 +153,24 @@ export function EquipmentPage() {
     setHintDismissed(EQUIPMENT_EQUIP_HINT_ID, true)
   }
 
+  const {
+    equipment,
+    totalWeight,
+    carryCapacity,
+    isEncumbered,
+    attunedCount,
+    currency,
+    totalCurrencyCopper,
+    addFromGameData,
+    removeItem,
+    updateItem,
+    toggleEquip,
+    toggleAttune,
+    updateCurrency,
+  } = useEquipment()
+
   useEffect(() => {
-    if (!showEquipHint) {
+    if (!showEquipHint || equipment.length === 0) {
       setHintPosition(null)
       return
     }
@@ -180,28 +196,14 @@ export function EquipmentPage() {
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update, true)
     }
-  }, [showEquipHint])
+  }, [showEquipHint, equipment])
+
   const [itemSearch, setItemSearch] = useState('')
   const [itemTypeFilter, setItemTypeFilter] = useState<ItemCategory>('All')
   const character = useCharacterStore((s) => s.activeCharacter)
   const gameData = useGameDataStore((s) => s.gameData)
   const { applyManualEquipmentGrant, removeEquipmentProvenance, getSourcesRowsBySection } =
     useProvenance()
-  const {
-    equipment,
-    totalWeight,
-    carryCapacity,
-    isEncumbered,
-    attunedCount,
-    currency,
-    totalCurrencyCopper,
-    addFromGameData,
-    removeItem,
-    updateItem,
-    toggleEquip,
-    toggleAttune,
-    updateCurrency,
-  } = useEquipment()
   const { calculatedAC, overrideAC } = useArmorClass()
   const equipmentItems = useMemo(() => {
     const merged = new Map<string, Item5e>()
@@ -606,10 +608,7 @@ export function EquipmentPage() {
                           {(isEquippable(item) || item.equipped) && (
                             <div
                               className="flex items-center gap-1"
-                              {...(item.armorType ||
-                              ARMOR_TYPE_CODES.has((item.type ?? '').split('|')[0].toUpperCase())
-                                ? { 'data-equip-ac-toggle': 'true' }
-                                : {})}
+                              data-equip-ac-toggle="true"
                             >
                               <Switch
                                 checked={item.equipped}

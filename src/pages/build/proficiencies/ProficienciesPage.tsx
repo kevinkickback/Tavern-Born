@@ -8,6 +8,7 @@ import { useSavingThrows } from '@/hooks/character/useSavingThrows'
 import { useSkills } from '@/hooks/character/useSkills'
 import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { getImplicitSource } from '@/lib/sourcePresets'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildProficienciesDetailsPanel } from '@/pages/build/proficiencies/components/DetailsPanel'
 import { BuildProficienciesTabsPanel } from '@/pages/build/proficiencies/components/TabsPanel'
@@ -79,15 +80,15 @@ export function BuildProficienciesPage() {
 
   const choiceCounts = useMemo(() => buildChoiceCounts(ledger.choices), [ledger.choices])
 
-  const toolSubtypeOptionsByKind = useMemo(
-    () =>
-      buildToolSubtypeOptionsByKind({
-        itemsBase,
-        items,
-        allowedSources: character?.allowedSources,
-      }),
-    [character?.allowedSources, items, itemsBase],
-  )
+  const toolSubtypeOptionsByKind = useMemo(() => {
+    const rawAllowed = character?.allowedSources
+    let effectiveSources: string[] | undefined
+    if (rawAllowed) {
+      const implicit = getImplicitSource(character?.originSystem ?? '2014')
+      effectiveSources = rawAllowed.includes(implicit) ? rawAllowed : [...rawAllowed, implicit]
+    }
+    return buildToolSubtypeOptionsByKind({ itemsBase, items, allowedSources: effectiveSources })
+  }, [character?.allowedSources, character?.originSystem, items, itemsBase])
 
   const toolChoiceSlots = useMemo(
     () =>

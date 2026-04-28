@@ -32,8 +32,14 @@ export function CharacterSheetPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [refreshNonce, setRefreshNonce] = useState(0)
   const [selectedTemplateId, setSelectedTemplateId] = useState<CharacterSheetTemplateId>(
-    DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
+    () => character?.originSystem ?? DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
   )
+
+  useEffect(() => {
+    if (character?.originSystem) {
+      setSelectedTemplateId(character.originSystem)
+    }
+  }, [character?.originSystem])
 
   const selectedTemplate = useMemo(
     () => getCharacterSheetTemplate(selectedTemplateId),
@@ -103,7 +109,7 @@ export function CharacterSheetPage() {
       return
     }
 
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' })
+    const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -141,16 +147,36 @@ export function CharacterSheetPage() {
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Export Options
               </span>
+            </div>
+            <div className="p-4 flex items-center gap-3">
+              <span className="text-sm font-medium text-muted-foreground shrink-0">Template:</span>
+              <Select
+                value={selectedTemplateId}
+                onValueChange={(value) =>
+                  setSelectedTemplateId(value as CharacterSheetTemplateId)
+                }
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CHARACTER_SHEET_TEMPLATES.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="ml-auto flex items-center gap-2">
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() => setRefreshNonce((n) => n + 1)}
                   disabled={isGenerating}
-                  className="h-7 text-xs gap-1.5"
+                  className="gap-2"
                 >
-                  <ArrowsClockwise className="h-3.5 w-3.5" weight="bold" />
+                  <ArrowsClockwise className="h-4 w-4" weight="bold" />
                   Regenerate
                 </Button>
                 <Button
@@ -158,40 +184,12 @@ export function CharacterSheetPage() {
                   size="sm"
                   onClick={handleDownload}
                   disabled={isGenerating || !pdfBytes}
-                  className="h-7 text-xs gap-1.5"
+                  className="gap-2"
                 >
-                  <DownloadSimple className="h-3.5 w-3.5" weight="bold" />
+                  <DownloadSimple className="h-4 w-4" weight="bold" />
                   Download PDF
                 </Button>
               </div>
-            </div>
-            <div className="p-4 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground shrink-0">Template</span>
-                <Select
-                  value={selectedTemplateId}
-                  onValueChange={(value) =>
-                    setSelectedTemplateId(value as CharacterSheetTemplateId)
-                  }
-                >
-                  <SelectTrigger className="w-[260px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CHARACTER_SHEET_TEMPLATES.map((template) => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Auto-filled for <span className="font-medium text-foreground">{characterName}</span>{' '}
-                using the{' '}
-                <span className="font-medium text-foreground">{selectedTemplate.name}</span>{' '}
-                template.
-              </p>
             </div>
           </Card>
 

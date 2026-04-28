@@ -21,6 +21,7 @@ import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { getImplicitSource } from '@/lib/sourcePresets'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { NoCharCard } from '@/pages/_shared'
 import {
@@ -257,12 +258,16 @@ export function BuildClassPage() {
   )
   const subclasses = useMemo(() => {
     const raw = (viewingClassData?.subclasses ?? []) as SubclassOption[]
-    const allowedSources = character?.allowedSources
+    const rawAllowed = character?.allowedSources
     const characterRace = (character?.race ?? '').toLowerCase()
 
     let filtered = raw
-    if (allowedSources && allowedSources.length > 0) {
-      filtered = filtered.filter((sc) => allowedSources.includes(sc.source ?? ''))
+    if (rawAllowed && rawAllowed.length > 0) {
+      const implicit = getImplicitSource(character?.originSystem ?? '2014')
+      const effectiveSources = rawAllowed.includes(implicit)
+        ? rawAllowed
+        : [...rawAllowed, implicit]
+      filtered = filtered.filter((sc) => effectiveSources.includes(sc.source ?? ''))
     }
 
     const isElf = characterRace.includes('elf') || characterRace.includes('half-elf')
@@ -279,6 +284,7 @@ export function BuildClassPage() {
   }, [
     viewingClassData?.subclasses,
     character?.allowedSources,
+    character?.originSystem,
     character?.race,
     character?.variantRules?.bladesingerAnyRace,
     character?.variantRules?.battleragerAnyRace,

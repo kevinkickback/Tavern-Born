@@ -451,7 +451,7 @@ export const useCharacterStore = create<CharacterState>()(
           // Active character updates are treated as in-memory draft changes.
           if (state.activeCharacterId === id && state.activeCharacter) {
             let next = { ...state.activeCharacter, ...updates, lastModified: now }
-            next = withAsiProvenance(state.activeCharacter, updates)
+            next = withAsiProvenance(next, updates)
             const parsed = parseCharacterData(next)
             if (!parsed.data) {
               console.error('updateCharacter validation failed:', {

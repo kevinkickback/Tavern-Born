@@ -1,5 +1,5 @@
 export interface SourcePreset {
-  id: '2014-recommended' | '2024-recommended' | 'expanded'
+  id: 'recommended' | 'expanded'
   label: string
   description: string
   abbreviations: string[]
@@ -7,35 +7,25 @@ export interface SourcePreset {
 
 export const SOURCE_PRESETS: SourcePreset[] = [
   {
-    id: '2014-recommended',
-    label: '2014 Recommended',
-    description: "Player's Handbook 2014 plus compatible expanded player options.",
-    abbreviations: ['PHB', 'XGE', 'TCE', 'MPMM', 'ERLW', 'EGW', 'MOT', 'VRGR'],
-  },
-  {
-    id: '2024-recommended',
-    label: '2024 Recommended',
-    description: "Player's Handbook 2024 plus compatible expanded player options.",
-    abbreviations: ['XPHB', 'XGE', 'TCE', 'MPMM', 'ERLW', 'EGW', 'MOT', 'VRGR'],
+    id: 'recommended',
+    label: 'Recommended',
+    description: 'Popular player options compatible with both 2014 and 2024 editions.',
+    abbreviations: ['XGE', 'TCE', 'MPMM', 'ERLW', 'EGW', 'MOT', 'VRGR'],
   },
   {
     id: 'expanded',
     label: 'Expanded',
     description: 'Recommended sources plus setting-focused books with narrower use cases.',
-    abbreviations: [
-      'PHB',
-      'XPHB',
-      'XGE',
-      'TCE',
-      'MPMM',
-      'ERLW',
-      'EGW',
-      'MOT',
-      'VRGR',
-      'GGR',
-      'SCC',
-    ],
+    abbreviations: ['XGE', 'TCE', 'MPMM', 'ERLW', 'EGW', 'MOT', 'VRGR', 'GGR', 'SCC'],
   },
 ]
 
 export const LARGE_SOURCE_WARNING_THRESHOLD = 15
+
+/** Sources always included based on the character's origin system — never toggled by the user. */
+export const IMPLICIT_SOURCES = new Set(['PHB', 'XPHB'])
+
+/** Returns the implicit core sourcebook for the given origin system. */
+export function getImplicitSource(originSystem: '2014' | '2024'): string {
+  return originSystem === '2024' ? 'XPHB' : 'PHB'
+}

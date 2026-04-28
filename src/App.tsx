@@ -33,6 +33,7 @@ import { EquipmentPage } from '@/pages/equipment/EquipmentPage'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { HomePage } from '@/pages/HomePage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { SourcesPage } from '@/pages/sources/SourcesPage'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { applyUiScale, useAppPreferencesStore } from '@/store/appPreferencesStore'
 
@@ -137,6 +138,7 @@ function App() {
             <Route path="/details/conditions" element={<ConditionsPage />} />
             <Route path="/character-sheet" element={<CharacterSheetPage />} />
             <Route path="/compendium" element={<CompendiumPage />} />
+            <Route path="/sources" element={<SourcesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </AppLayout>
