@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import { renderEntry } from '@/lib/renderer'
+import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { Background5e } from '@/types/5etools'
 import { DetailSection } from '../../DetailCards'
@@ -31,7 +32,11 @@ function getFirstStringEntry(entries: unknown[]): string {
 
 export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepProps) {
   const [search, setSearch] = useState('')
-  const allowedSources = data.allowedSources ?? []
+  const allowedSources = useMemo(() => {
+    const base = data.allowedSources ?? []
+    const implicit = getImplicitSource((data.originSystem || '2014') as '2014' | '2024')
+    return base.includes(implicit) ? base : [...base, implicit]
+  }, [data.allowedSources, data.originSystem])
   const sourceFilteredBackgrounds =
     allowedSources.length > 0
       ? backgrounds.filter((bg) => allowedSources.includes(bg.source))

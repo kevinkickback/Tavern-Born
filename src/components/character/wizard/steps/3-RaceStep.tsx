@@ -13,6 +13,7 @@ import {
   getSpeedDisplay,
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
+import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { Race5e } from '@/types/5etools'
 import { DetailSection } from '../../DetailCards'
@@ -25,7 +26,11 @@ interface RaceStepProps extends StepProps {
 
 export function RaceStep({ data, onChange, races }: RaceStepProps) {
   const [search, setSearch] = useState('')
-  const allowedSources = data.allowedSources ?? []
+  const allowedSources = useMemo(() => {
+    const base = data.allowedSources ?? []
+    const implicit = getImplicitSource((data.originSystem || '2014') as '2014' | '2024')
+    return base.includes(implicit) ? base : [...base, implicit]
+  }, [data.allowedSources, data.originSystem])
 
   const filteredRaces = useMemo(() => {
     const sourceFiltered =

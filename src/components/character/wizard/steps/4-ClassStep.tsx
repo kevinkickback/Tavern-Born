@@ -17,6 +17,7 @@ import {
   getSpellcastingStatDisplay,
 } from '@/lib/calculations/classUtils'
 import { getClassSummary } from '@/lib/calculations/entrySummary'
+import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 import { DetailHtmlSection, DetailSection } from '../../DetailCards'
@@ -29,7 +30,11 @@ interface ClassStepProps extends StepProps {
 
 export function ClassStep({ data, onChange, classes }: ClassStepProps) {
   const [search, setSearch] = useState('')
-  const allowedSources = data.allowedSources ?? []
+  const allowedSources = useMemo(() => {
+    const base = data.allowedSources ?? []
+    const implicit = getImplicitSource((data.originSystem || '2014') as '2014' | '2024')
+    return base.includes(implicit) ? base : [...base, implicit]
+  }, [data.allowedSources, data.originSystem])
   const sourceFilteredClasses =
     allowedSources.length > 0
       ? classes.filter((cls) => allowedSources.includes(cls.source))
@@ -39,7 +44,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
       ? buildSuppressedKeys(sourceFilteredClasses, new Set(allowedSources))
       : undefined
   const filteredClasses = sourceFilteredClasses.filter(
-    (cls) => !suppressedClassKeys?.has(`${cls.name}|${cls.source}`),
+    (cls) => !cls.isSidekick && !suppressedClassKeys?.has(`${cls.name}|${cls.source}`),
   )
   const searchFilteredClasses = useMemo(() => {
     const query = search.trim().toLowerCase()

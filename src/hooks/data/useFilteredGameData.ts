@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { DataFilter } from '@/lib/5etools/filters'
 import { buildSuppressedKeys } from '@/lib/5etools/reprints'
+import { getImplicitSource } from '@/lib/sourcePresets'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
@@ -147,8 +148,17 @@ export function useFilteredGameDataParams(params: FilterParams) {
  */
 export function useFilteredGameData() {
   const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
+  const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
   const preferNewerPrintings = useCharacterStore(
     (state) => state.activeCharacter?.variantRules?.preferNewerPrintings ?? false,
   )
-  return useFilteredGameDataParams({ allowedSources, preferNewerPrintings })
+
+  const effectiveSources = useMemo(() => {
+    if (!allowedSources) return undefined
+    const implicit = getImplicitSource(originSystem ?? '2014')
+    if (allowedSources.includes(implicit)) return allowedSources
+    return [...allowedSources, implicit]
+  }, [allowedSources, originSystem])
+
+  return useFilteredGameDataParams({ allowedSources: effectiveSources, preferNewerPrintings })
 }

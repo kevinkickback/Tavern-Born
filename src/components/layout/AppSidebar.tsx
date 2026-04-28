@@ -1,8 +1,8 @@
 import {
   Backpack,
   Barbell,
-  Bell,
   Book,
+  Books,
   CaretRight,
   Certificate,
   FilePdf,
@@ -111,9 +111,10 @@ export function AppSidebar() {
       onClick: () => navigate('/compendium'),
     },
     {
-      id: 'notifications',
-      label: 'Notifications',
-      icon: <Bell className="text-lg" />,
+      id: 'sources',
+      label: 'Sources',
+      icon: <Books className="text-lg" />,
+      onClick: () => navigate('/sources'),
     },
     {
       id: 'theme',
@@ -271,10 +272,9 @@ export function AppSidebar() {
         </nav>
 
         <div className="border-t border-border p-4">
-          <div className="flex items-center justify-center overflow-hidden">
+          <div className="flex items-center justify-center gap-2">
             {footerActions.map((action) => {
               const isExpanded = activeFooterAction === action.id
-              const isCollapsed = activeFooterAction !== null && !isExpanded
 
               return (
                 <button
@@ -290,9 +290,8 @@ export function AppSidebar() {
                   className={cn(
                     'flex h-10 items-center overflow-hidden rounded-xl text-sm font-medium transition-all duration-200 ease-out',
                     isExpanded
-                      ? 'w-36 gap-2 bg-secondary px-3 text-secondary-foreground shadow-sm'
+                      ? 'w-36 justify-center gap-2 bg-secondary px-3 text-secondary-foreground shadow-sm'
                       : 'w-10 justify-center text-muted-foreground hover:bg-secondary/70 hover:text-secondary-foreground',
-                    isCollapsed && 'w-0 scale-90 px-0 opacity-0 pointer-events-none',
                   )}
                 >
                   <span className="shrink-0">{action.icon}</span>

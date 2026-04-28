@@ -3,7 +3,7 @@ import { useId } from 'react'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { SOURCE_PRESETS, type SourcePreset } from '@/lib/sourcePresets'
+import { IMPLICIT_SOURCES, SOURCE_PRESETS, type SourcePreset } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
 import type { StepProps } from '../types'
@@ -89,11 +89,6 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
     )
   }
 
-  const isPhbRequired = () => {
-    const phbSources = sources.filter((s) => s.abbreviation === 'PHB' || s.abbreviation === 'XPHB')
-    return !phbSources.some((s) => allowedSources.includes(s.abbreviation))
-  }
-
   const isPresetActive = (preset: SourcePreset) => {
     const presetSources = preset.abbreviations.filter((abbreviation) =>
       availableSourceSet.has(abbreviation),
@@ -110,8 +105,6 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
   const hasNonPresetSourcesSelected = allowedSources.some(
     (abbreviation) => !presetSourceAbbreviations.has(abbreviation),
   )
-  const expandedPreset = SOURCE_PRESETS.find((preset) => preset.id === 'expanded')
-  const isExpandedSelectionActive = expandedPreset ? isPresetActive(expandedPreset) : false
   const preferNewerPrintingsEnabled = data.variantRules?.preferNewerPrintings ?? false
 
   const AS_METHODS = [
@@ -167,15 +160,15 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
             {[
               {
                 value: '2014' as const,
-                label: '2014 Origin Rules',
+                label: '5e Legacy (2014)',
                 description:
-                  'Origin ASIs come from race or subrace. Background origin feats and background ASIs are removed.',
+                  'The original 5th Edition ruleset. Widely supported, highly stable, and compatible with a large library of adventures and supplements.',
               },
               {
                 value: '2024' as const,
-                label: '2024 Origin Rules',
+                label: '5.5e Revised (2024)',
                 description:
-                  'Origin ASIs and the single origin feat come from background. Race origin ASIs and starting feats are removed.',
+                  'An updated version of 5th Edition with rebalanced classes, improved feats, and streamlined mechanics. Broadly compatible with earlier content.',
               },
             ].map((option) => {
               const selected = data.originSystem === option.value
@@ -200,7 +193,7 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
             })}
           </div>
           {invalidFields?.has('originSystem') && (
-            <p className="text-xs text-destructive">Please select an origin system to continue.</p>
+            <p className="text-xs text-destructive">Please select a ruleset to continue.</p>
           )}
         </div>
 
@@ -365,7 +358,9 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
             <div className="flex-1 min-h-0 flex flex-col gap-2">
               <div className="flex-1 overflow-y-auto pr-1 space-y-4">
                 {groupOrder.map((group) => {
-                  const groupSources = sourcesByGroup[group]
+                  const groupSources = sourcesByGroup[group]?.filter(
+                    (s) => !IMPLICIT_SOURCES.has(s.abbreviation),
+                  )
                   if (!groupSources || groupSources.length === 0) return null
 
                   return (
@@ -419,21 +414,14 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
                 </div>
               )}
 
-              {isExpandedSelectionActive && (
+              {data.originSystem === '2024' && (
                 <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
                   <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
                   <span>
                     {preferNewerPrintingsEnabled
-                      ? '2024 versions preferred — 2014 options only appear where no 2024 version exists. Disable "Prefer Newer Printings" to show both versions at all times.'
-                      : 'Both 2014 & 2024 options will be shown (creating duplicates). Enable "Prefer Newer Printings" to prefer 2024 versions when both are available.'}
+                      ? 'Older versions are hidden where a 2024 reprint exists in your selected sources.'
+                      : 'Some content exists in both 2014 and 2024 versions. Enable "Prefer Newer Printings" to automatically prefer the most recent version.'}
                   </span>
-                </div>
-              )}
-
-              {isPhbRequired() && (
-                <div className="text-xs text-destructive flex items-center gap-1.5 flex-shrink-0 bg-destructive/10 border border-destructive/30 p-3 rounded-md">
-                  <Warning className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span>At least one Player's Handbook (2014 or 2024) is required.</span>
                 </div>
               )}
             </div>

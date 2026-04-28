@@ -34,7 +34,7 @@ type OriginNormalizedRace = Race5e & {
 }
 
 export function getOriginSystemLabel(originSystem: OriginSystem): string {
-  return originSystem === '2024' ? '2024 Origin Rules' : '2014 Origin Rules'
+  return originSystem === '2024' ? '5.5e Revised (2024)' : '5e Legacy (2014)'
 }
 
 export function getOriginAsiSourceLabel(originSystem: OriginSystem): 'Race' | 'Background' {

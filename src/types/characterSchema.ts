@@ -428,7 +428,7 @@ export const wizardStep2Schema = z.object({
   abilityScoreMethod: abilityScoreMethodSchema.refine((v) => !!v, {
     message: 'Please select an ability score generation method',
   }),
-  allowedSources: sourceArraySchema.min(1, 'Please select at least one source book'),
+  allowedSources: z.array(sourceSchema),
 })
 
 export const wizardStep3Schema = z.object({
@@ -581,7 +581,7 @@ export const characterSchema = z
     proficiencies: proficienciesSchema,
     features: z.array(featureSchema),
     feats: z.array(featSchema),
-    allowedSources: z.array(sourceSchema).default(['PHB']),
+    allowedSources: z.array(sourceSchema).default([]),
     variantRules: variantRulesSchema.optional(),
     raceAsiChoices: z.array(z.array(z.string())).optional(),
     raceAsiBlockIndex: z.union([z.literal(0), z.literal(1)]).optional(),

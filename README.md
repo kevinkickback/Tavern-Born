@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Tavern Born Logo](src/ui/assets/images/icon.ico)
+<img src="design/logo_name.png" alt="Tavern Born Logo" width="250"/>
 
 **A comprehensive Dungeons & Dragons 5th Edition character creator**
 
@@ -21,6 +21,57 @@
 - **Equipment & inventory** — Item management with encumbrance tracking
 - **Multiple ability score methods** — Point Buy, Standard Array, Rolling, or Manual Entry
 - **Character details** — Portraits, backstory, and physical characteristics
+- **PDF export** — Generate a printable character sheet as a PDF
+
+## 📸 Screenshots
+
+<details>
+<summary>🏠 Home</summary>
+
+![Home](docs/images/home.png)
+*Browse and manage your characters*
+
+</details>
+
+<details>
+<summary>🎲 Ability Scores</summary>
+
+![Ability Scores](docs/images/ability_scores.png)
+*Set ability scores using Point Buy, Standard Array, Rolling, or Manual Entry*
+
+</details>
+
+<details>
+<summary>📖 Spell Selection</summary>
+
+![Spell Selection](docs/images/spell_select.png)
+*Browse and select spells with full descriptions and filters*
+
+</details>
+
+<details>
+<summary>✨ Spell List</summary>
+
+![Spell List](docs/images/spell_list.png)
+*Manage prepared spells, cantrips, and view spellcasting details*
+
+</details>
+
+<details>
+<summary>⚔️ Equipment</summary>
+
+![Equipment](docs/images/equipment.png)
+*Track inventory, weight, attunement slots, armor class, and currency*
+
+</details>
+
+<details>
+<summary>⬆️ Level Up & Multiclassing</summary>
+
+![Level Up](docs/images/level_up.png)
+*Level up, multiclass, and select ASIs or feats*
+
+</details>
 
 ## 🚀 Getting Started
 

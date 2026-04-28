@@ -17,13 +17,13 @@ type CharacterSheetTemplate = {
 export const CHARACTER_SHEET_TEMPLATES: readonly CharacterSheetTemplate[] = [
   {
     id: '2014',
-    name: 'MPMB 2014 Character Sheet',
+    name: '2014 Character Sheet',
     fileName: '2014_Character_Sheet.pdf',
     assetPath: '/pdf/2014_Character_Sheet.pdf',
   },
   {
     id: '2024',
-    name: 'WotC 2024 Character Sheet',
+    name: '2024 Character Sheet',
     fileName: '2024_Character_Sheet.pdf',
     assetPath: '/pdf/2024_Character_Sheet.pdf',
   },
