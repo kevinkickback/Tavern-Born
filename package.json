@@ -14,7 +14,8 @@
     "test:e2e:ui": "playwright test --ui",
     "optimize": "vite optimize",
     "preview": "vite preview",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "release": "npm run build && electron-builder --publish always"
   },
   "dependencies": {
     "@cantoo/pdf-lib": "^2.6.5",
