@@ -152,9 +152,7 @@ export function CharacterSheetPage() {
               <span className="text-sm font-medium text-muted-foreground shrink-0">Template:</span>
               <Select
                 value={selectedTemplateId}
-                onValueChange={(value) =>
-                  setSelectedTemplateId(value as CharacterSheetTemplateId)
-                }
+                onValueChange={(value) => setSelectedTemplateId(value as CharacterSheetTemplateId)}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue />

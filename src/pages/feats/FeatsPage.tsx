@@ -568,7 +568,10 @@ export function FeatsPage() {
 
     const update = () => {
       const btn = document.querySelector<HTMLElement>(FEATS_SETUP_BTN_SELECTOR)
-      if (!btn) { setHintPosition(null); return }
+      if (!btn) {
+        setHintPosition(null)
+        return
+      }
       const rect = btn.getBoundingClientRect()
       const centerX = rect.left + rect.width / 2
       const maxLeft = Math.max(16, window.innerWidth - FEATS_HINT_WIDTH - 16)
@@ -632,7 +635,8 @@ export function FeatsPage() {
                 <X className="h-3.5 w-3.5" />
               </button>
               <p className="leading-snug text-accent-foreground/95 pr-8">
-                Some feats need extra setup — like choosing a cantrip, skill, or spell. Click <strong>Complete Setup</strong> to finish configuring this feat.
+                Some feats need extra setup — like choosing a cantrip, skill, or spell. Click{' '}
+                <strong>Complete Setup</strong> to finish configuring this feat.
               </p>
             </div>
           </div>

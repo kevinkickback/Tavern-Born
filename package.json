@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b --noCheck && vite build",
-    "lint": "npx biome check --write .",
+    "lint": "npx biome format --write . && npx biome check --write .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

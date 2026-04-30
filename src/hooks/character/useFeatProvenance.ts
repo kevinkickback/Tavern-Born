@@ -279,9 +279,7 @@ export function useFeatProvenance({
                   (choice.optionPool.length === 0 ||
                     choice.optionPool.some((poolEntry) => normalizeKey(poolEntry) === normKey)),
               )
-              return (
-                candidates.find((c) => c.optionPool.length > 0) ?? candidates[0]
-              )
+              return candidates.find((c) => c.optionPool.length > 0) ?? candidates[0]
             })()
         if (!matchingChoice) return
 
