@@ -57,7 +57,6 @@ describe('app header character summary', () => {
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-      hasUnsavedChangesFlag: false,
     })
   })
 

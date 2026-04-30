@@ -27,7 +27,6 @@ function resetCharacterStore() {
     characters: [],
     activeCharacterId: null,
     activeCharacter: null,
-    hasUnsavedChangesFlag: false,
   })
 }
 

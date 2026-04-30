@@ -15,7 +15,7 @@ describe('SpellProfileManager', () => {
         detailsByProfileId={new Map()}
         groupedItems={new Map()}
         selectionSourceByProfileAndSpell={new Map()}
-        preparedCasterSpellsByProfile={new Map()}
+        preparedCasterItemsByProfile={new Map()}
         getSpellByName={() => undefined}
         onTogglePrepared={vi.fn()}
         onRemoveSpell={vi.fn()}
@@ -36,7 +36,7 @@ describe('SpellProfileManager', () => {
         detailsByProfileId={new Map()}
         groupedItems={new Map()}
         selectionSourceByProfileAndSpell={new Map()}
-        preparedCasterSpellsByProfile={new Map()}
+        preparedCasterItemsByProfile={new Map()}
         getSpellByName={() => undefined}
         onTogglePrepared={vi.fn()}
         onRemoveSpell={vi.fn()}

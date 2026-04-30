@@ -301,13 +301,15 @@ export interface Item5e {
 }
 
 export type AbilityBonus = {
-  [ability: string]: number
-} & {
   choose?: {
     from: string[]
     count: number
     amount?: number
   }
+  [ability: string]:
+    | number
+    | { from: string[]; count: number; amount?: number }
+    | undefined
 }
 
 export type LanguageProficiency = {

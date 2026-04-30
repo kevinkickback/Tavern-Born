@@ -47,6 +47,9 @@ function makeGameDataFixture(): GameData {
     magicvariants: [],
     optionalfeatures: [],
     variantrules: [],
+    trapHazards: [],
+    rewards: [],
+    cultsBoons: [],
     sources: [],
   }
 }

@@ -43,6 +43,9 @@ describe('5etools/lookups', () => {
       magicvariants: [],
       optionalfeatures: [{ name: 'Cantrip Formulas', source: 'TCE' }],
       variantrules: [],
+      trapHazards: [],
+      rewards: [],
+      cultsBoons: [],
       sources: [],
     })
 

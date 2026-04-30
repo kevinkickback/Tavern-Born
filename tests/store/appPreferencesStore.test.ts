@@ -44,7 +44,6 @@ describe('appPreferencesStore', () => {
       characters: [],
       activeCharacterId: null,
       activeCharacter: null,
-      hasUnsavedChangesFlag: false,
     })
   })
 
@@ -71,7 +70,6 @@ describe('appPreferencesStore', () => {
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-      hasUnsavedChangesFlag: false,
     })
 
     useAppPreferencesStore.getState().setHomeCardSize(520)
