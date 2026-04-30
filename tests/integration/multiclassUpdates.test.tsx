@@ -182,7 +182,7 @@ describe('Multiclass Updates', () => {
       })
 
       const updated = useCharacterStore.getState().activeCharacter
-      expect(updated?.classProgression!).toHaveLength(2)
+      expect(updated?.classProgression).toHaveLength(2)
       expect(updated?.classProgression?.[1].name).toBe('Cleric')
       expect(updated?.classProgression?.[1].levels).toBe(1)
     })
@@ -328,7 +328,7 @@ describe('Multiclass Updates', () => {
       })
 
       const updated = useCharacterStore.getState().activeCharacter
-      expect(updated?.classProgression!).toHaveLength(1)
+      expect(updated?.classProgression).toHaveLength(1)
       expect(updated?.classProgression?.[0].name).toBe('Wizard')
     })
 

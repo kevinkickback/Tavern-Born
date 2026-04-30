@@ -306,10 +306,7 @@ export type AbilityBonus = {
     count: number
     amount?: number
   }
-  [ability: string]:
-    | number
-    | { from: string[]; count: number; amount?: number }
-    | undefined
+  [ability: string]: number | { from: string[]; count: number; amount?: number } | undefined
 }
 
 export type LanguageProficiency = {

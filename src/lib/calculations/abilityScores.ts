@@ -186,10 +186,7 @@ type RaceAbilityEntry = {
     amount?: number
     from?: string[]
   }
-  [ability: string]:
-    | number
-    | { count?: number; amount?: number; from?: string[] }
-    | undefined
+  [ability: string]: number | { count?: number; amount?: number; from?: string[] } | undefined
 }
 
 /** Normalize an ability abbreviation (e.g. "str", "STR") to a full lowercase name. */
