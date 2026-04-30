@@ -281,8 +281,8 @@ export function EquipmentPage() {
               <X className="h-3.5 w-3.5" />
             </button>
             <p className="leading-snug text-accent-foreground/95 pr-8">
-              Toggle <strong>Equip</strong> on armor, shields, weapons, and worn magic items to mark
-              them active — armor and shields affect your Armor Class only when equipped.
+              Toggle <strong>Equip</strong> on armor, weapons, and worn magic items to mark
+              them active and applying their effect.
             </p>
           </div>
         </div>

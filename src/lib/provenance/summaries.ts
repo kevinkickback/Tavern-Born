@@ -35,10 +35,15 @@ function formatAbilityBonusAttribution(tag: SourceTag): string {
   return formatSourceType(tag.sourceType)
 }
 
+/** Strip trailing parentheticals that are pure flavor text (inner text > 30 chars). */
+function trimFlavorParenthetical(name: string): string {
+  return name.replace(/\s*\([^)]{31,}\)$/, '')
+}
+
 function rowsFromMap(map: Record<string, SourceTag[]>, category: string): SourceRow[] {
   return Object.entries(map).map(([key, tags]) => ({
     // Strip any stale {@item...} tags that may have been persisted before normalization
-    itemName: toDisplayName(stripItemTag(key)),
+    itemName: trimFlavorParenthetical(toDisplayName(stripItemTag(key))),
     category,
     attribution: formatTags(tags),
     sourceTypes: getSourceTypes(tags),

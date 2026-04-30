@@ -40,7 +40,7 @@ export function applyClassGrants(
       toolProficiencies?: Array<
         Record<string, boolean | number | { choose?: { from?: string[]; count?: number } }>
       >
-      skills?: Array<string | Record<string, unknown>>
+      skills?: Array<string | Record<string, unknown>> | Record<string, unknown>
     }
   },
   subclass:
@@ -96,7 +96,12 @@ export function applyClassGrants(
     `class:${normalizeKey(cls.name)}`,
   )
 
-  const skillChoiceEntry = (profs.skills ?? []).find(
+  const skillsArray = Array.isArray(profs.skills)
+    ? profs.skills
+    : profs.skills
+      ? [profs.skills as Record<string, unknown>]
+      : []
+  const skillChoiceEntry = skillsArray.find(
     (s): s is Record<string, unknown> => typeof s === 'object' && s !== null && 'choose' in s,
   ) as { choose?: { from: string[]; count: number } } | undefined
   if (skillChoiceEntry?.choose) {

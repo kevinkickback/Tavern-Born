@@ -43,6 +43,11 @@ export function* iterateProficiencyBlocks(
         }
       }
 
+      if (key === 'any' && typeof val === 'number' && val > 0) {
+        yield { kind: 'any-standard', count: val }
+        continue
+      }
+
       if (val === true) {
         yield { kind: 'fixed', key }
         continue

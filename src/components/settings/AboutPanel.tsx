@@ -1,4 +1,5 @@
 import { Books, Code, GithubLogo, Globe, Heart, Info } from '@phosphor-icons/react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 
@@ -7,13 +8,19 @@ const TECH_STACK = [
   { icon: Books, label: 'Radix UI + Tailwind CSS v4' },
 ]
 
-const INFO_ROWS = [
-  { label: 'Version', value: '0.0.0' },
-  { label: 'License', value: 'GPL-3.0' },
-  { label: 'Platform', value: 'Electron (Desktop)' },
-]
-
 export function AboutPanel() {
+  const [appVersion, setAppVersion] = useState('')
+
+  useEffect(() => {
+    void window.electronAPI?.getAppVersion().then(setAppVersion)
+  }, [])
+
+  const infoRows = [
+    { label: 'Version', value: appVersion || '—' },
+    { label: 'License', value: 'GPL-3.0' },
+    { label: 'Platform', value: 'Electron (Desktop)' },
+  ]
+
   return (
     <div className="space-y-6">
       {/* Hero card — profile-page style from material-tailwind */}
@@ -49,7 +56,7 @@ export function AboutPanel() {
 
           {/* Info rows — inspired by material-tailwind ProfileInfoCard */}
           <ul className="space-y-2.5">
-            {INFO_ROWS.map(({ label, value }) => (
+            {infoRows.map(({ label, value }) => (
               <li key={label} className="flex items-center gap-3 text-sm">
                 <span className="w-28 font-semibold text-foreground shrink-0">{label}:</span>
                 <span className="text-muted-foreground">{value}</span>

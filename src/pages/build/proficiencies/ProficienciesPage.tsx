@@ -8,6 +8,7 @@ import { useSavingThrows } from '@/hooks/character/useSavingThrows'
 import { useSkills } from '@/hooks/character/useSkills'
 import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { normalizeKey } from '@/lib/provenance'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildProficienciesDetailsPanel } from '@/pages/build/proficiencies/components/DetailsPanel'
@@ -22,6 +23,7 @@ import {
   buildToolSubtypeOptionsByKind,
   buildVisibleToolCandidates,
   getSelectedToolNames,
+  hasProfInArray,
   isArtisanToolSlot,
 } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
@@ -75,6 +77,34 @@ export function BuildProficienciesPage() {
     },
     [itemsByName, languagesByName],
   )
+
+  const activeFocused = useMemo(() => {
+    if (!focused) return null
+    if (focused.type === 'skill') {
+      const skill = skills.find((s) => s.name === focused.name)
+      if (!skill) return focused
+      return {
+        ...focused,
+        proficient: skill.proficient,
+        expertise: skill.expertise,
+        modifierString: skill.modifierString,
+      }
+    }
+    if (focused.type === 'save') {
+      const save = savingThrows.find((s) => s.ability === focused.ability)
+      if (!save) return focused
+      return { ...focused, proficient: save.proficient, modifierString: save.modifierString }
+    }
+    if (focused.type === 'item' && character) {
+      const { category, name } = focused
+      const norm = normalizeKey(name)
+      const ledgerGrants = ledger.proficiencies[category as keyof typeof ledger.proficiencies]
+      const hasGrant = ((ledgerGrants as Record<string, unknown[]>)[norm] ?? []).length > 0
+      const isProficient = hasProfInArray(character.proficiencies[category as keyof typeof character.proficiencies] as string[], name) || hasGrant
+      return { ...focused, isProficient }
+    }
+    return focused
+  }, [focused, skills, savingThrows, character, ledger])
 
   const skillDescriptions = useMemo(() => buildSkillDescriptions(skillDefs), [skillDefs])
 
@@ -232,7 +262,7 @@ export function BuildProficienciesPage() {
                 </div>
               </div>{' '}
               <BuildProficienciesDetailsPanel
-                focused={focused}
+                focused={activeFocused}
                 detailCollapsed={detailCollapsed}
                 skillDescriptions={skillDescriptions}
               />
