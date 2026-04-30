@@ -5,25 +5,66 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import type { SourceRow } from '@/lib/provenance/types'
+import type { SourceRow, SourceType } from '@/lib/provenance/types'
 import { renderEntry } from '@/lib/renderer'
 import { getCollapseState, setCollapseState } from '@/lib/storage/collapseState'
+import { cn } from '@/lib/utils'
 
 function renderInline(text: string): string {
   return renderEntry(text).replace(/^<p>|<\/p>$/g, '')
 }
 
-function SourceCategoryLine({ category, items }: { category: string; items: string[] }) {
+const SOURCE_TEXT_COLORS: Record<SourceType, string> = {
+  race: 'text-violet-400',
+  subrace: 'text-purple-400',
+  class: 'text-blue-400',
+  subclass: 'text-sky-400',
+  background: 'text-amber-400',
+  feat: 'text-green-400',
+  optionalFeature: 'text-teal-400',
+  manual: 'text-zinc-400',
+  ASI: 'text-rose-400',
+}
+
+interface AttributionGroup {
+  attribution: string
+  sourceTypes: SourceType[]
+  names: string[]
+  isPending: boolean
+}
+
+interface CategoryGroup {
+  category: string
+  groups: AttributionGroup[]
+}
+
+function SourceCategoryLine({
+  category,
+  groups,
+}: {
+  category: string
+  groups: AttributionGroup[]
+}) {
   return (
     <div className="py-1.5 text-sm">
       <span className="font-medium">{category}: </span>
       <span className="text-muted-foreground text-xs leading-relaxed">
-        {items.map((item) => (
-          <span key={`${category}-${item}`}>
-            <span dangerouslySetInnerHTML={{ __html: renderInline(item) }} />
-            {item !== items[items.length - 1] ? ', ' : ''}
-          </span>
-        ))}
+        {groups.map((group, gi) => {
+          const colorClass =
+            group.sourceTypes[0] != null ? SOURCE_TEXT_COLORS[group.sourceTypes[0]] : ''
+          return (
+            <span key={group.attribution}>
+              {group.names.map((name, i) => (
+                <span key={name}>
+                  <span dangerouslySetInnerHTML={{ __html: renderInline(name) }} />
+                  {i < group.names.length - 1 && ', '}
+                </span>
+              ))}
+              <span className={cn(colorClass)}>{` (${group.attribution})`}</span>
+              {gi < groups.length - 1 && ' — '}
+            </span>
+          )
+        })}
       </span>
     </div>
   )
@@ -58,44 +99,46 @@ export function SourcesAccordion({
     getCollapseState(persistKey, defaultCollapsed) ? '' : 'open',
   )
 
-  // Sync → persist on change
   useEffect(() => {
     setCollapseState(persistKey, value !== 'open')
   }, [persistKey, value])
 
   const groupedRows = useMemo(() => {
     const categoryOrder: string[] = []
-    const categoryMap = new Map<string, Map<string, { attributions: Set<string> }>>()
+    const categoryMap = new Map<
+      string,
+      Map<string, { sourceTypes: SourceType[]; names: string[]; isPending: boolean }>
+    >()
 
     for (const row of rows) {
-      if (!categoryMap.has(row.category)) {
-        categoryMap.set(row.category, new Map())
+      let attrMap = categoryMap.get(row.category)
+      if (!attrMap) {
+        attrMap = new Map()
+        categoryMap.set(row.category, attrMap)
         categoryOrder.push(row.category)
       }
-      const itemMap = categoryMap.get(row.category)
-      if (!itemMap) {
-        continue
+      if (!attrMap.has(row.attribution)) {
+        attrMap.set(row.attribution, {
+          sourceTypes: row.sourceTypes,
+          names: [],
+          isPending: row.isPending,
+        })
       }
-      if (!itemMap.has(row.itemName)) {
-        itemMap.set(row.itemName, { attributions: new Set() })
-      }
-      const entry = itemMap.get(row.itemName)
-      if (!entry) {
-        continue
-      }
-      entry.attributions.add(row.attribution)
+      attrMap.get(row.attribution)?.names.push(row.itemName)
     }
 
-    return categoryOrder.flatMap((category) => {
-      const itemMap = categoryMap.get(category)
-      if (!itemMap) {
-        return []
-      }
-      const items = Array.from(itemMap.entries()).map(([itemName, entry]) => {
-        const attribution = Array.from(entry.attributions).join(', ')
-        return `${itemName} (${attribution})`
-      })
-      return [{ category, items }]
+    return categoryOrder.flatMap((category): CategoryGroup[] => {
+      const attrMap = categoryMap.get(category)
+      if (!attrMap) return []
+      const groups: AttributionGroup[] = Array.from(attrMap.entries()).map(
+        ([attribution, data]) => ({
+          attribution,
+          sourceTypes: data.sourceTypes,
+          names: data.names,
+          isPending: data.isPending,
+        }),
+      )
+      return [{ category, groups }]
     })
   }, [rows])
 
@@ -107,7 +150,11 @@ export function SourcesAccordion({
     ) : (
       <div className="divide-y divide-border/50">
         {groupedRows.map((group) => (
-          <SourceCategoryLine key={group.category} category={group.category} items={group.items} />
+          <SourceCategoryLine
+            key={group.category}
+            category={group.category}
+            groups={group.groups}
+          />
         ))}
       </div>
     )

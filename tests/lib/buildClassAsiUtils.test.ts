@@ -4,22 +4,13 @@ import { applyClassAsiChoice, resetClassAsiChoice } from '@/pages/build/class/mo
 describe('buildClassAsiUtils', () => {
   test('applyClassAsiChoice applies a new ASI and appends choice', () => {
     const result = applyClassAsiChoice({
-      characterAbilityScores: {
-        strength: 10,
-        dexterity: 10,
-        constitution: 10,
-        intelligence: 10,
-        wisdom: 10,
-        charisma: 10,
-      },
       currentAsiChoices: [],
       className: 'Fighter',
       level: 4,
       abilityChanges: { strength: 2 },
     })
 
-    expect(result.abilityScores.strength).toBe(12)
-    expect(result.asiChoices).toEqual([
+    expect(result).toEqual([
       {
         id: 'asi-Fighter-4',
         className: 'Fighter',
@@ -31,14 +22,6 @@ describe('buildClassAsiUtils', () => {
 
   test('applyClassAsiChoice replaces existing ASI at same class/level', () => {
     const result = applyClassAsiChoice({
-      characterAbilityScores: {
-        strength: 12,
-        dexterity: 10,
-        constitution: 10,
-        intelligence: 10,
-        wisdom: 10,
-        charisma: 10,
-      },
       currentAsiChoices: [
         {
           id: 'asi-Fighter-4',
@@ -52,22 +35,12 @@ describe('buildClassAsiUtils', () => {
       abilityChanges: { constitution: 2 },
     })
 
-    expect(result.abilityScores.strength).toBe(10)
-    expect(result.abilityScores.constitution).toBe(12)
-    expect(result.asiChoices).toHaveLength(1)
-    expect(result.asiChoices[0]?.abilityChanges).toEqual({ constitution: 2 })
+    expect(result).toHaveLength(1)
+    expect(result[0]?.abilityChanges).toEqual({ constitution: 2 })
   })
 
-  test('resetClassAsiChoice reverts scores and removes matching ASI', () => {
+  test('resetClassAsiChoice removes the matching ASI choice', () => {
     const result = resetClassAsiChoice({
-      characterAbilityScores: {
-        strength: 12,
-        dexterity: 10,
-        constitution: 10,
-        intelligence: 10,
-        wisdom: 10,
-        charisma: 10,
-      },
       currentAsiChoices: [
         {
           id: 'asi-Fighter-4',
@@ -81,7 +54,6 @@ describe('buildClassAsiUtils', () => {
     })
 
     expect(result).not.toBeNull()
-    expect(result?.abilityScores.strength).toBe(10)
-    expect(result?.asiChoices).toEqual([])
+    expect(result).toEqual([])
   })
 })

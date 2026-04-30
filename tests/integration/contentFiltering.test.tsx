@@ -3,7 +3,12 @@ import { describe, expect, test } from 'vitest'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+import type { GameData } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+
+function partialGameData(partial: unknown): GameData {
+  return partial as GameData
+}
 
 /**
  * Integration tests for allowedSources filtering.
@@ -56,7 +61,7 @@ describe('Content Filtering (allowedSources)', () => {
       }
 
       useGameDataStore.setState({
-        gameData,
+        gameData: partialGameData(gameData),
       })
 
       const { result } = renderHook(() => useFilteredGameData())
@@ -86,7 +91,7 @@ describe('Content Filtering (allowedSources)', () => {
       }
 
       useGameDataStore.setState({
-        gameData,
+        gameData: partialGameData(gameData),
       })
 
       const { result } = renderHook(() => useFilteredGameData())
@@ -120,7 +125,7 @@ describe('Content Filtering (allowedSources)', () => {
       }
 
       useGameDataStore.setState({
-        gameData,
+        gameData: partialGameData(gameData),
       })
 
       const { result } = renderHook(() => useFilteredGameData())
@@ -149,7 +154,7 @@ describe('Content Filtering (allowedSources)', () => {
       }
 
       useGameDataStore.setState({
-        gameData,
+        gameData: partialGameData(gameData),
       })
 
       const { result } = renderHook(() => useFilteredGameData())
@@ -180,7 +185,7 @@ describe('Content Filtering (allowedSources)', () => {
       }
 
       useGameDataStore.setState({
-        gameData,
+        gameData: partialGameData(gameData),
       })
 
       const { result } = renderHook(() => useFilteredGameData())
@@ -209,7 +214,7 @@ describe('Content Filtering (allowedSources)', () => {
       }
 
       useGameDataStore.setState({
-        gameData,
+        gameData: partialGameData(gameData),
       })
 
       const { result, rerender } = renderHook(() => useFilteredGameData())
@@ -251,7 +256,7 @@ describe('Content Filtering (allowedSources)', () => {
       }
 
       useGameDataStore.setState({
-        gameData,
+        gameData: partialGameData(gameData),
       })
 
       const { result, rerender } = renderHook(() => useFilteredGameData())
@@ -273,7 +278,7 @@ describe('Content Filtering (allowedSources)', () => {
   })
 
   describe('Edge cases', () => {
-    test('empty allowedSources returns unfiltered content (fallback)', () => {
+    test('empty allowedSources filters to implicit source only', () => {
       const character = makeCharacterFixture({
         allowedSources: [],
       })
@@ -291,13 +296,14 @@ describe('Content Filtering (allowedSources)', () => {
       }
 
       useGameDataStore.setState({
-        gameData,
+        gameData: partialGameData(gameData),
       })
 
       const { result } = renderHook(() => useFilteredGameData())
 
-      // Should return all unfiltered content when allowedSources is empty
-      expect(result.current.spells.length).toBe(2)
+      // Empty allowedSources is treated as [implicit source] (PHB for 2014 characters),
+      // not as "show everything" — so only the PHB spell is returned.
+      expect(result.current.spells.length).toBe(1)
     })
 
     test('undefined allowedSources returns unfiltered content', () => {
@@ -320,7 +326,7 @@ describe('Content Filtering (allowedSources)', () => {
       }
 
       useGameDataStore.setState({
-        gameData,
+        gameData: partialGameData(gameData),
       })
 
       const { result } = renderHook(() => useFilteredGameData())

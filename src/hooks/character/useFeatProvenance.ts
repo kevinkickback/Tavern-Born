@@ -271,13 +271,18 @@ export function useFeatProvenance({
                 choice.domain === domain &&
                 choice.selected.length < choice.chooseCount,
             )
-          : ledger.choices.find(
-              (choice) =>
-                choice.domain === domain &&
-                choice.selected.length < choice.chooseCount &&
-                (choice.optionPool.length === 0 ||
-                  choice.optionPool.some((poolEntry) => normalizeKey(poolEntry) === normKey)),
-            )
+          : (() => {
+              const candidates = ledger.choices.filter(
+                (choice) =>
+                  choice.domain === domain &&
+                  choice.selected.length < choice.chooseCount &&
+                  (choice.optionPool.length === 0 ||
+                    choice.optionPool.some((poolEntry) => normalizeKey(poolEntry) === normKey)),
+              )
+              return (
+                candidates.find((c) => c.optionPool.length > 0) ?? candidates[0]
+              )
+            })()
         if (!matchingChoice) return
 
         const newSelected = [...matchingChoice.selected, itemName]

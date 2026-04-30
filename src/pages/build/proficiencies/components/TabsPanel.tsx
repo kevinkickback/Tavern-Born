@@ -264,6 +264,8 @@ export function BuildProficienciesTabsPanel({
                 onClick={() => {
                   if (canDeselect) onResolveChoiceSelection('skills', skill.name, false)
                   else if (canSelect) onResolveChoiceSelection('skills', skill.name, true)
+                }}
+                onMouseEnter={() => {
                   onFocusChange({
                     type: 'skill',
                     name: skill.name,
@@ -309,7 +311,7 @@ export function BuildProficienciesTabsPanel({
               <button
                 key={save.ability}
                 type="button"
-                onClick={() => {
+                onMouseEnter={() => {
                   onFocusChange({
                     type: 'save',
                     ability: save.ability,
@@ -370,6 +372,8 @@ export function BuildProficienciesTabsPanel({
                 onClick={() => {
                   if (canDeselect) onResolveChoiceSelection('armor', armorKey, false)
                   else if (canSelect) onResolveChoiceSelection('armor', armorKey, true)
+                }}
+                onMouseEnter={() => {
                   onFocusChange({
                     type: 'item',
                     category: 'armor',
@@ -436,6 +440,8 @@ export function BuildProficienciesTabsPanel({
                 onClick={() => {
                   if (canDeselect) onResolveChoiceSelection('weapons', weaponKey, false)
                   else if (canSelect) onResolveChoiceSelection('weapons', weaponKey, true)
+                }}
+                onMouseEnter={() => {
                   onFocusChange({
                     type: 'item',
                     category: 'weapons',
@@ -546,20 +552,12 @@ export function BuildProficienciesTabsPanel({
                   key={toolName}
                   type="button"
                   onClick={() => {
-                    if (isGenericKind) {
-                      onFocusChange({
-                        type: 'item',
-                        category: 'tools',
-                        name: toolName,
-                        isProficient: isSelected,
-                      })
-                      onExpandDetails()
-                      return
-                    }
-
+                    if (isGenericKind) return
                     if (canDeselect) onResolveChoiceSelection('tools', toolName, false)
                     else if (canSelect)
                       onResolveChoiceSelection('tools', toolName, true, artisanChoiceId)
+                  }}
+                  onMouseEnter={() => {
                     onFocusChange({
                       type: 'item',
                       category: 'tools',
@@ -639,6 +637,8 @@ export function BuildProficienciesTabsPanel({
                     onClick={() => {
                       if (canDeselect) onResolveChoiceSelection('languages', languageName, false)
                       else if (canSelect) onResolveChoiceSelection('languages', languageName, true)
+                    }}
+                    onMouseEnter={() => {
                       onFocusChange({
                         type: 'item',
                         category: 'languages',

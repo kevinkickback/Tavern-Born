@@ -26,7 +26,7 @@ describe('characterSheetPdf', () => {
         wisdom: 15,
         charisma: 8,
       },
-      armorClass: 16,
+      armorClassOverride: 16,
       speed: 35,
       hitPoints: {
         max: 31,
