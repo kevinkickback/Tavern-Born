@@ -267,7 +267,10 @@ export function SpellsPage() {
 
     const update = () => {
       const btn = document.querySelector<HTMLElement>(SPELLS_PREPARE_SELECTOR)
-      if (!btn) { setHintPosition(null); return }
+      if (!btn) {
+        setHintPosition(null)
+        return
+      }
       const rect = btn.getBoundingClientRect()
       const centerX = rect.left + rect.width / 2
       const maxLeft = Math.max(16, window.innerWidth - SPELLS_HINT_WIDTH - 16)
@@ -518,7 +521,8 @@ export function SpellsPage() {
               <X className="h-3.5 w-3.5" />
             </button>
             <p className="leading-snug text-accent-foreground/95 pr-8">
-              Toggle this circle to mark a spell prepared — as a prepared caster you can freely swap prepared spells between rests.
+              Toggle this circle to mark a spell prepared — as a prepared caster you can freely swap
+              prepared spells between rests.
             </p>
           </div>
         </div>

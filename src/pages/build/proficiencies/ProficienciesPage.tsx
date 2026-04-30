@@ -100,7 +100,11 @@ export function BuildProficienciesPage() {
       const norm = normalizeKey(name)
       const ledgerGrants = ledger.proficiencies[category as keyof typeof ledger.proficiencies]
       const hasGrant = ((ledgerGrants as Record<string, unknown[]>)[norm] ?? []).length > 0
-      const isProficient = hasProfInArray(character.proficiencies[category as keyof typeof character.proficiencies] as string[], name) || hasGrant
+      const isProficient =
+        hasProfInArray(
+          character.proficiencies[category as keyof typeof character.proficiencies] as string[],
+          name,
+        ) || hasGrant
       return { ...focused, isProficient }
     }
     return focused

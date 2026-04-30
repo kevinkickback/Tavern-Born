@@ -73,20 +73,14 @@ export function AppHeader() {
         <div className="flex items-center justify-center gap-3">
           {activeCharacter ? (
             <>
-<div className="flex items-center gap-2">
-                <div
-                  className="relative h-10 w-10 text-accent"
-                  data-testid="header-ac-badge"
-                >
+              <div className="flex items-center gap-2">
+                <div className="relative h-10 w-10 text-accent" data-testid="header-ac-badge">
                   <Shield weight="fill" className="h-10 w-10" />
                   <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-card-foreground leading-none">
                     {effectiveAC}
                   </span>
                 </div>
-                <div
-                  className="relative h-10 w-10 text-red-500"
-                  data-testid="header-hp-badge"
-                >
+                <div className="relative h-10 w-10 text-red-500" data-testid="header-hp-badge">
                   <Heart weight="fill" className="h-10 w-10" />
                   <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-card-foreground leading-none">
                     {displayedMaxHP}

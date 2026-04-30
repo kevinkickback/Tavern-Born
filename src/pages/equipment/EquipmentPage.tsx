@@ -281,8 +281,8 @@ export function EquipmentPage() {
               <X className="h-3.5 w-3.5" />
             </button>
             <p className="leading-snug text-accent-foreground/95 pr-8">
-              Toggle <strong>Equip</strong> on armor, weapons, and worn magic items to mark
-              them active and applying their effect.
+              Toggle <strong>Equip</strong> on armor, weapons, and worn magic items to mark them
+              active and applying their effect.
             </p>
           </div>
         </div>
@@ -606,10 +606,7 @@ export function EquipmentPage() {
 
                           {/* Equip */}
                           {(isEquippable(item) || item.equipped) && (
-                            <div
-                              className="flex items-center gap-1"
-                              data-equip-ac-toggle="true"
-                            >
+                            <div className="flex items-center gap-1" data-equip-ac-toggle="true">
                               <Switch
                                 checked={item.equipped}
                                 onCheckedChange={() => toggleEquip(item.id)}

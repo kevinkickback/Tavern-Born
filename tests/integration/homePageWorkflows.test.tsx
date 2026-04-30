@@ -156,7 +156,11 @@ describe('home page integration workflows', () => {
     useCharacterStore.setState({
       characters: [c1, c2],
       activeCharacterId: c1.id,
-      activeCharacter: { ...c1, name: 'Alpha Draft Edit', lastModified: new Date(Date.now() + 1000).toISOString() },
+      activeCharacter: {
+        ...c1,
+        name: 'Alpha Draft Edit',
+        lastModified: new Date(Date.now() + 1000).toISOString(),
+      },
     })
 
     render(<HomePage />)
