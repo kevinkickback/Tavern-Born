@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatModifier, normalizeAbilityName } from '@/lib/calculations/abilityScores'
+import { getClassIconUrl } from '@/lib/classIcons'
 
 interface SpellcastingDetailLike {
   profileId: string
@@ -83,7 +84,7 @@ export function SpellcastingDetailsCard({
           </p>
         ) : (
           <>
-            <div className="grid gap-3 xl:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
               {spellcastingDetails.map((detail) => (
                 <div
                   key={detail.profileId}
@@ -91,7 +92,19 @@ export function SpellcastingDetailsCard({
                 >
                   <div className="flex items-center gap-3 px-3 py-2.5 border-b border-border/40 bg-card">
                     <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                      <MagicWand className="h-5 w-5 text-white" weight="bold" />
+                      {(() => {
+                        const iconUrl = getClassIconUrl(detail.className)
+                        return iconUrl ? (
+                          <img
+                            src={iconUrl}
+                            alt={detail.className}
+                            className="h-5 w-5"
+                            style={{ filter: 'brightness(0) invert(1)' }}
+                          />
+                        ) : (
+                          <MagicWand className="h-5 w-5 text-white" weight="bold" />
+                        )
+                      })()}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-sm leading-tight truncate">

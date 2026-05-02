@@ -17,6 +17,7 @@ import {
   parseLanguages,
   parseMagicVariants,
   parseOptionalFeatures,
+  parseOrganizations,
   parseRaceFluffSummaries,
   parseRaces,
   parseRewards,
@@ -56,6 +57,7 @@ export class FiveEToolsDataLoader {
       { key: 'adventures', file: 'adventures.json' },
       { key: 'races', file: 'races.json' },
       { key: 'raceFluff', file: 'fluff-races.json' },
+      { key: 'backgroundFluff', file: 'fluff-backgrounds.json' },
       { key: 'classIndex', file: 'class/index.json' },
       { key: 'backgrounds', file: 'backgrounds.json' },
       { key: 'spellIndex', file: 'spells/index.json' },
@@ -84,6 +86,7 @@ export class FiveEToolsDataLoader {
       races: [],
       classes: [],
       backgrounds: [],
+      organizations: [],
       spells: [],
       feats: [],
       items: [],
@@ -151,6 +154,12 @@ export class FiveEToolsDataLoader {
                   item.summary,
                 ]),
               )
+              break
+            case 'backgroundFluff':
+              gameData.organizations = parseOrganizations(data)
+              gameData.organizations.forEach((item) => {
+                this.addItemSource(item, sourcesSet)
+              })
               break
             case 'backgrounds':
               gameData.backgrounds = parseBackgrounds(data) as GameData['backgrounds']

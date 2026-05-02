@@ -28,6 +28,7 @@ import { useCharacterStore } from '@/store/characterStore'
 import type { Character } from '@/types/character'
 
 type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'level-desc' | 'level-asc'
+type GroupByOption = 'none' | 'class' | 'alignment' | 'player'
 
 export function HomePage() {
   const characters = useCharacterStore((state) => state.characters)
@@ -42,6 +43,7 @@ export function HomePage() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false)
   const [sortBy, setSortBy] = useState<SortOption>('recent')
+  const [groupBy, setGroupBy] = useState<GroupByOption>('none')
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
@@ -71,6 +73,24 @@ export function HomePage() {
 
     return sorted
   }, [characters, sortBy])
+
+  const groupedCharacters = useMemo(() => {
+    if (groupBy === 'none') return null
+
+    const groups = new Map<string, Character[]>()
+    for (const char of sortedCharacters) {
+      let key: string
+      if (groupBy === 'class')
+        key = (char.classProgression?.length ?? 0) > 1 ? 'Multiclass' : char.class || 'Unknown'
+      else if (groupBy === 'alignment') key = char.details?.alignment || 'Unknown'
+      else key = char.details?.playerName || 'Unknown'
+
+      const existing = groups.get(key) ?? []
+      existing.push(char)
+      groups.set(key, existing)
+    }
+    return groups
+  }, [groupBy, sortedCharacters])
 
   const allSelected =
     sortedCharacters.length > 0 && selectedCharacterIds.length === sortedCharacters.length
@@ -247,11 +267,6 @@ export function HomePage() {
                 <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3">
                   <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                     Characters
-                    {characters.length > 0 && (
-                      <span className="ml-1.5 font-normal normal-case tracking-normal">
-                        ({characters.length})
-                      </span>
-                    )}
                   </span>
                 </div>
 
@@ -336,6 +351,42 @@ export function HomePage() {
                         </Button>
                       </div>
                     </div>
+                  ) : groupedCharacters ? (
+                    <div className="flex flex-col gap-6">
+                      {[...groupedCharacters.entries()].map(([group, chars]) => (
+                        <div key={group}>
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                              {group}
+                            </span>
+                            <span className="text-xs text-muted-foreground">({chars.length})</span>
+                            <div className="flex-1 h-px bg-border" />
+                          </div>
+                          <div
+                            className="grid gap-6"
+                            style={{
+                              gridTemplateColumns:
+                                'repeat(auto-fill, minmax(min(100%, 360px), 1fr))',
+                            }}
+                          >
+                            {chars.map((character) => (
+                              <CharacterCard
+                                key={character.id}
+                                character={character}
+                                onLoad={handleLoadCharacter}
+                                onDelete={handleDeleteCharacter}
+                                onExport={handleExportCharacter}
+                                isActive={character.id === activeCharacterId}
+                                selectionMode={selectionMode}
+                                isSelected={selectedCharacterIds.includes(character.id)}
+                                onToggleSelect={handleToggleCharacterSelection}
+                                cardSize={360}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
                     <div
                       className="grid gap-6"
@@ -400,15 +451,40 @@ export function HomePage() {
 
                     <div className="h-px bg-border" />
 
-                    <Button
-                      variant={selectionMode ? 'default' : 'outline'}
-                      size="sm"
-                      className="h-8 text-xs gap-1.5 w-full justify-start"
-                      onClick={handleToggleSelectionMode}
-                    >
-                      <CheckSquare size={14} />
-                      {selectionMode ? 'Cancel Multi-Select' : 'Multi-Select'}
-                    </Button>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs text-muted-foreground font-medium">Group by</span>
+                      <Select
+                        value={groupBy}
+                        onValueChange={(value) => setGroupBy(value as GroupByOption)}
+                      >
+                        <SelectTrigger className="h-8 text-xs w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="class">Class</SelectItem>
+                          <SelectItem value="alignment">Alignment</SelectItem>
+                          <SelectItem value="player">Player</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="h-px bg-border" />
+
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        Bulk Actions
+                      </span>
+                      <Button
+                        variant={selectionMode ? 'default' : 'outline'}
+                        size="sm"
+                        className="h-8 text-xs gap-1.5 w-full justify-start"
+                        onClick={handleToggleSelectionMode}
+                      >
+                        <CheckSquare size={14} />
+                        {selectionMode ? 'Cancel Multi-Select' : 'Multi-Select'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

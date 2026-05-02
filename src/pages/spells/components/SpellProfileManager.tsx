@@ -92,7 +92,7 @@ function CantripGroup({
         getColSpanClasses(span),
       )}
     >
-      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60 bg-accent/10">
+      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-foreground/70 border-b border-border/60 bg-muted/50">
         Cantrips
       </div>
       <div
@@ -352,9 +352,9 @@ export function SpellProfileManager({
                 <AccordionItem
                   key={profile.id}
                   value={profile.id}
-                  className="border-b border-border/30"
+                  className="border-b border-border/60"
                 >
-                  <AccordionTrigger className="px-6 py-2.5 bg-muted/50 rounded-none hover:no-underline hover:bg-muted/70 transition-colors">
+                  <AccordionTrigger className="px-6 py-2.5 bg-muted/70 rounded-none hover:no-underline hover:bg-muted/90 transition-colors border-t border-border/60">
                     <div className="flex items-center gap-2 text-left w-full min-w-0">
                       <span className="font-medium text-sm">{profile.label}</span>
                       <div className="ml-auto flex items-center gap-2 pr-1">
@@ -413,7 +413,7 @@ export function SpellProfileManager({
                         {profile.alwaysPrepared ||
                         isLevelOnly ||
                         (profile.type === 'class' && detail && !detail.isPreparedCaster) ? (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="outline" className="text-xs">
                             Always Prepared
                           </Badge>
                         ) : null}
@@ -428,7 +428,7 @@ export function SpellProfileManager({
                       </div>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="pb-1 border-t border-border/30 bg-muted/10">
+                  <AccordionContent className="pb-1 border-t border-border/60 bg-muted/10">
                     {isBonusProfile && !showDefaultEmptyState ? (
                       <div className="px-5 py-2 bg-muted/10 flex items-center justify-end">
                         <Button
@@ -555,7 +555,7 @@ export function SpellProfileManager({
                                       getColSpanClasses(span),
                                     )}
                                   >
-                                    <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60 bg-accent/10">
+                                    <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-foreground/70 border-b border-border/60 bg-muted/50">
                                       {formatSpellLevel(spellLevel)}s
                                     </div>
                                     <div
@@ -575,7 +575,9 @@ export function SpellProfileManager({
                                             key={`${profile.id}|avail|${spell.name}|${spell.source ?? ''}`}
                                             className={cn(
                                               'px-4 py-2 flex items-center gap-3 break-inside-avoid transition-colors',
-                                              isPrepared ? 'bg-accent/10' : 'hover:bg-muted/20',
+                                              isPrepared
+                                                ? 'bg-accent/20 border-l-2 border-accent/60 pl-[14px]'
+                                                : 'hover:bg-muted/20 border-l-2 border-transparent pl-[14px]',
                                             )}
                                           >
                                             <div className="min-w-0 flex-1">
@@ -678,7 +680,7 @@ export function SpellProfileManager({
                                         getColSpanClasses(span),
                                       )}
                                     >
-                                      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60 bg-accent/10">
+                                      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-foreground/70 border-b border-border/60 bg-muted/50">
                                         {formatSpellLevel(level)}s
                                       </div>
                                       <div

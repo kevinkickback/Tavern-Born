@@ -5,10 +5,21 @@ import {
   Sparkle,
   Star,
   TextAa,
+  Upload,
   Users,
 } from '@phosphor-icons/react'
-import { type ReactNode, useEffect, useId, useMemo, useState } from 'react'
+import {
+  type ChangeEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import { toast } from 'sonner'
 import { RichTextArea } from '@/components/editor/RichTextArea'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,8 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+
+const CUSTOM_ORGANIZATION_KEY = '__custom__'
+
 import { NoCharCard } from '../_shared'
 
 const ALIGNMENTS = [
@@ -45,6 +62,53 @@ const LIFESTYLES = [
   'Aristocratic',
 ]
 
+const ORGANIZATION_IMAGE_STYLES = [
+  'from-cyan-500/80 to-cyan-700/80',
+  'from-emerald-500/80 to-emerald-700/80',
+  'from-amber-500/80 to-amber-700/80',
+  'from-rose-500/80 to-rose-700/80',
+  'from-sky-500/80 to-sky-700/80',
+]
+
+const ORGANIZATION_THEMES: Record<string, string> = {
+  'emerald enclave': 'from-lime-900 via-yellow-700/95 to-emerald-900',
+  harpers: 'from-blue-950 via-slate-900 to-zinc-100',
+  'lords alliance': 'from-red-950 via-red-900 to-yellow-600',
+  'order of the gauntlet': 'from-zinc-900 via-neutral-800 to-stone-700',
+  zhentarim: 'from-black via-zinc-950 to-amber-300',
+}
+
+function getOrganizationKey(name: string, source: string) {
+  return `${name}|${source}`
+}
+
+function getInitials(label: string) {
+  const parts = label.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return 'ORG'
+  if (parts.length === 1) return parts[0].slice(0, 3).toUpperCase()
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase()
+}
+
+function getOrganizationImageStyle(label: string) {
+  const normalized = label
+    .toLowerCase()
+    .replace(/^the\s+/, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+  const themedStyle = ORGANIZATION_THEMES[normalized]
+  if (themedStyle) return themedStyle
+
+  const sum = [...label].reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  return ORGANIZATION_IMAGE_STYLES[sum % ORGANIZATION_IMAGE_STYLES.length]
+}
+
+function normalizeOrganizationImagePath(path: string) {
+  if (path.startsWith('/assets/factions/')) {
+    return path.replace('/assets/factions/', '/assets/images/factions/')
+  }
+  return path
+}
+
 function Field({ id, label, children }: { id: string; label: string; children: ReactNode }) {
   return (
     <div className="space-y-1.5">
@@ -65,7 +129,8 @@ export function CharacteristicsPage() {
   const updateActiveCharacterDetails = useCharacterStore(
     (state) => state.updateActiveCharacterDetails,
   )
-  const gameData = useGameDataStore((state) => state.gameData)
+  const gameData = useFilteredGameData()
+  const rawGameData = useGameDataStore((state) => state.gameData)
 
   // Identity
   const [charName, setCharName] = useState(activeCharacter?.name || '')
@@ -97,9 +162,22 @@ export function CharacteristicsPage() {
   // Story
   const [backstory, setBackstory] = useState(activeCharacter?.details?.backstory || '')
   const [appearance, setAppearance] = useState(activeCharacter?.details?.appearance || '')
-  const [alliesAndOrganizations, setAlliesAndOrganizations] = useState(
-    activeCharacter?.details?.alliesAndOrganizations || '',
+  const [organizationSelectionKey, setOrganizationSelectionKey] = useState(
+    activeCharacter?.details?.organizationSelectionKey || '',
   )
+  const [organizationCustomName, setOrganizationCustomName] = useState(
+    activeCharacter?.details?.organizationCustomName || '',
+  )
+  const [organizationCustomDescription, setOrganizationCustomDescription] = useState(
+    activeCharacter?.details?.organizationCustomDescription ||
+    activeCharacter?.details?.alliesAndOrganizations ||
+    '',
+  )
+  const [organizationCustomImage, setOrganizationCustomImage] = useState(
+    activeCharacter?.details?.organizationCustomImage || '',
+  )
+  const [failedOrganizationPreviewImagePath, setFailedOrganizationPreviewImagePath] = useState('')
+  const customImageInputRef = useRef<HTMLInputElement>(null)
 
   // IDs
   const charNameId = useId()
@@ -124,17 +202,31 @@ export function CharacteristicsPage() {
   const fearsId = useId()
   const backstoryId = useId()
   const appearanceId = useId()
-  const alliesId = useId()
+  const organizationSelectId = useId()
+  const organizationCustomNameId = useId()
+  const organizationCustomDescriptionId = useId()
+
+  const organizationOptions = useMemo(() => {
+    return (rawGameData?.organizations ?? []).map((organization) => ({
+      key: getOrganizationKey(organization.name, organization.source),
+      organization,
+    }))
+  }, [rawGameData?.organizations])
+
+  const selectedOrganization = useMemo(() => {
+    return organizationOptions.find((option) => option.key === organizationSelectionKey)
+      ?.organization
+  }, [organizationOptions, organizationSelectionKey])
 
   const deityNames = useMemo(() => {
-    if (!gameData?.deities) return []
+    if (!gameData.deities) return []
     const names = new Set<string>()
     for (const d of gameData.deities) {
       const name = (d as { name?: string }).name
       if (name) names.add(name)
     }
     return [...names].sort((a, b) => a.localeCompare(b))
-  }, [gameData?.deities])
+  }, [gameData.deities])
 
   useEffect(() => {
     setCharName(activeCharacter?.name || '')
@@ -160,9 +252,104 @@ export function CharacteristicsPage() {
       setFears(d.fears || '')
       setBackstory(d.backstory || '')
       setAppearance(d.appearance || '')
-      setAlliesAndOrganizations(d.alliesAndOrganizations || '')
+
+      const hasOrganizationState =
+        !!d.organizationSelectionKey ||
+        !!d.organizationCustomName ||
+        !!d.organizationCustomDescription ||
+        !!d.organizationCustomImage
+
+      if (hasOrganizationState) {
+        setOrganizationSelectionKey(d.organizationSelectionKey || '')
+        setOrganizationCustomName(d.organizationCustomName || '')
+        setOrganizationCustomDescription(d.organizationCustomDescription || '')
+        setOrganizationCustomImage(d.organizationCustomImage || '')
+      } else {
+        setOrganizationSelectionKey(d.alliesAndOrganizations ? CUSTOM_ORGANIZATION_KEY : '')
+        setOrganizationCustomName('')
+        setOrganizationCustomDescription(d.alliesAndOrganizations || '')
+        setOrganizationCustomImage('')
+      }
     }
   }, [activeCharacter])
+
+  const handleOrganizationSelect = (value: string) => {
+    setOrganizationSelectionKey(value)
+
+    if (value === CUSTOM_ORGANIZATION_KEY) {
+      updateActiveCharacterDetails({
+        organizationSelectionKey: value,
+        alliesAndOrganizations: organizationCustomDescription,
+      })
+      return
+    }
+
+    const nextOrganization = organizationOptions.find(
+      (option) => option.key === value,
+    )?.organization
+    setOrganizationCustomName('')
+    setOrganizationCustomDescription('')
+    setOrganizationCustomImage('')
+    updateActiveCharacterDetails({
+      organizationSelectionKey: value,
+      organizationCustomName: '',
+      organizationCustomDescription: '',
+      organizationCustomImage: '',
+      alliesAndOrganizations: nextOrganization?.description || '',
+    })
+  }
+
+  const handleOrganizationImageUpload = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file')
+      return
+    }
+
+    if (file.size > MAX_PORTRAIT_SIZE) {
+      toast.error('Image size must be less than 5MB')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      setOrganizationCustomImage(result)
+      updateActiveCharacterDetails({ organizationCustomImage: result })
+      if (customImageInputRef.current) {
+        customImageInputRef.current.value = ''
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleClearCustomImage = () => {
+    setOrganizationCustomImage('')
+    updateActiveCharacterDetails({ organizationCustomImage: '' })
+    if (customImageInputRef.current) {
+      customImageInputRef.current.value = ''
+    }
+  }
+
+  const previewTitle =
+    organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
+      ? organizationCustomName || 'Custom Organization'
+      : selectedOrganization?.name || ''
+
+  const previewDescription =
+    organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
+      ? organizationCustomDescription || ''
+      : selectedOrganization?.description || ''
+
+  const previewImage =
+    organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
+      ? organizationCustomImage || ''
+      : normalizeOrganizationImagePath(selectedOrganization?.imagePath || '')
+
+  const showPreviewImage =
+    Boolean(previewImage) && failedOrganizationPreviewImagePath !== previewImage
 
   if (!activeCharacter) {
     return <NoCharCard icon={<Sparkle weight="duotone" />} noun="edit characteristics" />
@@ -566,19 +753,146 @@ export function CharacteristicsPage() {
                 Connections
               </span>
             </div>
-            <div className="p-4">
-              <RichTextArea
-                id={alliesId}
-                label="Allies & Organizations"
-                value={alliesAndOrganizations}
-                onChange={(value) => {
-                  setAlliesAndOrganizations(value)
-                  updateActiveCharacterDetails({ alliesAndOrganizations: value })
-                }}
-                placeholder="Describe your character's allies, factions, and organizational ties."
-                rows={8}
-              />
+            <div className="p-4 grid gap-4 lg:grid-cols-2">
+              <div className="space-y-4">
+                <Field id={organizationSelectId} label="Allies & Organizations">
+                  <Select value={organizationSelectionKey} onValueChange={handleOrganizationSelect}>
+                    <SelectTrigger id={organizationSelectId}>
+                      <SelectValue placeholder="Select an organization or choose custom" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {organizationOptions.map((option) => (
+                        <SelectItem key={option.key} value={option.key}>
+                          {option.organization.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={CUSTOM_ORGANIZATION_KEY}>Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY && (
+                  <div className="space-y-3 rounded-lg border border-border/60 p-3">
+                    <Field id={organizationCustomNameId} label="Custom Organization Name">
+                      <Input
+                        id={organizationCustomNameId}
+                        value={organizationCustomName}
+                        onChange={(event) => {
+                          const value = event.target.value
+                          setOrganizationCustomName(value)
+                          updateActiveCharacterDetails({ organizationCustomName: value })
+                        }}
+                        placeholder="Enter custom ally or organization"
+                      />
+                    </Field>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Custom Image
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => customImageInputRef.current?.click()}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload Image
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={handleClearCustomImage}
+                          disabled={!organizationCustomImage}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor={organizationCustomDescriptionId}
+                        className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                      >
+                        Custom Description
+                      </Label>
+                      <Textarea
+                        id={organizationCustomDescriptionId}
+                        value={organizationCustomDescription}
+                        onChange={(event) => {
+                          const value = event.target.value
+                          setOrganizationCustomDescription(value)
+                          updateActiveCharacterDetails({
+                            organizationCustomDescription: value,
+                            alliesAndOrganizations: value,
+                          })
+                        }}
+                        placeholder="Describe the custom ally or organization."
+                        rows={6}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div
+                className={`space-y-2 rounded-lg border border-border/60 p-3 ${organizationSelectionKey === CUSTOM_ORGANIZATION_KEY ? '' : 'lg:col-span-2'
+                  }`}
+              >
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Selection Preview
+                </div>
+
+                {previewTitle || previewDescription ? (
+                  <div
+                    className={`relative overflow-hidden rounded-md border border-border/60 bg-gradient-to-br ${getOrganizationImageStyle(previewTitle || 'Organization')}`}
+                  >
+                    {showPreviewImage ? (
+                      <>
+                        <div className="pointer-events-none absolute inset-0 bg-black/15" />
+                        <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 overflow-hidden">
+                          <img
+                            src={previewImage}
+                            alt={previewTitle || 'Organization preview'}
+                            className="absolute right-2 top-1/2 h-[88%] w-auto -translate-y-1/2 object-contain opacity-95 drop-shadow-xl"
+                            onError={() => {
+                              setFailedOrganizationPreviewImagePath(previewImage)
+                            }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex w-1/3 items-center justify-center">
+                        <span className="text-4xl font-display font-bold text-white/90 tracking-widest">
+                          {getInitials(previewTitle || 'Organization')}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="relative z-10 min-h-44 space-y-2 p-4 pr-28 sm:pr-40">
+                      <h4 className="text-sm font-semibold text-white">{previewTitle}</h4>
+                      <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
+                        {previewDescription}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Select an organization to preview its details, or choose Custom to upload an
+                    image and write your own description.
+                  </p>
+                )}
+              </div>
             </div>
+
+            <input
+              ref={customImageInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleOrganizationImageUpload}
+              className="hidden"
+            />
           </Card>
         </div>
       </div>

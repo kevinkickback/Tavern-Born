@@ -192,11 +192,13 @@ export const useGameDataStore = create<GameDataState>()(
           const now = new Date().toISOString()
           // Persist parsed data to IDB cache so next launch is instant.
           const prevChangedAt = get().lastDataChangedAt
+          const hadGameData = get().gameData !== null
           const cacheEntry = await writeGameDataCache(data, config)
           const contentChanged = cacheEntry.lastDataChangedAt !== prevChangedAt
+          const shouldHydrateMemory = contentChanged || !hadGameData
           set({
-            gameData: contentChanged ? data : get().gameData,
-            itemLookup: contentChanged
+            gameData: shouldHydrateMemory ? data : get().gameData,
+            itemLookup: shouldHydrateMemory
               ? buildItemLookup([...(data.items ?? []), ...(data.itemsBase ?? [])])
               : get().itemLookup,
             dataSourceConfig: { ...config, isValid: true, lastLoaded: now },
@@ -204,7 +206,9 @@ export const useGameDataStore = create<GameDataState>()(
             isBackgroundRefreshing: false,
             loadProgress: null,
             lastLoadedAt: now,
-            ...(contentChanged ? { lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now } : {}),
+            ...(contentChanged || !prevChangedAt
+              ? { lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now }
+              : {}),
             lastUpdateCheckAt: now,
             cacheStatus: 'fetched',
           })

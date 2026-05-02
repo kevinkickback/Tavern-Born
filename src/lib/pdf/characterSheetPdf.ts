@@ -2,7 +2,12 @@ import { PDFDocument, PDFName, PDFNumber } from '@cantoo/pdf-lib'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
+import { mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
+import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
+import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
+import { getEffectiveMaxHP, matchesGameDataEntry } from '@/lib/characterUtils'
+import type { Class5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
 export type CharacterSheetTemplateId = '2014' | '2024'
@@ -148,15 +153,110 @@ function getRaceSummary(character: Character): string {
   return `${character.subrace} ${character.race}`.trim()
 }
 
-function getBackgroundFeatDescription(character: Character): string {
-  const provenanceFeats = character.provenance?.feats ?? {}
-  const backgroundFeatName = Object.entries(provenanceFeats).find(([, tags]) =>
-    tags.some((tag) => tag.sourceType === 'background'),
-  )?.[0]
-  if (!backgroundFeatName) return ''
-  const feat = character.feats.find((f) => f.name === backgroundFeatName)
-  if (!feat) return ''
-  return feat.description ? `${feat.name}: ${feat.description}` : feat.name
+function getBackgroundFeatureName(character: Character): string {
+  const provenanceFeatures = character.provenance?.features ?? {}
+  return (
+    Object.entries(provenanceFeatures).find(([, tags]) =>
+      tags.some((tag) => tag.sourceType === 'background'),
+    )?.[0] ?? ''
+  )
+}
+
+function buildBackgroundFeatureDescription(character: Character): string {
+  const name = getBackgroundFeatureName(character)
+  if (!name) return ''
+  const feature = character.features.find((f) => f.name === name)
+  return feature?.description?.trim() ?? ''
+}
+
+const SIZE_CODE_TO_FULL: Record<string, string> = {
+  G: 'Gargantuan',
+  H: 'Huge',
+  L: 'Large',
+  M: 'Medium',
+  S: 'Small',
+  T: 'Tiny',
+}
+
+function normalizeSizeForPdf(code: string | undefined): string {
+  if (!code) return ''
+  return SIZE_CODE_TO_FULL[code.toUpperCase()] ?? code
+}
+
+function lookupMergedRace(character: Character, racesData: Race5e[]): Race5e | undefined {
+  const parent = racesData.find((r) =>
+    matchesGameDataEntry(character.race, character.raceSource, r),
+  )
+  if (!parent) return undefined
+  if (!character.subrace) return parent
+  const subrace = (parent.subraces as Race5e[] | undefined)?.find((sr) =>
+    matchesGameDataEntry(character.subrace, character.subraceSource, sr),
+  )
+  return subrace ? mergeRaceWithSubrace(parent, subrace) : parent
+}
+
+function buildVisionSummary(character: Character, mergedRace?: Race5e): string {
+  if (character.visions?.length) {
+    return character.visions
+      .map((v) => {
+        const label = v.type.charAt(0).toUpperCase() + v.type.slice(1)
+        return v.range != null ? `${label} ${v.range} ft.` : label
+      })
+      .join(', ')
+  }
+  // Fallback: derive darkvision from race data for characters without stored visions
+  if (mergedRace?.darkvision) {
+    return `Darkvision ${mergedRace.darkvision} ft.`
+  }
+  return ''
+}
+
+function buildRacialTraitsSummary(character: Character): string {
+  const provenanceFeatures = character.provenance?.features ?? {}
+  const racialFeatureNames = new Set(
+    Object.entries(provenanceFeatures)
+      .filter(([, tags]) =>
+        tags.some((tag) => tag.sourceType === 'race' || tag.sourceType === 'subrace'),
+      )
+      .map(([name]) => name),
+  )
+  const racialFeatures = character.features.filter((f) => racialFeatureNames.has(f.name))
+  if (racialFeatures.length === 0) return character.race || ''
+  return racialFeatures
+    .map((f) => {
+      const body = f.description?.trim()
+      return body ? `${f.name}: ${body}` : f.name
+    })
+    .join('\n\n')
+}
+
+function buildClassFeaturesSummary2014(character: Character): string {
+  const provenanceFeatures = character.provenance?.features ?? {}
+  if (Object.keys(provenanceFeatures).length === 0) {
+    return buildFeaturesSummary(character)
+  }
+  const classFeatureNames = new Set(
+    Object.entries(provenanceFeatures)
+      .filter(([, tags]) =>
+        tags.some(
+          (tag) =>
+            tag.sourceType === 'class' ||
+            tag.sourceType === 'subclass' ||
+            tag.sourceType === 'optionalFeature',
+        ),
+      )
+      .map(([name]) => name),
+  )
+  const knownNames = new Set(Object.keys(provenanceFeatures))
+  const features = character.features.filter(
+    (f) => classFeatureNames.has(f.name) || !knownNames.has(f.name),
+  )
+  return features
+    .map((f) => {
+      const body = f.description?.trim()
+      return body ? `${f.name}: ${body}` : f.name
+    })
+    .join('\n\n')
 }
 
 function buildFeaturesSummary(character: Character): string {
@@ -233,9 +333,10 @@ function deriveCalculatedValues(character: Character) {
   }
 }
 
-function buildCharacterSheetFieldMap2024(character: Character): FieldMap {
+function buildCharacterSheetFieldMap2024(character: Character, classesData?: Class5e[]): FieldMap {
   const values = deriveCalculatedValues(character)
   const effectiveArmorClass = computeEffectiveCharacterArmorClass(character)
+  const maxHP = getEffectiveMaxHP(character, classesData)
   const textFields: Record<string, string> = {
     Text_1: character.name || '',
     Text_2: getClassLevelSummary(character),
@@ -260,7 +361,7 @@ function buildCharacterSheetFieldMap2024(character: Character): FieldMap {
     Text_7: formatModifier(values.proficiencyBonus),
     Text_8: formatModifier(values.abilityModifiers.dexterity),
     Text_9: `${character.speed || 30} ft`,
-    Text_10: String(character.hitPoints.max || ''),
+    Text_10: String(maxHP || ''),
     Text_11: String(character.hitPoints.current || ''),
     Text_12: String(character.hitPoints.temporary || ''),
 
@@ -290,9 +391,35 @@ function buildCharacterSheetFieldMap2024(character: Character): FieldMap {
   return { textFields, checkboxFields }
 }
 
-function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
+function buildCharacterSheetFieldMap2014(
+  character: Character,
+  classesData?: Class5e[],
+  racesData?: Race5e[],
+): FieldMap {
   const values = deriveCalculatedValues(character)
   const effectiveArmorClass = computeEffectiveCharacterArmorClass(character)
+  const maxHP = getEffectiveMaxHP(character, classesData)
+
+  const classesById = new Map(
+    (classesData ?? []).map((cls) => [toClassProfileId(cls.name, cls.source), cls]),
+  )
+  const spellcastingDetails = buildSpellcastingClassDetails(character, classesById)
+  const mergedRace = racesData ? lookupMergedRace(character, racesData) : undefined
+
+  const customOrganizationSummary = [
+    character.details.organizationCustomName,
+    character.details.organizationCustomDescription,
+  ]
+    .filter((part) => !!part && part.trim().length > 0)
+    .join('\n')
+
+  const languages = character.proficiencies.languages
+  const tools = character.proficiencies.tools
+  const armorLower = character.proficiencies.armor.map((a) => a.toLowerCase())
+  const weaponsLower = character.proficiencies.weapons.map((w) => w.toLowerCase())
+  const otherWeapons = character.proficiencies.weapons.filter(
+    (w) => !w.toLowerCase().includes('simple') && !w.toLowerCase().includes('martial'),
+  )
 
   const textFields: Record<string, string> = {
     'PC Name': character.name || '',
@@ -308,7 +435,7 @@ function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
     'Initiative bonus': formatModifier(values.abilityModifiers.dexterity),
     Speed: `${character.speed || 30} ft`,
     AC: String(effectiveArmorClass),
-    'HP Max': String(character.hitPoints.max),
+    'HP Max': String(maxHP),
     'HP Current': String(character.hitPoints.current),
     'HP Temp': String(character.hitPoints.temporary),
     'Total Experience': String(character.experiencePoints || ''),
@@ -336,11 +463,48 @@ function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
     Flaw: character.details.flaws || '',
     Background_History:
       character.details.backstory || character.details.lifeEvents || character.details.origin || '',
-    MoreProficiencies: buildProficienciesSummary(character),
-    'Class Features': buildFeaturesSummary(character),
-    'Racial Traits': character.race || '',
-    'Background Feature Description': getBackgroundFeatDescription(character),
-    'Background_Organisation.Left': character.details.alliesAndOrganizations || '',
+    'Class Features': buildClassFeaturesSummary2014(character),
+    'Racial Traits': buildRacialTraitsSummary(character),
+    'Background Feature': getBackgroundFeatureName(character),
+    'Background Feature Description': buildBackgroundFeatureDescription(character),
+    'Background_Organisation.Left':
+      character.details.organizationSelectionKey === '__custom__'
+        ? customOrganizationSummary || character.details.alliesAndOrganizations || ''
+        : character.details.alliesAndOrganizations || '',
+    Background_Appearance:
+      character.details.appearance || character.details.physicalDescription || '',
+    Background_Enemies: character.details.nemesis || '',
+    Vision: buildVisionSummary(character, mergedRace),
+    'Size Category': normalizeSizeForPdf(mergedRace?.size?.[0]),
+    'Spell save DC 1':
+      spellcastingDetails[0]?.spellSaveDC != null ? String(spellcastingDetails[0].spellSaveDC) : '',
+    'Spell save DC 2':
+      spellcastingDetails[1]?.spellSaveDC != null ? String(spellcastingDetails[1].spellSaveDC) : '',
+    'Language 1': languages[0] ?? '',
+    'Language 2': languages[1] ?? '',
+    'Language 3': languages[2] ?? '',
+    'Language 4': languages[3] ?? '',
+    'Language 5': languages[4] ?? '',
+    'Language 6': languages[5] ?? '',
+    'Tool 1': tools[0] ?? '',
+    'Tool 2': tools[1] ?? '',
+    'Tool 3': tools[2] ?? '',
+    'Tool 4': tools[3] ?? '',
+    'Tool 5': tools[4] ?? '',
+    'Tool 6': tools[5] ?? '',
+    'Proficiency Weapon Other Description': otherWeapons.join(', '),
+    'Feat Name 1': character.feats[0]?.name ?? '',
+    'Feat Name 2': character.feats[1]?.name ?? '',
+    'Feat Name 3': character.feats[2]?.name ?? '',
+    'Feat Name 4': character.feats[3]?.name ?? '',
+    'Feat Description 1': character.feats[0]?.description ?? '',
+    'Feat Description 2': character.feats[1]?.description ?? '',
+    'Feat Description 3': character.feats[2]?.description ?? '',
+    'Feat Description 4': character.feats[3]?.description ?? '',
+    'Feat Note 1': character.feats[0]?.prerequisites ?? '',
+    'Feat Note 2': character.feats[1]?.prerequisites ?? '',
+    'Feat Note 3': character.feats[2]?.prerequisites ?? '',
+    'Feat Note 4': character.feats[3]?.prerequisites ?? '',
   }
 
   for (const [ability, mapping] of Object.entries(MPMB_2014_ABILITY_FIELD_MAP) as Array<
@@ -358,6 +522,13 @@ function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
     'Death Save Fail1': (character.deathSaves?.failures ?? 0) >= 1,
     'Death Save Fail2': (character.deathSaves?.failures ?? 0) >= 2,
     'Death Save Fail3': (character.deathSaves?.failures ?? 0) >= 3,
+    'Proficiency Armor Light': armorLower.some((a) => a.includes('light')),
+    'Proficiency Armor Medium': armorLower.some((a) => a.includes('medium')),
+    'Proficiency Armor Heavy': armorLower.some((a) => a.includes('heavy')),
+    'Proficiency Shields': armorLower.some((a) => a.includes('shield')),
+    'Proficiency Weapon Simple': weaponsLower.some((w) => w.includes('simple')),
+    'Proficiency Weapon Martial': weaponsLower.some((w) => w.includes('martial')),
+    'Proficiency Weapon Other': otherWeapons.length > 0,
   }
 
   for (const [ability, mapping] of Object.entries(MPMB_2014_SAVE_FIELD_MAP) as Array<
@@ -380,11 +551,13 @@ function buildCharacterSheetFieldMap2014(character: Character): FieldMap {
 export function buildCharacterSheetFieldMap(
   character: Character,
   templateId: CharacterSheetTemplateId = DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
+  classesData?: Class5e[],
+  racesData?: Race5e[],
 ): FieldMap {
   if (templateId === '2014') {
-    return buildCharacterSheetFieldMap2014(character)
+    return buildCharacterSheetFieldMap2014(character, classesData, racesData)
   }
-  return buildCharacterSheetFieldMap2024(character)
+  return buildCharacterSheetFieldMap2024(character, classesData)
 }
 
 export function getCharacterSheetTemplate(
@@ -397,11 +570,18 @@ export async function generateFilledCharacterSheetPdf(
   character: Character,
   templateBytes: ArrayBuffer | Uint8Array,
   templateId: CharacterSheetTemplateId = DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
+  classesData?: Class5e[],
+  racesData?: Race5e[],
 ): Promise<Uint8Array> {
   const input = templateBytes instanceof Uint8Array ? templateBytes : new Uint8Array(templateBytes)
   const pdfDoc = await PDFDocument.load(input, { ignoreEncryption: false })
   const form = pdfDoc.getForm()
-  const { textFields, checkboxFields } = buildCharacterSheetFieldMap(character, templateId)
+  const { textFields, checkboxFields } = buildCharacterSheetFieldMap(
+    character,
+    templateId,
+    classesData,
+    racesData,
+  )
 
   for (const [fieldName, value] of Object.entries(textFields)) {
     try {
@@ -462,7 +642,7 @@ async function embedPortraitImage(
   form: ReturnType<PDFDocument['getForm']>,
   portrait: string,
 ): Promise<void> {
-  let button: { acroField: { getWidgets: () => unknown[] } } | null = null
+  let button: { acroField: { getWidgets: () => unknown[] } }
   try {
     button = form.getButton('Portrait') as unknown as {
       acroField: { getWidgets: () => unknown[] }
@@ -473,6 +653,7 @@ async function embedPortraitImage(
 
   const widgets = button.acroField.getWidgets() as Array<{
     getRectangle: () => { x: number; y: number; width: number; height: number }
+    P: () => { tag: string } | undefined
   }>
   if (widgets.length === 0) return
 
@@ -484,16 +665,40 @@ async function embedPortraitImage(
   }
 
   try {
-    const commaIdx = portrait.indexOf(',')
-    const base64 = commaIdx >= 0 ? portrait.slice(commaIdx + 1) : portrait
-    const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
-    const image = portrait.includes('image/png')
-      ? await pdfDoc.embedPng(bytes)
-      : await pdfDoc.embedJpg(bytes)
+    let bytes: Uint8Array
+    let isPng: boolean
+
+    if (portrait.startsWith('data:')) {
+      const commaIdx = portrait.indexOf(',')
+      const base64 = commaIdx >= 0 ? portrait.slice(commaIdx + 1) : portrait
+      bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+      isPng = portrait.includes('image/png')
+    } else {
+      const response = await fetch(portrait)
+      if (!response.ok) throw new Error('Failed to fetch portrait')
+      const contentType = response.headers.get('content-type') ?? ''
+      isPng = contentType.includes('png') || portrait.toLowerCase().endsWith('.png')
+      bytes = new Uint8Array(await response.arrayBuffer())
+    }
+
+    const image = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes)
     const pages = pdfDoc.getPages()
     if (pages.length > 0) {
-      pages[0].drawImage(image, { x: rect.x, y: rect.y, width: rect.width, height: rect.height })
+      // Resolve the page that actually owns this widget via its /P entry
+      const pageRefTag = widgets[0].P?.()?.tag
+      const targetPage = pageRefTag
+        ? (pages.find((p) => (p as unknown as { ref: { tag: string } }).ref?.tag === pageRefTag) ??
+          pages[0])
+        : pages[0]
+
+      const dims = image.scaleToFit(rect.width, rect.height)
+      const drawX = rect.x + (rect.width - dims.width) / 2
+      const drawY = rect.y + (rect.height - dims.height) / 2
+      targetPage.drawImage(image, { x: drawX, y: drawY, width: dims.width, height: dims.height })
     }
+
+    // Collapse the Portrait widget so it doesn't occlude the image drawn on the page
+    hideFieldWidgets(button)
   } catch {
     // Portrait embedding is best-effort; skip silently on any failure.
   }

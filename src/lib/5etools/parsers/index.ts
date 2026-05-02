@@ -1,4 +1,5 @@
 export * from './basic'
 export * from './classes'
+export * from './organizations'
 export * from './races'
 export * from './spells'

@@ -171,6 +171,7 @@ export const variantRulesSchema = z.object({
   battleragerAnyRace: z.boolean().default(false),
 
   preferNewerPrintings: z.boolean().optional(),
+  ignoreEquipRestrictions: z.boolean().default(false),
 })
 
 export const characterClassEntrySchema = z.object({
@@ -324,6 +325,10 @@ export const characterDetailsSchema = z.object({
   definingMoment: z.string().optional(),
   lifeEvents: z.string().optional(),
   backstory: z.string().optional(),
+  organizationSelectionKey: z.string().optional(),
+  organizationCustomName: z.string().optional(),
+  organizationCustomDescription: z.string().optional(),
+  organizationCustomImage: z.string().optional(),
   alliesAndOrganizations: z.string().optional(),
 })
 

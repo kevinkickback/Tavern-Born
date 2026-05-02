@@ -148,6 +148,7 @@ export interface VariantRules {
   bladesingerAnyRace?: boolean
   battleragerAnyRace?: boolean
   preferNewerPrintings?: boolean
+  ignoreEquipRestrictions?: boolean
 }
 
 export type AbilityScores = Record<AbilityName, number>
@@ -351,6 +352,10 @@ export interface CharacterDetails {
   definingMoment?: string
   lifeEvents?: string
   backstory?: string
+  organizationSelectionKey?: string
+  organizationCustomName?: string
+  organizationCustomDescription?: string
+  organizationCustomImage?: string
   alliesAndOrganizations?: string
 }
 

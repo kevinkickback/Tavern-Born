@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useMemo } from 'react'
+import { toast } from 'sonner'
 import {
   SPECIAL_SPELL_PROFILE_ID,
   type SpellcastingClassDetail,
@@ -193,6 +194,18 @@ export function useSpellProfileMutations(
       const preparedLimit =
         detail?.isPreparedCaster === true ? (detail.preparedSpellLimit ?? null) : null
 
+      if (!isPrepared) {
+        const conflict = spellProfiles.find(
+          (p) => p.id !== profileId && p.preparedSpells.includes(name),
+        )
+        if (conflict) {
+          toast.warning(`Already prepared by ${conflict.label}`, {
+            description: `${name} is already prepared through your ${conflict.label} profile.`,
+          })
+          return
+        }
+      }
+
       if (
         !isPrepared &&
         preparedLimit !== null &&
@@ -201,7 +214,14 @@ export function useSpellProfileMutations(
         return
       }
 
-      const result = toggleSpellPrepared(commandCharacter, currentLedger, profileId, name)
+      const isTruePrepared = !!detail?.isTruePreparedCaster
+      const result = toggleSpellPrepared(
+        commandCharacter,
+        currentLedger,
+        profileId,
+        name,
+        isTruePrepared,
+      )
       applySpellCommand(result)
     },
     [

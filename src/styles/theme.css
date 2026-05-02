@@ -314,18 +314,18 @@
 
   :root[data-accent="rose"],
   #root[data-accent="rose"] {
-    --color-accent-1: var(--ruby-1);
-    --color-accent-2: var(--ruby-2);
-    --color-accent-3: var(--ruby-3);
-    --color-accent-4: var(--ruby-4);
-    --color-accent-5: var(--ruby-5);
-    --color-accent-6: var(--ruby-6);
-    --color-accent-7: var(--ruby-7);
-    --color-accent-8: var(--ruby-8);
-    --color-accent-9: var(--ruby-9);
-    --color-accent-10: var(--ruby-10);
-    --color-accent-11: var(--ruby-11);
-    --color-accent-12: var(--ruby-12);
-    --color-accent-contrast: var(--ruby-contrast);
+    --color-accent-1: var(--crimson-1);
+    --color-accent-2: var(--crimson-2);
+    --color-accent-3: var(--crimson-3);
+    --color-accent-4: var(--crimson-4);
+    --color-accent-5: var(--crimson-5);
+    --color-accent-6: var(--crimson-6);
+    --color-accent-7: var(--crimson-7);
+    --color-accent-8: var(--crimson-8);
+    --color-accent-9: oklch(0.52 0.22 15);
+    --color-accent-10: oklch(0.48 0.22 15);
+    --color-accent-11: var(--crimson-11);
+    --color-accent-12: var(--crimson-12);
+    --color-accent-contrast: var(--crimson-contrast);
   }
 }

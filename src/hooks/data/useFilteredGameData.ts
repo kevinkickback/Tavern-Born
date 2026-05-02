@@ -25,6 +25,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         races: [],
         classes: [],
         backgrounds: [],
+        organizations: [],
         spells: [],
         feats: [],
         items: [],
@@ -46,6 +47,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
     const races = gameData.races ?? []
     const classes = gameData.classes ?? []
     const backgrounds = gameData.backgrounds ?? []
+    const organizations = gameData.organizations ?? []
     const spells = gameData.spells ?? []
     const feats = gameData.feats ?? []
     const items = gameData.items ?? []
@@ -60,6 +62,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         races,
         classes,
         backgrounds,
+        organizations,
         spells,
         feats,
         items,
@@ -76,6 +79,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
             ...races,
             ...classes,
             ...backgrounds,
+            ...organizations,
             ...spells,
             ...feats,
             ...items,
@@ -104,6 +108,12 @@ export function useFilteredGameDataParams(params: FilterParams) {
       backgrounds: DataFilter.filterBackgrounds(backgrounds, {
         sources: allowedSources,
         suppressedKeys,
+      }),
+      organizations: organizations.filter((org) => {
+        if (!allowedSources.includes(org.source)) {
+          return false
+        }
+        return !(suppressedKeys?.has(`${org.name}|${org.source}`) ?? false)
       }),
       spells: DataFilter.filterSpells(spells, {
         sources: allowedSources,

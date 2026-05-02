@@ -9,6 +9,8 @@ export interface HitPointsState {
   hitPoints: HitPoints
   /** Max HP as calculated from class hit die + CON mod × level. */
   calculatedMaxHP: number
+  /** Stored max HP when set, otherwise calculatedMaxHP. */
+  effectiveMaxHP: number
   /** Hit die faces for the character's class (e.g. 8 for a Rogue). */
   hitDie: number
   conMod: number
@@ -16,8 +18,6 @@ export interface HitPointsState {
   levelsHPBreakdown: number[]
   setCurrentHP: (hp: number) => void
   setTempHP: (hp: number) => void
-  setMaxHP: (hp: number) => void
-  syncMaxHP: () => void
   heal: (amount: number) => void
   damage: (amount: number) => void
 }
@@ -70,9 +70,12 @@ export function useHitPoints(): HitPointsState {
     })
   }
 
+  const hitPoints = character?.hitPoints ?? { max: 0, current: 0, temporary: 0 }
+
   return {
-    hitPoints: character?.hitPoints ?? { max: 0, current: 0, temporary: 0 },
+    hitPoints,
     calculatedMaxHP,
+    effectiveMaxHP: hitPoints.max > 0 ? hitPoints.max : calculatedMaxHP,
     hitDie,
     conMod,
     levelsHPBreakdown,
@@ -81,14 +84,6 @@ export function useHitPoints(): HitPointsState {
         current: Math.max(0, Math.min(hp, character?.hitPoints.max ?? 0)),
       }),
     setTempHP: (hp) => update({ temporary: Math.max(0, hp) }),
-    setMaxHP: (hp) => update({ max: Math.max(1, hp) }),
-    syncMaxHP: () => {
-      if (!character) return
-      update({
-        max: calculatedMaxHP,
-        current: Math.min(character.hitPoints.current, calculatedMaxHP),
-      })
-    },
     heal: (amount) => {
       if (!character) return
       const max = character.hitPoints.max
