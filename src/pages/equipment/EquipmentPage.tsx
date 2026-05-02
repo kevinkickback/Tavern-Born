@@ -9,6 +9,7 @@ import {
   Scales,
   Scroll,
   Shield,
+  ShieldWarning,
   Sword,
   Target,
   Trash,
@@ -23,6 +24,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
 import { useProvenance } from '@/hooks/character/useProvenance'
@@ -201,7 +203,19 @@ export function EquipmentPage() {
   const [itemSearch, setItemSearch] = useState('')
   const [itemTypeFilter, setItemTypeFilter] = useState<ItemCategory>('All')
   const character = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const gameData = useGameDataStore((s) => s.gameData)
+
+  const ignoreEquipRestrictions = character?.variantRules?.ignoreEquipRestrictions ?? false
+  const toggleIgnoreRestrictions = () => {
+    if (!character) return
+    updateCharacter(character.id, {
+      variantRules: {
+        ...character.variantRules,
+        ignoreEquipRestrictions: !ignoreEquipRestrictions,
+      },
+    })
+  }
   const { applyManualEquipmentGrant, removeEquipmentProvenance, getSourcesRowsBySection } =
     useProvenance()
   const { calculatedAC, overrideAC } = useArmorClass()
@@ -220,7 +234,13 @@ export function EquipmentPage() {
 
   const encumbrancePct = carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0
   const encumbranceTone =
-    encumbrancePct >= 100 ? 'bg-destructive' : encumbrancePct >= 75 ? 'bg-warning' : 'bg-accent'
+    encumbrancePct >= 90
+      ? 'bg-destructive'
+      : encumbrancePct >= 60
+        ? 'bg-warning'
+        : encumbrancePct >= 30
+          ? 'bg-green-500'
+          : 'bg-blue-500'
 
   const filteredEquipment = useMemo(() => {
     const q = itemSearch.trim().toLowerCase()
@@ -312,7 +332,7 @@ export function EquipmentPage() {
               </div>
             </div>
             <div className="px-2 lg:px-4 pb-2 lg:pb-3">
-              <div className="bg-primary relative h-1.5 w-full overflow-hidden rounded-full border border-primary/20">
+              <div className="bg-muted relative h-1.5 w-full overflow-hidden rounded-full">
                 <div
                   className={cn('h-full transition-all rounded-full', encumbranceTone)}
                   style={{ width: `${encumbrancePct}%` }}
@@ -450,14 +470,40 @@ export function EquipmentPage() {
               <Badge variant="outline" className="text-xs h-5 px-1.5">
                 {equipment.length}
               </Badge>
-              <Button
-                onClick={() => setAddItemOpen(true)}
-                size="sm"
-                className="ml-auto h-7 bg-accent text-accent-foreground hover:bg-accent/90"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Add Item
-              </Button>
+              <div className="ml-auto flex items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={toggleIgnoreRestrictions}
+                      className={cn(
+                        'flex items-center justify-center h-7 w-7 rounded-md transition-colors',
+                        ignoreEquipRestrictions
+                          ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )}
+                    >
+                      <ShieldWarning
+                        className="h-4 w-4"
+                        weight={ignoreEquipRestrictions ? 'fill' : 'regular'}
+                      />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {ignoreEquipRestrictions
+                      ? 'Restrictions ignored — click to enforce armor slots & proficiency'
+                      : 'Enforce armor slots & proficiency (click to ignore)'}
+                  </TooltipContent>
+                </Tooltip>
+                <Button
+                  onClick={() => setAddItemOpen(true)}
+                  size="sm"
+                  className="h-7 bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add Item
+                </Button>
+              </div>
             </div>
 
             {/* Search + filter row */}

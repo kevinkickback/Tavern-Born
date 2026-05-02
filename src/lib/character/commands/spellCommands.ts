@@ -237,6 +237,7 @@ export function toggleSpellPrepared(
   ledger: ProvenanceLedger,
   profileId: string,
   spellName: string,
+  isTruePreparedCaster = false,
 ): SpellCommandResult {
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (profile.id !== profileId) return profile
@@ -250,6 +251,7 @@ export function toggleSpellPrepared(
     }
 
     const isKnown =
+      isTruePreparedCaster ||
       profile.cantrips.includes(spellName) ||
       profile.spellsKnown.includes(spellName) ||
       profile.alwaysPrepared

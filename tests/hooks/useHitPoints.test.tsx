@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 vi.mock('@/lib/storage/idb-storage', () => ({
@@ -52,7 +52,7 @@ describe('useHitPoints hook', () => {
         charisma: 10,
       },
       variantRules: { averageHitPoints: true },
-      hitPoints: { max: 1, current: 1, temporary: 0 },
+      hitPoints: { max: 0, current: 0, temporary: 0 },
     })
 
     useCharacterStore.setState({
@@ -66,11 +66,6 @@ describe('useHitPoints hook', () => {
     expect(result.current.conMod).toBe(2)
     expect(result.current.levelsHPBreakdown).toEqual([0, 10, 7, 7, 7, 7, 6, 6, 6])
     expect(result.current.calculatedMaxHP).toBe(56)
-
-    act(() => {
-      result.current.syncMaxHP()
-    })
-
-    expect(useCharacterStore.getState().activeCharacter?.hitPoints.max).toBe(56)
+    expect(result.current.effectiveMaxHP).toBe(56)
   })
 })

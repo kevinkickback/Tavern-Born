@@ -393,6 +393,13 @@ export interface Language5e {
   [key: string]: unknown
 }
 
+export interface Organization5e {
+  name: string
+  source: string
+  description: string
+  imagePath?: string
+}
+
 export interface DataSourceConfig {
   type: 'local' | 'remote'
   path: string
@@ -404,6 +411,7 @@ export interface GameData {
   races: Race5e[]
   classes: Class5e[]
   backgrounds: Background5e[]
+  organizations: Organization5e[]
   spells: Spell5e[]
   feats: Feat5e[]
   items: Item5e[]

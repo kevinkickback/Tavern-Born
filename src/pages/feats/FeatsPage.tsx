@@ -828,20 +828,9 @@ export function FeatsPage() {
                 Bonus Feats
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs h-5 px-2">
-                {bonusFeats.length} total
-              </Badge>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 text-xs px-2 gap-1 text-muted-foreground hover:text-foreground"
-                onClick={() => setBonusModalOpen(true)}
-              >
-                <Plus className="h-3 w-3" />
-                Add
-              </Button>
-            </div>
+            <Badge variant="outline" className="text-xs h-5 px-2">
+              {bonusFeats.length} total
+            </Badge>
           </div>
           <CardContent className="p-4">
             {bonusFeats.length > 0 ? (

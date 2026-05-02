@@ -55,6 +55,7 @@ Stored examples (mutable runtime):
 - spell profile selections (class profiles + special unrestricted profile)
 - selected origin system (`2014` or `2024`)
 - user-entered detail fields and choices
+- organization connection selection state (`organizationSelectionKey`, `organizationCustomName`, `organizationCustomDescription`, `organizationCustomImage`)
 - inventory currency counters (`cp`, `sp`, `ep`, `gp`, `pp`)
 - selected background equipment options per block (`backgroundEquipmentChoices`)
 - selected class equipment option per class source (`classEquipmentChoices`)

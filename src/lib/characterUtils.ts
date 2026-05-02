@@ -189,6 +189,20 @@ export function calculateMaxHP(
   return Math.max(1, total)
 }
 
+/**
+ * Returns the character's effective max HP: the stored value when it has been
+ * explicitly set (> 0), otherwise the value derived from class progression and
+ * CON modifier.  Pass `classesData` for accurate per-class hit dice; without
+ * it the calculation falls back to d8 per level.
+ */
+export function getEffectiveMaxHP(character: Character, classesData?: Class5e[]): number {
+  if (character.hitPoints.max > 0) return character.hitPoints.max
+  const progression = { classes: getCharacterClassEntries(character) }
+  const conMod = getAbilityModifier(character.abilityScores.constitution)
+  const averageHp = character.variantRules?.averageHitPoints !== false
+  return calculateMaxHP(progression, conMod, { averageHp, classesData })
+}
+
 export function calculateMaxHPFromScores(
   progression: Progression | undefined | null,
   scores: AbilityScores,

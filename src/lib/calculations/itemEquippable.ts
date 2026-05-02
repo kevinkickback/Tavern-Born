@@ -15,6 +15,18 @@ const EQUIPPABLE_TYPE_CODES = new Set([
 ])
 
 /**
+ * Returns true if the character's armor proficiency list covers the given armor type.
+ * Uses substring matching to handle varying label formats from different source books.
+ */
+export function hasArmorProficiency(
+  proficiencies: string[],
+  armorType: 'light' | 'medium' | 'heavy' | 'shield',
+): boolean {
+  const keyword = armorType === 'shield' ? 'shield' : armorType
+  return proficiencies.some((p) => p.toLowerCase().includes(keyword))
+}
+
+/**
  * Returns true when an item is something a character wears or holds in a
  * meaningful D&D sense and should show an Equip toggle in the UI.
  */
