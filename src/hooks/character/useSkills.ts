@@ -4,6 +4,7 @@ import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/game
 import { ALL_SKILLS, deriveAllSkills, type SkillResult } from '@/lib/calculations/skills'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 
 export type { SkillResult }
 
@@ -23,6 +24,7 @@ export interface SkillsState {
 export function useSkills(): SkillsState {
   const activeCharacter = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const skillToAbilityMap = useGameDataStore((s) => s.gameData?.lookups?.skillToAbilityMap)
 
   const level = useMemo(() => getTotalCharacterLevel(activeCharacter), [activeCharacter])
   const abilityScores = activeCharacter?.abilityScores
@@ -48,8 +50,15 @@ export function useSkills(): SkillsState {
   )
 
   const skills = useMemo(
-    () => deriveAllSkills(abilityModifiers, proficientSkills, expertiseSkills, proficiencyBonus),
-    [abilityModifiers, proficientSkills, expertiseSkills, proficiencyBonus],
+    () =>
+      deriveAllSkills(
+        abilityModifiers,
+        proficientSkills,
+        expertiseSkills,
+        proficiencyBonus,
+        skillToAbilityMap,
+      ),
+    [abilityModifiers, proficientSkills, expertiseSkills, proficiencyBonus, skillToAbilityMap],
   )
 
   const passivePerception = useMemo(() => {

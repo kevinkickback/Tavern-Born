@@ -92,6 +92,19 @@ describe('buildProficienciesData', () => {
     expect(byKind['gaming set']).toEqual(['Dice Set'])
   })
 
+  test('buildToolSubtypeOptionsByKind excludes wondrous instruments from musical instrument list', () => {
+    const byKind = buildToolSubtypeOptionsByKind({
+      itemsBase: [{ name: 'Drum', type: 'INS', source: 'PHB' }],
+      items: [
+        { name: 'Instrument of Illusions', type: 'INS', source: 'XGE', wondrous: true },
+        { name: 'Horn of Silent Alarm', type: 'INS|XPHB', source: 'XDMG', wondrous: true },
+        { name: "+1 Rhythm-Maker's Drum", type: 'INS', source: 'TCE', wondrous: true },
+      ],
+    })
+
+    expect(byKind['musical instrument']).toEqual(['Drum'])
+  })
+
   test('buildToolSubtypeOptionsByKind falls back to global items when allowed-source subset is empty', () => {
     const byKind = buildToolSubtypeOptionsByKind({
       itemsBase: [{ name: 'Lute', type: 'INS|PHB', source: 'PHB' }],

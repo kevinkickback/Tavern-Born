@@ -28,6 +28,8 @@ function makeMinimalGameData(classes: unknown[]) {
     feats: [],
     items: [],
     itemsBase: [],
+    itemProperties: [],
+    itemTypes: [],
     classFeatures: [],
     actions: [],
     conditions: [],

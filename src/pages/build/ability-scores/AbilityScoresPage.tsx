@@ -58,8 +58,15 @@ export function BuildAbilityScoresPage() {
 
   const method = character?.variantRules?.abilityScoreMethod ?? 'standard-array'
 
-  const { normalizedRaceSelection, raceAsiData, racialBonuses, backgroundBonuses, selectedRace, subraceData, raceAsiBlockIndex } =
-    useTotalAbilityScores(character)
+  const {
+    normalizedRaceSelection,
+    raceAsiData,
+    racialBonuses,
+    backgroundBonuses,
+    selectedRace,
+    subraceData,
+    raceAsiBlockIndex,
+  } = useTotalAbilityScores(character)
 
   const raceAsiChoices: string[][] = character?.raceAsiChoices ?? EMPTY_RACE_ASI_CHOICES
   const isLineageRaceAsiFallback = hasFlexibleRaceOriginAsi(normalizedRaceSelection.race)

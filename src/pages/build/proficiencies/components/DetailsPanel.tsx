@@ -1,61 +1,20 @@
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { InfoTile } from '@/pages/_shared'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e, Language5e } from '@/types/5etools'
 
 // ── Display helpers ──────────────────────────────────────────────────────────
 
-const ARMOR_TYPE_LABELS: Record<string, string> = {
-  LA: 'Light Armor',
-  MA: 'Medium Armor',
-  HA: 'Heavy Armor',
-  S: 'Shield',
-}
-
-const DAMAGE_TYPE_LABELS: Record<string, string> = {
-  S: 'Slashing',
-  P: 'Piercing',
-  B: 'Bludgeoning',
-  N: 'Necrotic',
-  F: 'Fire',
-  C: 'Cold',
-  L: 'Lightning',
-  T: 'Thunder',
-  A: 'Acid',
-  Po: 'Poison',
-  Ps: 'Psychic',
-  R: 'Radiant',
-  O: 'Force',
-}
-
-const WEAPON_PROPERTY_LABELS: Record<string, string> = {
-  A: 'Ammunition',
-  AF: 'Ammunition (Firearm)',
-  BF: 'Burst Fire',
-  F: 'Finesse',
-  H: 'Heavy',
-  L: 'Light',
-  LD: 'Loading',
-  R: 'Reach',
-  RLD: 'Reload',
-  S: 'Special',
-  T: 'Thrown',
-  V: 'Versatile',
-  '2H': 'Two-Handed',
-}
-
-const TOOL_TYPE_LABELS: Record<string, string> = {
-  AT: "Artisan's Tools",
-  INS: 'Musical Instrument',
-  GS: 'Gaming Set',
-  T: 'Tool',
-  G: 'General',
-}
-
+/**
+ * Standard language type labels — display-only mapping; no structured
+ * JSON source exists in 5etools for these display names.
+ */
 const LANGUAGE_TYPE_LABELS: Record<string, string> = {
   standard: 'Standard',
   exotic: 'Exotic',
@@ -91,10 +50,10 @@ function formatWeight(weight?: number): string {
   return `${weight} lb.`
 }
 
-function formatArmorType(typeCode?: string): string {
+function formatArmorType(typeCode?: string, typeByAbbr?: Record<string, string>): string {
   if (!typeCode) return '—'
   const code = typeCode.split('|')[0].toUpperCase()
-  return ARMOR_TYPE_LABELS[code] ?? typeCode
+  return typeByAbbr?.[code] ?? typeCode
 }
 
 function formatDamageType(code?: string): string {
@@ -102,15 +61,15 @@ function formatDamageType(code?: string): string {
   return DAMAGE_TYPE_LABELS[code] ?? code
 }
 
-function formatProperties(props?: string[]): string {
+function formatProperties(props?: string[], propertyByAbbr?: Record<string, string>): string {
   if (!props?.length) return '—'
-  return props.map((p) => WEAPON_PROPERTY_LABELS[p] ?? p).join(', ')
+  return props.map((p) => propertyByAbbr?.[p] ?? p).join(', ')
 }
 
-function formatToolType(typeCode?: string): string {
+function formatToolType(typeCode?: string, typeByAbbr?: Record<string, string>): string {
   if (!typeCode) return '—'
   const code = typeCode.split('|')[0].toUpperCase()
-  return TOOL_TYPE_LABELS[code] ?? typeCode
+  return typeByAbbr?.[code] ?? typeCode
 }
 
 function formatLanguageType(type?: string): string {
@@ -185,7 +144,8 @@ function DetailRow({
 // ── Category detail panels ────────────────────────────────────────────────────
 
 function ArmorDetails({ item }: { item: Item5e }) {
-  const armorType = formatArmorType(item.type)
+  const itemTypeByAbbr = useGameDataStore((s) => s.gameData?.lookups?.itemTypeByAbbr)
+  const armorType = formatArmorType(item.type, itemTypeByAbbr)
   const edition = formatEdition(item.edition as string | undefined)
   const mastery = formatMasteryList(item.mastery)
 
@@ -211,6 +171,7 @@ function ArmorDetails({ item }: { item: Item5e }) {
 }
 
 function WeaponDetails({ item }: { item: Item5e }) {
+  const itemPropertyByAbbr = useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr)
   const weaponType = item.weaponCategory
     ? `${item.weaponCategory.charAt(0).toUpperCase()}${item.weaponCategory.slice(1)} ${
         item.type?.split('|')[0] === 'R' ? 'Ranged' : 'Melee'
@@ -242,7 +203,7 @@ function WeaponDetails({ item }: { item: Item5e }) {
           label="Range"
           value={item.range ?? (item.property?.includes('T') ? 'Thrown' : null)}
         />
-        <DetailRow label="Properties" value={formatProperties(item.property)} />
+        <DetailRow label="Properties" value={formatProperties(item.property, itemPropertyByAbbr)} />
         <DetailRow label="Weight" value={formatWeight(item.weight)} />
         <DetailRow label="Cost" value={formatItemCost(item.value)} />
       </div>
@@ -253,7 +214,8 @@ function WeaponDetails({ item }: { item: Item5e }) {
 }
 
 function ToolDetails({ item }: { item: Item5e }) {
-  const toolType = formatToolType(item.type)
+  const itemTypeByAbbr = useGameDataStore((s) => s.gameData?.lookups?.itemTypeByAbbr)
+  const toolType = formatToolType(item.type, itemTypeByAbbr)
   const edition = formatEdition(item.edition as string | undefined)
 
   return (

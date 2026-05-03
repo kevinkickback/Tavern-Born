@@ -4,6 +4,13 @@ import { ABILITY_NAMES, type AbilityName, formatModifier } from './abilityScores
 
 export { formatModifier }
 
+/**
+ * FALLBACK: static skill→ability map used when parsed game data is unavailable
+ * (e.g. before data/skills.json has loaded or in tests). Validated against the
+ * parsed data in DEV mode via validateSkillToAbilityMap(). When GameDataLookups
+ * is available, prefer skillToAbilityMap from there — it is derived directly
+ * from data/skills.json and takes precedence over this constant.
+ */
 export const SKILL_TO_ABILITY: Readonly<Record<string, AbilityName>> = {
   acrobatics: 'dexterity',
   'animal handling': 'wisdom',
@@ -73,8 +80,18 @@ export function validateSkillToAbilityMap(parsedSkills: unknown[]): void {
   }
 }
 
-export function getSkillAbility(skillName: string): AbilityName | null {
-  return SKILL_TO_ABILITY[skillName.toLowerCase().trim()] ?? null
+/**
+ * Resolve the governing ability for a skill by name.
+ * Prefers the parsed map from GameDataLookups when provided;
+ * falls back to the static FALLBACK SKILL_TO_ABILITY constant.
+ */
+export function getSkillAbility(
+  skillName: string,
+  parsedMap?: Readonly<Record<string, string>>,
+): AbilityName | null {
+  const key = skillName.toLowerCase().trim()
+  const resolved = parsedMap ?? SKILL_TO_ABILITY
+  return (resolved[key] as AbilityName | undefined) ?? null
 }
 
 export const SAVING_THROW_ABILITIES: readonly AbilityName[] = ABILITY_NAMES
@@ -150,18 +167,22 @@ export function calculateSkillModifier(
  * @param proficientSkills - Array of skill names from `character.proficiencies` / skill flags
  * @param expertiseSkills - Array of skill names where the character has expertise
  * @param proficiencyBonus - Current proficiency bonus
+ * @param parsedSkillToAbilityMap - Parsed map from GameDataLookups.skillToAbilityMap.
+ *   When provided this takes precedence over the static SKILL_TO_ABILITY fallback.
  */
 export function deriveAllSkills(
   abilityModifiers: Record<AbilityName, number>,
   proficientSkills: string[],
   expertiseSkills: string[],
   proficiencyBonus: number,
+  parsedSkillToAbilityMap?: Readonly<Record<string, string>>,
 ): SkillResult[] {
+  const resolvedMap = parsedSkillToAbilityMap ?? SKILL_TO_ABILITY
   const proficientSet = new Set(proficientSkills.map((s) => s.toLowerCase()))
   const expertiseSet = new Set(expertiseSkills.map((s) => s.toLowerCase()))
 
   return ALL_SKILLS.map((name) => {
-    const ability = SKILL_TO_ABILITY[name] ?? 'strength'
+    const ability = (resolvedMap[name] as AbilityName | undefined) ?? 'strength'
     const proficient = proficientSet.has(name)
     const expertise = expertiseSet.has(name)
     const modifier = calculateSkillModifier(

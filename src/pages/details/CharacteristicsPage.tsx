@@ -35,10 +35,22 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { ALIGNMENTS, LIFESTYLES } from '@/lib/5etools/constants'
 import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
 import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
+import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import { NoCharCard } from '../_shared'
 
 const EMPTY_ORGANIZATIONS: [] = []
+
+const CUSTOM_GRADIENT_PRESETS = [
+  { key: 'indigo', className: 'from-indigo-500/80 to-indigo-700/80' },
+  { key: 'emerald', className: 'from-emerald-500/80 to-emerald-700/80' },
+  { key: 'rose', className: 'from-rose-500/80 to-rose-700/80' },
+  { key: 'amber', className: 'from-amber-500/80 to-amber-700/80' },
+  { key: 'sky', className: 'from-sky-500/80 to-sky-700/80' },
+  { key: 'violet', className: 'from-violet-500/80 to-violet-700/80' },
+] as const
+
+const DEFAULT_CUSTOM_GRADIENT = CUSTOM_GRADIENT_PRESETS[0].key
 
 const ORGANIZATION_IMAGE_STYLES = [
   'from-cyan-500/80 to-cyan-700/80',
@@ -147,11 +159,14 @@ export function CharacteristicsPage() {
   )
   const [organizationCustomDescription, setOrganizationCustomDescription] = useState(
     activeCharacter?.details?.organizationCustomDescription ||
-    activeCharacter?.details?.alliesAndOrganizations ||
-    '',
+      activeCharacter?.details?.alliesAndOrganizations ||
+      '',
   )
   const [organizationCustomImage, setOrganizationCustomImage] = useState(
     activeCharacter?.details?.organizationCustomImage || '',
+  )
+  const [organizationCustomGradient, setOrganizationCustomGradient] = useState(
+    activeCharacter?.details?.organizationCustomGradient || DEFAULT_CUSTOM_GRADIENT,
   )
   const [failedOrganizationPreviewImagePath, setFailedOrganizationPreviewImagePath] = useState('')
   const customImageInputRef = useRef<HTMLInputElement>(null)
@@ -241,11 +256,13 @@ export function CharacteristicsPage() {
         setOrganizationCustomName(d.organizationCustomName || '')
         setOrganizationCustomDescription(d.organizationCustomDescription || '')
         setOrganizationCustomImage(d.organizationCustomImage || '')
+        setOrganizationCustomGradient(d.organizationCustomGradient || DEFAULT_CUSTOM_GRADIENT)
       } else {
         setOrganizationSelectionKey(d.alliesAndOrganizations ? CUSTOM_ORGANIZATION_KEY : '')
         setOrganizationCustomName('')
         setOrganizationCustomDescription(d.alliesAndOrganizations || '')
         setOrganizationCustomImage('')
+        setOrganizationCustomGradient(DEFAULT_CUSTOM_GRADIENT)
       }
     }
   }, [activeCharacter])
@@ -267,11 +284,13 @@ export function CharacteristicsPage() {
     setOrganizationCustomName('')
     setOrganizationCustomDescription('')
     setOrganizationCustomImage('')
+    setOrganizationCustomGradient(DEFAULT_CUSTOM_GRADIENT)
     updateActiveCharacterDetails({
       organizationSelectionKey: value,
       organizationCustomName: '',
       organizationCustomDescription: '',
       organizationCustomImage: '',
+      organizationCustomGradient: DEFAULT_CUSTOM_GRADIENT,
       alliesAndOrganizations: nextOrganization?.description || '',
     })
   }
@@ -324,6 +343,12 @@ export function CharacteristicsPage() {
     organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
       ? organizationCustomImage || ''
       : normalizeOrganizationImagePath(selectedOrganization?.imagePath || '')
+
+  const previewGradient =
+    organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
+      ? (CUSTOM_GRADIENT_PRESETS.find((p) => p.key === organizationCustomGradient)?.className ??
+        CUSTOM_GRADIENT_PRESETS[0].className)
+      : getOrganizationImageStyle(previewTitle || 'Organization')
 
   const showPreviewImage =
     Boolean(previewImage) && failedOrganizationPreviewImagePath !== previewImage
@@ -730,27 +755,29 @@ export function CharacteristicsPage() {
                 Connections
               </span>
             </div>
-            <div className="p-4 grid gap-4 lg:grid-cols-2">
-              <div className="space-y-4">
-                <Field id={organizationSelectId} label="Allies & Organizations">
-                  <Select value={organizationSelectionKey} onValueChange={handleOrganizationSelect}>
-                    <SelectTrigger id={organizationSelectId}>
-                      <SelectValue placeholder="Select an organization or choose custom" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {organizationOptions.map((option) => (
-                        <SelectItem key={option.key} value={option.key}>
-                          {option.organization.name}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value={CUSTOM_ORGANIZATION_KEY}>Custom</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
+            <div className="p-4 space-y-4">
+              {/* Dropdown — always its own row */}
+              <Field id={organizationSelectId} label="Allies & Organizations">
+                <Select value={organizationSelectionKey} onValueChange={handleOrganizationSelect}>
+                  <SelectTrigger id={organizationSelectId}>
+                    <SelectValue placeholder="Select an organization or choose custom" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizationOptions.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
+                        {option.organization.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={CUSTOM_ORGANIZATION_KEY}>Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
 
-                {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY && (
-                  <div className="space-y-3 rounded-lg border border-border/60 p-3">
-                    <Field id={organizationCustomNameId} label="Custom Organization Name">
+              {/* Custom controls row */}
+              {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY && (
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="flex-1 min-w-[160px]">
+                    <Field id={organizationCustomNameId} label="Name">
                       <Input
                         id={organizationCustomNameId}
                         value={organizationCustomName}
@@ -759,71 +786,102 @@ export function CharacteristicsPage() {
                           setOrganizationCustomName(value)
                           updateActiveCharacterDetails({ organizationCustomName: value })
                         }}
-                        placeholder="Enter custom ally or organization"
+                        placeholder="Organization name"
                       />
                     </Field>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Custom Image
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => customImageInputRef.current?.click()}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Image
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={handleClearCustomImage}
-                          disabled={!organizationCustomImage}
-                        >
-                          Clear
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="hidden sm:block self-stretch w-px bg-border/50 mx-2" />
 
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor={organizationCustomDescriptionId}
-                        className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                  <div className="shrink-0 space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Image
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => customImageInputRef.current?.click()}
                       >
-                        Custom Description
-                      </Label>
-                      <Textarea
-                        id={organizationCustomDescriptionId}
-                        value={organizationCustomDescription}
-                        onChange={(event) => {
-                          const value = event.target.value
-                          setOrganizationCustomDescription(value)
-                          updateActiveCharacterDetails({
-                            organizationCustomDescription: value,
-                            alliesAndOrganizations: value,
-                          })
-                        }}
-                        placeholder="Describe the custom ally or organization."
-                        rows={6}
-                      />
+                        <Upload className="h-4 w-4 mr-1.5" />
+                        Upload
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearCustomImage}
+                        disabled={!organizationCustomImage}
+                      >
+                        Clear
+                      </Button>
                     </div>
                   </div>
-                )}
-              </div>
 
-              <div
-                className={`space-y-2 rounded-lg border border-border/60 p-3 ${organizationSelectionKey === CUSTOM_ORGANIZATION_KEY ? '' : 'lg:col-span-2'
-                  }`}
-              >
-                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Selection Preview
+                  <div className="hidden sm:block self-stretch w-px bg-border/50 mx-2" />
+
+                  <div className="shrink-0 space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Background
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      {CUSTOM_GRADIENT_PRESETS.map((preset) => (
+                        <button
+                          key={preset.key}
+                          type="button"
+                          onClick={() => {
+                            setOrganizationCustomGradient(preset.key)
+                            updateActiveCharacterDetails({ organizationCustomGradient: preset.key })
+                          }}
+                          className={cn(
+                            `h-8 w-8 rounded-md bg-gradient-to-br ${preset.className} shrink-0 transition-all`,
+                            organizationCustomGradient === preset.key
+                              ? 'ring-2 ring-offset-2 ring-offset-background ring-white/70 scale-110'
+                              : 'opacity-60 hover:opacity-100',
+                          )}
+                          title={preset.key.charAt(0).toUpperCase() + preset.key.slice(1)}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
+              )}
 
-                {previewTitle || previewDescription ? (
+              {/* Description — custom only, always its own row */}
+              {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY && (
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor={organizationCustomDescriptionId}
+                    className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                  >
+                    Description
+                  </Label>
+                  <Textarea
+                    id={organizationCustomDescriptionId}
+                    value={organizationCustomDescription}
+                    onChange={(event) => {
+                      const value = event.target.value
+                      setOrganizationCustomDescription(value)
+                      updateActiveCharacterDetails({
+                        organizationCustomDescription: value,
+                        alliesAndOrganizations: value,
+                      })
+                    }}
+                    placeholder="Describe the custom ally or organization."
+                    rows={4}
+                  />
+                </div>
+              )}
+
+              {/* Preview */}
+              {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY ? (
+                <div className="space-y-2 rounded-lg border border-border/60 p-3">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Preview
+                  </div>
                   <div
-                    className={`relative overflow-hidden rounded-md border border-border/60 bg-gradient-to-br ${getOrganizationImageStyle(previewTitle || 'Organization')}`}
+                    className={`relative overflow-hidden rounded-md border border-border/60 bg-gradient-to-br ${previewGradient}`}
                   >
                     {showPreviewImage ? (
                       <>
@@ -833,34 +891,67 @@ export function CharacteristicsPage() {
                             src={previewImage}
                             alt={previewTitle || 'Organization preview'}
                             className="absolute right-2 top-1/2 h-[88%] w-auto -translate-y-1/2 object-contain opacity-95 drop-shadow-xl"
-                            onError={() => {
-                              setFailedOrganizationPreviewImagePath(previewImage)
-                            }}
+                            onError={() => setFailedOrganizationPreviewImagePath(previewImage)}
                           />
                         </div>
                       </>
                     ) : (
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex w-1/3 items-center justify-center">
                         <span className="text-4xl font-display font-bold text-white/90 tracking-widest">
-                          {getInitials(previewTitle || 'Organization')}
+                          {getInitials(previewTitle || 'ORG')}
                         </span>
                       </div>
                     )}
-
                     <div className="relative z-10 min-h-44 space-y-2 p-4 pr-28 sm:pr-40">
-                      <h4 className="text-sm font-semibold text-white">{previewTitle}</h4>
+                      <h4 className="text-sm font-semibold text-white">
+                        {previewTitle || (
+                          <span className="opacity-40 italic">Organization name</span>
+                        )}
+                      </h4>
                       <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
                         {previewDescription}
                       </p>
                     </div>
                   </div>
-                ) : (
+                </div>
+              ) : previewTitle || previewDescription ? (
+                <div
+                  className={`relative overflow-hidden rounded-md border border-border/60 bg-gradient-to-br ${previewGradient}`}
+                >
+                  {showPreviewImage ? (
+                    <>
+                      <div className="pointer-events-none absolute inset-0 bg-black/15" />
+                      <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 overflow-hidden">
+                        <img
+                          src={previewImage}
+                          alt={previewTitle || 'Organization preview'}
+                          className="absolute right-2 top-1/2 h-[88%] w-auto -translate-y-1/2 object-contain opacity-95 drop-shadow-xl"
+                          onError={() => setFailedOrganizationPreviewImagePath(previewImage)}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex w-1/3 items-center justify-center">
+                      <span className="text-4xl font-display font-bold text-white/90 tracking-widest">
+                        {getInitials(previewTitle || 'Organization')}
+                      </span>
+                    </div>
+                  )}
+                  <div className="relative z-10 min-h-44 space-y-2 p-4 pr-28 sm:pr-40">
+                    <h4 className="text-sm font-semibold text-white">{previewTitle}</h4>
+                    <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
+                      {previewDescription}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                !organizationSelectionKey && (
                   <p className="text-sm text-muted-foreground">
                     Select an organization to preview its details, or choose Custom to upload an
                     image and write your own description.
                   </p>
-                )}
-              </div>
+                )
+              )}
             </div>
 
             <input

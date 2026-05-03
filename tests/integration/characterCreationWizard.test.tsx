@@ -121,6 +121,8 @@ describe('character creation and proficiencies validation', () => {
         feats: [],
         items: [],
         itemsBase: [],
+        itemProperties: [],
+        itemTypes: [],
         classFeatures: [],
         actions: [],
         conditions: [],

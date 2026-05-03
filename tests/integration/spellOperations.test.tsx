@@ -1,11 +1,22 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
 import { useProvenance } from '@/hooks/character/useProvenance'
+import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { GrantType, SourceType } from '@/lib/provenance/types'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+
+/** Combined hook for tests that need both spell state and mutations. */
+function useSpellActions() {
+  const slots = useSpellSlots()
+  const mutations = useSpellProfileMutations(
+    slots.spellProfiles,
+    slots.spellcastingDetailByProfileId,
+  )
+  return { ...slots, ...mutations }
+}
 
 /**
  * Integration tests for spell profile updates and provenance tracking.
@@ -43,7 +54,7 @@ describe('Spell Operations', () => {
         characters: [character],
       })
 
-      const { result: spellSlotsResult } = renderHook(() => useSpellSlots())
+      const { result: spellSlotsResult } = renderHook(() => useSpellActions())
       const { result: provenanceResult } = renderHook(() => useProvenance())
 
       // Add cantrip via profile mutation
@@ -98,7 +109,7 @@ describe('Spell Operations', () => {
         activeCharacterId: character.id,
         characters: [character],
       })
-      const { result } = renderHook(() => useSpellSlots())
+      const { result } = renderHook(() => useSpellActions())
 
       // Add spell known via profile mutation
       act(() => {
@@ -138,7 +149,7 @@ describe('Spell Operations', () => {
         activeCharacterId: character.id,
         characters: [character],
       })
-      const { result } = renderHook(() => useSpellSlots())
+      const { result } = renderHook(() => useSpellActions())
 
       act(() => {
         result.current.setProfileSpells(
@@ -193,7 +204,7 @@ describe('Spell Operations', () => {
         characters: [{ ...character, provenance: mockLedger }],
       })
 
-      const { result: spellSlotsResult } = renderHook(() => useSpellSlots())
+      const { result: spellSlotsResult } = renderHook(() => useSpellActions())
       const { result: provenanceResult } = renderHook(() => useProvenance())
 
       // Remove from profile
@@ -242,7 +253,7 @@ describe('Spell Operations', () => {
         activeCharacterId: character.id,
         characters: [character],
       })
-      const { result } = renderHook(() => useSpellSlots())
+      const { result } = renderHook(() => useSpellActions())
 
       act(() => {
         result.current.removeSpellKnown('Entangle', 'class:Druid|PHB')
@@ -460,7 +471,7 @@ describe('Spell Operations', () => {
         activeCharacterId: character.id,
         characters: [character],
       })
-      const { result } = renderHook(() => useSpellSlots())
+      const { result } = renderHook(() => useSpellActions())
 
       // Prepare an unprepared spell
       act(() => {

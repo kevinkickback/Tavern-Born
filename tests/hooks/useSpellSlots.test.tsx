@@ -15,9 +15,20 @@ vi.mock('@/hooks/data/useGameData', () => ({
   useRaces: () => [],
 }))
 
+import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+
+/** Combined hook used in tests that exercise spell mutations. */
+function useSpellActions() {
+  const slots = useSpellSlots()
+  const mutations = useSpellProfileMutations(
+    slots.spellProfiles,
+    slots.spellcastingDetailByProfileId,
+  )
+  return { ...slots, ...mutations }
+}
 
 function resetCharacterStore() {
   useCharacterStore.setState({
@@ -117,7 +128,7 @@ describe('useSpellSlots hook', () => {
       activeCharacter: character,
     })
 
-    const { result } = renderHook(() => useSpellSlots())
+    const { result } = renderHook(() => useSpellActions())
 
     act(() => {
       result.current.addSpellKnown('Shield', 'class:Wizard|PHB')
@@ -149,7 +160,7 @@ describe('useSpellSlots hook', () => {
       activeCharacter: character,
     })
 
-    const { result } = renderHook(() => useSpellSlots())
+    const { result } = renderHook(() => useSpellActions())
 
     act(() => {
       result.current.addCantrip('Light')
@@ -170,7 +181,7 @@ describe('useSpellSlots hook', () => {
       activeCharacter: character,
     })
 
-    const { result } = renderHook(() => useSpellSlots())
+    const { result } = renderHook(() => useSpellActions())
 
     act(() => {
       result.current.addCantrip('Guidance', 'special:unrestricted')
@@ -207,7 +218,7 @@ describe('useSpellSlots hook', () => {
       },
     })
 
-    const { result } = renderHook(() => useSpellSlots())
+    const { result } = renderHook(() => useSpellActions())
 
     act(() => {
       result.current.removeCantrip('Fire Bolt', 'class:Wizard|PHB')
@@ -229,7 +240,7 @@ describe('useSpellSlots hook', () => {
       activeCharacter: character,
     })
 
-    const { result } = renderHook(() => useSpellSlots())
+    const { result } = renderHook(() => useSpellActions())
 
     act(() => {
       result.current.setProfileSpells('class:Wizard|PHB', ['Mage Hand'], ['Shield'])
@@ -257,7 +268,7 @@ describe('useSpellSlots hook', () => {
       },
     })
 
-    const { result } = renderHook(() => useSpellSlots())
+    const { result } = renderHook(() => useSpellActions())
 
     act(() => {
       result.current.syncProfiles()
@@ -280,7 +291,7 @@ describe('useSpellSlots hook', () => {
       activeCharacter: character,
     })
 
-    const { result } = renderHook(() => useSpellSlots())
+    const { result } = renderHook(() => useSpellActions())
 
     act(() => {
       result.current.togglePrepared('class:Wizard|PHB', 'Shield')
@@ -304,7 +315,7 @@ describe('useSpellSlots hook', () => {
       activeCharacter: character,
     })
 
-    const { result } = renderHook(() => useSpellSlots())
+    const { result } = renderHook(() => useSpellActions())
 
     act(() => {
       result.current.removeSpellKnown('Magic Missile', 'class:Wizard|PHB')

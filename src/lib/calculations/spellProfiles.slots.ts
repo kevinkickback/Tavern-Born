@@ -62,6 +62,9 @@ export function calculateCharacterSpellSlots(
   let combinedCasterLevel = 0
   const pact: SpellSlotsResult = {}
 
+  // Collect non-pact caster entries so we can prefer class data for single-class characters.
+  const sharedEntries: Array<{ classData: Class5e | undefined; levels: number }> = []
+
   for (const entry of entries) {
     const classData = classesById.get(toClassProfileId(entry.name, entry.source))
     const subclassData = getSelectedSubclassData(classData, entry)
@@ -74,9 +77,29 @@ export function calculateCharacterSpellSlots(
     }
 
     combinedCasterLevel += getCasterLevelContribution(progression, entry.levels)
+    sharedEntries.push({ classData, levels: entry.levels })
   }
 
-  const shared = combinedCasterLevel > 0 ? getStandardSpellSlots(combinedCasterLevel) : {}
+  let shared: SpellSlotsResult = {}
+  if (combinedCasterLevel > 0) {
+    if (sharedEntries.length === 1 && sharedEntries[0].classData) {
+      const { classData, levels } = sharedEntries[0]
+      // Only use the class's own progression table when the class itself (not a subclass)
+      // is the caster. For non-caster base classes with a caster subclass (e.g. Fighter +
+      // Eldritch Knight), the class won't have a matching progression table.
+      const classOwnProgression = classData.casterProgression as string | undefined
+      if (classOwnProgression && classOwnProgression !== 'none') {
+        shared =
+          getSpellSlotsFromClassData(classData, levels) ??
+          getStandardSpellSlots(combinedCasterLevel)
+      } else {
+        shared = getStandardSpellSlots(combinedCasterLevel)
+      }
+    } else {
+      // Multiclass: combine caster levels and look up the shared table per PHB rules.
+      shared = getStandardSpellSlots(combinedCasterLevel)
+    }
+  }
   const usedMap = getSpellSlotFieldMap(character.spells.spellSlots, 'used')
 
   const mergedSharedWithUsage = mergeSpellSlots(shared, usedMap)

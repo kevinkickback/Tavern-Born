@@ -37,6 +37,8 @@ function makeGameDataFixture(): GameData {
     feats: [],
     items: [],
     itemsBase: [],
+    itemProperties: [],
+    itemTypes: [],
     classFeatures: [],
     actions: [],
     conditions: [],
