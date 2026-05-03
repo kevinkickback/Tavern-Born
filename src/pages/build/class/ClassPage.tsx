@@ -73,8 +73,9 @@ export function BuildClassPage() {
   const classLookup = useClassLookup()
   const optionalFeatureLookup = useOptionalFeatureLookup()
   const { selectClass, selectSubclass } = useUnifiedClassSelection()
-  const { applyClassEquipmentChoice, applyOptionalFeatureSelection } = useClassProvenanceMutations()
-  const { replaceFeatSelections, commitFeatWithOptions } = useFeatProvenanceMutations()
+  const { applyClassEquipmentChoice } = useClassProvenanceMutations()
+  const { replaceFeatSelections, commitFeatWithOptions, applyOptionalFeatureSelection } =
+    useFeatProvenanceMutations()
   const { applyBatchSpellSelections, removeSpellProvenance, swapSpellProvenance } =
     useSpellProvenanceMutations()
   const {

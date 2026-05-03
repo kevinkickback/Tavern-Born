@@ -1,3 +1,4 @@
+import type { Progression } from '@/lib/characterUtils'
 import { getTotalLevel } from '@/lib/characterUtils'
 import type { Raw5ePrereq } from '@/types/5etools'
 import type { AbilityName } from './abilityScores'
@@ -14,9 +15,7 @@ export interface PrereqCharacterSnapshot {
     preparedSpells?: string[]
   }
   /** Optional multi-class progression. When present, takes precedence over `level`/`class`. */
-  progression?: {
-    classes?: Array<{ name: string; levels: number; source?: string }>
-  }
+  progression?: Progression
 }
 
 /** Canonical 5etools pact prerequisite text normalizer (Parser.prereqPactToFull). */
