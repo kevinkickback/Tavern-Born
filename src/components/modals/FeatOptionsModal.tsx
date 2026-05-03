@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, Check, MagicWand } from '@phosphor-icons/react'
-import { useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -89,7 +89,7 @@ function isStepComplete(step: FeatOptionStep, stepSels: StepSelections, idx: num
 
 // ── Step renderers ────────────────────────────────────────────────────────────
 
-function SpellcastingClassStep({
+const SpellcastingClassStep = memo(function SpellcastingClassStep({
   step,
   value,
   onChange,
@@ -115,9 +115,9 @@ function SpellcastingClassStep({
       </Select>
     </div>
   )
-}
+})
 
-function SpellPickStep({
+const SpellPickStep = memo(function SpellPickStep({
   step,
   selected,
   onToggle,
@@ -187,9 +187,9 @@ function SpellPickStep({
       </div>
     </div>
   )
-}
+})
 
-function ProficiencyPickStep({
+const ProficiencyPickStep = memo(function ProficiencyPickStep({
   step,
   selected,
   onToggle,
@@ -243,9 +243,9 @@ function ProficiencyPickStep({
       </div>
     </div>
   )
-}
+})
 
-function AbilityScoreStep({
+const AbilityScoreStep = memo(function AbilityScoreStep({
   step,
   value,
   onChange,
@@ -280,9 +280,9 @@ function AbilityScoreStep({
       </div>
     </div>
   )
-}
+})
 
-function OptionalFeatureStep({
+const OptionalFeatureStep = memo(function OptionalFeatureStep({
   step,
   value,
   onChange,
@@ -334,9 +334,9 @@ function OptionalFeatureStep({
       </div>
     </div>
   )
-}
+})
 
-function ExpertiseStep({
+const ExpertiseStep = memo(function ExpertiseStep({
   step,
   value,
   onChange,
@@ -373,7 +373,7 @@ function ExpertiseStep({
       </div>
     </div>
   )
-}
+})
 
 // ── Initial selection seeding ─────────────────────────────────────────────────
 
@@ -458,7 +458,7 @@ export interface FeatOptionsModalProps {
   onDismiss?: () => void
 }
 
-export function FeatOptionsModal({
+export const FeatOptionsModal = memo(function FeatOptionsModal({
   open,
   onOpenChange,
   feat,
@@ -690,4 +690,4 @@ export function FeatOptionsModal({
       </DialogContent>
     </Dialog>
   )
-}
+})

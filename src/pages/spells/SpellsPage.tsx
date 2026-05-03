@@ -1,6 +1,7 @@
 import { MagicWand, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
+import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -60,13 +61,16 @@ export function SpellsPage() {
     sharedSlots,
     pactSlots,
     isSpellcaster,
+    spellcastingDetailByProfileId,
+  } = useSpellSlots()
+  const {
     removeSpellFromProfile,
     setProfileSpells,
     togglePrepared,
     selectRacialSpell,
     removeRacialSpell,
     setRacialCastingAbility,
-  } = useSpellSlots()
+  } = useSpellProfileMutations(spellProfiles, spellcastingDetailByProfileId)
 
   const [racialChoiceModalOpen, setRacialChoiceModalOpen] = useState(false)
   const [bonusSpellModalOpen, setBonusSpellModalOpen] = useState(false)

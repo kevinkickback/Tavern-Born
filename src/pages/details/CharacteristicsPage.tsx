@@ -32,35 +32,13 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { ALIGNMENTS, LIFESTYLES } from '@/lib/5etools/constants'
 import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
+import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
 import { useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
-
-const CUSTOM_ORGANIZATION_KEY = '__custom__'
-
 import { NoCharCard } from '../_shared'
 
-const ALIGNMENTS = [
-  'Lawful Good',
-  'Neutral Good',
-  'Chaotic Good',
-  'Lawful Neutral',
-  'True Neutral',
-  'Chaotic Neutral',
-  'Lawful Evil',
-  'Neutral Evil',
-  'Chaotic Evil',
-]
-
-const LIFESTYLES = [
-  'Wretched',
-  'Squalid',
-  'Poor',
-  'Modest',
-  'Comfortable',
-  'Wealthy',
-  'Aristocratic',
-]
+const EMPTY_ORGANIZATIONS: [] = []
 
 const ORGANIZATION_IMAGE_STYLES = [
   'from-cyan-500/80 to-cyan-700/80',
@@ -130,7 +108,6 @@ export function CharacteristicsPage() {
     (state) => state.updateActiveCharacterDetails,
   )
   const gameData = useFilteredGameData()
-  const rawGameData = useGameDataStore((state) => state.gameData)
 
   // Identity
   const [charName, setCharName] = useState(activeCharacter?.name || '')
@@ -207,11 +184,11 @@ export function CharacteristicsPage() {
   const organizationCustomDescriptionId = useId()
 
   const organizationOptions = useMemo(() => {
-    return (rawGameData?.organizations ?? []).map((organization) => ({
+    return (gameData.organizations ?? EMPTY_ORGANIZATIONS).map((organization) => ({
       key: getOrganizationKey(organization.name, organization.source),
       organization,
     }))
-  }, [rawGameData?.organizations])
+  }, [gameData.organizations])
 
   const selectedOrganization = useMemo(() => {
     return organizationOptions.find((option) => option.key === organizationSelectionKey)

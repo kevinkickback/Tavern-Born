@@ -57,6 +57,9 @@ Key scripts in package.json:
 - Ingestion empty-object payload resilience in tests/lib/5etools/dataLoader.test.ts (absent entity keys treated as empty collections)
 - Ingestion partial spell index resilience in tests/lib/5etools/dataLoader.test.ts (valid spell files load when some indexed files are malformed)
 - Ingestion null entity array resilience in tests/lib/5etools/dataLoader.test.ts (class files with null entity arrays handled gracefully)
+- Feat options parser coverage in tests/lib/5etools/featOptions.test.ts (parseFeatSpellFilter, deriveFeatOptionSteps all step kinds, hasFeatOptions, deriveSpellStepsForClass)
+- SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
+- Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 
 ## High-Priority Gaps
 

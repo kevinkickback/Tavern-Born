@@ -38,6 +38,13 @@ export function CharacterSheetPage() {
   )
   const cancelRef = useRef<{ canceled: boolean } | null>(null)
 
+  // Cancel any in-flight generation when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (cancelRef.current) cancelRef.current.canceled = true
+    }
+  }, [])
+
   useEffect(() => {
     if (character?.originSystem) {
       setSelectedTemplateId(character.originSystem)
@@ -88,6 +95,7 @@ export function CharacterSheetPage() {
 
       setPdfBytes(filledBytes)
     } catch (error) {
+      console.error('[PDF] generation failed', { error, characterId: character?.id })
       const message =
         error instanceof Error ? error.message : 'Failed to generate character sheet PDF.'
       if (!handle.canceled) {

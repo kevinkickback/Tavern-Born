@@ -26,7 +26,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
+import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
@@ -306,8 +307,8 @@ export function FeatsPage() {
     removeFeatChoiceSelection,
     commitFeatWithOptions,
     editFeatWithOptions,
-    ledger,
-  } = useProvenance()
+  } = useFeatProvenanceMutations()
+  const { ledger } = useProvenanceLedger()
   const [bonusModalOpen, setBonusModalOpen] = useState(false)
   const [featOptionsTarget, setFeatOptionsTarget] = useState<Feat5e | null>(null)
   const [featEditCandidate, setFeatEditCandidate] = useState<{

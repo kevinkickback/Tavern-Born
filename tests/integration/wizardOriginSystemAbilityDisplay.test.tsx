@@ -60,6 +60,7 @@ describe('wizard 2024 origin-system ability display', () => {
         trapHazards: [],
         rewards: [],
         cultsBoons: [],
+        organizations: [],
         sources: [],
       },
       hasHydrated: true,

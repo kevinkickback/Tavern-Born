@@ -16,6 +16,7 @@ import { Card } from '@/components/ui/card'
 import { useClassResources } from '@/hooks/character/useClassResources'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useRitualCasting } from '@/hooks/character/useRitualCasting'
+import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -119,7 +120,7 @@ export function ConditionsPage() {
   const conditions = character.conditions ?? []
   const exhaustion = character.exhaustion ?? 0
   const hitDiceUsed = character.hitDiceUsed ?? 0
-  const totalLevel = character.level ?? 1
+  const totalLevel = getTotalCharacterLevel(character) ?? 1
   const hitDiceRemaining = Math.max(0, totalLevel - hitDiceUsed)
   const toggleCondition = (name: string) => {
     const next = conditions.includes(name)

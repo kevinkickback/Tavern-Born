@@ -25,7 +25,7 @@ import {
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Background5e, Class5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Item5e, Race5e } from '@/types/5etools'
 import type { AbilityScores } from '@/types/character'
 import { INITIAL_CHARACTER_DATA, WIZARD_STEPS } from './constants'
 import {
@@ -84,11 +84,14 @@ function getDefaultAbilityScoresForMethod(method: string): Record<string, number
   return buildUniformAbilityScores(POINT_BUY_MIN)
 }
 
+const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
+
 export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreationWizardProps) {
   const createNewCharacter = useCharacterStore((state) => state.createNewCharacter)
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const gameData = useGameDataStore((state) => state.gameData)
-  const itemLookup = useGameDataStore((state) => state.itemLookup)
+  const itemLookup =
+    useGameDataStore((state) => state.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
 
   const [currentStep, setCurrentStep] = useState(1)
   const [characterData, setCharacterData] = useState<CharacterWizardData>(INITIAL_CHARACTER_DATA)

@@ -2,7 +2,9 @@ import { CaretLeft, CaretRight, Sword, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { Card } from '@/components/ui/card'
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
+import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
+import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup, useOptionalFeatureLookup, useSubclass } from '@/hooks/data/useGameData'
@@ -71,15 +73,10 @@ export function BuildClassPage() {
   const classLookup = useClassLookup()
   const optionalFeatureLookup = useOptionalFeatureLookup()
   const { selectClass, selectSubclass } = useUnifiedClassSelection()
-  const {
-    applyClassEquipmentChoice,
-    applyOptionalFeatureSelection,
-    replaceFeatSelections,
-    commitFeatWithOptions,
-    applyBatchSpellSelections,
-    removeSpellProvenance,
-    swapSpellProvenance,
-  } = useProvenance()
+  const { applyClassEquipmentChoice, applyOptionalFeatureSelection } = useClassProvenanceMutations()
+  const { replaceFeatSelections, commitFeatWithOptions } = useFeatProvenanceMutations()
+  const { applyBatchSpellSelections, removeSpellProvenance, swapSpellProvenance } =
+    useSpellProvenanceMutations()
   const {
     selectedClassTab,
     classPickerOpen,

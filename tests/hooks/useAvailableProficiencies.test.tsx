@@ -42,6 +42,7 @@ function makeMinimalGameData(overrides: Partial<GameData> = {}): GameData {
     trapHazards: [],
     rewards: [],
     cultsBoons: [],
+    organizations: [],
     sources: [],
     ...overrides,
   }

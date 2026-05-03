@@ -35,7 +35,8 @@ let isPortableMode = false
 const AUTO_CHECK_INTERVAL = 24 * 60 * 60 * 1000
 const STARTUP_CHECK_DELAY = 3000
 
-function compareSemver(a: string, b: string): number {
+/** @internal exported for tests only */
+export function compareSemver(a: string, b: string): number {
   const [aCore, aPre = ''] = a.split('-', 2)
   const [bCore, bPre = ''] = b.split('-', 2)
   const aParts = aCore.split('.').map((p) => parseInt(p, 10) || 0)

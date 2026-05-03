@@ -207,6 +207,7 @@ export interface GameDataLookups {
   spellsByKey: Record<string, Spell5e>
   optionalFeaturesByKey: Record<string, unknown>
   subclassesByKey: Record<string, Subclass5e>
+  itemLookup: Map<string, Item5e>
 }
 
 export interface Background5e {

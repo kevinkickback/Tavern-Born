@@ -188,9 +188,9 @@ function BackgroundDetails2024({
                 className="border border-border/60 shadow-sm rounded-lg p-3"
               >
                 {section.name && <div className="font-semibold text-sm mb-1.5">{section.name}</div>}
-                {section.entries.map((entry) => (
+                {section.entries.map((entry, idx) => (
                   <div
-                    key={typeof entry === 'string' ? entry : JSON.stringify(entry).slice(0, 80)}
+                    key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
                     className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
                     dangerouslySetInnerHTML={{ __html: renderEntry(entry) }}
                   />
@@ -309,9 +309,9 @@ function BackgroundDetails2014({
                 className="border border-border/60 shadow-sm rounded-lg p-3"
               >
                 {section.name && <div className="font-semibold text-sm mb-1.5">{section.name}</div>}
-                {section.entries.map((entry) => (
+                {section.entries.map((entry, idx) => (
                   <div
-                    key={typeof entry === 'string' ? entry : JSON.stringify(entry).slice(0, 80)}
+                    key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
                     className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic [&_table]:text-xs [&_table]:w-full [&_th]:font-semibold [&_th]:text-left [&_td]:py-0.5"
                     dangerouslySetInnerHTML={{ __html: renderEntry(entry) }}
                   />

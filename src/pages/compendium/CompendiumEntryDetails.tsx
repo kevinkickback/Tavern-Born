@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import type { CompendiumEntry } from '@/lib/compendiumEntries'
 import { renderEntry } from '@/lib/renderer'
+import type { Class5e } from '@/types/5etools'
 
 interface CompendiumEntryDetailsProps {
   selectedEntry: CompendiumEntry
@@ -49,7 +50,7 @@ function getMulticlassRequirementsText(value: unknown): string {
   return formatRequirement(value)
 }
 
-function getClassRenderableEntries(data: Record<string, unknown>): unknown[] {
+function getClassRenderableEntries(data: Class5e): unknown[] {
   const traits: string[] = []
   const hd = isRecord(data.hd) ? data.hd : null
 
@@ -160,17 +161,17 @@ function getClassRenderableEntries(data: Record<string, unknown>): unknown[] {
 }
 
 function getRenderableEntries(selectedEntry: CompendiumEntry): unknown[] {
-  const entryList = asArray(selectedEntry.data.entries)
+  const entryList = asArray(selectedEntry.data.entries as unknown)
   if (entryList.length) return entryList
 
   if (selectedEntry.type === 'Class') {
     return getClassRenderableEntries(selectedEntry.data)
   }
 
-  const fluffEntries = asArray(selectedEntry.data.fluffEntries)
+  const fluffEntries = asArray(selectedEntry.data.fluffEntries as unknown)
   if (fluffEntries.length) return fluffEntries
 
-  const classFluffSections = asArray(selectedEntry.data.classFluffSections)
+  const classFluffSections = asArray(selectedEntry.data.classFluffSections as unknown)
     .filter(isRecord)
     .map((section) => ({
       type: 'entries',
@@ -256,8 +257,8 @@ export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetails
         )}
 
         {entryList.length > 0 ? (
-          entryList.map((entry) => {
-            const entryKey = typeof entry === 'string' ? entry : JSON.stringify(entry)
+          entryList.map((entry, idx) => {
+            const entryKey = typeof entry === 'string' ? `${idx}:${entry}` : `${idx}`
 
             return (
               <div

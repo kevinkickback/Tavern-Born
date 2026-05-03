@@ -50,6 +50,7 @@ function makeGameDataFixture(): GameData {
     trapHazards: [],
     rewards: [],
     cultsBoons: [],
+    organizations: [],
     sources: [],
   }
 }

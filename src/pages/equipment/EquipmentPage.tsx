@@ -27,7 +27,8 @@ import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useEquipmentProvenanceMutations } from '@/hooks/character/useEquipmentProvenanceMutations'
+import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -41,6 +42,7 @@ import { NoCharCard } from '../_shared'
 const EQUIPMENT_EQUIP_HINT_ID = 'equipment-equip-toggle'
 const EQUIP_AC_TOGGLE_SELECTOR = '[data-equip-ac-toggle="true"]'
 const EQUIP_HINT_WIDTH = 300
+const EMPTY_ITEMS: Item5e[] = []
 
 interface HintPosition {
   top: number
@@ -204,7 +206,7 @@ export function EquipmentPage() {
   const [itemTypeFilter, setItemTypeFilter] = useState<ItemCategory>('All')
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const gameData = useGameDataStore((s) => s.gameData)
+  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup)
 
   const ignoreEquipRestrictions = character?.variantRules?.ignoreEquipRestrictions ?? false
   const toggleIgnoreRestrictions = () => {
@@ -216,21 +218,13 @@ export function EquipmentPage() {
       },
     })
   }
-  const { applyManualEquipmentGrant, removeEquipmentProvenance, getSourcesRowsBySection } =
-    useProvenance()
+  const { applyManualEquipmentGrant, removeEquipmentProvenance } = useEquipmentProvenanceMutations()
+  const { getSourcesRowsBySection } = useProvenanceLedger()
   const { calculatedAC, overrideAC } = useArmorClass()
-  const equipmentItems = useMemo(() => {
-    const merged = new Map<string, Item5e>()
-    for (const item of (gameData?.items ?? []) as Item5e[]) {
-      const key = `${item.name}|${item.source ?? ''}`
-      merged.set(key, item)
-    }
-    for (const item of (gameData?.itemsBase ?? []) as Item5e[]) {
-      const key = `${item.name}|${item.source ?? ''}`
-      if (!merged.has(key)) merged.set(key, item)
-    }
-    return Array.from(merged.values())
-  }, [gameData])
+  const equipmentItems = useMemo(
+    () => Array.from(itemLookup?.values() ?? EMPTY_ITEMS),
+    [itemLookup],
+  )
 
   const encumbrancePct = carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0
   const encumbranceTone =

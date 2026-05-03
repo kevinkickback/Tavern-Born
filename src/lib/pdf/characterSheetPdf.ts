@@ -6,7 +6,18 @@ import { mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
-import { getEffectiveMaxHP, matchesGameDataEntry } from '@/lib/characterUtils'
+import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
+import {
+  getEffectiveMaxHP,
+  getTotalCharacterLevel,
+  matchesGameDataEntry,
+} from '@/lib/characterUtils'
+import {
+  type AcroWidget,
+  asFieldWithInternals,
+  type FieldWithInternals,
+  getPageRefTag,
+} from '@/lib/pdf/pdfFieldInternals'
 import type { Class5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
@@ -128,10 +139,7 @@ const AMMO_CHECKBOX_PATTERN = /^Ammo(Left|Right)\.(Top|Base|Bullet|Icon)\./
 const CALCULATED_FIELDS = ['AC', 'Proficiency Bonus', 'HP Max'] as const
 
 function getLevel(character: Character): number {
-  if (Array.isArray(character.classProgression) && character.classProgression.length > 0) {
-    return character.classProgression.reduce((sum, cls) => sum + (cls.levels || 0), 0) || 1
-  }
-  return character.level || 1
+  return getTotalCharacterLevel(character) || 1
 }
 
 function getClassLevelSummary(character: Character): string {
@@ -468,7 +476,7 @@ function buildCharacterSheetFieldMap2014(
     'Background Feature': getBackgroundFeatureName(character),
     'Background Feature Description': buildBackgroundFeatureDescription(character),
     'Background_Organisation.Left':
-      character.details.organizationSelectionKey === '__custom__'
+      character.details.organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
         ? customOrganizationSummary || character.details.alliesAndOrganizations || ''
         : character.details.alliesAndOrganizations || '',
     Background_Appearance:
@@ -642,19 +650,17 @@ async function embedPortraitImage(
   form: ReturnType<PDFDocument['getForm']>,
   portrait: string,
 ): Promise<void> {
-  let button: { acroField: { getWidgets: () => unknown[] } }
+  let button: FieldWithInternals
   try {
-    button = form.getButton('Portrait') as unknown as {
-      acroField: { getWidgets: () => unknown[] }
-    }
+    const raw = form.getButton('Portrait')
+    const internals = asFieldWithInternals(raw)
+    if (!internals) return
+    button = internals
   } catch {
     return
   }
 
-  const widgets = button.acroField.getWidgets() as Array<{
-    getRectangle: () => { x: number; y: number; width: number; height: number }
-    P: () => { tag: string } | undefined
-  }>
+  const widgets = button.acroField.getWidgets() as AcroWidget[]
   if (widgets.length === 0) return
 
   let rect: { x: number; y: number; width: number; height: number }
@@ -673,12 +679,20 @@ async function embedPortraitImage(
       const base64 = commaIdx >= 0 ? portrait.slice(commaIdx + 1) : portrait
       bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
       isPng = portrait.includes('image/png')
-    } else {
+    } else if (
+      portrait.startsWith('/') ||
+      portrait.startsWith('./') ||
+      portrait.startsWith('../')
+    ) {
+      // Relative / absolute asset paths from the app bundle — safe to fetch.
       const response = await fetch(portrait)
       if (!response.ok) throw new Error('Failed to fetch portrait')
       const contentType = response.headers.get('content-type') ?? ''
       isPng = contentType.includes('png') || portrait.toLowerCase().endsWith('.png')
       bytes = new Uint8Array(await response.arrayBuffer())
+    } else {
+      // Any other scheme (file://, http://, etc.) is not a supported portrait source.
+      return
     }
 
     const image = isPng ? await pdfDoc.embedPng(bytes) : await pdfDoc.embedJpg(bytes)
@@ -687,8 +701,7 @@ async function embedPortraitImage(
       // Resolve the page that actually owns this widget via its /P entry
       const pageRefTag = widgets[0].P?.()?.tag
       const targetPage = pageRefTag
-        ? (pages.find((p) => (p as unknown as { ref: { tag: string } }).ref?.tag === pageRefTag) ??
-          pages[0])
+        ? (pages.find((p) => getPageRefTag(p) === pageRefTag) ?? pages[0])
         : pages[0]
 
       const dims = image.scaleToFit(rect.width, rect.height)
@@ -704,14 +717,8 @@ async function embedPortraitImage(
   }
 }
 
-function hideFieldWidgets(field: { acroField: { getWidgets: () => unknown[] } }) {
-  for (const widget of field.acroField.getWidgets() as Array<{
-    setRectangle: (value: { x: number; y: number; width: number; height: number }) => void
-    dict: {
-      delete: (name: unknown) => void
-      set: (name: unknown, value: unknown) => void
-    }
-  }>) {
+function hideFieldWidgets(field: FieldWithInternals) {
+  for (const widget of field.acroField.getWidgets() as AcroWidget[]) {
     widget.setRectangle({ x: 0, y: 0, width: 0, height: 0 })
     widget.dict.delete(PDFName.of('AP'))
     widget.dict.delete(PDFName.of('A'))
@@ -731,11 +738,6 @@ function isPushButtonField(form: ReturnType<PDFDocument['getForm']>, fieldName: 
 
 function hideUnwantedFields(form: ReturnType<PDFDocument['getForm']>) {
   for (const field of form.getFields()) {
-    const fieldWithInternals = field as unknown as {
-      acroField: { getWidgets: () => unknown[] }
-      getName: () => string
-    }
-
     const name = field.getName()
     const isInteractiveButton =
       isPushButtonField(form, name) &&
@@ -743,6 +745,9 @@ function hideUnwantedFields(form: ReturnType<PDFDocument['getForm']>) {
     const isAmmoCheckbox = AMMO_CHECKBOX_PATTERN.test(name)
 
     if (!isInteractiveButton && !isAmmoCheckbox) continue
+
+    const fieldWithInternals = asFieldWithInternals(field)
+    if (!fieldWithInternals) continue
 
     try {
       hideFieldWidgets(fieldWithInternals)
@@ -766,14 +771,8 @@ function clearAttackModDropdowns(form: ReturnType<PDFDocument['getForm']>) {
 function stripCalculationActions(form: ReturnType<PDFDocument['getForm']>) {
   const aaKey = PDFName.of('AA')
   for (const field of form.getFields()) {
-    const fieldWithInternals = field as unknown as {
-      acroField: {
-        dict: {
-          has: (name: unknown) => boolean
-          delete: (name: unknown) => void
-        }
-      }
-    }
+    const fieldWithInternals = asFieldWithInternals(field)
+    if (!fieldWithInternals) continue
 
     if (fieldWithInternals.acroField.dict.has(aaKey)) {
       fieldWithInternals.acroField.dict.delete(aaKey)
@@ -786,14 +785,9 @@ function makeCalculatedFieldsEditable(form: ReturnType<PDFDocument['getForm']>) 
 
   for (const fieldName of CALCULATED_FIELDS) {
     try {
-      const field = form.getTextField(fieldName) as unknown as {
-        acroField: {
-          dict: {
-            get: (name: unknown) => unknown
-            set: (name: unknown, value: unknown) => void
-          }
-        }
-      }
+      const raw = form.getTextField(fieldName)
+      const field = asFieldWithInternals(raw)
+      if (!field) continue
 
       const flags = field.acroField.dict.get(ffKey) as { numberValue?: number } | undefined
       if (typeof flags?.numberValue === 'number') {
@@ -807,10 +801,8 @@ function makeCalculatedFieldsEditable(form: ReturnType<PDFDocument['getForm']>) 
 
 function stripCheckboxOffAppearances(form: ReturnType<PDFDocument['getForm']>) {
   for (const field of form.getFields()) {
-    const fieldWithInternals = field as unknown as {
-      acroField: { getWidgets: () => unknown[] }
-      getName: () => string
-    }
+    const fieldWithInternals = asFieldWithInternals(field)
+    if (!fieldWithInternals) continue
 
     try {
       form.getCheckBox(fieldWithInternals.getName())
@@ -818,21 +810,14 @@ function stripCheckboxOffAppearances(form: ReturnType<PDFDocument['getForm']>) {
       continue
     }
 
-    for (const widget of fieldWithInternals.acroField.getWidgets() as Array<{
-      dict: {
-        get: (name: unknown) =>
-          | {
-              get: (name: unknown) =>
-                | {
-                    has: (name: unknown) => boolean
-                    delete: (name: unknown) => void
-                  }
-                | undefined
-            }
-          | undefined
-      }
-    }>) {
-      const appearance = widget.dict.get(PDFName.of('AP'))
+    for (const widget of fieldWithInternals.acroField.getWidgets() as AcroWidget[]) {
+      const appearance = widget.dict.get(PDFName.of('AP')) as
+        | {
+            get: (
+              name: unknown,
+            ) => { has: (n: unknown) => boolean; delete: (n: unknown) => void } | undefined
+          }
+        | undefined
       const normalAppearance = appearance?.get(PDFName.of('N'))
       if (normalAppearance?.has(PDFName.of('Off'))) {
         normalAppearance.delete(PDFName.of('Off'))

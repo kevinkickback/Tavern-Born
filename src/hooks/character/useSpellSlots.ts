@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useClasses, useClassLookup, useRaces } from '@/hooks/data/useGameData'
 import {
   buildSpellcastingClassDetails,
@@ -31,18 +30,8 @@ export interface SpellSlotsState {
   preparedSpells: string[]
   spellProfiles: SpellProfile[]
   spellcastingDetails: SpellcastingClassDetail[]
-  syncProfiles: () => void
-  addCantrip: (name: string, profileId?: string) => void
-  removeCantrip: (name: string, profileId?: string) => void
-  addSpellKnown: (name: string, profileId?: string) => void
-  removeSpellKnown: (name: string, profileId?: string) => void
-  addSpellToProfile: (profileId: string, name: string, kind: 'cantrip' | 'spell') => void
-  setProfileSpells: (profileId: string, cantrips: string[], spellsKnown: string[]) => void
-  removeSpellFromProfile: (profileId: string, name: string, kind: 'cantrip' | 'spell') => void
-  togglePrepared: (profileId: string, name: string) => void
-  selectRacialSpell: (profileId: string, choiceId: string, spellName: string) => void
-  removeRacialSpell: (profileId: string, choiceId: string, spellName: string) => void
-  setRacialCastingAbility: (profileId: string, ability: string) => void
+  /** Pre-computed map of profileId → SpellcastingClassDetail for use with useSpellProfileMutations. */
+  spellcastingDetailByProfileId: Map<string, SpellcastingClassDetail>
 }
 
 function toSlotRows(
@@ -193,8 +182,6 @@ export function useSpellSlots(): SpellSlotsState {
     [spellcastingDetails],
   )
 
-  const mutations = useSpellProfileMutations(spellProfiles, spellcastingDetailByProfileId)
-
   return {
     slots,
     sharedSlots,
@@ -205,6 +192,6 @@ export function useSpellSlots(): SpellSlotsState {
     preparedSpells: known.preparedSpells,
     spellProfiles,
     spellcastingDetails,
-    ...mutations,
+    spellcastingDetailByProfileId,
   }
 }
