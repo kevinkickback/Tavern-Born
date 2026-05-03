@@ -25,6 +25,8 @@ describe('5etools/lookups', () => {
       feats: [],
       items: [],
       itemsBase: [],
+      itemProperties: [],
+      itemTypes: [],
       classFeatures: [
         {
           name: 'Arcane Recovery',

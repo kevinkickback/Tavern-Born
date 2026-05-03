@@ -54,7 +54,7 @@ const EXHAUSTION_LABELS = [
 
 function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex items-center gap-2">
+    <div className="bg-gradient-to-r from-accent/20 via-accent/10 to-transparent border-b border-border px-4 py-3 flex items-center gap-2">
       <span className="h-4 w-4 text-primary [&>svg]:h-full [&>svg]:w-full">{icon}</span>
       <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
         {title}
@@ -342,7 +342,7 @@ export function ConditionsPage() {
 
           {/* ── Class Resources ────────────────────────────────────── */}
           <Card className="w-full overflow-hidden">
-            <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex items-center gap-2">
+            <div className="bg-gradient-to-r from-accent/20 via-accent/10 to-transparent border-b border-border px-4 py-3 flex items-center gap-2">
               <Flame className="h-4 w-4 text-primary" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Class Resources

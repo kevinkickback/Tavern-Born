@@ -48,6 +48,8 @@ function seedFighterCharacter(level: number, classResources?: Record<string, num
       feats: [],
       items: [],
       itemsBase: [],
+      itemProperties: [],
+      itemTypes: [],
       classFeatures: [],
       actions: [],
       conditions: [],

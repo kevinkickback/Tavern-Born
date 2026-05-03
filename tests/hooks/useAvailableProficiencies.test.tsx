@@ -29,6 +29,8 @@ function makeMinimalGameData(overrides: Partial<GameData> = {}): GameData {
     feats: [],
     items: [],
     itemsBase: [],
+    itemProperties: [],
+    itemTypes: [],
     classFeatures: [],
     actions: [],
     conditions: [],

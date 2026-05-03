@@ -356,6 +356,7 @@ export interface CharacterDetails {
   organizationCustomName?: string
   organizationCustomDescription?: string
   organizationCustomImage?: string
+  organizationCustomGradient?: string
   alliesAndOrganizations?: string
 }
 

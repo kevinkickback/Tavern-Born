@@ -147,6 +147,8 @@ async function seedCharacter(page: import('@playwright/test').Page) {
           feats: [],
           items: [],
           itemsBase: [],
+          itemProperties: [],
+          itemTypes: [],
           classFeatures: [],
           actions: [],
           conditions: [],

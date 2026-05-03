@@ -65,6 +65,8 @@ test('equipment page supports equip/attune/quantity and weight updates', async (
           feats: [],
           items: [],
           itemsBase: [],
+          itemProperties: [],
+          itemTypes: [],
           classFeatures: [],
           actions: [],
           conditions: [],

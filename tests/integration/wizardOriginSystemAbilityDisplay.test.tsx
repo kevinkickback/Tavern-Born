@@ -47,6 +47,8 @@ describe('wizard 2024 origin-system ability display', () => {
         feats: [],
         items: [],
         itemsBase: [],
+        itemProperties: [],
+        itemTypes: [],
         classFeatures: [],
         actions: [],
         conditions: [],

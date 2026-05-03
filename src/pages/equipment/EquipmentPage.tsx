@@ -42,8 +42,6 @@ import { NoCharCard } from '../_shared'
 const EQUIPMENT_EQUIP_HINT_ID = 'equipment-equip-toggle'
 const EQUIP_AC_TOGGLE_SELECTOR = '[data-equip-ac-toggle="true"]'
 const EQUIP_HINT_WIDTH = 300
-const EMPTY_ITEMS: Item5e[] = []
-
 interface HintPosition {
   top: number
   left: number
@@ -119,30 +117,19 @@ function getDamageSummary(item: Equipment): string | null {
   return `${item.dmg1}${damageType}`
 }
 
-const PROPERTY_LABELS: Record<string, string> = {
-  A: 'Ammunition',
-  AF: 'Ammunition (Firearms)',
-  BF: 'Burst Fire',
-  F: 'Finesse',
-  H: 'Heavy',
-  L: 'Light',
-  LD: 'Loading',
-  R: 'Reach',
-  RLD: 'Reload',
-  S: 'Special',
-  T: 'Thrown',
-  '2H': 'Two-Handed',
-  V: 'Versatile',
-}
+const EMPTY_RECORD: Record<string, string> = {}
 
-function resolvePropertyLabel(tag: string): string {
+function resolvePropertyLabel(tag: string, propertyByAbbr: Record<string, string>): string {
   const key = tag.trim().split('|')[0].toUpperCase()
-  return PROPERTY_LABELS[key] ?? tag
+  return propertyByAbbr[key] ?? tag
 }
 
-function getPropertySummary(item: Equipment): string | null {
+function getPropertySummary(
+  item: Equipment,
+  propertyByAbbr: Record<string, string>,
+): string | null {
   if (!item.properties || item.properties.length === 0) return null
-  return item.properties.map(resolvePropertyLabel).join(', ')
+  return item.properties.map((p) => resolvePropertyLabel(p, propertyByAbbr)).join(', ')
 }
 
 export function EquipmentPage() {
@@ -207,6 +194,10 @@ export function EquipmentPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup)
+  const itemPropertyByAbbr =
+    useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr) ?? EMPTY_RECORD
+  const originSystem = character?.originSystem ?? '2024'
+  const preferNewerPrintings = character?.variantRules?.preferNewerPrintings ?? false
 
   const ignoreEquipRestrictions = character?.variantRules?.ignoreEquipRestrictions ?? false
   const toggleIgnoreRestrictions = () => {
@@ -221,10 +212,39 @@ export function EquipmentPage() {
   const { applyManualEquipmentGrant, removeEquipmentProvenance } = useEquipmentProvenanceMutations()
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const { calculatedAC, overrideAC } = useArmorClass()
-  const equipmentItems = useMemo(
-    () => Array.from(itemLookup?.values() ?? EMPTY_ITEMS),
-    [itemLookup],
-  )
+  const equipmentItems = useMemo(() => {
+    if (!itemLookup) return []
+    // When preferNewerPrintings is off, show all versions unfiltered.
+    if (!preferNewerPrintings) return Array.from(itemLookup.values())
+    // Deduplicate reprinted items based on edition:
+    // - 2024 characters see the newer reprint (e.g. Drum|XPHB, Bag of Holding|XDMG)
+    // - 2014 characters see the original printing (e.g. Drum|PHB, Bag of Holding|DMG)
+    const suppressed = new Set<string>()
+    for (const item of itemLookup.values()) {
+      const reprints = Array.isArray((item as { reprintedAs?: unknown }).reprintedAs)
+        ? ((item as { reprintedAs?: unknown }).reprintedAs as string[])
+        : []
+      for (const reprint of reprints) {
+        if (typeof reprint !== 'string') continue
+        const [n, s] = reprint.split('|')
+        if (!n || !s) continue
+        const reprintKey = `${n.trim().toLowerCase()}|${s.trim().toLowerCase()}`
+        if (itemLookup.has(reprintKey)) {
+          if (originSystem === '2014') {
+            // Suppress the newer reprint, keep the original
+            suppressed.add(reprintKey)
+          } else {
+            // Suppress the older original, keep the newer reprint
+            suppressed.add(`${item.name.toLowerCase()}|${(item.source ?? 'phb').toLowerCase()}`)
+          }
+        }
+      }
+    }
+    return Array.from(itemLookup.values()).filter(
+      (item) =>
+        !suppressed.has(`${item.name.toLowerCase()}|${(item.source ?? 'phb').toLowerCase()}`),
+    )
+  }, [itemLookup, originSystem, preferNewerPrintings])
 
   const encumbrancePct = carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0
   const encumbranceTone =
@@ -555,7 +575,7 @@ export function EquipmentPage() {
                                 ? Scroll
                                 : Package
                     const dmg = getDamageSummary(item)
-                    const props = getPropertySummary(item)
+                    const props = getPropertySummary(item, itemPropertyByAbbr)
                     return (
                       <div
                         key={item.id}

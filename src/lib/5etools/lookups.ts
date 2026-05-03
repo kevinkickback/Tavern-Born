@@ -1,9 +1,12 @@
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
+import { ABILITY_ABBREV_TO_FULL } from '@/lib/calculations/abilityNames'
 import type {
   Class5e,
   ClassFeature,
   GameData,
   GameDataLookups,
+  ItemProperty5e,
+  ItemType5e,
   Spell5e,
   Subclass5e,
 } from '@/types/5etools'
@@ -104,5 +107,50 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
     optionalFeaturesByKey: buildOptionalFeatureLookup(gameData.optionalfeatures),
     subclassesByKey: buildSubclassLookup(gameData.classes),
     itemLookup: buildItemLookup([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])]),
+    itemPropertyByAbbr: buildItemPropertyLookup(gameData.itemProperties ?? []),
+    itemTypeByAbbr: buildItemTypeLookup(gameData.itemTypes ?? []),
+    skillToAbilityMap: buildSkillToAbilityMap(gameData.skills ?? []),
   }
+}
+
+/** Build an abbreviation → display name map from parsed itemProperty records. */
+export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const prop of itemProperties) {
+    if (!prop.abbreviation || result[prop.abbreviation]) continue
+    const first = Array.isArray(prop.entries) && prop.entries.length > 0 ? prop.entries[0] : null
+    const name = (first as { name?: string } | null)?.name ?? prop.abbreviation
+    result[prop.abbreviation] = name
+  }
+  return result
+}
+
+/** Build an abbreviation → display name map from parsed itemType records. */
+export function buildItemTypeLookup(itemTypes: ItemType5e[]): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const t of itemTypes) {
+    if (!t.abbreviation || result[t.abbreviation]) continue
+    result[t.abbreviation] = t.name
+  }
+  return result
+}
+
+/**
+ * Build a lowercase skill name → full ability name map from parsed skills records.
+ * Deduplicates PHB/XPHB reprints by keeping the first occurrence per skill name.
+ */
+export function buildSkillToAbilityMap(skills: unknown[]): Record<string, string> {
+  const result: Record<string, string> = {}
+  const seen = new Set<string>()
+  for (const skill of skills) {
+    if (!skill || typeof skill !== 'object') continue
+    const s = skill as Record<string, unknown>
+    const name = typeof s.name === 'string' ? s.name.toLowerCase().trim() : null
+    const abbrv = typeof s.ability === 'string' ? s.ability.toLowerCase().trim() : null
+    if (!name || !abbrv || seen.has(name)) continue
+    seen.add(name)
+    const fullAbility = ABILITY_ABBREV_TO_FULL[abbrv]
+    if (fullAbility) result[name] = fullAbility
+  }
+  return result
 }

@@ -1,4 +1,4 @@
-import type { Language5e } from '@/types/5etools'
+import type { ItemProperty5e, ItemType5e, Language5e } from '@/types/5etools'
 import { SOURCE_FALLBACKS } from '../sourceFallbacks'
 import { asArray, asObject, type ParsedObject } from './shared'
 
@@ -115,6 +115,18 @@ export function parseCultsBoons(data: unknown): unknown[] {
   if (obj.boon) results.push(...asArray(obj.boon))
   if (results.length > 0) return results
   if (Array.isArray(data)) return data
+  return []
+}
+
+export function parseItemProperties(data: unknown): ItemProperty5e[] {
+  const obj = asObject(data)
+  if (obj.itemProperty) return asArray(obj.itemProperty) as ItemProperty5e[]
+  return []
+}
+
+export function parseItemTypes(data: unknown): ItemType5e[] {
+  const obj = asObject(data)
+  if (obj.itemType) return asArray(obj.itemType) as ItemType5e[]
   return []
 }
 

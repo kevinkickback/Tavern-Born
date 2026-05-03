@@ -7,6 +7,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e } from '@/types/5etools'
 
 export interface ItemSelectionModalProps {
@@ -17,13 +18,23 @@ export interface ItemSelectionModalProps {
   onConfirm: (items: Item5e[]) => void
 }
 
-type ItemCategory = 'weapons' | 'armor' | 'ammunition' | 'adventuring-gear' | 'potions' | 'scrolls'
+type ItemCategory =
+  | 'weapons'
+  | 'armor'
+  | 'ammunition'
+  | 'adventuring-gear'
+  | 'tools'
+  | 'wondrous'
+  | 'potions'
+  | 'scrolls'
 
 const TYPE_OPTIONS: Array<{ value: ItemCategory; label: string }> = [
   { value: 'weapons', label: 'Weapons' },
   { value: 'armor', label: 'Armor' },
   { value: 'ammunition', label: 'Ammunition' },
   { value: 'adventuring-gear', label: 'Adventuring Gear' },
+  { value: 'tools', label: 'Tools & Instruments' },
+  { value: 'wondrous', label: 'Wondrous Items' },
   { value: 'potions', label: 'Potions' },
   { value: 'scrolls', label: 'Scrolls' },
 ]
@@ -63,20 +74,12 @@ const PROPERTY_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'cursed', label: 'Cursed' },
 ]
 
-const ITEM_PROPERTY_LABELS: Record<string, string> = {
-  A: 'Ammunition',
-  AF: 'Ammunition (Firearms)',
-  BF: 'Burst Fire',
-  F: 'Finesse',
-  H: 'Heavy',
-  L: 'Light',
-  LD: 'Loading',
-  R: 'Reach',
-  RLD: 'Reload',
-  S: 'Special',
-  T: 'Thrown',
-  '2H': 'Two-Handed',
-  V: 'Versatile',
+const EMPTY_RECORD: Record<string, string> = {}
+
+function getPropertyLabel(tag: string, propertyByAbbr: Record<string, string>): string {
+  // Strip optional source suffix (e.g. "A|XPHB" → "A") before map lookup.
+  const key = tag.trim().split('|')[0].toUpperCase()
+  return propertyByAbbr[key] ?? tag
 }
 
 function toPlainText(html: string): string {
@@ -123,12 +126,6 @@ function getItemDescription(item: Item5e): string {
   return getArmorStatSummary(item)
 }
 
-function getPropertyLabel(tag: string): string {
-  // Strip optional source suffix (e.g. "A|XPHB" → "A") before map lookup.
-  const key = tag.trim().split('|')[0].toUpperCase()
-  return ITEM_PROPERTY_LABELS[key] ?? tag
-}
-
 function getItemTypeCodes(item: Item5e): string[] {
   const type = item.type
   if (Array.isArray(type)) {
@@ -163,6 +160,9 @@ function getItemCategories(item: Item5e): Set<ItemCategory> {
   if (typeCodes.includes('G')) categories.add('adventuring-gear')
   if (typeCodes.includes('P')) categories.add('potions')
   if (typeCodes.includes('SC')) categories.add('scrolls')
+  if (typeCodes.some((code) => code === 'INS' || code === 'AT' || code === 'GS' || code === 'T'))
+    categories.add('tools')
+  if (item.wondrous) categories.add('wondrous')
 
   return categories
 }
@@ -174,6 +174,8 @@ function getPrimaryCategoryLabel(item: Item5e): string {
     'armor',
     'ammunition',
     'adventuring-gear',
+    'tools',
+    'wondrous',
     'potions',
     'scrolls',
   ]
@@ -251,6 +253,8 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
   const normalizedRarity =
     item.rarity && item.rarity.toLowerCase() === 'unknown (magic)' ? 'unknown' : (item.rarity ?? '')
   const rarityColorClass = RARITY_COLORS[normalizedRarity.toLowerCase()] ?? ''
+  const itemPropertyByAbbr =
+    useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr) ?? EMPTY_RECORD
 
   return (
     <div className="p-3.5">
@@ -293,9 +297,9 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
               'text-xs px-1.5 py-0 h-5',
               'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-900/30 dark:text-sky-400',
             )}
-            title={getPropertyLabel(prop)}
+            title={getPropertyLabel(prop, itemPropertyByAbbr)}
           >
-            {getPropertyLabel(prop)}
+            {getPropertyLabel(prop, itemPropertyByAbbr)}
           </Badge>
         ))}
         {properties.length > 6 && (
@@ -326,7 +330,13 @@ export function ItemSelectionModal({
   onConfirm,
 }: ItemSelectionModalProps) {
   const filteredItems = useMemo(
-    () => items.filter((item) => getItemCategories(item).size > 0),
+    () =>
+      items.filter((item) => {
+        // Exclude itemGroup container records — they have an `items` string-array of
+        // references to individual items and are not themselves equippable.
+        if (Array.isArray((item as { items?: unknown }).items)) return false
+        return getItemCategories(item).size > 0
+      }),
     [items],
   )
 

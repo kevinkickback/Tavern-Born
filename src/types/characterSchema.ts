@@ -329,6 +329,7 @@ export const characterDetailsSchema = z.object({
   organizationCustomName: z.string().optional(),
   organizationCustomDescription: z.string().optional(),
   organizationCustomImage: z.string().optional(),
+  organizationCustomGradient: z.string().optional(),
   alliesAndOrganizations: z.string().optional(),
 })
 

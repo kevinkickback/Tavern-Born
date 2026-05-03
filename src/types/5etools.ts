@@ -201,6 +201,21 @@ export interface OptionalFeatureLike {
   entries?: unknown[]
 }
 
+export interface ItemProperty5e {
+  abbreviation: string
+  source: string
+  entries?: Array<{ type?: string; name?: string; entries?: unknown[] }>
+  [key: string]: unknown
+}
+
+export interface ItemType5e {
+  abbreviation: string
+  name: string
+  source: string
+  entries?: unknown[]
+  [key: string]: unknown
+}
+
 export interface GameDataLookups {
   classesByKey: Record<string, Class5e>
   classFeaturesByKey: Record<string, ClassFeature>
@@ -208,6 +223,12 @@ export interface GameDataLookups {
   optionalFeaturesByKey: Record<string, unknown>
   subclassesByKey: Record<string, Subclass5e>
   itemLookup: Map<string, Item5e>
+  /** Parsed from data/items-base.json → .itemProperty[]. Maps abbreviation → display name. */
+  itemPropertyByAbbr: Record<string, string>
+  /** Parsed from data/items-base.json → .itemType[]. Maps abbreviation → display name. */
+  itemTypeByAbbr: Record<string, string>
+  /** Parsed from data/skills.json → .skill[]. Maps lowercase skill name → full ability name. */
+  skillToAbilityMap: Record<string, string>
 }
 
 export interface Background5e {
@@ -417,6 +438,10 @@ export interface GameData {
   feats: Feat5e[]
   items: Item5e[]
   itemsBase: Item5e[]
+  /** Parsed from data/items-base.json → .itemProperty[]. */
+  itemProperties: ItemProperty5e[]
+  /** Parsed from data/items-base.json → .itemType[]. */
+  itemTypes: ItemType5e[]
   classFeatures: ClassFeature[]
   actions: unknown[]
   conditions: unknown[]

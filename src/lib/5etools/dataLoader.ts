@@ -13,7 +13,9 @@ import {
   parseCultsBoons,
   parseDeities,
   parseFeats,
+  parseItemProperties,
   parseItems,
+  parseItemTypes,
   parseLanguages,
   parseMagicVariants,
   parseOptionalFeatures,
@@ -91,6 +93,8 @@ export class FiveEToolsDataLoader {
       feats: [],
       items: [],
       itemsBase: [],
+      itemProperties: [],
+      itemTypes: [],
       classFeatures: [],
       actions: [],
       conditions: [],
@@ -181,6 +185,8 @@ export class FiveEToolsDataLoader {
               break
             case 'itemsBase':
               gameData.itemsBase = parseItems(data) as GameData['itemsBase']
+              gameData.itemProperties = parseItemProperties(data)
+              gameData.itemTypes = parseItemTypes(data)
               gameData.itemsBase.forEach((item) => {
                 this.addItemSource(item, sourcesSet)
               })
