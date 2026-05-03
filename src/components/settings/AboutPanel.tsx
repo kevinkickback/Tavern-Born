@@ -12,7 +12,12 @@ export function AboutPanel() {
   const [appVersion, setAppVersion] = useState('')
 
   useEffect(() => {
-    void window.electronAPI?.getAppVersion().then(setAppVersion)
+    window.electronAPI
+      ?.getAppVersion()
+      .then(setAppVersion)
+      .catch(() => {
+        // Version display is best-effort; silence is intentional.
+      })
   }, [])
 
   const infoRows = [

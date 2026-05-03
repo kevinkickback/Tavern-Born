@@ -1,5 +1,5 @@
 import { ArrowsLeftRight, BookOpen, Lock, Plus, Trash, WarningCircle } from '@phosphor-icons/react'
-import type { ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -74,7 +74,7 @@ interface CantripGroupProps {
   onRemoveSpell: (item: SpellListItem) => void
 }
 
-function CantripGroup({
+const CantripGroup = memo(function CantripGroup({
   items,
   span,
   swappedByAddedName,
@@ -168,7 +168,7 @@ function CantripGroup({
       </div>
     </div>
   )
-}
+})
 
 export interface SpellListItem {
   profileId: string
@@ -232,7 +232,7 @@ interface SpellProfileManagerProps {
   }) => ReactNode
 }
 
-export function SpellProfileManager({
+export const SpellProfileManager = memo(function SpellProfileManager({
   spellProfiles,
   detailsByProfileId,
   groupedItems,
@@ -799,4 +799,4 @@ export function SpellProfileManager({
       </CardContent>
     </Card>
   )
-}
+})

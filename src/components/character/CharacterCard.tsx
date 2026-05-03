@@ -3,6 +3,7 @@ import { memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import type { Character } from '@/types/character'
 
@@ -131,7 +132,7 @@ export const CharacterCard = memo(function CharacterCard({
         <div className={cn('mt-auto flex w-full flex-col items-end', isSmall ? 'gap-2' : 'gap-3')}>
           <div className={cn('flex flex-col items-end', detailsGap, detailText)}>
             <div className="flex items-center gap-2 text-foreground/90">
-              <span className="font-semibold">Level {character.level}</span>
+              <span className="font-semibold">Level {getTotalCharacterLevel(character)}</span>
               <Crown
                 className={cn('text-accent-foreground', isSmall ? 'size-3.5' : 'size-4')}
                 weight="fill"

@@ -178,7 +178,7 @@ export function BuildClassModals({
   feats,
   featByCompositeId,
 }: BuildClassModalsProps) {
-  const totalAbilityScores = useTotalAbilityScores(character)
+  const { total: totalAbilityScores } = useTotalAbilityScores(character)
   return (
     <>
       <ClassSelectionDialog

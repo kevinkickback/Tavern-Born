@@ -290,11 +290,11 @@ function getBackgroundProficiencyDisplay(blocks: unknown[] | undefined): string 
 function getEntryBaseKey(entry: unknown): string {
   if (typeof entry === 'string') return entry
   if (entry && typeof entry === 'object') {
-    const record = entry as { name?: unknown; source?: unknown }
+    const record = entry as { name?: unknown; source?: unknown; type?: unknown }
     if (typeof record.name === 'string') {
       return `${record.name}|${typeof record.source === 'string' ? record.source : ''}`
     }
-    return JSON.stringify(entry)
+    return `obj:${typeof record.type === 'string' ? record.type : 'entry'}`
   }
   return String(entry)
 }

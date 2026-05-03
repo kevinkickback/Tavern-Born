@@ -1,3 +1,4 @@
+import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import type {
   Class5e,
   ClassFeature,
@@ -102,5 +103,6 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
     spellsByKey: buildSpellLookup(gameData.spells),
     optionalFeaturesByKey: buildOptionalFeatureLookup(gameData.optionalfeatures),
     subclassesByKey: buildSubclassLookup(gameData.classes),
+    itemLookup: buildItemLookup([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])]),
   }
 }

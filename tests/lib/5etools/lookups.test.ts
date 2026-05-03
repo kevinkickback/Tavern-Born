@@ -46,6 +46,7 @@ describe('5etools/lookups', () => {
       trapHazards: [],
       rewards: [],
       cultsBoons: [],
+      organizations: [],
       sources: [],
     })
 
@@ -58,6 +59,7 @@ describe('5etools/lookups', () => {
     expect(
       lookups.subclassesByKey[getSubclassLookupKey('Wizard', 'PHB', 'Evocation', 'PHB')],
     ).toMatchObject({ name: 'School of Evocation' })
+    expect(lookups.itemLookup).toBeInstanceOf(Map)
   })
 })
 

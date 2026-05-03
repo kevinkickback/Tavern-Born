@@ -1,3 +1,4 @@
+import { getTotalLevel } from '@/lib/characterUtils'
 import type { Raw5ePrereq } from '@/types/5etools'
 import type { AbilityName } from './abilityScores'
 
@@ -110,7 +111,9 @@ export function checkPrerequisite(
       )
       charLevel = entry?.levels ?? 0
     } else {
-      charLevel = character.level ?? 0
+      charLevel = character.progression
+        ? getTotalLevel(character.progression)
+        : (character.level ?? 0)
     }
 
     const required = typeof prereq.level === 'object' ? (prereq.level.level ?? 1) : prereq.level

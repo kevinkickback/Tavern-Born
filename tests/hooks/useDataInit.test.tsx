@@ -50,6 +50,7 @@ function makeGameData(): GameData {
     trapHazards: [],
     rewards: [],
     cultsBoons: [],
+    organizations: [],
     sources: [],
   }
 }

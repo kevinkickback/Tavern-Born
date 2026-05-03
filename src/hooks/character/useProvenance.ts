@@ -4,20 +4,18 @@ import { useProvenanceRows } from '@/hooks/character/useProvenanceRows'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+import type { Item5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
 const EMPTY_ITEMS: never[] = []
+const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 
 function getLedger(character: Character | null): ProvenanceLedger {
   return character?.provenance ?? emptyProvenance()
 }
 
 export function useProvenance() {
-  const character = useCharacterStore((state) => {
-    if (state.activeCharacter) return state.activeCharacter
-    if (!state.activeCharacterId) return null
-    return state.characters.find((entry) => entry.id === state.activeCharacterId) ?? null
-  })
+  const character = useCharacterStore((state) => state.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const gameData = useGameDataStore((s) => s.gameData)
   const items = gameData?.items ?? EMPTY_ITEMS
@@ -25,7 +23,7 @@ export function useProvenance() {
 
   const ledger = useMemo(() => getLedger(character), [character?.provenance, character])
 
-  const itemLookup = useGameDataStore((s) => s.itemLookup)
+  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
 
   const patch = useCallback(
     (newLedger: ProvenanceLedger) => {

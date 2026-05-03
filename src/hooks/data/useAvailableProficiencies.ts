@@ -155,11 +155,7 @@ function collectWeaponOrArmorFromProfBlocks(
  */
 export function useAvailableProficiencies(): AvailableProficiencies {
   const gameData = useGameDataStore((state) => state.gameData)
-  const activeCharacter = useCharacterStore((state) => {
-    if (state.activeCharacter) return state.activeCharacter
-    if (!state.activeCharacterId) return null
-    return state.characters.find((character) => character.id === state.activeCharacterId) ?? null
-  })
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
 
   return useMemo(() => {
     const empty: AvailableProficiencies = {

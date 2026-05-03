@@ -5,26 +5,24 @@
  */
 
 import { useCallback } from 'react'
-import { useProvenance } from '@/hooks/character/useProvenance'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import {
   selectBaseClass,
   selectSubclass as selectSubclassCommand,
 } from '@/lib/character/commands/classCommands'
+import { computeApplyClassSelectionUpdates } from '@/lib/character/commands/classSelectionOrchestrationCommand'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-import type { Class5e } from '@/types/5etools'
+import { useGameDataStore } from '@/store/gameDataStore'
+import type { Class5e, Item5e } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
+
+const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 
 export function useUnifiedClassSelection() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { applyClassSelection } = useProvenance()
+  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
 
-  /**
-   * Apply a base class selection in a single coordinated operation.
-   *
-   * Coordinates command-derived character updates with provenance application.
-   */
   const selectClass = useCallback(
     (
       className: string,
@@ -40,25 +38,39 @@ export function useUnifiedClassSelection() {
 
       if (!cls) return
 
-      const result = selectBaseClass(
+      const ledger = character.provenance ?? emptyProvenance()
+      // Compute provenance/equipment/proficiency updates atomically via the orchestration command.
+      const orchestrationUpdates = computeApplyClassSelectionUpdates(
         character,
-        character.provenance ?? emptyProvenance(),
-        className,
+        ledger,
         cls,
-        classSource,
+        undefined,
+        itemLookup,
       )
+      // Compute class identity and classProgression updates via the command layer.
+      const commandResult = selectBaseClass(character, ledger, className, cls, classSource)
 
-      if (cls) applyClassSelection(cls, undefined)
-      updateCharacter(character.id, result.characterUpdate)
+      // Single atomic write: orchestration wins for provenance/equipment/armor/weapons/tools/savingThrows;
+      // selectBaseClass provides class identity fields and the merged skills map.
+      updateCharacter(character.id, {
+        ...orchestrationUpdates,
+        class: commandResult.characterUpdate.class,
+        classSource: commandResult.characterUpdate.classSource,
+        subclass: commandResult.characterUpdate.subclass,
+        subclassSource: commandResult.characterUpdate.subclassSource,
+        classProgression: commandResult.characterUpdate.classProgression,
+        skills: commandResult.characterUpdate.skills,
+        proficiencies: {
+          // orchestrationUpdates always sets proficiencies; Partial<Character> makes it optional so fallback to current
+          ...(orchestrationUpdates.proficiencies ?? character.proficiencies),
+          // selectBaseClass correctly adds new class skill profs; orchestration omits skills.
+          skills: commandResult.characterUpdate.proficiencies?.skills ?? [],
+        },
+      })
     },
-    [character, updateCharacter, applyClassSelection],
+    [character, updateCharacter, itemLookup],
   )
 
-  /**
-   * Apply a subclass selection in a single coordinated operation.
-   *
-   * Coordinates command-derived character updates with provenance application.
-   */
   const selectSubclass = useCallback(
     (
       subclassName: string,
@@ -73,11 +85,19 @@ export function useUnifiedClassSelection() {
         source: viewingEntry.source,
       }
 
-      applyClassSelection(classEntity, { name: subclassName, source: subclassSource })
-
+      const ledger = character.provenance ?? emptyProvenance()
+      // Compute provenance/equipment/proficiency updates atomically.
+      const orchestrationUpdates = computeApplyClassSelectionUpdates(
+        character,
+        ledger,
+        classEntity,
+        { name: subclassName, source: subclassSource },
+        itemLookup,
+      )
+      // Compute classProgression/subclass field updates.
       const result = selectSubclassCommand(
         character,
-        character.provenance ?? emptyProvenance(),
+        ledger,
         subclassName,
         subclassSource,
         undefined,
@@ -87,9 +107,13 @@ export function useUnifiedClassSelection() {
         },
       )
 
-      updateCharacter(character.id, result.characterUpdate)
+      // Single atomic write: merge both update sets (no field overlap).
+      updateCharacter(character.id, {
+        ...orchestrationUpdates,
+        ...result.characterUpdate,
+      })
     },
-    [character, updateCharacter, applyClassSelection],
+    [character, updateCharacter, itemLookup],
   )
 
   return { selectClass, selectSubclass }

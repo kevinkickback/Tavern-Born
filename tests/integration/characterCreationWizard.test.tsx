@@ -134,6 +134,7 @@ describe('character creation and proficiencies validation', () => {
         trapHazards: [],
         rewards: [],
         cultsBoons: [],
+        organizations: [],
         sources: [],
       },
       hasHydrated: true,

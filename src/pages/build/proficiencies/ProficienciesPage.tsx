@@ -3,7 +3,8 @@ import { useCallback, useMemo, useState } from 'react'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
+import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useSavingThrows } from '@/hooks/character/useSavingThrows'
 import { useSkills } from '@/hooks/character/useSkills'
 import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
@@ -30,15 +31,12 @@ import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 import { useCharacterStore } from '@/store/characterStore'
 
 export function BuildProficienciesPage() {
-  const character = useCharacterStore((state) => {
-    if (state.activeCharacter) return state.activeCharacter
-    if (!state.activeCharacterId) return null
-    return state.characters.find((entry) => entry.id === state.activeCharacterId) ?? null
-  })
+  const character = useCharacterStore((state) => state.activeCharacter)
   const { skills: skillDefs, items, itemsBase, languages } = useFilteredGameData()
   const { skills } = useSkills()
   const { savingThrows } = useSavingThrows()
-  const { ledger, resolveChoiceSelection, getSourcesRowsBySection } = useProvenance()
+  const { ledger, getSourcesRowsBySection } = useProvenanceLedger()
+  const { resolveChoiceSelection } = useFeatProvenanceMutations()
   const availableProficiencies = useAvailableProficiencies()
 
   const [detailCollapsed, setDetailCollapsed] = useState(false)

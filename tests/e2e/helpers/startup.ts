@@ -22,6 +22,7 @@ const MINIMAL_GAME_DATA: GameData = {
   trapHazards: [],
   rewards: [],
   cultsBoons: [],
+  organizations: [],
   sources: [],
 }
 

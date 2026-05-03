@@ -15,7 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useBackgroundProvenanceMutations } from '@/hooks/character/useBackgroundProvenanceMutations'
+import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
+import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
@@ -42,22 +44,21 @@ import {
 } from '@/pages/build/background/model/data'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Background5e, Feat5e, Spell5e } from '@/types/5etools'
+import type { Background5e, Feat5e, Item5e, Spell5e } from '@/types/5etools'
+
+const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { backgrounds, feats, spells } = useFilteredGameData()
-  const itemLookup = useGameDataStore((s) => s.itemLookup)
+  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [bgSearch, setBgSearch] = useState('')
-  const {
-    applyBackgroundSelection,
-    applyBackgroundAbilityChoices,
-    resolveFeatChoiceSelection,
-    commitFeatWithOptions,
-    ledger,
-  } = useProvenance()
+  const { applyBackgroundSelection, applyBackgroundAbilityChoices } =
+    useBackgroundProvenanceMutations()
+  const { resolveFeatChoiceSelection, commitFeatWithOptions } = useFeatProvenanceMutations()
+  const { ledger } = useProvenanceLedger()
   const selectedBackgroundRef = useRef<HTMLDivElement | null>(null)
   const [featModalOpen, setFeatModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)

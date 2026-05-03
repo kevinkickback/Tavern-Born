@@ -48,6 +48,7 @@ function setGameDataItems(
       trapHazards: [],
       rewards: [],
       cultsBoons: [],
+      organizations: [],
       sources: [],
     },
   })

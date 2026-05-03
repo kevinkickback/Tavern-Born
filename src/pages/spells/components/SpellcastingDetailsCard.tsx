@@ -85,63 +85,63 @@ export function SpellcastingDetailsCard({
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-              {spellcastingDetails.map((detail) => (
-                <div
-                  key={detail.profileId}
-                  className="border border-border rounded-xl overflow-hidden shadow-sm"
-                >
-                  <div className="flex items-center gap-3 px-3 py-2.5 border-b border-border/40 bg-card">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                      {(() => {
-                        const iconUrl = getClassIconUrl(detail.className)
-                        return iconUrl ? (
+              {spellcastingDetails.map((detail) => {
+                const classIconUrl = getClassIconUrl(detail.className)
+                return (
+                  <div
+                    key={detail.profileId}
+                    className="border border-border rounded-xl overflow-hidden shadow-sm"
+                  >
+                    <div className="flex items-center gap-3 px-3 py-2.5 border-b border-border/40 bg-card">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600/60 flex items-center justify-center shrink-0 shadow-sm">
+                        {classIconUrl ? (
                           <img
-                            src={iconUrl}
+                            src={classIconUrl}
                             alt={detail.className}
                             className="h-5 w-5"
                             style={{ filter: 'brightness(0) invert(1)' }}
                           />
                         ) : (
                           <MagicWand className="h-5 w-5 text-white" weight="bold" />
-                        )
-                      })()}
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-sm leading-tight truncate">
+                          {detail.className}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Level {detail.classLevel} · {detail.casterProgression}
+                        </p>
+                      </div>
+                      {detail.spellcastingAbility ? (
+                        <Badge variant="secondary" className="text-[10px] uppercase shrink-0">
+                          {detail.spellcastingAbility}
+                        </Badge>
+                      ) : null}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm leading-tight truncate">
-                        {detail.className}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Level {detail.classLevel} · {detail.casterProgression}
-                      </p>
+                    <div className="flex divide-x divide-border/40">
+                      <div className="flex-1 px-3 py-2.5">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                          Save DC
+                        </p>
+                        <p className="font-bold text-2xl leading-tight tabular-nums mt-0.5">
+                          {detail.spellSaveDC ?? '—'}
+                        </p>
+                      </div>
+                      <div className="flex-1 px-3 py-2.5">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                          Spell Attack
+                        </p>
+                        <p className="font-bold text-2xl leading-tight tabular-nums mt-0.5">
+                          {detail.spellAttackBonus !== null
+                            ? formatModifier(detail.spellAttackBonus)
+                            : '—'}
+                        </p>
+                      </div>
                     </div>
-                    {detail.spellcastingAbility ? (
-                      <Badge variant="secondary" className="text-[10px] uppercase shrink-0">
-                        {detail.spellcastingAbility}
-                      </Badge>
-                    ) : null}
                   </div>
-                  <div className="flex divide-x divide-border/40">
-                    <div className="flex-1 px-3 py-2.5">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                        Save DC
-                      </p>
-                      <p className="font-bold text-2xl leading-tight tabular-nums mt-0.5">
-                        {detail.spellSaveDC ?? '—'}
-                      </p>
-                    </div>
-                    <div className="flex-1 px-3 py-2.5">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                        Spell Attack
-                      </p>
-                      <p className="font-bold text-2xl leading-tight tabular-nums mt-0.5">
-                        {detail.spellAttackBonus !== null
-                          ? formatModifier(detail.spellAttackBonus)
-                          : '—'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
 
               {racialProfiles.map((profile) => {
                 const hasMultipleAbilityOptions = (profile.castingAbilityOptions?.length ?? 0) > 1

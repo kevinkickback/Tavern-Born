@@ -160,6 +160,7 @@ async function seedCharacter(page: import('@playwright/test').Page) {
           trapHazards: [],
           rewards: [],
           cultsBoons: [],
+          organizations: [],
           sources: [],
         },
         cachedAt: new Date().toISOString(),

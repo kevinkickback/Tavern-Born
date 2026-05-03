@@ -109,9 +109,9 @@ export function BuildClassDetailsPanel({
                         {features.map((feature) => (
                           <div key={`${feature.name}|${feature.source ?? ''}`}>
                             <div className="text-sm font-semibold mb-1">{feature.name}</div>
-                            {feature.entries?.map((entry) => (
+                            {feature.entries?.map((entry, idx) => (
                               <div
-                                key={typeof entry === 'string' ? entry : JSON.stringify(entry)}
+                                key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
                                 className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
                                 dangerouslySetInnerHTML={{
                                   __html: renderEntry(entry) ?? '',
@@ -125,9 +125,9 @@ export function BuildClassDetailsPanel({
                   ))}
               </>
             ) : selectedFeature.entries.length > 0 ? (
-              selectedFeature.entries.map((entry) => (
+              selectedFeature.entries.map((entry, idx) => (
                 <div
-                  key={typeof entry === 'string' ? entry : JSON.stringify(entry)}
+                  key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
                   className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
                   dangerouslySetInnerHTML={{ __html: renderEntry(entry) ?? '' }}
                 />
@@ -213,9 +213,9 @@ export function BuildClassDetailsPanel({
                   Description
                 </h4>
                 <div className="space-y-2">
-                  {viewingClassEntries.map((entry) => (
+                  {viewingClassEntries.map((entry, idx) => (
                     <div
-                      key={typeof entry === 'string' ? entry : JSON.stringify(entry)}
+                      key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
                       className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold"
                       dangerouslySetInnerHTML={{
                         __html: renderEntry(entry) ?? '',
@@ -232,13 +232,14 @@ export function BuildClassDetailsPanel({
                   Lore
                 </h4>
                 <div className="space-y-4">
-                  {(viewingClassData.classFluffSections ?? []).map((section) => (
-                    <div key={`${section.name}|${JSON.stringify(section.entries)}`}>
+                  {(viewingClassData.classFluffSections ?? []).map((section, sectionIdx) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: section.name is not unique; index needed to disambiguate
+                    <div key={`${section.name ?? ''}|${sectionIdx}`}>
                       <h5 className="text-sm font-semibold mb-2">{section.name}</h5>
                       <div className="space-y-2">
-                        {section.entries.map((entry) => (
+                        {section.entries.map((entry, idx) => (
                           <div
-                            key={typeof entry === 'string' ? entry : JSON.stringify(entry)}
+                            key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
                             className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold"
                             dangerouslySetInnerHTML={{
                               __html: renderEntry(entry) ?? '',

@@ -61,6 +61,7 @@ function seedFighterCharacter(level: number, classResources?: Record<string, num
       trapHazards: [],
       rewards: [],
       cultsBoons: [],
+      organizations: [],
       sources: [],
     },
   })

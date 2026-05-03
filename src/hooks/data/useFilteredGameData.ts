@@ -79,7 +79,6 @@ export function useFilteredGameDataParams(params: FilterParams) {
             ...races,
             ...classes,
             ...backgrounds,
-            ...organizations,
             ...spells,
             ...feats,
             ...items,
@@ -109,12 +108,8 @@ export function useFilteredGameDataParams(params: FilterParams) {
         sources: allowedSources,
         suppressedKeys,
       }),
-      organizations: organizations.filter((org) => {
-        if (!allowedSources.includes(org.source)) {
-          return false
-        }
-        return !(suppressedKeys?.has(`${org.name}|${org.source}`) ?? false)
-      }),
+      // Organizations are reference/flavor content (like deities) — not gated by sourcebook.
+      organizations,
       spells: DataFilter.filterSpells(spells, {
         sources: allowedSources,
         suppressedKeys,

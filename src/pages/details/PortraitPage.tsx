@@ -1,5 +1,6 @@
 import { Image } from '@phosphor-icons/react'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
+import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -32,7 +33,7 @@ export function PortraitPage() {
             portrait={activeCharacter.portrait ?? null}
             transform={activeCharacter.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
             name={activeCharacter.name}
-            level={activeCharacter.level}
+            level={getTotalCharacterLevel(activeCharacter)}
             race={activeCharacter.race}
             characterClass={activeCharacter.class}
             lastModified={activeCharacter.lastModified}
