@@ -38,6 +38,8 @@ interface GameDataState {
   error: string | null
   lastLoadedAt: string | null
   lastDataChangedAt: string | null
+  /** FNV-1a hash of the last successfully loaded game data; survives cache clears. */
+  lastContentFingerprint: string | null
   lastUpdateCheckAt: string | null
   cacheStatus: CacheStatus
   /** True once the Zustand persist middleware has read back from IDB. */
@@ -50,13 +52,17 @@ interface GameDataState {
   setLoadProgress: (progress: LoadProgress | null) => void
   setError: (error: string | null) => void
   setLastDataChangedAt: (iso: string | null) => void
+  setLastContentFingerprint: (fp: string | null) => void
   setHasHydrated: (v: boolean) => void
 
   /**
    * Read from IDB cache and populate store state. Returns a hint for which
    * toast (if any) the caller should display — the store does not import UI libs.
+   *
+   * Pass `forceCheck: true` to skip the 1-hour background-verify interval and
+   * always fire a background source check (used by auto-refresh on launch).
    */
-  loadFromCache: () => Promise<{ needsToast?: 'stale' | 'offline' }>
+  loadFromCache: (opts?: { forceCheck?: boolean }) => Promise<{ needsToast?: 'stale' | 'offline' }>
 
   /**
    * Fetch data from `config`, write to IDB cache, update store.
@@ -78,6 +84,7 @@ export const useGameDataStore = create<GameDataState>()(
       error: null,
       lastLoadedAt: null,
       lastDataChangedAt: null,
+      lastContentFingerprint: null,
       lastUpdateCheckAt: null,
       cacheStatus: 'unknown',
       hasHydrated: false,
@@ -89,9 +96,10 @@ export const useGameDataStore = create<GameDataState>()(
       setLoadProgress: (progress) => set({ loadProgress: progress }),
       setError: (error) => set({ error }),
       setLastDataChangedAt: (iso) => set({ lastDataChangedAt: iso }),
+      setLastContentFingerprint: (fp) => set({ lastContentFingerprint: fp }),
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
-      loadFromCache: async () => {
+      loadFromCache: async (opts) => {
         const {
           dataSourceConfig,
           lastUpdateCheckAt,
@@ -99,6 +107,7 @@ export const useGameDataStore = create<GameDataState>()(
           setGameData,
           setCacheStatus,
           setLastDataChangedAt,
+          setLastContentFingerprint,
         } = get()
         const cache = await readGameDataCache()
 
@@ -115,21 +124,24 @@ export const useGameDataStore = create<GameDataState>()(
           if (isCacheStale(cache.cachedAt)) {
             setGameData(cache.data)
             setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
+            setLastContentFingerprint(cache.contentFingerprint ?? null)
             setCacheStatus('stale')
             loadGameData(dataSourceConfig, true)
             return { needsToast: 'stale' }
           }
           setGameData(cache.data)
           setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
+          setLastContentFingerprint(cache.contentFingerprint ?? null)
           setCacheStatus('fresh')
-          // Only verify source in background if we haven't checked recently (within 1 hour).
+          // Only verify source in background if we haven't checked recently (within 1 hour),
+          // unless forceCheck is set (e.g. auto-refresh on launch is enabled).
           const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000
           const lastCheckedMs = lastUpdateCheckAt
             ? new Date(lastUpdateCheckAt).getTime()
             : Number.NaN
           const checkedRecently =
             Number.isFinite(lastCheckedMs) && Date.now() - lastCheckedMs < UPDATE_CHECK_INTERVAL_MS
-          if (!checkedRecently) {
+          if (opts?.forceCheck || !checkedRecently) {
             loadGameData(dataSourceConfig, true)
           }
           return {}
@@ -138,6 +150,7 @@ export const useGameDataStore = create<GameDataState>()(
         if (cache && !dataSourceConfig) {
           setGameData(cache.data)
           setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
+          setLastContentFingerprint(cache.contentFingerprint ?? null)
           setCacheStatus('offline')
           return { needsToast: 'offline' }
         }
@@ -184,9 +197,15 @@ export const useGameDataStore = create<GameDataState>()(
 
           const now = new Date().toISOString()
           // Persist parsed data to IDB cache so next launch is instant.
+          // Pass the last known fingerprint so writeGameDataCache can detect
+          // unchanged content even when the IDB cache was cleared.
           const prevChangedAt = get().lastDataChangedAt
+          const prevFingerprint = get().lastContentFingerprint
           const hadGameData = get().gameData !== null
-          const cacheEntry = await writeGameDataCache(data, config)
+          const cacheEntry = await writeGameDataCache(data, config, {
+            fingerprint: prevFingerprint,
+            lastDataChangedAt: prevChangedAt,
+          })
           const contentChanged = cacheEntry.lastDataChangedAt !== prevChangedAt
           const shouldHydrateMemory = contentChanged || !hadGameData
           set({
@@ -199,6 +218,7 @@ export const useGameDataStore = create<GameDataState>()(
             ...(contentChanged || !prevChangedAt
               ? { lastDataChangedAt: cacheEntry.lastDataChangedAt ?? now }
               : {}),
+            lastContentFingerprint: cacheEntry.contentFingerprint ?? null,
             lastUpdateCheckAt: now,
             cacheStatus: 'fetched',
           })
@@ -254,6 +274,7 @@ export const useGameDataStore = create<GameDataState>()(
           error: null,
           lastLoadedAt: null,
           lastDataChangedAt: null,
+          lastContentFingerprint: null,
           lastUpdateCheckAt: null,
           cacheStatus: 'unconfigured',
         })
@@ -267,6 +288,7 @@ export const useGameDataStore = create<GameDataState>()(
         dataSourceConfig: state.dataSourceConfig,
         lastLoadedAt: state.lastLoadedAt,
         lastDataChangedAt: state.lastDataChangedAt,
+        lastContentFingerprint: state.lastContentFingerprint,
         lastUpdateCheckAt: state.lastUpdateCheckAt,
       }),
       onRehydrateStorage: () => (state) => {
