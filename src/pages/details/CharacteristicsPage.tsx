@@ -465,7 +465,10 @@ export function CharacteristicsPage() {
           {/* ── Identity ── */}
           <Card className="w-full overflow-hidden">
             <div className="h-10 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-4 shrink-0">
-              <IdentificationCard className="h-4 w-4 text-indigo-400" weight="duotone" />
+              <IdentificationCard
+                className="h-4 w-4 text-indigo-600 dark:text-indigo-400"
+                weight="duotone"
+              />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Identity
               </span>

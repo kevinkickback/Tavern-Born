@@ -37,9 +37,13 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
     const implicit = getImplicitSource((data.originSystem || '2014') as '2014' | '2024')
     return base.includes(implicit) ? base : [...base, implicit]
   }, [data.allowedSources, data.originSystem])
+  const allowedBgSourcesUpper = useMemo(
+    () => new Set(allowedSources.map((s) => s.toUpperCase())),
+    [allowedSources],
+  )
   const sourceFilteredBackgrounds =
     allowedSources.length > 0
-      ? backgrounds.filter((bg) => allowedSources.includes(bg.source))
+      ? backgrounds.filter((bg) => allowedBgSourcesUpper.has(bg.source.toUpperCase()))
       : backgrounds
   const suppressedBackgroundKeys =
     data.variantRules?.preferNewerPrintings && allowedSources.length > 0

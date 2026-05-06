@@ -424,6 +424,17 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
                   </span>
                 </div>
               )}
+
+              {data.originSystem === '2014' && (
+                <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
+                  <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                  <span>
+                    {preferNewerPrintingsEnabled
+                      ? 'Older printings are hidden where a newer version exists in your selected sources. Disable "Prefer Newer Printings" to see all options.'
+                      : 'Some races and features appear in multiple printings across your selected sources (e.g., ERLW content updated in MPMM). Enable "Prefer Newer Printings" to automatically hide older versions.'}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

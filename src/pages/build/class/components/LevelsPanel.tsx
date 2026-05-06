@@ -263,7 +263,7 @@ export function BuildClassLevelsPanel({
                           </Badge>
                         )}
                         {choiceCount > 0 && (
-                          <Badge className="text-xs h-5 px-1.5 pointer-events-none bg-warning/20 text-warning border border-warning/30 hover:bg-warning/20">
+                          <Badge className="text-xs h-5 px-1.5 pointer-events-none bg-warning/20 text-warning-foreground dark:text-warning border border-warning/40 dark:border-warning/30 hover:bg-warning/20">
                             {choiceCount} {choiceCount === 1 ? 'choice' : 'choices'}
                           </Badge>
                         )}
