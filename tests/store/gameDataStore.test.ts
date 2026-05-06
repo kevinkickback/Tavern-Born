@@ -4,7 +4,10 @@ import type { DataSourceConfig, GameData } from '@/types/5etools'
 const { loadDataFromSourceMock, writeGameDataCacheMock, clearGameDataCacheMock } = vi.hoisted(
   () => ({
     loadDataFromSourceMock: vi.fn(),
-    writeGameDataCacheMock: vi.fn(async () => ({ lastDataChangedAt: '2026-01-01T00:00:00.000Z' })),
+    writeGameDataCacheMock: vi.fn(async () => ({
+      lastDataChangedAt: '2026-01-01T00:00:00.000Z',
+      contentFingerprint: 'abc123ef',
+    })),
     clearGameDataCacheMock: vi.fn(async () => undefined),
   }),
 )
@@ -93,7 +96,11 @@ describe('gameDataStore', () => {
       config,
       expect.objectContaining({ onProgress: expect.any(Function) }),
     )
-    expect(writeGameDataCacheMock).toHaveBeenCalledWith(data, config)
+    expect(writeGameDataCacheMock).toHaveBeenCalledWith(
+      data,
+      config,
+      expect.objectContaining({ fingerprint: null, lastDataChangedAt: null }),
+    )
     expect(state.gameData).toEqual(data)
     expect(state.dataSourceConfig?.isValid).toBe(true)
     expect(state.cacheStatus).toBe('fetched')
@@ -157,6 +164,7 @@ describe('gameDataStore', () => {
       dataSourceConfig: config,
       lastLoadedAt: '2026-01-01T00:00:00.000Z',
       lastDataChangedAt: null,
+      lastContentFingerprint: null,
       lastUpdateCheckAt: null,
     })
 
@@ -164,6 +172,7 @@ describe('gameDataStore', () => {
       dataSourceConfig: config,
       lastLoadedAt: '2026-01-01T00:00:00.000Z',
       lastDataChangedAt: null,
+      lastContentFingerprint: null,
       lastUpdateCheckAt: null,
     })
   })
