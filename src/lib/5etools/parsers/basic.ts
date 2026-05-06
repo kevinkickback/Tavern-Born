@@ -196,7 +196,9 @@ export function buildSourcesList(
     const id = typeof entryObj.id === 'string' ? entryObj.id : undefined
     const source = typeof entryObj.source === 'string' ? entryObj.source : undefined
     if (id) booksMap.set(id, entryObj)
-    if (source && source !== id) booksMap.set(source, entryObj)
+    // Only add source key if not already present — prevents adventure source fields from
+    // overwriting book entries (e.g., MOT-NSS with source:"MOT" must not shadow MOT book entry)
+    if (source && source !== id && !booksMap.has(source)) booksMap.set(source, entryObj)
   }
 
   const characterRelevantGroups = [
@@ -223,18 +225,21 @@ export function buildSourcesList(
         }
       }
       const bookObj = asObject(book)
-      const group = typeof bookObj.group === 'string' ? bookObj.group : 'other'
+      const rawGroup = typeof bookObj.group === 'string' ? bookObj.group : 'other'
+      // Normalize 5etools internal group variants to standard display groups
+      const group =
+        rawGroup === 'supplement-alt'
+          ? 'supplement'
+          : rawGroup === 'setting-alt'
+            ? 'setting'
+            : rawGroup
 
-      const hasCharacterOptions = characterRelevantGroups.includes(group)
+      const hasCharacterOptions = characterRelevantGroups.includes(rawGroup)
       const published = typeof bookObj.published === 'string' ? bookObj.published : undefined
 
       return {
-        abbreviation:
-          typeof bookObj.id === 'string'
-            ? bookObj.id
-            : typeof bookObj.source === 'string'
-              ? bookObj.source
-              : abbr,
+        // Uppercase to match the sourceSchema transform — character.allowedSources is always uppercase
+        abbreviation: abbr.toUpperCase(),
         name: typeof bookObj.name === 'string' ? bookObj.name : abbr,
         group,
         year: published ? Number.parseInt(published, 10) : undefined,

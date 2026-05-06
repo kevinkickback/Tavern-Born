@@ -49,7 +49,7 @@ export function AppHeader() {
 
   return (
     <>
-      <nav className="mb-6 grid grid-cols-3 items-center min-h-[4.5rem] rounded-xl bg-card/80 backdrop-blur-sm px-4 py-3 shadow-md border border-border">
+      <nav className="grid grid-cols-3 items-center min-h-[4.5rem] bg-card/80 backdrop-blur-sm px-4 py-3 border-b border-border">
         {/* Hamburger — mobile only (left slot) */}
         <div className="flex items-center">
           <button

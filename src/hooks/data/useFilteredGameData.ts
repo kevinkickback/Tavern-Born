@@ -137,13 +137,13 @@ export function useFilteredGameDataParams(params: FilterParams) {
       }),
       classFeatures: classFeatures.filter(
         (cf) =>
-          allowedSources.includes(cf.source) &&
+          allowedSources.some((s) => s.toUpperCase() === cf.source.toUpperCase()) &&
           !(suppressedKeys?.has(`${cf.name}|${cf.source}`) ?? false),
       ),
       optionalfeatures: optionalfeatures.filter((of: unknown) => {
         const optionalFeature = of as { name?: string; source?: string }
         const source = optionalFeature.source ?? ''
-        if (!allowedSources.includes(source)) {
+        if (!allowedSources.some((s) => s.toUpperCase() === source.toUpperCase())) {
           return false
         }
         return !(suppressedKeys?.has(`${optionalFeature.name}|${source}`) ?? false)

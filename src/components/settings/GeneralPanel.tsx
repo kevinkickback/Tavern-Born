@@ -1,4 +1,9 @@
-import { ArrowCounterClockwise, ArrowsClockwise, CheckCircle, Newspaper } from '@phosphor-icons/react'
+import {
+  ArrowCounterClockwise,
+  ArrowsClockwise,
+  CheckCircle,
+  Newspaper,
+} from '@phosphor-icons/react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -90,7 +95,9 @@ export function GeneralPanel() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-medium">Enable Auto Update</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Download and install updates automatically on launch.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Download and install updates automatically on launch.
+              </p>
             </div>
             <Switch
               checked={autoUpdate}
@@ -105,7 +112,9 @@ export function GeneralPanel() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-medium">Manual Update</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Check for a new release right now.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Check for a new release right now.
+              </p>
               {statusMessage && statusMessage !== 'You are on the latest version.' && (
                 <p className="text-xs text-muted-foreground mt-0.5">{statusMessage}</p>
               )}
@@ -115,10 +124,11 @@ export function GeneralPanel() {
               size="sm"
               onClick={handleCheckNow}
               disabled={checking}
-              className={`shrink-0 ${statusMessage === 'You are on the latest version.'
-                ? 'border-success text-success hover:text-success hover:bg-success/10'
-                : ''
-                }`}
+              className={`shrink-0 ${
+                statusMessage === 'You are on the latest version.'
+                  ? 'border-success text-success hover:text-success hover:bg-success/10'
+                  : ''
+              }`}
             >
               {statusMessage === 'You are on the latest version.' ? (
                 <CheckCircle weight="bold" />
@@ -133,9 +143,16 @@ export function GeneralPanel() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-medium">What's New?</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Browse release notes for the current version.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Browse release notes for the current version.
+                </p>
               </div>
-              <Button variant="outline" size="sm" onClick={handleViewChangelog} className="shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleViewChangelog}
+                className="shrink-0"
+              >
                 <Newspaper weight="duotone" />
                 {`Changelog (v${appVersion})`}
               </Button>

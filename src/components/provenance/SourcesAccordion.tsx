@@ -15,15 +15,15 @@ function renderInline(text: string): string {
 }
 
 const SOURCE_TEXT_COLORS: Record<SourceType, string> = {
-  race: 'text-violet-400',
-  subrace: 'text-purple-400',
-  class: 'text-blue-400',
-  subclass: 'text-sky-400',
-  background: 'text-amber-400',
-  feat: 'text-green-400',
-  optionalFeature: 'text-teal-400',
-  manual: 'text-zinc-400',
-  ASI: 'text-rose-400',
+  race: 'text-violet-600 dark:text-violet-400',
+  subrace: 'text-purple-600 dark:text-purple-400',
+  class: 'text-blue-600 dark:text-blue-400',
+  subclass: 'text-sky-600 dark:text-sky-400',
+  background: 'text-amber-600 dark:text-amber-400',
+  feat: 'text-green-600 dark:text-green-400',
+  optionalFeature: 'text-teal-600 dark:text-teal-400',
+  manual: 'text-zinc-500 dark:text-zinc-400',
+  ASI: 'text-rose-600 dark:text-rose-400',
 }
 
 interface AttributionGroup {

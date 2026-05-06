@@ -18,14 +18,14 @@ import type { Spell5e } from '@/types/5etools'
 import type { RaceSpellChoice } from '@/types/character'
 
 const SCHOOL_STYLES: Record<string, string> = {
-  A: 'bg-blue-500/10 text-blue-400',
-  C: 'bg-amber-500/10 text-amber-400',
-  D: 'bg-cyan-500/10 text-cyan-400',
-  E: 'bg-pink-500/10 text-pink-400',
-  V: 'bg-orange-500/10 text-orange-400',
-  I: 'bg-violet-500/10 text-violet-400',
-  N: 'bg-emerald-500/10 text-emerald-400',
-  T: 'bg-teal-500/10 text-teal-400',
+  A: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  C: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  D: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
+  E: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
+  V: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+  I: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  N: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  T: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
 }
 
 function getSchoolStyle(school: string | undefined): string {
@@ -249,7 +249,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
     <Card className="w-full flex flex-col overflow-hidden">
       <div className="h-10 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent border-b border-border/40 flex items-center px-4 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-indigo-400" weight="duotone" />
+          <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" weight="duotone" />
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
             Spell List
           </span>
