@@ -266,7 +266,8 @@ export function getSpellsGrantedAtLevel(
   const results: string[] = []
   for (const [key, tags] of Object.entries(ledger.spells)) {
     const match = tags.some(
-      (t) => t.sourceType === 'class' && t.sourceName === className && t.spellGrantedAtLevel === level,
+      (t) =>
+        t.sourceType === 'class' && t.sourceName === className && t.spellGrantedAtLevel === level,
     )
     if (match) results.push(key)
   }

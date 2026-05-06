@@ -61,7 +61,7 @@ describe('provenance/reconciliation', () => {
   test('reconcileRaceChange removes old race and old subrace grants', () => {
     let ledger = emptyProvenance()
     ledger = addGrant(ledger, 'languages', 'Common', raceTag)
-    ledger = addSpellGrant(ledger,'Fire Bolt', subraceTag)
+    ledger = addSpellGrant(ledger, 'Fire Bolt', subraceTag)
 
     const reconciled = reconcileRaceChange(ledger, 'Elf', 'High Elf')
 
@@ -72,7 +72,7 @@ describe('provenance/reconciliation', () => {
   test('reconcileSubraceChange removes only subrace grants', () => {
     let ledger = emptyProvenance()
     ledger = addGrant(ledger, 'languages', 'Common', raceTag)
-    ledger = addSpellGrant(ledger,'Fire Bolt', subraceTag)
+    ledger = addSpellGrant(ledger, 'Fire Bolt', subraceTag)
 
     const reconciled = reconcileSubraceChange(ledger, 'High Elf')
 
@@ -159,8 +159,8 @@ describe('provenance/reconciliation', () => {
 
   test('reconcileClassChange removes only the replaced class in multiclass state', () => {
     let ledger = emptyProvenance()
-    ledger = addSpellGrant(ledger,'Magic Missile', classTag)
-    ledger = addSpellGrant(ledger,'Cure Wounds', classTagCleric)
+    ledger = addSpellGrant(ledger, 'Magic Missile', classTag)
+    ledger = addSpellGrant(ledger, 'Cure Wounds', classTagCleric)
 
     const reconciled = reconcileClassChange(ledger, 'Wizard', undefined)
 
