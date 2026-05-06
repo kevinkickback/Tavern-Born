@@ -33,7 +33,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { checkMulticlassRequirements, MAX_CHARACTER_LEVEL } from '@/lib/calculations/gameRules'
 import { addMulticlass, applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import { removeSpellFromCharacter } from '@/lib/character/commands/spellCommands'
-import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getClassIconUrl } from '@/lib/classIcons'
 import { getSpellsGrantedAtLevel, removeSpellChoicesAtLevel } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
@@ -66,7 +66,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
   const classProgression: CharacterClassEntry[] = getCharacterClassEntries(character)
 
-  const totalLevel = classProgression.reduce((sum, e) => sum + e.levels, 0) || character.level
+  const totalLevel = getTotalCharacterLevel(character)
   const isAtCap = totalLevel >= MAX_CHARACTER_LEVEL
 
   // Classes available to add — deduplicate by name, exclude sidekick classes

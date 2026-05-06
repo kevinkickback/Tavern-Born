@@ -24,6 +24,23 @@ export const ARMOR_CATEGORY_LABEL_TO_CODE: Readonly<Record<string, string>> = {
 }
 
 /**
+ * Validate that ARMOR_TYPE_MAP codes are present in the parsed itemTypeByAbbr lookup.
+ * Call once after game data loads in DEV mode. Logs warnings for any missing codes so
+ * they surface if 5etools ever renames or removes a type abbreviation.
+ */
+export function validateArmorTypeCodes(itemTypeByAbbr: Record<string, string>): void {
+  for (const code of Object.keys(ARMOR_TYPE_MAP)) {
+    if (!itemTypeByAbbr[code]) {
+      console.warn(
+        `[armorClass] validateArmorTypeCodes: code "${code}" in ARMOR_TYPE_MAP not found in ` +
+          'parsed itemTypeByAbbr (data/items-base.json → .itemType[]). ' +
+          'Verify the code is still valid in the current 5etools data.',
+      )
+    }
+  }
+}
+
+/**
  * Strips the optional 5etools source suffix from a type code.
  * e.g. "HA|XPHB" → "HA", "S|XPHB" → "S"
  */

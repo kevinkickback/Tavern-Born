@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
-import { SKILL_TO_ABILITY } from '@/lib/calculations/skills'
 import { normalizeKey } from '@/lib/provenance'
 import type { ChoiceRecord, ProficiencyProvenance } from '@/lib/provenance/types'
 import { cn } from '@/lib/utils'
@@ -94,6 +93,7 @@ const CATEGORIES: CategoryConfig[] = [
 
 interface SkillRow {
   name: string
+  ability: string
   proficient: boolean
   expertise: boolean
   modifierString: string
@@ -269,7 +269,7 @@ export function BuildProficienciesTabsPanel({
                   onFocusChange({
                     type: 'skill',
                     name: skill.name,
-                    ability: SKILL_TO_ABILITY[skill.name.toLowerCase()] ?? '',
+                    ability: skill.ability,
                     proficient: isSelected,
                     expertise: skill.expertise,
                     modifierString: skill.modifierString,

@@ -1,3 +1,4 @@
+import { validateArmorTypeCodes } from '@/lib/calculations/armorClass'
 import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 import { buildGameDataLookups } from './lookups'
@@ -303,6 +304,10 @@ export class FiveEToolsDataLoader {
 
     gameData.sources = buildSourcesList(Array.from(sourcesSet), booksData, adventuresData)
     gameData.lookups = buildGameDataLookups(gameData)
+
+    if (import.meta.env.DEV) {
+      validateArmorTypeCodes(gameData.lookups.itemTypeByAbbr)
+    }
 
     if (options?.onProgress) {
       options.onProgress(resources.length, resources.length, 'Complete')

@@ -52,7 +52,7 @@ export function BuildAbilityScoresPage() {
   const { skills } = useFilteredGameData()
   const { scores, setScore, setAllScores, pointBuyTotal, pointBuyRemaining } = useAbilityScores()
   const { getSourcesRowsBySection } = useProvenanceLedger()
-  const { applyRaceSelection } = useRaceProvenanceMutations()
+  const { applyRaceSelection, applyRaceAsiChoices } = useRaceProvenanceMutations()
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [selectedAbility, setSelectedAbility] = useState<AbilityName>('charisma')
 
@@ -340,9 +340,7 @@ export function BuildAbilityScoresPage() {
                                             slotIndex,
                                             v,
                                           )
-                                          updateCharacter(character.id, {
-                                            raceAsiChoices: next,
-                                          })
+                                          applyRaceAsiChoices(next)
                                         }}
                                       >
                                         <SelectTrigger className="h-7 w-24 px-2 text-xs">

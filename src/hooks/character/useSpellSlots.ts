@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { useClasses, useClassLookup, useRaces } from '@/hooks/data/useGameData'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useClasses, useClassLookup } from '@/hooks/data/useGameData'
 import {
   buildSpellcastingClassDetails,
   calculateCharacterSpellSlots,
@@ -53,7 +54,7 @@ export function useSpellSlots(): SpellSlotsState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const classes = useClasses()
   const classLookup = useClassLookup()
-  const allRaces = useRaces()
+  const { races: allRaces } = useFilteredGameData()
 
   const classesById = useMemo(() => {
     const map = new Map<string, Class5e>()

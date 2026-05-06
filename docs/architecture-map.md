@@ -22,21 +22,23 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 5. Domain logic
 - Purpose: pure calculations and game rules.
-- Key files: src/lib/characterUtils.ts, src/lib/character/ids.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
+- Key files: src/lib/characterUtils.ts, src/lib/character/ids.ts, src/lib/character/equipmentHelpers.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
 
 6. Provenance system
 - Purpose: track source of grants and reconcile when race/class/features change.
-- Key files: src/lib/provenance/types.ts, src/lib/provenance/ledger.ts, src/lib/provenance/reconciliation.ts, src/lib/provenance/normalization.ts, src/lib/provenance/sourceLabels.ts, src/lib/provenance/summaries.ts, src/lib/provenance/applyRaceGrants.ts, src/lib/provenance/applyClassGrants.ts, src/lib/provenance/applyBackgroundGrants.ts, src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts, src/lib/provenance/index.ts, src/lib/provenance/sectionRows.ts, src/hooks/character/useProvenance.ts, src/hooks/character/useProvenanceMutations.ts (thin aggregator), src/hooks/character/useProvenanceRows.ts.
-- Domain mutation hooks (add new provenance callbacks here, not to the aggregator directly): src/hooks/character/useRaceProvenance.ts, src/hooks/character/useClassProvenance.ts, src/hooks/character/useBackgroundProvenance.ts, src/hooks/character/useSpellProvenance.ts, src/hooks/character/useFeatProvenance.ts, src/hooks/character/useEquipmentProvenance.ts.
-- Shared pure helpers used across domain hooks: src/hooks/character/provenanceHelpers.ts.
+- Key files: src/lib/provenance/types.ts, src/lib/provenance/ledger.ts, src/lib/provenance/reconciliation.ts, src/lib/provenance/normalization.ts, src/lib/provenance/sourceLabels.ts, src/lib/provenance/summaries.ts, src/lib/provenance/resolveRaceAsiChoices.ts, src/lib/provenance/applyRaceGrants.ts, src/lib/provenance/applyClassGrants.ts, src/lib/provenance/applyBackgroundGrants.ts, src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts, src/lib/provenance/applyAsiChoices.ts, src/lib/provenance/applyProficiencyBlocks.ts, src/lib/provenance/index.ts, src/lib/provenance/sectionRows.ts.
+- Domain mutation hooks — **production entry points** (add new provenance callbacks here): src/hooks/character/useRaceProvenanceMutations.ts, src/hooks/character/useClassProvenanceMutations.ts, src/hooks/character/useBackgroundProvenanceMutations.ts, src/hooks/character/useSpellProvenanceMutations.ts, src/hooks/character/useFeatProvenanceMutations.ts, src/hooks/character/useEquipmentProvenanceMutations.ts. Each reads from stores directly and owns the full mutation logic for its domain.
+- Test aggregator (not for production use): src/hooks/character/useProvenanceMutations.ts calls all six `use*ProvenanceMutations` hooks and spreads their results; src/hooks/character/useProvenance.ts is the integration test harness that composes mutations + rows. Use these in tests that need cross-domain interactions (e.g. apply race + class + verify ledger). Do not call them from pages.
+- Read-only derivation hook: src/hooks/character/useProvenanceRows.ts.
+- Shared pure equipment helpers (canonical — used by both lib commands and hooks): src/lib/character/equipmentHelpers.ts. src/hooks/character/provenanceHelpers.ts re-exports from there for backward compatibility.
 
 7. Hooks and view derivations
 - Purpose: thin wrappers from store state to UI-facing derived values.
 - Key files: src/hooks/character/*, src/hooks/data/*.
 
 Spellcasting note:
-- `src/hooks/character/useSpellSlots.ts` is a read-only hook: exposes spell slots, profiles, and spellcasting detail per profile. It composes `useSpellProfileMutations` for backward-compatible mutation access.
-- `src/hooks/character/useSpellProfileMutations.ts` owns all spell mutation callbacks (add/remove spells, toggle prepared, racial spells, profile sync).
+- `src/hooks/character/useSpellSlots.ts` is a **read-only** derivation hook: exposes spell slots, profiles, and spellcasting detail per profile. It does not include mutations.
+- `src/hooks/character/useSpellProfileMutations.ts` owns all spell mutation callbacks (add/remove spells, toggle prepared, racial spells, profile sync). Callers that need both derived spell state and mutation callbacks must call both hooks and wire their outputs together (see `SpellsPage.tsx` for the pattern).
 
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.

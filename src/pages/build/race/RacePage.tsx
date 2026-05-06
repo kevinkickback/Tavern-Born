@@ -44,7 +44,7 @@ import {
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
-import { matchesGameDataEntry } from '@/lib/characterUtils'
+import { getTotalCharacterLevel, matchesGameDataEntry } from '@/lib/characterUtils'
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
@@ -180,7 +180,7 @@ export function BuildRacePage() {
     : { cantrips: [], spellsKnown: [], preparedSpells: [] }
 
   const characterSnapshot: PrereqCharacterSnapshot = {
-    level: character?.level ?? 0,
+    level: getTotalCharacterLevel(character),
     class: character?.class ?? '',
     race: character?.race ?? '',
     abilityScores: character?.abilityScores ?? {

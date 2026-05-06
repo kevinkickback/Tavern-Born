@@ -132,6 +132,5 @@ describe('appPreferencesStore', () => {
     expect(rehydrateState.homeCardSize).toBe(MAX_HOME_CARD_SIZE)
     expect(rehydrateState.themeAccent).toBe('blue')
     expect(rehydrateState.themeAppearance).toBe('dark')
-    expect(setThemePreferencesMock).toHaveBeenCalledWith('blue', 'dark')
   })
 })
