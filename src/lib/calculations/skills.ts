@@ -161,7 +161,7 @@ export function calculateSkillModifier(
 }
 
 /**
- * Derive all 18 skill modifiers from current state.
+ * Derive all skill modifiers from current state.
  *
  * @param abilityModifiers - Record of ability → current modifier
  * @param proficientSkills - Array of skill names from `character.proficiencies` / skill flags
@@ -169,6 +169,8 @@ export function calculateSkillModifier(
  * @param proficiencyBonus - Current proficiency bonus
  * @param parsedSkillToAbilityMap - Parsed map from GameDataLookups.skillToAbilityMap.
  *   When provided this takes precedence over the static SKILL_TO_ABILITY fallback.
+ * @param parsedSkillList - Parsed ordered skill names from GameDataLookups.skillList.
+ *   When provided this takes precedence over the static ALL_SKILLS fallback.
  */
 export function deriveAllSkills(
   abilityModifiers: Record<AbilityName, number>,
@@ -176,12 +178,14 @@ export function deriveAllSkills(
   expertiseSkills: string[],
   proficiencyBonus: number,
   parsedSkillToAbilityMap?: Readonly<Record<string, string>>,
+  parsedSkillList?: readonly string[],
 ): SkillResult[] {
   const resolvedMap = parsedSkillToAbilityMap ?? SKILL_TO_ABILITY
+  const resolvedSkillList = parsedSkillList ?? ALL_SKILLS
   const proficientSet = new Set(proficientSkills.map((s) => s.toLowerCase()))
   const expertiseSet = new Set(expertiseSkills.map((s) => s.toLowerCase()))
 
-  return ALL_SKILLS.map((name) => {
+  return resolvedSkillList.map((name) => {
     const ability = (resolvedMap[name] as AbilityName | undefined) ?? 'strength'
     const proficient = proficientSet.has(name)
     const expertise = expertiseSet.has(name)

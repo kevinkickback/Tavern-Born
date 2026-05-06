@@ -110,6 +110,8 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
     itemPropertyByAbbr: buildItemPropertyLookup(gameData.itemProperties ?? []),
     itemTypeByAbbr: buildItemTypeLookup(gameData.itemTypes ?? []),
     skillToAbilityMap: buildSkillToAbilityMap(gameData.skills ?? []),
+    skillList: buildSkillList(gameData.skills ?? []),
+    conditionNames: buildConditionNames(gameData.conditions ?? []),
   }
 }
 
@@ -153,4 +155,38 @@ export function buildSkillToAbilityMap(skills: unknown[]): Record<string, string
     if (fullAbility) result[name] = fullAbility
   }
   return result
+}
+
+/**
+ * Build the ordered list of lowercase skill names from parsed skills records.
+ * Deduplicates PHB/XPHB reprints; order reflects JSON declaration order.
+ */
+export function buildSkillList(skills: unknown[]): readonly string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const skill of skills) {
+    if (!skill || typeof skill !== 'object') continue
+    const s = skill as Record<string, unknown>
+    const name = typeof s.name === 'string' ? s.name.toLowerCase().trim() : null
+    if (!name || seen.has(name)) continue
+    seen.add(name)
+    result.push(name)
+  }
+  return result
+}
+
+/**
+ * Extract sorted condition names from parsed conditionsdiseases records.
+ * Includes only entries tagged as 'condition' by parseConditions (excludes diseases).
+ */
+export function buildConditionNames(conditions: unknown[]): readonly string[] {
+  const names: string[] = []
+  for (const c of conditions) {
+    if (!c || typeof c !== 'object') continue
+    const entry = c as Record<string, unknown>
+    if (entry._sourceType !== 'condition') continue
+    const name = typeof entry.name === 'string' ? entry.name : null
+    if (name) names.push(name)
+  }
+  return names.sort()
 }

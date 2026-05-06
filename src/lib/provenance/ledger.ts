@@ -7,6 +7,7 @@ import type {
   ProficiencyProvenance,
   ProvenanceLedger,
   SourceTag,
+  SpellSourceTag,
 } from './types'
 
 type ProficiencyDomain = keyof ProficiencyProvenance
@@ -41,7 +42,8 @@ function getNonProficiencyMap(
     case 'feats':
       return ledger.feats
     case 'spells':
-      return ledger.spells
+      // SpellSourceTag extends SourceTag — safe widening cast for generic helpers
+      return ledger.spells as Record<string, SourceTag[]>
     case 'equipment':
       return ledger.equipment
   }
@@ -72,13 +74,14 @@ function setNonProficiencyMap(
     case 'feats':
       return { ...ledger, feats: map }
     case 'spells':
-      return { ...ledger, spells: map }
+      // Cast back: the generic helpers only store SourceTag-shaped objects here
+      return { ...ledger, spells: map as Record<string, SpellSourceTag[]> }
     case 'equipment':
       return { ...ledger, equipment: map }
   }
 }
 
-function tagPresent(list: SourceTag[], tag: SourceTag): boolean {
+function tagPresent(list: readonly SourceTag[], tag: SourceTag): boolean {
   return list.some(
     (t) =>
       t.sourceType === tag.sourceType &&
@@ -193,6 +196,22 @@ export function addAbilityBonus(
   return { ...ledger, abilityBonuses: [...ledger.abilityBonuses, record] }
 }
 
+/**
+ * Add a spell grant to the ledger. Prefer this over the generic `addGrant` for the
+ * spells domain — it preserves the `SpellSourceTag` type (level attribution, mode).
+ * Idempotent: does nothing if an identical sourceType+sourceName+grantType already exists.
+ */
+export function addSpellGrant(
+  ledger: ProvenanceLedger,
+  key: string,
+  tag: SpellSourceTag,
+): ProvenanceLedger {
+  const normKey = normalizeKey(key)
+  const existing = ledger.spells[normKey] ?? []
+  if (tagPresent(existing, tag)) return ledger
+  return { ...ledger, spells: { ...ledger.spells, [normKey]: [...existing, tag] } }
+}
+
 /** Add a choice placeholder record. Idempotent by id. */
 export function addChoicePlaceholder(
   ledger: ProvenanceLedger,
@@ -247,8 +266,7 @@ export function getSpellsGrantedAtLevel(
   const results: string[] = []
   for (const [key, tags] of Object.entries(ledger.spells)) {
     const match = tags.some(
-      (t) =>
-        t.sourceType === 'class' && t.sourceName === className && t.spellGrantedAtLevel === level,
+      (t) => t.sourceType === 'class' && t.sourceName === className && t.spellGrantedAtLevel === level,
     )
     if (match) results.push(key)
   }

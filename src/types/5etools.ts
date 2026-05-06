@@ -229,6 +229,10 @@ export interface GameDataLookups {
   itemTypeByAbbr: Record<string, string>
   /** Parsed from data/skills.json → .skill[]. Maps lowercase skill name → full ability name. */
   skillToAbilityMap: Record<string, string>
+  /** Ordered list of lowercase skill names parsed from data/skills.json → .skill[]. */
+  skillList: readonly string[]
+  /** Sorted condition names from data/conditionsdiseases.json → .condition[] (excludes diseases). */
+  conditionNames: readonly string[]
 }
 
 export interface Background5e {

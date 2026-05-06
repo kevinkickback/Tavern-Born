@@ -33,7 +33,7 @@ import {
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
-import { matchesGameDataEntry } from '@/lib/characterUtils'
+import { getTotalCharacterLevel, matchesGameDataEntry } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel'
@@ -167,7 +167,7 @@ export function BuildBackgroundPage() {
     : { cantrips: [], spellsKnown: [], preparedSpells: [] }
 
   const characterSnapshot: PrereqCharacterSnapshot = {
-    level: character?.level ?? 0,
+    level: getTotalCharacterLevel(character),
     class: character?.class ?? '',
     race: character?.race ?? '',
     abilityScores: character?.abilityScores ?? {

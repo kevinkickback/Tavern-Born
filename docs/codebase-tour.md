@@ -62,12 +62,13 @@ Provenance and source attribution:
 - src/components/provenance/* — provenance UI (ledger display)
 - src/hooks/character/useProvenance.ts — public hook (aggregates mutations + rows)
 - src/hooks/character/useProvenanceMutations.ts — thin aggregator; delegates to domain hooks
-- src/hooks/character/useRaceProvenance.ts — race and subrace grant mutations
-- src/hooks/character/useClassProvenance.ts — class selection and equipment mutations
-- src/hooks/character/useBackgroundProvenance.ts — background and ability score mutations
-- src/hooks/character/useSpellProvenance.ts — spell grant/swap/remove mutations
-- src/hooks/character/useFeatProvenance.ts — feat selection, options, choice resolution
-- src/hooks/character/useEquipmentProvenance.ts — manual equipment and proficiency toggles
+- src/hooks/character/useRaceProvenanceMutations.ts — race and subrace grant mutations
+- src/hooks/character/useClassProvenanceMutations.ts — class selection and equipment mutations
+- src/hooks/character/useBackgroundProvenanceMutations.ts — background and ability score mutations
+- src/hooks/character/useSpellProvenanceMutations.ts — spell grant/swap/remove mutations
+- src/hooks/character/useFeatProvenanceMutations.ts — feat selection, options, choice resolution
+- src/hooks/character/useEquipmentProvenanceMutations.ts — manual equipment and proficiency toggles
+- src/hooks/character/useProvenanceLedger.ts — read-only ledger derivation hook for pages that only display provenance state
 - src/hooks/character/provenanceHelpers.ts — shared pure helpers (extractFixedGrantNames, upsertGrantedEquipment, removeSourceGrantedEquipment)
 - src/hooks/character/useProvenanceRows.ts — ledger row derivation for the UI
 - src/lib/provenance/sectionRows.ts
@@ -108,7 +109,6 @@ Spells page UI orchestration:
 - src/lib/character/commands/spellCommands.ts — canonical spell mutation commands for profile/provenance coordination
 - src/hooks/character/useSpellSlots.ts — read state: spell slots, profiles, spellcasting detail (no mutations)
 - src/hooks/character/useSpellProfileMutations.ts — all spell mutation callbacks (add/remove/prepare/racial spells)
-- src/hooks/character/useSpellMutations.ts — thin unified spell mutation adapter when command-style spell writes are needed outside the main spell hook
 
 5etools rich text rendering:
 - src/lib/renderer.ts

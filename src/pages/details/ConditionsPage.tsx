@@ -16,6 +16,7 @@ import { Card } from '@/components/ui/card'
 import { useClassResources } from '@/hooks/character/useClassResources'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useRitualCasting } from '@/hooks/character/useRitualCasting'
+import { useConditionNames } from '@/hooks/data/useGameData'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
@@ -23,7 +24,11 @@ import { useCharacterStore } from '@/store/characterStore'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const CONDITIONS_5E = [
+/**
+ * FALLBACK: used only while conditionsdiseases.json has not yet loaded.
+ * The live list comes from useConditionNames() → GameDataLookups.conditionNames.
+ */
+const CONDITION_NAMES_FALLBACK: readonly string[] = [
   'Blinded',
   'Charmed',
   'Deafened',
@@ -40,6 +45,11 @@ const CONDITIONS_5E = [
   'Unconscious',
 ] as const
 
+/**
+ * FALLBACK: 5etools embeds exhaustion level text in conditionsdiseases.json
+ * entries as prose, not as a structured field. These labels are retained here
+ * until a structured parser is available.
+ */
 const EXHAUSTION_LABELS = [
   'Normal',
   'Disadvantage on ability checks',
@@ -100,6 +110,9 @@ export function ConditionsPage() {
   const { hitDie } = useHitPoints()
   const ritualCasting = useRitualCasting()
   const { resources, updateCurrent, resetResource, resetAll } = useClassResources()
+  const parsedConditionNames = useConditionNames()
+  const conditionNames =
+    parsedConditionNames.length > 0 ? parsedConditionNames : CONDITION_NAMES_FALLBACK
 
   const update = useCallback(
     <K extends keyof NonNullable<typeof character>>(
@@ -304,7 +317,7 @@ export function ConditionsPage() {
             <SectionHeader icon={<HeartBreak weight="duotone" />} title="Active Conditions" />
             <div className="p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                {CONDITIONS_5E.map((name) => {
+                {conditionNames.map((name) => {
                   const active = conditions.includes(name)
                   return (
                     <button

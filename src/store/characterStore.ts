@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import { MAX_CHARACTER_SIZE, MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
 import { SPECIAL_SPELL_PROFILE_LABEL } from '@/lib/calculations/spellProfiles'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
-import { makeSourceTag } from '@/lib/provenance/sourceLabels'
+import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import {
   CURRENT_SCHEMA_VERSION,
@@ -412,46 +412,18 @@ export const useCharacterStore = create<CharacterState>()(
         set((state) => {
           const now = new Date().toISOString()
 
-          // Helper to add provenance for class ASI choices
-          function withAsiProvenance(character: Character, updates: Partial<Character>): Character {
-            // Only update provenance if asiChoices is present in updates
-            if (!updates.asiChoices) return { ...character, ...updates }
-            const { asiChoices } = updates
-            let provenance = character.provenance ?? emptyProvenance()
-
-            // Remove all previous class ASI abilityBonuses
-            provenance = {
-              ...provenance,
-              abilityBonuses: provenance.abilityBonuses.filter(
-                (r) =>
-                  r.sourceTag.sourceType !== 'ASI' &&
-                  (r.sourceTag.sourceType !== 'class' || r.sourceTag.grantType !== 'choice'),
-              ),
-            }
-
-            // Add new records for each ASI choice
-            for (const asi of asiChoices) {
-              for (const [ability, value] of Object.entries(asi.abilityChanges)) {
-                provenance = {
-                  ...provenance,
-                  abilityBonuses: [
-                    ...provenance.abilityBonuses,
-                    {
-                      ability,
-                      value,
-                      sourceTag: makeSourceTag('ASI', asi.className, 'choice', undefined),
-                    },
-                  ],
-                }
-              }
-            }
-            return { ...character, ...updates, provenance }
-          }
-
           // Active character updates are treated as in-memory draft changes.
           if (state.activeCharacterId === id && state.activeCharacter) {
             let next = { ...state.activeCharacter, ...updates, lastModified: now }
-            next = withAsiProvenance(next, updates)
+            if (updates.asiChoices) {
+              next = {
+                ...next,
+                provenance: applyAsiChoices(
+                  next.provenance ?? emptyProvenance(),
+                  updates.asiChoices,
+                ),
+              }
+            }
             const parsed = parseCharacterData(next)
             if (!parsed.data) {
               console.error('updateCharacter validation failed:', {
@@ -467,7 +439,15 @@ export const useCharacterStore = create<CharacterState>()(
           const characters = state.characters.map((char) => {
             if (char.id !== id) return char
             let next = { ...char, ...updates, lastModified: now }
-            next = withAsiProvenance(char, updates)
+            if (updates.asiChoices) {
+              next = {
+                ...next,
+                provenance: applyAsiChoices(
+                  next.provenance ?? emptyProvenance(),
+                  updates.asiChoices,
+                ),
+              }
+            }
             const parsed = parseCharacterData(next)
             return parsed.data ?? char
           })

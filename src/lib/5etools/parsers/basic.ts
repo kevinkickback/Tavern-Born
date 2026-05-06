@@ -37,11 +37,20 @@ export function parseActions(data: unknown): unknown[] {
 
 export function parseConditions(data: unknown): unknown[] {
   const obj = asObject(data)
-  const conditions: unknown[] = []
-  if (obj.condition) conditions.push(...asArray(obj.condition))
-  if (obj.disease) conditions.push(...asArray(obj.disease))
-  if (Array.isArray(data)) conditions.push(...data)
-  return conditions
+  const results: unknown[] = []
+  const tag = (entries: unknown[], sourceType: 'condition' | 'disease') => {
+    for (const entry of entries) {
+      results.push(
+        entry && typeof entry === 'object'
+          ? { ...(entry as object), _sourceType: sourceType }
+          : entry,
+      )
+    }
+  }
+  if (obj.condition) tag(asArray(obj.condition), 'condition')
+  if (obj.disease) tag(asArray(obj.disease), 'disease')
+  if (Array.isArray(data)) results.push(...data)
+  return results
 }
 
 export function parseDeities(data: unknown): unknown[] {

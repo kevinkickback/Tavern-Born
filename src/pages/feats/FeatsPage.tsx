@@ -37,7 +37,7 @@ import {
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
-import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { renderEntryCached } from '@/lib/entryRenderCache'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
@@ -344,7 +344,7 @@ export function FeatsPage() {
 
   const characterSnapshot = useMemo<PrereqCharacterSnapshot>(
     () => ({
-      level: character?.level ?? 0,
+      level: getTotalCharacterLevel(character),
       class: character?.class ?? '',
       race: character?.race ?? '',
       abilityScores: character?.abilityScores ?? {

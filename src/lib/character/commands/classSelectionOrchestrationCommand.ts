@@ -4,7 +4,10 @@ import {
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
 import { mergeSkillState } from '@/lib/calculations/skills'
-import { generateEquipmentId } from '@/lib/character/ids'
+import {
+  removeSourceGrantedEquipment,
+  upsertGrantedEquipment,
+} from '@/lib/character/equipmentHelpers'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   addGrant,
@@ -119,65 +122,11 @@ export function buildInitialCharacterProficiencies(
   }
 }
 
-function removeSourceGrantedEquipment(
-  equipment: Character['equipment'],
-  sourceNames: string[],
-): Character['equipment'] {
-  if (sourceNames.length === 0) return equipment
-  return equipment.filter((item) => !sourceNames.includes(normalizeKey(item.name)))
-}
-
-function upsertGrantedEquipment(
-  equipment: Character['equipment'],
-  granted: Array<Omit<Character['equipment'][number], 'id' | 'equipped' | 'attuned'>>,
-): Character['equipment'] {
-  const next = [...equipment]
-
-  for (const item of granted) {
-    const existingIndex = next.findIndex(
-      (eq) =>
-        normalizeKey(eq.name) === normalizeKey(item.name) &&
-        normalizeKey(eq.source ?? '') === normalizeKey(item.source ?? ''),
-    )
-
-    if (existingIndex === -1) {
-      next.push({
-        id: generateEquipmentId(),
-        equipped: false,
-        attuned: false,
-        ...item,
-      })
-      continue
-    }
-
-    const existing = next[existingIndex]
-    next[existingIndex] = {
-      ...existing,
-      quantity: existing.quantity + item.quantity,
-      type: existing.type || item.type,
-      ac: existing.ac ?? item.ac,
-      armorType: existing.armorType ?? item.armorType,
-      weight: existing.weight ?? item.weight,
-      value: existing.value ?? item.value,
-      rarity: existing.rarity ?? item.rarity,
-      reqAttune: existing.reqAttune ?? item.reqAttune,
-      weaponCategory: existing.weaponCategory ?? item.weaponCategory,
-      dmg1: existing.dmg1 ?? item.dmg1,
-      dmg2: existing.dmg2 ?? item.dmg2,
-      dmgType: existing.dmgType ?? item.dmgType,
-      properties: existing.properties ?? item.properties,
-      range: existing.range ?? item.range,
-    }
-  }
-
-  return next
-}
-
 function getClassChoiceKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`
 }
 
-function replaceClassEquipmentGrants(
+export function replaceClassEquipmentGrants(
   ledger: ProvenanceLedger,
   className: string,
   classSource: string | undefined,
