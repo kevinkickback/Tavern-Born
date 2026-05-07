@@ -131,15 +131,13 @@ function validateFallbackProgression(className: string, parsedCasterProgression?
   }
 }
 
-/** Return the standard (non-pact) spell slot maximums for a given `casterLevel`. */
+/** Return the standard (non-pact) spell slot maximums for a given `casterLevel`.
+ * Uses the fallback static table. For single-class characters, prefer
+ * `getSpellSlotsFromClassData` which reads the parsed progression directly.
+ * This function is correct for multiclass combined caster levels (PHB rules).
+ */
 export function getStandardSpellSlots(casterLevel: number): SpellSlotsResult {
   if (casterLevel < 1 || casterLevel > 20) return {}
-  if (import.meta.env.DEV) {
-    console.warn(
-      `[spellSlots] getStandardSpellSlots: using fallback table for caster level ${casterLevel}. ` +
-        'Prefer getSpellSlotsFromClassData when class data is available.',
-    )
-  }
   const row = FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL[casterLevel] ?? []
   const result: SpellSlotsResult = {}
   for (let sl = 1; sl <= 9; sl++) {

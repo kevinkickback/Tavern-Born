@@ -37,9 +37,13 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
     const implicit = getImplicitSource((data.originSystem || '2014') as '2014' | '2024')
     return base.includes(implicit) ? base : [...base, implicit]
   }, [data.allowedSources, data.originSystem])
+  const allowedBgSourcesUpper = useMemo(
+    () => new Set(allowedSources.map((s) => s.toUpperCase())),
+    [allowedSources],
+  )
   const sourceFilteredBackgrounds =
     allowedSources.length > 0
-      ? backgrounds.filter((bg) => allowedSources.includes(bg.source))
+      ? backgrounds.filter((bg) => allowedBgSourcesUpper.has(bg.source.toUpperCase()))
       : backgrounds
   const suppressedBackgroundKeys =
     data.variantRules?.preferNewerPrintings && allowedSources.length > 0
@@ -290,11 +294,11 @@ function getBackgroundProficiencyDisplay(blocks: unknown[] | undefined): string 
 function getEntryBaseKey(entry: unknown): string {
   if (typeof entry === 'string') return entry
   if (entry && typeof entry === 'object') {
-    const record = entry as { name?: unknown; source?: unknown }
+    const record = entry as { name?: unknown; source?: unknown; type?: unknown }
     if (typeof record.name === 'string') {
       return `${record.name}|${typeof record.source === 'string' ? record.source : ''}`
     }
-    return JSON.stringify(entry)
+    return `obj:${typeof record.type === 'string' ? record.type : 'entry'}`
   }
   return String(entry)
 }

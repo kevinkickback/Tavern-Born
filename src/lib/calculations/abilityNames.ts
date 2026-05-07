@@ -1,3 +1,11 @@
+/**
+ * Map of 5etools ability-score abbreviations to lowercase full names.
+ *
+ * FALLBACK: 5etools has no standalone ability-score list JSON file; these
+ * abbreviations are embedded in skill/class/item entries. Validated in DEV
+ * mode against data/skills.json via validateSkillToAbilityMap() in skills.ts.
+ * Remove and replace with a parsed source if one becomes available.
+ */
 export const ABILITY_ABBREV_TO_FULL: Readonly<Record<string, string>> = {
   str: 'strength',
   dex: 'dexterity',
@@ -7,8 +15,10 @@ export const ABILITY_ABBREV_TO_FULL: Readonly<Record<string, string>> = {
   cha: 'charisma',
 }
 
+/** Canonical order of the six ability-score abbreviations (PHB column order). */
 export const ABILITY_ABBREV_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const
 
+/** Title-case display names for each ability abbreviation. */
 export const ABILITY_ABBREV_TO_TITLE: Readonly<Record<string, string>> = {
   str: 'Strength',
   dex: 'Dexterity',

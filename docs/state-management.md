@@ -55,6 +55,7 @@ Stored examples (mutable runtime):
 - spell profile selections (class profiles + special unrestricted profile)
 - selected origin system (`2014` or `2024`)
 - user-entered detail fields and choices
+- organization connection selection state (`organizationSelectionKey`, `organizationCustomName`, `organizationCustomDescription`, `organizationCustomImage`)
 - inventory currency counters (`cp`, `sp`, `ep`, `gp`, `pp`)
 - selected background equipment options per block (`backgroundEquipmentChoices`)
 - selected class equipment option per class source (`classEquipmentChoices`)
@@ -232,7 +233,7 @@ Increment `CURRENT_SCHEMA_VERSION` and create a new migration when:
 **Current Workflow:**
 - Domain commands in `src/lib/character/commands/spellCommands.ts` coordinate profile updates and provenance ledger changes together.
 - `useSpellSlots()` is the primary UI-facing hook and applies spell command results atomically to `character.spells` and `character.provenance`.
-- `useSpellMutations()` is the thin adapter when command-backed spell mutations are needed outside the main spell hook.
+- `useSpellProfileMutations()` provides all spell mutation callbacks (add/remove/prepare/racial spells) for components that need spell writes outside the spell slot derivation hook.
 
 **Caller Impact:** Controllers should route spell changes through the command-backed hooks rather than sequencing profile and provenance updates manually.
 ```typescript

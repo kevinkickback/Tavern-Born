@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 export function useDataInit() {
@@ -8,6 +9,7 @@ export function useDataInit() {
   const dataSourceConfig = useGameDataStore((s) => s.dataSourceConfig)
   const isLoading = useGameDataStore((s) => s.isLoading)
   const loadFromCache = useGameDataStore((s) => s.loadFromCache)
+  const autoRefreshGameData = useAppPreferencesStore((s) => s.autoRefreshGameData)
 
   const initialized = useRef(false)
 
@@ -32,7 +34,7 @@ export function useDataInit() {
     initialized.current = true
 
     async function init() {
-      const result = await loadFromCache()
+      const result = await loadFromCache({ forceCheck: autoRefreshGameData })
       if (result.needsToast === 'stale') {
         toast.info('Game data is out of date — refreshing in the background…', { duration: 5000 })
       }
@@ -45,5 +47,5 @@ export function useDataInit() {
     }
 
     init()
-  }, [hasHydrated, gameData, isLoading, loadFromCache])
+  }, [hasHydrated, gameData, isLoading, loadFromCache, autoRefreshGameData])
 }

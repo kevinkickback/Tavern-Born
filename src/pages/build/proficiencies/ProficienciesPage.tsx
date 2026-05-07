@@ -3,11 +3,13 @@ import { useCallback, useMemo, useState } from 'react'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
+import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useSavingThrows } from '@/hooks/character/useSavingThrows'
 import { useSkills } from '@/hooks/character/useSkills'
 import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { normalizeKey } from '@/lib/provenance'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildProficienciesDetailsPanel } from '@/pages/build/proficiencies/components/DetailsPanel'
@@ -22,21 +24,19 @@ import {
   buildToolSubtypeOptionsByKind,
   buildVisibleToolCandidates,
   getSelectedToolNames,
+  hasProfInArray,
   isArtisanToolSlot,
 } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 import { useCharacterStore } from '@/store/characterStore'
 
 export function BuildProficienciesPage() {
-  const character = useCharacterStore((state) => {
-    if (state.activeCharacter) return state.activeCharacter
-    if (!state.activeCharacterId) return null
-    return state.characters.find((entry) => entry.id === state.activeCharacterId) ?? null
-  })
+  const character = useCharacterStore((state) => state.activeCharacter)
   const { skills: skillDefs, items, itemsBase, languages } = useFilteredGameData()
   const { skills } = useSkills()
   const { savingThrows } = useSavingThrows()
-  const { ledger, resolveChoiceSelection, getSourcesRowsBySection } = useProvenance()
+  const { ledger, getSourcesRowsBySection } = useProvenanceLedger()
+  const { resolveChoiceSelection } = useFeatProvenanceMutations()
   const availableProficiencies = useAvailableProficiencies()
 
   const [detailCollapsed, setDetailCollapsed] = useState(false)
@@ -75,6 +75,38 @@ export function BuildProficienciesPage() {
     },
     [itemsByName, languagesByName],
   )
+
+  const activeFocused = useMemo(() => {
+    if (!focused) return null
+    if (focused.type === 'skill') {
+      const skill = skills.find((s) => s.name === focused.name)
+      if (!skill) return focused
+      return {
+        ...focused,
+        proficient: skill.proficient,
+        expertise: skill.expertise,
+        modifierString: skill.modifierString,
+      }
+    }
+    if (focused.type === 'save') {
+      const save = savingThrows.find((s) => s.ability === focused.ability)
+      if (!save) return focused
+      return { ...focused, proficient: save.proficient, modifierString: save.modifierString }
+    }
+    if (focused.type === 'item' && character) {
+      const { category, name } = focused
+      const norm = normalizeKey(name)
+      const ledgerGrants = ledger.proficiencies[category as keyof typeof ledger.proficiencies]
+      const hasGrant = ((ledgerGrants as Record<string, unknown[]>)[norm] ?? []).length > 0
+      const isProficient =
+        hasProfInArray(
+          character.proficiencies[category as keyof typeof character.proficiencies] as string[],
+          name,
+        ) || hasGrant
+      return { ...focused, isProficient }
+    }
+    return focused
+  }, [focused, skills, savingThrows, character, ledger])
 
   const skillDescriptions = useMemo(() => buildSkillDescriptions(skillDefs), [skillDefs])
 
@@ -232,7 +264,7 @@ export function BuildProficienciesPage() {
                 </div>
               </div>{' '}
               <BuildProficienciesDetailsPanel
-                focused={focused}
+                focused={activeFocused}
                 detailCollapsed={detailCollapsed}
                 skillDescriptions={skillDescriptions}
               />

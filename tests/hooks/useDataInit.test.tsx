@@ -25,6 +25,7 @@ vi.mock('sonner', () => ({
 import { toast } from 'sonner'
 import { useDataInit } from '@/hooks/data/useDataInit'
 import { isCacheForSource, isCacheStale, readGameDataCache } from '@/lib/storage/dataCache'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 
@@ -37,6 +38,8 @@ function makeGameData(): GameData {
     feats: [],
     items: [],
     itemsBase: [],
+    itemProperties: [],
+    itemTypes: [],
     classFeatures: [],
     actions: [],
     conditions: [],
@@ -50,6 +53,7 @@ function makeGameData(): GameData {
     trapHazards: [],
     rewards: [],
     cultsBoons: [],
+    organizations: [],
     sources: [],
   }
 }
@@ -74,6 +78,7 @@ describe('useDataInit', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetGameDataStore()
+    useAppPreferencesStore.setState({ autoRefreshGameData: false })
   })
 
   afterEach(() => {
@@ -258,5 +263,76 @@ describe('useDataInit', () => {
     expect(useGameDataStore.getState().gameData).toBeNull()
     expect(toast.info).not.toHaveBeenCalled()
     expect(toast.warning).not.toHaveBeenCalled()
+  })
+
+  test('skips background verify when recently checked and auto-refresh is off', async () => {
+    const config: DataSourceConfig = {
+      type: 'remote',
+      path: 'https://example.com/5etools',
+      isValid: true,
+    }
+    const cacheData = makeGameData()
+    const loadGameDataMock = vi.fn(async () => undefined)
+
+    vi.mocked(readGameDataCache).mockResolvedValue({
+      data: cacheData,
+      cachedAt: new Date().toISOString(),
+      sourceSnapshot: { type: 'remote', path: 'https://example.com/5etools' },
+      lastDataChangedAt: new Date().toISOString(),
+    })
+    vi.mocked(isCacheForSource).mockReturnValue(true)
+    vi.mocked(isCacheStale).mockReturnValue(false)
+
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      dataSourceConfig: config,
+      lastUpdateCheckAt: new Date().toISOString(), // checked moments ago
+      isLoading: false,
+      loadGameData: loadGameDataMock,
+    })
+    useAppPreferencesStore.setState({ autoRefreshGameData: false })
+
+    renderHook(() => useDataInit())
+
+    await waitFor(() => {
+      expect(useGameDataStore.getState().cacheStatus).toBe('fresh')
+    })
+    expect(loadGameDataMock).not.toHaveBeenCalled()
+  })
+
+  test('fires background verify when recently checked but auto-refresh is on', async () => {
+    const config: DataSourceConfig = {
+      type: 'remote',
+      path: 'https://example.com/5etools',
+      isValid: true,
+    }
+    const cacheData = makeGameData()
+    const loadGameDataMock = vi.fn(async () => undefined)
+
+    vi.mocked(readGameDataCache).mockResolvedValue({
+      data: cacheData,
+      cachedAt: new Date().toISOString(),
+      sourceSnapshot: { type: 'remote', path: 'https://example.com/5etools' },
+      lastDataChangedAt: new Date().toISOString(),
+    })
+    vi.mocked(isCacheForSource).mockReturnValue(true)
+    vi.mocked(isCacheStale).mockReturnValue(false)
+
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      dataSourceConfig: config,
+      lastUpdateCheckAt: new Date().toISOString(), // checked moments ago
+      isLoading: false,
+      loadGameData: loadGameDataMock,
+    })
+    useAppPreferencesStore.setState({ autoRefreshGameData: true })
+
+    renderHook(() => useDataInit())
+
+    await waitFor(() => {
+      expect(loadGameDataMock).toHaveBeenCalledWith(config, true)
+    })
   })
 })

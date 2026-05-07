@@ -171,6 +171,7 @@ export const variantRulesSchema = z.object({
   battleragerAnyRace: z.boolean().default(false),
 
   preferNewerPrintings: z.boolean().optional(),
+  ignoreEquipRestrictions: z.boolean().default(false),
 })
 
 export const characterClassEntrySchema = z.object({
@@ -324,6 +325,11 @@ export const characterDetailsSchema = z.object({
   definingMoment: z.string().optional(),
   lifeEvents: z.string().optional(),
   backstory: z.string().optional(),
+  organizationSelectionKey: z.string().optional(),
+  organizationCustomName: z.string().optional(),
+  organizationCustomDescription: z.string().optional(),
+  organizationCustomImage: z.string().optional(),
+  organizationCustomGradient: z.string().optional(),
   alliesAndOrganizations: z.string().optional(),
 })
 
@@ -370,9 +376,12 @@ export const sourceTagSchema = z.object({
   sourceName: z.string(),
   sourceRef: z.string().optional(),
   grantType: grantTypeSchema,
+  label: z.string(),
+})
+
+export const spellSourceTagSchema = sourceTagSchema.extend({
   spellGrantedAtLevel: z.number().int().min(1).optional(),
   spellAttributionMode: z.enum(['exact', 'inferred-lowest-eligible']).optional(),
-  label: z.string(),
 })
 
 export const abilityBonusProvenanceRecordSchema = z.object({
@@ -392,6 +401,7 @@ export const choiceRecordSchema = z.object({
 })
 
 const sourceTagListMapSchema = z.record(z.array(sourceTagSchema))
+const spellSourceTagListMapSchema = z.record(z.array(spellSourceTagSchema))
 
 export const proficiencyProvenanceSchema = z.object({
   armor: sourceTagListMapSchema,
@@ -407,7 +417,7 @@ export const provenanceLedgerSchema = z.object({
   abilityBonuses: z.array(abilityBonusProvenanceRecordSchema),
   features: sourceTagListMapSchema,
   feats: sourceTagListMapSchema,
-  spells: sourceTagListMapSchema,
+  spells: spellSourceTagListMapSchema,
   equipment: sourceTagListMapSchema,
   choices: z.array(choiceRecordSchema),
 })

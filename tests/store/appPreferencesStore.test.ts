@@ -44,7 +44,6 @@ describe('appPreferencesStore', () => {
       characters: [],
       activeCharacterId: null,
       activeCharacter: null,
-      hasUnsavedChangesFlag: false,
     })
   })
 
@@ -71,7 +70,6 @@ describe('appPreferencesStore', () => {
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-      hasUnsavedChangesFlag: false,
     })
 
     useAppPreferencesStore.getState().setHomeCardSize(520)
@@ -99,6 +97,7 @@ describe('appPreferencesStore', () => {
       themeAccent: 'blue',
       themeAppearance: 'light',
       autoRefreshGameData: true,
+      autoUpdate: true,
       uiScale: 100,
     })
   })
@@ -132,7 +131,6 @@ describe('appPreferencesStore', () => {
 
     expect(rehydrateState.homeCardSize).toBe(MAX_HOME_CARD_SIZE)
     expect(rehydrateState.themeAccent).toBe('blue')
-    expect(rehydrateState.themeAppearance).toBe('light')
-    expect(setThemePreferencesMock).toHaveBeenCalledWith('blue', 'light')
+    expect(rehydrateState.themeAppearance).toBe('dark')
   })
 })

@@ -33,7 +33,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { checkMulticlassRequirements, MAX_CHARACTER_LEVEL } from '@/lib/calculations/gameRules'
 import { addMulticlass, applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import { removeSpellFromCharacter } from '@/lib/character/commands/spellCommands'
-import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getClassIconUrl } from '@/lib/classIcons'
 import { getSpellsGrantedAtLevel, removeSpellChoicesAtLevel } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
@@ -66,7 +66,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
   const classProgression: CharacterClassEntry[] = getCharacterClassEntries(character)
 
-  const totalLevel = classProgression.reduce((sum, e) => sum + e.levels, 0) || character.level
+  const totalLevel = getTotalCharacterLevel(character)
   const isAtCap = totalLevel >= MAX_CHARACTER_LEVEL
 
   // Classes available to add — deduplicate by name, exclude sidekick classes
@@ -253,12 +253,12 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg flex flex-col gap-0 p-0 overflow-hidden max-h-[90vh]">
           <div className="h-12 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-5 shrink-0">
-            <Scroll className="h-4 w-4 text-indigo-400" weight="duotone" />
+            <Scroll className="h-4 w-4 text-indigo-600 dark:text-indigo-400" weight="duotone" />
             <span className="text-sm font-bold">Level Up</span>
             <span className="text-sm text-muted-foreground truncate min-w-0">{character.name}</span>
             <div className="ml-auto mr-8 flex items-center gap-2 shrink-0">
               <span className="text-xs text-muted-foreground">Total Level</span>
-              <span className="inline-flex items-center justify-center h-6 min-w-[1.5rem] px-1.5 rounded-md bg-indigo-500/20 text-indigo-300 text-xs font-bold tabular-nums">
+              <span className="inline-flex items-center justify-center h-6 min-w-[1.5rem] px-1.5 rounded-md bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-bold tabular-nums">
                 {totalLevel}
               </span>
             </div>
@@ -358,7 +358,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                     <span />
                   )}
                   {isAtCap && (
-                    <span className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-md px-2 py-1">
+                    <span className="text-xs text-warning-foreground dark:text-warning bg-warning/10 border border-warning/30 rounded-md px-2 py-1">
                       Level cap reached ({MAX_CHARACTER_LEVEL})
                     </span>
                   )}

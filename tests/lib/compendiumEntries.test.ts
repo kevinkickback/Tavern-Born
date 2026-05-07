@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest'
+import type { CompendiumEntry } from '@/lib/compendiumEntries'
 import { buildCompendiumEntries, filterCompendiumEntries } from '@/lib/compendiumEntries'
+import type { Spell5e } from '@/types/5etools'
 
 describe('compendiumEntries', () => {
   test('buildCompendiumEntries flattens multiple game data families', () => {
@@ -13,9 +15,9 @@ describe('compendiumEntries', () => {
         },
       },
       spells: {
-        mm: { name: 'Magic Missile', source: 'PHB', level: 1, school: 'E' },
+        mm: { name: 'Magic Missile', source: 'PHB', level: 1, school: 'E' } as unknown as Spell5e,
       },
-      items: [{ name: 'Rope', source: 'PHB', entries: ['item text'] }],
+      items: [{ name: 'Rope', source: 'PHB', type: 'G', entries: ['item text'] }],
     })
 
     expect(entries.map((e) => `${e.type}:${e.name}`)).toEqual([
@@ -36,7 +38,9 @@ describe('compendiumEntries', () => {
           fluff: { entries: ['class text'] },
         },
       ],
-      spells: [{ name: 'Magic Missile', source: 'PHB', level: 1, school: 'E' }],
+      spells: [
+        { name: 'Magic Missile', source: 'PHB', level: 1, school: 'E' } as unknown as Spell5e,
+      ],
       backgrounds: [{ name: 'Acolyte', source: 'PHB', entries: ['background text'] }],
     })
 
@@ -70,7 +74,12 @@ describe('compendiumEntries', () => {
       },
     ]
 
-    const filtered = filterCompendiumEntries(entries, 'magic', new Set(['Spell']), new Set(['PHB']))
+    const filtered = filterCompendiumEntries(
+      entries as CompendiumEntry[],
+      'magic',
+      new Set(['Spell']),
+      new Set(['PHB']),
+    )
 
     expect(filtered).toHaveLength(1)
     expect(filtered[0]?.name).toBe('Magic Missile')

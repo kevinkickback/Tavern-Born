@@ -7,8 +7,10 @@ import {
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Class5e } from '@/types/5etools'
+import type { Class5e, Item5e } from '@/types/5etools'
 import type { SelectedFeatureState } from './DetailsPanel'
+
+const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 
 const STARTING_EQUIPMENT_DESCRIPTION =
   'When you create your character, you receive equipment based on a combination of your class and background. Alternatively, you can start with a number of gold pieces based on your class and spend them on items from the lists in this section. See the Starting Wealth by Class table to determine how much gold you have to spend.\n\nYou decide how your character came by this starting equipment. It might have been an inheritance, or goods that the character purchased during his or her upbringing. You might have been equipped with a weapon, armor, and a backpack as part of military service. You might even have stolen your gear. A weapon could be a family heirloom, passed down from generation to generation until your character finally took up the mantle and followed in an ancestor\u2019s adventurous footsteps.'
@@ -30,7 +32,7 @@ export function BuildClassEquipmentSection({
   onSelectFeature,
   onExpandDetails,
 }: BuildClassEquipmentSectionProps) {
-  const itemLookup = useGameDataStore((s) => s.itemLookup)
+  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
   const equipmentBlocks = useMemo(
     () => resolveClassEquipmentBlocks(viewingClassData?.startingEquipment, itemLookup),
     [viewingClassData?.startingEquipment, itemLookup],

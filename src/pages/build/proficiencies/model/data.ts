@@ -135,11 +135,17 @@ export function buildToolSubtypeOptionsByKind({
 
   const scopedItems = filterBySource(allItems)
 
-  const scopedInstruments = collectByType(scopedItems, 'INS')
+  // Wondrous items (magical instruments like Horn of Silent Alarm, Instrument of Illusions,
+  // Rhythm-Maker's Drum) share the INS type code with mundane instruments but are not valid
+  // proficiency choices. Exclude them using the `wondrous` flag present on all magical items.
+  const mundaneItems = allItems.filter((item) => !(item as { wondrous?: unknown }).wondrous)
+  const scopedMundaneItems = filterBySource(mundaneItems)
+
+  const scopedInstruments = collectByType(scopedMundaneItems, 'INS')
   const scopedArtisans = collectByType(scopedItems, 'AT')
   const scopedGaming = collectByType(scopedItems, 'GS')
 
-  const allInstruments = collectByType(allItems, 'INS')
+  const allInstruments = collectByType(mundaneItems, 'INS')
   const allArtisans = collectByType(allItems, 'AT')
   const allGaming = collectByType(allItems, 'GS')
 

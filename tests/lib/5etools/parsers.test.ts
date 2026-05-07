@@ -5,6 +5,7 @@ import {
   parseClasses,
   parseClassFeatures,
   parseItems,
+  parseOrganizations,
   parseRaces,
   parseSpells,
 } from '@/lib/5etools/parsers'
@@ -299,6 +300,55 @@ describe('5etools/parsers', () => {
       entries: unknown[]
     }>
     expect(features[0]?.entries).toEqual(['Once per turn, you can deal extra damage.'])
+  })
+
+  test('parseOrganizations extracts faction descriptions from Faction Agent fluff', () => {
+    const organizations = parseOrganizations({
+      backgroundFluff: [
+        {
+          name: 'Faction Agent',
+          source: 'SCAG',
+          entries: [
+            {
+              type: 'entries',
+              entries: [
+                {
+                  type: 'entries',
+                  name: 'Factions of the Sword Coast',
+                  entries: [
+                    {
+                      type: 'entries',
+                      name: 'The Harpers',
+                      entries: ['A secretive organization focused on knowledge and justice.'],
+                    },
+                    {
+                      type: 'entries',
+                      name: 'The Zhentarim',
+                      entries: ['The Black Network seeks influence through covert operations.'],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(organizations).toEqual([
+      {
+        name: 'The Harpers',
+        source: 'SCAG',
+        description: 'A secretive organization focused on knowledge and justice.',
+        imagePath: '/assets/images/factions/harpers-5e.png',
+      },
+      {
+        name: 'The Zhentarim',
+        source: 'SCAG',
+        description: 'The Black Network seeks influence through covert operations.',
+        imagePath: '/assets/images/factions/zhentarim-5e-symbol.png',
+      },
+    ])
   })
 
   test('parseRaces expands simple _versions into subraces', () => {

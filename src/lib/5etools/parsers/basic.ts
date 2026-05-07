@@ -1,4 +1,4 @@
-import type { Language5e } from '@/types/5etools'
+import type { ItemProperty5e, ItemType5e, Language5e } from '@/types/5etools'
 import { SOURCE_FALLBACKS } from '../sourceFallbacks'
 import { asArray, asObject, type ParsedObject } from './shared'
 
@@ -37,11 +37,20 @@ export function parseActions(data: unknown): unknown[] {
 
 export function parseConditions(data: unknown): unknown[] {
   const obj = asObject(data)
-  const conditions: unknown[] = []
-  if (obj.condition) conditions.push(...asArray(obj.condition))
-  if (obj.disease) conditions.push(...asArray(obj.disease))
-  if (Array.isArray(data)) conditions.push(...data)
-  return conditions
+  const results: unknown[] = []
+  const tag = (entries: unknown[], sourceType: 'condition' | 'disease') => {
+    for (const entry of entries) {
+      results.push(
+        entry && typeof entry === 'object'
+          ? { ...(entry as object), _sourceType: sourceType }
+          : entry,
+      )
+    }
+  }
+  if (obj.condition) tag(asArray(obj.condition), 'condition')
+  if (obj.disease) tag(asArray(obj.disease), 'disease')
+  if (Array.isArray(data)) results.push(...data)
+  return results
 }
 
 export function parseDeities(data: unknown): unknown[] {
@@ -118,6 +127,18 @@ export function parseCultsBoons(data: unknown): unknown[] {
   return []
 }
 
+export function parseItemProperties(data: unknown): ItemProperty5e[] {
+  const obj = asObject(data)
+  if (obj.itemProperty) return asArray(obj.itemProperty) as ItemProperty5e[]
+  return []
+}
+
+export function parseItemTypes(data: unknown): ItemType5e[] {
+  const obj = asObject(data)
+  if (obj.itemType) return asArray(obj.itemType) as ItemType5e[]
+  return []
+}
+
 export function parseBooks(data: unknown): unknown[] {
   const obj = asObject(data)
   if (!data) return []
@@ -175,7 +196,9 @@ export function buildSourcesList(
     const id = typeof entryObj.id === 'string' ? entryObj.id : undefined
     const source = typeof entryObj.source === 'string' ? entryObj.source : undefined
     if (id) booksMap.set(id, entryObj)
-    if (source && source !== id) booksMap.set(source, entryObj)
+    // Only add source key if not already present — prevents adventure source fields from
+    // overwriting book entries (e.g., MOT-NSS with source:"MOT" must not shadow MOT book entry)
+    if (source && source !== id && !booksMap.has(source)) booksMap.set(source, entryObj)
   }
 
   const characterRelevantGroups = [
@@ -202,18 +225,21 @@ export function buildSourcesList(
         }
       }
       const bookObj = asObject(book)
-      const group = typeof bookObj.group === 'string' ? bookObj.group : 'other'
+      const rawGroup = typeof bookObj.group === 'string' ? bookObj.group : 'other'
+      // Normalize 5etools internal group variants to standard display groups
+      const group =
+        rawGroup === 'supplement-alt'
+          ? 'supplement'
+          : rawGroup === 'setting-alt'
+            ? 'setting'
+            : rawGroup
 
-      const hasCharacterOptions = characterRelevantGroups.includes(group)
+      const hasCharacterOptions = characterRelevantGroups.includes(rawGroup)
       const published = typeof bookObj.published === 'string' ? bookObj.published : undefined
 
       return {
-        abbreviation:
-          typeof bookObj.id === 'string'
-            ? bookObj.id
-            : typeof bookObj.source === 'string'
-              ? bookObj.source
-              : abbr,
+        // Uppercase to match the sourceSchema transform — character.allowedSources is always uppercase
+        abbreviation: abbr.toUpperCase(),
         name: typeof bookObj.name === 'string' ? bookObj.name : abbr,
         group,
         year: published ? Number.parseInt(published, 10) : undefined,

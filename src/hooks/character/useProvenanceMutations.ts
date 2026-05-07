@@ -1,38 +1,26 @@
-import type { ProvenanceLedger } from '@/lib/provenance/types'
-import type { Item5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
-import { useBackgroundProvenance } from './useBackgroundProvenance'
-import { useClassProvenance } from './useClassProvenance'
-import { useEquipmentProvenance } from './useEquipmentProvenance'
-import { useFeatProvenance } from './useFeatProvenance'
-import { useRaceProvenance } from './useRaceProvenance'
-import { useSpellProvenance } from './useSpellProvenance'
+import { useBackgroundProvenanceMutations } from './useBackgroundProvenanceMutations'
+import { useClassProvenanceMutations } from './useClassProvenanceMutations'
+import { useEquipmentProvenanceMutations } from './useEquipmentProvenanceMutations'
+import { useFeatProvenanceMutations } from './useFeatProvenanceMutations'
+import { useRaceProvenanceMutations } from './useRaceProvenanceMutations'
+import { useSpellProvenanceMutations } from './useSpellProvenanceMutations'
 
-interface UseProvenanceMutationsParams {
-  character: Character | null
-  ledger: ProvenanceLedger
-  itemLookup: Map<string, Item5e>
-  items: Item5e[]
-  itemsBase: Item5e[]
-  patch: (newLedger: ProvenanceLedger) => void
-  updateCharacter: (id: string, updates: Partial<Character>) => void
-}
-
-export function useProvenanceMutations({
-  character,
-  ledger,
-  itemLookup,
-  items,
-  itemsBase,
-  patch,
-  updateCharacter,
-}: UseProvenanceMutationsParams) {
-  const race = useRaceProvenance({ character, ledger, items, itemsBase, updateCharacter })
-  const cls = useClassProvenance({ character, ledger, itemLookup, updateCharacter })
-  const background = useBackgroundProvenance({ character, ledger, itemLookup, updateCharacter })
-  const spells = useSpellProvenance({ character, ledger, patch })
-  const feats = useFeatProvenance({ character, ledger, patch, updateCharacter })
-  const equipment = useEquipmentProvenance({ character, ledger, patch })
+/**
+ * Aggregates all six domain provenance hooks.
+ *
+ * **Production pages** should call the individual `use*ProvenanceMutations` hooks directly.
+ * This aggregator exists for `useProvenance`, which is the integration test harness:
+ * it composes all six domains into one surface so tests can exercise cross-domain
+ * provenance interactions without calling multiple separate hooks.
+ * Do not add new mutation logic here; add it to the relevant `use*ProvenanceMutations` hook.
+ */
+export function useProvenanceMutations() {
+  const race = useRaceProvenanceMutations()
+  const cls = useClassProvenanceMutations()
+  const background = useBackgroundProvenanceMutations()
+  const spells = useSpellProvenanceMutations()
+  const feats = useFeatProvenanceMutations()
+  const equipment = useEquipmentProvenanceMutations()
 
   return {
     ...race,

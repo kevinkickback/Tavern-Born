@@ -153,6 +153,8 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
     feats: [],
     items: [],
     itemsBase: [],
+    itemProperties: [],
+    itemTypes: [],
     classFeatures: [],
     actions: [],
     conditions: [],
@@ -166,6 +168,7 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
     trapHazards: [],
     rewards: [],
     cultsBoons: [],
+    organizations: [],
     sources: [],
   }
 

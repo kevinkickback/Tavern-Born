@@ -1,6 +1,8 @@
 import { useCallback, useMemo } from 'react'
+import { toast } from 'sonner'
 import { resolveArmorType } from '@/lib/calculations/armorClass'
 import { getCarryCapacity, MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
+import { hasArmorProficiency } from '@/lib/calculations/itemEquippable'
 import { generateEquipmentId } from '@/lib/character/ids'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
@@ -133,6 +135,33 @@ export function useEquipment(): EquipmentState {
   const toggleEquip = useCallback(
     (id: string) => {
       if (!character) return
+      const item = equipment.find((e) => e.id === id)
+      if (!item) return
+
+      if (!item.equipped && !(character.variantRules?.ignoreEquipRestrictions ?? false)) {
+        const armorType = item.armorType
+        if (armorType) {
+          const isShield = armorType === 'shield'
+          const conflict = equipment.find(
+            (e) =>
+              e.id !== id &&
+              e.equipped &&
+              e.armorType &&
+              (isShield ? e.armorType === 'shield' : e.armorType !== 'shield'),
+          )
+          if (conflict) {
+            toast.warning(`${conflict.name} is already equipped. Unequip it first.`)
+            return
+          }
+
+          if (!hasArmorProficiency(character.proficiencies.armor, armorType)) {
+            const label = armorType === 'shield' ? 'shields' : `${armorType} armor`
+            toast.warning(`${character.name} is not proficient with ${label}.`)
+            return
+          }
+        }
+      }
+
       patchEquipment(equipment.map((e) => (e.id === id ? { ...e, equipped: !e.equipped } : e)))
     },
     [character, equipment, patchEquipment],

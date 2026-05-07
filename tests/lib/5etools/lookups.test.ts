@@ -25,6 +25,8 @@ describe('5etools/lookups', () => {
       feats: [],
       items: [],
       itemsBase: [],
+      itemProperties: [],
+      itemTypes: [],
       classFeatures: [
         {
           name: 'Arcane Recovery',
@@ -43,6 +45,10 @@ describe('5etools/lookups', () => {
       magicvariants: [],
       optionalfeatures: [{ name: 'Cantrip Formulas', source: 'TCE' }],
       variantrules: [],
+      trapHazards: [],
+      rewards: [],
+      cultsBoons: [],
+      organizations: [],
       sources: [],
     })
 
@@ -55,6 +61,7 @@ describe('5etools/lookups', () => {
     expect(
       lookups.subclassesByKey[getSubclassLookupKey('Wizard', 'PHB', 'Evocation', 'PHB')],
     ).toMatchObject({ name: 'School of Evocation' })
+    expect(lookups.itemLookup).toBeInstanceOf(Map)
   })
 })
 

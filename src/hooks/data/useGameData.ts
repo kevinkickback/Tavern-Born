@@ -23,6 +23,14 @@ import type {
   Subclass5e,
 } from '@/types/5etools'
 
+/**
+ * Raw unfiltered race list from the game data store. Does NOT apply the active character's
+ * `allowedSources` or `preferNewerPrintings` suppression.
+ *
+ * **Build pages and character-scoped UI must use `useFilteredGameData()` instead.**
+ * Use this hook only for non-character contexts (e.g. compendium browser, admin tooling)
+ * where all sources should be visible regardless of character settings.
+ */
 export function useRaces(filters?: RaceFilters, searchQuery?: string) {
   const gameData = useGameDataStore((state) => state.gameData)
 
@@ -43,6 +51,10 @@ export function useRaces(filters?: RaceFilters, searchQuery?: string) {
   }, [gameData?.races, filters, searchQuery])
 }
 
+/**
+ * Raw unfiltered class list. Does NOT apply `allowedSources` or `preferNewerPrintings`.
+ * For character-scoped build pages use `useFilteredGameData()` instead.
+ */
 export function useClasses(filters?: ClassFilters, searchQuery?: string) {
   const gameData = useGameDataStore((state) => state.gameData)
 
@@ -63,6 +75,10 @@ export function useClasses(filters?: ClassFilters, searchQuery?: string) {
   }, [gameData?.classes, filters, searchQuery])
 }
 
+/**
+ * Raw unfiltered spell list. Does NOT apply `allowedSources` or `preferNewerPrintings`.
+ * For character-scoped build pages use `useFilteredGameData()` instead.
+ */
 export function useSpells(filters?: SpellFilters, searchQuery?: string) {
   const gameData = useGameDataStore((state) => state.gameData)
 
@@ -83,6 +99,10 @@ export function useSpells(filters?: SpellFilters, searchQuery?: string) {
   }, [gameData?.spells, filters, searchQuery])
 }
 
+/**
+ * Raw unfiltered background list. Does NOT apply `allowedSources` or `preferNewerPrintings`.
+ * For character-scoped build pages use `useFilteredGameData()` instead.
+ */
 export function useBackgrounds(filters?: BackgroundFilters, searchQuery?: string) {
   const gameData = useGameDataStore((state) => state.gameData)
 
@@ -103,6 +123,10 @@ export function useBackgrounds(filters?: BackgroundFilters, searchQuery?: string
   }, [gameData?.backgrounds, filters, searchQuery])
 }
 
+/**
+ * Raw unfiltered feat list. Does NOT apply `allowedSources` or `preferNewerPrintings`.
+ * For character-scoped build pages use `useFilteredGameData()` instead.
+ */
 export function useFeats(filters?: FeatFilters, searchQuery?: string) {
   const gameData = useGameDataStore((state) => state.gameData)
 
@@ -123,6 +147,10 @@ export function useFeats(filters?: FeatFilters, searchQuery?: string) {
   }, [gameData?.feats, filters, searchQuery])
 }
 
+/**
+ * Raw unfiltered item list. Does NOT apply `allowedSources` or `preferNewerPrintings`.
+ * For character-scoped build pages use `useFilteredGameData()` instead.
+ */
 export function useItems(filters?: ItemFilters, searchQuery?: string) {
   const gameData = useGameDataStore((state) => state.gameData)
 
@@ -300,6 +328,24 @@ export function useItem(name: string, source?: string): Item5e | undefined {
       return nameMatch && sourceMatch
     })
   }, [items, name, source])
+}
+
+/**
+ * Returns the sorted list of standard condition names from data/conditionsdiseases.json.
+ * Falls back to an empty array while game data is loading.
+ */
+export function useConditionNames(): readonly string[] {
+  const conditionNames = useGameDataStore((state) => state.gameData?.lookups?.conditionNames)
+  return useMemo(() => conditionNames ?? [], [conditionNames])
+}
+
+/**
+ * Returns the ordered list of skill names from data/skills.json.
+ * Falls back to an empty array while game data is loading.
+ */
+export function useSkillList(): readonly string[] {
+  const skillList = useGameDataStore((state) => state.gameData?.lookups?.skillList)
+  return useMemo(() => skillList ?? [], [skillList])
 }
 
 export function useGameDataStatus() {

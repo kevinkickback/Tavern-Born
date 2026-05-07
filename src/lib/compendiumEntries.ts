@@ -1,19 +1,42 @@
-export interface CompendiumEntry {
+import type { Background5e, Class5e, Feat5e, Item5e, Race5e, Spell5e } from '@/types/5etools'
+
+interface CompendiumEntryBase {
   name: string
-  type: string
   source: string
   description?: string
   searchText?: string
-  data: Record<string, unknown>
 }
 
+/** All untyped compendium entry type strings. */
+type UntypedEntryType =
+  | 'Skill'
+  | 'Sense'
+  | 'Action'
+  | 'Condition'
+  | 'Language'
+  | 'Deity'
+  | 'Optional Feature'
+  | 'Variant Rule'
+  | 'Trap / Hazard'
+  | 'Reward'
+  | 'Cult / Boon'
+
+export type CompendiumEntry =
+  | (CompendiumEntryBase & { type: 'Race'; data: Race5e })
+  | (CompendiumEntryBase & { type: 'Class'; data: Class5e })
+  | (CompendiumEntryBase & { type: 'Spell'; data: Spell5e })
+  | (CompendiumEntryBase & { type: 'Item'; data: Item5e })
+  | (CompendiumEntryBase & { type: 'Background'; data: Background5e })
+  | (CompendiumEntryBase & { type: 'Feat'; data: Feat5e })
+  | (CompendiumEntryBase & { type: UntypedEntryType; data: Record<string, unknown> })
+
 interface CompendiumGameData {
-  races?: unknown
-  classes?: unknown
-  spells?: unknown
-  items?: unknown[]
-  backgrounds?: unknown
-  feats?: unknown
+  races?: Race5e[] | Record<string, Race5e>
+  classes?: Class5e[] | Record<string, Class5e>
+  spells?: Spell5e[] | Record<string, Spell5e>
+  items?: Item5e[]
+  backgrounds?: Background5e[] | Record<string, Background5e>
+  feats?: Feat5e[] | Record<string, Feat5e>
   skills?: unknown
   senses?: unknown[]
   actions?: unknown[]
@@ -31,10 +54,10 @@ function asObj(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
 }
 
-function asCollection(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value
+function asCollection<T = unknown>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[]
   if (typeof value === 'object' && value !== null) {
-    return Object.values(value)
+    return Object.values(value) as T[]
   }
   return []
 }
@@ -108,7 +131,7 @@ function buildEntry(
     description,
     searchText: normalizeSearchText(name, type, source, description),
     data,
-  }
+  } as CompendiumEntry
 }
 
 function tokenizeSearchQuery(searchQuery: string): string[] {
@@ -160,59 +183,53 @@ export function buildCompendiumEntries(
   const entries: CompendiumEntry[] = []
 
   if (gameData.races) {
-    asCollection(gameData.races).forEach((race) => {
-      const raceObj = asObj(race)
-      const entriesList = Array.isArray(raceObj.entries) ? raceObj.entries : []
-      const description = getPreviewDescription(entriesList)
+    asCollection<Race5e>(gameData.races).forEach((race) => {
+      const description = getPreviewDescription(race.entries ?? [])
       entries.push(
         buildEntry(
-          String(raceObj.name ?? ''),
+          race.name ?? '',
           'Race',
-          String(raceObj.source ?? 'Unknown'),
+          race.source ?? 'Unknown',
           description,
-          raceObj,
+          race as unknown as Record<string, unknown>,
         ),
       )
     })
   }
 
   if (gameData.classes) {
-    asCollection(gameData.classes).forEach((cls) => {
-      const clsObj = asObj(cls)
-      const fluffEntries = Array.isArray(asObj(clsObj.fluff).entries)
-        ? (asObj(clsObj.fluff).entries as unknown[])
+    asCollection<Class5e>(gameData.classes).forEach((cls) => {
+      const fluffEntries = Array.isArray(asObj(cls.fluff).entries)
+        ? (asObj(cls.fluff).entries as unknown[])
         : []
-      const classFluffEntries = Array.isArray(clsObj.fluffEntries) ? clsObj.fluffEntries : []
-      const classFluffSections = Array.isArray(clsObj.classFluffSections)
-        ? clsObj.classFluffSections
-        : []
+      const classFluffEntries = Array.isArray(cls.fluffEntries) ? cls.fluffEntries : []
+      const classFluffSections = Array.isArray(cls.classFluffSections) ? cls.classFluffSections : []
       const description =
         getPreviewDescription(classFluffEntries) ||
         getPreviewDescription(classFluffSections) ||
         getPreviewDescription(fluffEntries)
       entries.push(
         buildEntry(
-          String(clsObj.name ?? ''),
+          cls.name ?? '',
           'Class',
-          String(clsObj.source ?? 'Unknown'),
+          cls.source ?? 'Unknown',
           description,
-          clsObj,
+          cls as unknown as Record<string, unknown>,
         ),
       )
     })
   }
 
   if (gameData.spells) {
-    asCollection(gameData.spells).forEach((spell) => {
-      const spellObj = asObj(spell)
-      const description = `Level ${String(spellObj.level ?? '?')} ${String(spellObj.school ?? '')}`
+    asCollection<Spell5e>(gameData.spells).forEach((spell) => {
+      const description = `Level ${spell.level ?? '?'} ${spell.school ?? ''}`
       entries.push(
         buildEntry(
-          String(spellObj.name ?? ''),
+          spell.name ?? '',
           'Spell',
-          String(spellObj.source ?? 'Unknown'),
+          spell.source ?? 'Unknown',
           description,
-          spellObj,
+          spell as unknown as Record<string, unknown>,
         ),
       )
     })
@@ -220,50 +237,44 @@ export function buildCompendiumEntries(
 
   if (gameData.items) {
     gameData.items.forEach((item) => {
-      const itemObj = asObj(item)
-      const itemEntries = Array.isArray(itemObj.entries) ? itemObj.entries : []
-      const description = getPreviewDescription(itemEntries) || String(itemObj.type ?? '')
+      const description = getPreviewDescription(item.entries ?? []) || item.type
       entries.push(
         buildEntry(
-          String(itemObj.name ?? ''),
+          item.name ?? '',
           'Item',
-          String(itemObj.source ?? 'Unknown'),
+          item.source ?? 'Unknown',
           description,
-          itemObj,
+          item as unknown as Record<string, unknown>,
         ),
       )
     })
   }
 
   if (gameData.backgrounds) {
-    asCollection(gameData.backgrounds).forEach((bg) => {
-      const bgObj = asObj(bg)
-      const bgEntries = Array.isArray(bgObj.entries) ? bgObj.entries : []
-      const description = getPreviewDescription(bgEntries)
+    asCollection<Background5e>(gameData.backgrounds).forEach((bg) => {
+      const description = getPreviewDescription(bg.entries ?? [])
       entries.push(
         buildEntry(
-          String(bgObj.name ?? ''),
+          bg.name ?? '',
           'Background',
-          String(bgObj.source ?? 'Unknown'),
+          bg.source ?? 'Unknown',
           description,
-          bgObj,
+          bg as unknown as Record<string, unknown>,
         ),
       )
     })
   }
 
   if (gameData.feats) {
-    Object.values(gameData.feats).forEach((feat) => {
-      const featObj = asObj(feat)
-      const featEntries = Array.isArray(featObj.entries) ? featObj.entries : []
-      const description = getPreviewDescription(featEntries)
+    asCollection<Feat5e>(gameData.feats).forEach((feat) => {
+      const description = getPreviewDescription(feat.entries ?? [])
       entries.push(
         buildEntry(
-          String(featObj.name ?? ''),
+          feat.name ?? '',
           'Feat',
-          String(featObj.source ?? 'Unknown'),
+          feat.source ?? 'Unknown',
           description,
-          featObj,
+          feat as unknown as Record<string, unknown>,
         ),
       )
     })

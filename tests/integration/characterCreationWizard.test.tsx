@@ -27,7 +27,6 @@ function resetCharacterStore() {
     characters: [],
     activeCharacterId: null,
     activeCharacter: null,
-    hasUnsavedChangesFlag: false,
   })
 }
 
@@ -122,6 +121,8 @@ describe('character creation and proficiencies validation', () => {
         feats: [],
         items: [],
         itemsBase: [],
+        itemProperties: [],
+        itemTypes: [],
         classFeatures: [],
         actions: [],
         conditions: [],
@@ -135,6 +136,7 @@ describe('character creation and proficiencies validation', () => {
         trapHazards: [],
         rewards: [],
         cultsBoons: [],
+        organizations: [],
         sources: [],
       },
       hasHydrated: true,

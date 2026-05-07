@@ -26,7 +26,8 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
+import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
@@ -36,7 +37,7 @@ import {
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
-import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { renderEntryCached } from '@/lib/entryRenderCache'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
@@ -146,7 +147,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
     : isOrigin
       ? 'text-amber-500'
       : grantedBy
-        ? 'text-violet-400'
+        ? 'text-violet-600 dark:text-violet-400'
         : 'text-accent-foreground'
 
   return (
@@ -306,8 +307,8 @@ export function FeatsPage() {
     removeFeatChoiceSelection,
     commitFeatWithOptions,
     editFeatWithOptions,
-    ledger,
-  } = useProvenance()
+  } = useFeatProvenanceMutations()
+  const { ledger } = useProvenanceLedger()
   const [bonusModalOpen, setBonusModalOpen] = useState(false)
   const [featOptionsTarget, setFeatOptionsTarget] = useState<Feat5e | null>(null)
   const [featEditCandidate, setFeatEditCandidate] = useState<{
@@ -343,7 +344,7 @@ export function FeatsPage() {
 
   const characterSnapshot = useMemo<PrereqCharacterSnapshot>(
     () => ({
-      level: character?.level ?? 0,
+      level: getTotalCharacterLevel(character),
       class: character?.class ?? '',
       race: character?.race ?? '',
       abilityScores: character?.abilityScores ?? {
@@ -568,7 +569,10 @@ export function FeatsPage() {
 
     const update = () => {
       const btn = document.querySelector<HTMLElement>(FEATS_SETUP_BTN_SELECTOR)
-      if (!btn) { setHintPosition(null); return }
+      if (!btn) {
+        setHintPosition(null)
+        return
+      }
       const rect = btn.getBoundingClientRect()
       const centerX = rect.left + rect.width / 2
       const maxLeft = Math.max(16, window.innerWidth - FEATS_HINT_WIDTH - 16)
@@ -632,7 +636,8 @@ export function FeatsPage() {
                 <X className="h-3.5 w-3.5" />
               </button>
               <p className="leading-snug text-accent-foreground/95 pr-8">
-                Some feats need extra setup — like choosing a cantrip, skill, or spell. Click <strong>Complete Setup</strong> to finish configuring this feat.
+                Some feats need extra setup — like choosing a cantrip, skill, or spell. Click{' '}
+                <strong>Complete Setup</strong> to finish configuring this feat.
               </p>
             </div>
           </div>
@@ -702,7 +707,7 @@ export function FeatsPage() {
         <Card className="w-full overflow-hidden">
           <div className="h-10 bg-gradient-to-r from-violet-500/20 via-violet-500/10 to-transparent border-b border-border/40 flex items-center justify-between px-4">
             <div className="flex items-center gap-2">
-              <Star className="h-4 w-4 text-violet-400" weight="duotone" />
+              <Star className="h-4 w-4 text-violet-600 dark:text-violet-400" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Character Feats
               </span>
@@ -824,20 +829,9 @@ export function FeatsPage() {
                 Bonus Feats
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs h-5 px-2">
-                {bonusFeats.length} total
-              </Badge>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 text-xs px-2 gap-1 text-muted-foreground hover:text-foreground"
-                onClick={() => setBonusModalOpen(true)}
-              >
-                <Plus className="h-3 w-3" />
-                Add
-              </Button>
-            </div>
+            <Badge variant="outline" className="text-xs h-5 px-2">
+              {bonusFeats.length} total
+            </Badge>
           </div>
           <CardContent className="p-4">
             {bonusFeats.length > 0 ? (

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import {
   iterateProficiencyBlocks,
   normalizeGenericToolChoice,
@@ -6,8 +7,6 @@ import {
   resolveRaceGrantFilterOptions,
   toProficiencyBlocks,
 } from '@/lib/provenance'
-import { useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
 
 export interface AvailableProficiencies {
   armor: string[]
@@ -151,44 +150,21 @@ function collectWeaponOrArmorFromProfBlocks(
 
 /**
  * Returns all available proficiency options for each category from game data.
- * Never hardcoded — all sourced from 5etools data.
+ * Never hardcoded — all sourced from 5etools data. Respects the active character's
+ * `allowedSources` and `preferNewerPrintings` settings via `useFilteredGameData`.
  */
 export function useAvailableProficiencies(): AvailableProficiencies {
-  const gameData = useGameDataStore((state) => state.gameData)
-  const activeCharacter = useCharacterStore((state) => {
-    if (state.activeCharacter) return state.activeCharacter
-    if (!state.activeCharacterId) return null
-    return state.characters.find((character) => character.id === state.activeCharacterId) ?? null
-  })
+  const filteredData = useFilteredGameData()
+  const { races, classes, backgrounds, items, itemsBase } = filteredData
+  // languages is not source-gated by useFilteredGameData but comes through the gameData spread
+  const languages =
+    (filteredData as unknown as { languages?: { name?: string; type?: string; source?: string }[] })
+      .languages ?? []
 
   return useMemo(() => {
-    const empty: AvailableProficiencies = {
-      armor: [],
-      weapons: [],
-      tools: [],
-      languages: [],
-      standardLanguages: [],
-      isStandardLanguage: () => false,
-    }
-    if (!gameData) return empty
-
-    const allowedSources = activeCharacter?.allowedSources ?? []
-    const hasSourceFilter = allowedSources.length > 0
-    const isAllowedBySource = (entry: { source?: string } | null | undefined): boolean => {
-      if (!hasSourceFilter) return true
-      if (!entry?.source) return true
-      return allowedSources.includes(entry.source)
-    }
-
-    const classes = (gameData.classes ?? []).filter((cls) => isAllowedBySource(cls))
-    const backgrounds = (gameData.backgrounds ?? []).filter((bg) => isAllowedBySource(bg))
-    const races = (gameData.races ?? []).filter((race) => isAllowedBySource(race))
-    const languages = (gameData.languages ?? []).filter((lang) => isAllowedBySource(lang))
-    const raceOptionContext = {
-      items: gameData.items ?? [],
-      itemsBase: gameData.itemsBase ?? [],
-      allowedSources,
-    }
+    // Items are already source-filtered by useFilteredGameData; pass empty allowedSources so
+    // resolveRaceGrantFilterOptions does not double-filter them.
+    const raceOptionContext = { items, itemsBase, allowedSources: [] as string[] }
 
     const armorMap = new Map<string, string>()
     for (const cls of classes) {
@@ -203,7 +179,8 @@ export function useAvailableProficiencies(): AvailableProficiencies {
         'armor',
         raceOptionContext,
       )
-      for (const sr of (race.subraces ?? []).filter((subrace) => isAllowedBySource(subrace))) {
+      // subraces are already source-filtered by DataFilter.filterRaces
+      for (const sr of race.subraces ?? []) {
         collectWeaponOrArmorFromProfBlocks(
           (sr as { armorProficiencies?: Record<string, unknown>[] }).armorProficiencies,
           armorMap,
@@ -227,7 +204,7 @@ export function useAvailableProficiencies(): AvailableProficiencies {
         'weapons',
         raceOptionContext,
       )
-      for (const sr of (race.subraces ?? []).filter((subrace) => isAllowedBySource(subrace))) {
+      for (const sr of race.subraces ?? []) {
         collectWeaponOrArmorFromProfBlocks(
           (sr as { weaponProficiencies?: Record<string, unknown>[] }).weaponProficiencies,
           weaponMap,
@@ -252,7 +229,7 @@ export function useAvailableProficiencies(): AvailableProficiencies {
         race.toolProficiencies as Record<string, unknown>[] | undefined,
         toolMap,
       )
-      for (const sr of (race.subraces ?? []).filter((subrace) => isAllowedBySource(subrace))) {
+      for (const sr of race.subraces ?? []) {
         collectFromProfBlocks(
           (sr as { toolProficiencies?: Record<string, unknown>[] }).toolProficiencies,
           toolMap,
@@ -287,5 +264,5 @@ export function useAvailableProficiencies(): AvailableProficiencies {
       standardLanguages,
       isStandardLanguage,
     }
-  }, [activeCharacter?.allowedSources, gameData])
+  }, [races, classes, backgrounds, items, itemsBase, languages])
 }

@@ -8,7 +8,6 @@ import {
   type AppearanceTheme,
   getStoredAccentTheme,
   getStoredAppearanceTheme,
-  setThemePreferences,
 } from '@/lib/themeManager'
 
 export const UI_SCALE_OPTIONS = [80, 90, 100, 110, 120] as const
@@ -101,9 +100,6 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         state.autoUpdate = state.autoUpdate !== false
         const validScales: number[] = [...UI_SCALE_OPTIONS]
         state.uiScale = validScales.includes(state.uiScale) ? state.uiScale : DEFAULT_UI_SCALE
-
-        setThemePreferences(state.themeAccent, state.themeAppearance)
-        applyUiScale(state.uiScale)
       },
     },
   ),

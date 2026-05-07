@@ -1,10 +1,10 @@
 import { buildItemLookup, resolveClassStartingEquipment } from '@/lib/5etools/startingEquipment'
 import type { Item5e } from '@/types/5etools'
 import { applyProficiencyBlocks, toProficiencyBlocks } from './applyProficiencyBlocks'
-import { addChoicePlaceholder, addGrant } from './ledger'
+import { addChoicePlaceholder, addGrant, addSpellGrant } from './ledger'
 import { normalizeKey, stripItemTag } from './normalization'
 import { makeSourceTag } from './sourceLabels'
-import type { ChoiceRecord, ProvenanceLedger } from './types'
+import type { ChoiceRecord, ProvenanceLedger, SpellSourceTag } from './types'
 
 function isNarrativeChoiceTool(value: string): boolean {
   const key = normalizeKey(value)
@@ -40,7 +40,7 @@ export function applyClassGrants(
       toolProficiencies?: Array<
         Record<string, boolean | number | { choose?: { from?: string[]; count?: number } }>
       >
-      skills?: Array<string | Record<string, unknown>>
+      skills?: Array<string | Record<string, unknown>> | Record<string, unknown>
     }
   },
   subclass:
@@ -96,7 +96,12 @@ export function applyClassGrants(
     `class:${normalizeKey(cls.name)}`,
   )
 
-  const skillChoiceEntry = (profs.skills ?? []).find(
+  const skillsArray = Array.isArray(profs.skills)
+    ? profs.skills
+    : profs.skills
+      ? [profs.skills as Record<string, unknown>]
+      : []
+  const skillChoiceEntry = skillsArray.find(
     (s): s is Record<string, unknown> => typeof s === 'object' && s !== null && 'choose' in s,
   ) as { choose?: { from: string[]; count: number } } | undefined
   if (skillChoiceEntry?.choose) {
@@ -178,7 +183,7 @@ export function applyClassSpellGrant(
       : Object.fromEntries(Object.entries(ledger.spells).filter(([key]) => key !== normSpell))
 
   const nextLedger = { ...ledger, spells: nextSpells }
-  const tag = {
+  const tag: SpellSourceTag = {
     ...makeSourceTag('class', className, grantType, classSource),
     ...(options?.spellGrantedAtLevel ? { spellGrantedAtLevel: options.spellGrantedAtLevel } : {}),
     ...(options?.spellAttributionMode
@@ -186,7 +191,7 @@ export function applyClassSpellGrant(
       : {}),
   }
 
-  return addGrant(nextLedger, 'spells', spellName, tag)
+  return addSpellGrant(nextLedger, spellName, tag)
 }
 
 /**

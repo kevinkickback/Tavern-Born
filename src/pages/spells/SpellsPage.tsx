@@ -1,6 +1,7 @@
 import { MagicWand, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
+import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -60,13 +61,16 @@ export function SpellsPage() {
     sharedSlots,
     pactSlots,
     isSpellcaster,
+    spellcastingDetailByProfileId,
+  } = useSpellSlots()
+  const {
     removeSpellFromProfile,
     setProfileSpells,
     togglePrepared,
     selectRacialSpell,
     removeRacialSpell,
     setRacialCastingAbility,
-  } = useSpellSlots()
+  } = useSpellProfileMutations(spellProfiles, spellcastingDetailByProfileId)
 
   const [racialChoiceModalOpen, setRacialChoiceModalOpen] = useState(false)
   const [bonusSpellModalOpen, setBonusSpellModalOpen] = useState(false)
@@ -267,7 +271,10 @@ export function SpellsPage() {
 
     const update = () => {
       const btn = document.querySelector<HTMLElement>(SPELLS_PREPARE_SELECTOR)
-      if (!btn) { setHintPosition(null); return }
+      if (!btn) {
+        setHintPosition(null)
+        return
+      }
       const rect = btn.getBoundingClientRect()
       const centerX = rect.left + rect.width / 2
       const maxLeft = Math.max(16, window.innerWidth - SPELLS_HINT_WIDTH - 16)
@@ -518,7 +525,8 @@ export function SpellsPage() {
               <X className="h-3.5 w-3.5" />
             </button>
             <p className="leading-snug text-accent-foreground/95 pr-8">
-              Toggle this circle to mark a spell prepared — as a prepared caster you can freely swap prepared spells between rests.
+              Toggle this circle to mark a spell prepared — as a prepared caster you can freely swap
+              prepared spells between rests.
             </p>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
   Scales,
   Scroll,
   Shield,
+  ShieldWarning,
   Sword,
   Target,
   Trash,
@@ -23,9 +24,11 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useEquipmentProvenanceMutations } from '@/hooks/character/useEquipmentProvenanceMutations'
+import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -39,7 +42,6 @@ import { NoCharCard } from '../_shared'
 const EQUIPMENT_EQUIP_HINT_ID = 'equipment-equip-toggle'
 const EQUIP_AC_TOGGLE_SELECTOR = '[data-equip-ac-toggle="true"]'
 const EQUIP_HINT_WIDTH = 300
-
 interface HintPosition {
   top: number
   left: number
@@ -115,30 +117,19 @@ function getDamageSummary(item: Equipment): string | null {
   return `${item.dmg1}${damageType}`
 }
 
-const PROPERTY_LABELS: Record<string, string> = {
-  A: 'Ammunition',
-  AF: 'Ammunition (Firearms)',
-  BF: 'Burst Fire',
-  F: 'Finesse',
-  H: 'Heavy',
-  L: 'Light',
-  LD: 'Loading',
-  R: 'Reach',
-  RLD: 'Reload',
-  S: 'Special',
-  T: 'Thrown',
-  '2H': 'Two-Handed',
-  V: 'Versatile',
-}
+const EMPTY_RECORD: Record<string, string> = {}
 
-function resolvePropertyLabel(tag: string): string {
+function resolvePropertyLabel(tag: string, propertyByAbbr: Record<string, string>): string {
   const key = tag.trim().split('|')[0].toUpperCase()
-  return PROPERTY_LABELS[key] ?? tag
+  return propertyByAbbr[key] ?? tag
 }
 
-function getPropertySummary(item: Equipment): string | null {
+function getPropertySummary(
+  item: Equipment,
+  propertyByAbbr: Record<string, string>,
+): string | null {
   if (!item.properties || item.properties.length === 0) return null
-  return item.properties.map(resolvePropertyLabel).join(', ')
+  return item.properties.map((p) => resolvePropertyLabel(p, propertyByAbbr)).join(', ')
 }
 
 export function EquipmentPage() {
@@ -201,26 +192,69 @@ export function EquipmentPage() {
   const [itemSearch, setItemSearch] = useState('')
   const [itemTypeFilter, setItemTypeFilter] = useState<ItemCategory>('All')
   const character = useCharacterStore((s) => s.activeCharacter)
-  const gameData = useGameDataStore((s) => s.gameData)
-  const { applyManualEquipmentGrant, removeEquipmentProvenance, getSourcesRowsBySection } =
-    useProvenance()
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup)
+  const itemPropertyByAbbr =
+    useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr) ?? EMPTY_RECORD
+  const originSystem = character?.originSystem ?? '2024'
+  const preferNewerPrintings = character?.variantRules?.preferNewerPrintings ?? false
+
+  const ignoreEquipRestrictions = character?.variantRules?.ignoreEquipRestrictions ?? false
+  const toggleIgnoreRestrictions = () => {
+    if (!character) return
+    updateCharacter(character.id, {
+      variantRules: {
+        ...character.variantRules,
+        ignoreEquipRestrictions: !ignoreEquipRestrictions,
+      },
+    })
+  }
+  const { applyManualEquipmentGrant, removeEquipmentProvenance } = useEquipmentProvenanceMutations()
+  const { getSourcesRowsBySection } = useProvenanceLedger()
   const { calculatedAC, overrideAC } = useArmorClass()
   const equipmentItems = useMemo(() => {
-    const merged = new Map<string, Item5e>()
-    for (const item of (gameData?.items ?? []) as Item5e[]) {
-      const key = `${item.name}|${item.source ?? ''}`
-      merged.set(key, item)
+    if (!itemLookup) return []
+    // When preferNewerPrintings is off, show all versions unfiltered.
+    if (!preferNewerPrintings) return Array.from(itemLookup.values())
+    // Deduplicate reprinted items based on edition:
+    // - 2024 characters see the newer reprint (e.g. Drum|XPHB, Bag of Holding|XDMG)
+    // - 2014 characters see the original printing (e.g. Drum|PHB, Bag of Holding|DMG)
+    const suppressed = new Set<string>()
+    for (const item of itemLookup.values()) {
+      const reprints = Array.isArray((item as { reprintedAs?: unknown }).reprintedAs)
+        ? ((item as { reprintedAs?: unknown }).reprintedAs as string[])
+        : []
+      for (const reprint of reprints) {
+        if (typeof reprint !== 'string') continue
+        const [n, s] = reprint.split('|')
+        if (!n || !s) continue
+        const reprintKey = `${n.trim().toLowerCase()}|${s.trim().toLowerCase()}`
+        if (itemLookup.has(reprintKey)) {
+          if (originSystem === '2014') {
+            // Suppress the newer reprint, keep the original
+            suppressed.add(reprintKey)
+          } else {
+            // Suppress the older original, keep the newer reprint
+            suppressed.add(`${item.name.toLowerCase()}|${(item.source ?? 'phb').toLowerCase()}`)
+          }
+        }
+      }
     }
-    for (const item of (gameData?.itemsBase ?? []) as Item5e[]) {
-      const key = `${item.name}|${item.source ?? ''}`
-      if (!merged.has(key)) merged.set(key, item)
-    }
-    return Array.from(merged.values())
-  }, [gameData])
+    return Array.from(itemLookup.values()).filter(
+      (item) =>
+        !suppressed.has(`${item.name.toLowerCase()}|${(item.source ?? 'phb').toLowerCase()}`),
+    )
+  }, [itemLookup, originSystem, preferNewerPrintings])
 
   const encumbrancePct = carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0
   const encumbranceTone =
-    encumbrancePct >= 100 ? 'bg-destructive' : encumbrancePct >= 75 ? 'bg-warning' : 'bg-accent'
+    encumbrancePct >= 90
+      ? 'bg-destructive'
+      : encumbrancePct >= 60
+        ? 'bg-warning'
+        : encumbrancePct >= 30
+          ? 'bg-green-500'
+          : 'bg-blue-500'
 
   const filteredEquipment = useMemo(() => {
     const q = itemSearch.trim().toLowerCase()
@@ -281,8 +315,8 @@ export function EquipmentPage() {
               <X className="h-3.5 w-3.5" />
             </button>
             <p className="leading-snug text-accent-foreground/95 pr-8">
-              Toggle <strong>Equip</strong> on armor, shields, weapons, and worn magic items to mark
-              them active — armor and shields affect your Armor Class only when equipped.
+              Toggle <strong>Equip</strong> on armor, weapons, and worn magic items to mark them
+              active and applying their effect.
             </p>
           </div>
         </div>
@@ -312,7 +346,7 @@ export function EquipmentPage() {
               </div>
             </div>
             <div className="px-2 lg:px-4 pb-2 lg:pb-3">
-              <div className="bg-primary relative h-1.5 w-full overflow-hidden rounded-full border border-primary/20">
+              <div className="bg-muted relative h-1.5 w-full overflow-hidden rounded-full">
                 <div
                   className={cn('h-full transition-all rounded-full', encumbranceTone)}
                   style={{ width: `${encumbrancePct}%` }}
@@ -450,14 +484,40 @@ export function EquipmentPage() {
               <Badge variant="outline" className="text-xs h-5 px-1.5">
                 {equipment.length}
               </Badge>
-              <Button
-                onClick={() => setAddItemOpen(true)}
-                size="sm"
-                className="ml-auto h-7 bg-accent text-accent-foreground hover:bg-accent/90"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Add Item
-              </Button>
+              <div className="ml-auto flex items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={toggleIgnoreRestrictions}
+                      className={cn(
+                        'flex items-center justify-center h-7 w-7 rounded-md transition-colors',
+                        ignoreEquipRestrictions
+                          ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )}
+                    >
+                      <ShieldWarning
+                        className="h-4 w-4"
+                        weight={ignoreEquipRestrictions ? 'fill' : 'regular'}
+                      />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {ignoreEquipRestrictions
+                      ? 'Restrictions ignored — click to enforce armor slots & proficiency'
+                      : 'Enforce armor slots & proficiency (click to ignore)'}
+                  </TooltipContent>
+                </Tooltip>
+                <Button
+                  onClick={() => setAddItemOpen(true)}
+                  size="sm"
+                  className="h-7 bg-accent text-accent-foreground hover:bg-accent/90"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Add Item
+                </Button>
+              </div>
             </div>
 
             {/* Search + filter row */}
@@ -515,7 +575,7 @@ export function EquipmentPage() {
                                 ? Scroll
                                 : Package
                     const dmg = getDamageSummary(item)
-                    const props = getPropertySummary(item)
+                    const props = getPropertySummary(item, itemPropertyByAbbr)
                     return (
                       <div
                         key={item.id}
@@ -606,10 +666,7 @@ export function EquipmentPage() {
 
                           {/* Equip */}
                           {(isEquippable(item) || item.equipped) && (
-                            <div
-                              className="flex items-center gap-1"
-                              data-equip-ac-toggle="true"
-                            >
+                            <div className="flex items-center gap-1" data-equip-ac-toggle="true">
                               <Switch
                                 checked={item.equipped}
                                 onCheckedChange={() => toggleEquip(item.id)}

@@ -1,22 +1,26 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
 import {
   ensureOriginSystemInvariants,
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
+import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
 import {
   applyRaceGrants,
   diffProficiencyGrants,
   reconcileRaceChange,
   reconcileSubraceChange,
+  resolveRaceAsiChoicesInLedger,
   resolveRaceGrantFilterOptions,
 } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
-import type { Item5e, Race5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
-import { extractFixedGrantNames } from './provenanceHelpers'
+import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
+import type { Race5e } from '@/types/5etools'
+
+const EMPTY_ITEMS: never[] = []
 
 function getEffectiveRaceLanguageBlocks(race: {
   lineage?: string | boolean
@@ -37,21 +41,18 @@ function dedupeValues(values: string[] | undefined): string[] | undefined {
   return deduped.length > 0 ? deduped : undefined
 }
 
-interface UseRaceProvenanceParams {
-  character: Character | null
-  ledger: ProvenanceLedger
-  items: Item5e[]
-  itemsBase: Item5e[]
-  updateCharacter: (id: string, updates: Partial<Character>) => void
-}
+export function useRaceProvenanceMutations() {
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const gameData = useGameDataStore((s) => s.gameData)
+  const items = gameData?.items ?? EMPTY_ITEMS
+  const itemsBase = gameData?.itemsBase ?? EMPTY_ITEMS
 
-export function useRaceProvenance({
-  character,
-  ledger,
-  items,
-  itemsBase,
-  updateCharacter,
-}: UseRaceProvenanceParams) {
+  const ledger = useMemo<ProvenanceLedger>(
+    () => character?.provenance ?? emptyProvenance(),
+    [character],
+  )
+
   const resolveRaceChoiceOptions = useCallback(
     (domain: 'armor' | 'weapons', fromFilter: string) =>
       resolveRaceGrantFilterOptions(domain, fromFilter, {
@@ -159,21 +160,15 @@ export function useRaceProvenance({
       }).filter((name) => !name.toLowerCase().startsWith('choose '))
       const raceLanguages = extractProficiencyBlockNames(
         getEffectiveRaceLanguageBlocks(normalizedRace),
-        {
-          includeAnyStandard: false,
-        },
+        { includeAnyStandard: false },
       ).filter((name) => !name.toLowerCase().startsWith('choose '))
       const subraceSkills = extractProficiencyBlockNames(
         normalizedSubrace?.skillProficiencies ?? [],
-        {
-          includeAnyStandard: false,
-        },
+        { includeAnyStandard: false },
       ).filter((name) => !name.toLowerCase().startsWith('choose '))
       const subraceLanguages = extractProficiencyBlockNames(
         normalizedSubrace?.languageProficiencies ?? [],
-        {
-          includeAnyStandard: false,
-        },
+        { includeAnyStandard: false },
       ).filter((name) => !name.toLowerCase().startsWith('choose '))
       const languagesToApply =
         character.originSystem === '2024' ? [] : [...raceLanguages, ...subraceLanguages]
@@ -210,7 +205,6 @@ export function useRaceProvenance({
         }
       }
 
-      // Apply darkvision from race/subrace
       const darkvisionRange = normalizedSubrace?.darkvision ?? normalizedRace.darkvision
       const nextVisions = (character.visions ?? []).filter((v) => v.type !== 'darkvision')
       if (typeof darkvisionRange === 'number' && darkvisionRange > 0) {
@@ -335,15 +329,11 @@ export function useRaceProvenance({
 
       const subraceSkills = extractProficiencyBlockNames(
         normalizedSubrace?.skillProficiencies ?? [],
-        {
-          includeAnyStandard: false,
-        },
+        { includeAnyStandard: false },
       ).filter((name) => !name.toLowerCase().startsWith('choose '))
       const subraceLanguages = extractProficiencyBlockNames(
         normalizedSubrace?.languageProficiencies ?? [],
-        {
-          includeAnyStandard: false,
-        },
+        { includeAnyStandard: false },
       ).filter((name) => !name.toLowerCase().startsWith('choose '))
       const subraceLanguagesToApply = character.originSystem === '2024' ? [] : subraceLanguages
       const subraceTools = extractFixedGrantNames(normalizedSubrace?.toolProficiencies)
@@ -369,7 +359,6 @@ export function useRaceProvenance({
         }
       }
 
-      // Apply darkvision from subrace (overrides race darkvision)
       const subraceVisions = (character.visions ?? []).filter((v) => v.type !== 'darkvision')
       const darkvisionRange = normalizedSubrace?.darkvision ?? race.darkvision
       if (typeof darkvisionRange === 'number' && darkvisionRange > 0) {
@@ -402,5 +391,14 @@ export function useRaceProvenance({
     [character, ledger, resolveRaceChoiceOptions, updateCharacter],
   )
 
-  return { applyRaceSelection, applySubraceChange }
+  const applyRaceAsiChoices = useCallback(
+    (choices: string[][]) => {
+      if (!character) return
+      const normalized = resolveRaceAsiChoicesInLedger(ledger, choices)
+      updateCharacter(character.id, { provenance: normalized, raceAsiChoices: choices })
+    },
+    [character, ledger, updateCharacter],
+  )
+
+  return { applyRaceSelection, applySubraceChange, applyRaceAsiChoices }
 }

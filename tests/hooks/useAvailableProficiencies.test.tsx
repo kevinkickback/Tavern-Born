@@ -12,6 +12,7 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+import type { GameData } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 function resetStores() {
@@ -19,9 +20,7 @@ function resetStores() {
   useGameDataStore.setState({ gameData: null })
 }
 
-function makeMinimalGameData(
-  overrides: Partial<Parameters<(typeof useGameDataStore)['setState']>[0]['gameData']> = {},
-) {
+function makeMinimalGameData(overrides: Partial<GameData> = {}): GameData {
   return {
     classes: [],
     races: [],
@@ -30,6 +29,8 @@ function makeMinimalGameData(
     feats: [],
     items: [],
     itemsBase: [],
+    itemProperties: [],
+    itemTypes: [],
     classFeatures: [],
     actions: [],
     conditions: [],
@@ -43,6 +44,7 @@ function makeMinimalGameData(
     trapHazards: [],
     rewards: [],
     cultsBoons: [],
+    organizations: [],
     sources: [],
     ...overrides,
   }
