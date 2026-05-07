@@ -8,6 +8,9 @@ const projectRoot = process.env.PROJECT_ROOT || import.meta.dirname
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Required for Electron: loadFile() uses file:// — relative paths must be used
+  // so all asset references resolve from the dist/ directory, not the filesystem root.
+  base: './',
   plugins: [
     react(),
     tailwindcss(),
@@ -20,6 +23,11 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    // Electron/Chromium supports module preloading natively; disable the inline
+    // polyfill so it doesn't trigger the script-src CSP in production.
+    modulePreload: { polyfill: false },
+  },
   resolve: {
     alias: {
       '@': resolve(projectRoot, 'src'),

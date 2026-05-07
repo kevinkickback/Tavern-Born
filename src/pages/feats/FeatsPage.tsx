@@ -616,7 +616,7 @@ export function FeatsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto w-full space-y-4">
+      <div className="px-6 pb-6 max-w-7xl mx-auto w-full space-y-4">
         {showSetupHint && hintPosition ? (
           <div
             className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
