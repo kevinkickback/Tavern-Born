@@ -532,7 +532,7 @@ export function SpellsPage() {
         </div>
       ) : null}
 
-      <div className="max-w-7xl mx-auto w-full space-y-6">
+      <div className="px-6 pb-6 max-w-7xl mx-auto w-full space-y-6">
         <div className="space-y-6">
           <SpellProfileManager
             spellProfiles={spellProfiles}

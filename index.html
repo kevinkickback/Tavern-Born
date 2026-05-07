@@ -7,15 +7,7 @@
   <title>Tavern Born - D&amp;D Character Creator</title>
   <!-- Apply stored theme before first paint to avoid flash of wrong colours.
        Runs synchronously during HTML parse, before CSS has rendered or JS modules execute. -->
-  <script>
-    var _a; var _c; var _r = document.documentElement;
-    try {
-      _a = localStorage.getItem('tb.theme.appearance');
-      _c = localStorage.getItem('tb.theme.accent');
-      if (_a === 'dark' || !_a) { _r.classList.add('dark'); _r.setAttribute('data-appearance', 'dark'); }
-      if (_c) { _r.setAttribute('data-accent', _c); }
-    } catch { /* localStorage unavailable */ }
-  </script>
+  <script src="./theme-init.js"></script>
   <style>
     :root {
       --tb-loader-bg: #cdced6;
