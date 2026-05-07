@@ -78,7 +78,7 @@
 ### Option 1: Download Release (Recommended)
 
 1. Download the latest `.exe` from the [Releases](../../releases) page
-2. Run the portable executable — no installation required
+2. Run the executable
 
 ### Option 2: Build from Source
 
@@ -91,11 +91,11 @@ npm install
 npm run dev
 ```
 
-## 📊 Data Files
+## 📊 Game Data
 
-> **⚠️ Important:** Tavern-Born does **not** include D&D game data. You must provide your own compatible JSON files.
+> **⚠️ Important:** Tavern-Born does **NOT** include Dungeons & Dragons game data.
 
-This application uses the [5etools](https://wiki.tercept.net/en/home) data format. On first launch, you will be prompted to select a folder/URL containing compatible JSON files.
+You must provide your own compatible data JSON files. The [5etools Wiki](https://wiki.tercept.net/en/home) (see: Download the Source code) might be helpful.
 
 
 ## 📄 License

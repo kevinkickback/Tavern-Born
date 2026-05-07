@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useClasses, useRaces } from '@/hooks/data/useGameData'
+import { useBackgrounds, useClasses, useRaces } from '@/hooks/data/useGameData'
 import {
   CHARACTER_SHEET_TEMPLATES,
   type CharacterSheetTemplateId,
@@ -30,6 +30,7 @@ export function CharacterSheetPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const classes = useClasses()
   const races = useRaces()
+  const backgrounds = useBackgrounds()
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -89,6 +90,7 @@ export function CharacterSheetPage() {
         selectedTemplateId,
         classes,
         races,
+        backgrounds,
       )
 
       if (handle.canceled) return
@@ -107,7 +109,7 @@ export function CharacterSheetPage() {
         setIsGenerating(false)
       }
     }
-  }, [character, classes, races, selectedTemplate, selectedTemplateId])
+  }, [character, classes, races, backgrounds, selectedTemplate, selectedTemplateId])
 
   const handleDownload = () => {
     if (!pdfBytes) {
