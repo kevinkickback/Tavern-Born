@@ -50,6 +50,7 @@ async function createWindow(): Promise<void> {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      devTools: isDev,
       webviewTag: false,
       allowRunningInsecureContent: false,
       navigateOnDragDrop: false,

@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Slider } from '@/components/ui/slider'
 import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
-import { DEFAULT_PORTRAIT_TRANSFORM, PLACEHOLDER_PORTRAITS } from '@/lib/portraitConstants'
+import {
+  DEFAULT_PORTRAIT_TRANSFORM,
+  PLACEHOLDER_PORTRAITS,
+  resolvePortraitSrc,
+} from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import type { PortraitTransform } from '@/types/character'
 
@@ -200,7 +204,7 @@ export function PortraitPicker({
                   onClick={() => handlePlaceholder(src)}
                   className={cn(
                     'relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105',
-                    portrait === src
+                    portrait && resolvePortraitSrc(portrait) === src
                       ? 'border-accent ring-2 ring-accent/50'
                       : 'border-border hover:border-accent/50',
                   )}

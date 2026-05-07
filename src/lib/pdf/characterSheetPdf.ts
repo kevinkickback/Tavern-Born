@@ -18,6 +18,7 @@ import {
   type FieldWithInternals,
   getPageRefTag,
 } from '@/lib/pdf/pdfFieldInternals'
+import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { renderEntry } from '@/lib/renderer'
 import type { Background5e, Class5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -764,7 +765,8 @@ async function embedPortraitImage(
       portrait.startsWith('../')
     ) {
       // Relative / absolute asset paths from the app bundle — safe to fetch.
-      const response = await fetch(portrait)
+      // Normalize legacy absolute paths to BASE_URL-relative for file:// compat.
+      const response = await fetch(resolvePortraitSrc(portrait))
       if (!response.ok) throw new Error('Failed to fetch portrait')
       const contentType = response.headers.get('content-type') ?? ''
       isPng = contentType.includes('png') || portrait.toLowerCase().endsWith('.png')
