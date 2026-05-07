@@ -477,6 +477,193 @@ describe('characterSheetPdf', () => {
     expect(map.textFields.Background_Enemies).toBe('The Iron Circle')
   })
 
+  test('2014 Racial Traits falls back to game data when provenance has no race features', () => {
+    const character = makeCharacterFixture({ race: 'Dwarf', raceSource: 'PHB' })
+    const racesData = [
+      {
+        name: 'Dwarf',
+        source: 'PHB',
+        entries: [
+          {
+            type: 'entries',
+            name: 'Dwarven Resilience',
+            entries: ['You have advantage on saving throws against poison.'],
+          },
+          {
+            type: 'entries',
+            name: 'Stonecunning',
+            entries: [
+              'Whenever you make a History check related to stonework, add double proficiency bonus.',
+            ],
+          },
+        ],
+      } as never,
+    ]
+
+    const map = buildCharacterSheetFieldMap(character, '2014', undefined, racesData)
+
+    expect(map.textFields['Racial Traits']).toContain('Dwarven Resilience')
+    expect(map.textFields['Racial Traits']).toContain('Stonecunning')
+    expect(map.textFields['Racial Traits']).not.toBe('Dwarf')
+  })
+
+  test('2014 Racial Traits prefers provenance features over game data', () => {
+    const character = makeCharacterFixture({
+      race: 'Dwarf',
+      raceSource: 'PHB',
+      features: [
+        {
+          id: 'f1',
+          name: 'Dwarven Resilience',
+          source: 'PHB',
+          description: 'Advantage on poison saves.',
+        },
+      ],
+      provenance: {
+        proficiencies: {
+          armor: {},
+          weapons: {},
+          tools: {},
+          languages: {},
+          skills: {},
+          savingThrows: {},
+        },
+        abilityBonuses: [],
+        features: {
+          'Dwarven Resilience': [
+            { sourceType: 'race', sourceName: 'Dwarf', grantType: 'fixed', label: 'Dwarf' },
+          ],
+        },
+        feats: {},
+        spells: {},
+        equipment: {},
+        choices: [],
+      },
+    })
+    const racesData = [
+      {
+        name: 'Dwarf',
+        source: 'PHB',
+        entries: [
+          {
+            type: 'entries',
+            name: 'Dwarven Resilience',
+            entries: ['From game data — should not appear.'],
+          },
+        ],
+      } as never,
+    ]
+
+    const map = buildCharacterSheetFieldMap(character, '2014', undefined, racesData)
+
+    expect(map.textFields['Racial Traits']).toContain('Dwarven Resilience')
+    expect(map.textFields['Racial Traits']).not.toContain('From game data')
+  })
+
+  test('2014 Background Feature and Description from background game data (2014 style)', () => {
+    const character = makeCharacterFixture({
+      background: 'Soldier',
+      backgroundSource: 'PHB',
+    })
+    const backgroundsData = [
+      {
+        name: 'Soldier',
+        source: 'PHB',
+        entries: [
+          'You were a soldier.',
+          {
+            type: 'entries',
+            name: 'Feature: Military Rank',
+            entries: ['You have a military rank from your career as a soldier.'],
+          },
+        ],
+      } as never,
+    ]
+
+    const map = buildCharacterSheetFieldMap(
+      character,
+      '2014',
+      undefined,
+      undefined,
+      backgroundsData,
+    )
+
+    expect(map.textFields['Background Feature']).toBe('Military Rank')
+    expect(map.textFields['Background Feature Description']).toContain('military rank')
+  })
+
+  test('2014 Background Feature provenance takes priority over game data', () => {
+    const character = makeCharacterFixture({
+      background: 'Soldier',
+      backgroundSource: 'PHB',
+      features: [
+        {
+          id: 'f-rank',
+          name: 'Military Rank',
+          source: 'PHB',
+          description: 'Provenance description.',
+        },
+      ],
+      provenance: {
+        proficiencies: {
+          armor: {},
+          weapons: {},
+          tools: {},
+          languages: {},
+          skills: {},
+          savingThrows: {},
+        },
+        abilityBonuses: [],
+        features: {
+          'Military Rank': [
+            {
+              sourceType: 'background',
+              sourceName: 'Soldier',
+              grantType: 'fixed',
+              label: 'Soldier',
+            },
+          ],
+        },
+        feats: {},
+        spells: {},
+        equipment: {},
+        choices: [],
+      },
+    })
+    const backgroundsData = [
+      {
+        name: 'Soldier',
+        source: 'PHB',
+        entries: [
+          {
+            type: 'entries',
+            name: 'Feature: Military Rank',
+            entries: ['Game data description — should not appear.'],
+          },
+        ],
+      } as never,
+    ]
+
+    const map = buildCharacterSheetFieldMap(
+      character,
+      '2014',
+      undefined,
+      undefined,
+      backgroundsData,
+    )
+
+    expect(map.textFields['Background Feature']).toBe('Military Rank')
+    expect(map.textFields['Background Feature Description']).toBe('Provenance description.')
+    expect(map.textFields['Background Feature Description']).not.toContain('Game data description')
+  })
+
+  test('2014 Background Feature empty when no background data and no provenance', () => {
+    const character = makeCharacterFixture({ background: 'Unknown' })
+    const map = buildCharacterSheetFieldMap(character, '2014', undefined, undefined, [])
+    expect(map.textFields['Background Feature']).toBe('')
+    expect(map.textFields['Background Feature Description']).toBe('')
+  })
+
   test('2014 Vision falls back to race darkvision when character has no visions', () => {
     const character = makeCharacterFixture({ race: 'Half-Elf', raceSource: 'PHB' })
     const racesData = [{ name: 'Half-Elf', source: 'PHB', darkvision: 60 } as never]

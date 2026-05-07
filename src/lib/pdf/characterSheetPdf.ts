@@ -2,7 +2,7 @@ import { PDFDocument, PDFName, PDFNumber } from '@cantoo/pdf-lib'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
-import { mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
+import { getRaceTraits, mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
@@ -18,7 +18,8 @@ import {
   type FieldWithInternals,
   getPageRefTag,
 } from '@/lib/pdf/pdfFieldInternals'
-import type { Class5e, Race5e } from '@/types/5etools'
+import { renderEntry } from '@/lib/renderer'
+import type { Background5e, Class5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
 export type CharacterSheetTemplateId = '2014' | '2024'
@@ -161,22 +162,6 @@ function getRaceSummary(character: Character): string {
   return `${character.subrace} ${character.race}`.trim()
 }
 
-function getBackgroundFeatureName(character: Character): string {
-  const provenanceFeatures = character.provenance?.features ?? {}
-  return (
-    Object.entries(provenanceFeatures).find(([, tags]) =>
-      tags.some((tag) => tag.sourceType === 'background'),
-    )?.[0] ?? ''
-  )
-}
-
-function buildBackgroundFeatureDescription(character: Character): string {
-  const name = getBackgroundFeatureName(character)
-  if (!name) return ''
-  const feature = character.features.find((f) => f.name === name)
-  return feature?.description?.trim() ?? ''
-}
-
 const SIZE_CODE_TO_FULL: Record<string, string> = {
   G: 'Gargantuan',
   H: 'Huge',
@@ -219,7 +204,48 @@ function buildVisionSummary(character: Character, mergedRace?: Race5e): string {
   return ''
 }
 
-function buildRacialTraitsSummary(character: Character): string {
+function renderEntriesToText(entries: unknown[]): string {
+  return entries
+    .map((e) => {
+      const html = renderEntry(e)
+      return html
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\s+/g, ' ')
+        .trim()
+    })
+    .filter(Boolean)
+    .join(' ')
+}
+
+function extractBackgroundFeatureBlock(
+  entries: unknown[],
+): { name: string; entries: unknown[] } | null {
+  const featureBlock = entries.find((entry) => {
+    if (!entry || typeof entry !== 'object') return false
+    const record = entry as { name?: unknown; entries?: unknown[] }
+    return (
+      typeof record.name === 'string' &&
+      /^feature\b/i.test(record.name) &&
+      Array.isArray(record.entries)
+    )
+  })
+  if (!featureBlock || typeof featureBlock !== 'object') return null
+  const featureName = (featureBlock as { name?: unknown }).name
+  const featureEntries = (featureBlock as { entries?: unknown[] }).entries
+  return {
+    name:
+      typeof featureName === 'string' && featureName.trim().length > 0
+        ? featureName.replace(/^feature\s*:?\s*/i, '').trim()
+        : 'Unnamed Feature',
+    entries: Array.isArray(featureEntries) ? featureEntries : [],
+  }
+}
+
+function buildRacialTraitsSummary(character: Character, mergedRace?: Race5e): string {
   const provenanceFeatures = character.provenance?.features ?? {}
   const racialFeatureNames = new Set(
     Object.entries(provenanceFeatures)
@@ -229,13 +255,57 @@ function buildRacialTraitsSummary(character: Character): string {
       .map(([name]) => name),
   )
   const racialFeatures = character.features.filter((f) => racialFeatureNames.has(f.name))
-  if (racialFeatures.length === 0) return character.race || ''
-  return racialFeatures
-    .map((f) => {
-      const body = f.description?.trim()
-      return body ? `${f.name}: ${body}` : f.name
-    })
-    .join('\n\n')
+  if (racialFeatures.length > 0) {
+    return racialFeatures
+      .map((f) => {
+        const body = f.description?.trim()
+        return body ? `${f.name}: ${body}` : f.name
+      })
+      .join('\n\n')
+  }
+  // Fall back to parsing traits from game data for 2014 characters
+  if (mergedRace) {
+    const traits = getRaceTraits(mergedRace)
+    if (traits.length > 0) {
+      return traits
+        .map((t) => {
+          const text = renderEntriesToText(t.entries)
+          return text ? `${t.name}: ${text}` : t.name
+        })
+        .join('\n\n')
+    }
+  }
+  return character.race || ''
+}
+
+function getBackgroundFeatureForPdf(
+  character: Character,
+  backgroundsData: Background5e[],
+): { name: string; description: string } {
+  // Prefer provenance-tracked features (set for 2024-style or manually-tracked features)
+  const provenanceFeatures = character.provenance?.features ?? {}
+  const provenanceName =
+    Object.entries(provenanceFeatures).find(([, tags]) =>
+      tags.some((tag) => tag.sourceType === 'background'),
+    )?.[0] ?? ''
+  if (provenanceName) {
+    const feature = character.features.find((f) => f.name === provenanceName)
+    return {
+      name: provenanceName,
+      description: feature?.description?.trim() ?? '',
+    }
+  }
+  // Fall back to parsing the feature from background game data (2014 characters)
+  const bg = backgroundsData.find((b) =>
+    matchesGameDataEntry(character.background, character.backgroundSource, b),
+  )
+  if (!bg?.entries) return { name: '', description: '' }
+  const featureBlock = extractBackgroundFeatureBlock(bg.entries as unknown[])
+  if (!featureBlock) return { name: '', description: '' }
+  return {
+    name: featureBlock.name,
+    description: renderEntriesToText(featureBlock.entries),
+  }
 }
 
 function buildClassFeaturesSummary2014(character: Character): string {
@@ -403,6 +473,7 @@ function buildCharacterSheetFieldMap2014(
   character: Character,
   classesData?: Class5e[],
   racesData?: Race5e[],
+  backgroundsData?: Background5e[],
 ): FieldMap {
   const values = deriveCalculatedValues(character)
   const effectiveArmorClass = computeEffectiveCharacterArmorClass(character)
@@ -472,9 +543,14 @@ function buildCharacterSheetFieldMap2014(
     Background_History:
       character.details.backstory || character.details.lifeEvents || character.details.origin || '',
     'Class Features': buildClassFeaturesSummary2014(character),
-    'Racial Traits': buildRacialTraitsSummary(character),
-    'Background Feature': getBackgroundFeatureName(character),
-    'Background Feature Description': buildBackgroundFeatureDescription(character),
+    'Racial Traits': buildRacialTraitsSummary(character, mergedRace),
+    ...(() => {
+      const bgFeature = getBackgroundFeatureForPdf(character, backgroundsData ?? [])
+      return {
+        'Background Feature': bgFeature.name,
+        'Background Feature Description': bgFeature.description,
+      }
+    })(),
     'Background_Organisation.Left':
       character.details.organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
         ? customOrganizationSummary || character.details.alliesAndOrganizations || ''
@@ -561,9 +637,10 @@ export function buildCharacterSheetFieldMap(
   templateId: CharacterSheetTemplateId = DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
   classesData?: Class5e[],
   racesData?: Race5e[],
+  backgroundsData?: Background5e[],
 ): FieldMap {
   if (templateId === '2014') {
-    return buildCharacterSheetFieldMap2014(character, classesData, racesData)
+    return buildCharacterSheetFieldMap2014(character, classesData, racesData, backgroundsData)
   }
   return buildCharacterSheetFieldMap2024(character, classesData)
 }
@@ -580,6 +657,7 @@ export async function generateFilledCharacterSheetPdf(
   templateId: CharacterSheetTemplateId = DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
   classesData?: Class5e[],
   racesData?: Race5e[],
+  backgroundsData?: Background5e[],
 ): Promise<Uint8Array> {
   const input = templateBytes instanceof Uint8Array ? templateBytes : new Uint8Array(templateBytes)
   const pdfDoc = await PDFDocument.load(input, { ignoreEncryption: false })
@@ -589,6 +667,7 @@ export async function generateFilledCharacterSheetPdf(
     templateId,
     classesData,
     racesData,
+    backgroundsData,
   )
 
   for (const [fieldName, value] of Object.entries(textFields)) {
