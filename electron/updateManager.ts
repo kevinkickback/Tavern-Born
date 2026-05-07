@@ -131,6 +131,12 @@ export function initAutoUpdater() {
   })
 
   autoUpdater.on('error', (err: Error) => {
+    // In unpacked (--dir) builds, app-update.yml is absent — treat as not-available.
+    if (err.message.includes('app-update.yml')) {
+      setStatus({ status: 'not-available' })
+      sendToRenderer('update-not-available')
+      return
+    }
     setStatus({ status: 'error', error: err.message })
     sendToRenderer('update-error', { message: err.message })
   })

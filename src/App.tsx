@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
@@ -119,7 +119,7 @@ function App() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <BrowserRouter>
+      <HashRouter>
         <AppLayout>
           <Routes>
             <Route path="/" element={<HomePage />} />
@@ -164,7 +164,7 @@ function App() {
           version={updateData?.version ?? ''}
           onOpenChange={setProgressOpen}
         />
-      </BrowserRouter>
+      </HashRouter>
     </TooltipProvider>
   )
 }
