@@ -1,5 +1,6 @@
 import { Clock, Crown, Sword, Trash, Upload, User } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import type { PortraitTransform } from '@/types/character'
 
@@ -36,7 +37,7 @@ export function PortraitCardPreview({
       <div className="group relative aspect-[3/2] w-full overflow-hidden rounded-lg border border-border bg-background">
         {image ? (
           <img
-            src={image}
+            src={resolvePortraitSrc(image)}
             alt="Character portrait card preview"
             className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full max-w-none select-none object-contain"
             style={{

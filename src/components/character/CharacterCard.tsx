@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
+import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import type { Character } from '@/types/character'
 
@@ -79,7 +80,7 @@ export const CharacterCard = memo(function CharacterCard({
     >
       {character.portrait ? (
         <img
-          src={character.portrait}
+          src={resolvePortraitSrc(character.portrait)}
           alt={`${character.name || 'Character'} portrait`}
           className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full max-w-none select-none object-contain"
           style={{
