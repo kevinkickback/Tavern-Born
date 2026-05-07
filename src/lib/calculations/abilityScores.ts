@@ -180,12 +180,13 @@ export function hasFlexibleRaceOriginAsi(race?: FlexibleRaceAbilitySource | null
 
 export type RaceLineageAsiBlockIndex = 0 | 1
 
-type RaceAbilityEntry = Partial<Record<string, number>> & {
+type RaceAbilityEntry = {
   choose?: {
     count?: number
     amount?: number
     from?: string[]
   }
+  [ability: string]: number | { count?: number; amount?: number; from?: string[] } | undefined
 }
 
 /** Normalize an ability abbreviation (e.g. "str", "STR") to a full lowercase name. */

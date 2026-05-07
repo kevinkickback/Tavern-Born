@@ -13,6 +13,12 @@ export type GrantType = 'fixed' | 'choice' | 'placeholder'
 
 export type SpellAttributionMode = 'exact' | 'inferred-lowest-eligible'
 
+/** SourceTag extended with spell-specific attribution metadata. Only used in ledger.spells. */
+export type SpellSourceTag = SourceTag & {
+  spellGrantedAtLevel?: number
+  spellAttributionMode?: SpellAttributionMode
+}
+
 export type ChoiceStatus = 'pending' | 'resolved' | 'partially-resolved'
 
 export type ChoiceDomain =
@@ -35,17 +41,6 @@ export interface SourceTag {
   /** Optional source code (e.g. 'PHB', 'XPHB') for cross-referencing. */
   sourceRef?: string
   grantType: GrantType
-  /**
-   * Optional class level at which a spell is attributed as gained.
-   * Present for spell grants tracked with class-level context.
-   */
-  spellGrantedAtLevel?: number
-  /**
-   * How the spell level attribution was determined.
-   * - exact: chosen from the class page level picker
-   * - inferred-lowest-eligible: inferred from spells page choices
-   */
-  spellAttributionMode?: SpellAttributionMode
   /**
    * User-visible label. Always 'User Choice' for manual toggling or user-driven
    * picks; otherwise the entity name (race, class, background, etc.).
@@ -90,7 +85,7 @@ export interface ProvenanceLedger {
   abilityBonuses: AbilityBonusProvenanceRecord[]
   features: Record<string, SourceTag[]>
   feats: Record<string, SourceTag[]>
-  spells: Record<string, SourceTag[]>
+  spells: Record<string, SpellSourceTag[]>
   equipment: Record<string, SourceTag[]>
   choices: ChoiceRecord[]
 }

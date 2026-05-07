@@ -33,9 +33,10 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
   }, [data.allowedSources, data.originSystem])
 
   const filteredRaces = useMemo(() => {
+    const allowedUpper = new Set(allowedSources.map((s) => s.toUpperCase()))
     const sourceFiltered =
       allowedSources.length > 0
-        ? races.filter((race) => allowedSources.includes(race.source))
+        ? races.filter((race) => allowedUpper.has(race.source.toUpperCase()))
         : races
     const suppressedKeys =
       data.variantRules?.preferNewerPrintings && allowedSources.length > 0
@@ -67,7 +68,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
         if (!sr.name) return false
         if (allowedSources.length === 0) return true
         const src = (sr as { source?: string }).source ?? race?.source ?? ''
-        if (!allowedSources.includes(src)) return false
+        if (!allowedSources.some((s) => s.toUpperCase() === src.toUpperCase())) return false
         const suppressedKeys =
           data.variantRules?.preferNewerPrintings && allowedSources.length > 0
             ? buildSuppressedKeys(filteredRaces, new Set(allowedSources))

@@ -1,3 +1,4 @@
+import { validateArmorTypeCodes } from '@/lib/calculations/armorClass'
 import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 import { buildGameDataLookups } from './lookups'
@@ -13,10 +14,13 @@ import {
   parseCultsBoons,
   parseDeities,
   parseFeats,
+  parseItemProperties,
   parseItems,
+  parseItemTypes,
   parseLanguages,
   parseMagicVariants,
   parseOptionalFeatures,
+  parseOrganizations,
   parseRaceFluffSummaries,
   parseRaces,
   parseRewards,
@@ -56,6 +60,7 @@ export class FiveEToolsDataLoader {
       { key: 'adventures', file: 'adventures.json' },
       { key: 'races', file: 'races.json' },
       { key: 'raceFluff', file: 'fluff-races.json' },
+      { key: 'backgroundFluff', file: 'fluff-backgrounds.json' },
       { key: 'classIndex', file: 'class/index.json' },
       { key: 'backgrounds', file: 'backgrounds.json' },
       { key: 'spellIndex', file: 'spells/index.json' },
@@ -84,10 +89,13 @@ export class FiveEToolsDataLoader {
       races: [],
       classes: [],
       backgrounds: [],
+      organizations: [],
       spells: [],
       feats: [],
       items: [],
       itemsBase: [],
+      itemProperties: [],
+      itemTypes: [],
       classFeatures: [],
       actions: [],
       conditions: [],
@@ -152,6 +160,12 @@ export class FiveEToolsDataLoader {
                 ]),
               )
               break
+            case 'backgroundFluff':
+              gameData.organizations = parseOrganizations(data)
+              gameData.organizations.forEach((item) => {
+                this.addItemSource(item, sourcesSet)
+              })
+              break
             case 'backgrounds':
               gameData.backgrounds = parseBackgrounds(data) as GameData['backgrounds']
               gameData.backgrounds.forEach((item) => {
@@ -172,6 +186,8 @@ export class FiveEToolsDataLoader {
               break
             case 'itemsBase':
               gameData.itemsBase = parseItems(data) as GameData['itemsBase']
+              gameData.itemProperties = parseItemProperties(data)
+              gameData.itemTypes = parseItemTypes(data)
               gameData.itemsBase.forEach((item) => {
                 this.addItemSource(item, sourcesSet)
               })
@@ -288,6 +304,10 @@ export class FiveEToolsDataLoader {
 
     gameData.sources = buildSourcesList(Array.from(sourcesSet), booksData, adventuresData)
     gameData.lookups = buildGameDataLookups(gameData)
+
+    if (import.meta.env.DEV) {
+      validateArmorTypeCodes(gameData.lookups.itemTypeByAbbr)
+    }
 
     if (options?.onProgress) {
       options.onProgress(resources.length, resources.length, 'Complete')

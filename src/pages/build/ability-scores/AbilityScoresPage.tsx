@@ -19,22 +19,16 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAbilityScores } from '@/hooks/character/useAbilityScores'
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
+import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
+import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import {
   ABILITY_ABBREVIATIONS,
   type AbilityName,
-  buildBackgroundBonuses,
-  getBackgroundAbilityData,
-  getRaceAbilityData,
   hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
-import {
-  normalizeBackgroundForOriginSystem,
-  normalizeRaceSelectionForOriginSystem,
-} from '@/lib/calculations/originSystem'
 import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills'
-import { matchesGameDataEntry } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildAbilityScoresDetailsPanel } from '@/pages/build/ability-scores/components/DetailsPanel'
@@ -44,102 +38,38 @@ import {
   BuildAbilityScoresStandardArrayPanel,
 } from '@/pages/build/ability-scores/components/MethodPanels'
 import {
-  buildRacialBonuses,
   buildSkillDetailsMap,
   selectSkillDetails,
   updateRaceAsiChoices,
 } from '@/pages/build/ability-scores/model/data'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Race5e } from '@/types/5etools'
 
 const EMPTY_RACE_ASI_CHOICES: string[][] = []
 
 export function BuildAbilityScoresPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { races, backgrounds, skills } = useFilteredGameData()
+  const { skills } = useFilteredGameData()
   const { scores, setScore, setAllScores, pointBuyTotal, pointBuyRemaining } = useAbilityScores()
-  const { getSourcesRowsBySection, applyRaceSelection } = useProvenance()
+  const { getSourcesRowsBySection } = useProvenanceLedger()
+  const { applyRaceSelection, applyRaceAsiChoices } = useRaceProvenanceMutations()
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [selectedAbility, setSelectedAbility] = useState<AbilityName>('charisma')
 
   const method = character?.variantRules?.abilityScoreMethod ?? 'standard-array'
 
-  const selectedRace = races.find((r) =>
-    matchesGameDataEntry(character?.race, character?.raceSource, r),
-  ) as Race5e | undefined
-  const subraceData = selectedRace?.subraces?.find(
-    (sr: Race5e) =>
-      sr.name === character?.subrace && (sr.source ?? '') === (character?.subraceSource ?? ''),
-  ) as Race5e | undefined
-  const normalizedRaceSelection = normalizeRaceSelectionForOriginSystem(
+  const {
+    normalizedRaceSelection,
+    raceAsiData,
+    racialBonuses,
+    backgroundBonuses,
     selectedRace,
     subraceData,
-    character?.originSystem ?? '2014',
-  )
-  const raceAsiBlockIndex = (character?.raceAsiBlockIndex ?? 0) as 0 | 1
-  const raceAsiData = getRaceAbilityData(
-    normalizedRaceSelection.race,
-    normalizedRaceSelection.subrace,
     raceAsiBlockIndex,
-  )
+  } = useTotalAbilityScores(character)
+
   const raceAsiChoices: string[][] = character?.raceAsiChoices ?? EMPTY_RACE_ASI_CHOICES
   const isLineageRaceAsiFallback = hasFlexibleRaceOriginAsi(normalizedRaceSelection.race)
-  const hasDataDrivenRacialBonuses = raceAsiData.fixed.length > 0 || raceAsiData.choices.length > 0
-
-  const selectedBg = backgrounds.find((b) =>
-    matchesGameDataEntry(character?.background, character?.backgroundSource, b),
-  )
-  const normalizedBackground = normalizeBackgroundForOriginSystem(
-    selectedBg,
-    character?.originSystem ?? '2014',
-  )
-  const bgAsiData = getBackgroundAbilityData(
-    normalizedBackground as { ability?: unknown[] } | undefined,
-  )
-  const backgroundBonuses = useMemo(
-    () =>
-      buildBackgroundBonuses(
-        bgAsiData,
-        character?.backgroundAsiBlockIndex ?? 0,
-        character?.backgroundAsiChoices ?? [],
-      ),
-    [bgAsiData, character?.backgroundAsiBlockIndex, character?.backgroundAsiChoices],
-  )
-
-  const provenanceRacialBonuses = useMemo(() => {
-    const bonuses: Partial<Record<AbilityName, number>> = {}
-    const records = character?.provenance?.abilityBonuses ?? []
-    for (const record of records) {
-      const tag = record.sourceTag
-      const isRelevantSource =
-        (tag.sourceType === 'race' &&
-          tag.sourceName === character?.race &&
-          (tag.sourceRef ?? '') === (character?.raceSource ?? '')) ||
-        (tag.sourceType === 'subrace' &&
-          tag.sourceName === (character?.subrace ?? '') &&
-          (tag.sourceRef ?? '') === (character?.subraceSource ?? ''))
-
-      if (!isRelevantSource) continue
-      const ability = record.ability as AbilityName
-      bonuses[ability] = (bonuses[ability] ?? 0) + record.value
-    }
-    return bonuses
-  }, [
-    character?.provenance?.abilityBonuses,
-    character?.race,
-    character?.raceSource,
-    character?.subrace,
-    character?.subraceSource,
-  ])
-
-  const racialBonuses = useMemo(
-    () =>
-      hasDataDrivenRacialBonuses
-        ? buildRacialBonuses(raceAsiData, raceAsiChoices)
-        : provenanceRacialBonuses,
-    [hasDataDrivenRacialBonuses, provenanceRacialBonuses, raceAsiChoices, raceAsiData],
-  )
 
   const asiBonuses = useMemo(() => {
     const bonuses: Partial<Record<AbilityName, number>> = {}
@@ -150,7 +80,7 @@ export function BuildAbilityScoresPage() {
       }
     }
     return bonuses
-  }, [character?.asiChoices])
+  }, [character])
 
   const displayBonuses = useMemo(() => {
     const merged: Partial<Record<AbilityName, number>> = {}
@@ -410,9 +340,7 @@ export function BuildAbilityScoresPage() {
                                             slotIndex,
                                             v,
                                           )
-                                          updateCharacter(character.id, {
-                                            raceAsiChoices: next,
-                                          })
+                                          applyRaceAsiChoices(next)
                                         }}
                                       >
                                         <SelectTrigger className="h-7 w-24 px-2 text-xs">

@@ -15,6 +15,7 @@ import {
   Scroll,
   Sparkle,
   Star,
+  Sun,
   Sword,
   User,
   Users,
@@ -102,6 +103,10 @@ export function AppSidebar() {
   const [activeFooterAction, setActiveFooterAction] = useState<string | null>(null)
   const sidebarOpen = useAppPreferencesStore((state) => state.sidebarOpen)
   const setSidebarOpen = useAppPreferencesStore((state) => state.setSidebarOpen)
+  const themeAppearance = useAppPreferencesStore((state) => state.themeAppearance)
+  const setThemeAppearance = useAppPreferencesStore((state) => state.setThemeAppearance)
+
+  const nextTheme = themeAppearance === 'dark' ? 'light' : 'dark'
 
   const footerActions: FooterAction[] = [
     {
@@ -118,8 +123,9 @@ export function AppSidebar() {
     },
     {
       id: 'theme',
-      label: 'Theme',
-      icon: <Moon className="text-lg" />,
+      label: nextTheme === 'light' ? 'Light' : 'Dark',
+      icon: nextTheme === 'light' ? <Sun className="text-lg" /> : <Moon className="text-lg" />,
+      onClick: () => setThemeAppearance(nextTheme),
     },
   ]
 
@@ -150,13 +156,13 @@ export function AppSidebar() {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 my-4 ml-4 flex h-[calc(100vh-32px)] w-72 flex-col rounded-xl border border-border bg-card shadow-sm transition-transform duration-300',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-80',
+          'fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-border bg-card transition-transform duration-300',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-72',
           'xl:translate-x-0',
         )}
       >
         {/* Brand header */}
-        <div className="relative flex items-center justify-center py-6 px-8 overflow-hidden">
+        <div className="relative flex items-center justify-center h-[4.5rem] px-8 overflow-hidden">
           <Link
             to="/"
             className="relative flex items-center font-display text-xl font-bold text-primary whitespace-nowrap"

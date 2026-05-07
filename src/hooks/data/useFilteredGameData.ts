@@ -4,6 +4,15 @@ import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
+import type {
+  Background5e,
+  Class5e,
+  ClassFeature,
+  Feat5e,
+  Item5e,
+  Race5e,
+  SourceBook,
+} from '@/types/5etools'
 
 interface FilterParams {
   allowedSources?: string[]
@@ -22,16 +31,17 @@ export function useFilteredGameDataParams(params: FilterParams) {
   const filteredData = useMemo(() => {
     if (!gameData) {
       return {
-        races: [],
-        classes: [],
-        backgrounds: [],
+        races: [] as Race5e[],
+        classes: [] as Class5e[],
+        backgrounds: [] as Background5e[],
+        organizations: [],
         spells: [],
-        feats: [],
-        items: [],
-        itemsBase: [],
-        classFeatures: [],
+        feats: [] as Feat5e[],
+        items: [] as Item5e[],
+        itemsBase: [] as Item5e[],
+        classFeatures: [] as ClassFeature[],
         optionalfeatures: [],
-        sources: [],
+        sources: [] as SourceBook[],
         actions: [],
         conditions: [],
         deities: [],
@@ -46,6 +56,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
     const races = gameData.races ?? []
     const classes = gameData.classes ?? []
     const backgrounds = gameData.backgrounds ?? []
+    const organizations = gameData.organizations ?? []
     const spells = gameData.spells ?? []
     const feats = gameData.feats ?? []
     const items = gameData.items ?? []
@@ -60,6 +71,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         races,
         classes,
         backgrounds,
+        organizations,
         spells,
         feats,
         items,
@@ -105,6 +117,8 @@ export function useFilteredGameDataParams(params: FilterParams) {
         sources: allowedSources,
         suppressedKeys,
       }),
+      // Organizations are reference/flavor content (like deities) — not gated by sourcebook.
+      organizations,
       spells: DataFilter.filterSpells(spells, {
         sources: allowedSources,
         suppressedKeys,
@@ -123,13 +137,13 @@ export function useFilteredGameDataParams(params: FilterParams) {
       }),
       classFeatures: classFeatures.filter(
         (cf) =>
-          allowedSources.includes(cf.source) &&
+          allowedSources.some((s) => s.toUpperCase() === cf.source.toUpperCase()) &&
           !(suppressedKeys?.has(`${cf.name}|${cf.source}`) ?? false),
       ),
       optionalfeatures: optionalfeatures.filter((of: unknown) => {
         const optionalFeature = of as { name?: string; source?: string }
         const source = optionalFeature.source ?? ''
-        if (!allowedSources.includes(source)) {
+        if (!allowedSources.some((s) => s.toUpperCase() === source.toUpperCase())) {
           return false
         }
         return !(suppressedKeys?.has(`${optionalFeature.name}|${source}`) ?? false)

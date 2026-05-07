@@ -1,4 +1,9 @@
-import { ArrowCounterClockwise, ArrowsClockwise, Newspaper } from '@phosphor-icons/react'
+import {
+  ArrowCounterClockwise,
+  ArrowsClockwise,
+  CheckCircle,
+  Newspaper,
+} from '@phosphor-icons/react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -75,6 +80,87 @@ export function GeneralPanel() {
 
   return (
     <div className="space-y-6">
+      {/* Updates */}
+      <Card className="w-full">
+        <CardHeader className="border-b border-border pb-4">
+          <div className="flex items-center gap-2">
+            <ArrowsClockwise className="h-4 w-4 text-primary" weight="duotone" />
+            <CardTitle className="text-base">App Updates</CardTitle>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Manage how and when the app checks for new releases.
+          </p>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Enable Auto Update</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Download and install updates automatically on launch.
+              </p>
+            </div>
+            <Switch
+              checked={autoUpdate}
+              onCheckedChange={(v) => {
+                setAutoUpdate(v)
+                void window.electronAPI?.setAutoCheck?.(v)
+                toast.success(v ? 'Auto-update enabled' : 'Auto-update disabled')
+              }}
+            />
+          </div>
+
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Manual Update</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Check for a new release right now.
+              </p>
+              {statusMessage && statusMessage !== 'You are on the latest version.' && (
+                <p className="text-xs text-muted-foreground mt-0.5">{statusMessage}</p>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCheckNow}
+              disabled={checking}
+              className={`shrink-0 ${
+                statusMessage === 'You are on the latest version.'
+                  ? 'border-success text-success hover:text-success hover:bg-success/10'
+                  : ''
+              }`}
+            >
+              {statusMessage === 'You are on the latest version.' ? (
+                <CheckCircle weight="bold" />
+              ) : (
+                <ArrowsClockwise weight="bold" className={checking ? 'animate-spin' : ''} />
+              )}
+              {statusMessage === 'You are on the latest version.' ? 'Up to Date' : 'Check Now'}
+            </Button>
+          </div>
+
+          {appVersion && (
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">What's New?</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Browse release notes for the current version.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleViewChangelog}
+                className="shrink-0"
+              >
+                <Newspaper weight="duotone" />
+                {`Changelog (v${appVersion})`}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Hints */}
       <Card className="w-full">
         <CardHeader className="border-b border-border pb-4">
@@ -99,52 +185,6 @@ export function GeneralPanel() {
               Reset
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Updates */}
-      <Card className="w-full">
-        <CardHeader className="border-b border-border pb-4">
-          <div className="flex items-center gap-2">
-            <ArrowsClockwise className="h-4 w-4 text-primary" weight="duotone" />
-            <CardTitle className="text-base">Updates</CardTitle>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Manage automatic update checks and view release notes.
-          </p>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium">Check for updates automatically</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Checks on startup and every 24 hours.
-              </p>
-            </div>
-            <Switch
-              checked={autoUpdate}
-              onCheckedChange={(v) => {
-                setAutoUpdate(v)
-                void window.electronAPI?.setAutoCheck?.(v)
-                toast.success(v ? 'Auto-update enabled' : 'Auto-update disabled')
-              }}
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleCheckNow} disabled={checking}>
-              <ArrowsClockwise weight="bold" className={checking ? 'animate-spin' : ''} />
-              Check Now
-            </Button>
-            {appVersion && (
-              <Button variant="ghost" size="sm" onClick={handleViewChangelog}>
-                <Newspaper weight="duotone" />
-                {`What's New (v${appVersion})`}
-              </Button>
-            )}
-          </div>
-
-          {statusMessage && <p className="text-xs text-muted-foreground">{statusMessage}</p>}
         </CardContent>
       </Card>
 

@@ -203,6 +203,11 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
         isValid: true,
       })
 
+      const { gameData: loadedGameData, error: loadError } = useGameDataStore.getState()
+      if (loadError || !loadedGameData) {
+        throw new Error(loadError || 'Game data failed to load')
+      }
+
       toast.success('Data source updated and loaded!', {
         description: 'Game data is now available',
       })

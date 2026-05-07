@@ -419,8 +419,19 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
                   <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
                   <span>
                     {preferNewerPrintingsEnabled
-                      ? 'Older versions are hidden where a 2024 reprint exists in your selected sources.'
-                      : 'Some content exists in both 2014 and 2024 versions. Enable "Prefer Newer Printings" to automatically prefer the most recent version.'}
+                      ? 'Older options are hidden when newer versions exist. Disable "Prefer Newer Printings" to see all options (will show duplicate entries).'
+                      : 'Some content exists in both Legacy (2014) and Revised (2024) editions. Enable "Prefer Newer Printings" to only see the most recent version.'}
+                  </span>
+                </div>
+              )}
+
+              {data.originSystem === '2014' && (
+                <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
+                  <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                  <span>
+                    {preferNewerPrintingsEnabled
+                      ? 'Older printings are hidden where a newer version exists in your selected sources. Disable "Prefer Newer Printings" to see all options.'
+                      : 'Some races and features appear in multiple printings across your selected sources (e.g., ERLW content updated in MPMM). Enable "Prefer Newer Printings" to automatically hide older versions.'}
                   </span>
                 </div>
               )}

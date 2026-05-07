@@ -38,6 +38,14 @@ describe('useEquipment hook', () => {
         wisdom: 10,
         charisma: 10,
       },
+      proficiencies: {
+        armor: ['light armor'],
+        weapons: [],
+        tools: [],
+        skills: [],
+        languages: [],
+        savingThrows: [],
+      },
       equipment: [
         {
           id: 'armor-1',
@@ -88,6 +96,14 @@ describe('useEquipment hook', () => {
         intelligence: 10,
         wisdom: 10,
         charisma: 10,
+      },
+      proficiencies: {
+        armor: ['heavy armor', 'shields'],
+        weapons: [],
+        tools: [],
+        skills: [],
+        languages: [],
+        savingThrows: [],
       },
       equipment: [
         {

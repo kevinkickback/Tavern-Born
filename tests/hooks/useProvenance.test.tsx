@@ -35,6 +35,8 @@ function setGameDataItems(
       feats: [],
       items: items as never,
       itemsBase: [],
+      itemProperties: [],
+      itemTypes: [],
       classFeatures: [],
       actions: [],
       conditions: [],
@@ -48,6 +50,7 @@ function setGameDataItems(
       trapHazards: [],
       rewards: [],
       cultsBoons: [],
+      organizations: [],
       sources: [],
     },
   })

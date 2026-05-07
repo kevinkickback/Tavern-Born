@@ -13,21 +13,11 @@ import { getCollapseState, setCollapseState } from '@/lib/storage/collapseState'
 
 interface UseProvenanceRowsParams {
   ledger: ProvenanceLedger
-  raceAsiChoices?: string[][]
-  backgroundAsiChoices?: string[]
 }
 
-export function useProvenanceRows({
-  ledger,
-  raceAsiChoices,
-  backgroundAsiChoices,
-}: UseProvenanceRowsParams) {
+export function useProvenanceRows({ ledger }: UseProvenanceRowsParams) {
   const proficiencyRows = useMemo(() => getAllProficiencyRows(ledger), [ledger])
-  const abilityBonusRows = useMemo(
-    () =>
-      getAbilityBonusRows(ledger, raceAsiChoices ?? undefined, backgroundAsiChoices ?? undefined),
-    [ledger, raceAsiChoices, backgroundAsiChoices],
-  )
+  const abilityBonusRows = useMemo(() => getAbilityBonusRows(ledger), [ledger])
   const featRows = useMemo(() => getFeatRows(ledger), [ledger])
   const featureRows = useMemo(() => getFeatureRows(ledger), [ledger])
   const spellRows = useMemo(() => getSpellRows(ledger), [ledger])

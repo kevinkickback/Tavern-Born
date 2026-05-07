@@ -14,6 +14,10 @@ export type { OptFeatureProg, OptionalFeatureLike }
 /**
  * Canonical map of 5etools optional feature type abbreviations to their full display names.
  * Mirrors `Parser.OPT_FEATURE_TYPE_TO_FULL` from the 5etools source.
+ *
+ * FALLBACK: 5etools does not expose this map as a structured JSON file; it is
+ * defined only in the 5etools JS source. Remove and replace with a parsed
+ * source if one becomes available.
  */
 export const OPT_FEATURE_TYPE_TO_FULL: Readonly<Record<string, string>> = {
   AI: 'Artificer Infusion',
@@ -48,6 +52,10 @@ export function optFeatureTypeToFull(type: string): string {
 /**
  * Canonical map of 5etools feat category abbreviations to their full display names.
  * Mirrors `Parser.FEAT_CATEGORY_TO_FULL` from the 5etools source.
+ *
+ * FALLBACK: 5etools does not expose this map as a structured JSON file; it is
+ * defined only in the 5etools JS source. Remove and replace with a parsed
+ * source if one becomes available.
  */
 export const FEAT_CATEGORY_TO_FULL: Readonly<Record<string, string>> = {
   D: 'Dragonmark',

@@ -16,13 +16,19 @@ import { Card } from '@/components/ui/card'
 import { useClassResources } from '@/hooks/character/useClassResources'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useRitualCasting } from '@/hooks/character/useRitualCasting'
+import { useConditionNames } from '@/hooks/data/useGameData'
+import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const CONDITIONS_5E = [
+/**
+ * FALLBACK: used only while conditionsdiseases.json has not yet loaded.
+ * The live list comes from useConditionNames() → GameDataLookups.conditionNames.
+ */
+const CONDITION_NAMES_FALLBACK: readonly string[] = [
   'Blinded',
   'Charmed',
   'Deafened',
@@ -39,6 +45,11 @@ const CONDITIONS_5E = [
   'Unconscious',
 ] as const
 
+/**
+ * FALLBACK: 5etools embeds exhaustion level text in conditionsdiseases.json
+ * entries as prose, not as a structured field. These labels are retained here
+ * until a structured parser is available.
+ */
 const EXHAUSTION_LABELS = [
   'Normal',
   'Disadvantage on ability checks',
@@ -53,7 +64,7 @@ const EXHAUSTION_LABELS = [
 
 function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex items-center gap-2">
+    <div className="bg-gradient-to-r from-accent/20 via-accent/10 to-transparent border-b border-border px-4 py-3 flex items-center gap-2">
       <span className="h-4 w-4 text-primary [&>svg]:h-full [&>svg]:w-full">{icon}</span>
       <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
         {title}
@@ -99,6 +110,9 @@ export function ConditionsPage() {
   const { hitDie } = useHitPoints()
   const ritualCasting = useRitualCasting()
   const { resources, updateCurrent, resetResource, resetAll } = useClassResources()
+  const parsedConditionNames = useConditionNames()
+  const conditionNames =
+    parsedConditionNames.length > 0 ? parsedConditionNames : CONDITION_NAMES_FALLBACK
 
   const update = useCallback(
     <K extends keyof NonNullable<typeof character>>(
@@ -119,7 +133,7 @@ export function ConditionsPage() {
   const conditions = character.conditions ?? []
   const exhaustion = character.exhaustion ?? 0
   const hitDiceUsed = character.hitDiceUsed ?? 0
-  const totalLevel = character.level ?? 1
+  const totalLevel = getTotalCharacterLevel(character) ?? 1
   const hitDiceRemaining = Math.max(0, totalLevel - hitDiceUsed)
   const toggleCondition = (name: string) => {
     const next = conditions.includes(name)
@@ -303,7 +317,7 @@ export function ConditionsPage() {
             <SectionHeader icon={<HeartBreak weight="duotone" />} title="Active Conditions" />
             <div className="p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                {CONDITIONS_5E.map((name) => {
+                {conditionNames.map((name) => {
                   const active = conditions.includes(name)
                   return (
                     <button
@@ -341,7 +355,7 @@ export function ConditionsPage() {
 
           {/* ── Class Resources ────────────────────────────────────── */}
           <Card className="w-full overflow-hidden">
-            <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex items-center gap-2">
+            <div className="bg-gradient-to-r from-accent/20 via-accent/10 to-transparent border-b border-border px-4 py-3 flex items-center gap-2">
               <Flame className="h-4 w-4 text-primary" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Class Resources

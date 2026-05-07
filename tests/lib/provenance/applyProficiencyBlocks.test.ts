@@ -24,6 +24,12 @@ describe('iterateProficiencyBlocks', () => {
     )
   })
 
+  test('yields any-standard for { any: N } in skill blocks', () => {
+    const blocks = toProficiencyBlocks([{ any: 2 }])
+    const entries = [...iterateProficiencyBlocks(blocks, 'skills')]
+    expect(entries).toEqual([{ kind: 'any-standard', count: 2 }])
+  })
+
   test('yields choose entries with fromFilter for armor blocks', () => {
     const blocks = toProficiencyBlocks([
       {

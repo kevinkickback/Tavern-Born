@@ -201,12 +201,38 @@ export interface OptionalFeatureLike {
   entries?: unknown[]
 }
 
+export interface ItemProperty5e {
+  abbreviation: string
+  source: string
+  entries?: Array<{ type?: string; name?: string; entries?: unknown[] }>
+  [key: string]: unknown
+}
+
+export interface ItemType5e {
+  abbreviation: string
+  name: string
+  source: string
+  entries?: unknown[]
+  [key: string]: unknown
+}
+
 export interface GameDataLookups {
   classesByKey: Record<string, Class5e>
   classFeaturesByKey: Record<string, ClassFeature>
   spellsByKey: Record<string, Spell5e>
   optionalFeaturesByKey: Record<string, unknown>
   subclassesByKey: Record<string, Subclass5e>
+  itemLookup: Map<string, Item5e>
+  /** Parsed from data/items-base.json → .itemProperty[]. Maps abbreviation → display name. */
+  itemPropertyByAbbr: Record<string, string>
+  /** Parsed from data/items-base.json → .itemType[]. Maps abbreviation → display name. */
+  itemTypeByAbbr: Record<string, string>
+  /** Parsed from data/skills.json → .skill[]. Maps lowercase skill name → full ability name. */
+  skillToAbilityMap: Record<string, string>
+  /** Ordered list of lowercase skill names parsed from data/skills.json → .skill[]. */
+  skillList: readonly string[]
+  /** Sorted condition names from data/conditionsdiseases.json → .condition[] (excludes diseases). */
+  conditionNames: readonly string[]
 }
 
 export interface Background5e {
@@ -301,13 +327,12 @@ export interface Item5e {
 }
 
 export type AbilityBonus = {
-  [ability: string]: number
-} & {
   choose?: {
     from: string[]
     count: number
     amount?: number
   }
+  [ability: string]: number | { from: string[]; count: number; amount?: number } | undefined
 }
 
 export type LanguageProficiency = {
@@ -394,6 +419,13 @@ export interface Language5e {
   [key: string]: unknown
 }
 
+export interface Organization5e {
+  name: string
+  source: string
+  description: string
+  imagePath?: string
+}
+
 export interface DataSourceConfig {
   type: 'local' | 'remote'
   path: string
@@ -405,10 +437,15 @@ export interface GameData {
   races: Race5e[]
   classes: Class5e[]
   backgrounds: Background5e[]
+  organizations: Organization5e[]
   spells: Spell5e[]
   feats: Feat5e[]
   items: Item5e[]
   itemsBase: Item5e[]
+  /** Parsed from data/items-base.json → .itemProperty[]. */
+  itemProperties: ItemProperty5e[]
+  /** Parsed from data/items-base.json → .itemType[]. */
+  itemTypes: ItemType5e[]
   classFeatures: ClassFeature[]
   actions: unknown[]
   conditions: unknown[]

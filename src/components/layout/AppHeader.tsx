@@ -16,7 +16,7 @@ export function AppHeader() {
   const sidebarOpen = useAppPreferencesStore((state) => state.sidebarOpen)
   const [levelUpOpen, setLevelUpOpen] = useState(false)
   const { effectiveAC } = useArmorClass()
-  const { hitPoints, calculatedMaxHP } = useHitPoints()
+  const { effectiveMaxHP } = useHitPoints()
 
   const classSummary = useMemo(() => {
     if (!activeCharacter) {
@@ -32,13 +32,6 @@ export function AppHeader() {
 
     return `${activeCharacter.race} - ${classes}`
   }, [activeCharacter])
-
-  const displayedMaxHP = useMemo(() => {
-    if (!activeCharacter) {
-      return 0
-    }
-    return hitPoints.max > 0 ? hitPoints.max : calculatedMaxHP
-  }, [activeCharacter, hitPoints.max, calculatedMaxHP])
 
   const handleSave = () => {
     if (!activeCharacter) {
@@ -56,7 +49,7 @@ export function AppHeader() {
 
   return (
     <>
-      <nav className="mb-6 grid grid-cols-3 items-center rounded-xl bg-card/80 backdrop-blur-sm px-4 py-3 shadow-md border border-border">
+      <nav className="grid grid-cols-3 items-center min-h-[4.5rem] bg-card/80 backdrop-blur-sm px-4 py-3 border-b border-border">
         {/* Hamburger — mobile only (left slot) */}
         <div className="flex items-center">
           <button
@@ -73,23 +66,17 @@ export function AppHeader() {
         <div className="flex items-center justify-center gap-3">
           {activeCharacter ? (
             <>
-<div className="flex items-center gap-2">
-                <div
-                  className="relative h-10 w-10 text-accent"
-                  data-testid="header-ac-badge"
-                >
+              <div className="flex items-center gap-2">
+                <div className="relative h-10 w-10 text-accent" data-testid="header-ac-badge">
                   <Shield weight="fill" className="h-10 w-10" />
                   <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-card-foreground leading-none">
                     {effectiveAC}
                   </span>
                 </div>
-                <div
-                  className="relative h-10 w-10 text-red-500"
-                  data-testid="header-hp-badge"
-                >
+                <div className="relative h-10 w-10 text-red-500" data-testid="header-hp-badge">
                   <Heart weight="fill" className="h-10 w-10" />
                   <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-card-foreground leading-none">
-                    {displayedMaxHP}
+                    {effectiveMaxHP}
                   </span>
                 </div>
               </div>

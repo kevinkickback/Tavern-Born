@@ -9,6 +9,8 @@ const MINIMAL_GAME_DATA: GameData = {
   feats: [],
   items: [],
   itemsBase: [],
+  itemProperties: [],
+  itemTypes: [],
   classFeatures: [],
   actions: [],
   conditions: [],
@@ -22,6 +24,7 @@ const MINIMAL_GAME_DATA: GameData = {
   trapHazards: [],
   rewards: [],
   cultsBoons: [],
+  organizations: [],
   sources: [],
 }
 

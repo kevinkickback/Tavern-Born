@@ -25,7 +25,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useProvenance } from '@/hooks/character/useProvenance'
+import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
+import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
+import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
@@ -42,7 +44,7 @@ import {
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
-import { matchesGameDataEntry } from '@/lib/characterUtils'
+import { getTotalCharacterLevel, matchesGameDataEntry } from '@/lib/characterUtils'
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
@@ -50,20 +52,12 @@ import { useCharacterStore } from '@/store/characterStore'
 import type { Feat5e, Race5e, Spell5e } from '@/types/5etools'
 
 export function BuildRacePage() {
-  const character = useCharacterStore((s) => {
-    if (s.activeCharacter) return s.activeCharacter
-    if (!s.activeCharacterId) return null
-    return s.characters.find((c) => c.id === s.activeCharacterId) ?? null
-  })
+  const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { races, feats, spells } = useFilteredGameData()
-  const {
-    applyRaceSelection,
-    applySubraceChange,
-    resolveFeatChoiceSelection,
-    commitFeatWithOptions,
-    ledger,
-  } = useProvenance()
+  const { applyRaceSelection, applySubraceChange } = useRaceProvenanceMutations()
+  const { resolveFeatChoiceSelection, commitFeatWithOptions } = useFeatProvenanceMutations()
+  const { ledger } = useProvenanceLedger()
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [raceSearch, setRaceSearch] = useState('')
   const [featModalOpen, setFeatModalOpen] = useState(false)
@@ -186,7 +180,7 @@ export function BuildRacePage() {
     : { cantrips: [], spellsKnown: [], preparedSpells: [] }
 
   const characterSnapshot: PrereqCharacterSnapshot = {
-    level: character?.level ?? 0,
+    level: getTotalCharacterLevel(character),
     class: character?.class ?? '',
     race: character?.race ?? '',
     abilityScores: character?.abilityScores ?? {

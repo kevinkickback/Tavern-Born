@@ -51,7 +51,7 @@ describe('Multiclass Updates', () => {
 
       const updated = useCharacterStore.getState().activeCharacter
       expect(updated?.level).toBe(4)
-      expect(updated?.classProgression[0].levels).toBe(4)
+      expect(updated?.classProgression?.[0].levels).toBe(4)
     })
 
     test('leveling changes spell slots for spellcasters', () => {
@@ -183,8 +183,8 @@ describe('Multiclass Updates', () => {
 
       const updated = useCharacterStore.getState().activeCharacter
       expect(updated?.classProgression).toHaveLength(2)
-      expect(updated?.classProgression[1].name).toBe('Cleric')
-      expect(updated?.classProgression[1].levels).toBe(1)
+      expect(updated?.classProgression?.[1].name).toBe('Cleric')
+      expect(updated?.classProgression?.[1].levels).toBe(1)
     })
 
     test('multiclassing adds spell profile for new spellcasting class', () => {
@@ -241,7 +241,7 @@ describe('Multiclass Updates', () => {
           spellProfiles: [
             {
               id: 'class:Wizard|PHB',
-              type: 'class',
+              type: 'class' as const,
               label: 'Wizard (Lv 1)',
               className: 'Wizard',
               classSource: 'PHB',
@@ -252,7 +252,7 @@ describe('Multiclass Updates', () => {
             },
             {
               id: 'special:unrestricted',
-              type: 'special',
+              type: 'special' as const,
               label: 'Spell Selection',
               alwaysPrepared: true,
               cantrips: [],
@@ -329,7 +329,7 @@ describe('Multiclass Updates', () => {
 
       const updated = useCharacterStore.getState().activeCharacter
       expect(updated?.classProgression).toHaveLength(1)
-      expect(updated?.classProgression[0].name).toBe('Wizard')
+      expect(updated?.classProgression?.[0].name).toBe('Wizard')
     })
 
     test('removing a spellcasting class removes its spell profile', () => {
@@ -511,15 +511,15 @@ describe('Multiclass Updates', () => {
         hitPoints: {
           current: 15,
           max: 15, // Wizard: 6 + (2 * 4 con mod) = 14, let's say 15
-          temp: 0,
+          temporary: 0,
         },
         abilityScores: {
-          str: 10,
-          dex: 14,
-          con: 14, // +2 modifier
-          int: 15,
-          wis: 13,
-          cha: 8,
+          strength: 10,
+          dexterity: 14,
+          constitution: 14, // +2 modifier
+          intelligence: 15,
+          wisdom: 13,
+          charisma: 8,
         },
       })
 
@@ -549,7 +549,7 @@ describe('Multiclass Updates', () => {
         hitPoints: {
           current: 24,
           max: 24, // Recalculated with Barbarian level
-          temp: 0,
+          temporary: 0,
         },
       }
 

@@ -5,8 +5,8 @@
  * return a single result object for callers to apply.
  */
 
-import { addGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
-import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
+import { addSpellGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
+import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
 import type { Character } from '@/types/character'
 
 export interface SpellCommandResult {
@@ -62,13 +62,13 @@ export function addSpellToCharacter(
   const sourceName = options?.source ?? (sourceType === 'manual' ? 'User Choice' : 'Unknown')
 
   const baseTag = makeSourceTag(sourceType, sourceName, 'choice', options?.source)
-  const sourceTag: SourceTag = {
+  const sourceTag: SpellSourceTag = {
     ...baseTag,
     ...(options?.grantedAtLevel ? { spellGrantedAtLevel: options.grantedAtLevel } : {}),
     ...(options?.attributionMode ? { spellAttributionMode: options.attributionMode } : {}),
   }
 
-  const updatedLedger = addGrant(ledger, 'spells', spellName, sourceTag)
+  const updatedLedger = addSpellGrant(ledger, spellName, sourceTag)
 
   return {
     profileUpdate: {
@@ -237,6 +237,7 @@ export function toggleSpellPrepared(
   ledger: ProvenanceLedger,
   profileId: string,
   spellName: string,
+  isTruePreparedCaster = false,
 ): SpellCommandResult {
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (profile.id !== profileId) return profile
@@ -250,6 +251,7 @@ export function toggleSpellPrepared(
     }
 
     const isKnown =
+      isTruePreparedCaster ||
       profile.cantrips.includes(spellName) ||
       profile.spellsKnown.includes(spellName) ||
       profile.alwaysPrepared
@@ -304,7 +306,7 @@ export function selectRacialSpell(
 
   const sourceTag = makeSourceTag('race', choiceId.split(':')[0] ?? 'Race', 'choice')
 
-  const updatedLedger = addGrant(ledger, 'spells', spellName, sourceTag)
+  const updatedLedger = addSpellGrant(ledger, spellName, sourceTag)
 
   return {
     profileUpdate: {

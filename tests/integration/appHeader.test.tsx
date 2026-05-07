@@ -28,13 +28,12 @@ vi.mock('@/hooks/character/useHitPoints', () => ({
   useHitPoints: () => ({
     hitPoints: { max: 42, current: 37, temporary: 0 },
     calculatedMaxHP: 40,
+    effectiveMaxHP: 42,
     hitDie: 10,
     conMod: 2,
     levelsHPBreakdown: [0, 12, 8, 8, 7, 7],
     setCurrentHP: vi.fn(),
     setTempHP: vi.fn(),
-    setMaxHP: vi.fn(),
-    syncMaxHP: vi.fn(),
     heal: vi.fn(),
     damage: vi.fn(),
   }),
@@ -57,7 +56,6 @@ describe('app header character summary', () => {
       characters: [character],
       activeCharacterId: character.id,
       activeCharacter: character,
-      hasUnsavedChangesFlag: false,
     })
   })
 

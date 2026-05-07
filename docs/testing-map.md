@@ -19,6 +19,7 @@ Key scripts in package.json:
 - Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
+- Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
 - Renderer output in src/lib/renderer.ts
 - Provenance ledger/reconciliation modules
 - Provenance section row routing helper in src/lib/provenance/sectionRows.ts
@@ -56,13 +57,16 @@ Key scripts in package.json:
 - Ingestion empty-object payload resilience in tests/lib/5etools/dataLoader.test.ts (absent entity keys treated as empty collections)
 - Ingestion partial spell index resilience in tests/lib/5etools/dataLoader.test.ts (valid spell files load when some indexed files are malformed)
 - Ingestion null entity array resilience in tests/lib/5etools/dataLoader.test.ts (class files with null entity arrays handled gracefully)
+- Feat options parser coverage in tests/lib/5etools/featOptions.test.ts (parseFeatSpellFilter, deriveFeatOptionSteps all step kinds, hasFeatOptions, deriveSpellStepsForClass)
+- SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
+- Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 
 ## High-Priority Gaps
 
 1. **Corrupted character recovery**: Import of invalid/schema-mismatched characters beyond the valid+invalid payload cases already covered.
 2. **SpellProfileManager decomposition**: Large component (~783 lines); defer until next feature touch.
 3. **FeatOptionsModal**: Multi-step feat-options wizard (~682 lines) has no dedicated test coverage. Add unit tests for step generation and selection persistence when next touched.
-4. **Auto-update flow**: electron/updateManager.ts has no unit tests. Key logic to cover: portable detection, event forwarding, cancel-in-flight guard.
+4. **Auto-update lifecycle**: `electron/updateManager.ts` has partial unit tests (semver comparator in `tests/lib/updateManager.test.ts`) but key lifecycle logic remains untested: portable detection, event forwarding, cancel-in-flight guard.
 
 ## Test Coverage by Layer
 

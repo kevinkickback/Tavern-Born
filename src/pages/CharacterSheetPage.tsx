@@ -1,5 +1,5 @@
-import { ArrowsClockwise, DownloadSimple, Eye, FilePdf, Sparkle } from '@phosphor-icons/react'
-import { useEffect, useMemo, useState } from 'react'
+import { ArrowsClockwise, DownloadSimple, Eye, FilePdf } from '@phosphor-icons/react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useBackgrounds, useClasses, useRaces } from '@/hooks/data/useGameData'
 import {
   CHARACTER_SHEET_TEMPLATES,
   type CharacterSheetTemplateId,
@@ -27,17 +28,29 @@ function getSafeFileName(name: string): string {
 
 export function CharacterSheetPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
+  const classes = useClasses()
+  const races = useRaces()
+  const backgrounds = useBackgrounds()
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [refreshNonce, setRefreshNonce] = useState(0)
   const [selectedTemplateId, setSelectedTemplateId] = useState<CharacterSheetTemplateId>(
     () => character?.originSystem ?? DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
   )
+  const cancelRef = useRef<{ canceled: boolean } | null>(null)
+
+  // Cancel any in-flight generation when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (cancelRef.current) cancelRef.current.canceled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (character?.originSystem) {
       setSelectedTemplateId(character.originSystem)
+      setPdfBytes(null)
+      setErrorMessage(null)
     }
   }, [character?.originSystem])
 
@@ -52,56 +65,51 @@ export function CharacterSheetPage() {
     [characterName],
   )
 
-  useEffect(() => {
-    let canceled = false
+  const handleGenerate = useCallback(async () => {
+    if (!character) return
 
-    const buildPreview = async () => {
-      if (!character) {
+    if (cancelRef.current) {
+      cancelRef.current.canceled = true
+    }
+    const handle = { canceled: false }
+    cancelRef.current = handle
+
+    try {
+      setIsGenerating(true)
+      setErrorMessage(null)
+
+      const response = await fetch(selectedTemplate.assetPath)
+      if (!response.ok) {
+        throw new Error(`Unable to load PDF template (${response.status} ${response.statusText})`)
+      }
+
+      const templateBytes = new Uint8Array(await response.arrayBuffer())
+      const filledBytes = await generateFilledCharacterSheetPdf(
+        character,
+        templateBytes,
+        selectedTemplateId,
+        classes,
+        races,
+        backgrounds,
+      )
+
+      if (handle.canceled) return
+
+      setPdfBytes(filledBytes)
+    } catch (error) {
+      console.error('[PDF] generation failed', { error, characterId: character?.id })
+      const message =
+        error instanceof Error ? error.message : 'Failed to generate character sheet PDF.'
+      if (!handle.canceled) {
+        setErrorMessage(message)
         setPdfBytes(null)
-        setErrorMessage(null)
-        return
       }
-
-      try {
-        setIsGenerating(true)
-        setErrorMessage(null)
-
-        const templateUrl = `${selectedTemplate.assetPath}?r=${refreshNonce}`
-        const response = await fetch(templateUrl)
-        if (!response.ok) {
-          throw new Error(`Unable to load PDF template (${response.status} ${response.statusText})`)
-        }
-
-        const templateBytes = new Uint8Array(await response.arrayBuffer())
-        const filledBytes = await generateFilledCharacterSheetPdf(
-          character,
-          templateBytes,
-          selectedTemplateId,
-        )
-
-        if (canceled) return
-
-        setPdfBytes(filledBytes)
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Failed to generate character sheet PDF.'
-        if (!canceled) {
-          setErrorMessage(message)
-          setPdfBytes(null)
-        }
-      } finally {
-        if (!canceled) {
-          setIsGenerating(false)
-        }
+    } finally {
+      if (!handle.canceled) {
+        setIsGenerating(false)
       }
     }
-
-    buildPreview()
-
-    return () => {
-      canceled = true
-    }
-  }, [character, refreshNonce, selectedTemplate, selectedTemplateId])
+  }, [character, classes, races, backgrounds, selectedTemplate, selectedTemplateId])
 
   const handleDownload = () => {
     if (!pdfBytes) {
@@ -152,9 +160,11 @@ export function CharacterSheetPage() {
               <span className="text-sm font-medium text-muted-foreground shrink-0">Template:</span>
               <Select
                 value={selectedTemplateId}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
                   setSelectedTemplateId(value as CharacterSheetTemplateId)
-                }
+                  setPdfBytes(null)
+                  setErrorMessage(null)
+                }}
               >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue />
@@ -172,12 +182,15 @@ export function CharacterSheetPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setRefreshNonce((n) => n + 1)}
+                  onClick={handleGenerate}
                   disabled={isGenerating}
                   className="gap-2"
                 >
-                  <ArrowsClockwise className="h-4 w-4" weight="bold" />
-                  Regenerate
+                  <ArrowsClockwise
+                    className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`}
+                    weight="bold"
+                  />
+                  {pdfBytes || errorMessage ? 'Regenerate' : 'Generate'}
                 </Button>
                 <Button
                   type="button"
@@ -205,7 +218,7 @@ export function CharacterSheetPage() {
             {isGenerating && (
               <div className="flex h-[70vh] items-center justify-center bg-muted/30">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Sparkle className="h-4 w-4 animate-pulse" weight="duotone" />
+                  <ArrowsClockwise className="h-4 w-4 animate-spin" weight="bold" />
                   Generating PDF preview…
                 </div>
               </div>
@@ -215,15 +228,18 @@ export function CharacterSheetPage() {
               <div className="flex h-[70vh] items-center justify-center px-6">
                 <div className="max-w-md space-y-3 text-center">
                   <p className="text-sm text-destructive">{errorMessage}</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRefreshNonce((n) => n + 1)}
-                  >
+                  <Button type="button" variant="outline" size="sm" onClick={handleGenerate}>
                     Try Again
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {!isGenerating && !errorMessage && !pdfBytes && (
+              <div className="flex h-[70vh] items-center justify-center bg-muted/30">
+                <p className="text-sm text-muted-foreground">
+                  Click Generate to preview your character sheet.
+                </p>
               </div>
             )}
 

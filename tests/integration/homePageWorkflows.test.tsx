@@ -97,7 +97,7 @@ describe('home page integration workflows', () => {
     render(<HomePage />)
 
     expect(screen.getByText('No Characters Yet')).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: 'Create First Character' }))
+    await user.click(screen.getByRole('button', { name: 'New Character' }))
     expect(screen.getByText('Character Wizard Open')).toBeTruthy()
   })
 
@@ -114,8 +114,8 @@ describe('home page integration workflows', () => {
 
     render(<HomePage />)
 
-    await user.click(screen.getByTitle('Toolbar'))
-    await user.click(screen.getByRole('button', { name: /multi select/i }))
+    await user.click(screen.getByTitle('Show filters'))
+    await user.click(screen.getByRole('button', { name: 'Multi-Select' }))
 
     await user.click(screen.getByRole('button', { name: 'select-c1' }))
     expect(screen.getByText('1 selected')).toBeTruthy()
@@ -156,7 +156,11 @@ describe('home page integration workflows', () => {
     useCharacterStore.setState({
       characters: [c1, c2],
       activeCharacterId: c1.id,
-      activeCharacter: { ...c1, name: 'Alpha Draft Edit' },
+      activeCharacter: {
+        ...c1,
+        name: 'Alpha Draft Edit',
+        lastModified: new Date(Date.now() + 1000).toISOString(),
+      },
     })
 
     render(<HomePage />)
@@ -179,7 +183,7 @@ describe('home page integration workflows', () => {
 
     render(<HomePage />)
 
-    await user.click(screen.getByRole('button', { name: 'Import Character' }))
+    await user.click(screen.getByRole('button', { name: 'Import' }))
     expect(fileInput.click).toHaveBeenCalled()
 
     const file = new File([JSON.stringify(makeCharacterFixture())], 'hero.json', {
@@ -208,7 +212,7 @@ describe('home page integration workflows', () => {
 
     render(<HomePage />)
 
-    await user.click(screen.getByRole('button', { name: 'Import Character' }))
+    await user.click(screen.getByRole('button', { name: 'Import' }))
     expect(fileInput.click).toHaveBeenCalled()
 
     const legacyCharacter = makeCharacterFixture()
@@ -246,7 +250,7 @@ describe('home page integration workflows', () => {
 
     render(<HomePage />)
 
-    await user.click(screen.getByRole('button', { name: 'Import Character' }))
+    await user.click(screen.getByRole('button', { name: 'Import' }))
     expect(fileInput.click).toHaveBeenCalled()
 
     const invalidFile = new File([JSON.stringify({ foo: 'bar' })], 'bad.json', {
@@ -275,7 +279,7 @@ describe('home page integration workflows', () => {
 
     render(<HomePage />)
 
-    await user.click(screen.getByRole('button', { name: 'Import Character' }))
+    await user.click(screen.getByRole('button', { name: 'Import' }))
 
     expect(fileInput.type).toBe('file')
     expect(fileInput.accept).toBe('.dndchar,.json')

@@ -198,8 +198,8 @@ describe('characterStore', () => {
     onRehydrate?.(rehydrateState)
 
     expect(rehydrateState.characters[0]?.provenance).toEqual(emptyProvenance())
-    expect(rehydrateState.activeCharacterId).toBe(persisted.id)
-    expect(rehydrateState.activeCharacter?.id).toBe(persisted.id)
+    expect(rehydrateState.activeCharacterId).toBeNull()
+    expect(rehydrateState.activeCharacter).toBeNull()
   })
 
   test('persist partialize stores characters and active character id', () => {
@@ -232,6 +232,6 @@ describe('characterStore', () => {
     expect(partialize).toBeTypeOf('function')
 
     const persisted = partialize?.(storeWithPersist.getState())
-    expect(persisted).toEqual({ characters: [fixture], activeCharacterId: fixture.id })
+    expect(persisted).toEqual({ characters: [fixture] })
   })
 })

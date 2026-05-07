@@ -16,12 +16,12 @@ describe('Armor Class Behavior', () => {
     test('light armor grants 10 + dex modifier', () => {
       const character = makeCharacterFixture({
         abilityScores: {
-          str: 10,
-          dex: 14, // +2 modifier
-          con: 10,
-          int: 10,
-          wis: 10,
-          cha: 10,
+          strength: 10,
+          dexterity: 14, // +2 modifier
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
         },
         equipment: [
           {
@@ -46,12 +46,12 @@ describe('Armor Class Behavior', () => {
     test('medium armor grants 10 + 2 + dex modifier capped at +2', () => {
       const character = makeCharacterFixture({
         abilityScores: {
-          str: 10,
-          dex: 16, // +3 modifier, but capped at +2 for medium armor
-          con: 10,
-          int: 10,
-          wis: 10,
-          cha: 10,
+          strength: 10,
+          dexterity: 16, // +3 modifier, but capped at +2 for medium armor
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
         },
         equipment: [
           {
@@ -76,12 +76,12 @@ describe('Armor Class Behavior', () => {
     test('heavy armor grants fixed AC (no dex modifier)', () => {
       const character = makeCharacterFixture({
         abilityScores: {
-          str: 10,
-          dex: 18, // +4 modifier, not applied
-          con: 10,
-          int: 10,
-          wis: 10,
-          cha: 10,
+          strength: 10,
+          dexterity: 18, // +4 modifier, not applied
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
         },
         equipment: [
           {
@@ -106,12 +106,12 @@ describe('Armor Class Behavior', () => {
     test('shield adds +2 to AC', () => {
       const character = makeCharacterFixture({
         abilityScores: {
-          str: 10,
-          dex: 14,
-          con: 10,
-          int: 10,
-          wis: 10,
-          cha: 10,
+          strength: 10,
+          dexterity: 14,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
         },
         equipment: [
           {
@@ -151,12 +151,12 @@ describe('Armor Class Behavior', () => {
         classSource: 'PHB',
         level: 5,
         abilityScores: {
-          str: 16, // +3 (not used for AC)
-          dex: 12, // +1 modifier
-          con: 16, // +3 modifier
-          int: 10,
-          wis: 10,
-          cha: 10,
+          strength: 16, // +3 (not used for AC)
+          dexterity: 12, // +1 modifier
+          constitution: 16, // +3 modifier
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
         },
         equipment: [],
       })
@@ -171,12 +171,12 @@ describe('Armor Class Behavior', () => {
         classSource: 'PHB',
         level: 5,
         abilityScores: {
-          str: 10,
-          dex: 16, // +3 modifier
-          con: 10,
-          int: 10,
-          wis: 14, // +2 modifier
-          cha: 10,
+          strength: 10,
+          dexterity: 16, // +3 modifier
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 14, // +2 modifier
+          charisma: 10,
         },
         equipment: [],
       })
@@ -190,12 +190,12 @@ describe('Armor Class Behavior', () => {
     test('unarmored character gets 10 + dex modifier', () => {
       const character = makeCharacterFixture({
         abilityScores: {
-          str: 10,
-          dex: 15, // +2 modifier
-          con: 10,
-          int: 10,
-          wis: 10,
-          cha: 10,
+          strength: 10,
+          dexterity: 15, // +2 modifier
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
         },
         equipment: [],
       })
@@ -211,12 +211,12 @@ describe('Armor Class Behavior', () => {
       const character = makeCharacterFixture({
         armorClassOverride: 17, // Explicit override (e.g., from Permanent Bracers of Protection)
         abilityScores: {
-          str: 10,
-          dex: 14,
-          con: 10,
-          int: 10,
-          wis: 10,
-          cha: 10,
+          strength: 10,
+          dexterity: 14,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
         },
         equipment: [
           {
@@ -242,12 +242,12 @@ describe('Armor Class Behavior', () => {
     test('increasing dex modifier increases light armor AC', () => {
       const characterLowDex = makeCharacterFixture({
         abilityScores: {
-          str: 10,
-          dex: 10, // +0 modifier
-          con: 10,
-          int: 10,
-          wis: 10,
-          cha: 10,
+          strength: 10,
+          dexterity: 10, // +0 modifier
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
         },
         equipment: [
           {
@@ -271,7 +271,7 @@ describe('Armor Class Behavior', () => {
         ...characterLowDex,
         abilityScores: {
           ...characterLowDex.abilityScores,
-          dex: 18, // +4 modifier
+          dexterity: 18, // +4 modifier
         },
       }
 
@@ -282,12 +282,12 @@ describe('Armor Class Behavior', () => {
     test('equipment change triggers AC recalculation', () => {
       const characterWithLeather = makeCharacterFixture({
         abilityScores: {
-          str: 10,
-          dex: 14,
-          con: 10,
-          int: 10,
-          wis: 10,
-          cha: 10,
+          strength: 10,
+          dexterity: 14,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
         },
         equipment: [
           {
@@ -318,7 +318,7 @@ describe('Armor Class Behavior', () => {
             equipped: true,
             attuned: false,
             ac: 13,
-            armorType: 'medium',
+            armorType: 'medium' as const,
             type: 'armor',
             quantity: 1,
           },
@@ -347,12 +347,12 @@ describe('Armor Class Behavior', () => {
     test('dual AC sync pattern: equipment updates and AC field updates are separate', () => {
       const character = makeCharacterFixture({
         abilityScores: {
-          str: 10,
-          dex: 14,
-          con: 10,
-          int: 10,
-          wis: 10,
-          cha: 10,
+          strength: 10,
+          dexterity: 14,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
         },
         equipment: [],
       })

@@ -28,6 +28,8 @@ function makeMinimalGameData(classes: unknown[]) {
     feats: [],
     items: [],
     itemsBase: [],
+    itemProperties: [],
+    itemTypes: [],
     classFeatures: [],
     actions: [],
     conditions: [],
@@ -41,6 +43,7 @@ function makeMinimalGameData(classes: unknown[]) {
     trapHazards: [],
     rewards: [],
     cultsBoons: [],
+    organizations: [],
     sources: [],
   }
 }

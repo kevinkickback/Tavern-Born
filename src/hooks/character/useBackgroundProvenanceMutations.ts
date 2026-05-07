@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import {
   getBackgroundEquipmentBlocks,
@@ -11,6 +11,10 @@ import {
   normalizeBackgroundForOriginSystem,
 } from '@/lib/calculations/originSystem'
 import {
+  removeSourceGrantedEquipment,
+  upsertGrantedEquipment,
+} from '@/lib/character/equipmentHelpers'
+import {
   addAbilityBonus,
   applyBackgroundGrants,
   diffProficiencyGrants,
@@ -19,25 +23,23 @@ import {
 } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
+import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Background5e, Item5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
-import { removeSourceGrantedEquipment, upsertGrantedEquipment } from './provenanceHelpers'
 
+const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 const CURRENCY_KEYS = ['cp', 'sp', 'ep', 'gp', 'pp'] as const
 
-interface UseBackgroundProvenanceParams {
-  character: Character | null
-  ledger: ProvenanceLedger
-  itemLookup: Map<string, Item5e>
-  updateCharacter: (id: string, updates: Partial<Character>) => void
-}
+export function useBackgroundProvenanceMutations() {
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
 
-export function useBackgroundProvenance({
-  character,
-  ledger,
-  itemLookup,
-  updateCharacter,
-}: UseBackgroundProvenanceParams) {
+  const ledger = useMemo<ProvenanceLedger>(
+    () => character?.provenance ?? emptyProvenance(),
+    [character],
+  )
+
   const applyBackgroundSelection = useCallback(
     (
       bg: {
@@ -115,9 +117,7 @@ export function useBackgroundProvenance({
       }).filter((name) => !name.toLowerCase().startsWith('choose '))
       const languages: string[] = extractProficiencyBlockNames(
         normalizedBg.languageProficiencies ?? [],
-        {
-          includeAnyStandard: false,
-        },
+        { includeAnyStandard: false },
       )
       const languagesToApply = character.originSystem === '2024' ? [] : languages
       const tools: string[] = extractProficiencyBlockNames(normalizedBg.toolProficiencies ?? [], {
@@ -206,9 +206,7 @@ export function useBackgroundProvenance({
       choices: string[],
     ) => {
       if (!character) return
-      if (character.originSystem !== '2024') {
-        return
-      }
+      if (character.originSystem !== '2024') return
       const normalizedBg = normalizeBackgroundForOriginSystem(
         bg as Background5e,
         character.originSystem,
@@ -218,7 +216,6 @@ export function useBackgroundProvenance({
       const block = bgData.blocks[blockIndex]
       if (!block) return
 
-      // Remove stale background ability bonus records
       const cleanedBonuses = ledger.abilityBonuses.filter(
         (r) => !(r.sourceTag.sourceType === 'background' && r.sourceTag.sourceName === bg.name),
       )

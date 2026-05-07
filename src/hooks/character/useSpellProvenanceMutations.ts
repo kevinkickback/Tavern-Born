@@ -1,16 +1,26 @@
-import { useCallback } from 'react'
-import { addGrant, applyClassSpellGrant, makeSourceTag } from '@/lib/provenance'
+import { useCallback, useMemo } from 'react'
+import { addSpellGrant, applyClassSpellGrant, makeSourceTag } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
-import type { Character } from '@/types/character'
+import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 
-interface UseSpellProvenanceParams {
-  character: Character | null
-  ledger: ProvenanceLedger
-  patch: (newLedger: ProvenanceLedger) => void
-}
+export function useSpellProvenanceMutations() {
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
-export function useSpellProvenance({ character, ledger, patch }: UseSpellProvenanceParams) {
+  const ledger = useMemo<ProvenanceLedger>(
+    () => character?.provenance ?? emptyProvenance(),
+    [character],
+  )
+
+  const patch = useCallback(
+    (newLedger: ProvenanceLedger) => {
+      if (!character) return
+      updateCharacter(character.id, { provenance: newLedger })
+    },
+    [character, updateCharacter],
+  )
+
   const applySpellSelection = useCallback(
     (
       className: string,
@@ -75,7 +85,7 @@ export function useSpellProvenance({ character, ledger, patch }: UseSpellProvena
     (spellName: string) => {
       if (!character) return
       const tag = makeSourceTag('manual', 'User Choice', 'choice')
-      patch(addGrant(ledger, 'spells', spellName, tag))
+      patch(addSpellGrant(ledger, spellName, tag))
     },
     [character, ledger, patch],
   )
@@ -113,7 +123,6 @@ export function useSpellProvenance({ character, ledger, patch }: UseSpellProvena
         (tag) => !!tag.spellGrantedAtLevel,
       )?.spellGrantedAtLevel
 
-      // Remove only the swapped class grant; keep unrelated grants for this spell.
       const retainedTags = removedTags.filter(
         (tag) =>
           !(
@@ -131,7 +140,6 @@ export function useSpellProvenance({ character, ledger, patch }: UseSpellProvena
       }
 
       const withRemoval = { ...ledger, spells: updatedSpells }
-      // Add replacement spell, inheriting the original pick's level attribution.
       const withAdd = applyClassSpellGrant(
         withRemoval,
         className,

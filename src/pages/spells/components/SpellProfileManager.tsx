@@ -1,5 +1,5 @@
 import { ArrowsLeftRight, BookOpen, Lock, Plus, Trash, WarningCircle } from '@phosphor-icons/react'
-import type { ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -18,14 +18,14 @@ import type { Spell5e } from '@/types/5etools'
 import type { RaceSpellChoice } from '@/types/character'
 
 const SCHOOL_STYLES: Record<string, string> = {
-  A: 'bg-blue-500/10 text-blue-400',
-  C: 'bg-amber-500/10 text-amber-400',
-  D: 'bg-cyan-500/10 text-cyan-400',
-  E: 'bg-pink-500/10 text-pink-400',
-  V: 'bg-orange-500/10 text-orange-400',
-  I: 'bg-violet-500/10 text-violet-400',
-  N: 'bg-emerald-500/10 text-emerald-400',
-  T: 'bg-teal-500/10 text-teal-400',
+  A: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  C: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  D: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
+  E: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
+  V: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+  I: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  N: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  T: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
 }
 
 function getSchoolStyle(school: string | undefined): string {
@@ -74,7 +74,7 @@ interface CantripGroupProps {
   onRemoveSpell: (item: SpellListItem) => void
 }
 
-function CantripGroup({
+const CantripGroup = memo(function CantripGroup({
   items,
   span,
   swappedByAddedName,
@@ -92,7 +92,7 @@ function CantripGroup({
         getColSpanClasses(span),
       )}
     >
-      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60 bg-accent/10">
+      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-foreground/70 border-b border-border/60 bg-muted/50">
         Cantrips
       </div>
       <div
@@ -168,7 +168,7 @@ function CantripGroup({
       </div>
     </div>
   )
-}
+})
 
 export interface SpellListItem {
   profileId: string
@@ -232,7 +232,7 @@ interface SpellProfileManagerProps {
   }) => ReactNode
 }
 
-export function SpellProfileManager({
+export const SpellProfileManager = memo(function SpellProfileManager({
   spellProfiles,
   detailsByProfileId,
   groupedItems,
@@ -249,7 +249,7 @@ export function SpellProfileManager({
     <Card className="w-full flex flex-col overflow-hidden">
       <div className="h-10 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent border-b border-border/40 flex items-center px-4 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-indigo-400" weight="duotone" />
+          <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" weight="duotone" />
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
             Spell List
           </span>
@@ -352,9 +352,9 @@ export function SpellProfileManager({
                 <AccordionItem
                   key={profile.id}
                   value={profile.id}
-                  className="border-b border-border/30"
+                  className="border-b border-border/60"
                 >
-                  <AccordionTrigger className="px-6 py-2.5 bg-muted/50 rounded-none hover:no-underline hover:bg-muted/70 transition-colors">
+                  <AccordionTrigger className="px-6 py-2.5 bg-muted/70 rounded-none hover:no-underline hover:bg-muted/90 transition-colors border-t border-border/60">
                     <div className="flex items-center gap-2 text-left w-full min-w-0">
                       <span className="font-medium text-sm">{profile.label}</span>
                       <div className="ml-auto flex items-center gap-2 pr-1">
@@ -413,7 +413,7 @@ export function SpellProfileManager({
                         {profile.alwaysPrepared ||
                         isLevelOnly ||
                         (profile.type === 'class' && detail && !detail.isPreparedCaster) ? (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="outline" className="text-xs">
                             Always Prepared
                           </Badge>
                         ) : null}
@@ -428,7 +428,7 @@ export function SpellProfileManager({
                       </div>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="pb-1 border-t border-border/30 bg-muted/10">
+                  <AccordionContent className="pb-1 border-t border-border/60 bg-muted/10">
                     {isBonusProfile && !showDefaultEmptyState ? (
                       <div className="px-5 py-2 bg-muted/10 flex items-center justify-end">
                         <Button
@@ -555,7 +555,7 @@ export function SpellProfileManager({
                                       getColSpanClasses(span),
                                     )}
                                   >
-                                    <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60 bg-accent/10">
+                                    <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-foreground/70 border-b border-border/60 bg-muted/50">
                                       {formatSpellLevel(spellLevel)}s
                                     </div>
                                     <div
@@ -575,7 +575,9 @@ export function SpellProfileManager({
                                             key={`${profile.id}|avail|${spell.name}|${spell.source ?? ''}`}
                                             className={cn(
                                               'px-4 py-2 flex items-center gap-3 break-inside-avoid transition-colors',
-                                              isPrepared ? 'bg-accent/10' : 'hover:bg-muted/20',
+                                              isPrepared
+                                                ? 'bg-accent/20 border-l-2 border-accent/60 pl-[14px]'
+                                                : 'hover:bg-muted/20 border-l-2 border-transparent pl-[14px]',
                                             )}
                                           >
                                             <div className="min-w-0 flex-1">
@@ -678,7 +680,7 @@ export function SpellProfileManager({
                                         getColSpanClasses(span),
                                       )}
                                     >
-                                      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-b border-border/60 bg-accent/10">
+                                      <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-foreground/70 border-b border-border/60 bg-muted/50">
                                         {formatSpellLevel(level)}s
                                       </div>
                                       <div
@@ -797,4 +799,4 @@ export function SpellProfileManager({
       </CardContent>
     </Card>
   )
-}
+})

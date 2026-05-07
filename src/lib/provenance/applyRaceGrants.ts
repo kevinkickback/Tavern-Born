@@ -8,7 +8,7 @@ import {
   type ProficiencyBlock,
   toProficiencyBlocks,
 } from './applyProficiencyBlocks'
-import { addAbilityBonus, addChoicePlaceholder, addGrant } from './ledger'
+import { addAbilityBonus, addChoicePlaceholder, addSpellGrant } from './ledger'
 import { normalizeKey } from './normalization'
 import { makeSourceTag } from './sourceLabels'
 import type { ChoiceRecord, ProvenanceLedger } from './types'
@@ -116,13 +116,13 @@ export function applyRaceSpellGrants(
   },
   totalCharacterLevel: number,
   ledger: ProvenanceLedger,
-  tag: import('./types').SourceTag,
+  tag: import('./types').SpellSourceTag,
 ): ProvenanceLedger {
   let result = ledger
   const grants = parseRaceSpells(race.additionalSpells)
   for (const grant of grants) {
     if (grant.level > totalCharacterLevel) continue
-    result = addGrant(result, 'spells', grant.spellName, tag)
+    result = addSpellGrant(result, grant.spellName, tag)
   }
   return result
 }

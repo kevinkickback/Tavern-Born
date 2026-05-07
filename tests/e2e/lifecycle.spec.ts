@@ -144,6 +144,8 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
           feats: [],
           items: [],
           itemsBase: [],
+          itemProperties: [],
+          itemTypes: [],
           classFeatures: [],
           actions: [],
           conditions: [],

@@ -71,11 +71,12 @@ export class DataFilter {
     let filtered = [...races]
 
     if (filters.sources && filters.sources.length > 0) {
-      filtered = filtered.filter((r) => filters.sources?.includes(r.source))
+      const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
+      filtered = filtered.filter((r) => sourcesUpper.has(r.source.toUpperCase()))
       filtered = filtered.map((r) => {
         if (!r.subraces || r.subraces.length === 0) return r
         const filteredSubraces = r.subraces.filter((sr) =>
-          filters.sources?.includes((sr as { source?: string }).source ?? r.source),
+          sourcesUpper.has(((sr as { source?: string }).source ?? r.source).toUpperCase()),
         )
         return { ...r, subraces: filteredSubraces }
       })
@@ -124,7 +125,8 @@ export class DataFilter {
     let filtered = [...classes]
 
     if (filters.sources && filters.sources.length > 0) {
-      filtered = filtered.filter((c) => filters.sources?.includes(c.source))
+      const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
+      filtered = filtered.filter((c) => sourcesUpper.has(c.source.toUpperCase()))
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
@@ -162,7 +164,8 @@ export class DataFilter {
     let filtered = [...spells]
 
     if (filters.sources && filters.sources.length > 0) {
-      filtered = filtered.filter((s) => filters.sources?.includes(s.source))
+      const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
+      filtered = filtered.filter((s) => sourcesUpper.has(s.source.toUpperCase()))
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
@@ -231,7 +234,8 @@ export class DataFilter {
     let filtered = [...backgrounds]
 
     if (filters.sources && filters.sources.length > 0) {
-      filtered = filtered.filter((b) => filters.sources?.includes(b.source))
+      const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
+      filtered = filtered.filter((b) => sourcesUpper.has(b.source.toUpperCase()))
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
@@ -263,7 +267,8 @@ export class DataFilter {
     let filtered = [...feats]
 
     if (filters.sources && filters.sources.length > 0) {
-      filtered = filtered.filter((f) => filters.sources?.includes(f.source))
+      const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
+      filtered = filtered.filter((f) => sourcesUpper.has(f.source.toUpperCase()))
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
@@ -298,7 +303,8 @@ export class DataFilter {
     let filtered = [...items]
 
     if (filters.sources && filters.sources.length > 0) {
-      filtered = filtered.filter((i) => filters.sources?.includes(i.source))
+      const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
+      filtered = filtered.filter((i) => sourcesUpper.has(i.source.toUpperCase()))
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {

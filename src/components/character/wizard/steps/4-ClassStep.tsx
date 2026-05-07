@@ -35,9 +35,13 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
     const implicit = getImplicitSource((data.originSystem || '2014') as '2014' | '2024')
     return base.includes(implicit) ? base : [...base, implicit]
   }, [data.allowedSources, data.originSystem])
+  const allowedClassSourcesUpper = useMemo(
+    () => new Set(allowedSources.map((s) => s.toUpperCase())),
+    [allowedSources],
+  )
   const sourceFilteredClasses =
     allowedSources.length > 0
-      ? classes.filter((cls) => allowedSources.includes(cls.source))
+      ? classes.filter((cls) => allowedClassSourcesUpper.has(cls.source.toUpperCase()))
       : classes
   const suppressedClassKeys =
     data.variantRules?.preferNewerPrintings && allowedSources.length > 0

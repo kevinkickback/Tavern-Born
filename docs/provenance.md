@@ -14,17 +14,27 @@ Without provenance, changing race/class/background can leave stale proficiencies
 - src/lib/provenance/normalization.ts
 - src/lib/provenance/sourceLabels.ts
 - src/lib/provenance/summaries.ts
+- src/lib/provenance/resolveRaceAsiChoices.ts — pure function that syncs `raceAsiChoices` into ledger `ChoiceRecord.selected` arrays; called by `useProvenanceLedger`/`useProvenance` before deriving rows, and by `applyRaceAsiChoices` when persisting choices
 - src/lib/provenance/applyRaceGrants.ts
 - src/lib/provenance/applyClassGrants.ts
 - src/lib/provenance/applyBackgroundGrants.ts
 - src/lib/provenance/applyFeatAndOptionalFeatureGrants.ts
+- src/lib/provenance/applyAsiChoices.ts — pure function for rebuilding ASI ability-bonus provenance from `asiChoices`; called by the character store on patches that contain `asiChoices`
+- src/lib/provenance/applyProficiencyBlocks.ts — pure function for applying 5etools proficiency grant blocks to the ledger
 - src/lib/provenance/index.ts
-- src/hooks/character/useProvenanceMutations.ts
 - src/hooks/character/useProvenanceRows.ts
-- src/hooks/character/useProvenance.ts
 
-Current orchestration note:
-- The provenance hook remains the UI-facing mutation surface, but class-selection orchestration is now delegated to `src/lib/character/commands/classSelectionOrchestrationCommand.ts` so the hook no longer owns that business logic inline.
+## Hook Entry Points
+
+**For production pages:** use the self-contained `use*ProvenanceMutations` hooks directly — `useRaceProvenanceMutations`, `useClassProvenanceMutations`, `useBackgroundProvenanceMutations`, `useSpellProvenanceMutations`, `useFeatProvenanceMutations`, `useEquipmentProvenanceMutations`. Each reads character/store state itself and owns the full mutation logic for its domain.
+
+**For reading provenance rows:** use `useProvenanceLedger` (src/hooks/character/useProvenanceLedger.ts) in pages that only need to display provenance state. It normalizes the ledger via `resolveRaceAsiChoicesInLedger` before deriving rows, so all row functions receive a fully-resolved ledger.
+
+**For tests:** `useProvenance` (src/hooks/character/useProvenance.ts) is the integration test harness. It composes all six domains via `useProvenanceMutations` (src/hooks/character/useProvenanceMutations.ts, the aggregator) and exposes mutations + provenance rows from a single hook. Use it in tests that need cross-domain provenance interactions. Do not call it from production pages.
+
+**Adding new mutations:** add the callback directly to the relevant `use*ProvenanceMutations` hook (e.g. `useRaceProvenanceMutations.ts`). It will automatically be available through the test harness aggregator as well. Do not add logic to the aggregator.
+
+Class-selection orchestration is delegated to `src/lib/character/commands/classSelectionOrchestrationCommand.ts` — the hook layer calls this command and applies the resulting patch via `updateCharacter`.
 
 ## Ledger Model
 
@@ -33,9 +43,11 @@ The character carries a provenance ledger with source-tagged grant maps for:
 - abilityBonuses (array of `{ability, value, sourceTag}` entries)
 - features
 - feats
-- spells
+- spells — stored as `Record<string, SpellSourceTag[]>`; use `addSpellGrant` (not the generic `addGrant`) to preserve spell-specific attribution fields
 - equipment
 - choices
+
+**`SpellSourceTag`** extends `SourceTag` with optional `spellGrantedAtLevel` and `spellAttributionMode` fields. These fields are only meaningful in the `spells` domain and must not appear on general-purpose `SourceTag` values. Always construct spell tags as `SpellSourceTag` and use `addSpellGrant`.
 
 ## Background Ability Score Choices (XPHB 2024)
 
@@ -106,11 +118,20 @@ Grouped tool choices:
 - Grouped entries are placeholders only; final grants are always concrete tool names selected by the user.
 - Resolving grouped tool choices updates both `ledger.choices` and `character.proficiencies.tools`; removing a choice-granted concrete tool reopens the underlying placeholder capacity.
 
+## Race ASI Choices and ChoiceRecord.selected
+
+When a lineage race is selected, `applyRaceGrants` creates `ChoiceRecord` entries with `selected: []` for each ASI slot. The user's ability selections are persisted via `applyRaceAsiChoices` in `useRaceProvenanceMutations`, which:
+1. Calls `resolveRaceAsiChoicesInLedger` to populate `ChoiceRecord.selected` in the ledger.
+2. Writes both `provenance` and `raceAsiChoices` to the character in a single `updateCharacter` call.
+
+For existing characters where `ChoiceRecord.selected` may be empty (e.g. created before this pattern was established), `useProvenanceLedger` and `useProvenance` apply `resolveRaceAsiChoicesInLedger` at read time using `character.raceAsiChoices` as a fallback. This ensures `getAbilityBonusRows` always receives a fully-resolved ledger without needing external parameters.
+
 ## Invariants
 
 - Every non-user-manual grant should be traceable to a source tag.
 - Reconciliation should be additive/subtractive by source, not by brittle string matching alone.
 - UI summaries should read from ledger data rather than duplicate source logic.
+- `getAbilityBonusRows(ledger)` takes only the ledger — no external `raceAsiChoices` or `backgroundAsiChoices` params. The ledger must be normalized via `resolveRaceAsiChoicesInLedger` before calling it.
 - Spell grants may include optional class-level attribution metadata:
 	- exact: selected from class-page level picker
 	- inferred-lowest-eligible: selected from spells page and attributed to the lowest eligible class level with remaining gain capacity
@@ -136,7 +157,7 @@ Grouped tool choices:
     patch(next)
   }
   ```
-  Use the `applyBatch*` helpers in `useProvenanceMutations` when available.
+  Use the `applyBatch*` helpers in the relevant `use*Provenance` implementation hook when available.
 
 ## Testing Guidance
 

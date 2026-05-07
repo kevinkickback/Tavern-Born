@@ -1,16 +1,26 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
-import type { Character } from '@/types/character'
+import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 
-interface UseEquipmentProvenanceParams {
-  character: Character | null
-  ledger: ProvenanceLedger
-  patch: (newLedger: ProvenanceLedger) => void
-}
+export function useEquipmentProvenanceMutations() {
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
-export function useEquipmentProvenance({ character, ledger, patch }: UseEquipmentProvenanceParams) {
+  const ledger = useMemo<ProvenanceLedger>(
+    () => character?.provenance ?? emptyProvenance(),
+    [character],
+  )
+
+  const patch = useCallback(
+    (newLedger: ProvenanceLedger) => {
+      if (!character) return
+      updateCharacter(character.id, { provenance: newLedger })
+    },
+    [character, updateCharacter],
+  )
+
   const applyManualEquipmentGrant = useCallback(
     (itemName: string) => {
       if (!character) return

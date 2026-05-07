@@ -1,61 +1,37 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import {
   getClassDefaultEquipmentBlocks,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
-import { computeApplyClassSelectionUpdates } from '@/lib/character/commands/classSelectionOrchestrationCommand'
-import { addGrant, makeSourceTag } from '@/lib/provenance'
-import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
+import {
+  computeApplyClassSelectionUpdates,
+  replaceClassEquipmentGrants,
+} from '@/lib/character/commands/classSelectionOrchestrationCommand'
+import {
+  removeSourceGrantedEquipment,
+  upsertGrantedEquipment,
+} from '@/lib/character/equipmentHelpers'
+import type { ProvenanceLedger } from '@/lib/provenance/types'
+import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
-import { removeSourceGrantedEquipment, upsertGrantedEquipment } from './provenanceHelpers'
+
+const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 
 function getClassChoiceKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`
 }
 
-function replaceClassEquipmentGrants(
-  ledger: ProvenanceLedger,
-  className: string,
-  classSource: string | undefined,
-  equipmentNames: string[],
-): ProvenanceLedger {
-  const nextEquipment: Record<string, SourceTag[]> = {}
+export function useClassProvenanceMutations() {
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
 
-  for (const [itemName, tags] of Object.entries(ledger.equipment)) {
-    const retained = tags.filter(
-      (tag) =>
-        !(
-          tag.sourceType === 'class' &&
-          tag.sourceName === className &&
-          (tag.sourceRef ?? '') === (classSource ?? '')
-        ),
-    )
-    if (retained.length > 0) nextEquipment[itemName] = retained
-  }
+  const ledger = useMemo<ProvenanceLedger>(
+    () => character?.provenance ?? emptyProvenance(),
+    [character],
+  )
 
-  let nextLedger: ProvenanceLedger = { ...ledger, equipment: nextEquipment }
-  const classTag = makeSourceTag('class', className, 'fixed', classSource)
-  for (const itemName of equipmentNames) {
-    nextLedger = addGrant(nextLedger, 'equipment', itemName, classTag)
-  }
-
-  return nextLedger
-}
-
-interface UseClassProvenanceParams {
-  character: Character | null
-  ledger: ProvenanceLedger
-  itemLookup: Map<string, Item5e>
-  updateCharacter: (id: string, updates: Partial<Character>) => void
-}
-
-export function useClassProvenance({
-  character,
-  ledger,
-  itemLookup,
-  updateCharacter,
-}: UseClassProvenanceParams) {
   const applyClassSelection = useCallback(
     (
       cls: {
@@ -77,7 +53,6 @@ export function useClassProvenance({
       subclass?: { name: string; source?: string },
     ) => {
       if (!character) return
-
       const updates = computeApplyClassSelectionUpdates(
         character,
         ledger,
@@ -119,7 +94,6 @@ export function useClassProvenance({
       )
       const classChoiceKey = getClassChoiceKey(cls.name, cls.source)
       const currentChoices = [...(character.classEquipmentChoices?.[classChoiceKey] ?? [])]
-      // Ensure the array is big enough, then update the specific block index
       while (currentChoices.length <= blockIndex) {
         currentChoices.push('a')
       }
