@@ -32,7 +32,10 @@ export function AboutPanel() {
       <Card className="w-full overflow-hidden">
         {/* Gradient banner */}
         <div className="relative h-32 bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10">
-          <div className="absolute inset-0 bg-[url('/assets/images/ui/logo.png')] bg-no-repeat bg-right-bottom opacity-10 bg-contain" />
+          <div
+            className="absolute inset-0 bg-no-repeat bg-right-bottom opacity-10 bg-contain"
+            style={{ backgroundImage: `url(${import.meta.env.BASE_URL}assets/images/ui/logo.png)` }}
+          />
         </div>
 
         {/* Logo + name pulled up over banner */}
@@ -40,7 +43,7 @@ export function AboutPanel() {
           <div className="-mt-10 flex items-end gap-4 mb-4">
             <div className="h-20 w-20 rounded-2xl border-4 border-card bg-card shadow-lg flex items-center justify-center overflow-hidden shrink-0">
               <img
-                src="/assets/images/ui/logo.png"
+                src={`${import.meta.env.BASE_URL}assets/images/ui/logo.png`}
                 alt="Tavern Born"
                 className="h-16 w-16 object-contain"
               />

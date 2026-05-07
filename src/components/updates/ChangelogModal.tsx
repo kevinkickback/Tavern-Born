@@ -1,4 +1,6 @@
 import { ArrowSquareOut, CircleNotch } from '@phosphor-icons/react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -47,9 +49,9 @@ export function ChangelogModal({
               <CircleNotch className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : changelog ? (
-            <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-sans">
-              {changelog}
-            </pre>
+            <div className="text-sm text-muted-foreground [&>h1]:text-base [&>h1]:font-semibold [&>h1]:text-foreground [&>h1]:mb-1 [&>h2]:text-sm [&>h2]:font-semibold [&>h2]:text-foreground [&>h2]:mt-3 [&>h2]:mb-1 [&>h3]:text-xs [&>h3]:font-semibold [&>h3]:text-foreground [&>h3]:mt-2 [&>h3]:mb-0.5 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:pl-4 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:pl-4 [&>ol]:mb-2 [&_li]:mb-0.5 [&>hr]:border-border [&>hr]:my-3 [&_a]:text-primary [&_a]:underline [&_strong]:text-foreground [&_code]:bg-muted [&_code]:rounded [&_code]:px-1 [&_code]:text-xs [&_pre]:bg-muted [&_pre]:rounded [&_pre]:p-2 [&_pre]:overflow-x-auto [&_pre]:text-xs [&_pre_code]:bg-transparent [&_pre_code]:p-0">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{changelog}</ReactMarkdown>
+            </div>
           ) : (
             <div className="text-sm text-muted-foreground space-y-2">
               <p>No changelog available for this release.</p>

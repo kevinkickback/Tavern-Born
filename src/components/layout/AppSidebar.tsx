@@ -99,7 +99,7 @@ const navItems: NavItem[] = [
 export function AppSidebar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [expandedSections, setExpandedSections] = useState<string[]>(['Build'])
+  const [expandedSections, setExpandedSections] = useState<string[]>([])
   const [activeFooterAction, setActiveFooterAction] = useState<string | null>(null)
   const sidebarOpen = useAppPreferencesStore((state) => state.sidebarOpen)
   const setSidebarOpen = useAppPreferencesStore((state) => state.setSidebarOpen)
@@ -168,7 +168,7 @@ export function AppSidebar() {
             className="relative flex items-center font-display text-xl font-bold text-primary whitespace-nowrap"
           >
             <img
-              src="/assets/images/ui/logo.png"
+              src={`${import.meta.env.BASE_URL}assets/images/ui/logo.png`}
               alt="Tavern Born"
               className="absolute -left-7 top-1/2 h-24 w-24 -translate-y-1/2 object-contain"
             />

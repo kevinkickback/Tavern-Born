@@ -36,7 +36,7 @@ export function SettingsPage() {
 
       <div className="max-w-7xl mx-auto w-full">
         {/* Tab navigation */}
-        <div className="border-b border-border mb-6 px-1">
+        <div className="border-b border-border mb-6 px-6">
           <nav className="flex gap-1">
             {TABS.map(({ id, label, Icon }) => (
               <button
@@ -58,10 +58,12 @@ export function SettingsPage() {
         </div>
 
         {/* Tab content */}
-        {activeTab === 'appearance' && <AppearancePanel />}
-        {activeTab === 'data' && <DataSourceConfigurator />}
-        {activeTab === 'general' && <GeneralPanel />}
-        {activeTab === 'about' && <AboutPanel />}
+        <div className="px-6 pb-6">
+          {activeTab === 'appearance' && <AppearancePanel />}
+          {activeTab === 'data' && <DataSourceConfigurator />}
+          {activeTab === 'general' && <GeneralPanel />}
+          {activeTab === 'about' && <AboutPanel />}
+        </div>
       </div>
     </div>
   )
