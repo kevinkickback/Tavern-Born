@@ -1,8 +1,14 @@
 import { useCallback, useMemo } from 'react'
+import { useClassLookup } from '@/hooks/data/useGameData'
 import { ABILITY_NAMES, type AbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
-import { ALL_SKILLS, deriveAllSkills, type SkillResult } from '@/lib/calculations/skills'
-import { getTotalCharacterLevel } from '@/lib/characterUtils'
+import {
+  ALL_SKILLS,
+  deriveAllSkills,
+  getExpertiseSlotsFromClasses,
+  type SkillResult,
+} from '@/lib/calculations/skills'
+import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
@@ -22,6 +28,12 @@ export interface SkillsState {
 
   /** Toggle expertise on a skill (only meaningful when already proficient). */
   toggleExpertise: (skillName: string) => void
+
+  /** Total expertise slots available from class features (e.g. Rogue L1/L6, Bard L3/L10). */
+  availableExpertiseSlots: number
+
+  /** Number of skills currently marked as expertise. */
+  usedExpertiseSlots: number
 }
 
 export function useSkills(): SkillsState {
@@ -29,6 +41,7 @@ export function useSkills(): SkillsState {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const skillToAbilityMap = useGameDataStore((s) => s.gameData?.lookups?.skillToAbilityMap)
   const parsedSkillList = useGameDataStore((s) => s.gameData?.lookups?.skillList)
+  const classesByKey = useClassLookup()
 
   const resolvedSkillList = parsedSkillList ?? ALL_SKILLS
 
@@ -79,6 +92,16 @@ export function useSkills(): SkillsState {
     const perception = skills.find((s) => s.name === 'perception')
     return 10 + (perception?.modifier ?? abilityModifiers.wisdom ?? 0)
   }, [skills, abilityModifiers.wisdom])
+
+  const availableExpertiseSlots = useMemo(
+    () => getExpertiseSlotsFromClasses(getCharacterClassEntries(activeCharacter), classesByKey),
+    [activeCharacter, classesByKey],
+  )
+
+  const usedExpertiseSlots = useMemo(
+    () => Object.values(activeCharacter?.skills ?? {}).filter((s) => s?.expertise).length,
+    [activeCharacter?.skills],
+  )
 
   const toggleProficiency = useCallback(
     (skillName: string) => {
@@ -148,5 +171,12 @@ export function useSkills(): SkillsState {
     [activeCharacter, updateCharacter],
   )
 
-  return { skills, passivePerception, toggleProficiency, toggleExpertise }
+  return {
+    skills,
+    passivePerception,
+    toggleProficiency,
+    toggleExpertise,
+    availableExpertiseSlots,
+    usedExpertiseSlots,
+  }
 }

@@ -190,7 +190,7 @@ export function HomePage() {
     const url = URL.createObjectURL(dataBlob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${character.name || 'character'}.dndchar`
+    link.download = `${character.name || 'character'}.tbc`
     link.click()
     URL.revokeObjectURL(url)
     toast.success('Character exported successfully')
@@ -199,7 +199,7 @@ export function HomePage() {
   const handleImportCharacter = () => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.dndchar,.json'
+    input.accept = '.tbc,.json'
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (!file) return

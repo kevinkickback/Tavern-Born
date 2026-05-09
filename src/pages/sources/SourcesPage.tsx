@@ -45,7 +45,11 @@ export function SourcesPage() {
   const [showHint, setShowHint] = useState(() => !isHintDismissed(HINT_ID))
   const [hintPosition, setHintPosition] = useState<HintPosition | null>(null)
 
-  const sources = gameData?.sources ?? []
+  const allSources = gameData?.sources ?? []
+  const sources = useMemo(
+    () => allSources.filter((s) => s.hasCharacterOptions !== false),
+    [allSources],
+  )
   const allowedSources = character?.allowedSources ?? []
   const availableSourceSet = new Set(sources.map((s) => s.abbreviation))
 

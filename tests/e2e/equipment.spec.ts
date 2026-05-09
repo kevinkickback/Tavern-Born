@@ -15,7 +15,7 @@ async function closeStartupModalIfOpen(page: import('@playwright/test').Page) {
 }
 
 test('equipment page supports equip/attune/quantity and weight updates', async ({ page }) => {
-  const fixturePath = path.resolve('tests/fixtures/equipment-e2e.dndchar')
+  const fixturePath = path.resolve('tests/fixtures/equipment-e2e.tbc')
   const character = JSON.parse(fs.readFileSync(fixturePath, 'utf-8')) as {
     id: string
   }

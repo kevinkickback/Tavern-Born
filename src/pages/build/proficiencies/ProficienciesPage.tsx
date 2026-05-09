@@ -33,7 +33,7 @@ import { useCharacterStore } from '@/store/characterStore'
 export function BuildProficienciesPage() {
   const character = useCharacterStore((state) => state.activeCharacter)
   const { skills: skillDefs, items, itemsBase, languages } = useFilteredGameData()
-  const { skills } = useSkills()
+  const { skills, toggleExpertise, availableExpertiseSlots, usedExpertiseSlots } = useSkills()
   const { savingThrows } = useSavingThrows()
   const { ledger, getSourcesRowsBySection } = useProvenanceLedger()
   const { resolveChoiceSelection } = useFeatProvenanceMutations()
@@ -252,7 +252,13 @@ export function BuildProficienciesPage() {
                         if (detailCollapsed) setDetailCollapsed(false)
                       }}
                       onResolveChoiceSelection={resolveChoiceSelection}
-                      isStandardLanguage={availableProficiencies.isStandardLanguage}
+                      onToggleExpertise={toggleExpertise}
+                      availableExpertiseSlots={availableExpertiseSlots}
+                      usedExpertiseSlots={usedExpertiseSlots}
+                      expertiseChoiceCount={Math.max(
+                        0,
+                        availableExpertiseSlots - usedExpertiseSlots,
+                      )}
                     />
                   </div>
                 </ScrollArea>
