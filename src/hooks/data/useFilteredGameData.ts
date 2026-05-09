@@ -10,6 +10,7 @@ import type {
   ClassFeature,
   Feat5e,
   Item5e,
+  Language5e,
   Race5e,
   SourceBook,
 } from '@/types/5etools'
@@ -47,7 +48,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         deities: [],
         skills: [],
         senses: [],
-        languages: [],
+        languages: [] as Language5e[],
         magicvariants: [],
         variantrules: [],
       }
@@ -149,6 +150,9 @@ export function useFilteredGameDataParams(params: FilterParams) {
         return !(suppressedKeys?.has(`${optionalFeature.name}|${source}`) ?? false)
       }),
       sources,
+      languages: DataFilter.filterLanguages(gameData.languages ?? [], {
+        sources: allowedSources,
+      }),
     }
   }, [gameData, allowedSources, preferNewerPrintings])
 

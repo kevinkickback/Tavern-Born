@@ -208,3 +208,25 @@ test('filterRaces removes subraces whose source is not in allowedSources', () =>
 
   expect(filtered.subraces?.map((sr) => (sr as Race5e).name)).toEqual(['High', 'Wood'])
 })
+
+test('filterLanguages applies source filter', () => {
+  const languages = [
+    { name: 'Common', source: 'PHB', type: 'standard' },
+    { name: 'Elvish', source: 'PHB', type: 'standard' },
+    { name: 'Abyssal', source: 'XPHB', type: 'rare' },
+    { name: 'Aarakocra', source: 'MM' },
+  ]
+
+  const filtered = DataFilter.filterLanguages(languages, { sources: ['PHB'] })
+  expect(filtered.map((l) => l.name)).toEqual(['Common', 'Elvish'])
+})
+
+test('filterLanguages returns all when no sources specified', () => {
+  const languages = [
+    { name: 'Common', source: 'PHB' },
+    { name: 'Abyssal', source: 'XPHB' },
+  ]
+
+  expect(DataFilter.filterLanguages(languages, {})).toHaveLength(2)
+  expect(DataFilter.filterLanguages(languages, { sources: [] })).toHaveLength(2)
+})

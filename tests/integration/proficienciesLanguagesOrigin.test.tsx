@@ -47,7 +47,10 @@ function renderPanel(languageChoice: ChoiceRecord) {
       onFocusChange={() => undefined}
       onExpandDetails={() => undefined}
       onResolveChoiceSelection={() => undefined}
-      isStandardLanguage={(name) => ['common', 'elvish'].includes(name.toLowerCase())}
+      onToggleExpertise={() => undefined}
+      availableExpertiseSlots={0}
+      usedExpertiseSlots={0}
+      expertiseChoiceCount={0}
       defaultTab="languages"
     />,
   )

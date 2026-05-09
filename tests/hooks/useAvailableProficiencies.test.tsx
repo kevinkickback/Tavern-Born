@@ -131,7 +131,7 @@ describe('useAvailableProficiencies', () => {
     expect(result.current.languages).toContain('Elvish')
   })
 
-  test('standardLanguages contains only languages with type "standard"', () => {
+  test('languages contains all languages regardless of type', () => {
     useGameDataStore.setState({
       gameData: makeMinimalGameData({
         languages: [
@@ -142,24 +142,8 @@ describe('useAvailableProficiencies', () => {
     })
 
     const { result } = renderHook(() => useAvailableProficiencies())
-    expect(result.current.standardLanguages).toContain('Common')
-    expect(result.current.standardLanguages).not.toContain('Deep Speech')
-  })
-
-  test('isStandardLanguage returns true for standard languages, false for exotic', () => {
-    useGameDataStore.setState({
-      gameData: makeMinimalGameData({
-        languages: [
-          { name: 'Common', source: 'PHB', type: 'standard' },
-          { name: 'Deep Speech', source: 'PHB', type: 'exotic' },
-        ] as never,
-      }) as never,
-    })
-
-    const { result } = renderHook(() => useAvailableProficiencies())
-    expect(result.current.isStandardLanguage('Common')).toBe(true)
-    expect(result.current.isStandardLanguage('common')).toBe(true) // case-insensitive
-    expect(result.current.isStandardLanguage('Deep Speech')).toBe(false)
+    expect(result.current.languages).toContain('Common')
+    expect(result.current.languages).toContain('Deep Speech')
   })
 
   test('deduplicates proficiencies from multiple classes', () => {
