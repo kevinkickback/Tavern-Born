@@ -1,4 +1,12 @@
-import type { Background5e, Class5e, Feat5e, Item5e, Race5e, Spell5e } from '@/types/5etools'
+import type {
+  Background5e,
+  Class5e,
+  Feat5e,
+  Item5e,
+  Language5e,
+  Race5e,
+  Spell5e,
+} from '@/types/5etools'
 
 export interface RaceFilters {
   sources?: string[]
@@ -53,6 +61,10 @@ export interface ItemFilters {
   rarities?: string[]
   weaponCategories?: string[]
   armorCategories?: string[]
+}
+
+export interface LanguageFilters {
+  sources?: string[]
 }
 
 const isSuppressed = (
@@ -330,6 +342,12 @@ export class DataFilter {
     }
 
     return filtered
+  }
+
+  static filterLanguages(languages: Language5e[], filters: LanguageFilters): Language5e[] {
+    if (!filters.sources || filters.sources.length === 0) return languages
+    const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
+    return languages.filter((l) => sourcesUpper.has((l.source ?? '').toUpperCase()))
   }
 }
 

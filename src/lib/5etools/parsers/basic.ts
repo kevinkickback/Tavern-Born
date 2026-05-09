@@ -246,7 +246,6 @@ export function buildSourcesList(
         hasCharacterOptions,
       }
     })
-    .filter((source) => source.hasCharacterOptions !== false)
     .sort((a, b) => {
       const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
       const groupDiff = groupOrder.indexOf(a.group) - groupOrder.indexOf(b.group)

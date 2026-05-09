@@ -4,7 +4,7 @@ import { expect, test } from '@playwright/test'
 import { ensureStartupPromptResolved, selectCharacterFromHome } from './helpers/startup'
 
 test('import -> edit portrait -> save -> reload persists character changes', async ({ page }) => {
-  const fixturePath = path.resolve('tests/fixtures/equipment-e2e.dndchar')
+  const fixturePath = path.resolve('tests/fixtures/equipment-e2e.tbc')
   const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf-8')) as {
     id: string
     name: string
