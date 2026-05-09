@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test'
 import { ensureStartupPromptResolved, selectCharacterFromHome } from './helpers/startup'
 
+async function navigateToClassPage(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: 'Build' }).click()
+  await page.getByRole('link', { name: 'Class' }).click()
+}
+
 const MULTICLASS_CHARACTER = {
   id: 'multiclass-e2e-1',
   version: '2.0.0',
@@ -181,7 +186,7 @@ test('multiclass character shows both class tabs on class page', async ({ page }
 
   await selectCharacterFromHome(page, 'Multiclass E2E Hero')
 
-  await page.getByRole('link', { name: 'Class' }).click()
+  await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)
 
   // Both classes should appear as tab triggers
@@ -197,7 +202,7 @@ test('multiclass class tabs show correct level badges', async ({ page }) => {
   await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
 
   await selectCharacterFromHome(page, 'Multiclass E2E Hero')
-  await page.getByRole('link', { name: 'Class' }).click()
+  await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)
 
   // Fighter tab should display level 5 badge, Wizard level 3
@@ -216,7 +221,7 @@ test('multiclass tab switch updates the visible class panel', async ({ page }) =
   await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
 
   await selectCharacterFromHome(page, 'Multiclass E2E Hero')
-  await page.getByRole('link', { name: 'Class' }).click()
+  await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)
 
   // Fighter tab is default (first entry) — activate it explicitly
@@ -236,7 +241,7 @@ test('multiclass character persists both classes after reload', async ({ page })
   await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
 
   await selectCharacterFromHome(page, 'Multiclass E2E Hero')
-  await page.getByRole('link', { name: 'Class' }).click()
+  await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)
 
   // Verify both tabs exist before reload
@@ -248,7 +253,7 @@ test('multiclass character persists both classes after reload', async ({ page })
   await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
   await page.getByRole('link', { name: 'Home' }).click()
   await selectCharacterFromHome(page, 'Multiclass E2E Hero')
-  await page.getByRole('link', { name: 'Class' }).click()
+  await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)
 
   // Both classes should still be present after reload

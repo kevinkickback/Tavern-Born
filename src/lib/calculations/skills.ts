@@ -1,4 +1,5 @@
-import type { Skills } from '@/types/character'
+import type { Class5e } from '@/types/5etools'
+import type { CharacterClassEntry, Skills } from '@/types/character'
 import { ABILITY_ABBREV_TO_FULL } from './abilityNames'
 import { ABILITY_NAMES, type AbilityName, formatModifier } from './abilityScores'
 
@@ -233,4 +234,40 @@ export function mergeSkillState(current: Skills, proficiencies: string[]): Skill
   }
 
   return next
+}
+
+/**
+ * Count the total expertise slots available to the character from class features.
+ * Each "Expertise" class feature instance (e.g. Rogue L1/L6, Bard L3/L10) grants 2 slots.
+ * Expertise from feats is applied directly when the feat option is resolved and is not counted here.
+ */
+export function getExpertiseSlotsFromClasses(
+  classProgression: CharacterClassEntry[] | null | undefined,
+  classesByKey: Record<string, Class5e>,
+): number {
+  if (!classProgression?.length) return 0
+  let slots = 0
+  for (const entry of classProgression) {
+    const key = `${entry.name}|${entry.source ?? ''}`
+    const cls = classesByKey[key]
+    if (!cls?.classFeatureRefs) continue
+    for (const ref of cls.classFeatureRefs) {
+      // Use the level from the original ref string (e.g. "Expertise|Rogue||6" → 6) rather
+      // than ref.level. The parser's feature-record resolver indexes by name|source only, so
+      // two refs with the same name+source but different levels (e.g. Rogue Expertise at
+      // levels 1 and 6) both resolve to the same record and both end up with level: 1,
+      // causing every level-1 check to count both.
+      const refParts = typeof ref.ref === 'string' ? ref.ref.split('|') : []
+      const parsedLevel = Number.parseInt(refParts[3] ?? '', 10)
+      const level = Number.isNaN(parsedLevel) ? ref.level : parsedLevel
+      if (
+        typeof level === 'number' &&
+        level <= entry.levels &&
+        ref.name.toLowerCase() === 'expertise'
+      ) {
+        slots += 2
+      }
+    }
+  }
+  return slots
 }

@@ -218,7 +218,7 @@ describe('home page integration workflows', () => {
     const legacyCharacter = makeCharacterFixture()
     legacyCharacter.version = '0.0.0'
 
-    const file = new File([JSON.stringify(legacyCharacter)], 'legacy.dndchar', {
+    const file = new File([JSON.stringify(legacyCharacter)], 'legacy.tbc', {
       type: 'application/json',
     })
 
@@ -282,7 +282,7 @@ describe('home page integration workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Import' }))
 
     expect(fileInput.type).toBe('file')
-    expect(fileInput.accept).toBe('.dndchar,.json')
+    expect(fileInput.accept).toBe('.tbc,.json')
     expect(typeof fileInput.onchange).toBe('function')
     expect(fileInput.click).toHaveBeenCalled()
   })

@@ -18,8 +18,10 @@ import {
   filterCompendiumEntries,
 } from '@/lib/compendiumEntries'
 import { renderEntry } from '@/lib/renderer'
+import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
+import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 const ENTRY_TYPES = [
@@ -45,10 +47,9 @@ const ENTRY_TYPES = [
 const MAX_DISPLAY = 200
 
 export function CompendiumPage() {
-  // Intentional direct store access: the Compendium is a universal reference browser
-  // and must show all available data regardless of the active character's allowed sources.
-  // useFilteredGameData() would incorrectly narrow results by character source settings.
   const gameData = useGameDataStore((state) => state.gameData)
+  const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
+  const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set())
   const [activeSources, setActiveSources] = useState<Set<string>>(new Set())
@@ -56,12 +57,11 @@ export function CompendiumPage() {
   const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(null)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
 
-  const allEntries = useMemo(() => buildCompendiumEntries(gameData), [gameData])
-
-  const allSources = useMemo(
-    () => Array.from(new Set(allEntries.map((e) => e.source))).sort(),
-    [allEntries],
-  )
+  const effectiveAllowedSources = useMemo(() => {
+    if (!allowedSources) return undefined
+    const implicit = getImplicitSource(originSystem ?? '2014')
+    return allowedSources.includes(implicit) ? allowedSources : [...allowedSources, implicit]
+  }, [allowedSources, originSystem])
 
   const sourceNameMap = useMemo(() => {
     const map = new Map<string, string>()
@@ -70,6 +70,23 @@ export function CompendiumPage() {
     }
     return map
   }, [gameData?.sources])
+
+  const allEntries = useMemo(() => {
+    const entries = buildCompendiumEntries(gameData)
+    if (!effectiveAllowedSources || effectiveAllowedSources.length === 0) return entries
+    const sourcesSet = new Set(effectiveAllowedSources.map((s) => s.toUpperCase()))
+    return entries.filter((e) => sourcesSet.has(e.source.toUpperCase()))
+  }, [gameData, effectiveAllowedSources])
+
+  const allSources = useMemo(
+    () =>
+      Array.from(new Set(allEntries.map((e) => e.source))).sort((a, b) => {
+        const nameA = sourceNameMap.get(a) ?? a
+        const nameB = sourceNameMap.get(b) ?? b
+        return nameA.localeCompare(nameB)
+      }),
+    [allEntries, sourceNameMap],
+  )
 
   const activeFilterCount = activeTypes.size + activeSources.size
 

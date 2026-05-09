@@ -13,10 +13,6 @@ export interface AvailableProficiencies {
   weapons: string[]
   tools: string[]
   languages: string[]
-  /** Languages with type "standard" in game data. */
-  standardLanguages: string[]
-  /** Returns true when the named language is type "standard". Case-insensitive. */
-  isStandardLanguage: (name: string) => boolean
 }
 
 function toGenericChoiceLabel(value: string): string {
@@ -155,11 +151,7 @@ function collectWeaponOrArmorFromProfBlocks(
  */
 export function useAvailableProficiencies(): AvailableProficiencies {
   const filteredData = useFilteredGameData()
-  const { races, classes, backgrounds, items, itemsBase } = filteredData
-  // languages is not source-gated by useFilteredGameData but comes through the gameData spread
-  const languages =
-    (filteredData as unknown as { languages?: { name?: string; type?: string; source?: string }[] })
-      .languages ?? []
+  const { races, classes, backgrounds, items, itemsBase, languages } = filteredData
 
   return useMemo(() => {
     // Items are already source-filtered by useFilteredGameData; pass empty allowedSources so
@@ -239,30 +231,19 @@ export function useAvailableProficiencies(): AvailableProficiencies {
     const tools = Array.from(toolMap.values()).sort()
 
     const languageSet = new Map<string, string>()
-    const standardSet = new Set<string>()
-    const standardMap = new Map<string, string>()
     for (const lang of languages) {
       const cleanName = sanitizeProficiencyLabel(lang.name)
       if (!cleanName) continue
       const norm = normalizeKey(cleanName)
       if (!languageSet.has(norm)) languageSet.set(norm, cleanName)
-      if (lang.type === 'standard') {
-        if (!standardMap.has(norm)) standardMap.set(norm, cleanName)
-        standardSet.add(norm)
-      }
     }
     const allLanguages = Array.from(languageSet.values()).sort()
-    const standardLanguages = Array.from(standardMap.values()).sort()
-
-    const isStandardLanguage = (name: string) => standardSet.has(normalizeKey(name))
 
     return {
       armor,
       weapons,
       tools,
       languages: allLanguages,
-      standardLanguages,
-      isStandardLanguage,
     }
   }, [races, classes, backgrounds, items, itemsBase, languages])
 }
