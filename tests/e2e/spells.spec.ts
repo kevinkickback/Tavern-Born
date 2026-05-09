@@ -8,7 +8,7 @@ async function closeStartupModalIfOpen(page: import('@playwright/test').Page) {
 }
 
 test('spells page shows no-character state and returns home', async ({ page }) => {
-  await page.goto('/spells')
+  await page.goto('/#/spells')
   await closeStartupModalIfOpen(page)
 
   await expect(page.locator('main')).toContainText('No Character Selected')
@@ -19,7 +19,7 @@ test('spells page shows no-character state and returns home', async ({ page }) =
 
 test.describe('spells page no-character coverage', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/spells')
+    await page.goto('/#/spells')
     await closeStartupModalIfOpen(page)
   })
 
@@ -50,7 +50,7 @@ test.describe('spells page no-character coverage', () => {
 
   test('no-character card remains visible after hard navigation from home', async ({ page }) => {
     await page.goto('/')
-    await page.goto('/spells')
+    await page.goto('/#/spells')
     await expect(page.locator('main')).toContainText('No Character Selected')
   })
 

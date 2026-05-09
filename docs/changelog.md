@@ -1,5 +1,8 @@
-v0.2.0
-- Changed character save file extention to .tbc
-- Add missing skill experties logic
-- Redesigned skills proficiency tab
-- Compendium & Languages now respect allowed sources
+# v0.1.3
+
+## Changes
+
+* character save file extension changed from `.dndchar` to `.tbc`
+* Added missing skill expertise logic
+* Added ability grouping to skill proficiency tab
+* Compendium and Languages now respect allowed sources
