@@ -2,20 +2,6 @@ import { CheckCircle2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useGameDataStore } from '@/store/gameDataStore'
 
-/**
- * Full-screen overlay shown while the app is initialising.
- *
- * Covers the entire viewport (pointer-events included) so users can't
- * interact with the app until game data is ready.
- *
- * Shown during:
- *  - IDB hydration  (!hasHydrated)
- *  - Foreground data fetch  (isLoading && !isBackgroundRefreshing)
- *  - Cache read gap  (gameData not yet available and init still pending)
- *
- * When loading completes, briefly shows a checkmark with "App is ready"
- * before fading out.
- */
 export function AppLoadingOverlay() {
   const hasHydrated = useGameDataStore((s) => s.hasHydrated)
   const isLoading = useGameDataStore((s) => s.isLoading)
@@ -30,7 +16,6 @@ export function AppLoadingOverlay() {
     (isLoading && !isBackgroundRefreshing) ||
     (!gameData && cacheStatus === 'unknown' && !error)
 
-  // Phase: 'loading' → 'ready' (show checkmark) → 'fading' (fade out) → 'hidden' (unmount)
   const [phase, setPhase] = useState<'loading' | 'ready' | 'fading' | 'hidden'>('loading')
 
   useEffect(() => {
@@ -42,13 +27,11 @@ export function AppLoadingOverlay() {
     }
 
     if (phase === 'ready') {
-      // Hold the checkmark visible, then start fading.
       const timer = setTimeout(() => setPhase('fading'), 1200)
       return () => clearTimeout(timer)
     }
 
     if (phase === 'fading') {
-      // Wait for the CSS fade-out to finish, then unmount.
       const timer = setTimeout(() => setPhase('hidden'), 500)
       return () => clearTimeout(timer)
     }

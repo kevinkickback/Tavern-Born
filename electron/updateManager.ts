@@ -35,6 +35,23 @@ let isPortableMode = false
 const AUTO_CHECK_INTERVAL = 24 * 60 * 60 * 1000
 const STARTUP_CHECK_DELAY = 3000
 
+function isOfflineNow(): boolean {
+  const netWithOnline = net as typeof net & { isOnline?: () => boolean }
+  return typeof netWithOnline.isOnline === 'function' && !netWithOnline.isOnline()
+}
+
+function isConnectivityError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message.toLowerCase() : ''
+  return (
+    message.includes('net::') ||
+    message.includes('network') ||
+    message.includes('internet') ||
+    message.includes('timed out') ||
+    message.includes('econn') ||
+    message.includes('enotfound')
+  )
+}
+
 /** @internal exported for tests only */
 export function compareSemver(a: string, b: string): number {
   const [aCore, aPre = ''] = a.split('-', 2)
@@ -132,7 +149,7 @@ export function initAutoUpdater() {
 
   autoUpdater.on('error', (err: Error) => {
     // In unpacked (--dir) builds, app-update.yml is absent — treat as not-available.
-    if (err.message.includes('app-update.yml')) {
+    if (err.message.includes('app-update.yml') || isConnectivityError(err)) {
       setStatus({ status: 'not-available' })
       sendToRenderer('update-not-available')
       return
@@ -158,6 +175,12 @@ export function initAutoUpdater() {
 }
 
 async function checkForUpdatePortable(): Promise<UpdateStatus> {
+  if (isOfflineNow()) {
+    setStatus({ status: 'not-available' })
+    sendToRenderer('update-not-available')
+    return { status: 'not-available' }
+  }
+
   const currentVersion = app.getVersion()
   const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`
 
@@ -200,6 +223,11 @@ async function checkForUpdatePortable(): Promise<UpdateStatus> {
     sendToRenderer('update-not-available')
     return { status: 'not-available' }
   } catch (err) {
+    if (isConnectivityError(err)) {
+      setStatus({ status: 'not-available' })
+      sendToRenderer('update-not-available')
+      return { status: 'not-available' }
+    }
     const status: UpdateStatus = { status: 'error', error: (err as Error).message }
     setStatus(status)
     return status
@@ -208,6 +236,12 @@ async function checkForUpdatePortable(): Promise<UpdateStatus> {
 
 export async function checkForUpdate(): Promise<UpdateStatus> {
   if (!app.isPackaged) {
+    setStatus({ status: 'not-available' })
+    sendToRenderer('update-not-available')
+    return { status: 'not-available' }
+  }
+
+  if (isOfflineNow()) {
     setStatus({ status: 'not-available' })
     sendToRenderer('update-not-available')
     return { status: 'not-available' }
@@ -241,6 +275,11 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
     setStatus({ status: 'not-available' })
     return { status: 'not-available' }
   } catch (err) {
+    if (isConnectivityError(err)) {
+      setStatus({ status: 'not-available' })
+      sendToRenderer('update-not-available')
+      return { status: 'not-available' }
+    }
     const status: UpdateStatus = { status: 'error', error: (err as Error).message }
     setStatus(status)
     return status

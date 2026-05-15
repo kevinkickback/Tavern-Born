@@ -185,4 +185,21 @@ describe('writeGameDataCache', () => {
     // Should preserve the old timestamp even though the cache lacked a fingerprint
     expect(second.lastDataChangedAt).toBe(knownChangedAt)
   })
+
+  test('preserves lastDataChangedAt when legacy cache lacks fingerprint and no fallback is provided', async () => {
+    const data = makeGameData('legacy')
+    const before = '2025-01-01T00:00:00.000Z'
+
+    idbGetMock.mockResolvedValue({
+      data,
+      cachedAt: before,
+      // contentFingerprint intentionally absent (legacy)
+      lastDataChangedAt: before,
+      sourceSnapshot: { type: config.type, path: config.path },
+    })
+
+    const entry = await writeGameDataCache(data, config)
+
+    expect(entry.lastDataChangedAt).toBe(before)
+  })
 })

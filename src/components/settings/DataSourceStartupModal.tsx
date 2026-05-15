@@ -46,7 +46,6 @@ export function DataSourceStartupModal() {
 
   const handleOpenChange = (next: boolean) => {
     if (!next && !gameData && !isLoading && !isForced) {
-      // Block closing when there is genuinely no data available.
       return
     }
     if (!next && isForced) {

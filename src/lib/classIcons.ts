@@ -1,4 +1,3 @@
-/** Maps lowercase class names to their SVG icon URL in public/assets. */
 export const CLASS_ICON_MAP: Record<string, string> = {
   artificer: '/assets/images/ui/icons/artificer.svg',
   barbarian: '/assets/images/ui/icons/barbarian.svg',
@@ -15,10 +14,6 @@ export const CLASS_ICON_MAP: Record<string, string> = {
   wizard: '/assets/images/ui/icons/wizard.svg',
 }
 
-/**
- * Returns the SVG icon URL for a class name, or null for homebrew/unknown classes.
- * @param className - The class name (case-insensitive).
- */
 export function getClassIconUrl(className: string): string | null {
   return CLASS_ICON_MAP[className.toLowerCase().trim()] ?? null
 }

@@ -58,7 +58,6 @@ export function parseHitDice(hitDice: string | undefined | null): number {
   return match ? Number.parseInt(match[1], 10) : 8
 }
 
-/** Get hit die face value from a Class5e object. Falls back to 8. */
 export function getHitDiceFromClass(cls: Class5e | undefined | null): number {
   return cls?.hd?.faces ?? 8
 }

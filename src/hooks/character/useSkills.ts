@@ -18,21 +18,11 @@ import { useGameDataStore } from '@/store/gameDataStore'
 export type { SkillResult }
 
 export interface SkillsState {
-  /** All 18 skills with derived modifiers. Never stale — always computed from current scores. */
   skills: SkillResult[]
-
-  /** Passive Perception: 10 + Perception modifier. */
   passivePerception: number
-
   toggleProficiency: (skillName: string) => void
-
-  /** Toggle expertise on a skill (only meaningful when already proficient). */
   toggleExpertise: (skillName: string) => void
-
-  /** Total expertise slots available from class features (e.g. Rogue L1/L6, Bard L3/L10). */
   availableExpertiseSlots: number
-
-  /** Number of skills currently marked as expertise. */
   usedExpertiseSlots: number
 }
 
@@ -160,7 +150,7 @@ export function useSkills(): SkillsState {
         expertise: false,
         bonus: 0,
       }
-      if (!current.proficient) return // Expertise requires proficiency
+      if (!current.proficient) return
       updateCharacter(activeCharacter.id, {
         skills: {
           ...activeCharacter.skills,

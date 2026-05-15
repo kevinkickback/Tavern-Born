@@ -16,17 +16,18 @@ Flow:
 4. Decision branch (inside loadFromCache):
 - No cache and no source: set cacheStatus to unconfigured.
 - Cache and source, same source, fresh cache: serve cache immediately and run a background source verification check.
-- Cache and source, same source, stale cache: serve cache and trigger background refresh — returns { needsToast: 'stale' }.
+- Cache and source, same source, stale cache: serve cache and trigger background refresh silently (no toast).
 - Cache and source, different source: fetch fresh and replace cache.
 - Cache without source: serve offline cache — returns { needsToast: 'offline' }.
 - Source without cache: fetch fresh.
-5. useDataInit shows the appropriate toast based on the returned needsToast value.
+5. useDataInit shows an offline-only toast when cached data is used without a configured source.
 6. On successful fetch, parsed gameData is written to cache and store.
 
 Startup preference behavior:
 - Theme is applied immediately from localStorage before React renders, then reconciled with the persisted app preferences store after IndexedDB hydration.
 - Home-page card size is read from the app preferences store. The size slider is on the home page itself, not in Settings.
-- Stale cache always triggers a background refresh on startup.
+- Stale cache always triggers a silent background refresh on startup.
+- Background refreshes now preserve the current in-memory/cache data when a refresh returns an empty catalog payload (for example, remote source offline during startup).
 
 Update metadata behavior:
 - `lastUpdateCheckAt` is set only after a successful source check/fetch.
@@ -50,6 +51,7 @@ Important behavior:
 - Class index handling differs from spell index behavior; class index keys are slugs, not sources.
 - Composite key lookups use name|source and are expected by downstream hooks.
 - Game data loads are cancellation-aware: a new load aborts any in-flight request, and stale responses are ignored via request-id guards.
+- Remote ingestion now fails fast when no top-level resources can be fetched at all, instead of returning an empty dataset.
 
 ## 3) Character Edit and Save Lifecycle
 
@@ -197,6 +199,10 @@ Flow:
 Portable executable behavior:
 - In portable mode, auto-install is disabled; users download a new portable archive manually.
 - `updateManager` detects portable mode and adjusts behavior accordingly.
+
+Offline behavior:
+- Scheduled and manual checks short-circuit to `not-available` when Electron reports no network connectivity.
+- Connectivity-related updater failures are treated as `not-available` (not hard errors), avoiding noisy offline startup failure states.
 
 IPC channels:
 - `update:check`, `update:download`, `update:cancel`, `update:install`, `update:status`, `update:set-auto-check`, `update:get-version`, `update:get-current-changelog`

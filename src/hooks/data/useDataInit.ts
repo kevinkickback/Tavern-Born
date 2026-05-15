@@ -35,9 +35,6 @@ export function useDataInit() {
 
     async function init() {
       const result = await loadFromCache({ forceCheck: autoRefreshGameData })
-      if (result.needsToast === 'stale') {
-        toast.info('Game data is out of date — refreshing in the background…', { duration: 5000 })
-      }
       if (result.needsToast === 'offline') {
         toast.warning(
           'No data source is configured. Using cached data — some content may be outdated.',

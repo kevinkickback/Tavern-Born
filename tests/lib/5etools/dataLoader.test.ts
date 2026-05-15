@@ -596,4 +596,20 @@ describe('5etools/dataLoader', () => {
     expect(gameData.classFeatures.map((it) => it.name)).toEqual(['Spellcasting'])
     expect(gameData.spells).toEqual([])
   })
+
+  test('throws when remote source cannot load any top-level resource', async () => {
+    globalThis.fetch = vi.fn(() => {
+      throw new TypeError('Failed to fetch')
+    }) as unknown as typeof fetch
+
+    const loader = new FiveEToolsDataLoader({
+      type: 'remote',
+      path: 'https://example.com/5etools-src/main',
+      isValid: true,
+    })
+
+    await expect(loader.loadAllData()).rejects.toThrow(
+      'Unable to load remote data source. Check internet connectivity and source URL.',
+    )
+  })
 })

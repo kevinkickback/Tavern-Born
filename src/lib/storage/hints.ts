@@ -4,7 +4,6 @@ function storageKey(hintId: string): string {
   return `${KEY_PREFIX}${hintId}`
 }
 
-/** Read whether a one-time UI hint has been dismissed by the user. */
 export function isHintDismissed(hintId: string): boolean {
   try {
     return localStorage.getItem(storageKey(hintId)) === 'true'
@@ -13,7 +12,6 @@ export function isHintDismissed(hintId: string): boolean {
   }
 }
 
-/** Persist one-time UI hint dismissal state. */
 export function setHintDismissed(hintId: string, dismissed: boolean): void {
   try {
     if (dismissed) {
@@ -21,12 +19,9 @@ export function setHintDismissed(hintId: string, dismissed: boolean): void {
       return
     }
     localStorage.removeItem(storageKey(hintId))
-  } catch {
-    // localStorage unavailable (SSR, private browsing restriction) — noop
-  }
+  } catch {}
 }
 
-/** Remove all dismissed one-time UI hint records, causing them to appear again. */
 export function resetAllHints(): void {
   try {
     const keysToRemove: string[] = []
@@ -35,7 +30,5 @@ export function resetAllHints(): void {
       if (key?.startsWith(KEY_PREFIX)) keysToRemove.push(key)
     }
     for (const key of keysToRemove) localStorage.removeItem(key)
-  } catch {
-    // localStorage unavailable — noop
-  }
+  } catch {}
 }

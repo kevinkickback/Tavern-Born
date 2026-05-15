@@ -91,8 +91,6 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
       return
     }
 
-    // If selector mode was auto-opened due to missing data (startup/clear),
-    // close it once a valid source is loaded so active details are shown.
     if (autoOpenedSelectorRef.current && !selectorOnly) {
       setIsSelectingDataSource(false)
       autoOpenedSelectorRef.current = false

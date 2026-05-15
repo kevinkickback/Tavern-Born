@@ -84,11 +84,9 @@ function RaceAsiBonuses({
     while (newChoices.length <= blockIdx) newChoices.push([])
     const blockSelections = [...(newChoices[blockIdx] ?? [])]
 
-    // Swap: if another slot in this block already has this ability, give it the current slot's value
     const intraConflict = blockSelections.findIndex((s, si) => si !== slotIdx && s === ability)
     if (intraConflict >= 0) blockSelections[intraConflict] = blockSelections[slotIdx] ?? ''
 
-    // Clear cross-block conflict: same ability cannot appear in any other block
     for (let bi = 0; bi < newChoices.length; bi++) {
       if (bi === blockIdx) continue
       const other = newChoices[bi] ?? []
@@ -144,7 +142,6 @@ function RaceAsiBonuses({
           return slotAnchors.map((slotAnchor) => {
             const slotIdx = block.from.indexOf(slotAnchor)
             const selected = selections[slotIdx] ?? ''
-            // Disable abilities chosen in any other slot of this block OR any slot of another block
             const takenByOthers = new Set([
               ...selections.filter((s, si) => si !== slotIdx && s !== ''),
               ...choices.flatMap((_, bi) =>
@@ -294,7 +291,7 @@ function StandardArrayPanel({
       setAssignments(fallback)
       setAllScores(fallback)
     }
-    // Intentionally ignore `assignments` to avoid resetting user edits on each local assignment change.
+    // Keep local assignment edits stable while normalizing invalid incoming scores.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scores, setAllScores])
 

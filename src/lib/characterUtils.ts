@@ -10,7 +10,6 @@ import {
   parseHitDice,
 } from './calculations/gameRules'
 
-/** A single class entry within a character's multiclass progression. */
 export interface ClassEntry {
   name: string
   source?: string
@@ -49,7 +48,6 @@ export function getCharacterClassEntries(
   ]
 }
 
-/** Total character level summed across all class entries. */
 export function getTotalLevel(progression: Progression | undefined | null): number {
   if (!progression?.classes?.length) return 1
   return progression.classes.reduce((sum, c) => sum + (c.levels || 0), 0)
@@ -76,7 +74,6 @@ export function getTotalCharacterLevel(
   return entries.reduce((sum, e) => sum + (e.levels || 0), 0) || 1
 }
 
-/** The primary (first) class entry, or null for a brand-new character. */
 export function getPrimaryClass(progression: Progression | undefined | null): ClassEntry | null {
   if (!progression?.classes?.length) return null
   return progression.classes[0]
@@ -115,7 +112,6 @@ export function countAvailableASIs(
       count += asiLevels.filter((l) => l <= (entry.levels || 0)).length
     }
   }
-  // Variant Human grants 1 free feat
   const raceName = race?.name?.toLowerCase() ?? ''
   if (raceName.includes('variant') && raceName.includes('human')) {
     count += 1
@@ -139,7 +135,7 @@ export function calculateHPBreakdown(
   options?: { averageHp?: boolean; classesData?: Class5e[] },
 ): number[] {
   const { averageHp = true, classesData } = options ?? {}
-  const breakdown: number[] = [0] // index 0 unused
+  const breakdown: number[] = [0]
   const classes = progression?.classes ?? []
   let firstLevel = true
 
@@ -147,7 +143,6 @@ export function calculateHPBreakdown(
     const classLevels = Math.max(0, entry.levels || 0)
     if (classLevels <= 0) continue
 
-    // Source-aware lookup, fall back to name-only
     const classData =
       classesData?.find(
         (c) => c.name === entry.name && (entry.source == null || c.source === entry.source),
@@ -184,7 +179,6 @@ export function calculateMaxHP(
   options?: { averageHp?: boolean; classesData?: Class5e[] },
 ): number {
   const breakdown = calculateHPBreakdown(progression, conModifier, options)
-  // breakdown[0] is the unused sentinel (0), so summing it is harmless
   const total = breakdown.reduce((sum, v) => sum + v, 0)
   return Math.max(1, total)
 }
@@ -219,7 +213,6 @@ export function isMaxLevel(progression: Progression | undefined | null): boolean
   return getTotalLevel(progression) >= MAX_CHARACTER_LEVEL
 }
 
-/** Validate that a proposed multiclass is legal (total doesn't exceed 20). */
 export function canGainLevel(
   progression: Progression | undefined | null,
   additionalLevels = 1,

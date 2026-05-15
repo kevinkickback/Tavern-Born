@@ -54,9 +54,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const [ignoreRestrictions, setIgnoreRestrictions] = useState(false)
   const [multiclassSelection, setMulticlassSelection] = useState('')
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
-  // Ordered history of levels added this session: [{className, classLevel}]
-  // classLevel is the class's own level count (1-based) at the moment it was added.
-  // Popping from this stack drives Remove Last Level targeting.
   const [levelHistory, setLevelHistory] = useState<
     Array<{ className: string; classLevel: number }>
   >([])
@@ -69,7 +66,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const totalLevel = getTotalCharacterLevel(character)
   const isAtCap = totalLevel >= MAX_CHARACTER_LEVEL
 
-  // Classes available to add — deduplicate by name, exclude sidekick classes
   const seenClassNames = new Set<string>()
   const multiclassOptions = (classes as Class5e[])
     .filter((cls) => {
@@ -185,9 +181,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       return
     }
 
-    // Determine which class+level to remove.
-    // If we have history from this session, pop the last entry.
-    // Otherwise fall back to the last class in progression at its current level.
     const lastHistoryEntry = levelHistory[levelHistory.length - 1]
     const targetClassName =
       lastHistoryEntry?.className ?? classProgression[classProgression.length - 1].name
@@ -201,7 +194,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       return
     }
 
-    // Remove spells and spell choice placeholders attributed to this class at this class level.
     const ledger = character.provenance ?? emptyProvenance()
     const affectedSpells = getSpellsGrantedAtLevel(ledger, targetClassName, targetClassLevel)
     let updatedLedger = removeSpellChoicesAtLevel(ledger, targetClassName, targetClassLevel)
@@ -222,7 +214,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     let newProgression = classProgression.map((e, i) =>
       i === targetIdx ? { ...e, levels: e.levels - 1 } : e,
     )
-    // Drop the class entirely if it hits 0 levels
     if (newProgression[targetIdx].levels <= 0) {
       newProgression = newProgression.filter((_, i) => i !== targetIdx)
     }
@@ -271,7 +262,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
           <ScrollArea className="flex-1 overflow-hidden">
             <div className="px-5 py-4 space-y-4">
-              {/* Your Classes */}
               <div>
                 <div className="flex items-center gap-2 mb-2.5">
                   <Scroll className="h-3.5 w-3.5 text-muted-foreground" />
@@ -365,7 +355,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                 </div>
               </div>
 
-              {/* Add Multiclass */}
               <div>
                 <div className="flex items-center gap-2 mb-2.5">
                   <Users className="h-3.5 w-3.5 text-muted-foreground" />

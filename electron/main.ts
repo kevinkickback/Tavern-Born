@@ -21,13 +21,7 @@ const __dirname = dirname(__filename)
 let mainWindow: BrowserWindow | null = null
 let hasUnsavedChanges = false
 let forceClose = false
-/**
- * The base directory the user configured for local 5etools data files.
- * Set whenever the renderer calls `dialog:selectFolder` or
- * `config:setLocalDataPath`. Only paths under this directory may be read
- * via `fs:readJson`.
- */
-let allowedLocalDataPath: string | null = null
+let localDataRootPath: string | null = null
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL
 
@@ -46,7 +40,6 @@ async function createWindow(): Promise<void> {
     backgroundColor: '#111113',
     webPreferences: {
       preload: join(__dirname, 'preload.mjs'),
-      // Security best practices
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
@@ -66,7 +59,6 @@ async function createWindow(): Promise<void> {
 
   attachWindowStatePersistence(mainWindow)
 
-  // Show window once content is ready to avoid white flash
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show()
     if (isDev) {
@@ -74,8 +66,6 @@ async function createWindow(): Promise<void> {
     }
   })
 
-  // --- Security: Restrict navigation ---
-  // Only allow navigation to the app's own URLs
   mainWindow.webContents.on('will-navigate', (event, url) => {
     const allowedOrigins = ['http://localhost:', `file://${__dirname}`]
     const isAllowed = allowedOrigins.some((origin) => url.startsWith(origin))
@@ -84,7 +74,6 @@ async function createWindow(): Promise<void> {
     }
   })
 
-  // --- Security: Open external links in the default browser ---
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://') || url.startsWith('http://')) {
       shell.openExternal(url)
@@ -92,7 +81,6 @@ async function createWindow(): Promise<void> {
     return { action: 'deny' }
   })
 
-  // Load the app
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
   } else {
@@ -113,7 +101,6 @@ async function createWindow(): Promise<void> {
   initAutoUpdater()
 }
 
-// --- Security: Content Security Policy ---
 app.on('ready', () => {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
@@ -139,7 +126,6 @@ app.on('ready', () => {
     })
   })
 
-  // --- Security: Deny all permission requests ---
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
     callback(false)
   })
@@ -156,17 +142,13 @@ app.on('ready', () => {
         })
     if (result.canceled || result.filePaths.length === 0) return null
     const selected = result.filePaths[0]
-    // Track the selected directory as the allowed base for local file reads.
-    allowedLocalDataPath = normalize(selected)
+    localDataRootPath = normalize(selected)
     return selected
   })
 
-  // Called by the renderer when a previously-configured local data path is
-  // restored from persisted state (e.g. on app startup) so the main process
-  // can enforce path constraints without requiring the user to re-select.
   ipcMain.on('config:setLocalDataPath', (_event, folderPath: unknown) => {
     if (typeof folderPath === 'string' && isAbsolute(folderPath)) {
-      allowedLocalDataPath = normalize(folderPath)
+      localDataRootPath = normalize(folderPath)
     }
   })
 
@@ -174,15 +156,10 @@ app.on('ready', () => {
     if (!isAbsolute(filePath)) throw new Error('Path must be absolute')
     const normalized = normalize(filePath)
 
-    // Path-containment guard: only allow reads from within the configured
-    // local data directory. This prevents renderer XSS or compromised code
-    // from reading arbitrary host files (SSH keys, credentials, etc.).
-    if (!allowedLocalDataPath) {
+    if (!localDataRootPath) {
       throw new Error('No local data directory configured. Select a folder first.')
     }
-    const base = allowedLocalDataPath.endsWith(sep)
-      ? allowedLocalDataPath
-      : allowedLocalDataPath + sep
+    const base = localDataRootPath.endsWith(sep) ? localDataRootPath : localDataRootPath + sep
     if (!normalized.startsWith(base)) {
       throw new Error('Access denied: path is outside the configured data directory.')
     }
@@ -247,27 +224,22 @@ app.on('ready', () => {
   })
 })
 
-// macOS: Re-create window when dock icon is clicked
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     void createWindow()
   }
 })
 
-// Quit when all windows are closed (except macOS)
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
 
-// --- Security: Prevent creation of additional WebContents ---
 app.on('web-contents-created', (_event, contents) => {
-  // Prevent navigation in any new webContents
   contents.on('will-navigate', (event) => {
     event.preventDefault()
   })
 
-  // Deny all new window/tab creation from child contents
   contents.setWindowOpenHandler(() => ({ action: 'deny' }))
 })

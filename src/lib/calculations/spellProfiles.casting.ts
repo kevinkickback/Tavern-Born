@@ -66,7 +66,6 @@ export function isPreparedCaster(classData?: Class5e): boolean {
   return !hasKnownSpellProgression(classData)
 }
 
-/** True prepared casters (Cleric/Druid/Paladin) prepare from the full class list. */
 export function isTruePreparedCaster(classData?: Class5e): boolean {
   if (!classData?.spellcastingAbility) return false
   // PHB path: formula-based prepared caster with no known-spell progression
@@ -153,9 +152,7 @@ export function evaluatePreparedSpellsFormula(
     if (typeof evalResult === 'number' && Number.isFinite(evalResult)) {
       return Math.max(0, Math.floor(evalResult))
     }
-  } catch {
-    // Fall through to return null
-  }
+  } catch {}
 
   return null
 }
@@ -167,7 +164,6 @@ export function getPreparedSpellLimit(
 ): number | null {
   if (!classData?.spellcastingAbility) return null
 
-  // XPHB array-based progression takes precedence
   const progression = getProgressionArray(classData.preparedSpellsProgression)
   if (progression) {
     return progression[characterLevel - 1] ?? progression[progression.length - 1] ?? null
@@ -253,12 +249,10 @@ export function buildSpellcastingClassDetails(
       const truePreparedCaster = isTruePreparedCaster(classData)
       const levelOnlyPrepared = isLevelOnlyPreparedCaster(classData)
 
-      // Determine prepared spell limit
       const preparedSpellLimit = preparedCaster
         ? getPreparedSpellLimit(classData, entry.levels, mod)
         : null
 
-      // Determine known spell limit
       let knownSpellLimit: number | null
       const progressionKnownSpellLimit = getKnownSpellLimit(classData, entry.levels)
       if (preparedCaster || levelOnlyPrepared) {

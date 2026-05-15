@@ -373,6 +373,21 @@ function buildProficienciesSummary(character: Character): string {
   return rows.join('\n')
 }
 
+function buildLanguagesSummary(character: Character): string {
+  if (character.proficiencies.languages.length === 0) return ''
+  return character.proficiencies.languages.join(', ')
+}
+
+function buildFeatsSummary(character: Character): string {
+  if (character.feats.length === 0) return ''
+  return character.feats
+    .map((feat) => {
+      const body = feat.description?.trim()
+      return body ? `${feat.name}: ${body}` : feat.name
+    })
+    .join('\n\n')
+}
+
 function deriveCalculatedValues(character: Character) {
   const level = getLevel(character)
   const proficiencyBonus = getProficiencyBonus(level)
@@ -416,12 +431,15 @@ function buildCharacterSheetFieldMap2024(character: Character, classesData?: Cla
   const values = deriveCalculatedValues(character)
   const effectiveArmorClass = computeEffectiveCharacterArmorClass(character)
   const maxHP = getEffectiveMaxHP(character, classesData)
+  const hitDiceUsed = Math.max(0, character.hitDiceUsed ?? 0)
+  const remainingHitDice = Math.max(0, values.level - hitDiceUsed)
   const textFields: Record<string, string> = {
     Text_1: character.name || '',
     Text_2: getClassLevelSummary(character),
     Text_3: getRaceSummary(character),
     Text_4: character.background || '',
-    Text_5: '',
+    Text_5: character.details.alignment || '',
+    Text_6: String(values.level),
 
     Text_22: String(character.abilityScores.strength),
     Text_25: formatModifier(values.abilityModifiers.strength),
@@ -443,15 +461,26 @@ function buildCharacterSheetFieldMap2024(character: Character, classesData?: Cla
     Text_10: String(maxHP || ''),
     Text_11: String(character.hitPoints.current || ''),
     Text_12: String(character.hitPoints.temporary || ''),
+    Text_13: String(remainingHitDice),
 
     Text_55: buildProficienciesSummary(character),
+    Text_56: buildLanguagesSummary(character),
     Text_57: buildFeaturesSummary(character),
+    Text_58: buildFeatsSummary(character),
     Text_59: buildEquipmentSummary(character),
     Text_60:
       character.details.backstory || character.details.lifeEvents || character.details.origin || '',
   }
 
-  const checkboxFields: Record<string, boolean> = {}
+  const checkboxFields: Record<string, boolean> = {
+    Checkbox_1: !!character.inspiration,
+    Checkbox_2: (character.deathSaves?.successes ?? 0) >= 1,
+    Checkbox_3: (character.deathSaves?.successes ?? 0) >= 2,
+    Checkbox_4: (character.deathSaves?.successes ?? 0) >= 3,
+    Checkbox_5: (character.deathSaves?.failures ?? 0) >= 1,
+    Checkbox_6: (character.deathSaves?.failures ?? 0) >= 2,
+    Checkbox_7: (character.deathSaves?.failures ?? 0) >= 3,
+  }
 
   for (const [ability, mapping] of Object.entries(WOTC_2024_SAVE_FIELD_MAP) as Array<
     [AbilityName, { modifier: string; proficiency: string }]

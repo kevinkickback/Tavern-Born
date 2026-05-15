@@ -18,6 +18,9 @@ describe('characterSheetPdf', () => {
       ],
       level: 4,
       background: 'Outlander',
+      details: {
+        alignment: 'Chaotic Good',
+      },
       abilityScores: {
         strength: 12,
         dexterity: 16,
@@ -33,6 +36,23 @@ describe('characterSheetPdf', () => {
         current: 24,
         temporary: 5,
       },
+      hitDiceUsed: 1,
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        languages: ['Common', 'Elvish'],
+        skills: [],
+        savingThrows: [],
+      },
+      feats: [
+        {
+          id: 'alert',
+          name: 'Alert',
+          source: 'PHB',
+          description: 'You gain a +5 bonus to initiative.',
+        },
+      ],
     })
 
     const map = buildCharacterSheetFieldMap(character, '2024')
@@ -41,6 +61,8 @@ describe('characterSheetPdf', () => {
     expect(map.textFields.Text_2).toBe('Ranger 3 / Fighter 1')
     expect(map.textFields.Text_3).toBe('Wood Elf')
     expect(map.textFields.Text_4).toBe('Outlander')
+    expect(map.textFields.Text_5).toBe('Chaotic Good')
+    expect(map.textFields.Text_6).toBe('4')
 
     expect(map.textFields.Text_22).toBe('12')
     expect(map.textFields.Text_23).toBe('16')
@@ -49,6 +71,29 @@ describe('characterSheetPdf', () => {
     expect(map.textFields.Text_10).toBe('31')
     expect(map.textFields.Text_11).toBe('24')
     expect(map.textFields.Text_12).toBe('5')
+    expect(map.textFields.Text_13).toBe('3')
+    expect(map.textFields.Text_56).toBe('Common, Elvish')
+    expect(map.textFields.Text_58).toBe('Alert: You gain a +5 bonus to initiative.')
+  })
+
+  test('should map inspiration and death saves for 2024 template', () => {
+    const character = makeCharacterFixture({
+      inspiration: true,
+      deathSaves: {
+        successes: 2,
+        failures: 1,
+      },
+    })
+
+    const map = buildCharacterSheetFieldMap(character, '2024')
+
+    expect(map.checkboxFields.Checkbox_1).toBe(true)
+    expect(map.checkboxFields.Checkbox_2).toBe(true)
+    expect(map.checkboxFields.Checkbox_3).toBe(true)
+    expect(map.checkboxFields.Checkbox_4).toBe(false)
+    expect(map.checkboxFields.Checkbox_5).toBe(true)
+    expect(map.checkboxFields.Checkbox_6).toBe(false)
+    expect(map.checkboxFields.Checkbox_7).toBe(false)
   })
 
   test('should map saving throw and skill proficiency checkboxes', () => {

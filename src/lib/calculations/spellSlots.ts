@@ -16,7 +16,6 @@ export const CASTER_PROGRESSION_TO_FULL: Readonly<Record<CasterProgression, stri
   none: 'None',
 }
 
-/** Convert a caster progression key to its full display name. */
 export function casterProgressionToFull(progression: string): string {
   return CASTER_PROGRESSION_TO_FULL[progression as CasterProgression] ?? progression
 }
@@ -27,7 +26,6 @@ export function casterProgressionToFull(progression: string): string {
  * Each row is [level-1 slots, level-2 slots, ..., level-9 slots].
  */
 const FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL: number[][] = [
-  // Index 0 intentionally unused so index === caster level.
   [],
   /* lv 1  */ [2],
   /* lv 2  */ [3],
@@ -71,7 +69,7 @@ export const FALLBACK_CLASS_CASTER_PROGRESSION: Record<string, CasterProgression
   Druid: 'full',
   Sorcerer: 'full',
   Wizard: 'full',
-  Artificer: 'artificer', // data says 'artificer' (ceiling half-caster), not '1/2'
+  Artificer: 'artificer',
   Paladin: '1/2',
   Ranger: '1/2',
   Warlock: 'pact',
@@ -147,7 +145,6 @@ export function getStandardSpellSlots(casterLevel: number): SpellSlotsResult {
   return result
 }
 
-/** Return pact magic slot maximums for a Warlock of the given `level`. */
 export function getPactMagicSlots(level: number): SpellSlotsResult {
   if (level < 1 || level > 20) return {}
   if (import.meta.env.DEV) {
