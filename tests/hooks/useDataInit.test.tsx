@@ -137,7 +137,7 @@ describe('useDataInit', () => {
     })
     expect(useGameDataStore.getState().gameData).toEqual(cacheData)
     expect(loadGameDataMock).toHaveBeenCalledWith(config, true)
-    expect(toast.info).toHaveBeenCalled()
+    expect(toast.info).not.toHaveBeenCalled()
   })
 
   test('uses offline cache when source config is missing', async () => {

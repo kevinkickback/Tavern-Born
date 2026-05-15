@@ -71,22 +71,12 @@ function SourceCategoryLine({
 }
 
 export interface SourcesAccordionProps {
-  /** Stable identifier used to persist collapsed state per section. */
   sectionId: string
-  /** Panel heading. Defaults to "Sources". */
   title?: string
-  /** Rows to render. */
   rows: SourceRow[]
-  /** Text shown when rows is empty. */
   emptyText?: string
-  /** Initial collapsed state when no persisted value exists. */
   defaultCollapsed?: boolean
 }
-
-/**
- * Collapsible Sources accordion rendered at the bottom of a card/section.
- * Persists its collapsed state to localStorage by sectionId.
- */
 export function SourcesAccordion({
   sectionId,
   title = 'Sources',

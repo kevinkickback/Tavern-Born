@@ -70,9 +70,7 @@ export function setThemePreferences(accent: AccentTheme, appearance: AppearanceT
   try {
     localStorage.setItem(ACCENT_STORAGE_KEY, accent)
     localStorage.setItem(APPEARANCE_STORAGE_KEY, appearance)
-  } catch {
-    // localStorage unavailable — noop
-  }
+  } catch {}
 }
 
 export function setAccentTheme(accent: AccentTheme) {

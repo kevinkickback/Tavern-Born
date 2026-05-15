@@ -72,15 +72,11 @@ export function RenderedEntryWithTooltip({
     if (pinnedRef.current) return
     clearHide()
     hideTimer.current = setTimeout(() => {
-      // Guard with :hover so the tooltip stays open when the mouse is physically
-      // over it, even if no JS event fired to cancel the timer (portal event edge cases).
       if (!pinnedRef.current && !tooltipRef.current?.matches(':hover')) setHint(null)
     }, HIDE_DELAY_MS)
   }, [clearHide])
 
-  // Callback ref that wires native DOM listeners onto the portaled tooltip element.
-  // React 18 delegates synthetic events to the app root; elements portaled to
-  // document.body are outside that root, so onMouseEnter/onMouseLeave are unreliable.
+  // Tooltip content is portaled to document.body, so native listeners are more reliable here.
   const setTooltipRef = useCallback(
     (el: HTMLDivElement | null) => {
       const prev = tooltipRef.current
@@ -105,8 +101,6 @@ export function RenderedEntryWithTooltip({
       const el = target.closest('[data-recursive-title]') as HTMLElement | null
 
       if (!el) {
-        // Mouse is over wrapper but not over an entity link — keep the tooltip
-        // open. It will close via handleWrapperMouseLeave when the mouse exits.
         return
       }
 
@@ -143,11 +137,10 @@ export function RenderedEntryWithTooltip({
     [recursiveLookup, clearHide],
   )
 
-  // Check relatedTarget so we don't schedule a hide when the mouse moves into the tooltip.
   const handleWrapperMouseLeave = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const related = e.nativeEvent.relatedTarget as Node | null
-      if (related && tooltipRef.current?.contains(related)) return
+      const pointerDestination = e.nativeEvent.relatedTarget as Node | null
+      if (pointerDestination && tooltipRef.current?.contains(pointerDestination)) return
       scheduleHide()
     },
     [scheduleHide],
@@ -199,8 +192,7 @@ export function RenderedEntryWithTooltip({
       <div onMouseMove={handleMouseMove} onMouseLeave={handleWrapperMouseLeave}>
         <div
           className={className}
-          // renderEntry outputs safe HTML from structured 5etools entries.
-          // eslint-disable-next-line react/no-danger
+          // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
           dangerouslySetInnerHTML={{ __html: html }}
         />
       </div>
@@ -251,8 +243,7 @@ export function RenderedEntryWithTooltip({
                         const entryHtml = renderEntryCached(e)
                         return (
                           <div
-                            // renderEntry outputs safe HTML from structured 5etools entries.
-                            // eslint-disable-next-line react/no-danger
+                            // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
                             key={`${hint.spell.name}|${entryHtml.slice(0, 48)}`}
                             dangerouslySetInnerHTML={{ __html: entryHtml }}
                           />
@@ -286,8 +277,7 @@ export function RenderedEntryWithTooltip({
                   <div className="px-3 pb-3 pt-2 text-sm leading-relaxed max-h-[220px] overflow-y-auto [&_p]:my-0.5 [&_p+_p]:mt-1 [&_ul]:my-1 [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-0.5 [&_ol]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-border [&_th]:bg-muted/20 [&_th]:px-1.5 [&_th]:py-1 [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-1 [&_.cursor-help]:underline [&_.cursor-help]:decoration-dotted [&_.cursor-help]:underline-offset-2">
                     {hint.html ? (
                       <div
-                        // renderEntry outputs safe HTML from structured 5etools entries.
-                        // eslint-disable-next-line react/no-danger
+                        // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
                         dangerouslySetInnerHTML={{ __html: hint.html }}
                       />
                     ) : (

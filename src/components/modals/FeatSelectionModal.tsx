@@ -92,21 +92,13 @@ const FeatCard = memo(function FeatCard({
 export interface FeatSelectionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Available feats to browse (pre-filtered to allowed sources, merged with saved feats). */
   feats: Feat5e[]
-  /** How many feats the character may hold (total earned ASI slots, excluding special feats). */
   maxSelections: number
-  /** Composite IDs (`name|source`) pre-selected when the dialog opens. */
   initialSelectedIds?: string[]
-  /** IDs of feats that were selected via the ignore-limit toggle (count excluded from limit). */
   initialSpecialIds?: string[]
-  /** Character snapshot used for prerequisite validation. */
   characterSnapshot: PrereqCharacterSnapshot
-  /** Optional initial filter state when opening (e.g. show unmet prereqs in class-driven pickers). */
   initialFilters?: ActiveFilters
-  /** When false, hides the "Ignore selection limit" switch (e.g. on BuildClassPage). Defaults to true. */
   allowIgnoreLimit?: boolean
-  /** When true, clicking an at-limit feat auto-swaps it with the current selection. Defaults to true. */
   swapOnLimit?: boolean
   onConfirm: (selectedFeats: Feat5e[]) => void
 }
@@ -135,7 +127,6 @@ export function FeatSelectionModal({
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [feats])
 
-  // Build prereq map once; keyed by `name|source`
   const prereqMap = useMemo(() => {
     const map = new Map<string, { met: boolean; reasons: string[] }>()
     for (const f of feats) {
@@ -153,10 +144,7 @@ export function FeatSelectionModal({
     [prereqMap],
   )
 
-  // Tracks whether the "ignore selection limit" switch is active.
-  // Updated inside matchItem (which receives activeFilters) and read by canSelect.
   const ignoreLimitRef = useRef(false)
-  // IDs of feats that are already classified as "special" — excluded from the normal slot count.
   const specialIdsRef = useRef(new Set(initialSpecialIds))
 
   const filterSections: FilterSection[] = useMemo(
@@ -206,20 +194,14 @@ export function FeatSelectionModal({
       {
         key: 'all',
         label: maxSelections === 1 ? 'feat' : 'feats',
-        // Include pre-existing special feats in the display limit so the badge
-        // doesn't appear red when special feats are pre-selected.
         max: maxSelections + specialIdsRef.current.size,
         test: () => true,
       },
     ],
-    // `specialIdsRef.current` is mutable by design; depending on it would cause noisy recomputation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- special IDs are mutable via ref.
     [maxSelections],
   )
 
-  // Feats with unmet prereqs are hidden by default; the filter toggle reveals them.
-  // They remain selectable when visible — prereq failures are shown as warnings only.
-  // Also captures the ignoreLimit switch state into ignoreLimitRef for canSelect.
   const matchItem = useCallback(
     (item: Feat5e, search: string, activeFilters: ActiveFilters) => {
       ignoreLimitRef.current = activeFilters.limit?.has('ignoreLimit') ?? false
@@ -240,8 +222,6 @@ export function FeatSelectionModal({
     [prereqMap],
   )
 
-  // When the selection limit is ignored, all items are always selectable.
-  // Otherwise, block adding beyond maxSelections — special IDs don't count against the limit.
   const canSelect = useCallback(
     (item: Feat5e, selectedIds: Set<string>, _allItems: Feat5e[]) => {
       if (ignoreLimitRef.current) return true

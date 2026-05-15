@@ -1,17 +1,37 @@
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+
+const { appState, netState, checkForUpdatesMock, downloadUpdateMock, quitAndInstallMock, onMock } =
+  vi.hoisted(() => ({
+    appState: {
+      isPackaged: false,
+      version: '1.0.0',
+    },
+    netState: {
+      online: true,
+    },
+    checkForUpdatesMock: vi.fn(),
+    downloadUpdateMock: vi.fn(),
+    quitAndInstallMock: vi.fn(),
+    onMock: vi.fn(),
+  }))
 
 vi.mock('electron', () => ({
   app: {
-    getVersion: () => '1.0.0',
-    isPackaged: false,
+    getVersion: () => appState.version,
+    get isPackaged() {
+      return appState.isPackaged
+    },
   },
   BrowserWindow: {
     getAllWindows: () => [],
   },
   net: {
     fetch: vi.fn(),
+    isOnline: () => netState.online,
   },
-  shell: {},
+  shell: {
+    openExternal: vi.fn(),
+  },
 }))
 
 vi.mock('electron-updater', () => ({
@@ -20,12 +40,22 @@ vi.mock('electron-updater', () => ({
     autoInstallOnAppQuit: false,
     allowDowngrade: false,
     forceDevUpdateConfig: false,
-    on: vi.fn(),
+    on: onMock,
+    checkForUpdates: checkForUpdatesMock,
+    downloadUpdate: downloadUpdateMock,
+    quitAndInstall: quitAndInstallMock,
   },
   CancellationToken: class {},
 }))
 
-import { compareSemver } from '../../electron/updateManager'
+import {
+  checkForUpdate,
+  compareSemver,
+  getUpdateStatus,
+  initAutoUpdater,
+  startAutoCheckSchedule,
+  stopAutoCheckSchedule,
+} from '../../electron/updateManager'
 
 describe('compareSemver', () => {
   test('returns 0 for equal versions', () => {
@@ -68,5 +98,42 @@ describe('compareSemver', () => {
   test('handles v-prefixed strings when stripped by caller', () => {
     const strip = (v: string) => v.replace(/^v/, '')
     expect(compareSemver(strip('v2.0.0'), strip('v1.9.0'))).toBe(1)
+  })
+})
+
+describe('updateManager offline safeguards', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useFakeTimers()
+    appState.isPackaged = true
+    appState.version = '1.0.0'
+    netState.online = true
+    stopAutoCheckSchedule()
+  })
+
+  afterEach(() => {
+    stopAutoCheckSchedule()
+    vi.useRealTimers()
+  })
+
+  test('checkForUpdate returns not-available offline without calling electron-updater', async () => {
+    netState.online = false
+
+    const result = await checkForUpdate()
+
+    expect(result.status).toBe('not-available')
+    expect(getUpdateStatus().status).toBe('not-available')
+    expect(checkForUpdatesMock).not.toHaveBeenCalled()
+  })
+
+  test('startup auto-check schedule skips updater calls while offline', async () => {
+    netState.online = false
+    initAutoUpdater()
+    startAutoCheckSchedule()
+
+    await vi.advanceTimersByTimeAsync(3000)
+
+    expect(checkForUpdatesMock).not.toHaveBeenCalled()
+    expect(getUpdateStatus().status).toBe('not-available')
   })
 })

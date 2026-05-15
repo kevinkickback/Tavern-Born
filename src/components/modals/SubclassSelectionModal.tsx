@@ -68,13 +68,11 @@ export function SubclassSelectionModal({
     [],
   )
 
-  // Single-select: max 1, one category covering all items.
   const categories = useMemo(
     () => [{ key: 'all', label: 'selected', max: 1, test: () => true }],
     [],
   )
 
-  // Block selecting more than 1; already-selected item can always be toggled off.
   const canSelect = useCallback((item: SubclassOption, selectedIds: Set<string>) => {
     if (selectedIds.has(`${item.name}|${item.source ?? ''}`)) return true
     return selectedIds.size < 1
@@ -88,8 +86,7 @@ export function SubclassSelectionModal({
         .find((id) => id.startsWith(`${selectedName}|`))
       return selectedId ? [selectedId] : []
     },
-    // Keep the memo keyed to selection inputs only; mapper/callback allocations are deterministic.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only selection inputs should trigger recompute.
     [selectedName, subclasses],
   )
 

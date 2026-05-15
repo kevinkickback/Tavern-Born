@@ -1,14 +1,3 @@
-// Generic selection dialog — filter sidebar + scrollable inline card list + footer counters.
-//
-// Layout (matches fizbanes-forge SpellSelectorModal visual):
-//   Header:  DialogTitle | search bar (filter-toggle + input + Clear)
-//   Body:    [collapsible filter sidebar] | [scrollable card list]
-//   Footer:  SELECTED label + per-category badges + status text | Cancel + Confirm
-//
-// The component is deliberately unopinionated — it manages selection state and
-// filter sidebar UI; all item-specific logic (card rendering, match function,
-// filter sections, category limits) is provided by the caller.
-
 import { Funnel, X } from '@phosphor-icons/react'
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
@@ -34,7 +23,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 
-/** The state of all filter sections, keyed by FilterSection.key. */
 export type ActiveFilters = Record<string, Set<string>>
 
 export interface FilterOption {
@@ -45,23 +33,16 @@ export interface FilterOption {
 export interface FilterSection {
   key: string
   label: string
-  /** checkboxes: empty set = all pass, non-empty = must match one checked option.
-   *  switches:   each enabled value acts as an independent AND clause. */
   type: 'checkboxes' | 'switches'
   options: FilterOption[]
-  /** Number of columns for checkbox grid. Defaults to 2. */
   columns?: 1 | 2
-  /** Values that should be rendered disabled (greyed out, unclickable). */
   disabledValues?: Set<string>
 }
 
 export interface CategoryLimit<T> {
   key: string
-  /** Short label shown in the footer badge, e.g. "cantrips", "1st-level". */
   label: string
-  /** Maximum allowed selections in this category. Use Infinity for unlimited. */
   max: number
-  /** Returns true if this item belongs to this category. */
   test: (item: T) => boolean
 }
 
@@ -71,24 +52,13 @@ export interface SelectionModalProps<T> {
   title: string
   items: T[]
   getItemId: (item: T) => string
-  /** Render the inner content of a card. The outer click wrapper is provided by the modal. */
   renderCard: (item: T, isSelected: boolean, canSelect: boolean) => ReactNode
-  /** Return true when the item should appear given the current search + active filters. */
   matchItem: (item: T, search: string, activeFilters: ActiveFilters) => boolean
   filterSections?: FilterSection[]
-  /** Optional per-category selection limits used for footer badges + default guard. */
   categories?: CategoryLimit<T>[]
-  /** Override the default selection guard. Return false to block adding the item. */
   canSelect?: (item: T, selectedIds: Set<string>, allItems: T[]) => boolean
-  /**
-   * When true, clicking an at-limit item auto-deselects the earliest normal selection to make
-   * room — instead of showing a blocked-state toast. Items that would normally be greyed out
-   * still appear enabled so the user can click to swap directly.
-   */
   swapOnLimit?: boolean
-  /** IDs that are pre-selected when the dialog opens. Re-evaluated on every open. */
   initialSelectedIds?: string[]
-  /** Active filter state to pre-apply when the dialog opens (e.g. level checkboxes). */
   initialFilters?: ActiveFilters
   onConfirm: (selectedIds: string[], selectedItems: T[]) => void
 }
@@ -143,11 +113,9 @@ function SelectionModalInner<T>({
     [items, search, activeFilters, matchItem],
   )
 
-  // Batch rendering: only mount first N cards; load more on demand.
   const BATCH = 40
   const [renderLimit, setRenderLimit] = useState(BATCH)
-  // Reset when search or filters change so newly-filtered results start from top.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset trigger
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset paging on filter/search changes.
   useEffect(() => {
     setRenderLimit(BATCH)
   }, [search, activeFilters])
@@ -182,7 +150,6 @@ function SelectionModalInner<T>({
       const alreadySelected = selectedIds.has(id)
       if (!alreadySelected && !checkCanSelect(item)) {
         if (swapOnLimit) {
-          // Auto-deselect the first blocking selection and add the new item.
           setSelectedIds((prev) => {
             const next = new Set(prev)
             for (const sid of next) {
@@ -473,10 +440,6 @@ function SelectionModalInner<T>({
     </>
   )
 }
-
-// The Dialog wrapper is separate so DialogContent is always in the tree for
-// Radix animations. key={open} on the inner component remounts it with fresh
-// state each time the dialog opens, without an effect or counter.
 
 export function SelectionModal<T>(props: SelectionModalProps<T>) {
   const { open, onOpenChange, ...rest } = props

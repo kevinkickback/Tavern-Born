@@ -20,9 +20,7 @@ interface RacialProfileLike {
 
 interface RacialSpellcastingCardProps {
   racialProfiles: RacialProfileLike[]
-  /** Proficiency bonus for the character. */
   proficiencyBonus: number
-  /** Ability score modifier lookup by short ability name (str, dex, con, int, wis, cha). */
   abilityModifiers: Record<string, number>
   onSetCastingAbility: (profileId: string, ability: string) => void
 }

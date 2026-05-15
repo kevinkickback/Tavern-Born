@@ -13,7 +13,6 @@ type RaceTraitEntry = {
   entries?: unknown[]
 }
 
-/** Merge a parent race with a selected subrace, handling ability overwrites and unioning arrays. */
 export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
   const isVersion = (subrace as Race5e & { _isVersion?: boolean })._isVersion === true
   const replacesAbility =
@@ -48,12 +47,10 @@ export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
   } as Race5e
 }
 
-/** Filter subraces to those with a name. */
 export function getAvailableSubraces(race?: Race5e): Race5e[] {
   return ((race?.subraces ?? []) as Race5e[]).filter((sr) => !!sr.name)
 }
 
-/** Title-case each word in a string (splits on whitespace). */
 export function toTitleCase(value: string): string {
   return value
     .split(/\s+/)
@@ -62,13 +59,11 @@ export function toTitleCase(value: string): string {
     .join(' ')
 }
 
-/** Capitalize the first letter of a string, leaving the rest as-is. Returns String(s) for non-string inputs. */
 export function formatCapitalized(s: unknown): string {
   if (typeof s !== 'string') return String(s)
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-/** Format speed as "X ft." display string. Returns "—" when unavailable. */
 export function getSpeedDisplay(race: Race5e | undefined): string {
   if (!race?.speed) return '—'
   if (typeof race.speed === 'number') return `${race.speed} ft.`
@@ -98,7 +93,6 @@ export function getSpeedDisplay(race: Race5e | undefined): string {
   return '—'
 }
 
-/** Format darkvision as "X ft." display string. Returns "—" when unavailable. */
 export function getDarkvisionDisplay(race: Race5e | undefined): string {
   if (!race?.darkvision || race.darkvision === 0) return '—'
   return `${race.darkvision} ft.`
@@ -118,7 +112,6 @@ export function getLanguageDisplay(race: Race5e | undefined): string {
     .join(', ')
 }
 
-/** Format skill proficiencies as a display array including "Choose N from …" blocks. */
 export function getSkillProfDisplay(race: Race5e | undefined): string[] {
   if (!race?.skillProficiencies) return []
   const skills: string[] = []

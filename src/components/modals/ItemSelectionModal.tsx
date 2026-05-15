@@ -39,12 +39,6 @@ const TYPE_OPTIONS: Array<{ value: ItemCategory; label: string }> = [
   { value: 'scrolls', label: 'Scrolls' },
 ]
 
-/**
- * Canonical rarity ordering used to sort dynamically derived rarity filter options.
- * Rarities of 'none' (mundane items) are intentionally omitted — they are filtered
- * by the "no rarity filter active" default rather than as a selectable tier.
- * 'unknown (magic)' is normalized to 'unknown' throughout.
- */
 const RARITY_ORDER = [
   'common',
   'uncommon',
@@ -77,7 +71,6 @@ const PROPERTY_OPTIONS: Array<{ value: string; label: string }> = [
 const EMPTY_RECORD: Record<string, string> = {}
 
 function getPropertyLabel(tag: string, propertyByAbbr: Record<string, string>): string {
-  // Strip optional source suffix (e.g. "A|XPHB" → "A") before map lookup.
   const key = tag.trim().split('|')[0].toUpperCase()
   return propertyByAbbr[key] ?? tag
 }
@@ -210,7 +203,6 @@ function matchItem(item: Item5e, search: string, activeFilters: ActiveFilters): 
   const normalizedRarity = rarity === 'unknown (magic)' ? 'unknown' : rarity
   const raritySet = activeFilters.rarity
   if (raritySet && raritySet.size > 0) {
-    // Items with rarity 'none' (mundane) are excluded when any rarity filter is active.
     if (!normalizedRarity || normalizedRarity === 'none') return false
     if (!raritySet.has(normalizedRarity)) return false
   }
@@ -332,16 +324,12 @@ export function ItemSelectionModal({
   const filteredItems = useMemo(
     () =>
       items.filter((item) => {
-        // Exclude itemGroup container records — they have an `items` string-array of
-        // references to individual items and are not themselves equippable.
         if (Array.isArray((item as { items?: unknown }).items)) return false
         return getItemCategories(item).size > 0
       }),
     [items],
   )
 
-  // Derive rarity filter options from the actual items in the prop, ordered by RARITY_ORDER.
-  // This ensures options stay in sync with the data without manual maintenance.
   const rarityOptions = useMemo(() => {
     const seen = new Set<string>()
     for (const item of filteredItems) {

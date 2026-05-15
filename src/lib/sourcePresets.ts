@@ -22,10 +22,8 @@ export const SOURCE_PRESETS: SourcePreset[] = [
 
 export const LARGE_SOURCE_WARNING_THRESHOLD = 15
 
-/** Sources always included based on the character's origin system — never toggled by the user. */
 export const IMPLICIT_SOURCES = new Set(['PHB', 'XPHB'])
 
-/** Returns the implicit core sourcebook for the given origin system. */
 export function getImplicitSource(originSystem: '2014' | '2024'): string {
   return originSystem === '2024' ? 'XPHB' : 'PHB'
 }

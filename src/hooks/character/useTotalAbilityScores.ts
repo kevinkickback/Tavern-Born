@@ -18,9 +18,7 @@ import { buildRacialBonuses } from '@/pages/build/ability-scores/model/data'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
-/** All derived data from the ability score calculation pipeline, including intermediate values. */
 export interface TotalAbilityScoresData {
-  /** Final computed total ability scores (base + racial + background + ASI bonuses). */
   total: AbilityScores
   selectedRace: Race5e | undefined
   subraceData: Race5e | undefined

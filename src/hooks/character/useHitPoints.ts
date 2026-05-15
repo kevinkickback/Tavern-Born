@@ -7,14 +7,10 @@ import type { HitPoints } from '@/types/character'
 
 export interface HitPointsState {
   hitPoints: HitPoints
-  /** Max HP as calculated from class hit die + CON mod × level. */
   calculatedMaxHP: number
-  /** Stored max HP when set, otherwise calculatedMaxHP. */
   effectiveMaxHP: number
-  /** Hit die faces for the character's class (e.g. 8 for a Rogue). */
   hitDie: number
   conMod: number
-  /** HP at each individual level: [0] unused, [1] = first level, etc. */
   levelsHPBreakdown: number[]
   setCurrentHP: (hp: number) => void
   setTempHP: (hp: number) => void

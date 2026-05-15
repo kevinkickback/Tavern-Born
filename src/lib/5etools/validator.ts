@@ -4,10 +4,10 @@ import {
   ActionDataSchema,
   BackgroundDataSchema,
   BookDataSchema,
-  ClassIndexSchema,
   ConditionDataSchema,
   FeatDataSchema,
   GenericDataSchema,
+  IndexSchema,
   ItemDataSchema,
   LanguageDataSchema,
   OptionalFeatureDataSchema,
@@ -24,68 +24,27 @@ interface ValidationResult {
 
 interface FileValidationConfig {
   name: string
-  path: string
   schema?: ZodTypeAny
 }
 
 const REQUIRED_FILES: FileValidationConfig[] = [
-  { name: 'books.json', path: 'data/books.json', schema: BookDataSchema },
-  { name: 'races.json', path: 'data/races.json', schema: RaceDataSchema },
-  {
-    name: 'class/index.json',
-    path: 'data/class/index.json',
-    schema: ClassIndexSchema,
-  },
-  {
-    name: 'backgrounds.json',
-    path: 'data/backgrounds.json',
-    schema: BackgroundDataSchema,
-  },
-  {
-    name: 'spells/index.json',
-    path: 'data/spells/index.json',
-    schema: ClassIndexSchema,
-  },
-  { name: 'feats.json', path: 'data/feats.json', schema: FeatDataSchema },
-  { name: 'items.json', path: 'data/items.json', schema: ItemDataSchema },
-  {
-    name: 'items-base.json',
-    path: 'data/items-base.json',
-    schema: ItemDataSchema,
-  },
-  { name: 'actions.json', path: 'data/actions.json', schema: ActionDataSchema },
-  {
-    name: 'conditionsdiseases.json',
-    path: 'data/conditionsdiseases.json',
-    schema: ConditionDataSchema,
-  },
-  {
-    name: 'deities.json',
-    path: 'data/deities.json',
-    schema: GenericDataSchema,
-  },
-  { name: 'skills.json', path: 'data/skills.json', schema: GenericDataSchema },
-  { name: 'senses.json', path: 'data/senses.json', schema: GenericDataSchema },
-  {
-    name: 'languages.json',
-    path: 'data/languages.json',
-    schema: LanguageDataSchema,
-  },
-  {
-    name: 'magicvariants.json',
-    path: 'data/magicvariants.json',
-    schema: GenericDataSchema,
-  },
-  {
-    name: 'optionalfeatures.json',
-    path: 'data/optionalfeatures.json',
-    schema: OptionalFeatureDataSchema,
-  },
-  {
-    name: 'variantrules.json',
-    path: 'data/variantrules.json',
-    schema: GenericDataSchema,
-  },
+  { name: 'books.json', schema: BookDataSchema },
+  { name: 'races.json', schema: RaceDataSchema },
+  { name: 'class/index.json', schema: IndexSchema },
+  { name: 'backgrounds.json', schema: BackgroundDataSchema },
+  { name: 'spells/index.json', schema: IndexSchema },
+  { name: 'feats.json', schema: FeatDataSchema },
+  { name: 'items.json', schema: ItemDataSchema },
+  { name: 'items-base.json', schema: ItemDataSchema },
+  { name: 'actions.json', schema: ActionDataSchema },
+  { name: 'conditionsdiseases.json', schema: ConditionDataSchema },
+  { name: 'deities.json', schema: GenericDataSchema },
+  { name: 'skills.json', schema: GenericDataSchema },
+  { name: 'senses.json', schema: GenericDataSchema },
+  { name: 'languages.json', schema: LanguageDataSchema },
+  { name: 'magicvariants.json', schema: GenericDataSchema },
+  { name: 'optionalfeatures.json', schema: OptionalFeatureDataSchema },
+  { name: 'variantrules.json', schema: GenericDataSchema },
 ]
 
 async function validateLocalFile(basePath: string, file: FileValidationConfig): Promise<boolean> {
@@ -98,9 +57,9 @@ async function validateLocalFile(basePath: string, file: FileValidationConfig): 
     const data = await readLocalJson(fullPath)
     if (!data || typeof data !== 'object') return false
     if (file.schema) {
-      try {
-        file.schema.parse(data)
-      } catch {
+      const result = file.schema.safeParse(data)
+      if (!result.success) {
+        console.warn(`Schema validation failed for ${file.name}:`, result.error)
         return false
       }
     }
@@ -110,18 +69,18 @@ async function validateLocalFile(basePath: string, file: FileValidationConfig): 
   }
 }
 
-async function validateFileStructure(url: string, file: FileValidationConfig): Promise<boolean> {
+async function validateRemoteFile(basePath: string, file: FileValidationConfig): Promise<boolean> {
+  const base = basePath.endsWith('/') ? basePath : `${basePath}/`
+  const url = `${base}data/${file.name}`
   try {
-    const response = await fetch(url, {
-      method: 'GET',
+    // HEAD first: fast existence + content-type check with no body download
+    const headResponse = await fetch(url, {
+      method: 'HEAD',
       signal: AbortSignal.timeout(10000),
     })
+    if (!headResponse.ok) return false
 
-    if (!response.ok) {
-      return false
-    }
-
-    const contentType = response.headers.get('content-type')
+    const contentType = headResponse.headers.get('content-type')
     if (
       contentType &&
       !contentType.includes('application/json') &&
@@ -130,20 +89,22 @@ async function validateFileStructure(url: string, file: FileValidationConfig): P
       return false
     }
 
+    if (!file.schema) return true
+
+    // GET only when a schema must be validated
+    const response = await fetch(url, {
+      method: 'GET',
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!response.ok) return false
+
     const data = await response.json()
+    if (!data || typeof data !== 'object') return false
 
-    if (!data || typeof data !== 'object') {
+    const result = file.schema.safeParse(data)
+    if (!result.success) {
+      console.warn(`Schema validation failed for ${file.name}:`, result.error)
       return false
-    }
-
-    if (file.schema) {
-      try {
-        file.schema.parse(data)
-        return true
-      } catch (error) {
-        console.warn(`Schema validation failed for ${file.name}:`, error)
-        return false
-      }
     }
 
     return true
@@ -151,10 +112,6 @@ async function validateFileStructure(url: string, file: FileValidationConfig): P
     console.warn(`Failed to validate ${file.name}:`, error)
     return false
   }
-}
-
-function buildFileUrl(basePath: string, filePath: string): string {
-  return `${basePath}${basePath.endsWith('/') ? '' : '/'}${filePath}`
 }
 
 export async function validateDataSource(config: DataSourceConfig): Promise<ValidationResult> {
@@ -207,20 +164,17 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
       }
     }
 
-    const foundResources: string[] = []
-    const validationPromises = REQUIRED_FILES.map(async (file) => {
-      let isValid: boolean
-      if (config.type === 'local') {
-        isValid = await validateLocalFile(normalizedPath, file)
-      } else {
-        const url = buildFileUrl(normalizedPath, file.path)
-        isValid = await validateFileStructure(url, file)
-      }
-      if (isValid) foundResources.push(file.name)
-      return { file: file.name, isValid }
-    })
+    const results = await Promise.all(
+      REQUIRED_FILES.map(async (file) => {
+        const isValid =
+          config.type === 'local'
+            ? await validateLocalFile(normalizedPath, file)
+            : await validateRemoteFile(normalizedPath, file)
+        return { name: file.name, isValid }
+      }),
+    )
 
-    await Promise.all(validationPromises)
+    const foundResources = results.filter((r) => r.isValid).map((r) => r.name)
 
     if (foundResources.length === 0) {
       return {
