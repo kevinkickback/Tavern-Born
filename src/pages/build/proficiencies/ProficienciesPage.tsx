@@ -1,7 +1,8 @@
-import { CaretLeft, CaretRight, Certificate } from '@phosphor-icons/react'
+import { Certificate } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Card } from '@/components/ui/card'
+import { SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
@@ -39,6 +40,7 @@ export function BuildProficienciesPage() {
   const { resolveChoiceSelection } = useFeatProvenanceMutations()
   const availableProficiencies = useAvailableProficiencies()
 
+  const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [focused, setFocused] = useState<ProfFocus | null>(null)
 
@@ -46,6 +48,20 @@ export function BuildProficienciesPage() {
     const map = new Map<string, (typeof itemsBase)[0]>()
     for (const item of [...itemsBase, ...items]) {
       if (item.name) map.set(item.name.toLowerCase(), item)
+    }
+    return map
+  }, [itemsBase, items])
+
+  const weaponInfoMap = useMemo(() => {
+    const map = new Map<string, { category?: string; ranged?: boolean }>()
+    for (const item of [...itemsBase, ...items]) {
+      if (!item.name) continue
+      const category = item.weaponCategory
+      const typeCode = item.type?.split('|')[0]
+      const ranged = typeCode === 'R' ? true : typeCode === 'M' ? false : undefined
+      if (category || ranged !== undefined) {
+        map.set(item.name.toLowerCase(), { category, ranged })
+      }
     }
     return map
   }, [itemsBase, items])
@@ -121,6 +137,25 @@ export function BuildProficienciesPage() {
     }
     return buildToolSubtypeOptionsByKind({ itemsBase, items, allowedSources: effectiveSources })
   }, [character?.allowedSources, character?.originSystem, items, itemsBase])
+
+  const languageTypes = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const lang of languages) {
+      if (lang.name && lang.type) map.set(lang.name.toLowerCase(), lang.type)
+    }
+    return map
+  }, [languages])
+
+  const toolTypeMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const [kind, toolNames] of Object.entries(toolSubtypeOptionsByKind)) {
+      if (kind === 'tool') continue // 'tool' is a superset of all subtypes; skip to avoid overwriting specific-kind entries
+      for (const toolName of toolNames) {
+        map.set(toolName.toLowerCase(), kind)
+      }
+    }
+    return map
+  }, [toolSubtypeOptionsByKind])
 
   const toolChoiceSlots = useMemo(
     () =>
@@ -205,76 +240,75 @@ export function BuildProficienciesPage() {
       <div className="flex-1 overflow-hidden px-6 pb-6">
         <div className="max-w-7xl mx-auto h-full">
           <Card className="h-full overflow-hidden flex flex-col">
-            <div className="relative flex flex-row flex-1 overflow-hidden min-h-0 -my-6">
-              {' '}
-              <button
-                type="button"
-                onClick={() => setDetailCollapsed((c) => !c)}
-                title={detailCollapsed ? 'Expand details panel' : 'Collapse details panel'}
-                className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all"
-              >
-                {detailCollapsed ? (
-                  <CaretLeft className="h-3.5 w-3.5" />
-                ) : (
-                  <CaretRight className="h-3.5 w-3.5" />
-                )}
-              </button>{' '}
-              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-                <ScrollArea className="flex-1 overflow-hidden">
-                  <div className="p-4 pr-8">
-                    <BuildProficienciesTabsPanel
-                      skills={skills}
-                      savingThrows={savingThrows}
-                      availableArmor={availableProficiencies.armor.filter(
-                        (armorKey): armorKey is string => typeof armorKey === 'string',
-                      )}
-                      availableWeapons={availableProficiencies.weapons.filter(
-                        (weaponKey): weaponKey is string => typeof weaponKey === 'string',
-                      )}
-                      availableLanguages={availableProficiencies.languages.filter(
-                        (langName): langName is string => typeof langName === 'string',
-                      )}
-                      currentProficiencies={{
-                        armor: character.proficiencies.armor,
-                        weapons: character.proficiencies.weapons,
-                        tools: character.proficiencies.tools,
-                        languages: character.proficiencies.languages,
-                      }}
-                      ledger={ledger}
-                      choiceCounts={choiceCounts}
-                      dropdownToolSlots={dropdownToolSlots}
-                      artisanToolSlots={artisanToolSlots}
-                      visibleToolCandidates={visibleToolCandidates}
-                      artisanChoiceByNorm={artisanChoiceByNorm}
-                      focused={focused}
-                      onFocusChange={handleFocusChange}
-                      onExpandDetails={() => {
-                        if (detailCollapsed) setDetailCollapsed(false)
-                      }}
-                      onResolveChoiceSelection={resolveChoiceSelection}
-                      onToggleExpertise={toggleExpertise}
-                      availableExpertiseSlots={availableExpertiseSlots}
-                      usedExpertiseSlots={usedExpertiseSlots}
-                      expertiseChoiceCount={Math.max(
-                        0,
-                        availableExpertiseSlots - usedExpertiseSlots,
-                      )}
+            <SplitPane
+              leftCollapsed={leftCollapsed}
+              rightCollapsed={detailCollapsed}
+              onLeftCollapsedChange={setLeftCollapsed}
+              onRightCollapsedChange={setDetailCollapsed}
+              rightWidth="w-[40%] min-w-[280px]"
+              left={
+                <>
+                  <ScrollArea className="flex-1 overflow-hidden">
+                    <div className="p-4 pr-8">
+                      <BuildProficienciesTabsPanel
+                        skills={skills}
+                        savingThrows={savingThrows}
+                        availableArmor={availableProficiencies.armor.filter(
+                          (armorKey): armorKey is string => typeof armorKey === 'string',
+                        )}
+                        availableWeapons={availableProficiencies.weapons.filter(
+                          (weaponKey): weaponKey is string => typeof weaponKey === 'string',
+                        )}
+                        availableLanguages={availableProficiencies.languages.filter(
+                          (langName): langName is string => typeof langName === 'string',
+                        )}
+                        currentProficiencies={{
+                          armor: character.proficiencies.armor,
+                          weapons: character.proficiencies.weapons,
+                          tools: character.proficiencies.tools,
+                          languages: character.proficiencies.languages,
+                        }}
+                        ledger={ledger}
+                        choiceCounts={choiceCounts}
+                        dropdownToolSlots={dropdownToolSlots}
+                        artisanToolSlots={artisanToolSlots}
+                        visibleToolCandidates={visibleToolCandidates}
+                        artisanChoiceByNorm={artisanChoiceByNorm}
+                        languageTypes={languageTypes}
+                        toolTypeMap={toolTypeMap}
+                        weaponInfoMap={weaponInfoMap}
+                        focused={focused}
+                        onFocusChange={handleFocusChange}
+                        onExpandDetails={() => {
+                          if (detailCollapsed) setDetailCollapsed(false)
+                        }}
+                        onResolveChoiceSelection={resolveChoiceSelection}
+                        onToggleExpertise={toggleExpertise}
+                        availableExpertiseSlots={availableExpertiseSlots}
+                        usedExpertiseSlots={usedExpertiseSlots}
+                        expertiseChoiceCount={Math.max(
+                          0,
+                          availableExpertiseSlots - usedExpertiseSlots,
+                        )}
+                      />
+                    </div>
+                  </ScrollArea>
+                  <div className="px-4 pb-4 border-t border-border">
+                    <SourcesAccordion
+                      sectionId="build-proficiencies"
+                      rows={getSourcesRowsBySection('build-proficiencies')}
                     />
                   </div>
-                </ScrollArea>
-                <div className="px-4 pb-4 border-t border-border">
-                  <SourcesAccordion
-                    sectionId="build-proficiencies"
-                    rows={getSourcesRowsBySection('build-proficiencies')}
-                  />
-                </div>
-              </div>{' '}
-              <BuildProficienciesDetailsPanel
-                focused={activeFocused}
-                detailCollapsed={detailCollapsed}
-                skillDescriptions={skillDescriptions}
-              />
-            </div>
+                </>
+              }
+              right={
+                <BuildProficienciesDetailsPanel
+                  focused={activeFocused}
+                  skillDescriptions={skillDescriptions}
+                  weaponItemsBase={itemsBase}
+                />
+              }
+            />
           </Card>
         </div>
       </div>

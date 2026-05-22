@@ -101,6 +101,20 @@ export function buildChoiceCounts(
   return counts
 }
 
+/**
+ * Returns the display label for a weapon category grant key (e.g. `"simple"`,
+ * `"martial weapons"`, `"simple melee"`) or `null` if the key is not a
+ * recognised weapon category.
+ */
+export function formatWeaponCategoryLabel(key: string): string | null {
+  const k = key.toLowerCase()
+  const cat = k.includes('simple') ? 'Simple' : k.includes('martial') ? 'Martial' : null
+  if (!cat) return null
+  if (k.includes('melee')) return `All ${cat} Melee Weapons`
+  if (k.includes('ranged')) return `All ${cat} Ranged Weapons`
+  return `All ${cat} Weapons`
+}
+
 export function buildToolSubtypeOptionsByKind({
   itemsBase,
   items,
@@ -284,6 +298,9 @@ export function buildVisibleToolCandidates({
     if (!genericKind) return true
     // Never render the abstract catch-all token as a pill.
     if (genericKind === 'tool') return false
+    // Artisan's tools are expanded into individual named tool pills via the artisan slot
+    // mechanism — never show the category label itself as a pill.
+    if (genericKind === "artisan's tools") return false
     // Keep only canonical generic labels (e.g. "gaming set"), not verbose placeholders.
     return normalizeKey(toolName) === normalizeKey(genericKind)
   })

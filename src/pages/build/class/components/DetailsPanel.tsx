@@ -8,7 +8,6 @@ import {
   getSpellcastingStatDisplay,
 } from '@/lib/calculations/classUtils'
 import { renderEntry } from '@/lib/renderer'
-import { cn } from '@/lib/utils'
 import { InfoTile } from '@/pages/_shared'
 import type { Class5e } from '@/types/5etools'
 
@@ -26,7 +25,6 @@ export interface SelectedFeatureState {
 }
 
 export interface BuildClassDetailsPanelProps {
-  detailCollapsed: boolean
   selectedFeature: SelectedFeatureState | null
   viewingClassData?: Class5e
   viewingClassEntries: unknown[]
@@ -35,7 +33,6 @@ export interface BuildClassDetailsPanelProps {
 }
 
 export function BuildClassDetailsPanel({
-  detailCollapsed,
   selectedFeature,
   viewingClassData,
   viewingClassEntries,
@@ -43,12 +40,7 @@ export function BuildClassDetailsPanel({
   onClearSelection,
 }: BuildClassDetailsPanelProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
-        detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'w-1/2 min-w-[320px]',
-      )}
-    >
+    <>
       <div className="bg-gradient-to-r from-accent/10 to-transparent border-b border-border px-4 py-3 flex-shrink-0 flex flex-col gap-2">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Details
@@ -277,6 +269,6 @@ export function BuildClassDetailsPanel({
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

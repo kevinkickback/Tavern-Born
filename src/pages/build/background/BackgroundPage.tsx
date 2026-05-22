@@ -1,4 +1,4 @@
-import { CaretLeft, CaretRight, Scroll, Star } from '@phosphor-icons/react'
+import { Scroll, Star } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -53,6 +54,7 @@ export function BuildBackgroundPage() {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { backgrounds, feats, spells } = useFilteredGameData()
   const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
+  const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [bgSearch, setBgSearch] = useState('')
   const { applyBackgroundSelection, applyBackgroundAbilityChoices } =
@@ -91,8 +93,8 @@ export function BuildBackgroundPage() {
 
   const selectedBg = character
     ? (backgrounds.find((b) =>
-        matchesGameDataEntry(character.background, character.backgroundSource, b),
-      ) as Background5e | undefined)
+      matchesGameDataEntry(character.background, character.backgroundSource, b),
+    ) as Background5e | undefined)
     : undefined
   const normalizedSelectedBg = normalizeBackgroundForOriginSystem(
     selectedBg,
@@ -295,8 +297,8 @@ export function BuildBackgroundPage() {
                             const block1 = bgAsiData.blocks[1]
                             const autoChoices =
                               selectedBg?.source === 'XPHB' &&
-                              block1 &&
-                              block1.from.length === block1.weights.length
+                                block1 &&
+                                block1.from.length === block1.weights.length
                                 ? [...block1.from]
                                 : []
                             applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
@@ -405,8 +407,8 @@ export function BuildBackgroundPage() {
                         .join(', ')
                       const resolvedFeat = isResolved
                         ? (feats as Feat5e[]).find(
-                            (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
-                          )
+                          (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                        )
                         : undefined
                       return (
                         <div key={choice.id}>
@@ -454,147 +456,142 @@ export function BuildBackgroundPage() {
       <div className="flex-1 overflow-hidden px-6 pb-6">
         <div className="max-w-7xl mx-auto h-full">
           <Card className="h-full overflow-hidden flex flex-col">
-            <div className="relative flex flex-row flex-1 overflow-hidden min-h-0 -my-6">
-              {' '}
-              <button
-                type="button"
-                onClick={() => setDetailCollapsed((c) => !c)}
-                title={detailCollapsed ? 'Expand details panel' : 'Collapse details panel'}
-                className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all"
-              >
-                {detailCollapsed ? (
-                  <CaretLeft className="h-3.5 w-3.5" />
-                ) : (
-                  <CaretRight className="h-3.5 w-3.5" />
-                )}
-              </button>{' '}
-              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-                <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex flex-col gap-2">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Backgrounds ({filteredBackgrounds.length}
-                    {bgSearch ? ` of ${backgrounds.length}` : ''})
-                  </span>
-                  <Input
-                    placeholder="Search backgrounds…"
-                    value={bgSearch}
-                    onChange={(e) => setBgSearch(e.target.value)}
-                    className="h-8 text-sm"
-                  />
-                </div>
-                <ScrollArea className="flex-1 overflow-hidden">
-                  <div className="p-4 space-y-1 pr-8">
-                    {filteredBackgrounds.map((bg) => {
-                      const bgKey = `${bg.name}|${bg.source ?? ''}`
-                      const isSelected = selectedBackgroundKey === bgKey
-                      const rowChoiceBlocks = isSelected ? choiceBlocks : []
-                      const bgOptionCount = optionCountByBackground.get(bgKey) ?? 0
-                      return (
-                        <div
-                          key={bgKey}
-                          ref={isSelected ? selectedBackgroundRef : null}
-                          className={cn(
-                            'w-full flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors border-l-4 [scroll-margin-top:8px]',
-                            isSelected
-                              ? 'bg-accent/10 border-accent'
-                              : 'border-transparent hover:bg-muted/40',
-                          )}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => handleBackground(bg.name, bg.source ?? undefined)}
-                            className="flex items-center gap-3 min-w-0 flex-1 text-left"
-                          >
-                            <div
-                              className={cn(
-                                'h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold shadow-sm select-none',
-                                isSelected
-                                  ? 'bg-primary/20 text-primary'
-                                  : 'bg-muted text-muted-foreground',
-                              )}
-                            >
-                              {bg.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="font-semibold text-sm truncate">{bg.name}</div>
-                              <div className="text-xs text-muted-foreground">{bg.source}</div>
-                            </div>
-                          </button>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {isSelected && rowChoiceBlocks.length > 0 ? (
-                              <div className="flex flex-col gap-1.5">
-                                {rowChoiceBlocks.map((block) => {
-                                  const currentChoice =
-                                    bgEquipmentChoices[block.index]?.toLowerCase() ??
-                                    block.choiceKeys[0] ??
-                                    'a'
-                                  return (
-                                    <Select
-                                      key={block.index}
-                                      value={currentChoice}
-                                      onValueChange={(val) => {
-                                        if (!selectedBg) return
-                                        const next = [...bgEquipmentChoices]
-                                        while (next.length <= block.index) next.push('a')
-                                        next[block.index] = val
-                                        applyBackgroundSelection(selectedBg, next)
-                                        updateCharacter(character.id, {
-                                          backgroundEquipmentChoices: next,
-                                        })
-                                      }}
-                                    >
-                                      <SelectTrigger className="h-7 text-xs max-w-[260px]">
-                                        <SelectValue placeholder={`Choice ${block.index + 1}…`} />
-                                      </SelectTrigger>
-                                      <SelectContent className="w-[420px]" align="end">
-                                        {block.choiceKeys.map((key) => {
-                                          const optionData = block.options[key]
-                                          const label =
-                                            formatEquipmentOptionEntries(optionData).join(', ')
-                                          return (
-                                            <SelectItem key={key} value={key} className="text-xs">
-                                              ({key.toUpperCase()}) {label}
-                                            </SelectItem>
-                                          )
-                                        })}
-                                      </SelectContent>
-                                    </Select>
-                                  )
-                                })}
-                              </div>
-                            ) : (
-                              <>
-                                {bgOptionCount > 0 && (
-                                  <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                                    {bgOptionCount} item option{bgOptionCount === 1 ? '' : 's'}
-                                  </Badge>
-                                )}
-                                <Badge variant="outline" className="text-xs">
-                                  {bg.source}
-                                </Badge>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
+            <SplitPane
+              leftCollapsed={leftCollapsed}
+              rightCollapsed={detailCollapsed}
+              onLeftCollapsedChange={setLeftCollapsed}
+              onRightCollapsedChange={setDetailCollapsed}
+              rightWidth="w-1/2 min-w-[320px]"
+              left={
+                <>
+                  <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex flex-col gap-2">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Backgrounds ({filteredBackgrounds.length}
+                      {bgSearch ? ` of ${backgrounds.length}` : ''})
+                    </span>
+                    <Input
+                      placeholder="Search backgrounds…"
+                      value={bgSearch}
+                      onChange={(e) => setBgSearch(e.target.value)}
+                      className="h-8 text-sm"
+                    />
                   </div>
-                </ScrollArea>
-              </div>{' '}
-              <BuildBackgroundDetailsPanel
-                detailCollapsed={detailCollapsed}
-                selectedBackground={selectedBg}
-                skillNames={skills}
-                languageNames={langs}
-                toolNames={tools}
-                equipmentBlocks={equipmentBlocks}
-                bgEquipmentChoices={bgEquipmentChoices}
-                fixedBgFeats={fixedBgFeats}
-                chosenOriginFeat={chosenOriginFeat}
-                bgAsiData={bgAsiData}
-                bgBlockIndex={bgBlockIndex}
-                bgChoices={bgChoices}
-              />
-            </div>
+                  <ScrollArea className="flex-1 overflow-hidden">
+                    <div className="p-4 space-y-1 pr-8">
+                      {filteredBackgrounds.map((bg) => {
+                        const bgKey = `${bg.name}|${bg.source ?? ''}`
+                        const isSelected = selectedBackgroundKey === bgKey
+                        const rowChoiceBlocks = isSelected ? choiceBlocks : []
+                        const bgOptionCount = optionCountByBackground.get(bgKey) ?? 0
+                        return (
+                          <div
+                            key={bgKey}
+                            ref={isSelected ? selectedBackgroundRef : null}
+                            className={cn(
+                              'w-full flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors border-l-4 [scroll-margin-top:8px]',
+                              isSelected
+                                ? 'bg-accent/10 border-accent'
+                                : 'border-transparent hover:bg-muted/40',
+                            )}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleBackground(bg.name, bg.source ?? undefined)}
+                              className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                            >
+                              <div
+                                className={cn(
+                                  'h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold shadow-sm select-none',
+                                  isSelected
+                                    ? 'bg-primary/20 text-primary'
+                                    : 'bg-muted text-muted-foreground',
+                                )}
+                              >
+                                {bg.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-sm truncate">{bg.name}</div>
+                                <div className="text-xs text-muted-foreground">{bg.source}</div>
+                              </div>
+                            </button>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {isSelected && rowChoiceBlocks.length > 0 ? (
+                                <div className="flex flex-col gap-1.5">
+                                  {rowChoiceBlocks.map((block) => {
+                                    const currentChoice =
+                                      bgEquipmentChoices[block.index]?.toLowerCase() ??
+                                      block.choiceKeys[0] ??
+                                      'a'
+                                    return (
+                                      <Select
+                                        key={block.index}
+                                        value={currentChoice}
+                                        onValueChange={(val) => {
+                                          if (!selectedBg) return
+                                          const next = [...bgEquipmentChoices]
+                                          while (next.length <= block.index) next.push('a')
+                                          next[block.index] = val
+                                          applyBackgroundSelection(selectedBg, next)
+                                          updateCharacter(character.id, {
+                                            backgroundEquipmentChoices: next,
+                                          })
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-7 text-xs max-w-[260px]">
+                                          <SelectValue placeholder={`Choice ${block.index + 1}…`} />
+                                        </SelectTrigger>
+                                        <SelectContent className="w-[420px]" align="end">
+                                          {block.choiceKeys.map((key) => {
+                                            const optionData = block.options[key]
+                                            const label =
+                                              formatEquipmentOptionEntries(optionData).join(', ')
+                                            return (
+                                              <SelectItem key={key} value={key} className="text-xs">
+                                                ({key.toUpperCase()}) {label}
+                                              </SelectItem>
+                                            )
+                                          })}
+                                        </SelectContent>
+                                      </Select>
+                                    )
+                                  })}
+                                </div>
+                              ) : (
+                                <>
+                                  {bgOptionCount > 0 && (
+                                    <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                      {bgOptionCount} item option{bgOptionCount === 1 ? '' : 's'}
+                                    </Badge>
+                                  )}
+                                  <Badge variant="outline" className="text-xs">
+                                    {bg.source}
+                                  </Badge>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </ScrollArea>
+                </>
+              }
+              right={
+                <BuildBackgroundDetailsPanel
+                  selectedBackground={selectedBg}
+                  skillNames={skills}
+                  languageNames={langs}
+                  toolNames={tools}
+                  equipmentBlocks={equipmentBlocks}
+                  bgEquipmentChoices={bgEquipmentChoices}
+                  fixedBgFeats={fixedBgFeats}
+                  chosenOriginFeat={chosenOriginFeat}
+                  bgAsiData={bgAsiData}
+                  bgBlockIndex={bgBlockIndex}
+                  bgChoices={bgChoices}
+                />
+              }
+            />
           </Card>
         </div>
       </div>

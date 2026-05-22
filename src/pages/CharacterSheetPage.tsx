@@ -135,8 +135,8 @@ export function CharacterSheetPage() {
   }
 
   return (
-    <div>
-      <div className="px-6 py-5 page-header-band mb-6">
+    <div className="h-full flex flex-col">
+      <div className="px-6 py-5 page-header-band mb-6 shrink-0">
         <div className="max-w-7xl mx-auto flex items-center gap-3">
           <FilePdf className="h-6 w-6 text-primary" weight="duotone" />
           <div>
@@ -146,7 +146,7 @@ export function CharacterSheetPage() {
         </div>
       </div>
 
-      <div className="px-6 pb-6">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
         <div className="max-w-7xl mx-auto w-full space-y-4">
           {/* ── Export Options ── */}
           <Card className="w-full overflow-hidden">
@@ -216,7 +216,7 @@ export function CharacterSheetPage() {
             </div>
 
             {isGenerating && (
-              <div className="flex h-[70vh] items-center justify-center bg-muted/30">
+              <div className="flex min-h-[240px] items-center justify-center bg-muted/30">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <ArrowsClockwise className="h-4 w-4 animate-spin" weight="bold" />
                   Generating PDF preview…
@@ -225,7 +225,7 @@ export function CharacterSheetPage() {
             )}
 
             {!isGenerating && errorMessage && (
-              <div className="flex h-[70vh] items-center justify-center px-6">
+              <div className="flex min-h-[240px] items-center justify-center px-6">
                 <div className="max-w-md space-y-3 text-center">
                   <p className="text-sm text-destructive">{errorMessage}</p>
                   <Button type="button" variant="outline" size="sm" onClick={handleGenerate}>
@@ -236,7 +236,7 @@ export function CharacterSheetPage() {
             )}
 
             {!isGenerating && !errorMessage && !pdfBytes && (
-              <div className="flex h-[70vh] items-center justify-center bg-muted/30">
+              <div className="flex min-h-[240px] items-center justify-center bg-muted/30">
                 <p className="text-sm text-muted-foreground">
                   Click Generate to preview your character sheet.
                 </p>
