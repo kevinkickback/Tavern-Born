@@ -9,6 +9,7 @@ import {
   buildToolSubtypeOptionsByKind,
   buildVisibleToolCandidates,
   dedupeByNorm,
+  formatWeaponCategoryLabel,
   getSelectedToolNames,
   hasUnresolvedChoiceForKind,
   normalizeGenericToolKind,
@@ -265,6 +266,20 @@ describe('buildVisibleToolCandidates', () => {
     expect(result).toContain('gaming set')
     expect(result.some((n) => n.toLowerCase().includes('one type'))).toBe(false)
   })
+
+  test("filters out the artisan's tools category label", () => {
+    const result = buildVisibleToolCandidates({
+      availableTools: ["artisan's tools"],
+      optionalToolNames: [],
+      artisanToolNames: ["Smith's Tools", "Brewer's Supplies"],
+      currentTools: [],
+      selectedToolNames: [],
+    })
+
+    expect(result).not.toContain("artisan's tools")
+    expect(result).toContain("Smith's Tools")
+    expect(result).toContain("Brewer's Supplies")
+  })
 })
 
 describe('buildArtisanChoiceMap', () => {
@@ -350,5 +365,32 @@ describe('buildOptionalToolNamesFromChoices', () => {
 
     expect(result).toContain('Lute')
     expect(result).toContain('Lyre')
+  })
+})
+
+describe('formatWeaponCategoryLabel', () => {
+  test('returns null for unrecognised keys', () => {
+    expect(formatWeaponCategoryLabel('handaxe')).toBeNull()
+    expect(formatWeaponCategoryLabel('')).toBeNull()
+    expect(formatWeaponCategoryLabel('light crossbow')).toBeNull()
+  })
+
+  test('returns broad category label for simple/martial keys', () => {
+    expect(formatWeaponCategoryLabel('simple')).toBe('All Simple Weapons')
+    expect(formatWeaponCategoryLabel('simple weapons')).toBe('All Simple Weapons')
+    expect(formatWeaponCategoryLabel('martial')).toBe('All Martial Weapons')
+    expect(formatWeaponCategoryLabel('martial weapons')).toBe('All Martial Weapons')
+  })
+
+  test('returns melee/ranged scoped label when qualifier is present', () => {
+    expect(formatWeaponCategoryLabel('simple melee')).toBe('All Simple Melee Weapons')
+    expect(formatWeaponCategoryLabel('simple ranged')).toBe('All Simple Ranged Weapons')
+    expect(formatWeaponCategoryLabel('martial melee')).toBe('All Martial Melee Weapons')
+    expect(formatWeaponCategoryLabel('martial ranged')).toBe('All Martial Ranged Weapons')
+  })
+
+  test('is case-insensitive', () => {
+    expect(formatWeaponCategoryLabel('Simple Melee')).toBe('All Simple Melee Weapons')
+    expect(formatWeaponCategoryLabel('MARTIAL')).toBe('All Martial Weapons')
   })
 })

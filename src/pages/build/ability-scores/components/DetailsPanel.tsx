@@ -3,7 +3,6 @@ import { Separator } from '@/components/ui/separator'
 import type { AbilityName } from '@/lib/calculations/abilityScores'
 import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills'
 import { renderEntry } from '@/lib/renderer'
-import { cn } from '@/lib/utils'
 import {
   buildSkillSourceTags,
   formatTitleCase,
@@ -11,7 +10,6 @@ import {
 } from '@/pages/build/ability-scores/model/data'
 
 interface BuildAbilityScoresDetailsPanelProps {
-  detailCollapsed: boolean
   selectedAbility: AbilityName
   selectedSkillDetails: SkillDetail[]
 }
@@ -21,7 +19,6 @@ function renderInlineEntry(entry: unknown): string {
 }
 
 export function BuildAbilityScoresDetailsPanel({
-  detailCollapsed,
   selectedAbility,
   selectedSkillDetails,
 }: BuildAbilityScoresDetailsPanelProps) {
@@ -29,14 +26,7 @@ export function BuildAbilityScoresDetailsPanel({
   const sourceTags = buildSkillSourceTags(selectedSkillDetails)
 
   return (
-    <div
-      className={cn(
-        'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
-        detailCollapsed
-          ? 'w-0 min-w-0 opacity-0 pointer-events-none'
-          : 'w-[40%] min-w-[320px] max-w-[460px]',
-      )}
-    >
+    <>
       <div className="bg-gradient-to-r from-accent/30 via-accent/15 to-transparent border-b border-border/40 px-4 py-3 flex-shrink-0 flex flex-col gap-2">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Details
@@ -90,6 +80,6 @@ export function BuildAbilityScoresDetailsPanel({
           </div>
         </div>
       </ScrollArea>
-    </div>
+    </>
   )
 }

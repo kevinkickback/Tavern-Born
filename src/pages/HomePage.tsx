@@ -1,4 +1,4 @@
-import { CheckSquare, Funnel, Plus, Trash, Upload, Users } from '@phosphor-icons/react'
+import { CheckSquare, Funnel, Plus, Trash, Upload, Users, X } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { CharacterCard } from '@/components/character/CharacterCard'
@@ -255,10 +255,14 @@ export function HomePage() {
                   title={filterPanelOpen ? 'Hide filters' : 'Show filters'}
                   className={cn(
                     'absolute top-2 z-20 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all duration-300',
-                    filterPanelOpen ? 'right-[216px]' : 'right-2',
+                    filterPanelOpen ? 'right-[248px]' : 'right-2',
                   )}
                 >
-                  <Funnel className="h-3.5 w-3.5" weight={filterPanelOpen ? 'fill' : 'regular'} />
+                  {filterPanelOpen ? (
+                    <X className="h-3.5 w-3.5" />
+                  ) : (
+                    <Funnel className="h-3.5 w-3.5" />
+                  )}
                 </button>
               )}
 
@@ -290,31 +294,6 @@ export function HomePage() {
                       <Upload size={13} />
                       Import
                     </Button>
-                  </div>
-                )}
-
-                {/* Selection banner */}
-                {selectionMode && (
-                  <div className="flex items-center gap-3 border-b border-border bg-muted/30 px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox checked={allSelected} onCheckedChange={handleToggleAllSelection} />
-                      <span className="text-sm text-muted-foreground">
-                        {allSelected ? 'Deselect All' : 'Select All'}
-                      </span>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className="gap-1.5 h-7 text-xs"
-                      disabled={selectedCharacterIds.length === 0}
-                      onClick={handleDeleteSelected}
-                    >
-                      <Trash size={13} />
-                      Delete ({selectedCharacterIds.length})
-                    </Button>
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {selectedCharacterIds.length} selected
-                    </span>
                   </div>
                 )}
 
@@ -365,8 +344,8 @@ export function HomePage() {
                           <div
                             className="grid gap-6"
                             style={{
-                              gridTemplateColumns:
-                                'repeat(auto-fill, minmax(min(100%, 360px), 1fr))',
+                              gridTemplateColumns: 'repeat(auto-fill, 360px)',
+                              justifyContent: 'space-between',
                             }}
                           >
                             {chars.map((character) => (
@@ -391,7 +370,8 @@ export function HomePage() {
                     <div
                       className="grid gap-6"
                       style={{
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 360px), 1fr))',
+                        gridTemplateColumns: 'repeat(auto-fill, 360px)',
+                        justifyContent: 'space-between',
                       }}
                     >
                       {sortedCharacters.map((character) => (
@@ -417,7 +397,7 @@ export function HomePage() {
               <div className="w-0 flex-shrink-0 relative">
                 <div
                   className={cn(
-                    'absolute top-0 right-0 h-full w-52 flex flex-col border-l border-border bg-card z-10 transition-transform duration-300 ease-in-out',
+                    'absolute top-0 right-0 h-full w-60 flex flex-col border-l border-border bg-card z-10 transition-transform duration-300 ease-in-out',
                     filterPanelOpen
                       ? 'translate-x-0 shadow-xl'
                       : 'translate-x-full pointer-events-none',
@@ -478,12 +458,38 @@ export function HomePage() {
                       <Button
                         variant={selectionMode ? 'default' : 'outline'}
                         size="sm"
-                        className="h-8 text-xs gap-1.5 w-full justify-start"
+                        className="h-8 text-xs gap-1.5 w-full justify-center"
                         onClick={handleToggleSelectionMode}
                       >
                         <CheckSquare size={14} />
                         {selectionMode ? 'Cancel Multi-Select' : 'Multi-Select'}
                       </Button>
+                      {selectionMode && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <div className="flex items-center gap-1.5">
+                            <Checkbox
+                              checked={allSelected}
+                              onCheckedChange={handleToggleAllSelection}
+                            />
+                            <span className="text-xs text-muted-foreground w-[4.75rem] shrink-0">
+                              {allSelected ? 'Deselect All' : 'Select All'}
+                            </span>
+                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="h-7 text-xs gap-1 flex-1 justify-center"
+                            disabled={selectedCharacterIds.length === 0}
+                            onClick={handleDeleteSelected}
+                          >
+                            <Trash size={12} />
+                            Delete
+                            {selectedCharacterIds.length > 0
+                              ? ` (${selectedCharacterIds.length})`
+                              : ''}
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

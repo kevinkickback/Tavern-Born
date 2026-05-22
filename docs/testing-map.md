@@ -36,6 +36,7 @@ Key scripts in package.json:
 	- src/pages/build/proficiencies/model/data.ts
 	- src/pages/build/class/model/levelsUtils.ts
 	- Grouped tool-choice expansion coverage (gaming set/musical instrument/artisan's tools/any-tool)
+	- `formatWeaponCategoryLabel` weapon category key → display label
 - Compendium entry shaping and filtering in src/lib/compendiumEntries.ts
 - Integration workflows: home page, startup modals, level-up modal (tests/integration/*)
 - Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
