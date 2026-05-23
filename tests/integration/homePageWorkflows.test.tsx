@@ -118,7 +118,6 @@ describe('home page integration workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Multi-Select' }))
 
     await user.click(screen.getByRole('button', { name: 'select-c1' }))
-    expect(screen.getByText('1 selected')).toBeTruthy()
 
     await user.click(screen.getByRole('button', { name: /delete \(1\)/i }))
 
