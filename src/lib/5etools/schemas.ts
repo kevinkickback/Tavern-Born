@@ -42,7 +42,7 @@ export const ClassDataSchema = z
   })
   .passthrough()
 
-export const ClassIndexSchema = z.record(z.string())
+export const IndexSchema = z.record(z.string())
 
 export const BackgroundSchema = z
   .object({

@@ -193,16 +193,13 @@ export function getRecursiveHintPosition(
   x: number
   y: number
 } {
-  // Get viewport-relative coordinates of the hovered element
   const rect = target.getBoundingClientRect()
 
-  // Find the TooltipContent container (nearest positioned ancestor)
   let container = target.offsetParent as HTMLElement | null
   while (container && !container.classList.contains('[&_p]:my-0.5')) {
     container = container.offsetParent as HTMLElement | null
   }
 
-  // If we can't find the container, look for any data-* attributes or class patterns
   if (!container) {
     container = target.closest('[role="tooltip"]') as HTMLElement | null
   }
@@ -210,7 +207,6 @@ export function getRecursiveHintPosition(
     container = target.closest('div[class*="shadow-xl"]') as HTMLElement | null
   }
 
-  // Get the container's viewport-relative position
   const containerRect = container?.getBoundingClientRect() || {
     left: 0,
     top: 0,
@@ -218,7 +214,6 @@ export function getRecursiveHintPosition(
     bottom: window.innerHeight,
   }
 
-  // Convert element coordinates to be relative to container
   const elementRelX = rect.left - containerRect.left
   const elementRelY = rect.top - containerRect.top
 
@@ -226,7 +221,6 @@ export function getRecursiveHintPosition(
   const tooltipHeightEstimate = hasBody ? 220 : 88
   const gap = 8
 
-  // Position to the right of the hovered text, or left if no space
   const containerWidth = containerRect.right - containerRect.left
   const rightCandidate = rect.right - containerRect.left + gap
   const leftCandidate = elementRelX - tooltipWidthEstimate - gap
@@ -238,7 +232,6 @@ export function getRecursiveHintPosition(
     x = Math.max(0, containerWidth - tooltipWidthEstimate - 4)
   }
 
-  // Position below or above the hovered text
   const centeredY = elementRelY + rect.height / 2 - tooltipHeightEstimate / 2
   const preferredDown = rect.bottom - containerRect.top + gap
   const preferredUp = elementRelY - tooltipHeightEstimate - gap
@@ -255,7 +248,6 @@ export function getRecursiveHintPosition(
   return { x, y }
 }
 
-// Local helper for transforming entry HTML with recursive title tracking
 export function getEntryWithHoverTitles(entry: unknown): string {
   const html = renderEntry(entry) ?? ''
   return html

@@ -137,7 +137,6 @@ export function SpellsPage() {
     [spellcastingDetails],
   )
 
-  /** For true prepared casters (Cleric/Druid/Paladin), pre-compute all castable class spells and list items grouped by profile. */
   const preparedCasterItemsByProfile = useMemo(() => {
     const map = new Map<string, PreparedCasterSpellItem[]>()
     for (const detail of spellcastingDetails) {
@@ -324,7 +323,6 @@ export function SpellsPage() {
 
     const initialSelectedNames = activeRacialChoice.selected ?? []
 
-    // Collect spells from all other profiles so they appear locked
     const otherProfileSpells = new Set<string>()
     for (const profile of spellProfiles) {
       if (profile.id === activeRacialChoice.profileId) continue

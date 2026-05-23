@@ -26,17 +26,11 @@ type OptionalFeatureOption = {
 export interface OptionalFeatureSelectionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** Dialog title, e.g. "Choose Eldritch Invocations" */
   title: string
-  /** Pre-filtered list of optional feature objects for this featureType. */
   features: OptionalFeatureOption[]
-  /** Maximum allowed selections (total at current class level). */
   maxSelections: number
-  /** Feature names already chosen when the dialog opens. */
   initialSelectedNames?: string[]
-  /** Character snapshot used for prerequisite validation. */
   characterSnapshot: PrereqCharacterSnapshot
-  /** Class name for level-based prereq checks (e.g. "Warlock"). */
   className?: string
   onConfirm: (names: string[]) => void
 }
@@ -91,8 +85,7 @@ const FeatureCard = memo(function FeatureCard({
             'text-sm text-muted-foreground line-clamp-3 leading-snug',
             !prereqMet && !isSelected && 'opacity-70',
           )}
-          // renderEntry returns safe HTML from structured 5etools data.
-          // eslint-disable-next-line react/no-danger
+          // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
           dangerouslySetInnerHTML={{ __html: descHtml }}
         />
       )}
@@ -100,7 +93,6 @@ const FeatureCard = memo(function FeatureCard({
   )
 })
 
-/** Derive a stable composite key for a feature that respects source. */
 function featureKey(f: OptionalFeatureOption): string {
   return `${f.name}|${f.source ?? ''}`
 }
@@ -116,7 +108,6 @@ export function OptionalFeatureSelectionModal({
   className,
   onConfirm,
 }: OptionalFeatureSelectionModalProps) {
-  // Deduplicate by name|source composite key.
   const dedupedFeatures = useMemo(() => {
     const seen = new Map<string, OptionalFeatureOption>()
     for (const f of features) {
@@ -126,8 +117,6 @@ export function OptionalFeatureSelectionModal({
     return Array.from(seen.values())
   }, [features])
 
-  // Map incoming bare names → composite keys for SelectionModal's initialSelectedIds.
-  // When a stored name matches exactly one dedupedFeature, use its composite key.
   const initialSelectedIds = useMemo(() => {
     return initialSelectedNames.map((name) => {
       const match = dedupedFeatures.find((f) => f.name === name)
@@ -135,7 +124,6 @@ export function OptionalFeatureSelectionModal({
     })
   }, [initialSelectedNames, dedupedFeatures])
 
-  // Run all prerequisite checks up-front so each card doesn't recompute.
   const prereqMap = useMemo(() => {
     const map = new Map<string, { met: boolean; reasons: string[] }>()
     for (const f of dedupedFeatures) {
@@ -175,12 +163,10 @@ export function OptionalFeatureSelectionModal({
     [hasUnmetPrerequisites],
   )
 
-  // Override SelectionModal's default guard: block if prereqs not met.
   const canSelect = useCallback(
     (item: OptionalFeatureOption, selectedIds: Set<string>, allItems: OptionalFeatureOption[]) => {
       const prereq = prereqMap.get(featureKey(item))
       if (prereq && !prereq.met) return false
-      // Also enforce the category limit (replaces defaultCanSelect).
       const selected = allItems.filter((i) => selectedIds.has(featureKey(i))).length
       if (selected >= maxSelections && !selectedIds.has(featureKey(item))) return false
       return true

@@ -194,11 +194,6 @@ export function useBackgroundProvenanceMutations() {
     [character, ledger, updateCharacter, itemLookup],
   )
 
-  /**
-   * Apply (or update) the player's background ability score choices.
-   * Replaces any existing background ability bonus records in the ledger.
-   * Writes new records derived from the chosen block + ordered selections.
-   */
   const applyBackgroundAbilityChoices = useCallback(
     (
       bg: { name: string; source?: string; ability?: unknown[] },

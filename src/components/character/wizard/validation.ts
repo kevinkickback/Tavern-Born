@@ -23,7 +23,6 @@ export function validateStep(
   characterData: CharacterWizardData,
   gameData: Pick<GameData, 'races' | 'classes' | 'backgrounds'> | null | undefined,
 ): ValidationResult {
-  // Data-availability guards (can't be encoded in schema — requires loaded game data)
   if (step === 3 && (gameData?.races ?? []).length === 0) {
     return {
       valid: false,

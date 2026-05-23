@@ -1,9 +1,10 @@
-import { Book, CaretLeft, CaretRight, Funnel, MagnifyingGlass, X } from '@phosphor-icons/react'
+import { Book, Funnel, MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -55,6 +56,7 @@ export function CompendiumPage() {
   const [activeSources, setActiveSources] = useState<Set<string>>(new Set())
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(null)
+  const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
 
   const effectiveAllowedSources = useMemo(() => {
@@ -256,107 +258,93 @@ export function CompendiumPage() {
               Right pane: fixed width, collapses to 0 via CSS transition.
               Toggle button: absolutely positioned top-right of the card body. */}
           <Card className="h-full overflow-hidden flex flex-col">
-            <div className="relative flex flex-row flex-1 overflow-hidden min-h-0 -my-6">
-              {/* Toggle button — absolute, top-right of the card body */}
-              <button
-                type="button"
-                onClick={() => setDetailCollapsed((c) => !c)}
-                title={detailCollapsed ? 'Expand details panel' : 'Collapse details panel'}
-                className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all"
-              >
-                {detailCollapsed ? (
-                  <CaretLeft className="h-3.5 w-3.5" />
-                ) : (
-                  <CaretRight className="h-3.5 w-3.5" />
-                )}
-              </button>
-
-              {/* Left pane — always flex-1, expands naturally when right collapses */}
-              <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-                <div className="p-4 border-b border-border">
-                  <div className="flex items-center justify-between mb-1">
+            <SplitPane
+              leftCollapsed={leftCollapsed}
+              rightCollapsed={detailCollapsed}
+              onLeftCollapsedChange={setLeftCollapsed}
+              onRightCollapsedChange={setDetailCollapsed}
+              rightWidth="w-[42%] min-w-[320px]"
+              left={
+                <>
+                  <div className="p-4 border-b border-border">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        Results ({filteredEntries.length}
+                        {hasMore && ` — showing first ${MAX_DISPLAY}`})
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                    <div className="p-4 space-y-2">
+                      {filteredEntries.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground">
+                          No entries found
+                        </div>
+                      ) : (
+                        displayedEntries.map((entry) => (
+                          <button
+                            type="button"
+                            key={`${entry.type}-${entry.source}-${entry.name}`}
+                            onClick={() => {
+                              setSelectedEntry(entry)
+                              if (detailCollapsed) setDetailCollapsed(false)
+                            }}
+                            className={cn(
+                              'w-full text-left p-3 rounded-lg border transition-colors hover:border-accent',
+                              selectedEntry === entry
+                                ? 'border-accent bg-accent'
+                                : 'border-border bg-card',
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0 overflow-hidden">
+                                <h3 className="font-semibold truncate">{entry.name}</h3>
+                                {entry.description && (
+                                  <p
+                                    className="text-sm text-muted-foreground line-clamp-1"
+                                    dangerouslySetInnerHTML={{
+                                      __html: renderEntry(entry.description),
+                                    }}
+                                  />
+                                )}
+                              </div>
+                              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                <Badge variant="outline" className="text-xs">
+                                  {entry.type}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  {entry.source}
+                                </Badge>
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              }
+              right={
+                <>
+                  <div className="p-4 border-b border-border">
                     <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                      Results ({filteredEntries.length}
-                      {hasMore && ` — showing first ${MAX_DISPLAY}`})
+                      Details
                     </span>
                   </div>
-                </div>
-                <div className="flex-1 overflow-y-auto overflow-x-hidden">
-                  <div className="p-4 space-y-2">
-                    {filteredEntries.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        No entries found
-                      </div>
-                    ) : (
-                      displayedEntries.map((entry) => (
-                        <button
-                          type="button"
-                          key={`${entry.type}-${entry.source}-${entry.name}`}
-                          onClick={() => {
-                            setSelectedEntry(entry)
-                            if (detailCollapsed) setDetailCollapsed(false)
-                          }}
-                          className={cn(
-                            'w-full text-left p-3 rounded-lg border transition-colors hover:border-accent',
-                            selectedEntry === entry
-                              ? 'border-accent bg-accent'
-                              : 'border-border bg-card',
-                          )}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0 overflow-hidden">
-                              <h3 className="font-semibold truncate">{entry.name}</h3>
-                              {entry.description && (
-                                <p
-                                  className="text-sm text-muted-foreground line-clamp-1"
-                                  dangerouslySetInnerHTML={{
-                                    __html: renderEntry(entry.description),
-                                  }}
-                                />
-                              )}
-                            </div>
-                            <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                              <Badge variant="outline" className="text-xs">
-                                {entry.type}
-                              </Badge>
-                              <Badge variant="secondary" className="text-xs">
-                                {entry.source}
-                              </Badge>
-                            </div>
-                          </div>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right pane — collapses to 0 width via CSS transition, same as forge .info-panel */}
-              <div
-                className={cn(
-                  'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
-                  detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'min-w-[320px]',
-                  !detailCollapsed && 'w-[42%]',
-                )}
-              >
-                <div className="p-4 border-b border-border">
-                  <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    Details
-                  </span>
-                </div>
-                <ScrollArea className="flex-1 overflow-hidden">
-                  <div className="p-4">
-                    {selectedEntry ? (
-                      <CompendiumEntryDetails selectedEntry={selectedEntry} />
-                    ) : (
-                      <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-                        Select an entry to view details
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
-            </div>
+                  <ScrollArea className="flex-1 overflow-hidden">
+                    <div className="p-4">
+                      {selectedEntry ? (
+                        <CompendiumEntryDetails selectedEntry={selectedEntry} />
+                      ) : (
+                        <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+                          Select an entry to view details
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </>
+              }
+            />
           </Card>
         </div>
       </div>

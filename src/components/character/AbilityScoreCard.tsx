@@ -13,11 +13,6 @@ interface AbilityScoreCardProps {
   onSelect?: () => void
 }
 
-/**
- * Reusable ability score card component for displaying a single ability score.
- * Features a gradient header strip with the ability abbreviation, a large centered
- * score + colored modifier, and an optional controls slot via children.
- */
 export function AbilityScoreCard({
   ability,
   score,
@@ -55,7 +50,6 @@ export function AbilityScoreCard({
             : 'border-border',
       )}
     >
-      {/* Gradient header strip with ability abbreviation */}
       <div
         className={cn(
           'h-8 flex items-center px-3 border-b transition-colors',
@@ -82,7 +76,6 @@ export function AbilityScoreCard({
         )}
       </div>
 
-      {/* Score and modifier — button when interactive, plain div otherwise */}
       {interactive ? (
         <button
           type="button"
@@ -103,7 +96,6 @@ export function AbilityScoreCard({
         scoreBody
       )}
 
-      {/* Controls slot */}
       {children && <div className="px-3 pb-3 pt-2 border-t border-border/40">{children}</div>}
     </div>
   )

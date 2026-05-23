@@ -17,12 +17,10 @@ import {
 
 export type { AbilityName, AbilityScores } from '@/types/character'
 
-/** All six D&D ability names in standard order — derived from the canonical abbreviation table. */
 export const ABILITY_NAMES: readonly AbilityName[] = ABILITY_ABBREV_ORDER.map(
   (abv) => ABILITY_ABBREV_TO_FULL[abv] as AbilityName,
 )
 
-/** Maps each full ability name to its uppercase abbreviation — derived from the canonical abbreviation table. */
 export const ABILITY_ABBREVIATIONS: Readonly<Record<AbilityName, string>> = Object.fromEntries(
   ABILITY_ABBREV_ORDER.map((abv) => [
     ABILITY_ABBREV_TO_FULL[abv],
@@ -30,7 +28,6 @@ export const ABILITY_ABBREVIATIONS: Readonly<Record<AbilityName, string>> = Obje
   ]),
 ) as Readonly<Record<AbilityName, string>>
 
-/** A bonus applied to an ability from a named source (race, feat, ASI, etc.). */
 export interface AbilityBonus {
   value: number
   source: string
@@ -69,7 +66,6 @@ export function getTotalAbilityScore(base: number, bonuses: AbilityBonus[]): num
   return Math.min(total, ABILITY_SCORE_ABSOLUTE_MAX)
 }
 
-/** Compute the total score for a named ability, capped at 20 for most calculations. */
 export function getAbilityScore(
   ability: AbilityName,
   scores: AbilityScores,
@@ -125,7 +121,6 @@ export function isValidStandardArrayAssignment(scores: Partial<AbilityScores>): 
     usedCounts.set(val, (usedCounts.get(val) ?? 0) + 1)
   }
 
-  // Each value can be used at most once, and must be in STANDARD_ARRAY
   for (const [val, count] of usedCounts) {
     if (count > 1 || !(STANDARD_ARRAY as readonly number[]).includes(val)) {
       return false
@@ -148,7 +143,6 @@ export interface FixedAbilityBonus {
   source: 'race' | 'subrace'
 }
 
-/** A choosable racial ability bonus (Tasha's or "choose any"). */
 export interface ChoosableAbilityBonus {
   count: number
   amount: number
@@ -189,7 +183,6 @@ type RaceAbilityEntry = {
   [ability: string]: number | { count?: number; amount?: number; from?: string[] } | undefined
 }
 
-/** Normalize an ability abbreviation (e.g. "str", "STR") to a full lowercase name. */
 export function normalizeAbilityName(input: string): AbilityName | null {
   const map: Record<string, AbilityName> = {
     str: 'strength',
@@ -208,16 +201,8 @@ export function normalizeAbilityName(input: string): AbilityName | null {
   return map[input.toLowerCase().trim()] ?? null
 }
 
-/** A single weighted-choice block from a 2024 background ability entry. */
 export interface BackgroundAbilityBlock {
-  /** Abilities the player may pick from. */
   from: AbilityName[]
-  /**
-   * Bonus amounts indexed by selection slot.
-   * selections[i] receives weights[i] points.
-   * e.g. [2, 1] → first pick gets +2, second gets +1.
-   * e.g. [1, 1, 1] → three picks each get +1.
-   */
   weights: number[]
 }
 

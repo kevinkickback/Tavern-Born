@@ -119,6 +119,26 @@ describe('gameDataStore', () => {
     expect(state.loadProgress).toBeNull()
   })
 
+  test('background refresh keeps existing data when loader returns empty payload', async () => {
+    const existing = makeGameDataFixture()
+    existing.classes = [{ name: 'Wizard', source: 'PHB' }] as unknown as GameData['classes']
+    useGameDataStore.setState({
+      gameData: existing,
+      dataSourceConfig: config,
+      cacheStatus: 'stale',
+    })
+
+    loadDataFromSourceMock.mockResolvedValue(makeGameDataFixture())
+
+    await useGameDataStore.getState().loadGameData(config, true)
+
+    const state = useGameDataStore.getState()
+    expect(state.gameData).toEqual(existing)
+    expect(state.cacheStatus).toBe('stale')
+    expect(state.error).toBe('Background refresh returned empty data; keeping existing cache')
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+  })
+
   test('loadGameData handles loader errors', async () => {
     loadDataFromSourceMock.mockRejectedValue(new Error('boom'))
 

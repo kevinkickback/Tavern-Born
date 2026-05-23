@@ -101,7 +101,6 @@ export function useSpellProvenanceMutations() {
     [character, ledger, patch],
   )
 
-  /** Atomically remove old spell provenance and add replacement in one update. */
   const swapSpellProvenance = useCallback(
     (
       className: string,

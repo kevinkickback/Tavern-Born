@@ -8,14 +8,11 @@ import {
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
 
-/** Derived level and proficiency state for the active character. */
 export interface CharacterLevelState {
   level: number
   proficiencyBonus: number
   proficiencyBonusString: string
   isMaxLevel: boolean
-
-  /** Initiative modifier — DEX modifier (no proficiency by default). */
   initiativeModifier: number
   initiativeString: string
 }

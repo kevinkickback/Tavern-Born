@@ -7,7 +7,6 @@ interface CompendiumEntryBase {
   searchText?: string
 }
 
-/** All untyped compendium entry type strings. */
 type UntypedEntryType =
   | 'Skill'
   | 'Sense'
@@ -169,7 +168,6 @@ function scoreEntry(entry: CompendiumEntry, queryLower: string, terms: string[])
     }
   }
 
-  // Bonus when all terms hit the name (vs only some)
   if (nameMatches === terms.length) score += 20
 
   return score

@@ -21,7 +21,6 @@ import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 
 export interface SpellLevelLimit {
-  /** 0 = cantrip; 1–9 = spell level */
   level: number
   max: number
 }
@@ -31,19 +30,12 @@ export interface SpellSelectionModalProps {
   onOpenChange: (open: boolean) => void
   title?: string
   spells: Spell5e[]
-  /** Names already selected in another profile or slot and therefore unavailable here. */
   lockedNames?: Set<string>
-  /** All spell names the character already knows (from any source). Hidden by default, never re-selectable. */
   characterSpellNames?: Set<string>
-  /** Per-level selection limits expressed as CategoryLimit objects. Optional. */
   categories?: CategoryLimit<Spell5e>[]
-  /** Pre-selected spell names when the dialog opens. */
   initialSelectedNames?: string[]
-  /** Active filter state to pre-apply when the dialog opens (e.g. level checkboxes). */
   initialFilters?: ActiveFilters
-  /** When set, level filter options NOT in this set are disabled (greyed out). */
   allowedLevels?: Set<string>
-  /** Optional class filter — show only spells on that class list. */
   className?: string
   classSource?: string
   classListOverrides?: Set<string>
@@ -132,7 +124,6 @@ function matchSpell(
   strictLevels: boolean,
   characterSpellNames?: Set<string>,
 ): boolean {
-  // Hide already-known spells when the visibility filter is active.
   if (characterSpellNames?.has(spell.name) && activeFilters.visibility?.has('hide-known')) {
     return false
   }
@@ -146,12 +137,8 @@ function matchSpell(
     return false
   }
 
-  // Name search.
   if (search && !spell.name.toLowerCase().includes(search.toLowerCase())) return false
 
-  // Level filter.
-  // strictLevels=true (class card): empty set means nothing is selected → no results.
-  // strictLevels=false (browse page): empty set means no filter → all pass.
   const levelSet = activeFilters.level
   if (strictLevels) {
     if (!levelSet || levelSet.size === 0 || !levelSet.has(String(spell.level))) return false
@@ -250,8 +237,7 @@ const SpellCard = memo(function SpellCard({
       {descHtml && (
         <div
           className="text-sm text-muted-foreground line-clamp-3 leading-snug"
-          // renderEntry returns safe HTML produced from structured 5etools data.
-          // eslint-disable-next-line react/no-danger
+          // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
           dangerouslySetInnerHTML={{ __html: descHtml }}
         />
       )}
