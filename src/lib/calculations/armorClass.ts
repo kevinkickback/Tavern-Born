@@ -3,7 +3,6 @@ import { getAbilityModifier } from './gameRules'
 
 export type ArmorCategory = 'light' | 'medium' | 'heavy' | 'shield' | 'none'
 
-/** Maps 5etools item type codes to internal armor categories. */
 export const ARMOR_TYPE_MAP: Readonly<Record<string, ArmorCategory>> = {
   LA: 'light',
   MA: 'medium',
@@ -48,9 +47,7 @@ function normalizeTypeCode(raw: string): string {
   return raw.split('|')[0]
 }
 
-/** Returns the armour category derived from a 5etools item type code. */
 export function getArmorCategory(item: Equipment): ArmorCategory {
-  // An explicit armorType wins (set when importing from game data)
   if (item.armorType) return item.armorType
   const typeKey = normalizeTypeCode(item.type ?? '').toUpperCase()
   if (typeKey === 'SHIELD') return 'shield'
@@ -97,7 +94,6 @@ export function computeArmorClass(equipment: Equipment[], dexModifier: number): 
   } else if (category === 'medium') {
     ac = baseAC + Math.min(dexModifier, 2)
   } else {
-    // heavy — no DEX bonus
     ac = baseAC
   }
 

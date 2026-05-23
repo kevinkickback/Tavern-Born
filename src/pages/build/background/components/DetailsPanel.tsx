@@ -14,7 +14,6 @@ import type { Background5e } from '@/types/5etools'
 import type { AbilityName } from '@/types/character'
 
 interface BuildBackgroundDetailsPanelProps {
-  detailCollapsed: boolean
   selectedBackground?: Background5e
   skillNames: string[]
   languageNames: string[]
@@ -326,7 +325,6 @@ function BackgroundDetails2014({
 }
 
 export function BuildBackgroundDetailsPanel({
-  detailCollapsed,
   selectedBackground,
   skillNames,
   languageNames,
@@ -340,12 +338,7 @@ export function BuildBackgroundDetailsPanel({
   bgChoices,
 }: BuildBackgroundDetailsPanelProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
-        detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'w-1/2 min-w-[320px]',
-      )}
-    >
+    <>
       <div className="bg-gradient-to-r from-accent/10 to-transparent border-b border-border px-4 py-3 flex flex-col gap-2">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Details
@@ -398,6 +391,6 @@ export function BuildBackgroundDetailsPanel({
           )}
         </div>
       </ScrollArea>
-    </div>
+    </>
   )
 }

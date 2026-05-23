@@ -398,11 +398,6 @@ export function useFeatProvenanceMutations() {
     [character, ledger, updateCharacter],
   )
 
-  /**
-   * Commit a feat together with its follow-up option selections.
-   * Writes the feat (with `options` field), applies spell/proficiency/ability grants,
-   * and removes any pending `featOptions` choice record for this feat.
-   */
   const commitFeatWithOptions = useCallback(
     (
       feat: { name: string; source?: string },
@@ -541,10 +536,6 @@ export function useFeatProvenanceMutations() {
     [character, ledger, updateCharacter],
   )
 
-  /**
-   * Retract all grants made by a feat's option selections.
-   * Call before removing a feat that has `options` set.
-   */
   const retractFeatOptionGrants = useCallback(
     (feat: { name: string }, featOptions: FeatOptionSelections) => {
       if (!character) return
@@ -620,10 +611,6 @@ export function useFeatProvenanceMutations() {
     [character, ledger, updateCharacter],
   )
 
-  /**
-   * Atomically retract old feat option grants and apply new ones.
-   * Use when the user re-opens FeatOptionsModal to edit an already-configured feat.
-   */
   const editFeatWithOptions = useCallback(
     (
       feat: { name: string; source?: string },

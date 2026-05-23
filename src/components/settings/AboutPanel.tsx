@@ -15,9 +15,7 @@ export function AboutPanel() {
     window.electronAPI
       ?.getAppVersion()
       .then(setAppVersion)
-      .catch(() => {
-        // Version display is best-effort; silence is intentional.
-      })
+      .catch(() => {})
   }, [])
 
   const infoRows = [

@@ -39,7 +39,6 @@ export function useUnifiedClassSelection() {
       if (!cls) return
 
       const ledger = character.provenance ?? emptyProvenance()
-      // Compute provenance/equipment/proficiency updates atomically via the orchestration command.
       const orchestrationUpdates = computeApplyClassSelectionUpdates(
         character,
         ledger,
@@ -47,11 +46,8 @@ export function useUnifiedClassSelection() {
         undefined,
         itemLookup,
       )
-      // Compute class identity and classProgression updates via the command layer.
       const commandResult = selectBaseClass(character, ledger, className, cls, classSource)
 
-      // Single atomic write: orchestration wins for provenance/equipment/armor/weapons/tools/savingThrows;
-      // selectBaseClass provides class identity fields and the merged skills map.
       updateCharacter(character.id, {
         ...orchestrationUpdates,
         class: commandResult.characterUpdate.class,
@@ -61,9 +57,7 @@ export function useUnifiedClassSelection() {
         classProgression: commandResult.characterUpdate.classProgression,
         skills: commandResult.characterUpdate.skills,
         proficiencies: {
-          // orchestrationUpdates always sets proficiencies; Partial<Character> makes it optional so fallback to current
           ...(orchestrationUpdates.proficiencies ?? character.proficiencies),
-          // selectBaseClass correctly adds new class skill profs; orchestration omits skills.
           skills: commandResult.characterUpdate.proficiencies?.skills ?? [],
         },
       })
@@ -86,7 +80,6 @@ export function useUnifiedClassSelection() {
       }
 
       const ledger = character.provenance ?? emptyProvenance()
-      // Compute provenance/equipment/proficiency updates atomically.
       const orchestrationUpdates = computeApplyClassSelectionUpdates(
         character,
         ledger,
@@ -94,7 +87,6 @@ export function useUnifiedClassSelection() {
         { name: subclassName, source: subclassSource },
         itemLookup,
       )
-      // Compute classProgression/subclass field updates.
       const result = selectSubclassCommand(
         character,
         ledger,
@@ -107,7 +99,6 @@ export function useUnifiedClassSelection() {
         },
       )
 
-      // Single atomic write: merge both update sets (no field overlap).
       updateCharacter(character.id, {
         ...orchestrationUpdates,
         ...result.characterUpdate,

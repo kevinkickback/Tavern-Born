@@ -2,16 +2,13 @@ import { del, get, set } from 'idb-keyval'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 
 const CACHE_KEY = 'tb:game-data-cache'
-const MAX_AGE_MS = 24 * 60 * 60 * 1000 // 24 hours
+const MAX_AGE_MS = 24 * 60 * 60 * 1000
 
 export interface GameDataCacheEntry {
   data: GameData
   cachedAt: string
-  /** Hash of parsed game data content used to detect actual data changes. */
   contentFingerprint?: string
-  /** Last time fetched content differed from previous cached content. */
   lastDataChangedAt?: string
-  /** Minimal source config snapshot — enough to detect source changes. */
   sourceSnapshot: { type: string; path: string }
 }
 
@@ -52,13 +49,13 @@ export async function writeGameDataCache(
   const now = new Date().toISOString()
   const contentFingerprint = computeContentFingerprint(data)
   const previous = await readGameDataCache()
+  const previousFingerprint =
+    previous && isCacheForSource(previous, config)
+      ? (previous.contentFingerprint ?? computeContentFingerprint(previous.data))
+      : null
 
   let lastDataChangedAt: string
-  if (
-    previous &&
-    isCacheForSource(previous, config) &&
-    previous.contentFingerprint === contentFingerprint
-  ) {
+  if (previous && previousFingerprint != null && previousFingerprint === contentFingerprint) {
     // Same source and same content in the existing cache — data hasn't changed.
     lastDataChangedAt = previous.lastDataChangedAt ?? previous.cachedAt
   } else if (

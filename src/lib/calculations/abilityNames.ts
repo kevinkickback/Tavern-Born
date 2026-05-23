@@ -15,10 +15,8 @@ export const ABILITY_ABBREV_TO_FULL: Readonly<Record<string, string>> = {
   cha: 'charisma',
 }
 
-/** Canonical order of the six ability-score abbreviations (PHB column order). */
 export const ABILITY_ABBREV_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const
 
-/** Title-case display names for each ability abbreviation. */
 export const ABILITY_ABBREV_TO_TITLE: Readonly<Record<string, string>> = {
   str: 'Strength',
   dex: 'Dexterity',

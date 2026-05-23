@@ -8,10 +8,7 @@ import { useCharacterStore } from '@/store/characterStore'
 export type { SavingThrowResult }
 
 export interface SavingThrowsState {
-  /** All six saving throws with derived modifiers. Never stale — derived from scores + proficiency. */
   savingThrows: SavingThrowResult[]
-
-  /** Toggle proficiency on a saving throw (adds/removes from character.proficiencies.savingThrows). */
   toggleProficiency: (ability: AbilityName) => void
 }
 

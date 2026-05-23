@@ -98,14 +98,12 @@ function App() {
     applyUiScale(uiScale)
   }, [uiScale])
 
-  // Start auto-check schedule based on persisted preference
   useEffect(() => {
     if (!window.electronAPI?.setAutoCheck) return
     const { autoUpdate } = useAppPreferencesStore.getState()
     void window.electronAPI.setAutoCheck(autoUpdate)
   }, [])
 
-  // Listen for update-available events and show a toast
   useEffect(() => {
     if (!window.electronAPI?.onUpdateAvailable) return
     return window.electronAPI.onUpdateAvailable((data) => {

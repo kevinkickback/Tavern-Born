@@ -102,6 +102,7 @@ export const CharacterCard = memo(function CharacterCard({
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onToggleSelect?.(character.id)}
+            onClick={(e) => e.stopPropagation()}
             aria-label={`Select ${character.name || 'character'}`}
             className="border-white shadow-md"
           />

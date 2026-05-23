@@ -317,7 +317,6 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                 ? [...new Set(availableClassSpells.map((s) => s.level))].sort((a, b) => a - b)
                 : []
 
-              // Compute missing spells for class profiles
               const currentCantrips = items.filter((item) => item.kind === 'cantrip').length
               // Known-spell limits should track only choosable class spells; always-prepared
               // grants should not consume the "known" quota.
@@ -508,7 +507,6 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                         </div>
                       </div>
                     ) : null}
-                    {/* True prepared casters: cantrips + full class spell list with prepare toggles */}
                     {isTruePrepared && (levels.includes(0) || availableClassSpells.length > 0)
                       ? (() => {
                           const totalGroups = (levels.includes(0) ? 1 : 0) + availLevels.length
@@ -633,7 +631,6 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                         })()
                       : null}
 
-                    {/* Non-true-prepared: cantrips + normal spell list from items */}
                     {!isTruePrepared
                       ? (() => {
                           const totalGroups = levels.length

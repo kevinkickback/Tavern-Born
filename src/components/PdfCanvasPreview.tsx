@@ -21,7 +21,6 @@ export function PdfCanvasPreview({ pdfBytes }: PdfCanvasPreviewProps) {
     const container = containerRef.current
     if (!container) return
 
-    // Clear previous canvases
     container.innerHTML = ''
     setRendering(true)
     setError(null)

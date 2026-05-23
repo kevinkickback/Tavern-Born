@@ -43,6 +43,9 @@ function renderPanel(languageChoice: ChoiceRecord) {
       artisanToolSlots={[]}
       visibleToolCandidates={[]}
       artisanChoiceByNorm={new Map()}
+      languageTypes={new Map()}
+      toolTypeMap={new Map()}
+      weaponInfoMap={new Map()}
       focused={null}
       onFocusChange={() => undefined}
       onExpandDetails={() => undefined}

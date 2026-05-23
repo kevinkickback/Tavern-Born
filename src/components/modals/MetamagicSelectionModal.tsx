@@ -33,8 +33,7 @@ const MetamagicCard = memo(function MetamagicCard({ metamagic, isSelected }: Met
       {descHtml && (
         <div
           className="text-sm text-muted-foreground line-clamp-3 leading-snug"
-          // renderEntry outputs safe HTML from structured 5etools entries.
-          // eslint-disable-next-line react/no-danger
+          // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
           dangerouslySetInnerHTML={{ __html: descHtml }}
         />
       )}

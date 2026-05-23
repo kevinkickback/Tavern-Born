@@ -8,7 +8,6 @@ export function getSchoolName(abbreviation: string | undefined): string {
   return SPELL_SCHOOL_NAMES[abbreviation.toUpperCase()] ?? abbreviation
 }
 
-// Units that are "singletons" — when count is 1, the number is omitted
 const SP_TIME_SINGLETONS = new Set(['action', 'bonus', 'reaction', 'round'])
 
 export function formatCastingTime(time: CastingTime[] | undefined): string {
@@ -17,11 +16,9 @@ export function formatCastingTime(time: CastingTime[] | undefined): string {
   const unitKey = t.unit.toLowerCase()
   const unitDisplay =
     unitKey === 'bonus' ? 'Bonus Action' : unitKey.charAt(0).toUpperCase() + unitKey.slice(1)
-  // Singletons with count=1: just the unit name ("Action", "Bonus Action", "Reaction", "Round")
   if (t.number === 1 && SP_TIME_SINGLETONS.has(unitKey)) {
     return unitDisplay
   }
-  // Timed: "1 minute", "10 minutes", "8 hours", etc.
   const rawUnit = unitKey === 'bonus' ? 'bonus action' : unitKey
   const plural = t.number > 1 ? 's' : ''
   return `${t.number} ${rawUnit}${plural}`
@@ -36,7 +33,6 @@ const RANGE_DIST_TYPE_TO_FULL: Record<string, string> = {
   special: 'Special',
 }
 
-// Area-of-effect spell range types — range is "Self" per canonical parser
 const AREA_RANGE_TYPES = new Set([
   'line',
   'cube',
@@ -65,16 +61,13 @@ export function formatRange(range: SpellRange | undefined): string {
   if (!range) return 'N/A'
   if (range.type === 'special') return 'Special'
 
-  // Area spells (cone, sphere, line, etc.) cast from self
   if (AREA_RANGE_TYPES.has(range.type)) return 'Self'
 
   if (range.type === 'point') {
     const dist = range.distance
     if (!dist) return 'N/A'
-    // self / touch / sight / unlimited / special as distance type
     const distFull = RANGE_DIST_TYPE_TO_FULL[dist.type?.toLowerCase()]
     if (distFull) return distFull
-    // Numeric range — singular for amount=1 ("1 foot" not "1 feet")
     if (dist.amount !== undefined) {
       const unit = dist.amount === 1 ? getSingularUnit(dist.type) : dist.type
       return `${dist.amount} ${unit}`
@@ -82,7 +75,6 @@ export function formatRange(range: SpellRange | undefined): string {
     return dist.type ?? 'N/A'
   }
 
-  // Fallback: legacy/homebrew formats that put self/touch directly on range.type
   const directFull = RANGE_DIST_TYPE_TO_FULL[range.type?.toLowerCase()]
   if (directFull) return directFull
 
@@ -135,8 +127,6 @@ export function ordinalSuffix(n: number): string {
       return 'th'
   }
 }
-
-/** E.g. 0 → "Cantrip", 1 → "1st-level", 2 → "2nd-level" */
 
 /** E.g. 1 → "1st", 2 → "2nd", 3 → "3rd", 11 → "11th" */
 export function getOrdinalForm(n: number): string {

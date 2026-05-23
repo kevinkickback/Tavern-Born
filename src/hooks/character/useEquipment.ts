@@ -18,9 +18,7 @@ const DEFAULT_CURRENCY: Currency = {
 
 export interface EquipmentState {
   equipment: Equipment[]
-  /** Total weight of all items in inventory (quantity × unit weight). */
   totalWeight: number
-  /** Max carry capacity (STR × 15). */
   carryCapacity: number
   isEncumbered: boolean
   attunedCount: number

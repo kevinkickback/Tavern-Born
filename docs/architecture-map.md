@@ -64,6 +64,7 @@ Feat options note:
 Character sheet PDF note:
 - Route src/pages/CharacterSheetPage.tsx renders the PDF preview/download workflow.
 - PDF mapping and filling logic lives in src/lib/pdf/characterSheetPdf.ts, with template-aware mapping for both 2014 and 2024 sheets.
+- 2024 mapping coverage includes core identity/combat stats, save/skill proficiencies, inspiration and death save checkboxes, and narrative/proficiency blocks when matching fields exist.
 - PDF form editing is powered by `@cantoo/pdf-lib` (maintained fork of pdf-lib) to keep browser-side AcroForm fill/edit behavior stable.
 - The 2014 pipeline also strips MPMB interactive chrome (buttons, ammo tracker widgets, calculation scripts, attack-mod placeholder state) before save/render.
 

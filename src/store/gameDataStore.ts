@@ -14,6 +14,31 @@ import type { DataSourceConfig, GameData } from '@/types/5etools'
 let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
 
+function getCatalogEntityCount(data: GameData): number {
+  return (
+    data.races.length +
+    data.classes.length +
+    data.backgrounds.length +
+    data.spells.length +
+    data.feats.length +
+    data.items.length +
+    data.itemsBase.length +
+    data.classFeatures.length +
+    data.actions.length +
+    data.conditions.length +
+    data.deities.length +
+    data.skills.length +
+    data.senses.length +
+    data.languages.length +
+    data.optionalfeatures.length +
+    data.variantrules.length +
+    data.trapHazards.length +
+    data.rewards.length +
+    data.cultsBoons.length +
+    data.organizations.length
+  )
+}
+
 interface LoadProgress {
   current: number
   total: number
@@ -62,7 +87,7 @@ interface GameDataState {
    * Pass `forceCheck: true` to skip the 1-hour background-verify interval and
    * always fire a background source check (used by auto-refresh on launch).
    */
-  loadFromCache: (opts?: { forceCheck?: boolean }) => Promise<{ needsToast?: 'stale' | 'offline' }>
+  loadFromCache: (opts?: { forceCheck?: boolean }) => Promise<{ needsToast?: 'offline' }>
 
   /**
    * Fetch data from `config`, write to IDB cache, update store.
@@ -127,7 +152,7 @@ export const useGameDataStore = create<GameDataState>()(
             setLastContentFingerprint(cache.contentFingerprint ?? null)
             setCacheStatus('stale')
             loadGameData(dataSourceConfig, true)
-            return { needsToast: 'stale' }
+            return {}
           }
           setGameData(cache.data)
           setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
@@ -189,6 +214,16 @@ export const useGameDataStore = create<GameDataState>()(
               : (current, total, resource) => set({ loadProgress: { current, total, resource } }),
             signal: controller.signal,
           })
+
+          const existingData = get().gameData
+          if (
+            background &&
+            existingData &&
+            getCatalogEntityCount(existingData) > 0 &&
+            getCatalogEntityCount(data) === 0
+          ) {
+            throw new Error('Background refresh returned empty data; keeping existing cache')
+          }
 
           // Ignore stale results from superseded requests.
           if (requestId !== activeLoadRequestId) {

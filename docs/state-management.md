@@ -14,7 +14,7 @@ This document defines state ownership, mutation rules, and persistence behavior.
 - File: src/store/gameDataStore.ts
 - Owns: parsed gameData, source config, load progress, cache status, hydration flag.
 - Primary write API: loadGameData(config, background?).
-- Cache bootstrap API: loadFromCache() — reads IDB cache and runs the startup decision branch; returns { needsToast? } for UI callers to act on. UI notification logic stays in useDataInit.
+- Cache bootstrap API: loadFromCache() — reads IDB cache and runs the startup decision branch; returns an optional offline toast hint for UI callers. UI notification logic stays in useDataInit.
 
 3. App preferences store
 - File: src/store/appPreferencesStore.ts

@@ -1,16 +1,11 @@
 /**
  * Typed accessors for pdf-lib internal structures that are not exposed by the
- * public API.  All casts are isolated here so each call-site stays clean.
+ * public API. All casts are isolated here so each call-site stays clean.
  *
  * Runtime shape checks are used where the cost is negligible and the guard
  * prevents crashes on unexpected template revisions.
  */
 
-// ---------------------------------------------------------------------------
-// Internal type shapes
-// ---------------------------------------------------------------------------
-
-/** A pdf-lib widget as returned by acroField.getWidgets(). */
 export type AcroWidget = {
   getRectangle: () => { x: number; y: number; width: number; height: number }
   setRectangle: (value: { x: number; y: number; width: number; height: number }) => void
@@ -18,7 +13,6 @@ export type AcroWidget = {
   dict: AcroDict
 }
 
-/** Subset of an AcroForm field's internal dictionary. */
 export type AcroDict = {
   has: (name: unknown) => boolean
   delete: (name: unknown) => void
@@ -26,7 +20,6 @@ export type AcroDict = {
   set: (name: unknown, value: unknown) => void
 }
 
-/** Any pdf-lib field type that exposes acroField internals with widgets + dict. */
 export type FieldWithInternals = {
   acroField: {
     getWidgets: () => AcroWidget[]
@@ -35,14 +28,9 @@ export type FieldWithInternals = {
   getName: () => string
 }
 
-/** Minimal shape needed to locate a page by its /P reference tag. */
 type PageWithRef = {
   ref: { tag: string }
 }
-
-// ---------------------------------------------------------------------------
-// Accessors
-// ---------------------------------------------------------------------------
 
 /**
  * Cast any pdf-lib field to FieldWithInternals.  Returns null and logs a

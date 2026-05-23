@@ -1,7 +1,8 @@
-import { CaretLeft, CaretRight, Sword, X } from '@phosphor-icons/react'
+import { Sword, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { Card } from '@/components/ui/card'
+import { SplitPane } from '@/components/ui/SplitPane'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
@@ -87,6 +88,7 @@ export function BuildClassPage() {
     spellSwapLevel,
     spellSwapDrop,
     detailCollapsed,
+    leftCollapsed,
     selectedFeature,
     optPickerState,
     featPickerOpen,
@@ -100,6 +102,7 @@ export function BuildClassPage() {
     setSpellSwapLevel,
     setSpellSwapDrop,
     setDetailCollapsed,
+    setLeftCollapsed,
     setSelectedFeature,
     setOptPickerState,
     setFeatPickerOpen,
@@ -147,13 +150,25 @@ export function BuildClassPage() {
     selectClass(className, classSource, classLookup, fallbackClassByName)
     handleClassSelectionApplied()
   }
+  const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
   const allClassFeatures = useMemo(() => {
     if (!viewingClass) return []
     const src = viewingClassSource ?? viewingClassData?.source
     return classFeatures
-      .filter((f) => f.className === viewingClass && (!src || f.classSource === src))
+      .filter((f) => {
+        if (f.className !== viewingClass) return false
+        if (src && f.classSource !== src) return false
+        if (!includeClassFeatureVariants && f.name.startsWith('Optional Rule:')) return false
+        return true
+      })
       .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
-  }, [classFeatures, viewingClass, viewingClassSource, viewingClassData])
+  }, [
+    classFeatures,
+    viewingClass,
+    viewingClassSource,
+    viewingClassData,
+    includeClassFeatureVariants,
+  ])
 
   const featuresByLevel = useMemo(() => {
     return getClassFeatureGroups(allClassFeatures)
@@ -162,7 +177,6 @@ export function BuildClassPage() {
     return getSubclassSelectionInfo(viewingClassData)
   }, [viewingClassData])
   const asiLevels = viewingClassData ? getASILevelsFromClass(viewingClassData) : []
-  const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
   const optFeatures = useMemo(
     () =>
       (
@@ -495,78 +509,74 @@ export function BuildClassPage() {
       <div className="flex-1 overflow-hidden px-6 pb-6">
         <div className="max-w-7xl mx-auto h-full">
           <Card className="h-full overflow-hidden flex flex-col">
-            <div className="relative flex flex-row flex-1 overflow-hidden min-h-0 -my-6">
-              <button
-                type="button"
-                onClick={() => setDetailCollapsed((c) => !c)}
-                title={detailCollapsed ? 'Expand details panel' : 'Collapse details panel'}
-                className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/80 transition-all"
-              >
-                {detailCollapsed ? (
-                  <CaretLeft className="h-3.5 w-3.5" />
-                ) : (
-                  <CaretRight className="h-3.5 w-3.5" />
-                )}
-              </button>
-              <BuildClassLevelsPanel
-                classProgression={classProgression}
-                selectedClassTab={selectedClassTab}
-                onSelectClassTab={handleSelectClassTab}
-                character={character}
-                levelsToShow={levelsToShow}
-                subclassLevel={subclassLevel}
-                asiLevels={asiLevels}
-                spellChoicesByLevel={spellChoicesByLevel}
-                optFeatureProgressions={optFeatureProgressions}
-                classFeatProgressions={classFeatProgressions}
-                featuresByLevel={featuresByLevel}
-                subclassFeatureName={subclassFeatureName}
-                selectedFeature={selectedFeature}
-                viewingClassData={viewingClassData}
-                viewingSubclass={viewingSubclass}
-                viewingSubclassData={viewingSubclassData}
-                detailCollapsed={detailCollapsed}
-                viewingClass={viewingClass ?? ''}
-                viewingClassSource={viewingClassSource}
-                viewingClassLevel={viewingClassLevel}
-                classEquipmentBlockChoices={classEquipmentBlockChoices}
-                selectedNames={selectedNames}
-                optFeatures={optFeatures}
-                featByCompositeId={featByCompositeId}
-                feats={(feats ?? []) as Feat5e[]}
-                spellByName={spellByName}
-                appliedAsiChoicesForClass={appliedAsiChoicesForClass}
-                asiModeByLevel={asiModeByLevel}
-                usedASI={usedASI}
-                totalASIAcrossClasses={totalASIAcrossClasses}
-                onOpenClassPicker={() => setClassPickerOpen(true)}
-                onOpenSubclassPicker={() => setSubclassPickerOpen(true)}
-                onOpenSpellPicker={setSpellPickerLevel}
-                onOpenSpellSwap={setSpellSwapLevel}
-                onOpenFeatPicker={() => setFeatPickerOpen(true)}
-                onOpenAsiPicker={setAsiPickerLevel}
-                onOpenOptPicker={setOptPickerState}
-                onOpenClassFeatPicker={setClassFeatPickerState}
-                onBlockChoiceChange={(blockIndex, choice) => {
-                  if (!viewingClassData) return
-                  applyClassEquipmentChoice(viewingClassData, blockIndex, choice)
-                }}
-                onSelectFeature={setSelectedFeature}
-                onExpandDetails={() => setDetailCollapsed(false)}
-                onAsiReset={handleAsiReset}
-                onSetAsiModeByLevel={setAsiMode}
-                onClearFeatSelectionsForAsi={() => replaceFeatSelections([])}
-                getOrdinalForm={getOrdinalForm}
-              />
-              <BuildClassDetailsPanel
-                detailCollapsed={detailCollapsed}
-                selectedFeature={selectedFeature}
-                viewingClassData={viewingClassData}
-                viewingClassEntries={viewingClassEntries}
-                viewingSubclass={viewingSubclass}
-                onClearSelection={() => setSelectedFeature(null)}
-              />
-            </div>
+            <SplitPane
+              leftCollapsed={leftCollapsed}
+              rightCollapsed={detailCollapsed}
+              onLeftCollapsedChange={setLeftCollapsed}
+              onRightCollapsedChange={setDetailCollapsed}
+              rightWidth="w-1/2 min-w-[320px]"
+              left={
+                <BuildClassLevelsPanel
+                  classProgression={classProgression}
+                  selectedClassTab={selectedClassTab}
+                  onSelectClassTab={handleSelectClassTab}
+                  character={character}
+                  levelsToShow={levelsToShow}
+                  subclassLevel={subclassLevel}
+                  asiLevels={asiLevels}
+                  spellChoicesByLevel={spellChoicesByLevel}
+                  optFeatureProgressions={optFeatureProgressions}
+                  classFeatProgressions={classFeatProgressions}
+                  featuresByLevel={featuresByLevel}
+                  subclassFeatureName={subclassFeatureName}
+                  selectedFeature={selectedFeature}
+                  viewingClassData={viewingClassData}
+                  viewingSubclass={viewingSubclass}
+                  viewingSubclassData={viewingSubclassData}
+                  detailCollapsed={detailCollapsed}
+                  viewingClass={viewingClass ?? ''}
+                  viewingClassSource={viewingClassSource}
+                  viewingClassLevel={viewingClassLevel}
+                  classEquipmentBlockChoices={classEquipmentBlockChoices}
+                  selectedNames={selectedNames}
+                  optFeatures={optFeatures}
+                  featByCompositeId={featByCompositeId}
+                  feats={(feats ?? []) as Feat5e[]}
+                  spellByName={spellByName}
+                  appliedAsiChoicesForClass={appliedAsiChoicesForClass}
+                  asiModeByLevel={asiModeByLevel}
+                  usedASI={usedASI}
+                  totalASIAcrossClasses={totalASIAcrossClasses}
+                  onOpenClassPicker={() => setClassPickerOpen(true)}
+                  onOpenSubclassPicker={() => setSubclassPickerOpen(true)}
+                  onOpenSpellPicker={setSpellPickerLevel}
+                  onOpenSpellSwap={setSpellSwapLevel}
+                  onOpenFeatPicker={() => setFeatPickerOpen(true)}
+                  onOpenAsiPicker={setAsiPickerLevel}
+                  onOpenOptPicker={setOptPickerState}
+                  onOpenClassFeatPicker={setClassFeatPickerState}
+                  onBlockChoiceChange={(blockIndex, choice) => {
+                    if (!viewingClassData) return
+                    applyClassEquipmentChoice(viewingClassData, blockIndex, choice)
+                  }}
+                  onSelectFeature={setSelectedFeature}
+                  onExpandDetails={() => setDetailCollapsed(false)}
+                  onAsiReset={handleAsiReset}
+                  onSetAsiModeByLevel={setAsiMode}
+                  onClearFeatSelectionsForAsi={() => replaceFeatSelections([])}
+                  getOrdinalForm={getOrdinalForm}
+                />
+              }
+              right={
+                <BuildClassDetailsPanel
+                  selectedFeature={selectedFeature}
+                  viewingClassData={viewingClassData}
+                  viewingClassEntries={viewingClassEntries}
+                  viewingSubclass={viewingSubclass}
+                  onClearSelection={() => setSelectedFeature(null)}
+                />
+              }
+            />
           </Card>
         </div>
       </div>

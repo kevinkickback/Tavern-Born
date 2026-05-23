@@ -31,7 +31,6 @@ export interface SpellSlotsState {
   preparedSpells: string[]
   spellProfiles: SpellProfile[]
   spellcastingDetails: SpellcastingClassDetail[]
-  /** Pre-computed map of profileId → SpellcastingClassDetail for use with useSpellProfileMutations. */
   spellcastingDetailByProfileId: Map<string, SpellcastingClassDetail>
 }
 
@@ -77,14 +76,12 @@ export function useSpellSlots(): SpellSlotsState {
   const selectedRaceData = useMemo(() => {
     if (!character?.race) return undefined
 
-    // Find the parent race entry
     const parentMatch = allRaces.find(
       (r) =>
         r.name === character.race &&
         (!character.raceSource || (r.source ?? '') === (character.raceSource ?? '')),
     )
 
-    // Find the subrace entry nested inside the parent
     let subraceMatch: Race5e | undefined
     let subraceIsNested = false
     if (character.subrace && parentMatch?.subraces) {
@@ -96,7 +93,6 @@ export function useSpellSlots(): SpellSlotsState {
       if (subraceMatch) subraceIsNested = true
     }
 
-    // Also check for subraces promoted to top-level entries (e.g. MPMM lineage races)
     if (!subraceMatch && character.subrace) {
       const topLevel = allRaces.find(
         (r) =>
@@ -106,9 +102,6 @@ export function useSpellSlots(): SpellSlotsState {
       if (topLevel) subraceMatch = topLevel
     }
 
-    // Merge additionalSpells from parent and subrace (both can contribute)
-    // When the parent has named additionalSpells blocks (keyed by subrace name),
-    // filter to only include the block matching the selected subrace.
     const parentSpells = parentMatch?.additionalSpells ?? []
     const filteredParentSpells =
       character.subrace && parentSpells.some((s) => !!s.name)
@@ -121,9 +114,6 @@ export function useSpellSlots(): SpellSlotsState {
 
     if (mergedSpells.length === 0) return undefined
 
-    // Use the most specific name for the profile label.
-    // For nested subraces (e.g. "High" inside "Elf"), combine with the parent race name
-    // so the card reads "High Elf" instead of just "High".
     const displayName =
       subraceIsNested && subraceMatch
         ? `${subraceMatch.name} ${parentMatch?.name ?? character.race ?? ''}`

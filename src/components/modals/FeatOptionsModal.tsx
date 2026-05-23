@@ -61,12 +61,8 @@ const STANDARD_LANGUAGES = [
   'Undercommon',
 ]
 
-// ── Per-step selection state ──────────────────────────────────────────────────
-
-/** Selections accumulated per wizard step (keyed by step index). */
 type StepSelections = Record<number, string | string[]>
 
-/** Tracks single-value steps (string) vs multi-value steps (string[]). */
 function getStepValue(stepSels: StepSelections, idx: number): string | string[] {
   return stepSels[idx] ?? ''
 }
@@ -86,8 +82,6 @@ function isStepComplete(step: FeatOptionStep, stepSels: StepSelections, idx: num
     }
   }
 }
-
-// ── Step renderers ────────────────────────────────────────────────────────────
 
 const SpellcastingClassStep = memo(function SpellcastingClassStep({
   step,
@@ -375,8 +369,6 @@ const ExpertiseStep = memo(function ExpertiseStep({
   )
 })
 
-// ── Initial selection seeding ─────────────────────────────────────────────────
-
 function seedStepSelections(steps: FeatOptionStep[], init: FeatOptionSelections): StepSelections {
   const result: StepSelections = {}
   for (let i = 0; i < steps.length; i++) {
@@ -408,12 +400,6 @@ function seedStepSelections(steps: FeatOptionStep[], init: FeatOptionSelections)
   return result
 }
 
-// ── Modal ─────────────────────────────────────────────────────────────────────
-
-/**
- * Compute the initial wizard steps and seeded selections in one pass.
- * Called only once per mount via lazy useState initializers.
- */
 function initWizardState(
   feat: Feat5e,
   initialSelections?: FeatOptionSelections,
@@ -449,12 +435,9 @@ export interface FeatOptionsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   feat: Feat5e
-  /** Skills the character is already proficient in, for the expertise step. */
   proficientSkillNames?: string[]
-  /** Pre-populate wizard with prior selections when editing an already-configured feat. */
   initialSelections?: FeatOptionSelections
   onFinish: (selections: FeatOptionSelections) => void
-  /** Called when user dismisses without completing — feat is saved as pending. */
   onDismiss?: () => void
 }
 
@@ -479,8 +462,6 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
 
   const currentStep = allSteps[stepIndex]
 
-  // ── Setters per step ──────────────────────────────────────────────────────
-
   const setSingle = useCallback((idx: number, val: string) => {
     setStepSels((prev) => ({ ...prev, [idx]: val }))
   }, [])
@@ -494,7 +475,6 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
     })
   }, [])
 
-  // When a spellcasting class is chosen, inject class-specific spell steps.
   const handleClassChosen = useCallback(
     (className: string, stepIdx: number) => {
       setSingle(stepIdx, className)
@@ -514,8 +494,6 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
     },
     [feat, setSingle],
   )
-
-  // ── Build final FeatOptionSelections on Finish ────────────────────────────
 
   const buildSelections = useCallback((): FeatOptionSelections => {
     const result: FeatOptionSelections = {}

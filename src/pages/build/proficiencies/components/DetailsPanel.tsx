@@ -5,11 +5,10 @@ import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { InfoTile } from '@/pages/_shared'
+import { formatWeaponCategoryLabel } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e, Language5e } from '@/types/5etools'
-
-// ── Display helpers ──────────────────────────────────────────────────────────
 
 /**
  * Standard language type labels — display-only mapping; no structured
@@ -315,33 +314,6 @@ const ARMOR_CATEGORY_INFO: Record<string, { label: string; acNote: string; examp
   },
 }
 
-const WEAPON_CATEGORY_INFO: Record<string, { label: string; note: string }> = {
-  'simple weapons': {
-    label: 'Simple Weapons',
-    note: 'All simple melee and ranged weapons — clubs, daggers, handaxes, darts, slings, etc.',
-  },
-  'simple melee weapons': {
-    label: 'Simple Melee Weapons',
-    note: 'Clubs, daggers, greatclubs, handaxes, javelins, light hammers, maces, quarterstaffs, sickles, spears.',
-  },
-  'simple ranged weapons': {
-    label: 'Simple Ranged Weapons',
-    note: 'Light crossbows, darts, shortbows, slings.',
-  },
-  'martial weapons': {
-    label: 'Martial Weapons',
-    note: 'All martial melee and ranged weapons — longswords, rapiers, battleaxes, longbows, hand crossbows, etc.',
-  },
-  'martial melee weapons': {
-    label: 'Martial Melee Weapons',
-    note: 'Battleaxes, flails, glaives, greataxes, greatswords, halberds, lances, longswords, mauls, morningstars, pikes, rapiers, scimitars, shortswords, tridents, war picks, warhammers, whips.',
-  },
-  'martial ranged weapons': {
-    label: 'Martial Ranged Weapons',
-    note: 'Blowguns, hand crossbows, heavy crossbows, longbows, nets.',
-  },
-}
-
 const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
   armor: 'Armor',
   weapons: 'Weapon',
@@ -367,27 +339,97 @@ function ArmorCategoryDetails({ categoryKey }: { categoryKey: string }) {
   )
 }
 
-function WeaponCategoryDetails({ categoryKey }: { categoryKey: string }) {
-  const info = WEAPON_CATEGORY_INFO[categoryKey.toLowerCase()]
-  if (!info) return null
+function WeaponList({ title, names }: { title: string | null; names: string[] }) {
+  return (
+    <div className="bg-card/60 border border-border/60 rounded-lg p-3 space-y-1.5">
+      {title && (
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
+      )}
+      <ul className="space-y-0.5">
+        {names.map((name) => (
+          <li key={name} className="text-sm">
+            {name}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function WeaponCategoryDetails({
+  categoryKey,
+  weaponItemsBase,
+}: {
+  categoryKey: string
+  weaponItemsBase: Item5e[]
+}) {
+  const label = formatWeaponCategoryLabel(categoryKey)
+  if (!label) return null
+
+  const lowerKey = categoryKey.toLowerCase()
+  const filterCategory = lowerKey.includes('simple')
+    ? 'simple'
+    : lowerKey.includes('martial')
+      ? 'martial'
+      : null
+  const filterRanged = lowerKey.includes('ranged')
+    ? true
+    : lowerKey.includes('melee')
+      ? false
+      : null
+
+  const seen = new Set<string>()
+  const filtered: { name: string; ranged: boolean }[] = []
+  for (const item of weaponItemsBase) {
+    if (!item.name || item.weaponCategory !== filterCategory) continue
+    const isRanged = item.type?.split('|')[0] === 'R'
+    if (filterRanged !== null && isRanged !== filterRanged) continue
+    const lower = item.name.toLowerCase()
+    if (!seen.has(lower)) {
+      seen.add(lower)
+      filtered.push({ name: item.name, ranged: isRanged })
+    }
+  }
+  filtered.sort((a, b) => a.name.localeCompare(b.name))
+
+  const meleeWeapons = filtered.filter((w) => !w.ranged).map((w) => w.name)
+  const rangedWeapons = filtered.filter((w) => w.ranged).map((w) => w.name)
+  const showSplit = filterRanged === null && meleeWeapons.length > 0 && rangedWeapons.length > 0
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1.5">
-        <Badge variant="secondary">{info.label}</Badge>
+        <Badge variant="secondary">{label}</Badge>
         <Badge variant="outline">Category</Badge>
+        {filtered.length > 0 && <Badge variant="outline">{filtered.length} weapons</Badge>}
       </div>
-      <div className="bg-card/60 border border-border/60 rounded-lg p-3">
-        <p className="text-sm leading-relaxed text-muted-foreground">{info.note}</p>
-      </div>
+      {filtered.length > 0 &&
+        (showSplit ? (
+          <div className="grid grid-cols-2 gap-3">
+            <WeaponList title="Melee" names={meleeWeapons} />
+            <WeaponList title="Ranged" names={rangedWeapons} />
+          </div>
+        ) : (
+          <WeaponList title={null} names={filtered.map((w) => w.name)} />
+        ))}
     </div>
   )
 }
 
 // ── ItemDetails dispatcher ────────────────────────────────────────────────────
 
-function ItemDetails({ focused }: { focused: Extract<ProfFocus, { type: 'item' }> }) {
+function ItemDetails({
+  focused,
+  weaponItemsBase,
+}: {
+  focused: Extract<ProfFocus, { type: 'item' }>
+  weaponItemsBase: Item5e[]
+}) {
   const categoryLabel = CATEGORY_DISPLAY_LABELS[focused.category] ?? focused.category
+  const displayName =
+    focused.category === 'weapons'
+      ? (formatWeaponCategoryLabel(focused.name) ?? focused.name)
+      : focused.name
 
   let detailContent: React.ReactNode
 
@@ -418,8 +460,10 @@ function ItemDetails({ focused }: { focused: Extract<ProfFocus, { type: 'item' }
   } else if (focused.category === 'weapons') {
     if (focused.itemData) {
       detailContent = <WeaponDetails item={focused.itemData} />
-    } else if (WEAPON_CATEGORY_INFO[focused.name.toLowerCase()]) {
-      detailContent = <WeaponCategoryDetails categoryKey={focused.name} />
+    } else if (formatWeaponCategoryLabel(focused.name)) {
+      detailContent = (
+        <WeaponCategoryDetails categoryKey={focused.name} weaponItemsBase={weaponItemsBase} />
+      )
     } else {
       detailContent = (
         <div className="flex flex-wrap gap-1.5">
@@ -452,7 +496,7 @@ function ItemDetails({ focused }: { focused: Extract<ProfFocus, { type: 'item' }
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-xl font-display font-bold capitalize">{focused.name}</h2>
+        <h2 className="text-xl font-display font-bold capitalize">{displayName}</h2>
         <p className="text-sm text-muted-foreground">
           {focused.isProficient ? (
             <span className="text-accent-foreground font-medium">Proficient</span>
@@ -472,22 +516,17 @@ function ItemDetails({ focused }: { focused: Extract<ProfFocus, { type: 'item' }
 
 interface BuildProficienciesDetailsPanelProps {
   focused: ProfFocus | null
-  detailCollapsed: boolean
   skillDescriptions: Record<string, unknown[]>
+  weaponItemsBase: Item5e[]
 }
 
 export function BuildProficienciesDetailsPanel({
   focused,
-  detailCollapsed,
   skillDescriptions,
+  weaponItemsBase,
 }: BuildProficienciesDetailsPanelProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
-        detailCollapsed ? 'w-0 min-w-0 opacity-0 pointer-events-none' : 'w-[40%] min-w-[280px]',
-      )}
-    >
+    <>
       <div className="bg-gradient-to-r from-accent/30 via-accent/15 to-transparent border-b border-border/40 px-4 py-3 flex-shrink-0 flex flex-col gap-2">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Details
@@ -583,10 +622,10 @@ export function BuildProficienciesDetailsPanel({
               </div>
             </div>
           ) : (
-            <ItemDetails focused={focused} />
+            <ItemDetails focused={focused} weaponItemsBase={weaponItemsBase} />
           )}
         </div>
       </ScrollArea>
-    </div>
+    </>
   )
 }

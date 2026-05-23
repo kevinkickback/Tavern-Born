@@ -119,6 +119,7 @@ export class FiveEToolsDataLoader {
     let spellIndexData: unknown = null
     let spellSourceLookupData: unknown = null
     let raceFluffSummaryByKey = new Map<string, string>()
+    let loadedTopLevelResources = 0
 
     let completedResources = 0
     await Promise.all(
@@ -129,6 +130,7 @@ export class FiveEToolsDataLoader {
 
         try {
           const data = await this.loadResource(resource.file, options?.signal)
+          loadedTopLevelResources += 1
 
           switch (resource.key) {
             case 'books':
@@ -282,6 +284,12 @@ export class FiveEToolsDataLoader {
         }
       }),
     )
+
+    if (this.isRemote && loadedTopLevelResources === 0) {
+      throw new Error(
+        'Unable to load remote data source. Check internet connectivity and source URL.',
+      )
+    }
 
     if (options?.signal?.aborted) return gameData
 

@@ -1,13 +1,13 @@
+import type { Icon } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
-/** Labeled detail card with icon header and text content. */
 export function DetailSection({
   icon: Icon,
   label,
   children,
   empty,
 }: {
-  icon: React.ComponentType<{ className?: string; weight?: string }>
+  icon: Icon
   label: string
   children: React.ReactNode
   empty?: boolean
@@ -23,13 +23,12 @@ export function DetailSection({
   )
 }
 
-/** Labeled detail card with icon header and raw HTML content. */
 export function DetailHtmlSection({
   icon: Icon,
   label,
   html,
 }: {
-  icon: React.ComponentType<{ className?: string; weight?: string }>
+  icon: Icon
   label: string
   html: string | null
 }) {
