@@ -172,8 +172,9 @@ function ArmorDetails({ item }: { item: Item5e }) {
 function WeaponDetails({ item }: { item: Item5e }) {
   const itemPropertyByAbbr = useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr)
   const weaponType = item.weaponCategory
-    ? `${item.weaponCategory.charAt(0).toUpperCase()}${item.weaponCategory.slice(1)} ${item.type?.split('|')[0] === 'R' ? 'Ranged' : 'Melee'
-    }`
+    ? `${item.weaponCategory.charAt(0).toUpperCase()}${item.weaponCategory.slice(1)} ${
+        item.type?.split('|')[0] === 'R' ? 'Ranged' : 'Melee'
+      }`
     : '—'
   const edition = formatEdition(item.edition as string | undefined)
   const mastery = formatMasteryList(item.mastery)

@@ -162,7 +162,13 @@ export function BuildClassPage() {
         return true
       })
       .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
-  }, [classFeatures, viewingClass, viewingClassSource, viewingClassData, includeClassFeatureVariants])
+  }, [
+    classFeatures,
+    viewingClass,
+    viewingClassSource,
+    viewingClassData,
+    includeClassFeatureVariants,
+  ])
 
   const featuresByLevel = useMemo(() => {
     return getClassFeatureGroups(allClassFeatures)

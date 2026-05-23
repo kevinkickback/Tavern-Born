@@ -748,8 +748,8 @@ export function BuildProficienciesTabsPanel({
                           ? 'border-border bg-card text-foreground hover:border-accent'
                           : 'border-border bg-card text-muted-foreground opacity-50',
                     focused?.type === 'item' &&
-                    focused.name === armorKey &&
-                    'ring-2 ring-accent ring-offset-2',
+                      focused.name === armorKey &&
+                      'ring-2 ring-accent ring-offset-2',
                   )}
                 >
                   {isSelected ? (
@@ -852,8 +852,8 @@ export function BuildProficienciesTabsPanel({
                                 ? 'border-border bg-card text-foreground hover:border-accent'
                                 : 'border-border bg-card text-muted-foreground opacity-50',
                           focused?.type === 'item' &&
-                          focused.name === weaponKey &&
-                          'ring-2 ring-accent ring-offset-2',
+                            focused.name === weaponKey &&
+                            'ring-2 ring-accent ring-offset-2',
                         )}
                       >
                         {isSelected ? (
@@ -1014,8 +1014,8 @@ export function BuildProficienciesTabsPanel({
                                     ? 'border-border bg-card text-foreground hover:border-accent'
                                     : 'border-border bg-card text-muted-foreground opacity-50',
                             focused?.type === 'item' &&
-                            focused.name === toolName &&
-                            'ring-2 ring-accent/70 ring-offset-2',
+                              focused.name === toolName &&
+                              'ring-2 ring-accent/70 ring-offset-2',
                           )}
                         >
                           {isSelected ? (
@@ -1126,8 +1126,8 @@ export function BuildProficienciesTabsPanel({
                                   ? 'border-border bg-card text-foreground hover:border-accent'
                                   : 'border-border bg-card text-muted-foreground opacity-50',
                             focused?.type === 'item' &&
-                            focused.name === languageName &&
-                            'ring-2 ring-accent/70 ring-offset-2',
+                              focused.name === languageName &&
+                              'ring-2 ring-accent/70 ring-offset-2',
                           )}
                         >
                           {isSelected ? (
