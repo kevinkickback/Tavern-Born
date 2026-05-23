@@ -380,9 +380,9 @@ export function BuildRacePage() {
                                     .join(', ')
                                   const resolvedFeat = isResolved
                                     ? (feats as Feat5e[]).find(
-                                      (f) =>
-                                        f.name.toLowerCase() === choice.selected[0].toLowerCase(),
-                                    )
+                                        (f) =>
+                                          f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                                      )
                                     : undefined
                                   return (
                                     <div

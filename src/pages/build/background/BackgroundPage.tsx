@@ -93,8 +93,8 @@ export function BuildBackgroundPage() {
 
   const selectedBg = character
     ? (backgrounds.find((b) =>
-      matchesGameDataEntry(character.background, character.backgroundSource, b),
-    ) as Background5e | undefined)
+        matchesGameDataEntry(character.background, character.backgroundSource, b),
+      ) as Background5e | undefined)
     : undefined
   const normalizedSelectedBg = normalizeBackgroundForOriginSystem(
     selectedBg,
@@ -297,8 +297,8 @@ export function BuildBackgroundPage() {
                             const block1 = bgAsiData.blocks[1]
                             const autoChoices =
                               selectedBg?.source === 'XPHB' &&
-                                block1 &&
-                                block1.from.length === block1.weights.length
+                              block1 &&
+                              block1.from.length === block1.weights.length
                                 ? [...block1.from]
                                 : []
                             applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
@@ -407,8 +407,8 @@ export function BuildBackgroundPage() {
                         .join(', ')
                       const resolvedFeat = isResolved
                         ? (feats as Feat5e[]).find(
-                          (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
-                        )
+                            (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                          )
                         : undefined
                       return (
                         <div key={choice.id}>
