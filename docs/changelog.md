@@ -44,15 +44,16 @@ As this is the initial public release, bugs and incomplete features are expected
 
 </details>
 <details>
-<summary><strong>v0.1.25</strong></summary>
+<summary><strong>v0.1.5</strong></summary>
 
 ## ✨ Changes
 
 * Starting equipment choices no longer displayed for classes chosen AFTER your first
 * Original subclass selection no longer leaks onto other class tabs when they have a subclass choice pending
-* Races should no longer display a subrace dropdown box if no subclasses exsist
+* Races should no longer display a dropdown box if no subclass options exsist
 * Racial spells aquired after level 1 now properly display on spells page
 * Class resource tracker expanded with more options
+* Character equipment now added to 2014 pdf generation
 
 ## ⚠️ Known Issues
 
