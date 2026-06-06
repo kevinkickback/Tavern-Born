@@ -27,21 +27,27 @@ export function useClassResources(): {
     if (!character) return []
     const stored = character.classResources ?? {}
     const progression = getCharacterClassEntries(character)
+    const chaScore = character.abilityScores?.charisma ?? 10
+    const chaMod = Math.max(1, Math.floor((chaScore - 10) / 2))
 
     return progression.flatMap((entry) => {
       const classData =
         classes.find((c) => c.name === entry.name && c.source === entry.source) ??
         classes.find((c) => c.name === entry.name)
       const defs = getClassResourceDefs(classData, entry.levels ?? 1)
-      return defs.map((def) => ({
-        id: def.id,
-        label: def.label,
-        current:
-          stored[def.id] ?? def.maxPerLevel[Math.max(1, Math.min(20, entry.levels ?? 1)) - 1] ?? 0,
-        max: def.maxPerLevel[Math.max(1, Math.min(20, entry.levels ?? 1)) - 1] ?? 0,
-        restType: def.restType,
-        className: entry.name,
-      }))
+      const levelIdx = Math.max(0, Math.min(19, (entry.levels ?? 1) - 1))
+      return defs.map((def) => {
+        const max = def.maxFormula === 'cha-mod' ? chaMod : (def.maxPerLevel[levelIdx] ?? 0)
+        const restType = def.restTypeByLevel?.[levelIdx] ?? def.restType
+        return {
+          id: def.id,
+          label: def.label,
+          current: stored[def.id] ?? max,
+          max,
+          restType,
+          className: entry.name,
+        }
+      })
     })
   }, [character, classes])
 
