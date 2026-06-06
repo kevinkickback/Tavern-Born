@@ -621,6 +621,15 @@ function buildCharacterSheetFieldMap2014(
     'Feat Note 4': character.feats[3]?.prerequisites ?? '',
   }
 
+  for (let i = 0; i < Math.min(character.equipment.length, 54); i++) {
+    const item = character.equipment[i]
+    if (!item) continue
+    const n = i + 1
+    textFields[`Adventuring Gear Row ${n}`] = item.name
+    textFields[`Adventuring Gear Amount ${n}`] = String(item.quantity)
+    textFields[`Adventuring Gear Weight ${n}`] = item.weight != null ? String(item.weight) : ''
+  }
+
   for (const [ability, mapping] of Object.entries(MPMB_2014_ABILITY_FIELD_MAP) as Array<
     [AbilityName, { score: string; modifier: string }]
   >) {
