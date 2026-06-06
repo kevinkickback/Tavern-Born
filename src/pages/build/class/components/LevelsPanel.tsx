@@ -208,25 +208,28 @@ export function BuildClassLevelsPanel({
             </p>
           ) : (
             <Accordion type="multiple" value={openSections} onValueChange={setOpenSections}>
-              <AccordionItem value="starting-equipment">
-                <AccordionTrigger className="text-sm px-1 hover:no-underline">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Starting Equipment</span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="pt-1 pb-2 px-1">
-                    <BuildClassEquipmentSection
-                      viewingClassData={viewingClassData}
-                      blockChoices={classEquipmentBlockChoices}
-                      detailCollapsed={detailCollapsed}
-                      onBlockChoiceChange={onBlockChoiceChange}
-                      onSelectFeature={onSelectFeature}
-                      onExpandDetails={onExpandDetails}
-                    />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+              {(classProgression.length <= 1 ||
+                classProgression[0]?.name === viewingClass) && (
+                  <AccordionItem value="starting-equipment">
+                    <AccordionTrigger className="text-sm px-1 hover:no-underline">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">Starting Equipment</span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="pt-1 pb-2 px-1">
+                        <BuildClassEquipmentSection
+                          viewingClassData={viewingClassData}
+                          blockChoices={classEquipmentBlockChoices}
+                          detailCollapsed={detailCollapsed}
+                          onBlockChoiceChange={onBlockChoiceChange}
+                          onSelectFeature={onSelectFeature}
+                          onExpandDetails={onExpandDetails}
+                        />
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                )}
 
               {levelsToShow.map((lv) => {
                 const {

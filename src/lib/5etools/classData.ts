@@ -178,12 +178,20 @@ export function getSubclassSelectionInfo(classData: Class5e | undefined): {
 
 // ── Class Resource Definitions ─────────────────────────────────────────────
 
+/** 'cha-mod' → max = character's Charisma modifier (min 1), computed at render time. */
+export type ClassResourceMaxFormula = 'cha-mod'
+
 export interface ClassResourceDef {
   id: string
   label: string
-  /** Max uses at each level (index 0 = level 1). Length 20. */
+  /** Max uses at each level (index 0 = level 1). Length 20.
+   *  When `maxFormula` is set this serves as a fallback minimum. */
   maxPerLevel: readonly number[]
   restType: 'short' | 'long'
+  /** Per-level rest type (length 20). When set, takes precedence over `restType`. */
+  restTypeByLevel?: readonly ('short' | 'long')[]
+  /** When set, max is computed from character state instead of `maxPerLevel`. */
+  maxFormula?: ClassResourceMaxFormula
 }
 
 /** Table column labels that are not limited-use resources (bonuses, dice, spell filters). */
@@ -202,6 +210,71 @@ const TABLE_RESOURCE_REST_TYPE: Record<string, 'short' | 'long'> = {
   'Sorcery Points': 'long',
   Rages: 'long',
   'Infused Items': 'long',
+}
+
+/**
+ * Source-specific hardcoded resources. Key format: `"ClassName|source"`.
+ * Checked before HARDCODED_RESOURCES; both sets are merged (source-specific first).
+ */
+const HARDCODED_RESOURCES_BY_SOURCE: Partial<Record<string, ClassResourceDef[]>> = {
+  'Bard|PHB': [
+    {
+      id: 'bard-bardic-inspiration',
+      label: 'Bardic Inspiration',
+      // Fallback max = 1; actual max is computed from Cha modifier in useClassResources.
+      maxPerLevel: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      maxFormula: 'cha-mod',
+      // Long rest lv 1–4; short rest lv 5–20 (Font of Inspiration).
+      restTypeByLevel: [
+        'long',
+        'long',
+        'long',
+        'long',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+        'short',
+      ],
+      restType: 'long',
+    },
+  ],
+  'Bard|XPHB': [
+    {
+      id: 'bard-bardic-inspiration',
+      label: 'Bardic Inspiration',
+      // Uses = Proficiency Bonus (2024 PHB). Short rest from level 1.
+      maxPerLevel: [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6],
+      restType: 'short',
+    },
+  ],
+  'Wizard|PHB': [
+    {
+      id: 'wizard-arcane-recovery',
+      label: 'Arcane Recovery',
+      maxPerLevel: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      restType: 'long',
+    },
+  ],
+  'Wizard|XPHB': [
+    {
+      id: 'wizard-arcane-recovery',
+      label: 'Arcane Recovery',
+      maxPerLevel: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      restType: 'short',
+    },
+  ],
 }
 
 /** Hardcoded resource tables for classes whose limited resources aren't in classTableGroups. */
@@ -320,9 +393,11 @@ export function getClassResourceDefs(
     })
   }
 
-  // Add hardcoded resources for classes where table data is absent
-  const hardcoded = HARDCODED_RESOURCES[classData.name] ?? []
-  for (const def of hardcoded) {
+  // Add hardcoded resources: source-specific entries take precedence, then name-only.
+  const sourceKey = `${classData.name}|${classData.source ?? ''}`
+  const sourceSpecific = HARDCODED_RESOURCES_BY_SOURCE[sourceKey] ?? []
+  const nameOnly = HARDCODED_RESOURCES[classData.name] ?? []
+  for (const def of [...sourceSpecific, ...nameOnly]) {
     if (!seenIds.has(def.id)) {
       seenIds.add(def.id)
       results.push(def)
