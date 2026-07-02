@@ -9,11 +9,8 @@
     "build": "tsc -b --noCheck && vite build",
     "lint": "npx biome format --write . && npx biome check --write .",
     "test": "vitest run",
-    "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "optimize": "vite optimize",
-    "preview": "vite preview",
     "dist": "npm run build && electron-builder",
     "release": "npm run build && electron-builder --publish always"
   },
@@ -71,7 +68,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.11",
     "@eslint/js": "^9.21.0",
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4.2.2",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

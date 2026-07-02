@@ -228,7 +228,7 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
   await page.reload()
   await ensureStartupPromptResolved(page, 'e2e-lifecycle-seed')
 
-  await page.getByRole('link', { name: 'Home' }).click()
+  await page.getByRole('list').getByRole('link', { name: 'Home' }).click()
   await expect(page).toHaveURL(/\/$/)
   await selectCharacterFromHome(page, fixture.name)
   await page.getByRole('button', { name: 'Details' }).click()
