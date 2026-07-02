@@ -12,6 +12,7 @@ import {
 } from '@/lib/sourcePresets'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
+import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
@@ -121,11 +122,7 @@ export function SourcesPage() {
   }, [showHint])
 
   if (!character) {
-    return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        No active character.
-      </div>
-    )
+    return <NoCharCard icon={<Books weight="duotone" />} noun="manage sources" />
   }
 
   const implicitSource = getImplicitSource(character.originSystem)

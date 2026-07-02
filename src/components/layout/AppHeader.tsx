@@ -1,5 +1,6 @@
 import { FloppyDisk, Heart, List, Shield, TrendUp } from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
 import { Button } from '@/components/ui/button'
@@ -49,17 +50,24 @@ export function AppHeader() {
 
   return (
     <>
-      <nav className="grid grid-cols-3 items-center min-h-[4.5rem] bg-card/80 backdrop-blur-sm px-4 py-3 border-b border-border">
-        {/* Hamburger — mobile only (left slot) */}
-        <div className="flex items-center">
+      <nav className="grid grid-cols-3 items-center min-h-[4.5rem] bg-card/80 backdrop-blur-sm px-4 py-3 border-b border-border relative z-50 app-drag">
+        {/* Left slot: logo + brand name + hamburger toggle */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
             aria-label="Open sidebar"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground xl:hidden"
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
           >
             <List className="h-6 w-6" />
           </button>
+          <Link to="/" aria-label="Home">
+            <img
+              src={`${import.meta.env.BASE_URL}assets/images/ui/logo.png`}
+              alt="Tavern Born"
+              className="h-12 w-12 object-contain"
+            />
+          </Link>
         </div>
 
         {/* Character info — center slot */}
@@ -99,18 +107,17 @@ export function AppHeader() {
 
         {/* Actions — right slot */}
         <div className="flex items-center justify-end gap-2">
-          {activeCharacter && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              data-level-up-button="true"
-              onClick={() => setLevelUpOpen(true)}
-            >
-              <TrendUp />
-              Level Up
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            data-level-up-button="true"
+            disabled={!activeCharacter}
+            onClick={() => setLevelUpOpen(true)}
+          >
+            <TrendUp />
+            Level Up
+          </Button>
           <Button
             variant="default"
             size="sm"
@@ -119,7 +126,7 @@ export function AppHeader() {
             onClick={handleSave}
           >
             {hasUnsavedChanges && (
-              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
+              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse" />
             )}
             <FloppyDisk />
             Save

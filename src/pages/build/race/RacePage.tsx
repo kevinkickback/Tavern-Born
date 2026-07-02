@@ -53,6 +53,7 @@ import type { Feat5e, Race5e, Spell5e } from '@/types/5etools'
 export function BuildRacePage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const reconcileCharacter = useCharacterStore((s) => s.reconcileCharacter)
   const { races, feats, spells } = useFilteredGameData()
   const { applyRaceSelection, applySubraceChange } = useRaceProvenanceMutations()
   const { resolveFeatChoiceSelection, commitFeatWithOptions } = useFeatProvenanceMutations()
@@ -119,7 +120,7 @@ export function BuildRacePage() {
 
     if (currentSubraces.length === 0) {
       if (char.subrace || char.subraceSource) {
-        updateCharacter(char.id, { subrace: undefined, subraceSource: undefined })
+        reconcileCharacter(char.id, { subrace: undefined, subraceSource: undefined })
         applySubraceChange(race, undefined)
       }
       return
@@ -130,12 +131,12 @@ export function BuildRacePage() {
     const firstSubrace = currentSubraces[0]
     if (!firstSubrace) return
 
-    updateCharacter(char.id, {
+    reconcileCharacter(char.id, {
       subrace: firstSubrace.name,
       subraceSource: firstSubrace.source ?? undefined,
     })
     applySubraceChange(race, firstSubrace)
-  }, [selectedRaceKey, applySubraceChange, updateCharacter])
+  }, [selectedRaceKey, applySubraceChange, reconcileCharacter])
 
   // Racial feat choices from provenance
   const racialFeatChoices = useMemo(

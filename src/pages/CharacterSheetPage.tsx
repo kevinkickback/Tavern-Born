@@ -78,7 +78,7 @@ export function CharacterSheetPage() {
       setIsGenerating(true)
       setErrorMessage(null)
 
-      const response = await fetch(selectedTemplate.assetPath)
+      const response = await fetch(import.meta.env.BASE_URL + selectedTemplate.assetPath)
       if (!response.ok) {
         throw new Error(`Unable to load PDF template (${response.status} ${response.statusText})`)
       }

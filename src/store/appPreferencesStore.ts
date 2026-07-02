@@ -62,7 +62,7 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
       autoRefreshGameData: true,
       autoUpdate: true,
       uiScale: DEFAULT_UI_SCALE,
-      sidebarOpen: false,
+      sidebarOpen: true,
 
       setHomeCardSize: (size) => set({ homeCardSize: clampHomeCardSize(size) }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
