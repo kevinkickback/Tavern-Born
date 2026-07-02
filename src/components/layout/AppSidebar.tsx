@@ -20,7 +20,6 @@ import {
   User,
   Users,
   Wrench,
-  X,
 } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -156,36 +155,10 @@ export function AppSidebar() {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-border bg-card transition-transform duration-300',
+          'fixed top-[4.5rem] bottom-0 left-0 z-50 flex w-72 flex-col border-r border-border bg-card transition-transform duration-300',
           sidebarOpen ? 'translate-x-0' : '-translate-x-72',
-          'xl:translate-x-0',
         )}
       >
-        {/* Brand header */}
-        <div className="relative flex items-center justify-center h-[4.5rem] px-8 overflow-hidden">
-          <Link
-            to="/"
-            className="relative flex items-center font-display text-xl font-bold text-primary whitespace-nowrap"
-          >
-            <img
-              src={`${import.meta.env.BASE_URL}assets/images/ui/logo.png`}
-              alt="Tavern Born"
-              className="absolute -left-7 top-1/2 h-24 w-24 -translate-y-1/2 object-contain"
-            />
-            <span className="pl-16">Tavern Born</span>
-          </Link>
-          <button
-            type="button"
-            aria-label="Close sidebar"
-            onClick={() => setSidebarOpen(false)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground xl:hidden"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mx-4 border-t border-border" />
-
         <nav className="flex-1 overflow-y-auto p-2">
           <ul className="flex flex-col gap-px">
             {navItems.map((item) => {

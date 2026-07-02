@@ -48,7 +48,13 @@ export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
 }
 
 export function getAvailableSubraces(race?: Race5e): Race5e[] {
-  return ((race?.subraces ?? []) as Race5e[]).filter((sr) => !!sr.name)
+  const all = ((race?.subraces ?? []) as (Race5e & { _isMetadataDefault?: boolean })[]).filter(
+    (sr) => !!sr.name,
+  )
+  // If the only option is a metadata-only 'Default' placeholder (no gameplay content),
+  // suppress it — the base race traits are already on the parent and no choice is needed.
+  if (all.length === 1 && all[0]?._isMetadataDefault) return []
+  return all
 }
 
 export function toTitleCase(value: string): string {

@@ -37,13 +37,13 @@ export const CHARACTER_SHEET_TEMPLATES: readonly CharacterSheetTemplate[] = [
     id: '2014',
     name: '2014 Character Sheet',
     fileName: '2014_Character_Sheet.pdf',
-    assetPath: '/pdf/2014_Character_Sheet.pdf',
+    assetPath: 'pdf/2014_Character_Sheet.pdf',
   },
   {
     id: '2024',
     name: '2024 Character Sheet',
     fileName: '2024_Character_Sheet.pdf',
-    assetPath: '/pdf/2024_Character_Sheet.pdf',
+    assetPath: 'pdf/2024_Character_Sheet.pdf',
   },
 ] as const
 
@@ -619,6 +619,15 @@ function buildCharacterSheetFieldMap2014(
     'Feat Note 2': character.feats[1]?.prerequisites ?? '',
     'Feat Note 3': character.feats[2]?.prerequisites ?? '',
     'Feat Note 4': character.feats[3]?.prerequisites ?? '',
+  }
+
+  for (let i = 0; i < Math.min(character.equipment.length, 54); i++) {
+    const item = character.equipment[i]
+    if (!item) continue
+    const n = i + 1
+    textFields[`Adventuring Gear Row ${n}`] = item.name
+    textFields[`Adventuring Gear Amount ${n}`] = String(item.quantity)
+    textFields[`Adventuring Gear Weight ${n}`] = item.weight != null ? String(item.weight) : ''
   }
 
   for (const [ability, mapping] of Object.entries(MPMB_2014_ABILITY_FIELD_MAP) as Array<

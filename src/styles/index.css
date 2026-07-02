@@ -143,6 +143,20 @@
     }
   }
 
+  /* Electron window drag region — applied to AppHeader so the whole bar moves the window.
+     All interactive descendants (buttons, links, inputs) automatically opt out. */
+  .app-drag {
+    -webkit-app-region: drag;
+    user-select: none;
+  }
+  .app-drag button,
+  .app-drag a,
+  .app-drag [role="button"],
+  .app-drag input,
+  .app-drag select {
+    -webkit-app-region: no-drag;
+  }
+
   [data-slot="tooltip-content"] {
     ul {
       @apply list-disc pl-5 space-y-1;

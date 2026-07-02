@@ -816,4 +816,44 @@ describe('characterSheetPdf', () => {
     expect(outputAmmo.acroField.getWidgets()[0].getRectangle().width).toBe(0)
     expect(outputPortraitButton.acroField.getWidgets()[0].getRectangle().width).toBe(120)
   })
+
+  test('2014 equipment populates Adventuring Gear row fields', () => {
+    const character = makeCharacterFixture({
+      equipment: [
+        { id: 'e1', name: 'Longsword', type: 'M', quantity: 1, equipped: true, weight: 3 },
+        { id: 'e2', name: 'Torch', type: 'G', quantity: 5, equipped: false, weight: 1 },
+        { id: 'e3', name: 'Backpack', type: 'G', quantity: 1, equipped: false },
+      ],
+    })
+    const map = buildCharacterSheetFieldMap(character, '2014')
+
+    expect(map.textFields['Adventuring Gear Row 1']).toBe('Longsword')
+    expect(map.textFields['Adventuring Gear Amount 1']).toBe('1')
+    expect(map.textFields['Adventuring Gear Weight 1']).toBe('3')
+
+    expect(map.textFields['Adventuring Gear Row 2']).toBe('Torch')
+    expect(map.textFields['Adventuring Gear Amount 2']).toBe('5')
+    expect(map.textFields['Adventuring Gear Weight 2']).toBe('1')
+
+    expect(map.textFields['Adventuring Gear Row 3']).toBe('Backpack')
+    expect(map.textFields['Adventuring Gear Amount 3']).toBe('1')
+    expect(map.textFields['Adventuring Gear Weight 3']).toBe('')
+
+    expect(map.textFields['Adventuring Gear Row 4']).toBeUndefined()
+  })
+
+  test('2014 equipment is capped at 54 rows', () => {
+    const equipment = Array.from({ length: 60 }, (_, i) => ({
+      id: `e${i}`,
+      name: `Item ${i + 1}`,
+      type: 'G',
+      quantity: 1,
+      equipped: false,
+    }))
+    const character = makeCharacterFixture({ equipment })
+    const map = buildCharacterSheetFieldMap(character, '2014')
+
+    expect(map.textFields['Adventuring Gear Row 54']).toBe('Item 54')
+    expect(map.textFields['Adventuring Gear Row 55']).toBeUndefined()
+  })
 })

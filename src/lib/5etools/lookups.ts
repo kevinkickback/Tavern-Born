@@ -180,13 +180,13 @@ export function buildSkillList(skills: unknown[]): readonly string[] {
  * Includes only entries tagged as 'condition' by parseConditions (excludes diseases).
  */
 export function buildConditionNames(conditions: unknown[]): readonly string[] {
-  const names: string[] = []
+  const seen = new Set<string>()
   for (const c of conditions) {
     if (!c || typeof c !== 'object') continue
     const entry = c as Record<string, unknown>
     if (entry._sourceType !== 'condition') continue
     const name = typeof entry.name === 'string' ? entry.name : null
-    if (name) names.push(name)
+    if (name) seen.add(name)
   }
-  return names.sort()
+  return [...seen].sort()
 }

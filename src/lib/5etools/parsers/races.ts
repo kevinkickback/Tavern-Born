@@ -29,13 +29,35 @@ export function parseRaces(data: unknown): unknown[] {
     const nested = subraceMap.get(key)
     const versionSubraces = expandVersions(raceObj)
 
+    const GAMEPLAY_KEYS = new Set([
+      'entries',
+      'ability',
+      'traitTags',
+      'darkvision',
+      'resist',
+      'immune',
+      'conditionImmune',
+      'languageProficiencies',
+      'skillProficiencies',
+      'toolProficiencies',
+      'weaponProficiencies',
+      'armorProficiencies',
+      'additionalSpells',
+      'feats',
+      'speed',
+      'size',
+      'overwrite',
+    ])
     const allSubraces = [
       ...(nested ?? []).map((subrace) => {
         const subraceObj = asObject(subrace)
         if (typeof subraceObj.name === 'string' && subraceObj.name.trim().length > 0) {
           return subraceObj
         }
-        return { ...subraceObj, name: 'Default' }
+        // Nameless entries become 'Default'. Tag metadata-only ones so the display
+        // layer can suppress a lone Default that adds nothing to the base race.
+        const hasGameplay = Object.keys(subraceObj).some((k) => GAMEPLAY_KEYS.has(k))
+        return { ...subraceObj, name: 'Default', _isMetadataDefault: !hasGameplay }
       }),
       ...versionSubraces,
     ]
