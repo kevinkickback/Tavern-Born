@@ -13,15 +13,15 @@ Use industry best practices unless overridden below. Prefer simple, composable d
 ### 0. Docs routing
 Read relevant docs before non-trivial changes; update them in the same change.
 
-- `docs/README.md` — index
-- `docs/architecture-map.md` — where code belongs
-- `docs/data-flow.md` — startup/loading/persistence
-- `docs/data-ingestion.md` — anything in `src/lib/5etools/`
-- `docs/state-management.md` — stores or mutation flows
-- `docs/provenance.md` — grant/reconciliation behavior
-- `docs/react-patterns.md` — React hook and rendering conventions for this codebase
-- `docs/testing-map.md` — adding or modifying tests
-- `docs/codebase-tour.md` — fast concern-to-folder routing
+- [docs/README.md](../docs/README.md) — index
+- [docs/architecture-map.md](../docs/architecture-map.md) — where code belongs
+- [docs/data-flow.md](../docs/data-flow.md) — startup/loading/persistence
+- [docs/data-ingestion.md](../docs/data-ingestion.md) — anything in `src/lib/5etools/`
+- [docs/state-management.md](../docs/state-management.md) — stores or mutation flows
+- [docs/provenance.md](../docs/provenance.md) — grant/reconciliation behavior
+- [docs/react-patterns.md](../docs/react-patterns.md) — React hook and rendering conventions for this codebase
+- [docs/testing-map.md](../docs/testing-map.md) — adding or modifying tests
+- [docs/codebase-tour.md](../docs/codebase-tour.md) — fast concern-to-folder routing
 
 ### 1. Never edit `data/`
 `data/` holds 5etools JSON managed externally. Put all fixups in source (e.g. `src/lib/5etools/sourceFallbacks.ts`). Enforced by hooks; never bypass.
