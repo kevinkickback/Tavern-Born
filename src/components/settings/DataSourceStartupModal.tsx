@@ -69,7 +69,7 @@ export function DataSourceStartupModal() {
       >
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">
-            {isForced ? 'Data Source Setup' : 'Welcome to Tavern Born'}
+            {isForced ? 'Data Source Setup' : 'Welcome to Tavern Born!'}
           </DialogTitle>
           <DialogDescription>
             {isForced ? (

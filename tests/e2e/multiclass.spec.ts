@@ -251,7 +251,7 @@ test('multiclass character persists both classes after reload', async ({ page })
   // Reload and re-navigate
   await page.reload()
   await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
-  await page.getByRole('link', { name: 'Home' }).click()
+  await page.getByRole('list').getByRole('link', { name: 'Home' }).click()
   await selectCharacterFromHome(page, 'Multiclass E2E Hero')
   await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)

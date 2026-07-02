@@ -307,9 +307,7 @@ export function BuildClassPage() {
     typeof viewingClassData?.subclassTitle === 'string'
       ? viewingClassData.subclassTitle
       : 'Subclass'
-  const viewingSubclass = viewingEntry
-    ? (viewingEntry.subclass ?? character?.subclass)
-    : character?.subclass
+  const viewingSubclass = viewingEntry ? viewingEntry.subclass : character?.subclass
   const viewingSubclassData = useSubclass(
     viewingClass ?? '',
     viewingClassSource,

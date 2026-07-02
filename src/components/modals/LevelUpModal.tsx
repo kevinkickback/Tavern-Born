@@ -359,7 +359,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                 <div className="flex items-center gap-2 mb-2.5">
                   <Users className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Add Multiclass
+                    Multiclass
                   </span>
                 </div>
 
@@ -368,7 +368,20 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                     Maximum level reached.
                   </p>
                 ) : (
-                  <div className="border border-border rounded-xl p-3 bg-muted/5 space-y-2.5">
+                  <div className="border border-border rounded-xl p-3 bg-muted/5 space-y-4">
+                    <div className="flex items-center justify-end gap-2">
+                      <Label
+                        htmlFor={ignoreRestrictionsId}
+                        className="text-xs text-muted-foreground cursor-pointer select-none"
+                      >
+                        Ignore ability score requirements
+                      </Label>
+                      <Switch
+                        id={ignoreRestrictionsId}
+                        checked={ignoreRestrictions}
+                        onCheckedChange={setIgnoreRestrictions}
+                      />
+                    </div>
                     <div className="flex gap-2">
                       <Select value={multiclassSelection} onValueChange={setMulticlassSelection}>
                         <SelectTrigger className="flex-1 h-9">
@@ -416,19 +429,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                         <Plus className="h-3.5 w-3.5" />
                         Add
                       </Button>
-                    </div>
-                    <div className="flex items-center justify-between pt-0.5">
-                      <Label
-                        htmlFor={ignoreRestrictionsId}
-                        className="text-xs text-muted-foreground cursor-pointer select-none"
-                      >
-                        Ignore ability score requirements
-                      </Label>
-                      <Switch
-                        id={ignoreRestrictionsId}
-                        checked={ignoreRestrictions}
-                        onCheckedChange={setIgnoreRestrictions}
-                      />
                     </div>
                   </div>
                 )}

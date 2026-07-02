@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { useCharacterStore } from '@/store/characterStore'
@@ -65,14 +66,22 @@ describe('app header character summary', () => {
   })
 
   test('should show multiclass-aware level and class summary in header', () => {
-    render(<AppHeader />)
+    render(
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>,
+    )
 
     expect(screen.getByText('Aelar')).toBeTruthy()
     expect(screen.getByText('Elf - Fighter 3 - Wizard 2')).toBeTruthy()
   })
 
   test('should show current AC and max HP in icon badges', () => {
-    render(<AppHeader />)
+    render(
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>,
+    )
 
     expect(screen.getByTestId('header-ac-badge')).toBeTruthy()
     expect(screen.getByTestId('header-hp-badge')).toBeTruthy()
