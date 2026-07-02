@@ -109,6 +109,10 @@ interface CharacterState {
   setCharacters: (characters: Character[]) => void
   addCharacter: (character: Character) => void
   updateCharacter: (id: string, updates: Partial<Character>) => void
+  /** Silent system correction: writes updates to both activeCharacter and characters[i]
+   * atomically so hasUnsavedChanges() stays false. Use only for auto-corrections that
+   * are not initiated by the user (e.g. auto-selecting a default subrace on mount). */
+  reconcileCharacter: (id: string, updates: Partial<Character>) => void
   updateActiveCharacter: (updates: Partial<Character>) => void
   updateActiveCharacterDetails: (updates: Partial<Character['details']>) => void
   deleteCharacter: (id: string) => void
@@ -452,6 +456,24 @@ export const useCharacterStore = create<CharacterState>()(
             return parsed.data ?? char
           })
           return { characters }
+        }),
+
+      // Atomically applies updates to both the draft and the persisted record so
+      // hasUnsavedChanges() stays false. Use for silent system corrections only.
+      reconcileCharacter: (id, updates) =>
+        set((state) => {
+          if (state.activeCharacterId !== id || !state.activeCharacter) return {}
+          const now = new Date().toISOString()
+          const next = { ...state.activeCharacter, ...updates, lastModified: now }
+          const parsed = parseCharacterData(next)
+          if (!parsed.data) {
+            console.error('reconcileCharacter validation failed:', { id, error: parsed.error })
+            return {}
+          }
+          const characters = state.characters.map((c) =>
+            c.id === id ? (parsed.data as Character) : c,
+          )
+          return { activeCharacter: parsed.data, characters }
         }),
 
       updateActiveCharacter: (updates) =>

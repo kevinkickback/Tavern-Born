@@ -52,6 +52,7 @@ const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const reconcileCharacter = useCharacterStore((s) => s.reconcileCharacter)
   const { backgrounds, feats, spells } = useFilteredGameData()
   const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
   const [leftCollapsed, setLeftCollapsed] = useState(false)
@@ -221,7 +222,15 @@ export function BuildBackgroundPage() {
     const alreadySet = currentAsiBlock.from.every((a, i) => choices[i] === a)
     if (alreadySet) return
     applyBackgroundAbilityChoices(selectedBg, blockIndex, [...currentAsiBlock.from])
-  }, [isXphbAutoAssign, character, selectedBg, currentAsiBlock, applyBackgroundAbilityChoices])
+    reconcileCharacter(character.id, {})
+  }, [
+    isXphbAutoAssign,
+    character,
+    selectedBg,
+    currentAsiBlock,
+    applyBackgroundAbilityChoices,
+    reconcileCharacter,
+  ])
 
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
