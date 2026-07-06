@@ -57,7 +57,7 @@ export function AppHeader() {
             type="button"
             aria-label="Open sidebar"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
+            className="xl:hidden rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
           >
             <List className="h-6 w-6" />
           </button>
