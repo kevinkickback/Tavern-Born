@@ -118,29 +118,6 @@
 
   .page-header-band {
     position: relative;
-    background: linear-gradient(
-      to right,
-      transparent,
-      color-mix(in srgb, var(--color-card) 50%, transparent) 18%,
-      color-mix(in srgb, var(--color-card) 50%, transparent) 82%,
-      transparent
-    );
-
-    &::after {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: linear-gradient(
-        to right,
-        transparent,
-        var(--color-border) 18%,
-        var(--color-border) 82%,
-        transparent
-      );
-    }
   }
 
   /* Electron window drag region — applied to AppHeader so the whole bar moves the window.
@@ -209,6 +186,23 @@
     a {
       @apply text-primary underline hover:text-primary/80 transition-colors;
     }
+  }
+
+  .bg-texture {
+    background-image: radial-gradient(
+      circle,
+      color-mix(in oklch, var(--foreground) 7%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 20px 20px;
+  }
+
+  .dark .bg-texture {
+    background-image: radial-gradient(
+      circle,
+      color-mix(in oklch, var(--foreground) 3%, transparent) 1px,
+      transparent 1px
+    );
   }
 }
 

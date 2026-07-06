@@ -43,12 +43,14 @@ As this is the initial public release, bugs and incomplete features are expected
 * PDF generation for both the 2024 character sheets is incomplete and under active development.
 
 </details>
+
 <details>
 <summary><strong>v0.1.5</strong></summary>
 
 ## ✨ Changes
 
-* Starting equipment choices no longer displayed for classes chosen AFTER your first
+* Fixed pdf generation not working at all (oops!)
+* Starting equipment no longer added when multiclassing
 * Original subclass selection no longer leaks onto other class tabs when they have a subclass choice pending
 * Races should no longer display a dropdown box if no subclass options exsist
 * Racial spells aquired after level 1 now properly display on spells page

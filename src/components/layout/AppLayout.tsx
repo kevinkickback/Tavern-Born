@@ -17,8 +17,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       <AppSidebar />
       <main
         className={cn(
-          'flex-1 min-h-0 overflow-auto transition-[padding] duration-300',
-          sidebarOpen && 'xl:pl-72',
+          'flex-1 min-h-0 overflow-auto transition-[padding] duration-300 bg-texture',
+          sidebarOpen ? 'xl:pl-56' : 'xl:pl-12',
         )}
       >
         {children}
