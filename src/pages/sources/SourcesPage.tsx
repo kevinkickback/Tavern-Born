@@ -230,7 +230,7 @@ export function SourcesPage() {
             )}
 
             {/* Prefer Newer Printings toggle */}
-            <div className="rounded-lg border border-border bg-muted/20 p-4 flex items-center justify-between gap-4 shrink-0">
+            <div className="rounded-lg border border-border bg-card p-4 flex items-center justify-between gap-4 shrink-0">
               <div className="flex items-center gap-2">
                 <Sparkle className="h-4 w-4 text-primary" weight="fill" />
                 <Label htmlFor={preferNewerId} className="font-semibold cursor-pointer">
@@ -260,7 +260,7 @@ export function SourcesPage() {
             </div>
 
             {/* Allowed Sources */}
-            <div className="rounded-lg border border-border bg-muted/20 flex flex-col flex-1 min-h-0 overflow-hidden">
+            <div className="rounded-lg border border-border bg-card flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-wrap gap-2 shrink-0">
                 <div className="flex items-center gap-2">
                   <BookOpen className="h-5 w-5 text-primary" weight="fill" />
