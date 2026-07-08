@@ -248,7 +248,7 @@ export function BuildRacePage() {
               rightWidth="w-1/2 min-w-[320px]"
               left={
                 <>
-                  <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex flex-col gap-2">
+                  <div className="bg-gradient-to-r from-accent/20 to-accent/10 px-4 py-3 flex flex-col gap-2">
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                       Races ({filteredRaces.length}
                       {raceSearch ? ` of ${races.length}` : ''})
@@ -381,9 +381,9 @@ export function BuildRacePage() {
                                     .join(', ')
                                   const resolvedFeat = isResolved
                                     ? (feats as Feat5e[]).find(
-                                        (f) =>
-                                          f.name.toLowerCase() === choice.selected[0].toLowerCase(),
-                                      )
+                                      (f) =>
+                                        f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                                    )
                                     : undefined
                                   return (
                                     <div
@@ -432,7 +432,7 @@ export function BuildRacePage() {
               }
               right={
                 <>
-                  <div className="bg-gradient-to-r from-accent/10 to-transparent border-b border-border px-4 py-3 flex flex-col gap-2">
+                  <div className="bg-gradient-to-r from-accent/10 to-transparent px-4 py-3 flex flex-col gap-2">
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                       Details
                     </span>

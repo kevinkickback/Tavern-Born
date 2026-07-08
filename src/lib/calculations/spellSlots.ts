@@ -350,3 +350,83 @@ export function mergeSpellSlots(
   }
   return result
 }
+
+/**
+ * DEV-mode validator. Cross-checks the three spell-slot fallback tables against
+ * parsed class data:
+ *  - FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL vs. the Wizard's rowsSpellProgression
+ *  - FALLBACK_PACT_SLOT_COUNT / FALLBACK_PACT_SLOT_LEVEL vs. the Warlock's classTableGroups
+ *  - FALLBACK_CLASS_CASTER_PROGRESSION vs. all loaded classes that have a casterProgression
+ *
+ * Call once after class data finishes loading.
+ */
+export function validateSpellSlotFallbacks(classes: Class5e[]): void {
+  // F8 — standard slot table vs. Wizard
+  const wizard = classes.find((c) => c.name === 'Wizard' && c.casterProgression === 'full')
+  if (wizard) {
+    const parsedSlots = getSpellSlotsFromClassData(wizard, 1)
+    if (parsedSlots === null) {
+      console.warn(
+        '[spellSlots] validateSpellSlotFallbacks: could not read Wizard spell-slot progression ' +
+          'from classTableGroups. Cannot validate FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL.',
+      )
+    } else {
+      for (let level = 1; level <= 20; level++) {
+        const fallbackRow = FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL[level] ?? []
+        const parsedAtLevel = getSpellSlotsFromClassData(wizard, level)
+        if (!parsedAtLevel) continue
+        for (let sl = 1; sl <= 9; sl++) {
+          const fallbackCount = fallbackRow[sl - 1] ?? 0
+          const parsedCount = parsedAtLevel[sl]?.max ?? 0
+          if (fallbackCount !== parsedCount) {
+            console.warn(
+              `[spellSlots] validateSpellSlotFallbacks: FALLBACK_STANDARD_SPELL_SLOTS mismatch ` +
+                `at caster level ${level}, slot level ${sl}: fallback=${fallbackCount}, wizard parsed=${parsedCount}`,
+            )
+          }
+        }
+      }
+    }
+  }
+
+  // F9 — pact slot tables vs. Warlock
+  const warlock = classes.find((c) => c.name === 'Warlock' && c.casterProgression === 'pact')
+  if (warlock) {
+    for (let level = 1; level <= 20; level++) {
+      const parsed = getSpellSlotsFromClassData(warlock, level)
+      if (!parsed) continue
+      const parsedEntry = Object.entries(parsed)[0]
+      if (!parsedEntry) continue
+      const [parsedSlotLevelStr, parsedSlotData] = parsedEntry
+      const parsedSlotLevel = Number(parsedSlotLevelStr)
+      const parsedCount = parsedSlotData?.max ?? 0
+      const fallbackCount = FALLBACK_PACT_SLOT_COUNT[level] ?? 0
+      const fallbackSlotLevel = FALLBACK_PACT_SLOT_LEVEL[level] ?? 0
+      if (fallbackCount !== parsedCount) {
+        console.warn(
+          `[spellSlots] validateSpellSlotFallbacks: FALLBACK_PACT_SLOT_COUNT mismatch at level ${level}: ` +
+            `fallback=${fallbackCount}, warlock parsed=${parsedCount}`,
+        )
+      }
+      if (fallbackSlotLevel !== parsedSlotLevel) {
+        console.warn(
+          `[spellSlots] validateSpellSlotFallbacks: FALLBACK_PACT_SLOT_LEVEL mismatch at level ${level}: ` +
+            `fallback=${fallbackSlotLevel}, warlock parsed=${parsedSlotLevel}`,
+        )
+      }
+    }
+  }
+
+  // F10 — warn for classes with a casterProgression not in the fallback map
+  for (const cls of classes) {
+    const progression = cls.casterProgression as string | undefined
+    if (!progression || progression === 'none') continue
+    if (!(cls.name in FALLBACK_CLASS_CASTER_PROGRESSION)) {
+      console.warn(
+        `[spellSlots] validateSpellSlotFallbacks: class "${cls.name}" has casterProgression ` +
+          `"${progression}" but is not in FALLBACK_CLASS_CASTER_PROGRESSION. ` +
+          'Add it to src/lib/calculations/spellSlots.ts so the fallback path works for this class.',
+      )
+    }
+  }
+}

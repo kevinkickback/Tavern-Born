@@ -32,6 +32,7 @@ lerna-debug.log*
 # Tooling/CI artifacts
 **/agent-eval-report*
 docs/cicd-workflow.md
+docs/review/
 
 # Temp folders
 /temp/

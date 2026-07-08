@@ -29,6 +29,7 @@ import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
 import { useEquipmentProvenanceMutations } from '@/hooks/character/useEquipmentProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
+import { ARMOR_TYPE_MAP } from '@/lib/calculations/armorClass'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -60,7 +61,11 @@ const FILTER_CHIPS: ItemCategory[] = [
   'Scrolls',
 ]
 
-const ARMOR_TYPE_CODES = new Set(['LA', 'MA', 'HA', 'S'])
+// Derived from ARMOR_TYPE_MAP so they share a single source of truth.
+const ARMOR_TYPE_CODES = new Set(Object.keys(ARMOR_TYPE_MAP))
+// Melee (M) and ranged (R) weapon type codes. These are 5etools item-type
+// abbreviations from data/items-base.json; no standalone list exists, so they
+// are declared here alongside ARMOR_TYPE_CODES for symmetry.
 const WEAPON_TYPE_CODES = new Set(['M', 'R'])
 
 function getItemCategory(item: Equipment): Exclude<ItemCategory, 'All'> {
@@ -476,7 +481,7 @@ export function EquipmentPage() {
         <div className="max-w-7xl mx-auto h-full">
           <Card className="w-full h-full flex flex-col overflow-hidden">
             {/* Gradient header band */}
-            <div className="h-10 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent border-b border-border flex items-center gap-3 px-4 shrink-0">
+            <div className="h-10 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent flex items-center gap-3 px-4 shrink-0">
               <Backpack className="h-4 w-4 text-primary/80" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Inventory

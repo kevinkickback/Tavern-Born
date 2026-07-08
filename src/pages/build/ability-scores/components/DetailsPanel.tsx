@@ -27,7 +27,7 @@ export function BuildAbilityScoresDetailsPanel({
 
   return (
     <>
-      <div className="bg-gradient-to-r from-accent/30 via-accent/15 to-transparent border-b border-border/40 px-4 py-3 flex-shrink-0 flex flex-col gap-2">
+      <div className="bg-gradient-to-r from-accent/30 via-accent/15 to-transparent px-4 py-3 flex-shrink-0 flex flex-col gap-2">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Details
         </span>
