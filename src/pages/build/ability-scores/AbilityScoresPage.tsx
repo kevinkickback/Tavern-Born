@@ -263,7 +263,7 @@ export function BuildAbilityScoresPage() {
                         </Tabs>
                         {raceAsiData.choices.length > 0 && (
                           <div className="mt-4 border border-border rounded-xl overflow-hidden bg-card/50">
-                            <div className="h-8 bg-gradient-to-r from-emerald-500/25 via-emerald-500/12 to-transparent border-b border-border/40 flex items-center px-3">
+                            <div className="h-8 bg-gradient-to-r from-emerald-500/25 via-emerald-500/12 to-transparent flex items-center px-3">
                               <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
                                 Racial Bonuses
                               </span>

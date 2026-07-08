@@ -6,6 +6,7 @@ import {
 } from '@/lib/5etools/startingEquipment'
 import { getBackgroundAbilityData, normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
+import { mergeSkillState } from '@/lib/calculations/skills'
 import {
   ensureOriginSystemInvariants,
   normalizeBackgroundForOriginSystem,
@@ -72,7 +73,6 @@ export function useBackgroundProvenanceMutations() {
       ensureOriginSystemInvariants(newLedger, character.originSystem)
 
       let newProfs = { ...character.proficiencies }
-      const newSkills = { ...(character.skills ?? {}) }
       let newEquipment = [...(character.equipment ?? [])]
       if (oldBgName) {
         for (const domain of ['skills', 'languages', 'tools'] as const) {
@@ -84,14 +84,6 @@ export function useBackgroundProvenanceMutations() {
                 skills: (newProfs.skills ?? []).filter(
                   (name) => !toRemove.includes(normalizeKey(name)),
                 ),
-              }
-              for (const removed of toRemove) {
-                const existing = newSkills[removed]
-                newSkills[removed] = {
-                  proficient: false,
-                  expertise: false,
-                  bonus: existing?.bonus ?? 0,
-                }
               }
               continue
             }
@@ -130,15 +122,7 @@ export function useBackgroundProvenanceMutations() {
         tools: [...new Set([...newProfs.tools, ...tools])],
       }
 
-      for (const skillName of skills) {
-        const norm = normalizeKey(skillName)
-        const existing = newSkills[norm]
-        newSkills[norm] = {
-          proficient: true,
-          expertise: existing?.expertise ?? false,
-          bonus: existing?.bonus ?? 0,
-        }
-      }
+      const newSkills = mergeSkillState(character.skills ?? {}, newProfs.skills)
 
       const bgBlocks = getBackgroundEquipmentBlocks(bg.startingEquipment)
       const resolvedBackgroundPackage = resolveEquipmentWithBlockChoices(

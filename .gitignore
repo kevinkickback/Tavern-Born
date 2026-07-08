@@ -28,6 +28,7 @@ lerna-debug.log*
 
 # Tooling/CI artifacts
 docs/cicd-workflow.md
+docs/review/
 
 # Temp folders
 /temp/

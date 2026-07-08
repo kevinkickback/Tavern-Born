@@ -69,7 +69,7 @@ export function SpellcastingDetailsCard({
 
   return (
     <Card className="w-full overflow-hidden">
-      <div className="h-10 bg-gradient-to-r from-violet-500/20 via-violet-500/10 to-transparent border-b border-border/40 flex items-center px-4">
+      <div className="h-10 bg-gradient-to-r from-violet-500/20 via-violet-500/10 to-transparent flex items-center px-4">
         <div className="flex items-center gap-2">
           <MagicWand className="h-4 w-4 text-violet-400" weight="duotone" />
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
