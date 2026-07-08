@@ -147,13 +147,13 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
     const multiclassResult = selectedClass
       ? addMulticlass(
-          character,
-          character.provenance ?? emptyProvenance(),
-          multiclassSelection,
-          selectedClass,
-          selectedClass.source,
-          1,
-        )
+        character,
+        character.provenance ?? emptyProvenance(),
+        multiclassSelection,
+        selectedClass,
+        selectedClass.source,
+        1,
+      )
       : null
 
     const nextProficiencies =
@@ -243,7 +243,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg flex flex-col gap-0 p-0 overflow-hidden max-h-[90vh]">
-          <div className="h-12 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-5 shrink-0">
+          <div className="h-12 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent flex items-center gap-3 px-5 shrink-0">
             <Scroll className="h-4 w-4 text-indigo-600 dark:text-indigo-400" weight="duotone" />
             <span className="text-sm font-bold">Level Up</span>
             <span className="text-sm text-muted-foreground truncate min-w-0">{character.name}</span>

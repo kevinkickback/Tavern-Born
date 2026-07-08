@@ -6,6 +6,7 @@ import {
   ALL_SKILLS,
   deriveAllSkills,
   getExpertiseSlotsFromClasses,
+  mergeSkillState,
   type SkillResult,
 } from '@/lib/calculations/skills'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
@@ -103,15 +104,10 @@ export function useSkills(): SkillsState {
         bonus: 0,
       }
       const proficient = !current.proficient
-      const nextSkills = {
-        ...activeCharacter.skills,
-        [key]: {
-          ...current,
-          proficient,
-          expertise: proficient ? current.expertise : false,
-        },
-      }
-      const nextProficientSkills = resolvedSkillList.filter((name) => nextSkills[name]?.proficient)
+      const nextProficientSkills = proficient
+        ? [...new Set([...(activeCharacter.proficiencies?.skills ?? []), key])]
+        : (activeCharacter.proficiencies?.skills ?? []).filter((n) => n.toLowerCase() !== key)
+      const nextSkills = mergeSkillState(activeCharacter.skills ?? {}, nextProficientSkills)
 
       const ledger = activeCharacter.provenance ?? emptyProvenance()
       let nextLedger: ProvenanceLedger
@@ -138,7 +134,7 @@ export function useSkills(): SkillsState {
         provenance: nextLedger,
       })
     },
-    [activeCharacter, updateCharacter, resolvedSkillList],
+    [activeCharacter, updateCharacter],
   )
 
   const toggleExpertise = useCallback(

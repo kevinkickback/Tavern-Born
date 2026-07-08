@@ -705,7 +705,7 @@ export function FeatsPage() {
 
         {/* Character Feats card */}
         <Card className="w-full overflow-hidden">
-          <div className="h-10 bg-gradient-to-r from-violet-500/20 via-violet-500/10 to-transparent border-b border-border/40 flex items-center justify-between px-4">
+          <div className="h-10 bg-gradient-to-r from-violet-500/20 via-violet-500/10 to-transparent flex items-center justify-between px-4">
             <div className="flex items-center gap-2">
               <Star className="h-4 w-4 text-violet-600 dark:text-violet-400" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
@@ -822,7 +822,7 @@ export function FeatsPage() {
 
         {/* Bonus Feats card */}
         <Card className="w-full overflow-hidden">
-          <div className="h-10 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent border-b border-border/40 flex items-center justify-between px-4">
+          <div className="h-10 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent flex items-center justify-between px-4">
             <div className="flex items-center gap-2">
               <Lightning className="h-4 w-4 text-primary" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">

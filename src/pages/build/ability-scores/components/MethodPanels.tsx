@@ -54,7 +54,7 @@ export function BuildAbilityScoresPointBuyPanel({
     <div className="flex flex-col gap-5">
       {/* Points Used — dashboard stat card style */}
       <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-        <div className="h-9 bg-gradient-to-r from-accent/60 via-accent/30 to-transparent border-b border-border/40 flex items-center px-3 gap-2">
+        <div className="h-9 bg-gradient-to-r from-accent/60 via-accent/30 to-transparent flex items-center px-3 gap-2">
           <Barbell className="h-4 w-4 text-accent/80" weight="bold" />
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
             Points Used

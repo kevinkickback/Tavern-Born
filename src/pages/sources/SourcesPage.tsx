@@ -1,9 +1,14 @@
 import { BookOpen, Books, Question, Sparkle, Warning, X } from '@phosphor-icons/react'
 import { useEffect, useId, useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { detectSourceConflicts } from '@/lib/sourceConflicts'
+import {
+  countRemovedSpells,
+  detectSourceConflicts,
+  pruneSpellsForDisabledSources,
+} from '@/lib/sourceConflicts'
 import {
   getImplicitSource,
   IMPLICIT_SOURCES,
@@ -130,20 +135,45 @@ export function SourcesPage() {
 
   const patch = (updates: Partial<typeof character>) => updateCharacter(character.id, updates)
 
+  const allSpells = gameData?.spells ?? []
+
+  const getEffectiveSources = (nextAllowed: string[]): string[] => {
+    const implicit = getImplicitSource(character.originSystem)
+    return nextAllowed.includes(implicit) ? nextAllowed : [...nextAllowed, implicit]
+  }
+
+  const applySpellPrune = (
+    updates: Partial<typeof character>,
+    nextAllowed: string[],
+  ): Partial<typeof character> => {
+    const prune = pruneSpellsForDisabledSources(
+      character,
+      getEffectiveSources(nextAllowed),
+      allSpells,
+    )
+    if (!prune) return updates
+    const removed = countRemovedSpells(character, prune.spells.spellProfiles)
+    if (removed > 0) {
+      toast.warning(`${removed} spell${removed === 1 ? '' : 's'} removed (source disabled)`)
+    }
+    return { ...updates, ...prune }
+  }
+
   const toggleSource = (abbr: string) => {
-    const next = allowedSources.includes(abbr)
-      ? allowedSources.filter((s) => s !== abbr)
-      : [...allowedSources, abbr]
-    patch({ allowedSources: next })
+    const isRemoving = allowedSources.includes(abbr)
+    const next = isRemoving ? allowedSources.filter((s) => s !== abbr) : [...allowedSources, abbr]
+    const updates: Partial<typeof character> = { allowedSources: next }
+    patch(isRemoving ? applySpellPrune(updates, next) : updates)
   }
 
   const applyPreset = (preset: SourcePreset) => {
-    patch({
-      allowedSources: preset.abbreviations.filter((a) => availableSourceSet.has(a)),
-    })
+    const next = preset.abbreviations.filter((a) => availableSourceSet.has(a))
+    patch(applySpellPrune({ allowedSources: next }, next))
   }
 
-  const clearSources = () => patch({ allowedSources: [] })
+  const clearSources = () => {
+    patch(applySpellPrune({ allowedSources: [] }, []))
+  }
 
   const setPreferNewerPrintings = (checked: boolean) => {
     patch({ variantRules: { ...character.variantRules, preferNewerPrintings: checked } })

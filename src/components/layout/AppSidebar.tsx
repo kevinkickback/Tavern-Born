@@ -87,11 +87,6 @@ const navGroups: NavGroup[] = [
         ],
       },
       {
-        label: 'Character Sheet',
-        path: '/character-sheet',
-        icon: <FilePdf />,
-      },
-      {
         label: 'Sources',
         path: '/sources',
         icon: <Books />,
@@ -101,6 +96,11 @@ const navGroups: NavGroup[] = [
   {
     label: 'Tools',
     items: [
+      {
+        label: 'Character Sheet',
+        path: '/character-sheet',
+        icon: <FilePdf />,
+      },
       {
         label: 'Compendium',
         path: '/compendium',

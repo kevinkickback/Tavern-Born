@@ -4,8 +4,21 @@ import type { ChoiceRecord, ProvenanceLedger, SourceTag } from '@/lib/provenance
 import type { OriginSystem } from '@/types/character'
 
 export const ORIGIN_2024_LANGUAGE_SOURCE = '2024 Origin Languages'
+/**
+ * FALLBACK: The 2024 XPHB origin system grants one base language (Common) plus
+ * ORIGIN_2024_LANGUAGE_CHOICE_COUNT additional choices. 5etools does not encode
+ * this in any JSON file (XPHB races and backgrounds both have null
+ * languageProficiencies; data/charcreationoptions.json contains no language grant
+ * data). This constant is a necessary hardcode with no JSON replacement available.
+ * If the base language ever changes in a future printing, update here.
+ */
 export const ORIGIN_2024_BASE_LANGUAGE = 'Common'
 export const ORIGIN_2024_LANGUAGE_CHOICE_ID = 'origin:2024:languages'
+/**
+ * FALLBACK: The number of additional language choices granted by the 2024 origin
+ * system. 5etools does not encode this value in any data file. Update here if
+ * the rules change in a future printing.
+ */
 export const ORIGIN_2024_LANGUAGE_CHOICE_COUNT = 2
 
 function makeOriginLanguageTag(grantType: SourceTag['grantType']): SourceTag {

@@ -159,8 +159,8 @@ export function CharacteristicsPage() {
   )
   const [organizationCustomDescription, setOrganizationCustomDescription] = useState(
     activeCharacter?.details?.organizationCustomDescription ||
-      activeCharacter?.details?.alliesAndOrganizations ||
-      '',
+    activeCharacter?.details?.alliesAndOrganizations ||
+    '',
   )
   const [organizationCustomImage, setOrganizationCustomImage] = useState(
     activeCharacter?.details?.organizationCustomImage || '',
@@ -464,7 +464,7 @@ export function CharacteristicsPage() {
         <div className="max-w-7xl mx-auto w-full space-y-4">
           {/* ── Identity ── */}
           <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-4 shrink-0">
+            <div className="h-10 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
               <IdentificationCard
                 className="h-4 w-4 text-indigo-600 dark:text-indigo-400"
                 weight="duotone"
@@ -646,7 +646,7 @@ export function CharacteristicsPage() {
 
           {/* ── Personality ── */}
           <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-violet-500/20 via-violet-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-4 shrink-0">
+            <div className="h-10 bg-gradient-to-r from-violet-500/20 via-violet-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
               <Brain className="h-4 w-4 text-violet-400" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Personality
@@ -729,7 +729,7 @@ export function CharacteristicsPage() {
 
           {/* ── Story ── */}
           <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-4 shrink-0">
+            <div className="h-10 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
               <Scroll className="h-4 w-4 text-amber-400" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Story
@@ -752,7 +752,7 @@ export function CharacteristicsPage() {
 
           {/* ── Connections ── */}
           <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-teal-500/20 via-teal-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-4 shrink-0">
+            <div className="h-10 bg-gradient-to-r from-teal-500/20 via-teal-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
               <Users className="h-4 w-4 text-teal-400" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Connections

@@ -11,7 +11,7 @@ import type { Character } from '@/types/character'
  * Current character schema version.
  * Increment when making breaking changes to the character format.
  */
-export const CURRENT_SCHEMA_VERSION = 2
+export const CURRENT_SCHEMA_VERSION = 3
 
 /**
  * Migration handler: transform character from version N to N+1.
@@ -226,5 +226,20 @@ registerMigration({
     const c = character as unknown as Record<string, unknown>
     const { originSystem: _originSystem, ...rest } = c
     return { ...rest, version: '1.0.0' }
+  },
+})
+
+registerMigration({
+  fromVersion: 2,
+  toVersion: 3,
+  description: 'Remove deprecated armorClass field (was retained for migration compat; never read for display).',
+  up: (character) => {
+    const c = character as Record<string, unknown>
+    const { armorClass: _ac, ...rest } = c
+    return { ...rest, version: '3.0.0' } as Character
+  },
+  down: (character) => {
+    const c = character as unknown as Record<string, unknown>
+    return { ...c, version: '2.0.0' }
   },
 })
