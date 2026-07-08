@@ -94,8 +94,8 @@ export function BuildBackgroundPage() {
 
   const selectedBg = character
     ? (backgrounds.find((b) =>
-        matchesGameDataEntry(character.background, character.backgroundSource, b),
-      ) as Background5e | undefined)
+      matchesGameDataEntry(character.background, character.backgroundSource, b),
+    ) as Background5e | undefined)
     : undefined
   const normalizedSelectedBg = normalizeBackgroundForOriginSystem(
     selectedBg,
@@ -306,8 +306,8 @@ export function BuildBackgroundPage() {
                             const block1 = bgAsiData.blocks[1]
                             const autoChoices =
                               selectedBg?.source === 'XPHB' &&
-                              block1 &&
-                              block1.from.length === block1.weights.length
+                                block1 &&
+                                block1.from.length === block1.weights.length
                                 ? [...block1.from]
                                 : []
                             applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
@@ -416,8 +416,8 @@ export function BuildBackgroundPage() {
                         .join(', ')
                       const resolvedFeat = isResolved
                         ? (feats as Feat5e[]).find(
-                            (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
-                          )
+                          (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                        )
                         : undefined
                       return (
                         <div key={choice.id}>
@@ -473,7 +473,7 @@ export function BuildBackgroundPage() {
               rightWidth="w-1/2 min-w-[320px]"
               left={
                 <>
-                  <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex flex-col gap-2">
+                  <div className="bg-gradient-to-r from-accent/20 to-accent/10 px-4 py-3 flex flex-col gap-2">
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                       Backgrounds ({filteredBackgrounds.length}
                       {bgSearch ? ` of ${backgrounds.length}` : ''})

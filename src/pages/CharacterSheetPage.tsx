@@ -150,7 +150,7 @@ export function CharacterSheetPage() {
         <div className="max-w-7xl mx-auto w-full space-y-4">
           {/* ── Export Options ── */}
           <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-rose-500/20 via-rose-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-4 shrink-0">
+            <div className="h-10 bg-gradient-to-r from-rose-500/20 via-rose-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
               <FilePdf className="h-4 w-4 text-rose-400" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Export Options
@@ -208,7 +208,7 @@ export function CharacterSheetPage() {
 
           {/* ── PDF Preview ── */}
           <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-slate-500/20 via-slate-500/10 to-transparent border-b border-border/40 flex items-center gap-3 px-4 shrink-0">
+            <div className="h-10 bg-gradient-to-r from-slate-500/20 via-slate-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
               <Eye className="h-4 w-4 text-slate-400" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Preview

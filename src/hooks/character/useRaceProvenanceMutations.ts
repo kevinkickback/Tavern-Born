@@ -6,6 +6,7 @@ import {
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
+import { mergeSkillState } from '@/lib/calculations/skills'
 import {
   applyRaceGrants,
   diffProficiencyGrants,
@@ -124,7 +125,6 @@ export function useRaceProvenanceMutations() {
       ensureOriginSystemInvariants(newLedger, character.originSystem)
 
       let nextProficiencies = { ...character.proficiencies }
-      const nextSkills = { ...(character.skills ?? {}) }
 
       for (const [sourceType, sourceName] of [
         ['race', oldRaceName],
@@ -140,17 +140,6 @@ export function useRaceProvenanceMutations() {
             [domain]: nextProficiencies[domain].filter(
               (name) => !toRemove.includes(normalizeKey(name)),
             ),
-          }
-
-          if (domain === 'skills') {
-            for (const removed of toRemove) {
-              const existing = nextSkills[removed]
-              nextSkills[removed] = {
-                proficient: false,
-                expertise: false,
-                bonus: existing?.bonus ?? 0,
-              }
-            }
           }
         }
       }
@@ -195,15 +184,7 @@ export function useRaceProvenanceMutations() {
         armor: [...new Set([...nextProficiencies.armor, ...raceArmor, ...subraceArmor])],
       }
 
-      for (const skillName of [...raceSkills, ...subraceSkills]) {
-        const normalized = normalizeKey(skillName)
-        const existing = nextSkills[normalized]
-        nextSkills[normalized] = {
-          proficient: true,
-          expertise: existing?.expertise ?? false,
-          bonus: existing?.bonus ?? 0,
-        }
-      }
+      const nextSkills = mergeSkillState(character.skills ?? {}, nextProficiencies.skills)
 
       const darkvisionRange = normalizedSubrace?.darkvision ?? normalizedRace.darkvision
       const nextVisions = (character.visions ?? []).filter((v) => v.type !== 'darkvision')
@@ -300,7 +281,6 @@ export function useRaceProvenanceMutations() {
       ensureOriginSystemInvariants(newLedger, character.originSystem)
 
       let nextProficiencies = { ...character.proficiencies }
-      const nextSkills = { ...(character.skills ?? {}) }
 
       if (oldSubraceName) {
         for (const domain of ['skills', 'languages', 'tools', 'armor', 'weapons'] as const) {
@@ -312,17 +292,6 @@ export function useRaceProvenanceMutations() {
             [domain]: nextProficiencies[domain].filter(
               (name) => !toRemove.includes(normalizeKey(name)),
             ),
-          }
-
-          if (domain === 'skills') {
-            for (const removed of toRemove) {
-              const existing = nextSkills[removed]
-              nextSkills[removed] = {
-                proficient: false,
-                expertise: false,
-                bonus: existing?.bonus ?? 0,
-              }
-            }
           }
         }
       }
@@ -349,15 +318,7 @@ export function useRaceProvenanceMutations() {
         armor: [...new Set([...nextProficiencies.armor, ...subraceArmor])],
       }
 
-      for (const skillName of subraceSkills) {
-        const normalized = normalizeKey(skillName)
-        const existing = nextSkills[normalized]
-        nextSkills[normalized] = {
-          proficient: true,
-          expertise: existing?.expertise ?? false,
-          bonus: existing?.bonus ?? 0,
-        }
-      }
+      const nextSkills = mergeSkillState(character.skills ?? {}, nextProficiencies.skills)
 
       const subraceVisions = (character.visions ?? []).filter((v) => v.type !== 'darkvision')
       const darkvisionRange = normalizedSubrace?.darkvision ?? race.darkvision

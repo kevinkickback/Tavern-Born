@@ -268,7 +268,7 @@ export function HomePage() {
 
               {/* Main panel */}
               <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-                <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3">
+                <div className="bg-gradient-to-r from-accent/20 to-accent/10 px-4 py-3">
                   <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                     Characters
                   </span>
@@ -403,7 +403,7 @@ export function HomePage() {
                       : 'translate-x-full pointer-events-none',
                   )}
                 >
-                  <div className="bg-gradient-to-r from-accent/10 to-transparent border-b border-border px-4 py-4 flex items-center gap-2">
+                  <div className="bg-gradient-to-r from-accent/10 to-transparent px-4 py-4 flex items-center gap-2">
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                       Filters
                     </span>

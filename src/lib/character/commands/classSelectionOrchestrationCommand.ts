@@ -114,7 +114,11 @@ export function buildInitialCharacterProficiencies(
 
   const tools = [...new Set([...classTools, ...bgTools])]
   const skills = [...new Set(bgSkills.map((s) => s.toLowerCase()))]
-  const languages = [...new Set(['Common', ...bgLanguages])]
+  // Do NOT hardcode 'Common' here. Common for 2014-origin characters comes from
+  // race data via applyRaceGrants (data/races.json → .race[].languageProficiencies).
+  // MPMM/expansion races intentionally omit Common — injecting it here would be wrong.
+  // 2024-origin characters receive Common via ensureOriginLanguageBaseline().
+  const languages = [...new Set(bgLanguages)]
 
   return {
     proficiencies: { armor, weapons, tools, skills, languages, savingThrows },

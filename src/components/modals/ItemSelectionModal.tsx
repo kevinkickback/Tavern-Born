@@ -5,6 +5,7 @@ import {
   SelectionModal,
 } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
+import { RARITY_COLORS, RARITY_ORDER } from '@/lib/5etools/constants'
 import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -38,28 +39,6 @@ const TYPE_OPTIONS: Array<{ value: ItemCategory; label: string }> = [
   { value: 'potions', label: 'Potions' },
   { value: 'scrolls', label: 'Scrolls' },
 ]
-
-const RARITY_ORDER = [
-  'common',
-  'uncommon',
-  'rare',
-  'very rare',
-  'legendary',
-  'artifact',
-  'unknown',
-] as const
-
-const RARITY_COLORS: Record<string, string> = {
-  common: 'bg-zinc-100 text-zinc-700 border-zinc-300 dark:bg-zinc-800 dark:text-zinc-300',
-  uncommon: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-400',
-  rare: 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-400',
-  'very rare':
-    'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-400',
-  legendary:
-    'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400',
-  artifact: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-400',
-  unknown: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400',
-}
 
 const PROPERTY_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'attunement', label: 'Attunement' },

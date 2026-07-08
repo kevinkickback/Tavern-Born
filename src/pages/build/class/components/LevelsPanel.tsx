@@ -150,7 +150,7 @@ export function BuildClassLevelsPanel({
 
   return (
     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-      <div className="bg-gradient-to-r from-accent/20 to-accent/10 border-b border-border px-4 py-3 flex-shrink-0 flex flex-col gap-2">
+      <div className="bg-gradient-to-r from-accent/20 to-accent/10 px-4 py-3 flex-shrink-0 flex flex-col gap-2">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Features
         </span>

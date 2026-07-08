@@ -172,9 +172,8 @@ function ArmorDetails({ item }: { item: Item5e }) {
 function WeaponDetails({ item }: { item: Item5e }) {
   const itemPropertyByAbbr = useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr)
   const weaponType = item.weaponCategory
-    ? `${item.weaponCategory.charAt(0).toUpperCase()}${item.weaponCategory.slice(1)} ${
-        item.type?.split('|')[0] === 'R' ? 'Ranged' : 'Melee'
-      }`
+    ? `${item.weaponCategory.charAt(0).toUpperCase()}${item.weaponCategory.slice(1)} ${item.type?.split('|')[0] === 'R' ? 'Ranged' : 'Melee'
+    }`
     : '—'
   const edition = formatEdition(item.edition as string | undefined)
   const mastery = formatMasteryList(item.mastery)
@@ -527,7 +526,7 @@ export function BuildProficienciesDetailsPanel({
 }: BuildProficienciesDetailsPanelProps) {
   return (
     <>
-      <div className="bg-gradient-to-r from-accent/30 via-accent/15 to-transparent border-b border-border/40 px-4 py-3 flex-shrink-0 flex flex-col gap-2">
+      <div className="bg-gradient-to-r from-accent/30 via-accent/15 to-transparent px-4 py-3 flex-shrink-0 flex flex-col gap-2">
         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Details
         </span>

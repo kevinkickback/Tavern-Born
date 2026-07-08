@@ -47,9 +47,9 @@ describe('buildInitialCharacterProficiencies', () => {
     expect(result.proficiencies.savingThrows.filter((s) => s === 'strength')).toHaveLength(1)
   })
 
-  test('always includes Common in languages', () => {
+  test('does not inject Common — languages come from race data or origin system, not class selection', () => {
     const result = buildInitialCharacterProficiencies(undefined, undefined)
-    expect(result.proficiencies.languages).toContain('Common')
+    expect(result.proficiencies.languages).toEqual([])
   })
 
   test('merges background skills into proficiencies', () => {
@@ -70,7 +70,8 @@ describe('buildInitialCharacterProficiencies', () => {
       toolProficiencies: [],
     }
     const result = buildInitialCharacterProficiencies(undefined, bg)
-    expect(result.proficiencies.languages).toContain('Common')
+    expect(result.proficiencies.languages).toContain('elvish')
+    // Common is NOT injected here; it comes from race data via applyRaceGrants
   })
 
   test('initializes skills state map for background skills', () => {
@@ -88,7 +89,7 @@ describe('buildInitialCharacterProficiencies', () => {
     expect(result.proficiencies.armor).toEqual([])
     expect(result.proficiencies.weapons).toEqual([])
     expect(result.proficiencies.savingThrows).toEqual([])
-    expect(result.proficiencies.languages).toContain('Common')
+    expect(result.proficiencies.languages).toEqual([])
   })
 
   test('strips 5etools item tags from weapon/armor strings', () => {
