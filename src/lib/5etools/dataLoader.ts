@@ -5,7 +5,10 @@ import {
 } from '@/lib/5etools/constants'
 import { validateArmorTypeCodes } from '@/lib/calculations/armorClass'
 import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
-import { validateSpellSlotFallbacks } from '@/lib/calculations/spellSlots'
+import {
+  validateFallbackCasterProgression,
+  validateSpellSlotFallbacks,
+} from '@/lib/calculations/spellSlots'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 import { buildGameDataLookups } from './lookups'
 import {
@@ -431,6 +434,9 @@ export class FiveEToolsDataLoader {
 
     gameData.classes = allClasses
     gameData.classFeatures = allClassFeatures
+    if (import.meta.env.DEV) {
+      validateFallbackCasterProgression(gameData.classes)
+    }
   }
 
   private async loadSpellData(

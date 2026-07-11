@@ -60,8 +60,7 @@ describe('migrateCharacter', () => {
     expect(result).toBeDefined()
     expect(result.id).toBe('test-id')
     expect(result.name).toBe('Test Hero')
-    // The 0→1 migration chain stamps the version as '1.0.0'
-    expect(result.version).toBe('2.0.0')
+    expect(result.version).toBe(`${CURRENT_SCHEMA_VERSION}.0.0`)
     expect(result.originSystem).toBe('2014')
   })
 
@@ -92,7 +91,7 @@ describe('migrateCharacter', () => {
     )
 
     expect(result.originSystem).toBe('2024')
-    expect(result.version).toBe('2.0.0')
+    expect(result.version).toBe(`${CURRENT_SCHEMA_VERSION}.0.0`)
   })
 
   it('throws when migration result is missing required fields (id/name)', () => {

@@ -232,7 +232,8 @@ registerMigration({
 registerMigration({
   fromVersion: 2,
   toVersion: 3,
-  description: 'Remove deprecated armorClass field (was retained for migration compat; never read for display).',
+  description:
+    'Remove deprecated armorClass field (was retained for migration compat; never read for display).',
   up: (character) => {
     const c = character as Record<string, unknown>
     const { armorClass: _ac, ...rest } = c
