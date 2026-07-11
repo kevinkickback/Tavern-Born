@@ -79,6 +79,28 @@ export const FALLBACK_CLASS_CASTER_PROGRESSION: Record<string, CasterProgression
   Rogue: 'none',
 }
 
+/**
+ * DEV-mode validator. Compares FALLBACK_CLASS_CASTER_PROGRESSION against parsed
+ * class data. Call once after classes load. Logs a warning for every mismatch so
+ * stale fallback values surface during development.
+ */
+export function validateFallbackCasterProgression(
+  classes: Array<{ name: string; casterProgression?: string }>,
+): void {
+  for (const cls of classes) {
+    const fallback = FALLBACK_CLASS_CASTER_PROGRESSION[cls.name]
+    if (!fallback) continue // class not in the fallback map — new homebrew-style entry, not a problem
+    const parsed = cls.casterProgression as CasterProgression | undefined
+    if (!parsed || parsed === 'none') continue // class intentionally has no progression
+    if (fallback !== parsed) {
+      console.warn(
+        `[spellSlots] validateFallbackCasterProgression: mismatch for "${cls.name}": ` +
+          `fallback="${fallback}", parsed="${parsed}". Update FALLBACK_CLASS_CASTER_PROGRESSION.`,
+      )
+    }
+  }
+}
+
 export interface SpellSlotLevel {
   max: number
   used: number

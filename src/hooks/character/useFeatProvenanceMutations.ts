@@ -1,5 +1,7 @@
 import { useCallback, useMemo } from 'react'
+import { useLedgerPatch } from '@/hooks/character/useLedgerPatch'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
+import { mergeSkillState } from '@/lib/calculations/skills'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
 import {
   addAbilityBonus,
@@ -18,6 +20,12 @@ import type { Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 
 export function useFeatProvenanceMutations() {
+  // Domain mutation hook contract:
+  // 1. Read character + ledger from store (via useLedgerPatch or direct store selectors).
+  // 2. Reconcile: remove grants from the old source (reconcile* functions in lib/provenance).
+  // 3. Apply: add grants from the new source (apply* functions in lib/provenance).
+  // 4. Sync derived character fields (proficiencies, skills via mergeSkillState, equipment).
+  // 5. Write via updateCharacter(character.id, patch) or patchLedger for ledger-only writes.
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
@@ -26,13 +34,7 @@ export function useFeatProvenanceMutations() {
     [character],
   )
 
-  const patch = useCallback(
-    (newLedger: ProvenanceLedger) => {
-      if (!character) return
-      updateCharacter(character.id, { provenance: newLedger })
-    },
-    [character, updateCharacter],
-  )
+  const patch = useLedgerPatch()
 
   const applyFeatSelection = useCallback(
     (featName: string, featSource: string | undefined) => {
@@ -79,7 +81,6 @@ export function useFeatProvenanceMutations() {
 
       let nextSpellProfiles = character.spells.spellProfiles
       let newProficiencies = { ...character.proficiencies }
-      const newSkills = { ...(character.skills ?? {}) }
       let newAbilityScores = { ...character.abilityScores }
 
       for (const removedFeat of removedWithOptions) {
@@ -103,8 +104,6 @@ export function useFeatProvenanceMutations() {
             ...newProficiencies,
             skills: newProficiencies.skills.filter((s) => normalizeKey(s) !== normKey),
           }
-          const existing = newSkills[normKey]
-          newSkills[normKey] = { proficient: false, expertise: false, bonus: existing?.bonus ?? 0 }
         }
 
         for (const lang of opts.languages ?? []) {
@@ -130,18 +129,10 @@ export function useFeatProvenanceMutations() {
           }
         }
 
-        if (opts.expertiseSkill) {
-          const normKey = normalizeKey(opts.expertiseSkill)
-          const existing = newSkills[normKey]
-          newSkills[normKey] = {
-            proficient: existing?.proficient ?? false,
-            expertise: false,
-            bonus: existing?.bonus ?? 0,
-          }
-        }
-
         newLedger = removeGrantsBySource(newLedger, 'feat', removedFeat.name)
       }
+
+      const newSkills = mergeSkillState(character.skills ?? {}, newProficiencies.skills)
 
       updateCharacter(character.id, {
         feats: selectedFeats.map((feat) => {
