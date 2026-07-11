@@ -6,11 +6,11 @@ import {
 } from '@/lib/5etools/startingEquipment'
 import { getBackgroundAbilityData, normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
-import { mergeSkillState } from '@/lib/calculations/skills'
 import {
   ensureOriginSystemInvariants,
   normalizeBackgroundForOriginSystem,
 } from '@/lib/calculations/originSystem'
+import { mergeSkillState } from '@/lib/calculations/skills'
 import {
   removeSourceGrantedEquipment,
   upsertGrantedEquipment,
@@ -32,6 +32,12 @@ const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 const CURRENCY_KEYS = ['cp', 'sp', 'ep', 'gp', 'pp'] as const
 
 export function useBackgroundProvenanceMutations() {
+  // Domain mutation hook contract:
+  // 1. Read character + ledger from store (via useLedgerPatch or direct store selectors).
+  // 2. Reconcile: remove grants from the old source (reconcile* functions in lib/provenance).
+  // 3. Apply: add grants from the new source (apply* functions in lib/provenance).
+  // 4. Sync derived character fields (proficiencies, skills via mergeSkillState, equipment).
+  // 5. Write via updateCharacter(character.id, patch) or patchLedger for ledger-only writes.
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP

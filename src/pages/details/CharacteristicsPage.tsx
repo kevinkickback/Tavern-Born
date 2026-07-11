@@ -159,8 +159,8 @@ export function CharacteristicsPage() {
   )
   const [organizationCustomDescription, setOrganizationCustomDescription] = useState(
     activeCharacter?.details?.organizationCustomDescription ||
-    activeCharacter?.details?.alliesAndOrganizations ||
-    '',
+      activeCharacter?.details?.alliesAndOrganizations ||
+      '',
   )
   const [organizationCustomImage, setOrganizationCustomImage] = useState(
     activeCharacter?.details?.organizationCustomImage || '',

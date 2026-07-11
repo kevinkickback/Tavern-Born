@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useCharacterRaceData } from '@/hooks/character/useCharacterRaceData'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import {
   type AbilityName,
@@ -39,26 +40,8 @@ export interface TotalAbilityScoresData {
 export function useTotalAbilityScores(
   character: Character | null | undefined,
 ): TotalAbilityScoresData {
-  const { races, backgrounds } = useFilteredGameData()
-
-  const selectedRace = useMemo(
-    () =>
-      character
-        ? (races.find((r) => matchesGameDataEntry(character.race, character.raceSource, r)) as
-            | Race5e
-            | undefined)
-        : undefined,
-    [races, character],
-  )
-
-  const subraceData = useMemo(
-    () =>
-      selectedRace?.subraces?.find(
-        (sr: Race5e) =>
-          sr.name === character?.subrace && (sr.source ?? '') === (character?.subraceSource ?? ''),
-      ) as Race5e | undefined,
-    [selectedRace, character],
-  )
+  const { backgrounds } = useFilteredGameData()
+  const { parentRace: selectedRace, subraceData } = useCharacterRaceData(character)
 
   const normalizedRaceSelection = useMemo(
     () =>
