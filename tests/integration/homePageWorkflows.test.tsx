@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
 import { HomePage } from '@/pages/HomePage'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -233,7 +234,7 @@ describe('home page integration workflows', () => {
       .characters.find((c) => c.id === legacyCharacter.id)
 
     expect(imported).toBeTruthy()
-    expect(imported?.version).toBe('2.0.0')
+    expect(imported?.version).toBe(`${CURRENT_SCHEMA_VERSION}.0.0`)
     expect(imported?.originSystem).toBe('2014')
   })
 
