@@ -68,11 +68,11 @@ As this is the initial public release, bugs and incomplete features are expected
 
 ## ✨ Changes
 
-* Minor app visual redesign (header/sidebar)
-* Details > Exhaustion condition: now displays the effect of the selected level + previous levels if applicable
-* When the element that a tooltip hint is anchored to becomes covered/hidden, the tooltip will also be hidden
-* Reduced lag/stuttering when opening a selection modal with large lists (equipment selection, spell selection, etc)
-* Added toast notification when game data files have been updated via auto update/refresh
+* Refreshed the header and sidebar for clearer navigation and improved layouts on smaller screens
+* Exhaustion details now display the cumulative effects of the selected level and all previous levels
+* Contextual hints now hide when their related control is obscured and return when it becomes visible again
+* Improved the responsiveness of equipment, spell, and other selection windows containing large lists
+* Automatic game data refreshes now provide a notification only when new data has been successfully applied
 
 ## ⚠️ Known Issues
 
