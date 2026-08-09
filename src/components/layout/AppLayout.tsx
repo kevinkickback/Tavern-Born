@@ -12,17 +12,17 @@ export function AppLayout({ children }: AppLayoutProps) {
   const sidebarOpen = useAppPreferencesStore((s) => s.sidebarOpen)
 
   return (
-    <div className="h-screen bg-background overflow-hidden flex flex-col">
-      <AppHeader />
+    <div className="h-screen bg-background overflow-hidden">
       <AppSidebar />
-      <main
+      <div
         className={cn(
-          'flex-1 min-h-0 overflow-auto transition-[padding] duration-300 bg-texture',
-          sidebarOpen ? 'xl:pl-56' : 'xl:pl-12',
+          'h-screen flex flex-col transition-[padding] duration-300',
+          sidebarOpen ? 'xl:pl-60' : 'xl:pl-16',
         )}
       >
-        {children}
-      </main>
+        <AppHeader />
+        <main className="flex-1 min-h-0 overflow-auto bg-texture">{children}</main>
+      </div>
     </div>
   )
 }

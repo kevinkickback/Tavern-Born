@@ -9,7 +9,7 @@ import {
   Wrench,
   X,
 } from '@phosphor-icons/react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   Select,
   SelectContent,
@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { normalizeKey } from '@/lib/provenance'
 import type { ChoiceRecord, ProficiencyProvenance } from '@/lib/provenance/types'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
@@ -33,12 +34,6 @@ import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 
 const EXPERTISE_HINT_SELECTOR = '[data-expertise-hint="true"]'
 const EXPERTISE_HINT_WIDTH = 280
-
-interface HintPosition {
-  top: number
-  left: number
-  arrowLeft: number
-}
 
 type TabValue = 'skills' | 'saving-throws' | 'armor' | 'weapons' | 'tools' | 'languages'
 
@@ -234,41 +229,16 @@ export function BuildProficienciesTabsPanel({
   const [showExpertiseHint, setShowExpertiseHint] = useState(
     () => availableExpertiseSlots > 0 && !isHintDismissed('skills-expertise'),
   )
-  const [expertiseHintPos, setExpertiseHintPos] = useState<HintPosition | null>(null)
+  const expertiseHintPos = useAnchoredHintPosition({
+    enabled: showExpertiseHint && availableExpertiseSlots > 0,
+    selector: EXPERTISE_HINT_SELECTOR,
+    width: EXPERTISE_HINT_WIDTH,
+  })
 
   const handleDismissExpertiseHint = () => {
     setShowExpertiseHint(false)
     setHintDismissed('skills-expertise', true)
   }
-
-  useEffect(() => {
-    if (!showExpertiseHint || availableExpertiseSlots === 0) {
-      setExpertiseHintPos(null)
-      return
-    }
-
-    const update = () => {
-      const btn = document.querySelector<HTMLElement>(EXPERTISE_HINT_SELECTOR)
-      if (!btn) {
-        setExpertiseHintPos(null)
-        return
-      }
-      const rect = btn.getBoundingClientRect()
-      const centerX = rect.left + rect.width / 2
-      const maxLeft = Math.max(16, window.innerWidth - EXPERTISE_HINT_WIDTH - 16)
-      const left = Math.min(Math.max(centerX - EXPERTISE_HINT_WIDTH / 2, 16), maxLeft)
-      const arrowLeft = Math.min(Math.max(centerX - left, 18), EXPERTISE_HINT_WIDTH - 18)
-      setExpertiseHintPos({ top: rect.bottom + 12, left, arrowLeft })
-    }
-
-    update()
-    window.addEventListener('resize', update)
-    window.addEventListener('scroll', update, true)
-    return () => {
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', update, true)
-    }
-  }, [showExpertiseHint, availableExpertiseSlots])
 
   const choiceSelectedClass =
     'border-2 border-accent border-dashed bg-accent/15 text-accent-foreground hover:bg-accent/25'

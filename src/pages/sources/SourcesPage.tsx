@@ -1,9 +1,10 @@
 import { BookOpen, Books, Question, Sparkle, Warning, X } from '@phosphor-icons/react'
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import {
   countRemovedSpells,
   detectSourceConflicts,
@@ -36,12 +37,6 @@ const HINT_ID = 'sources-implicit-rulebook'
 const HINT_WIDTH = 300
 const ALLOWED_SOURCES_HEADER_SELECTOR = '[data-allowed-sources-header]'
 
-interface HintPosition {
-  top: number
-  left: number
-  arrowLeft: number
-}
-
 export function SourcesPage() {
   const preferNewerId = useId()
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -49,7 +44,12 @@ export function SourcesPage() {
   const gameData = useGameDataStore((s) => s.gameData)
 
   const [showHint, setShowHint] = useState(() => !isHintDismissed(HINT_ID))
-  const [hintPosition, setHintPosition] = useState<HintPosition | null>(null)
+  const hintPosition = useAnchoredHintPosition({
+    enabled: showHint,
+    selector: ALLOWED_SOURCES_HEADER_SELECTOR,
+    width: HINT_WIDTH,
+    gap: 10,
+  })
 
   const allSources = gameData?.sources ?? []
   const sources = useMemo(
@@ -96,35 +96,6 @@ export function SourcesPage() {
   }
 
   const preferNewerPrintings = character?.variantRules?.preferNewerPrintings ?? false
-
-  useEffect(() => {
-    if (!showHint) {
-      setHintPosition(null)
-      return
-    }
-
-    const updatePosition = () => {
-      const el = document.querySelector<HTMLElement>(ALLOWED_SOURCES_HEADER_SELECTOR)
-      if (!el) {
-        setHintPosition(null)
-        return
-      }
-      const rect = el.getBoundingClientRect()
-      const centerX = rect.left + rect.width / 2
-      const maxLeft = Math.max(16, window.innerWidth - HINT_WIDTH - 16)
-      const left = Math.min(Math.max(centerX - HINT_WIDTH / 2, 16), maxLeft)
-      const arrowLeft = Math.min(Math.max(centerX - left, 18), HINT_WIDTH - 18)
-      setHintPosition({ top: rect.bottom + 10, left, arrowLeft })
-    }
-
-    updatePosition()
-    window.addEventListener('resize', updatePosition)
-    window.addEventListener('scroll', updatePosition, true)
-    return () => {
-      window.removeEventListener('resize', updatePosition)
-      window.removeEventListener('scroll', updatePosition, true)
-    }
-  }, [showHint])
 
   if (!character) {
     return <NoCharCard icon={<Books weight="duotone" />} noun="manage sources" />
@@ -187,7 +158,7 @@ export function SourcesPage() {
   return (
     <TooltipProvider>
       <div className="h-full flex flex-col">
-        <div className="px-6 py-5 page-header-band mb-6 shrink-0">
+        <div className="px-6 py-5 page-header-band shrink-0">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-3">
               <Books className="h-6 w-6 text-primary" weight="duotone" />

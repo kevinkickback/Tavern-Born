@@ -81,19 +81,22 @@ interface GameDataState {
   setHasHydrated: (v: boolean) => void
 
   /**
-   * Read from IDB cache and populate store state. Returns a hint for which
-   * toast (if any) the caller should display — the store does not import UI libs.
+   * Read from IDB cache and populate store state. Returns UI-facing outcome
+   * hints while keeping notification libraries out of the store.
    *
    * Pass `forceCheck: true` to skip the 1-hour background-verify interval and
    * always fire a background source check (used by auto-refresh on launch).
    */
-  loadFromCache: (opts?: { forceCheck?: boolean }) => Promise<{ needsToast?: 'offline' }>
+  loadFromCache: (opts?: {
+    forceCheck?: boolean
+  }) => Promise<{ needsToast?: 'offline'; backgroundRefresh?: Promise<boolean> }>
 
   /**
-   * Fetch data from `config`, write to IDB cache, update store.
-   * Pass `background = true` to do a silent refresh without blocking UI.
+   * Fetch data from `config`, write to IDB cache, and update the store. Resolves
+   * true only when the content fingerprint changed. Pass `background = true`
+   * to refresh without blocking or clearing the current data.
    */
-  loadGameData: (config: DataSourceConfig, background?: boolean) => Promise<void>
+  loadGameData: (config: DataSourceConfig, background?: boolean) => Promise<boolean>
   refreshGameData: () => Promise<void>
   clearGameData: () => void
 }
@@ -151,8 +154,7 @@ export const useGameDataStore = create<GameDataState>()(
             setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
             setLastContentFingerprint(cache.contentFingerprint ?? null)
             setCacheStatus('stale')
-            loadGameData(dataSourceConfig, true)
-            return {}
+            return { backgroundRefresh: loadGameData(dataSourceConfig, true) }
           }
           setGameData(cache.data)
           setLastDataChangedAt(cache.lastDataChangedAt ?? cache.cachedAt)
@@ -167,7 +169,7 @@ export const useGameDataStore = create<GameDataState>()(
           const checkedRecently =
             Number.isFinite(lastCheckedMs) && Date.now() - lastCheckedMs < UPDATE_CHECK_INTERVAL_MS
           if (opts?.forceCheck || !checkedRecently) {
-            loadGameData(dataSourceConfig, true)
+            return { backgroundRefresh: loadGameData(dataSourceConfig, true) }
           }
           return {}
         }
@@ -208,14 +210,21 @@ export const useGameDataStore = create<GameDataState>()(
         }
 
         try {
+          const failedResources = new Set<string>()
           const data = await loadDataFromSource(config, {
             onProgress: background
               ? undefined
               : (current, total, resource) => set({ loadProgress: { current, total, resource } }),
+            onResourceFailure: background ? (resource) => failedResources.add(resource) : undefined,
             signal: controller.signal,
           })
 
           const existingData = get().gameData
+          if (background && failedResources.size > 0) {
+            throw new Error(
+              `Background refresh incomplete (${failedResources.size} resource${failedResources.size === 1 ? '' : 's'} failed); keeping existing cache`,
+            )
+          }
           if (
             background &&
             existingData &&
@@ -227,7 +236,7 @@ export const useGameDataStore = create<GameDataState>()(
 
           // Ignore stale results from superseded requests.
           if (requestId !== activeLoadRequestId) {
-            return
+            return false
           }
 
           const now = new Date().toISOString()
@@ -257,10 +266,11 @@ export const useGameDataStore = create<GameDataState>()(
             lastUpdateCheckAt: now,
             cacheStatus: 'fetched',
           })
+          return contentChanged
         } catch (error) {
           // Ignore stale request failures and intentional aborts.
           if (requestId !== activeLoadRequestId) {
-            return
+            return false
           }
 
           const isAbortError =
@@ -272,7 +282,7 @@ export const useGameDataStore = create<GameDataState>()(
               isBackgroundRefreshing: false,
               loadProgress: null,
             })
-            return
+            return false
           }
 
           set({
@@ -281,6 +291,7 @@ export const useGameDataStore = create<GameDataState>()(
             isBackgroundRefreshing: false,
             loadProgress: null,
           })
+          return false
         } finally {
           if (activeLoadController === controller) {
             activeLoadController = null

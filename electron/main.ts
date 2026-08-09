@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, normalize, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell } from 'electron'
 import {
   cancelDownload,
   checkForUpdate,
@@ -24,6 +24,15 @@ let forceClose = false
 let localDataRootPath: string | null = null
 
 const isDev = !!process.env.VITE_DEV_SERVER_URL
+
+function isDevToolsShortcut(input: Electron.Input): boolean {
+  const key = input.key.toLowerCase()
+  return (
+    key === 'f12' ||
+    ((input.control || input.meta) && input.shift && ['c', 'i', 'j'].includes(key)) ||
+    (input.meta && input.alt && ['c', 'i', 'j'].includes(key))
+  )
+}
 
 async function createWindow(): Promise<void> {
   const windowState = await loadWindowState()
@@ -52,6 +61,11 @@ async function createWindow(): Promise<void> {
     autoHideMenuBar: true,
     title: 'Tavern Born',
   })
+
+  if (!isDev) {
+    mainWindow.removeMenu()
+    mainWindow.setMenuBarVisibility(false)
+  }
 
   if (windowState.isMaximized) {
     mainWindow.maximize()
@@ -102,6 +116,10 @@ async function createWindow(): Promise<void> {
 }
 
 app.on('ready', () => {
+  if (!isDev) {
+    Menu.setApplicationMenu(null)
+  }
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -237,6 +255,15 @@ app.on('window-all-closed', () => {
 })
 
 app.on('web-contents-created', (_event, contents) => {
+  if (!isDev) {
+    contents.on('before-input-event', (event, input) => {
+      if (isDevToolsShortcut(input)) {
+        event.preventDefault()
+      }
+    })
+    contents.on('devtools-opened', () => contents.closeDevTools())
+  }
+
   contents.on('will-navigate', (event) => {
     event.preventDefault()
   })

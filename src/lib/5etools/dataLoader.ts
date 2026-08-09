@@ -42,6 +42,7 @@ import {
 
 export interface DataLoaderOptions {
   onProgress?: (current: number, total: number, resource: string) => void
+  onResourceFailure?: (resource: string) => void
   signal?: AbortSignal
 }
 
@@ -285,6 +286,7 @@ export class FiveEToolsDataLoader {
             (error instanceof Error && error.name === 'AbortError')
           if (isAbort) throw error
           console.warn(`Failed to load ${resource.file}:`, error)
+          options?.onResourceFailure?.(resource.file)
         } finally {
           completedResources += 1
           if (options?.onProgress) {
@@ -371,12 +373,13 @@ export class FiveEToolsDataLoader {
               title?: string
             }>
           }> = []
+          const fluffFile = classFile.file.replace(/^class-/, 'fluff-class-')
           try {
-            const fluffFile = classFile.file.replace(/^class-/, 'fluff-class-')
             const fluffData = await this.loadResource(`class/${fluffFile}`, options?.signal)
             fluffSummaries = parseClassFluffSummaries(fluffData)
             richFluff = parseClassFluff(fluffData)
           } catch {
+            options?.onResourceFailure?.(`class/${fluffFile}`)
             fluffSummaries = []
             richFluff = []
           }
@@ -413,6 +416,7 @@ export class FiveEToolsDataLoader {
           }
         } catch (error) {
           console.warn(`Failed to load class file ${classFile.file}:`, error)
+          options?.onResourceFailure?.(`class/${classFile.file}`)
           return {
             classes: [] as GameData['classes'],
             features: [] as GameData['classFeatures'],
@@ -464,6 +468,7 @@ export class FiveEToolsDataLoader {
           return parsedSpells
         } catch (error) {
           console.warn(`Failed to load spell file ${spellFile.file}:`, error)
+          options?.onResourceFailure?.(`spells/${spellFile.file}`)
           return [] as GameData['spells']
         }
       }),

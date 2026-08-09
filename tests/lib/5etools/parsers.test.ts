@@ -177,6 +177,24 @@ describe('5etools/parsers', () => {
     expect(list.map((s) => s.abbreviation)).toEqual(['XPHB', 'DMG'])
   })
 
+  test('buildSourcesList is deterministic for mixed dates and equal names', () => {
+    const sources = ['U2', 'D1', 'U1', 'D2']
+    const books = {
+      book: [
+        { id: 'U2', name: 'Shared Name', group: 'supplement' },
+        { id: 'D1', name: 'Later Book', group: 'supplement', published: '2025-01-01' },
+        { id: 'U1', name: 'Shared Name', group: 'supplement' },
+        { id: 'D2', name: 'Earlier Book', group: 'supplement', published: '2023-01-01' },
+      ],
+    }
+
+    const expected = ['D1', 'D2', 'U1', 'U2']
+    expect(buildSourcesList(sources, books).map((source) => source.abbreviation)).toEqual(expected)
+    expect(
+      buildSourcesList([...sources].reverse(), books).map((source) => source.abbreviation),
+    ).toEqual(expected)
+  })
+
   test('parseSpells enriches classes and subclasses from generated lookup', () => {
     const spells = parseSpells(
       {
