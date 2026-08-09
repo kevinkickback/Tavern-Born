@@ -141,8 +141,9 @@ describe('5etools/dataLoader', () => {
       path: 'https://example.com/5etools-src/main',
       isValid: true,
     })
+    const onResourceFailure = vi.fn()
 
-    const gameData = await loader.loadAllData()
+    const gameData = await loader.loadAllData({ onResourceFailure })
 
     expect(gameData.classes.map((it) => it.name)).toEqual(['Wizard', 'Wrong Source Class'])
     expect(gameData.classFeatures.map((it) => it.name)).toEqual(['Spellcasting', 'Wrong Feature'])
@@ -163,6 +164,8 @@ describe('5etools/dataLoader', () => {
         },
       ]),
     )
+    expect(onResourceFailure).toHaveBeenCalledWith('fluff-races.json')
+    expect(onResourceFailure).toHaveBeenCalledWith('class/fluff-class-phb.json')
   })
 
   test('loads classes from slug-keyed class index entries without source filtering them out', async () => {

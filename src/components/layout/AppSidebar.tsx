@@ -179,16 +179,40 @@ export function AppSidebar() {
 
       <aside
         className={cn(
-          'fixed top-[4.5rem] bottom-0 left-0 z-50 flex flex-col border-r border-t border-border bg-card',
-          'transition-[width,transform] duration-300 overflow-x-hidden',
-          // Mobile: slide in/out at full width (existing behavior)
+          'fixed top-24 bottom-3 left-3 z-50 flex flex-col bg-card rounded-xl shadow-md border border-border xl:top-3',
+          'transition-[width,transform] duration-300 overflow-hidden',
+          // Mobile: slide in/out
           'w-56',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-56',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-60',
           // Desktop: always visible, width-based toggle
           'xl:translate-x-0',
           isExpanded ? 'xl:w-56' : 'xl:w-12',
         )}
       >
+        {/* Logo + brand */}
+        <div
+          className={cn(
+            'flex items-center gap-3 py-3 shrink-0 min-h-[4.5rem]',
+            isExpanded ? 'px-3' : 'justify-center',
+          )}
+        >
+          <Link to="/" aria-label="Home" className="shrink-0 flex items-center justify-center">
+            <img
+              src={`${import.meta.env.BASE_URL}assets/images/ui/logo.png`}
+              alt="Tavern Born"
+              className="h-12 w-12 object-contain"
+            />
+          </Link>
+          <span
+            className={cn(
+              'font-display text-base font-bold text-primary uppercase tracking-wider whitespace-nowrap overflow-hidden transition-[opacity,max-width] duration-200',
+              isExpanded ? 'opacity-100 max-w-full' : 'opacity-0 max-w-0',
+            )}
+          >
+            Tavern Born
+          </span>
+        </div>
+        <div className="mx-3 border-t border-border shrink-0" />
         <nav className="flex-1 overflow-y-auto p-2">
           <div className="flex flex-col gap-1">
             {navGroups.map((group, groupIndex) => (

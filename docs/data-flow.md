@@ -20,14 +20,14 @@ Flow:
 - Cache and source, different source: fetch fresh and replace cache.
 - Cache without source: serve offline cache — returns { needsToast: 'offline' }.
 - Source without cache: fetch fresh.
-5. useDataInit shows an offline-only toast when cached data is used without a configured source.
+5. useDataInit shows a toast when cached data is used without a configured source, or when enabled launch auto-refresh confirms that content changed. Successful no-change checks remain silent.
 6. On successful fetch, parsed gameData is written to cache and store.
 
 Startup preference behavior:
 - Theme is applied immediately from localStorage before React renders, then reconciled with the persisted app preferences store after IndexedDB hydration.
 - Home-page card size is read from the app preferences store. The size slider is on the home page itself, not in Settings.
-- Stale cache always triggers a silent background refresh on startup.
-- Background refreshes now preserve the current in-memory/cache data when a refresh returns an empty catalog payload (for example, remote source offline during startup).
+- Stale cache always triggers a background refresh on startup. It remains silent unless launch auto-refresh is enabled and the content fingerprint changes.
+- Background refreshes are atomic: if any requested resource fails or the refresh returns an empty catalog, the current in-memory/cache data and update timestamps are preserved.
 
 Update metadata behavior:
 - `lastUpdateCheckAt` is set only after a successful source check/fetch.
@@ -92,6 +92,11 @@ Flow:
 3. If the saved position is off-screen, the app falls back to default placement while preserving the last usable size.
 4. Move/resize/close events write updated bounds back to disk.
 5. Maximized state is restored after the BrowserWindow is created.
+
+Production window hardening:
+- The native application/window menu is removed, so Alt cannot reveal a hidden menu bar.
+- DevTools are disabled in `webPreferences`; common DevTools shortcuts are blocked and any programmatic DevTools open is immediately closed.
+- Development builds retain the menu and DevTools behavior.
 
 ## 4) Provenance Application and Reconciliation
 

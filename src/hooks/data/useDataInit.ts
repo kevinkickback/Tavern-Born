@@ -41,6 +41,11 @@ export function useDataInit() {
           { duration: 8000 },
         )
       }
+      if (autoRefreshGameData && (await result.backgroundRefresh)) {
+        toast.success('Game data updated', {
+          description: 'Updated game data files were loaded automatically.',
+        })
+      }
     }
 
     init()

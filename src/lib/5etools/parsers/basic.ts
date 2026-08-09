@@ -210,6 +210,7 @@ export function buildSourcesList(
     'adventure',
     'organized-play',
   ]
+  const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
 
   return sourceAbbreviations
     .map((abbr) => {
@@ -247,8 +248,10 @@ export function buildSourcesList(
       }
     })
     .sort((a, b) => {
-      const groupOrder = ['core', 'supplement', 'setting', 'adventure', 'playtest', 'other']
-      const groupDiff = groupOrder.indexOf(a.group) - groupOrder.indexOf(b.group)
+      const aGroup = groupOrder.indexOf(a.group)
+      const bGroup = groupOrder.indexOf(b.group)
+      const groupDiff =
+        (aGroup === -1 ? groupOrder.length : aGroup) - (bGroup === -1 ? groupOrder.length : bGroup)
       if (groupDiff !== 0) return groupDiff
       // Within core: PHB first, DMG second, MM third
       if (a.group === 'core') {
@@ -261,7 +264,9 @@ export function buildSourcesList(
         const slotDiff = coreSlot(a.abbreviation) - coreSlot(b.abbreviation)
         if (slotDiff !== 0) return slotDiff
       }
-      if (a.year && b.year && a.year !== b.year) return b.year - a.year
-      return a.name.localeCompare(b.name)
+      const yearDiff = (b.year ?? 0) - (a.year ?? 0)
+      if (yearDiff !== 0) return yearDiff
+      const nameDiff = a.name.localeCompare(b.name)
+      return nameDiff || a.abbreviation.localeCompare(b.abbreviation)
     })
 }

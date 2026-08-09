@@ -136,7 +136,7 @@ export function CharacterSheetPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 py-5 page-header-band mb-6 shrink-0">
+      <div className="px-6 py-5 page-header-band shrink-0">
         <div className="max-w-7xl mx-auto flex items-center gap-3">
           <FilePdf className="h-6 w-6 text-primary" weight="duotone" />
           <div>

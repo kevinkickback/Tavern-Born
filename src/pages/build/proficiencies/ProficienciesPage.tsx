@@ -223,7 +223,7 @@ export function BuildProficienciesPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 py-5 page-header-band mb-6">
+      <div className="px-6 py-5 page-header-band">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <Certificate className="h-6 w-6 text-primary" weight="duotone" />
