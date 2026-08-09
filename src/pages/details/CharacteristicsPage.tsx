@@ -159,8 +159,8 @@ export function CharacteristicsPage() {
   )
   const [organizationCustomDescription, setOrganizationCustomDescription] = useState(
     activeCharacter?.details?.organizationCustomDescription ||
-      activeCharacter?.details?.alliesAndOrganizations ||
-      '',
+    activeCharacter?.details?.alliesAndOrganizations ||
+    '',
   )
   const [organizationCustomImage, setOrganizationCustomImage] = useState(
     activeCharacter?.details?.organizationCustomImage || '',
@@ -360,7 +360,7 @@ export function CharacteristicsPage() {
   return (
     <div>
       {/* Page header */}
-      <div className="px-6 py-5 page-header-band mb-6 shrink-0">
+      <div className="px-6 py-5 page-header-band shrink-0">
         <div className="max-w-7xl mx-auto flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <Sparkle className="h-6 w-6 text-primary" weight="duotone" />

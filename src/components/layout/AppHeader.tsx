@@ -1,6 +1,5 @@
 import { FloppyDisk, Heart, List, Shield, TrendUp } from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
 import { Button } from '@/components/ui/button'
@@ -50,9 +49,9 @@ export function AppHeader() {
 
   return (
     <>
-      <nav className="grid grid-cols-3 items-center min-h-[4.5rem] bg-card/80 backdrop-blur-sm px-4 py-3 border-b border-border relative z-50 app-drag">
-        {/* Left slot: logo + brand name + hamburger toggle */}
-        <div className="flex items-center gap-2">
+      <nav className="grid grid-cols-3 items-center min-h-[4.5rem] bg-card/80 backdrop-blur-sm px-4 py-3 rounded-xl mx-3 mt-3 shadow-sm border border-border relative z-50 app-drag">
+        {/* Left slot: hamburger toggle (mobile only) */}
+        <div className="flex items-center">
           <button
             type="button"
             aria-label="Open sidebar"
@@ -61,13 +60,6 @@ export function AppHeader() {
           >
             <List className="h-6 w-6" />
           </button>
-          <Link to="/" aria-label="Home">
-            <img
-              src={`${import.meta.env.BASE_URL}assets/images/ui/logo.png`}
-              alt="Tavern Born"
-              className="h-12 w-12 object-contain"
-            />
-          </Link>
         </div>
 
         {/* Character info — center slot */}

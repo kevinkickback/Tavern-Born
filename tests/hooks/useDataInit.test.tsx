@@ -18,6 +18,7 @@ vi.mock('@/lib/storage/dataCache', () => ({
 vi.mock('sonner', () => ({
   toast: {
     info: vi.fn(),
+    success: vi.fn(),
     warning: vi.fn(),
   },
 }))
@@ -87,7 +88,7 @@ describe('useDataInit', () => {
   })
 
   test('sets unconfigured status when no cache and no source are available', async () => {
-    const loadGameDataMock = vi.fn(async () => undefined)
+    const loadGameDataMock = vi.fn(async () => false)
     useGameDataStore.setState({
       hasHydrated: true,
       gameData: null,
@@ -111,7 +112,7 @@ describe('useDataInit', () => {
       isValid: true,
     }
     const cacheData = makeGameData()
-    const loadGameDataMock = vi.fn(async () => undefined)
+    const loadGameDataMock = vi.fn(async () => false)
 
     vi.mocked(readGameDataCache).mockResolvedValue({
       data: cacheData,
@@ -173,7 +174,7 @@ describe('useDataInit', () => {
       isValid: true,
     }
     const cacheData = makeGameData()
-    const loadGameDataMock = vi.fn(async () => undefined)
+    const loadGameDataMock = vi.fn(async () => false)
 
     vi.mocked(readGameDataCache).mockResolvedValue({
       data: cacheData,
@@ -208,7 +209,7 @@ describe('useDataInit', () => {
       isValid: true,
     }
     const cacheData = makeGameData()
-    const loadGameDataMock = vi.fn(async () => undefined)
+    const loadGameDataMock = vi.fn(async () => false)
 
     vi.mocked(readGameDataCache).mockResolvedValue({
       data: cacheData,
@@ -243,7 +244,7 @@ describe('useDataInit', () => {
       path: 'https://example.com/5etools',
       isValid: true,
     }
-    const loadGameDataMock = vi.fn(async () => undefined)
+    const loadGameDataMock = vi.fn(async () => false)
 
     vi.mocked(readGameDataCache).mockResolvedValue(null)
 
@@ -272,7 +273,7 @@ describe('useDataInit', () => {
       isValid: true,
     }
     const cacheData = makeGameData()
-    const loadGameDataMock = vi.fn(async () => undefined)
+    const loadGameDataMock = vi.fn(async () => false)
 
     vi.mocked(readGameDataCache).mockResolvedValue({
       data: cacheData,
@@ -308,7 +309,7 @@ describe('useDataInit', () => {
       isValid: true,
     }
     const cacheData = makeGameData()
-    const loadGameDataMock = vi.fn(async () => undefined)
+    const loadGameDataMock = vi.fn(async () => true)
 
     vi.mocked(readGameDataCache).mockResolvedValue({
       data: cacheData,
@@ -334,5 +335,45 @@ describe('useDataInit', () => {
     await waitFor(() => {
       expect(loadGameDataMock).toHaveBeenCalledWith(config, true)
     })
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith('Game data updated', {
+        description: 'Updated game data files were loaded automatically.',
+      })
+    })
+  })
+
+  test('does not toast when launch auto-refresh finds no changes', async () => {
+    const config: DataSourceConfig = {
+      type: 'remote',
+      path: 'https://example.com/5etools',
+      isValid: true,
+    }
+    const cacheData = makeGameData()
+    const loadGameDataMock = vi.fn(async () => false)
+
+    vi.mocked(readGameDataCache).mockResolvedValue({
+      data: cacheData,
+      cachedAt: new Date().toISOString(),
+      sourceSnapshot: { type: 'remote', path: 'https://example.com/5etools' },
+      lastDataChangedAt: new Date().toISOString(),
+    })
+    vi.mocked(isCacheForSource).mockReturnValue(true)
+    vi.mocked(isCacheStale).mockReturnValue(false)
+
+    useGameDataStore.setState({
+      hasHydrated: true,
+      gameData: null,
+      dataSourceConfig: config,
+      isLoading: false,
+      loadGameData: loadGameDataMock,
+    })
+    useAppPreferencesStore.setState({ autoRefreshGameData: true })
+
+    renderHook(() => useDataInit())
+
+    await waitFor(() => {
+      expect(loadGameDataMock).toHaveBeenCalledWith(config, true)
+    })
+    expect(toast.success).not.toHaveBeenCalled()
   })
 })

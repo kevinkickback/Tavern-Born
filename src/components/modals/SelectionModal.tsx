@@ -1,5 +1,6 @@
 import { Funnel, X } from '@phosphor-icons/react'
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   Accordion,
@@ -19,11 +20,14 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 
 export type ActiveFilters = Record<string, Set<string>>
+
+const MODAL_ROW_ESTIMATE = 148
+const MODAL_LIST_INITIAL_RECT = { width: 800, height: 600 }
+const estimateModalRowSize = () => MODAL_ROW_ESTIMATE
 
 export interface FilterOption {
   value: string
@@ -107,20 +111,30 @@ function SelectionModalInner<T>({
     return { ...base, ...initialFilters }
   })
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(initialSelectedIds))
+  const scrollParentRef = useRef<HTMLDivElement>(null)
+
+  const resetScroll = useCallback(() => {
+    if (scrollParentRef.current) scrollParentRef.current.scrollTop = 0
+  }, [])
 
   const filteredItems = useMemo(
     () => items.filter((item) => matchItem(item, search, activeFilters)),
     [items, search, activeFilters, matchItem],
   )
 
-  const BATCH = 40
-  const [renderLimit, setRenderLimit] = useState(BATCH)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset paging on filter/search changes.
-  useEffect(() => {
-    setRenderLimit(BATCH)
-  }, [search, activeFilters])
-  const visibleItems = filteredItems.slice(0, renderLimit)
-  const hiddenCount = filteredItems.length - visibleItems.length
+  const getVirtualItemKey = useCallback(
+    (index: number) => getItemId(filteredItems[index]),
+    [filteredItems, getItemId],
+  )
+  const getScrollElement = useCallback(() => scrollParentRef.current, [])
+  const rowVirtualizer = useVirtualizer({
+    count: filteredItems.length,
+    estimateSize: estimateModalRowSize,
+    getItemKey: getVirtualItemKey,
+    getScrollElement,
+    initialRect: MODAL_LIST_INITIAL_RECT,
+    overscan: 4,
+  })
 
   const selectedItems = useMemo(
     () => items.filter((item) => selectedIds.has(getItemId(item))),
@@ -176,6 +190,7 @@ function SelectionModalInner<T>({
 
   const handleCheckbox = useCallback(
     (sectionKey: string, optionValue: string, checked: boolean) => {
+      resetScroll()
       setActiveFilters((prev) => {
         const next = { ...prev, [sectionKey]: new Set(prev[sectionKey]) }
         if (checked) next[sectionKey].add(optionValue)
@@ -183,19 +198,26 @@ function SelectionModalInner<T>({
         return next
       })
     },
-    [],
+    [resetScroll],
   )
 
-  const handleSwitch = useCallback((sectionKey: string, optionValue: string, enabled: boolean) => {
-    setActiveFilters((prev) => {
-      const next = { ...prev, [sectionKey]: new Set(prev[sectionKey]) }
-      if (enabled) next[sectionKey].add(optionValue)
-      else next[sectionKey].delete(optionValue)
-      return next
-    })
-  }, [])
+  const handleSwitch = useCallback(
+    (sectionKey: string, optionValue: string, enabled: boolean) => {
+      resetScroll()
+      setActiveFilters((prev) => {
+        const next = { ...prev, [sectionKey]: new Set(prev[sectionKey]) }
+        if (enabled) next[sectionKey].add(optionValue)
+        else next[sectionKey].delete(optionValue)
+        return next
+      })
+    },
+    [resetScroll],
+  )
 
-  const clearSearch = () => setSearch('')
+  const clearSearch = () => {
+    setSearch('')
+    resetScroll()
+  }
 
   const handleConfirm = () => {
     onConfirm([...selectedIds], selectedItems)
@@ -323,7 +345,10 @@ function SelectionModalInner<T>({
             <Input
               placeholder="Search..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                resetScroll()
+              }}
               className="h-10 pr-16 text-sm"
               autoFocus
             />
@@ -353,48 +378,51 @@ function SelectionModalInner<T>({
             {sidebar}
           </div>
         )}
-        <ScrollArea className="flex-1 overflow-hidden">
-          <div className="p-3 space-y-2">
-            {filteredItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-16">
-                No results match your filters.
-              </p>
-            ) : (
-              visibleItems.map((item) => {
+        <div ref={scrollParentRef} className="min-w-0 flex-1 overflow-y-auto">
+          {filteredItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-16">
+              No results match your filters.
+            </p>
+          ) : (
+            <div
+              className="relative w-full"
+              style={{ height: rowVirtualizer.getTotalSize() }}
+              data-selection-list-size={filteredItems.length}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const item = filteredItems[virtualRow.index]
                 const id = getItemId(item)
                 const isSelected = selectedIds.has(id)
                 const canSel = isSelected || checkCanSelect(item) || swapOnLimit
                 return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => toggleItem(item)}
-                    disabled={!isSelected && !canSel}
-                    className={cn(
-                      'w-full text-left rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                      isSelected
-                        ? 'border-accent bg-accent/10'
-                        : canSel
-                          ? 'border-border hover:border-accent/50 hover:bg-accent/5'
-                          : 'border-border opacity-40 cursor-not-allowed',
-                    )}
+                  <div
+                    key={virtualRow.key}
+                    ref={rowVirtualizer.measureElement}
+                    data-index={virtualRow.index}
+                    className="absolute top-0 left-0 w-full px-3 py-1"
+                    style={{ transform: `translateY(${virtualRow.start}px)` }}
                   >
-                    {renderCard(item, isSelected, canSel)}
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleItem(item)}
+                      disabled={!isSelected && !canSel}
+                      className={cn(
+                        'w-full text-left rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        isSelected
+                          ? 'border-accent bg-accent/10'
+                          : canSel
+                            ? 'border-border hover:border-accent/50 hover:bg-accent/5'
+                            : 'border-border opacity-40 cursor-not-allowed',
+                      )}
+                    >
+                      {renderCard(item, isSelected, canSel)}
+                    </button>
+                  </div>
                 )
-              })
-            )}
-            {hiddenCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setRenderLimit((c) => c + BATCH)}
-                className="w-full py-2.5 text-sm text-muted-foreground hover:text-foreground text-center border border-dashed border-border hover:border-accent/40 rounded-lg transition-colors"
-              >
-                {hiddenCount} more — load next {Math.min(BATCH, hiddenCount)}
-              </button>
-            )}
-          </div>
-        </ScrollArea>
+              })}
+            </div>
+          )}
+        </div>
       </div>
       <div className="flex-shrink-0 border-t border-border px-5 py-3 flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">

@@ -1,9 +1,10 @@
 import { MagicWand, X } from '@phosphor-icons/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { buildSpellSelectionSourceMap } from '@/lib/calculations/spellProfiles.attribution'
@@ -29,12 +30,6 @@ import { NoCharCard } from '../_shared'
 
 const SPELLS_PREPARE_SELECTOR = '[data-spell-prepare-toggle="true"]'
 const SPELLS_HINT_WIDTH = 300
-
-interface HintPosition {
-  top: number
-  left: number
-  arrowLeft: number
-}
 
 export function SpellsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -255,41 +250,16 @@ export function SpellsPage() {
   const [showPreparedHint, setShowPreparedHint] = useState(
     () => !isHintDismissed('spells-prepared-caster'),
   )
-  const [hintPosition, setHintPosition] = useState<HintPosition | null>(null)
+  const hintPosition = useAnchoredHintPosition({
+    enabled: showPreparedHint && hasTruePreparedCaster,
+    selector: SPELLS_PREPARE_SELECTOR,
+    width: SPELLS_HINT_WIDTH,
+  })
 
   const handleDismissPreparedHint = () => {
     setShowPreparedHint(false)
     setHintDismissed('spells-prepared-caster', true)
   }
-
-  useEffect(() => {
-    if (!showPreparedHint || !hasTruePreparedCaster) {
-      setHintPosition(null)
-      return
-    }
-
-    const update = () => {
-      const btn = document.querySelector<HTMLElement>(SPELLS_PREPARE_SELECTOR)
-      if (!btn) {
-        setHintPosition(null)
-        return
-      }
-      const rect = btn.getBoundingClientRect()
-      const centerX = rect.left + rect.width / 2
-      const maxLeft = Math.max(16, window.innerWidth - SPELLS_HINT_WIDTH - 16)
-      const left = Math.min(Math.max(centerX - SPELLS_HINT_WIDTH / 2, 16), maxLeft)
-      const arrowLeft = Math.min(Math.max(centerX - left, 18), SPELLS_HINT_WIDTH - 18)
-      setHintPosition({ top: rect.bottom + 12, left, arrowLeft })
-    }
-
-    update()
-    window.addEventListener('resize', update)
-    window.addEventListener('scroll', update, true)
-    return () => {
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', update, true)
-    }
-  }, [showPreparedHint, hasTruePreparedCaster])
 
   const racialProfiles = useMemo(
     () => spellProfiles.filter((p) => p.type === 'racial'),
@@ -490,7 +460,7 @@ export function SpellsPage() {
 
   return (
     <div>
-      <div className="px-6 py-5 page-header-band mb-6">
+      <div className="px-6 py-5 page-header-band">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <MagicWand className="h-6 w-6 text-primary" weight="duotone" />
