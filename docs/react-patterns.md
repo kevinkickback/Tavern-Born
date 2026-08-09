@@ -54,6 +54,12 @@ const [steps, setSteps] = useState<Step[]>(() => deriveSteps(feat))
 
 ---
 
+## Large Selection Lists
+
+`SelectionModal` virtualizes its complete filtered result set with `@tanstack/react-virtual`. Keep search, filters, and virtualizer state local to the modal, use stable item IDs for virtual row keys, and keep the canonical item arrays in `gameDataStore`. Do not replace the complete virtual range with incremental batches: the scrollbar and any result must remain available immediately.
+
+---
+
 ## Ref-Based Dep Narrowing for Trigger-Only Effects
 
 When a `useEffect` should run only when a specific trigger changes (e.g. "when the selected race key changes"), but needs access to current values of other variables, use refs to read the current values without adding them to the dep array.

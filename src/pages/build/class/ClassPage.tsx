@@ -1,5 +1,5 @@
 import { Sword, X } from '@phosphor-icons/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { Card } from '@/components/ui/card'
 import { SplitPane } from '@/components/ui/SplitPane'
@@ -9,6 +9,7 @@ import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanc
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup, useOptionalFeatureLookup, useSubclass } from '@/hooks/data/useGameData'
+import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import type { OptionalFeatureLike } from '@/lib/5etools/classData'
 import {
   getClassFeatureGroups,
@@ -60,12 +61,6 @@ interface SubclassOption {
 const CLASS_LEVEL_UP_HINT_ID = 'class-level-up-banner'
 const LEVEL_UP_BUTTON_SELECTOR = '[data-level-up-button="true"]'
 const LEVEL_UP_HINT_WIDTH = 320
-
-interface HintPosition {
-  top: number
-  left: number
-  arrowLeft: number
-}
 
 export function BuildClassPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -418,45 +413,17 @@ export function BuildClassPage() {
   const [showLevelUpHint, setShowLevelUpHint] = useState(
     () => !isHintDismissed(CLASS_LEVEL_UP_HINT_ID),
   )
-  const [hintPosition, setHintPosition] = useState<HintPosition | null>(null)
+  const hintPosition = useAnchoredHintPosition({
+    enabled: showLevelUpHint,
+    selector: LEVEL_UP_BUTTON_SELECTOR,
+    width: LEVEL_UP_HINT_WIDTH,
+    horizontalAlign: 'end',
+  })
 
   const handleDismissLevelUpHint = () => {
     setShowLevelUpHint(false)
     setHintDismissed(CLASS_LEVEL_UP_HINT_ID, true)
   }
-
-  useEffect(() => {
-    if (!showLevelUpHint) {
-      setHintPosition(null)
-      return
-    }
-
-    const updateHintPosition = () => {
-      const levelUpButton = document.querySelector<HTMLElement>(LEVEL_UP_BUTTON_SELECTOR)
-      if (!levelUpButton) {
-        setHintPosition(null)
-        return
-      }
-
-      const rect = levelUpButton.getBoundingClientRect()
-      const maxLeft = Math.max(16, window.innerWidth - LEVEL_UP_HINT_WIDTH - 16)
-      const left = Math.min(Math.max(rect.right - LEVEL_UP_HINT_WIDTH, 16), maxLeft)
-      const top = rect.bottom + 12
-      const centerX = rect.left + rect.width / 2
-      const arrowLeft = Math.min(Math.max(centerX - left, 18), LEVEL_UP_HINT_WIDTH - 18)
-
-      setHintPosition({ top, left, arrowLeft })
-    }
-
-    updateHintPosition()
-    window.addEventListener('resize', updateHintPosition)
-    window.addEventListener('scroll', updateHintPosition, true)
-
-    return () => {
-      window.removeEventListener('resize', updateHintPosition)
-      window.removeEventListener('scroll', updateHintPosition, true)
-    }
-  }, [showLevelUpHint])
 
   if (!character) {
     return <NoCharCard icon={<Sword weight="duotone" />} noun="configure your class" />
@@ -464,7 +431,7 @@ export function BuildClassPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 py-5 page-header-band mb-6">
+      <div className="px-6 py-5 page-header-band">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <Sword className="h-6 w-6 text-accent" weight="duotone" />

@@ -15,7 +15,7 @@ import {
   Trash,
   X,
 } from '@phosphor-icons/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +29,7 @@ import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
 import { useEquipmentProvenanceMutations } from '@/hooks/character/useEquipmentProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
+import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { ARMOR_TYPE_MAP } from '@/lib/calculations/armorClass'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
@@ -43,12 +44,6 @@ import { NoCharCard } from '../_shared'
 const EQUIPMENT_EQUIP_HINT_ID = 'equipment-equip-toggle'
 const EQUIP_AC_TOGGLE_SELECTOR = '[data-equip-ac-toggle="true"]'
 const EQUIP_HINT_WIDTH = 300
-interface HintPosition {
-  top: number
-  left: number
-  arrowLeft: number
-}
-
 type ItemCategory = 'All' | 'Weapons' | 'Armor' | 'Ammunition' | 'Gear' | 'Potions' | 'Scrolls'
 
 const FILTER_CHIPS: ItemCategory[] = [
@@ -142,13 +137,6 @@ export function EquipmentPage() {
   const [showEquipHint, setShowEquipHint] = useState(
     () => !isHintDismissed(EQUIPMENT_EQUIP_HINT_ID),
   )
-  const [hintPosition, setHintPosition] = useState<HintPosition | null>(null)
-
-  const handleDismissEquipHint = () => {
-    setShowEquipHint(false)
-    setHintDismissed(EQUIPMENT_EQUIP_HINT_ID, true)
-  }
-
   const {
     equipment,
     totalWeight,
@@ -165,34 +153,16 @@ export function EquipmentPage() {
     updateCurrency,
   } = useEquipment()
 
-  useEffect(() => {
-    if (!showEquipHint || equipment.length === 0) {
-      setHintPosition(null)
-      return
-    }
+  const hintPosition = useAnchoredHintPosition({
+    enabled: showEquipHint && equipment.length > 0,
+    selector: EQUIP_AC_TOGGLE_SELECTOR,
+    width: EQUIP_HINT_WIDTH,
+  })
 
-    const update = () => {
-      const toggle = document.querySelector<HTMLElement>(EQUIP_AC_TOGGLE_SELECTOR)
-      if (!toggle) {
-        setHintPosition(null)
-        return
-      }
-      const rect = toggle.getBoundingClientRect()
-      const centerX = rect.left + rect.width / 2
-      const maxLeft = Math.max(16, window.innerWidth - EQUIP_HINT_WIDTH - 16)
-      const left = Math.min(Math.max(centerX - EQUIP_HINT_WIDTH / 2, 16), maxLeft)
-      const arrowLeft = Math.min(Math.max(centerX - left, 18), EQUIP_HINT_WIDTH - 18)
-      setHintPosition({ top: rect.bottom + 12, left, arrowLeft })
-    }
-
-    update()
-    window.addEventListener('resize', update)
-    window.addEventListener('scroll', update, true)
-    return () => {
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', update, true)
-    }
-  }, [showEquipHint, equipment])
+  const handleDismissEquipHint = () => {
+    setShowEquipHint(false)
+    setHintDismissed(EQUIPMENT_EQUIP_HINT_ID, true)
+  }
 
   const [itemSearch, setItemSearch] = useState('')
   const [itemTypeFilter, setItemTypeFilter] = useState<ItemCategory>('All')
@@ -287,7 +257,7 @@ export function EquipmentPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header band */}
-      <div className="px-6 py-2 lg:py-5 page-header-band mb-2 lg:mb-6 shrink-0">
+      <div className="px-6 py-2 lg:py-5 page-header-band mb-2 shrink-0">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <Backpack className="h-6 w-6 text-primary" weight="duotone" />

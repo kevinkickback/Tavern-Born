@@ -77,6 +77,9 @@ describe('gameDataStore', () => {
       loadProgress: null,
       error: null,
       lastLoadedAt: null,
+      lastDataChangedAt: null,
+      lastContentFingerprint: null,
+      lastUpdateCheckAt: null,
       cacheStatus: 'unknown',
       hasHydrated: false,
     })
@@ -89,7 +92,7 @@ describe('gameDataStore', () => {
       return Promise.resolve(data)
     })
 
-    await useGameDataStore.getState().loadGameData(config)
+    const contentChanged = await useGameDataStore.getState().loadGameData(config)
 
     const state = useGameDataStore.getState()
     expect(loadDataFromSourceMock).toHaveBeenCalledWith(
@@ -106,6 +109,27 @@ describe('gameDataStore', () => {
     expect(state.cacheStatus).toBe('fetched')
     expect(state.isLoading).toBe(false)
     expect(state.error).toBeNull()
+    expect(contentChanged).toBe(true)
+  })
+
+  test('loadGameData reports unchanged content without replacing in-memory data', async () => {
+    const data = makeGameDataFixture()
+    const lastDataChangedAt = '2026-01-01T00:00:00.000Z'
+    loadDataFromSourceMock.mockResolvedValue(data)
+    writeGameDataCacheMock.mockResolvedValueOnce({
+      lastDataChangedAt,
+      contentFingerprint: 'abc123ef',
+    })
+    useGameDataStore.setState({
+      gameData: data,
+      lastDataChangedAt,
+      lastContentFingerprint: 'abc123ef',
+    })
+
+    const contentChanged = await useGameDataStore.getState().loadGameData(config, true)
+
+    expect(contentChanged).toBe(false)
+    expect(useGameDataStore.getState().gameData).toBe(data)
   })
 
   test('loadGameData background success toggles background flag', async () => {
@@ -117,6 +141,36 @@ describe('gameDataStore', () => {
     expect(state.isBackgroundRefreshing).toBe(false)
     expect(state.isLoading).toBe(false)
     expect(state.loadProgress).toBeNull()
+  })
+
+  test('background refresh rejects partial data before updating cache or timestamps', async () => {
+    const existing = makeGameDataFixture()
+    existing.classes = [{ name: 'Wizard', source: 'PHB' }] as unknown as GameData['classes']
+    const lastDataChangedAt = '2026-01-01T00:00:00.000Z'
+    const lastUpdateCheckAt = '2026-01-02T00:00:00.000Z'
+    useGameDataStore.setState({
+      gameData: existing,
+      dataSourceConfig: config,
+      lastDataChangedAt,
+      lastUpdateCheckAt,
+      cacheStatus: 'fresh',
+    })
+    loadDataFromSourceMock.mockImplementation((_config, options) => {
+      options?.onResourceFailure?.('spells/spells-phb.json')
+      return Promise.resolve(makeGameDataFixture())
+    })
+
+    const contentChanged = await useGameDataStore.getState().loadGameData(config, true)
+
+    const state = useGameDataStore.getState()
+    expect(contentChanged).toBe(false)
+    expect(state.gameData).toBe(existing)
+    expect(state.lastDataChangedAt).toBe(lastDataChangedAt)
+    expect(state.lastUpdateCheckAt).toBe(lastUpdateCheckAt)
+    expect(state.error).toBe(
+      'Background refresh incomplete (1 resource failed); keeping existing cache',
+    )
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
   })
 
   test('background refresh keeps existing data when loader returns empty payload', async () => {

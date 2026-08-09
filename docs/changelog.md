@@ -62,3 +62,20 @@ As this is the initial public release, bugs and incomplete features are expected
 * PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development.
 
 </details>
+
+<details>
+<summary><strong>v0.1.6</strong></summary>
+
+## ✨ Changes
+
+* Minor app visual redesign (header/sidebar)
+* Details > Exhaustion condition: now displays the effect of the selected level + previous levels if applicable
+* When the element that a tooltip hint is anchored to becomes covered/hidden, the tooltip will also be hidden
+* Reduced lag/stuttering when opening a selection modal with large lists (equipment selection, spell selection, etc)
+* Added toast notification when game data files have been updated via auto update/refresh
+
+## ⚠️ Known Issues
+
+* PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development.
+
+</details>

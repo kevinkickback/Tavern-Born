@@ -60,6 +60,11 @@ const EXHAUSTION_LABELS = [
   'Death',
 ] as const
 
+export function getActiveExhaustionEffects(level: number) {
+  const clampedLevel = Math.max(0, Math.min(6, level))
+  return EXHAUSTION_LABELS.slice(1, clampedLevel + 1)
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────
 
 function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
@@ -132,6 +137,7 @@ export function ConditionsPage() {
   const deathSaves = character.deathSaves ?? { successes: 0, failures: 0 }
   const conditions = character.conditions ?? []
   const exhaustion = character.exhaustion ?? 0
+  const activeExhaustionEffects = getActiveExhaustionEffects(exhaustion)
   const hitDiceUsed = character.hitDiceUsed ?? 0
   const totalLevel = getTotalCharacterLevel(character) ?? 1
   const hitDiceRemaining = Math.max(0, totalLevel - hitDiceUsed)
@@ -155,7 +161,7 @@ export function ConditionsPage() {
 
   return (
     <div>
-      <div className="px-6 py-5 page-header-band mb-6">
+      <div className="px-6 py-5 page-header-band">
         <div className="max-w-7xl mx-auto flex items-center gap-3">
           <Lightning className="h-6 w-6 text-primary" weight="duotone" />
           <div>
@@ -275,7 +281,7 @@ export function ConditionsPage() {
           <Card className="w-full overflow-hidden">
             <SectionHeader icon={<Wind weight="duotone" />} title="Exhaustion" />
             <div className="p-4 space-y-3">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {[0, 1, 2, 3, 4, 5, 6].map((level) => (
                   <button
                     key={level}
@@ -297,16 +303,24 @@ export function ConditionsPage() {
                     {level}
                   </button>
                 ))}
-                {exhaustion > 0 && (
-                  <Badge
-                    variant={exhaustion >= 6 ? 'destructive' : 'secondary'}
-                    className="ml-2 text-xs"
-                  >
-                    {EXHAUSTION_LABELS[exhaustion]}
-                  </Badge>
-                )}
               </div>
-              {exhaustion === 0 && (
+              {activeExhaustionEffects.length > 0 ? (
+                <ul className="flex flex-wrap gap-1.5" aria-label="Active exhaustion effects">
+                  {activeExhaustionEffects.map((effect, index) => {
+                    const level = index + 1
+                    return (
+                      <li key={effect}>
+                        <Badge
+                          variant={level >= 6 ? 'destructive' : 'secondary'}
+                          className="text-xs"
+                        >
+                          Level {level}: {effect}
+                        </Badge>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : (
                 <p className="text-xs text-muted-foreground">{EXHAUSTION_LABELS[0]}</p>
               )}
             </div>

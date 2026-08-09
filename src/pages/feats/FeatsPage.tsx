@@ -10,7 +10,7 @@ import {
   WarningCircle,
   X,
 } from '@phosphor-icons/react'
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import {
@@ -30,6 +30,7 @@ import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceM
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
+import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
@@ -50,12 +51,6 @@ import { NoCharCard } from '../_shared'
 const FEATS_SETUP_HINT_ID = 'feats-complete-setup'
 const FEATS_SETUP_BTN_SELECTOR = '[data-feat-setup-btn="true"]'
 const FEATS_HINT_WIDTH = 300
-
-interface HintPosition {
-  top: number
-  left: number
-  arrowLeft: number
-}
 
 const EMPTY_STRINGS: string[] = []
 
@@ -554,41 +549,16 @@ export function FeatsPage() {
   const proficientSkillNames = character?.proficiencies?.skills ?? EMPTY_STRINGS
 
   const [showSetupHint, setShowSetupHint] = useState(() => !isHintDismissed(FEATS_SETUP_HINT_ID))
-  const [hintPosition, setHintPosition] = useState<HintPosition | null>(null)
+  const hintPosition = useAnchoredHintPosition({
+    enabled: showSetupHint && pendingOptionFeatNames.size > 0,
+    selector: FEATS_SETUP_BTN_SELECTOR,
+    width: FEATS_HINT_WIDTH,
+  })
 
   const handleDismissSetupHint = () => {
     setShowSetupHint(false)
     setHintDismissed(FEATS_SETUP_HINT_ID, true)
   }
-
-  useEffect(() => {
-    if (!showSetupHint || pendingOptionFeatNames.size === 0) {
-      setHintPosition(null)
-      return
-    }
-
-    const update = () => {
-      const btn = document.querySelector<HTMLElement>(FEATS_SETUP_BTN_SELECTOR)
-      if (!btn) {
-        setHintPosition(null)
-        return
-      }
-      const rect = btn.getBoundingClientRect()
-      const centerX = rect.left + rect.width / 2
-      const maxLeft = Math.max(16, window.innerWidth - FEATS_HINT_WIDTH - 16)
-      const left = Math.min(Math.max(centerX - FEATS_HINT_WIDTH / 2, 16), maxLeft)
-      const arrowLeft = Math.min(Math.max(centerX - left, 18), FEATS_HINT_WIDTH - 18)
-      setHintPosition({ top: rect.bottom + 12, left, arrowLeft })
-    }
-
-    update()
-    window.addEventListener('resize', update)
-    window.addEventListener('scroll', update, true)
-    return () => {
-      window.removeEventListener('resize', update)
-      window.removeEventListener('scroll', update, true)
-    }
-  }, [showSetupHint, pendingOptionFeatNames])
 
   if (!character) {
     return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />
@@ -602,7 +572,7 @@ export function FeatsPage() {
     pendingOptionCount > 0
   return (
     <div>
-      <div className="px-6 py-5 page-header-band mb-6">
+      <div className="px-6 py-5 page-header-band">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3">
             <Star className="h-6 w-6 text-primary" weight="duotone" />

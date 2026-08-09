@@ -49,6 +49,7 @@ Core modules:
 
 4. Lookup construction
 - lookups creates composite-key maps (name|source) for fast, collision-safe access.
+- Source metadata is sorted by a total, deterministic order so parallel resource completion cannot cause cache fingerprint churn.
 
 5. Caching and freshness
 - Parsed data plus source snapshot are cached in IndexedDB.
@@ -155,4 +156,5 @@ When a user selects spells for a multiclass character:
 - Lookup map usage should be preferred for exact entity fetches.
 - Keep parser output serializable and stable to reduce cache churn.
 - Background refresh is designed to reduce startup latency while keeping data fresh.
+- Background refresh reports dropped resources to the store so partial ingestion results are never committed over a complete cache.
 - Progress callbacks are completion-based during ingestion: each completed resource increments progress, regardless of completion order.

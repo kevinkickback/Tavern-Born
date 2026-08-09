@@ -191,7 +191,7 @@
   .bg-texture {
     background-image: radial-gradient(
       circle,
-      color-mix(in oklch, var(--foreground) 7%, transparent) 1px,
+      color-mix(in oklch, var(--foreground) 11%, transparent) 1px,
       transparent 1px
     );
     background-size: 20px 20px;
@@ -200,7 +200,7 @@
   .dark .bg-texture {
     background-image: radial-gradient(
       circle,
-      color-mix(in oklch, var(--foreground) 3%, transparent) 1px,
+      color-mix(in oklch, var(--foreground) 6%, transparent) 1px,
       transparent 1px
     );
   }
