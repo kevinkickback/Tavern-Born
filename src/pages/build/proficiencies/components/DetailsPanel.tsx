@@ -1,10 +1,10 @@
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
-import { InfoTile } from '@/pages/_shared'
 import { formatWeaponCategoryLabel } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -140,6 +140,17 @@ function DetailRow({
   )
 }
 
+function DetailMetric({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="border-l-2 border-primary/50 py-1 pl-3">
+      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      {children}
+    </div>
+  )
+}
+
 // ── Category detail panels ────────────────────────────────────────────────────
 
 function ArmorDetails({ item }: { item: Item5e }) {
@@ -156,7 +167,7 @@ function ArmorDetails({ item }: { item: Item5e }) {
         {mastery && <Badge variant="outline">Mastery: {mastery}</Badge>}
       </div>
 
-      <div className="bg-card/60 border border-border/60 rounded-lg p-3 space-y-2">
+      <div className="space-y-2 border-y border-border/70 py-3">
         <DetailRow label="Armor Class" value={item.ac != null ? `${item.ac}` : null} />
         <DetailRow label="Str. Requirement" value={item.strength ? `${item.strength}` : 'None'} />
         <DetailRow label="Stealth" value={item.stealth ? 'Disadvantage' : 'Normal'} />
@@ -194,7 +205,7 @@ function WeaponDetails({ item }: { item: Item5e }) {
         {mastery && <Badge variant="outline">Mastery: {mastery}</Badge>}
       </div>
 
-      <div className="bg-card/60 border border-border/60 rounded-lg p-3 space-y-2">
+      <div className="space-y-2 border-y border-border/70 py-3">
         <DetailRow label="Type" value={weaponType} />
         <DetailRow label="Damage" value={primaryDmg} />
         {versatileDmg && <DetailRow label="Versatile" value={versatileDmg} />}
@@ -224,7 +235,7 @@ function ToolDetails({ item }: { item: Item5e }) {
         {edition && <Badge variant="outline">{edition} Edition</Badge>}
       </div>
 
-      <div className="bg-card/60 border border-border/60 rounded-lg p-3 space-y-2">
+      <div className="space-y-2 border-y border-border/70 py-3">
         <DetailRow label="Category" value={toolType} />
         <DetailRow label="Weight" value={formatWeight(item.weight)} />
         <DetailRow label="Cost" value={formatItemCost(item.value)} />
@@ -258,7 +269,7 @@ function LanguageDetails({ lang }: { lang: Language5e }) {
         {is2024 && <Badge variant="outline">2024 Edition</Badge>}
       </div>
 
-      <div className="bg-card/60 border border-border/60 rounded-lg p-3 space-y-2">
+      <div className="space-y-2 border-y border-border/70 py-3">
         <DetailRow label={is2024 ? 'Origin' : 'Typical Speakers'} value={speakers} />
         <DetailRow label="Script" value={script} />
         {dialects && <DetailRow label="Dialects" value={dialects} />}
@@ -331,7 +342,7 @@ function ArmorCategoryDetails({ categoryKey }: { categoryKey: string }) {
         <Badge variant="secondary">{info.label}</Badge>
         <Badge variant="outline">Category</Badge>
       </div>
-      <div className="bg-card/60 border border-border/60 rounded-lg p-3 space-y-2">
+      <div className="space-y-2 border-y border-border/70 py-3">
         <DetailRow label="AC Calculation" value={info.acNote} />
         <DetailRow label="Examples" value={info.examples} />
       </div>
@@ -341,7 +352,7 @@ function ArmorCategoryDetails({ categoryKey }: { categoryKey: string }) {
 
 function WeaponList({ title, names }: { title: string | null; names: string[] }) {
   return (
-    <div className="bg-card/60 border border-border/60 rounded-lg p-3 space-y-1.5">
+    <div className="space-y-1.5 border-y border-border/70 py-3">
       {title && (
         <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
       )}
@@ -527,22 +538,9 @@ export function BuildProficienciesDetailsPanel({
 }: BuildProficienciesDetailsPanelProps) {
   return (
     <>
-      <div className="bg-gradient-to-r from-accent/30 via-accent/15 to-transparent px-4 py-3 flex-shrink-0 flex flex-col gap-2">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Details
-        </span>
-        <div className="flex items-center gap-2 min-h-8">
-          {focused ? (
-            <span className="text-sm font-bold font-display leading-tight capitalize">
-              {'name' in focused ? focused.name : focused.ability}
-            </span>
-          ) : (
-            <span className="text-sm text-muted-foreground">Select a proficiency…</span>
-          )}
-        </div>
-      </div>
+      <WorkspacePaneHeader title="Proficiency details" className="pr-20" />
       <ScrollArea className="flex-1 overflow-hidden">
-        <div className="p-4">
+        <WorkspaceDetailContent>
           {!focused ? (
             <div className="flex items-center justify-center h-32 text-muted-foreground text-sm text-center">
               Click any proficiency to view details
@@ -555,10 +553,10 @@ export function BuildProficienciesDetailsPanel({
               </div>
               <Separator />
               <div className="grid grid-cols-3 gap-3">
-                <InfoTile title="Modifier">
+                <DetailMetric label="Modifier">
                   <span className="text-xl font-bold font-mono">{focused.modifierString}</span>
-                </InfoTile>
-                <InfoTile title="Proficient">
+                </DetailMetric>
+                <DetailMetric label="Proficient">
                   <span
                     className={cn(
                       'text-sm font-medium',
@@ -567,8 +565,8 @@ export function BuildProficienciesDetailsPanel({
                   >
                     {focused.proficient ? 'Yes' : 'No'}
                   </span>
-                </InfoTile>
-                <InfoTile title="Expertise">
+                </DetailMetric>
+                <DetailMetric label="Expertise">
                   <span
                     className={cn(
                       'text-sm font-medium',
@@ -577,7 +575,7 @@ export function BuildProficienciesDetailsPanel({
                   >
                     {focused.expertise ? 'Yes' : 'No'}
                   </span>
-                </InfoTile>
+                </DetailMetric>
               </div>
               {skillDescriptions[focused.name.toLowerCase()]?.length > 0 && (
                 <div>
@@ -606,10 +604,10 @@ export function BuildProficienciesDetailsPanel({
               </div>
               <Separator />
               <div className="grid grid-cols-2 gap-3">
-                <InfoTile title="Modifier">
+                <DetailMetric label="Modifier">
                   <span className="text-xl font-bold font-mono">{focused.modifierString}</span>
-                </InfoTile>
-                <InfoTile title="Proficient">
+                </DetailMetric>
+                <DetailMetric label="Proficient">
                   <span
                     className={cn(
                       'text-sm font-medium',
@@ -618,13 +616,13 @@ export function BuildProficienciesDetailsPanel({
                   >
                     {focused.proficient ? 'Yes' : 'No'}
                   </span>
-                </InfoTile>
+                </DetailMetric>
               </div>
             </div>
           ) : (
             <ItemDetails focused={focused} weaponItemsBase={weaponItemsBase} />
           )}
-        </div>
+        </WorkspaceDetailContent>
       </ScrollArea>
     </>
   )

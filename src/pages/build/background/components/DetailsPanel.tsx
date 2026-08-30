@@ -2,6 +2,7 @@ import { Barbell, Brain, Star, Translate, Wrench } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
 import {
   formatEquipmentOptionEntries,
   type ResolvedEquipmentBlock,
@@ -75,10 +76,10 @@ function EquipmentSection({
 
   return (
     <div>
-      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 border-l-2 border-accent pl-2">
+      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Starting Equipment
       </h4>
-      <div className="rounded-xl border border-border shadow-sm overflow-hidden">
+      <div className="border-y border-border">
         {allItems.map((item, i) => (
           <div
             // biome-ignore lint/suspicious/noArrayIndexKey: stable positional list
@@ -97,21 +98,27 @@ function EquipmentSection({
   )
 }
 
-function StatTile({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+function StatTile({
+  icon,
+  label,
+  value,
+  className,
+}: {
+  icon: ReactNode
+  label: string
+  value: string
+  className?: string
+}) {
   return (
-    <div className="border border-border shadow-sm rounded-xl">
-      <div className="flex items-center justify-between p-3.5">
-        <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary/60 shadow-md flex items-center justify-center flex-shrink-0">
-          {icon}
-        </div>
-        <div className="text-right min-w-0 ml-2">
-          <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-            {label}
-          </p>
-          <p className="text-xs font-bold mt-0.5 truncate" title={value}>
-            {value}
-          </p>
-        </div>
+    <div className={cn('flex min-h-16 items-center gap-3 px-3 py-2.5', className)}>
+      <div className="shrink-0 text-primary">{icon}</div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
+        <p className="mt-0.5 truncate text-sm font-semibold" title={value}>
+          {value}
+        </p>
       </div>
     </div>
   )
@@ -150,24 +157,27 @@ function BackgroundDetails2024({
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 border-y border-border">
         <StatTile
-          icon={<Brain className="h-5 w-5 text-white" weight="fill" />}
+          icon={<Brain className="size-4" weight="fill" />}
           label="Skills"
           value={skillNames.length > 0 ? skillNames.join(' · ') : '—'}
+          className="border-b border-r border-border"
         />
         <StatTile
-          icon={<Wrench className="h-5 w-5 text-white" weight="fill" />}
+          icon={<Wrench className="size-4" weight="fill" />}
           label="Tool Proficiency"
           value={toolNames.length > 0 ? toolNames.join(', ') : '—'}
+          className="border-b border-border"
         />
         <StatTile
-          icon={<Barbell className="h-5 w-5 text-white" weight="fill" />}
+          icon={<Barbell className="size-4" weight="fill" />}
           label="Ability Scores"
           value={asiDisplay}
+          className="border-r border-border"
         />
         <StatTile
-          icon={<Star className="h-5 w-5 text-white" weight="fill" />}
+          icon={<Star className="size-4" weight="fill" />}
           label="Origin Feat"
           value={featDisplay}
         />
@@ -177,15 +187,12 @@ function BackgroundDetails2024({
 
       {narrativeEntries.length > 0 && (
         <div>
-          <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 border-l-2 border-accent pl-2">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Features
           </h4>
-          <div className="space-y-3">
+          <div className="border-t border-border">
             {narrativeEntries.map((section, i) => (
-              <div
-                key={section.name ?? i}
-                className="border border-border/60 shadow-sm rounded-lg p-3"
-              >
+              <div key={section.name ?? i} className="border-b border-border py-3">
                 {section.name && <div className="font-semibold text-sm mb-1.5">{section.name}</div>}
                 {section.entries.map((entry, idx) => (
                   <div
@@ -222,12 +229,9 @@ function BackgroundDetails2014({
 
   return (
     <div className="space-y-5">
-      {/* Skills — full-width tile with badge list */}
-      <div className="border border-border shadow-sm rounded-xl">
-        <div className="p-3.5 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary to-primary/60 shadow-md flex items-center justify-center flex-shrink-0">
-            <Brain className="h-5 w-5 text-white" weight="fill" />
-          </div>
+      <div className="border-y border-border">
+        <div className="flex min-h-16 items-center gap-3 px-3 py-2.5">
+          <Brain className="size-4 shrink-0 text-primary" weight="fill" />
           <div className="min-w-0">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
               Skill Proficiencies
@@ -247,13 +251,10 @@ function BackgroundDetails2014({
         </div>
       </div>
 
-      {/* Languages + Tools — 2-col */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="border border-border shadow-sm rounded-xl p-3.5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-7 w-7 rounded-md bg-gradient-to-br from-primary to-primary/60 shadow flex items-center justify-center flex-shrink-0">
-              <Translate className="h-4 w-4 text-white" weight="fill" />
-            </div>
+      <div className="grid grid-cols-2 border-y border-border">
+        <div className="min-h-16 border-r border-border p-3">
+          <div className="mb-2 flex items-center gap-2">
+            <Translate className="size-4 shrink-0 text-primary" weight="fill" />
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
               Languages
             </p>
@@ -271,11 +272,9 @@ function BackgroundDetails2014({
           )}
         </div>
 
-        <div className="border border-border shadow-sm rounded-xl p-3.5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-7 w-7 rounded-md bg-gradient-to-br from-primary to-primary/60 shadow flex items-center justify-center flex-shrink-0">
-              <Wrench className="h-4 w-4 text-white" weight="fill" />
-            </div>
+        <div className="min-h-16 p-3">
+          <div className="mb-2 flex items-center gap-2">
+            <Wrench className="size-4 shrink-0 text-primary" weight="fill" />
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
               Tools
             </p>
@@ -298,15 +297,12 @@ function BackgroundDetails2014({
 
       {namedSections.length > 0 && (
         <div>
-          <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3 border-l-2 border-accent pl-2">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Features
           </h4>
-          <div className="space-y-3">
+          <div className="border-t border-border">
             {namedSections.map((section, i) => (
-              <div
-                key={section.name ?? i}
-                className="border border-border/60 shadow-sm rounded-lg p-3"
-              >
+              <div key={section.name ?? i} className="border-b border-border py-3">
                 {section.name && <div className="font-semibold text-sm mb-1.5">{section.name}</div>}
                 {section.entries.map((entry, idx) => (
                   <div
@@ -339,14 +335,11 @@ export function BuildBackgroundDetailsPanel({
 }: BuildBackgroundDetailsPanelProps) {
   return (
     <>
-      <div className="bg-gradient-to-r from-accent/10 to-transparent px-4 py-3 flex flex-col gap-2">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Details
-        </span>
-        <div className="flex items-center gap-2 min-h-8">
+      <WorkspacePaneHeader title="Background details" className="pr-20">
+        <div className="ml-auto flex min-w-0 items-center gap-2">
           {selectedBackground ? (
             <>
-              <span className="text-sm font-bold font-display leading-tight">
+              <span className="truncate text-sm font-semibold leading-tight">
                 {selectedBackground.name}
               </span>
               <Badge variant="outline" className="text-xs shrink-0">
@@ -357,9 +350,9 @@ export function BuildBackgroundDetailsPanel({
             <span className="text-sm text-muted-foreground">Select a background…</span>
           )}
         </div>
-      </div>
+      </WorkspacePaneHeader>
       <ScrollArea className="flex-1 overflow-hidden">
-        <div className="p-4">
+        <WorkspaceDetailContent>
           {selectedBackground ? (
             selectedBackground.edition === 'one' ? (
               <BackgroundDetails2024
@@ -389,7 +382,7 @@ export function BuildBackgroundDetailsPanel({
               Select a background to view details
             </div>
           )}
-        </div>
+        </WorkspaceDetailContent>
       </ScrollArea>
     </>
   )

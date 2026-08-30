@@ -1,11 +1,9 @@
 import { Book, Funnel, MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { SplitPane } from '@/components/ui/SplitPane'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -13,6 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  MasterDetail,
+  WorkspaceBody,
+  WorkspacePage,
+  WorkspacePaneHeader,
+  WorkspaceToolbar,
+} from '@/components/workspace'
 import {
   buildCompendiumEntries,
   type CompendiumEntry,
@@ -22,6 +27,7 @@ import { renderEntry } from '@/lib/renderer'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
@@ -54,10 +60,9 @@ export function CompendiumPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set())
   const [activeSources, setActiveSources] = useState<Set<string>>(new Set())
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const filtersOpen = useAppPreferencesStore((state) => state.compendiumFiltersOpen)
+  const setFiltersOpen = useAppPreferencesStore((state) => state.setCompendiumFiltersOpen)
   const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(null)
-  const [leftCollapsed, setLeftCollapsed] = useState(false)
-  const [detailCollapsed, setDetailCollapsed] = useState(false)
 
   const effectiveAllowedSources = useMemo(() => {
     if (!allowedSources) return undefined
@@ -67,8 +72,8 @@ export function CompendiumPage() {
 
   const sourceNameMap = useMemo(() => {
     const map = new Map<string, string>()
-    for (const s of gameData?.sources ?? []) {
-      map.set(s.abbreviation, s.name)
+    for (const source of gameData?.sources ?? []) {
+      map.set(source.abbreviation, source.name)
     }
     return map
   }, [gameData?.sources])
@@ -76,13 +81,13 @@ export function CompendiumPage() {
   const allEntries = useMemo(() => {
     const entries = buildCompendiumEntries(gameData)
     if (!effectiveAllowedSources || effectiveAllowedSources.length === 0) return entries
-    const sourcesSet = new Set(effectiveAllowedSources.map((s) => s.toUpperCase()))
-    return entries.filter((e) => sourcesSet.has(e.source.toUpperCase()))
+    const sourcesSet = new Set(effectiveAllowedSources.map((source) => source.toUpperCase()))
+    return entries.filter((entry) => sourcesSet.has(entry.source.toUpperCase()))
   }, [gameData, effectiveAllowedSources])
 
   const allSources = useMemo(
     () =>
-      Array.from(new Set(allEntries.map((e) => e.source))).sort((a, b) => {
+      Array.from(new Set(allEntries.map((entry) => entry.source))).sort((a, b) => {
         const nameA = sourceNameMap.get(a) ?? a
         const nameB = sourceNameMap.get(b) ?? b
         return nameA.localeCompare(nameB)
@@ -93,17 +98,19 @@ export function CompendiumPage() {
   const activeFilterCount = activeTypes.size + activeSources.size
 
   const toggleType = (type: string) => {
-    setActiveTypes((prev) => {
-      const next = new Set(prev)
-      next.has(type) ? next.delete(type) : next.add(type)
+    setActiveTypes((previous) => {
+      const next = new Set(previous)
+      if (next.has(type)) next.delete(type)
+      else next.add(type)
       return next
     })
   }
 
   const toggleSource = (source: string) => {
-    setActiveSources((prev) => {
-      const next = new Set(prev)
-      next.has(source) ? next.delete(source) : next.add(source)
+    setActiveSources((previous) => {
+      const next = new Set(previous)
+      if (next.has(source)) next.delete(source)
+      else next.add(source)
       return next
     })
   }
@@ -123,231 +130,227 @@ export function CompendiumPage() {
 
   if (!gameData) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>No Data Loaded</CardTitle>
-            <CardDescription>
-              Please configure and load a data source in Settings before using the Compendium.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <WorkspacePage>
+        <WorkspaceBody className="flex items-center justify-center p-8">
+          <div className="max-w-sm text-center">
+            <Book className="mx-auto size-10 text-muted-foreground" weight="duotone" />
+            <h2 className="mt-4 text-base font-semibold">No game data loaded</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Configure a game-data source before browsing the compendium.
+            </p>
+            <Button asChild size="sm" className="mt-4">
+              <Link to="/settings">Open Settings</Link>
+            </Button>
+          </div>
+        </WorkspaceBody>
+      </WorkspacePage>
     )
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="p-6 page-header-band">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <Book className="text-2xl text-primary" weight="duotone" />
-            <div>
-              <h1 className="text-2xl font-display font-bold">Compendium</h1>
-              <p className="text-sm text-muted-foreground">
-                Search and explore all loaded D&D 5e content
-              </p>
-            </div>
+    <WorkspacePage className="gap-3 p-3">
+      <div className="shrink-0 rounded-md border border-border bg-sidebar/30 px-3 py-2">
+        <WorkspaceToolbar className="h-9 gap-3 border-0 bg-transparent px-0">
+          <div className="relative min-w-0 flex-1">
+            <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-foreground/65" />
+            <Input
+              type="search"
+              aria-label="Search compendium"
+              placeholder="Search names, descriptions, traits, and sources"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="h-9 border-border bg-background pl-9 pr-24 text-sm shadow-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] tabular-nums text-muted-foreground">
+              {filteredEntries.length.toLocaleString()} results
+            </span>
           </div>
-
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search names, descriptions, traits, features, and sources..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-background"
-              />
-            </div>
+          <div className="shrink-0 border-l border-border pl-3">
             <Button
-              variant={filtersOpen || activeFilterCount > 0 ? 'default' : 'outline'}
-              onClick={() => setFiltersOpen((o) => !o)}
-              className="gap-2 shrink-0"
+              variant={filtersOpen || activeFilterCount > 0 ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-9 gap-1.5 px-3"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen(!filtersOpen)}
             >
-              <Funnel className="h-4 w-4" weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
+              <Funnel weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
               Filters
               {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] tabular-nums">
                   {activeFilterCount}
                 </Badge>
               )}
             </Button>
           </div>
+        </WorkspaceToolbar>
 
-          {filtersOpen && (
-            <div className="mt-3 pt-3 border-t border-border space-y-3">
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1 w-14 shrink-0">
-                  Type
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {ENTRY_TYPES.map((t) => (
+        {filtersOpen && (
+          <div className="mt-3 border-t border-border/70 pt-3">
+            <div className="flex items-start gap-3">
+              <span className="w-12 shrink-0 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Type
+              </span>
+              <div className="flex flex-1 flex-wrap gap-1">
+                {ENTRY_TYPES.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    aria-pressed={activeTypes.has(type)}
+                    onClick={() => toggleType(type)}
+                    className={cn(
+                      'h-6 rounded border px-2 text-[11px] transition-colors',
+                      activeTypes.has(type)
+                        ? 'border-primary/60 bg-primary/15 text-primary'
+                        : 'border-border bg-background/50 text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-2 flex items-start gap-3">
+              <span className="w-12 shrink-0 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Source
+              </span>
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+                <Select value="" onValueChange={(source) => source && toggleSource(source)}>
+                  <SelectTrigger className="h-7 w-48 bg-background text-xs shadow-none">
+                    <SelectValue placeholder="Add source filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allSources
+                      .filter((source) => !activeSources.has(source))
+                      .map((source) => (
+                        <SelectItem key={source} value={source} className="text-xs">
+                          {sourceNameMap.get(source) ?? source}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {Array.from(activeSources)
+                  .sort()
+                  .map((source) => (
                     <button
-                      key={t}
+                      key={source}
                       type="button"
-                      onClick={() => toggleType(t)}
-                      className={cn(
-                        'px-2.5 py-1 rounded-md text-xs font-medium border transition-colors',
-                        activeTypes.has(t)
-                          ? 'bg-accent text-accent-foreground border-accent'
-                          : 'bg-background text-foreground border-border hover:border-accent/60',
-                      )}
+                      onClick={() => toggleSource(source)}
+                      className="flex h-6 items-center gap-1 rounded border border-primary/60 bg-primary/15 px-2 text-[11px] text-primary"
                     >
-                      {t}
+                      {sourceNameMap.get(source) ?? source}
+                      <X className="size-2.5" />
                     </button>
                   ))}
-                </div>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="ml-1 h-6 text-[11px] text-muted-foreground hover:text-foreground"
+                  >
+                    Clear all
+                  </button>
+                )}
               </div>
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1 w-14 shrink-0">
-                  Source
-                </span>
-                <div className="flex-1 space-y-2">
-                  <Select value="" onValueChange={(s) => s && toggleSource(s)}>
-                    <SelectTrigger className="h-8 w-56 text-xs bg-background">
-                      <SelectValue placeholder="Add source filter…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allSources
-                        .filter((s) => !activeSources.has(s))
-                        .map((s) => (
-                          <SelectItem key={s} value={s} className="text-xs">
-                            {sourceNameMap.get(s) ?? s}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  {activeSources.size > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {Array.from(activeSources)
-                        .sort()
-                        .map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => toggleSource(s)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border bg-accent text-accent-foreground border-accent hover:bg-accent/80 transition-colors"
-                          >
-                            {sourceNameMap.get(s) ?? s} <X className="h-2.5 w-2.5" />
-                          </button>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              {activeFilterCount > 0 && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="h-3 w-3" /> Clear all filters
-                </button>
-              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 overflow-hidden">
-        <div className="max-w-7xl mx-auto h-full p-6">
-          {/* Single split-pane card — same pattern as fizbanes-forge Build pages.
-              Left pane: flex-1 (expands when right collapses).
-              Right pane: fixed width, collapses to 0 via CSS transition.
-              Toggle button: absolutely positioned top-right of the card body. */}
-          <Card className="h-full overflow-hidden flex flex-col">
-            <SplitPane
-              leftCollapsed={leftCollapsed}
-              rightCollapsed={detailCollapsed}
-              onLeftCollapsedChange={setLeftCollapsed}
-              onRightCollapsedChange={setDetailCollapsed}
-              rightWidth="w-[42%] min-w-[320px]"
-              left={
-                <>
-                  <div className="p-4 border-b border-border">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                        Results ({filteredEntries.length}
-                        {hasMore && ` — showing first ${MAX_DISPLAY}`})
-                      </span>
-                    </div>
+      <WorkspaceBody className="overflow-hidden rounded-lg border border-border bg-background">
+        <MasterDetail
+          masterWidth="clamp(21rem, 36vw, 28rem)"
+          masterClassName="border-r-2 border-border bg-sidebar/70"
+          detailClassName="bg-background"
+          master={
+            <div className="flex h-full min-h-0 flex-col">
+              <WorkspacePaneHeader
+                title="Results"
+                count={
+                  <>
+                    {filteredEntries.length.toLocaleString()}
+                    {hasMore && ` · first ${MAX_DISPLAY}`}
+                  </>
+                }
+              />
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                {filteredEntries.length === 0 ? (
+                  <div className="px-4 py-12 text-center text-sm text-muted-foreground">
+                    No entries found
                   </div>
-                  <div className="flex-1 overflow-y-auto overflow-x-hidden">
-                    <div className="p-4 space-y-2">
-                      {filteredEntries.length === 0 ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                          No entries found
-                        </div>
-                      ) : (
-                        displayedEntries.map((entry) => (
+                ) : (
+                  <ul>
+                    {displayedEntries.map((entry) => {
+                      const selected = selectedEntry === entry
+                      return (
+                        <li key={`${entry.type}-${entry.source}-${entry.name}`}>
                           <button
                             type="button"
-                            key={`${entry.type}-${entry.source}-${entry.name}`}
-                            onClick={() => {
-                              setSelectedEntry(entry)
-                              if (detailCollapsed) setDetailCollapsed(false)
-                            }}
+                            aria-pressed={selected}
+                            onClick={() => setSelectedEntry(entry)}
                             className={cn(
-                              'w-full text-left p-3 rounded-lg border transition-colors hover:border-accent',
-                              selectedEntry === entry
-                                ? 'border-accent bg-accent'
-                                : 'border-border bg-card',
+                              'relative flex w-full items-start gap-2 border-b border-border/70 px-3 py-2 text-left transition-colors',
+                              selected ? 'bg-secondary text-foreground' : 'hover:bg-secondary/45',
                             )}
                           >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0 overflow-hidden">
-                                <h3 className="font-semibold truncate">{entry.name}</h3>
-                                {entry.description && (
-                                  <p
-                                    className="text-sm text-muted-foreground line-clamp-1"
-                                    dangerouslySetInnerHTML={{
-                                      __html: renderEntry(entry.description),
-                                    }}
-                                  />
-                                )}
-                              </div>
-                              <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                <Badge variant="outline" className="text-xs">
-                                  {entry.type}
-                                </Badge>
-                                <Badge variant="secondary" className="text-xs">
-                                  {entry.source}
-                                </Badge>
-                              </div>
+                            {selected && (
+                              <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-r-full bg-primary" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <h3 className="truncate text-sm font-medium">{entry.name}</h3>
+                              {entry.description && (
+                                <p
+                                  className="mt-0.5 line-clamp-1 text-xs text-muted-foreground"
+                                  dangerouslySetInnerHTML={{
+                                    __html: renderEntry(entry.description),
+                                  }}
+                                />
+                              )}
+                            </div>
+                            <div className="flex shrink-0 flex-col items-end gap-0.5">
+                              <span className="text-[10px] font-medium text-muted-foreground">
+                                {entry.type}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground/70">
+                                {entry.source}
+                              </span>
                             </div>
                           </button>
-                        ))
-                      )}
-                    </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+          }
+          detail={
+            <div className="flex h-full min-h-0 flex-col">
+              <WorkspacePaneHeader title="Entry details">
+                {selectedEntry && (
+                  <div className="ml-auto flex min-w-0 items-center gap-2">
+                    <span className="truncate text-sm font-semibold">{selectedEntry.name}</span>
+                    <Badge variant="outline" className="shrink-0 text-xs">
+                      {selectedEntry.source}
+                    </Badge>
                   </div>
-                </>
-              }
-              right={
-                <>
-                  <div className="p-4 border-b border-border">
-                    <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                      Details
-                    </span>
+                )}
+              </WorkspacePaneHeader>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-6">
+                {selectedEntry ? (
+                  <div className="mx-auto max-w-3xl">
+                    <CompendiumEntryDetails selectedEntry={selectedEntry} />
                   </div>
-                  <ScrollArea className="flex-1 overflow-hidden">
-                    <div className="p-4">
-                      {selectedEntry ? (
-                        <CompendiumEntryDetails selectedEntry={selectedEntry} />
-                      ) : (
-                        <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-                          Select an entry to view details
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
-                </>
-              }
-            />
-          </Card>
-        </div>
-      </div>
-    </div>
+                ) : (
+                  <div className="flex h-full min-h-48 items-center justify-center text-sm text-muted-foreground">
+                    Select an entry to view its details
+                  </div>
+                )}
+              </div>
+            </div>
+          }
+        />
+      </WorkspaceBody>
+    </WorkspacePage>
   )
 }

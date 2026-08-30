@@ -3,40 +3,42 @@ import { Button } from '@/components/ui/button'
 import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
 import { cn } from '@/lib/utils'
 import type { Feat5e, Subclass5e } from '@/types/5etools'
-import type { AsiChoice, Character } from '@/types/character'
+import type { AsiChoice, Feat } from '@/types/character'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 
 interface BuildClassAsiSectionProps {
   level: number
   viewingClass: string
+  viewingClassSource?: string
   viewingSubclassData?: Subclass5e
   featuresByLevel: Map<number, ClassFeatureDisplay[]>
   appliedAsiChoicesForClass: AsiChoice[]
+  featForLevel?: Feat
   asiModeByLevel: Record<string, 'asi' | 'feat'>
   usedASI: number
   totalASIAcrossClasses: number
-  character: Character
   feats: Feat5e[]
   detailCollapsed: boolean
   onExpandDetails: () => void
   onSelectFeature: (feature: SelectedFeatureState) => void
   onAsiReset: (level: number) => void
   onOpenAsiPicker: (level: number) => void
-  onOpenFeatPicker: () => void
+  onOpenFeatPicker: (level: number) => void
   onSetAsiModeByLevel: (levelKey: string, mode: 'asi' | 'feat') => void
-  onClearFeatSelectionsForAsi: () => void
+  onClearFeatSelectionsForAsi: (level: number) => void
 }
 
 export function BuildClassAsiSection({
   level,
   viewingClass,
+  viewingClassSource,
   viewingSubclassData,
   featuresByLevel,
   appliedAsiChoicesForClass,
+  featForLevel,
   asiModeByLevel,
   usedASI,
   totalASIAcrossClasses,
-  character,
   feats,
   detailCollapsed,
   onExpandDetails,
@@ -48,10 +50,9 @@ export function BuildClassAsiSection({
   onClearFeatSelectionsForAsi,
 }: BuildClassAsiSectionProps) {
   const existingAsi = appliedAsiChoicesForClass.find((ac) => ac.level === level)
-  const levelKey = `${level}|${viewingClass}`
-  const mode = existingAsi ? 'asi' : (asiModeByLevel[levelKey] ?? 'feat')
-  const isApplied = !!existingAsi
-  const featsTaken = character.feats ?? []
+  const levelKey = `${level}|${viewingClass}|${viewingClassSource ?? ''}`
+  const mode = existingAsi ? 'asi' : featForLevel ? 'feat' : (asiModeByLevel[levelKey] ?? 'feat')
+  const isApplied = !!existingAsi || !!featForLevel
 
   return (
     <div
@@ -74,12 +75,14 @@ export function BuildClassAsiSection({
             </div>
             <div className="text-xs text-muted-foreground">
               {isApplied
-                ? Object.entries(existingAsi?.abilityChanges ?? {})
-                    .map(
-                      ([ability, bonus]) =>
-                        `+${bonus} ${ability.charAt(0).toUpperCase() + ability.slice(1)}`,
-                    )
-                    .join(', ')
+                ? existingAsi
+                  ? Object.entries(existingAsi.abilityChanges)
+                      .map(
+                        ([ability, bonus]) =>
+                          `+${bonus} ${ability.charAt(0).toUpperCase() + ability.slice(1)}`,
+                      )
+                      .join(', ')
+                  : featForLevel?.name
                 : mode === 'asi'
                   ? 'Select ability scores to increase'
                   : usedASI > 0
@@ -94,7 +97,7 @@ export function BuildClassAsiSection({
               variant="outline"
               size="sm"
               className="flex-shrink-0 h-7 text-xs"
-              onClick={() => onAsiReset(level)}
+              onClick={() => (existingAsi ? onAsiReset(level) : onOpenFeatPicker(level))}
             >
               Change
             </Button>
@@ -108,12 +111,12 @@ export function BuildClassAsiSection({
             </Button>
           ) : (
             <Button
-              variant={usedASI > 0 ? 'outline' : 'default'}
+              variant="default"
               size="sm"
               className="flex-shrink-0 h-7 text-xs"
-              onClick={onOpenFeatPicker}
+              onClick={() => onOpenFeatPicker(level)}
             >
-              {usedASI > 0 ? 'Edit Feats' : 'Choose Feat'}
+              Choose Feat
             </Button>
           )}
         </div>
@@ -124,7 +127,7 @@ export function BuildClassAsiSection({
           <label className="flex items-center gap-1.5 text-xs cursor-pointer">
             <input
               type="radio"
-              name={`asiChoice_${level}_${viewingClass}`}
+              name={`asiChoice_${level}_${viewingClass}_${viewingClassSource ?? ''}`}
               value="feat"
               checked={mode === 'feat'}
               onChange={() => onSetAsiModeByLevel(levelKey, 'feat')}
@@ -135,12 +138,12 @@ export function BuildClassAsiSection({
           <label className="flex items-center gap-1.5 text-xs cursor-pointer">
             <input
               type="radio"
-              name={`asiChoice_${level}_${viewingClass}`}
+              name={`asiChoice_${level}_${viewingClass}_${viewingClassSource ?? ''}`}
               value="asi"
               checked={mode === 'asi'}
               onChange={() => {
                 onSetAsiModeByLevel(levelKey, 'asi')
-                onClearFeatSelectionsForAsi()
+                onClearFeatSelectionsForAsi(level)
               }}
               className="accent-accent-9"
             />
@@ -149,7 +152,7 @@ export function BuildClassAsiSection({
         </div>
       )}
 
-      {isApplied &&
+      {existingAsi &&
         (() => {
           const asiFeature = (featuresByLevel.get(level) ?? []).find(
             (f) => f.name === 'Ability Score Improvement',
@@ -195,13 +198,15 @@ export function BuildClassAsiSection({
           )
         })()}
 
-      {!isApplied && mode === 'feat' && featsTaken.length > 0 && (
+      {!existingAsi && featForLevel && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-success/20 pt-2">
-          {featsTaken.map((feat) => {
-            const featData = feats.find((f) => f.name === feat.name)
+          {(() => {
+            const featData = feats.find(
+              (feat) => feat.name === featForLevel.name && feat.source === featForLevel.source,
+            )
             return (
               <button
-                key={feat.id}
+                key={featForLevel.id}
                 type="button"
                 onMouseEnter={() => {
                   if (!featData) return
@@ -223,10 +228,10 @@ export function BuildClassAsiSection({
                 }}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-success/30 bg-success/5 hover:border-success/50 hover:bg-success/15 text-foreground transition-colors"
               >
-                <span className="font-medium">{feat.name}</span>
+                <span className="font-medium">{featForLevel.name}</span>
               </button>
             )
-          })}
+          })()}
         </div>
       )}
     </div>

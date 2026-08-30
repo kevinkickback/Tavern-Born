@@ -5,7 +5,6 @@ import {
   CloudArrowDown,
   Database,
   FolderOpen,
-  Repeat,
   Trash,
   Warning,
   XCircle,
@@ -22,6 +21,7 @@ import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Section } from '@/components/workspace'
 import { validateDataSource } from '@/lib/5etools'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -274,16 +274,13 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="border-b border-border pb-4">
-          <div className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-primary" weight="duotone" />
-            <CardTitle className="text-base">Data Source Configuration</CardTitle>
-          </div>
-          <p className="text-sm text-muted-foreground">Configure where to load game data from</p>
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <div>
+      <Section
+        title="Data Source Configuration"
+        description="Configure where to load game data from."
+        className="pt-0"
+      >
+        <div className="space-y-6">
           {!selectorOnly && hasActiveDataSource && !isSelectingDataSource ? (
             <div className="relative space-y-3 bg-muted/50 p-4 rounded-lg">
               <Badge variant="default" className="gap-1 absolute top-3 right-3">
@@ -507,27 +504,19 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
               )}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
       {!selectorOnly && (
-        <Card>
-          <CardHeader className="border-b border-border pb-4">
-            <div className="flex items-center gap-2">
-              <Repeat className="h-4 w-4 text-primary" weight="duotone" />
-              <CardTitle className="text-base">Auto-refresh on Launch</CardTitle>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Automatically check for game data updates when the app starts.
-            </p>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-sm font-medium">Enable auto-refresh</p>
-              <Switch checked={autoRefreshGameData} onCheckedChange={setAutoRefreshGameData} />
-            </div>
-          </CardContent>
-        </Card>
+        <Section
+          title="Auto-refresh on Launch"
+          description="Automatically check for game data updates when the app starts."
+        >
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm font-medium">Enable auto-refresh</p>
+            <Switch checked={autoRefreshGameData} onCheckedChange={setAutoRefreshGameData} />
+          </div>
+        </Section>
       )}
 
       {isLoading && loadProgress && (

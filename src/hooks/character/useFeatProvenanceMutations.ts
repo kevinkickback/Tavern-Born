@@ -57,7 +57,15 @@ export function useFeatProvenanceMutations() {
   )
 
   const replaceFeatSelections = useCallback(
-    (selectedFeats: Array<{ name: string; source?: string }>) => {
+    (
+      selectedFeats: Array<{
+        name: string
+        source?: string
+        className?: string
+        classSource?: string
+        classLevel?: number
+      }>,
+    ) => {
       if (!character) return
       const oldNames = new Set((character.feats ?? []).map((feat) => feat.name))
       const newNames = new Set(selectedFeats.map((feat) => feat.name))
@@ -143,6 +151,9 @@ export function useFeatProvenanceMutations() {
             source: feat.source ?? '',
             description: existing?.description ?? '',
             options: existing?.options,
+            className: feat.className ?? existing?.className,
+            classSource: feat.classSource ?? existing?.classSource,
+            classLevel: feat.classLevel ?? existing?.classLevel,
           }
         }),
         provenance: newLedger,

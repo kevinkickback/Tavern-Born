@@ -341,7 +341,7 @@ export function installUpdate(): void {
   if (!app.isPackaged) {
     return
   }
-  autoUpdater.quitAndInstall(false, true)
+  autoUpdater.quitAndInstall(true, true)
 }
 
 export function getUpdateStatus(): UpdateStatus {

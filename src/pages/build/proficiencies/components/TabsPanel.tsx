@@ -1,15 +1,18 @@
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import {
+  ArrowCounterClockwise,
   Brain,
   Check,
   GlobeHemisphereWest,
+  LockSimple,
+  Plus,
   Shield,
   ShieldCheck,
   Sword,
   Wrench,
   X,
 } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import {
   Select,
   SelectContent,
@@ -35,16 +38,20 @@ import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 const EXPERTISE_HINT_SELECTOR = '[data-expertise-hint="true"]'
 const EXPERTISE_HINT_WIDTH = 280
 
-type TabValue = 'skills' | 'saving-throws' | 'armor' | 'weapons' | 'tools' | 'languages'
+export type ProficiencyTabValue =
+  | 'skills'
+  | 'saving-throws'
+  | 'armor'
+  | 'weapons'
+  | 'tools'
+  | 'languages'
 
 type ChoiceCounts = Record<'skills' | 'armor' | 'weapons' | 'tools' | 'languages', number>
 
 interface CategoryConfig {
-  value: TabValue
+  value: ProficiencyTabValue
   label: string
   icon: PhosphorIcon
-  gradient: string
-  iconColor: string
   choiceKey?: keyof ChoiceCounts
 }
 
@@ -53,50 +60,102 @@ const CATEGORIES: CategoryConfig[] = [
     value: 'skills',
     label: 'Skills',
     icon: Brain,
-    gradient: 'from-violet-500/50 to-violet-500/10',
-    iconColor: 'text-violet-400',
     choiceKey: 'skills',
   },
   {
     value: 'saving-throws',
     label: 'Saves',
     icon: ShieldCheck,
-    gradient: 'from-blue-500/50 to-blue-500/10',
-    iconColor: 'text-blue-400',
   },
   {
     value: 'armor',
     label: 'Armor',
     icon: Shield,
-    gradient: 'from-slate-500/50 to-slate-500/10',
-    iconColor: 'text-slate-400',
     choiceKey: 'armor',
   },
   {
     value: 'weapons',
     label: 'Weapons',
     icon: Sword,
-    gradient: 'from-red-500/50 to-red-500/10',
-    iconColor: 'text-red-400',
     choiceKey: 'weapons',
   },
   {
     value: 'tools',
     label: 'Tools',
     icon: Wrench,
-    gradient: 'from-amber-500/50 to-amber-500/10',
-    iconColor: 'text-amber-400',
     choiceKey: 'tools',
   },
   {
     value: 'languages',
     label: 'Languages',
     icon: GlobeHemisphereWest,
-    gradient: 'from-emerald-500/50 to-emerald-500/10',
-    iconColor: 'text-emerald-400',
     choiceKey: 'languages',
   },
 ]
+
+interface BuildProficienciesCategorySwitcherProps {
+  activeTab: ProficiencyTabValue
+  choiceCounts: ChoiceCounts
+  expertiseChoiceCount: number
+  onActiveTabChange: (value: ProficiencyTabValue) => void
+}
+
+export function BuildProficienciesCategorySwitcher({
+  activeTab,
+  choiceCounts,
+  expertiseChoiceCount,
+  onActiveTabChange,
+}: BuildProficienciesCategorySwitcherProps) {
+  return (
+    <div className="h-full min-w-0 flex-1 overflow-x-auto">
+      <div
+        className="inline-flex h-full min-w-max items-stretch gap-5"
+        role="tablist"
+        aria-label="Proficiency category"
+      >
+        {CATEGORIES.map(({ value, label, icon: Icon, choiceKey }) => {
+          const count = choiceKey ? (choiceCounts[choiceKey] ?? 0) : 0
+          const isActive = activeTab === value
+          const showExpertiseBadge = value === 'skills' && expertiseChoiceCount > 0
+          return (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => onActiveTabChange(value)}
+              className={cn(
+                'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',
+                isActive
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+              )}
+            >
+              <Icon
+                className={cn('size-4 shrink-0', isActive && 'text-primary')}
+                weight={isActive ? 'fill' : 'regular'}
+              />
+              <span>{label}</span>
+              {count > 0 && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold leading-none text-primary">
+                  {count}
+                </span>
+              )}
+              {showExpertiseBadge && (
+                <span
+                  title={`${expertiseChoiceCount} expertise slot${expertiseChoiceCount !== 1 ? 's' : ''} remaining`}
+                  className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500/20 px-1 text-[10px] font-bold leading-none text-amber-500"
+                >
+                  {expertiseChoiceCount}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 interface SkillRow {
   name: string
@@ -112,6 +171,7 @@ type SkillGroup = { label: string | null; skills: SkillRow[] }
 type WeaponSort = 'alpha' | 'category' | 'melee-ranged' | 'proficient'
 type ToolSort = 'alpha' | 'type' | 'proficient'
 type LangSort = 'alpha' | 'type' | 'proficient'
+type ProficiencyRowState = 'chosen' | 'granted' | 'available' | 'unavailable'
 
 interface SavingThrowRow {
   ability: string
@@ -142,7 +202,6 @@ interface BuildProficienciesTabsPanelProps {
   visibleToolCandidates: string[]
   /** Map from normalised artisan tool name to the choiceId of the first slot that accepts it. */
   artisanChoiceByNorm: Map<string, string>
-  focused: ProfFocus | null
   onFocusChange: (focus: ProfFocus) => void
   onExpandDetails: () => void
   onResolveChoiceSelection: (
@@ -158,13 +217,17 @@ interface BuildProficienciesTabsPanelProps {
   usedExpertiseSlots: number
   /** Unspent expertise slots — shown as a separate badge on the Skills card. */
   expertiseChoiceCount: number
-  defaultTab?: 'skills' | 'saving-throws' | 'armor' | 'weapons' | 'tools' | 'languages'
+  activeTab?: ProficiencyTabValue
+  onActiveTabChange?: (value: ProficiencyTabValue) => void
+  defaultTab?: ProficiencyTabValue
   /** Map from lowercased language name to its type ('standard'/'exotic'/'rare'/'secret'). */
   languageTypes: Map<string, string>
   /** Map from lowercased tool name to its generic kind ("artisan's tools"/'musical instrument'/'gaming set'). */
   toolTypeMap: Map<string, string>
   /** Map from lowercased weapon name to its category ('simple'/'martial') and ranged flag. */
   weaponInfoMap: Map<string, { category?: string; ranged?: boolean }>
+  /** Retained for callers that coordinate the current inspector item. */
+  focused?: ProfFocus | null
 }
 
 function formatProfLabel(value: string): string {
@@ -174,6 +237,54 @@ function formatProfLabel(value: string): string {
       /(^|[\s/-])([a-z])/g,
       (_, sep: string, letter: string) => `${sep}${letter.toUpperCase()}`,
     )
+}
+
+function ProficiencyStatus({ state }: { state: ProficiencyRowState }) {
+  const label =
+    state === 'chosen'
+      ? 'Chosen'
+      : state === 'granted'
+        ? 'Granted'
+        : state === 'available'
+          ? 'Available'
+          : 'Unavailable'
+  return (
+    <span
+      className={cn(
+        'inline-flex h-5 shrink-0 items-center rounded border px-1.5 text-[11px] font-semibold',
+        state === 'chosen' && 'border-primary/50 bg-primary/10 text-primary',
+        state === 'granted' && 'border-success/40 bg-success/10 text-success',
+        state === 'available' && 'border-primary/50 bg-primary/10 text-primary',
+        state === 'unavailable' && 'border-border bg-muted/20 text-muted-foreground',
+      )}
+    >
+      {label}
+    </span>
+  )
+}
+
+function ProficiencyStateIcon({
+  state,
+  fallback,
+  actionable = false,
+}: {
+  state: ProficiencyRowState
+  fallback: ReactNode
+  actionable?: boolean
+}) {
+  if (state === 'chosen') {
+    return (
+      <span className="relative size-3.5 shrink-0" aria-hidden="true">
+        <Check className="size-3.5 group-hover:hidden group-focus-visible:hidden" />
+        <ArrowCounterClockwise className="hidden size-3.5 group-hover:block group-focus-visible:block" />
+      </span>
+    )
+  }
+  if (state === 'granted') return <LockSimple className="size-3.5 shrink-0" aria-hidden="true" />
+  if (state === 'available' && actionable) {
+    return <Plus className="size-3.5 shrink-0" aria-hidden="true" />
+  }
+  return fallback
 }
 
 const SAVE_ABBREVIATIONS: Record<string, string> = {
@@ -202,25 +313,31 @@ export function BuildProficienciesTabsPanel({
   availableLanguages,
   currentProficiencies,
   ledger,
-  choiceCounts,
   dropdownToolSlots,
   artisanToolSlots,
   visibleToolCandidates,
   artisanChoiceByNorm,
-  focused,
   onFocusChange,
   onExpandDetails,
   onResolveChoiceSelection,
   onToggleExpertise,
   availableExpertiseSlots,
   usedExpertiseSlots,
-  expertiseChoiceCount,
+  activeTab,
+  onActiveTabChange,
   defaultTab,
   languageTypes,
   toolTypeMap,
   weaponInfoMap,
 }: BuildProficienciesTabsPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabValue>(defaultTab ?? 'skills')
+  const [internalActiveTab, setInternalActiveTab] = useState<ProficiencyTabValue>(
+    defaultTab ?? 'skills',
+  )
+  const currentActiveTab = activeTab ?? internalActiveTab
+  const handleActiveTabChange = (value: ProficiencyTabValue) => {
+    setInternalActiveTab(value)
+    onActiveTabChange?.(value)
+  }
   const [skillSort, setSkillSort] = useState<SkillSort>('alpha')
   const [weaponSort, setWeaponSort] = useState<WeaponSort>('alpha')
   const [toolSort, setToolSort] = useState<ToolSort>('alpha')
@@ -240,10 +357,8 @@ export function BuildProficienciesTabsPanel({
     setHintDismissed('skills-expertise', true)
   }
 
-  const choiceSelectedClass =
-    'border-2 border-accent border-dashed bg-accent/15 text-accent-foreground hover:bg-accent/25'
-  const fixedSelectedClass =
-    'border-accent/60 bg-accent/80 text-accent-foreground hover:bg-accent/70'
+  const choiceSelectedClass = 'bg-primary/10 text-foreground hover:bg-primary/15'
+  const fixedSelectedClass = 'bg-success/10 text-foreground hover:bg-success/15'
 
   const skillGroups: SkillGroup[] = (() => {
     if (skillSort === 'alpha') {
@@ -425,68 +540,16 @@ export function BuildProficienciesTabsPanel({
           </div>
         </div>
       ) : null}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)}>
-        {/* MTD-style category icon cards */}
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5">
-          {CATEGORIES.map(({ value, label, icon: Icon, gradient, iconColor, choiceKey }) => {
-            const count = choiceKey ? (choiceCounts[choiceKey] ?? 0) : 0
-            const isActive = activeTab === value
-            const showExpertiseBadge = value === 'skills' && expertiseChoiceCount > 0
-            return (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setActiveTab(value)}
-                className={cn(
-                  'relative flex flex-col items-center gap-2 py-3 px-2 rounded-xl border transition-all duration-200',
-                  isActive
-                    ? 'border-accent bg-card shadow-sm ring-1 ring-accent/20'
-                    : 'border-border bg-muted/20 hover:border-accent/40 hover:bg-card/60',
-                )}
-              >
-                <div
-                  className={cn(
-                    'w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-br shrink-0',
-                    gradient,
-                  )}
-                >
-                  <Icon className={cn('h-4.5 w-4.5', iconColor)} weight="bold" />
-                </div>
-                <span
-                  className={cn(
-                    'text-[11px] font-semibold leading-tight text-center',
-                    isActive ? 'text-foreground' : 'text-muted-foreground',
-                  )}
-                >
-                  {label}
-                </span>
-                {count > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center px-1 leading-none">
-                    {count}
-                  </span>
-                )}
-                {showExpertiseBadge && (
-                  <span
-                    title={`${expertiseChoiceCount} expertise slot${expertiseChoiceCount !== 1 ? 's' : ''} remaining`}
-                    className={cn(
-                      'absolute -right-1.5 h-4 min-w-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none',
-                      count > 0 ? 'top-2.5' : '-top-1.5',
-                    )}
-                  >
-                    {expertiseChoiceCount}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-
+      <Tabs
+        value={currentActiveTab}
+        onValueChange={(value) => handleActiveTabChange(value as ProficiencyTabValue)}
+      >
         <TabsContent value="skills">
           <div className="space-y-4">
             <div className="flex items-center justify-end gap-2">
               <span className="text-xs text-muted-foreground">Sort:</span>
               <Select value={skillSort} onValueChange={(v) => setSkillSort(v as SkillSort)}>
-                <SelectTrigger className="h-7 w-[140px] text-xs">
+                <SelectTrigger className="h-8 w-[150px] cursor-pointer text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -512,14 +575,12 @@ export function BuildProficienciesTabsPanel({
                     <div className="flex-1 h-px bg-border" />
                   </div>
                 )}
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background 2xl:grid-cols-2">
                   {groupSkills.map((skill) => {
                     const normName = skill.name
-                    const hasLedgerGrant = (ledger.proficiencies.skills[normName] ?? []).length > 0
+                    const sourceTags = ledger.proficiencies.skills[normName] ?? []
+                    const hasLedgerGrant = sourceTags.length > 0
                     const isSelected = skill.proficient || hasLedgerGrant
-                    const isFixed = (ledger.proficiencies.skills[normName] ?? []).some(
-                      (tag) => tag.grantType === 'fixed',
-                    )
                     const isChoiceSelected = ledger.choices.some(
                       (choice) =>
                         choice.domain === 'skills' &&
@@ -536,26 +597,45 @@ export function BuildProficienciesTabsPanel({
                               (poolEntry) => normalizeKey(poolEntry) === normName,
                             )),
                       )
-                    const canDeselect = isChoiceSelected && !isFixed
-                    const isFocused = focused?.type === 'skill' && focused.name === skill.name
+                    const canDeselect = isChoiceSelected
                     const canAddExpertise =
                       isSelected && !skill.expertise && usedExpertiseSlots < availableExpertiseSlots
                     const canRemoveExpertise = isSelected && skill.expertise
                     const canToggleExpertise = canAddExpertise || canRemoveExpertise
+                    const rowState: ProficiencyRowState = isChoiceSelected
+                      ? 'chosen'
+                      : isSelected
+                        ? 'granted'
+                        : canSelect
+                          ? 'available'
+                          : 'unavailable'
+                    const focusSkill = () => {
+                      onFocusChange({
+                        type: 'skill',
+                        name: skill.name,
+                        ability: skill.ability,
+                        proficient: isSelected,
+                        expertise: skill.expertise,
+                        modifierString: skill.modifierString,
+                      })
+                      onExpandDetails()
+                    }
 
                     return (
-                      <div
+                      <fieldset
                         key={skill.name}
+                        onMouseEnter={focusSkill}
+                        onFocusCapture={focusSkill}
+                        aria-label={`${formatProfLabel(skill.name)} proficiency`}
                         className={cn(
-                          'inline-flex items-stretch rounded-lg border text-sm transition-all font-medium overflow-hidden focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2',
+                          'inline-flex min-h-11 min-w-0 items-stretch overflow-hidden bg-background text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-within:z-10 focus-within:ring-2 focus-within:ring-primary focus-within:ring-inset',
                           isChoiceSelected
                             ? choiceSelectedClass
                             : isSelected
                               ? fixedSelectedClass
                               : canSelect
-                                ? 'border-border bg-card text-foreground hover:border-accent'
-                                : 'border-border bg-card text-muted-foreground opacity-50',
-                          isFocused && 'ring-2 ring-accent/70 ring-offset-2',
+                                ? 'bg-background text-foreground hover:bg-primary/5'
+                                : 'bg-background text-foreground hover:bg-primary/5',
                         )}
                       >
                         <button
@@ -594,26 +674,38 @@ export function BuildProficienciesTabsPanel({
                         </button>
                         <button
                           type="button"
-                          onMouseEnter={() => {
-                            onFocusChange({
-                              type: 'skill',
-                              name: skill.name,
-                              ability: skill.ability,
-                              proficient: isSelected,
-                              expertise: skill.expertise,
-                              modifierString: skill.modifierString,
-                            })
-                            onExpandDetails()
-                          }}
                           onClick={() => {
                             if (canDeselect) onResolveChoiceSelection('skills', skill.name, false)
                             else if (canSelect) onResolveChoiceSelection('skills', skill.name, true)
                           }}
-                          className="px-3 py-2 focus-visible:outline-none"
+                          title={
+                            canDeselect
+                              ? `Remove choice: ${formatProfLabel(skill.name)}`
+                              : isSelected
+                                ? `${formatProfLabel(skill.name)} is granted and cannot be removed`
+                                : canSelect
+                                  ? `Choose ${formatProfLabel(skill.name)}`
+                                  : undefined
+                          }
+                          className={cn(
+                            'group flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left focus-visible:outline-none',
+                            canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
+                          )}
                         >
-                          {formatProfLabel(skill.name)}
+                          <ProficiencyStateIcon
+                            state={rowState}
+                            actionable={canSelect || canDeselect}
+                            fallback={<Brain className="size-3.5 shrink-0" aria-hidden="true" />}
+                          />
+                          <span className="truncate">{formatProfLabel(skill.name)}</span>
+                          <span className="ml-auto flex shrink-0 items-center gap-2">
+                            <span className="text-xs font-normal text-muted-foreground">
+                              {skill.ability.toUpperCase()}
+                            </span>
+                            <ProficiencyStatus state={rowState} />
+                          </span>
                         </button>
-                      </div>
+                      </fieldset>
                     )
                   })}
                 </div>
@@ -623,43 +715,51 @@ export function BuildProficienciesTabsPanel({
         </TabsContent>
 
         <TabsContent value="saving-throws">
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background sm:grid-cols-2 2xl:grid-cols-3">
             {savingThrows.map((save) => {
               const normAbility = normalizeKey(save.ability)
               const abbr = SAVE_ABBREVIATIONS[normAbility]
-              const hasLedgerGrant =
-                (ledger.proficiencies.savingThrows[normAbility] ?? []).length > 0 ||
-                (abbr ? (ledger.proficiencies.savingThrows[abbr] ?? []).length > 0 : false)
+              const sourceTags = [
+                ...(ledger.proficiencies.savingThrows[normAbility] ?? []),
+                ...(abbr ? (ledger.proficiencies.savingThrows[abbr] ?? []) : []),
+              ]
+              const hasLedgerGrant = sourceTags.length > 0
               const isSelected = save.proficient || hasLedgerGrant
-              const isFocused = focused?.type === 'save' && focused.ability === save.ability
+              const rowState: ProficiencyRowState = isSelected ? 'granted' : 'unavailable'
+              const focusSave = () => {
+                onFocusChange({
+                  type: 'save',
+                  ability: save.ability,
+                  proficient: isSelected,
+                  modifierString: save.modifierString,
+                })
+                onExpandDetails()
+              }
 
               return (
                 <button
                   key={save.ability}
                   type="button"
-                  onMouseEnter={() => {
-                    onFocusChange({
-                      type: 'save',
-                      ability: save.ability,
-                      proficient: isSelected,
-                      modifierString: save.modifierString,
-                    })
-                    onExpandDetails()
-                  }}
+                  onMouseEnter={focusSave}
+                  onFocus={focusSave}
                   className={cn(
-                    'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                    'group inline-flex min-h-11 min-w-0 cursor-default items-center gap-2 bg-background px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
                     isSelected
-                      ? 'border-accent bg-accent text-accent-foreground hover:bg-accent/80'
-                      : 'border-border bg-card text-muted-foreground opacity-50',
-                    isFocused && 'ring-2 ring-accent ring-offset-2',
+                      ? fixedSelectedClass
+                      : 'bg-background text-foreground hover:bg-primary/5',
                   )}
                 >
-                  {isSelected ? (
-                    <Check className="h-3.5 w-3.5" />
-                  ) : (
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                  )}
+                  <ProficiencyStateIcon
+                    state={rowState}
+                    fallback={<ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />}
+                  />
                   <span>{formatProfLabel(save.ability)}</span>
+                  <span className="ml-auto flex shrink-0 items-center gap-2">
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {save.modifierString}
+                    </span>
+                    <ProficiencyStatus state={rowState} />
+                  </span>
                 </button>
               )
             })}
@@ -667,15 +767,13 @@ export function BuildProficienciesTabsPanel({
         </TabsContent>
 
         <TabsContent value="armor">
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background sm:grid-cols-2">
             {availableArmor.map((armorKey) => {
               const normArmor = normalizeKey(armorKey)
-              const hasLedgerGrant = (ledger.proficiencies.armor[normArmor] ?? []).length > 0
+              const sourceTags = ledger.proficiencies.armor[normArmor] ?? []
+              const hasLedgerGrant = sourceTags.length > 0
               const isSelected =
                 hasProfInArray(currentProficiencies.armor, armorKey) || hasLedgerGrant
-              const isFixed = (ledger.proficiencies.armor[normArmor] ?? []).some(
-                (tag) => tag.grantType === 'fixed',
-              )
               const isChoiceSelected = ledger.choices.some(
                 (choice) =>
                   choice.domain === 'armor' &&
@@ -690,7 +788,23 @@ export function BuildProficienciesTabsPanel({
                     (choice.optionPool.length === 0 ||
                       choice.optionPool.some((poolEntry) => normalizeKey(poolEntry) === normArmor)),
                 )
-              const canDeselect = isChoiceSelected && !isFixed
+              const canDeselect = isChoiceSelected
+              const rowState: ProficiencyRowState = isChoiceSelected
+                ? 'chosen'
+                : isSelected
+                  ? 'granted'
+                  : canSelect
+                    ? 'available'
+                    : 'unavailable'
+              const focusArmor = () => {
+                onFocusChange({
+                  type: 'item',
+                  category: 'armor',
+                  name: armorKey,
+                  isProficient: isSelected,
+                })
+                onExpandDetails()
+              }
               return (
                 <button
                   key={armorKey}
@@ -699,35 +813,38 @@ export function BuildProficienciesTabsPanel({
                     if (canDeselect) onResolveChoiceSelection('armor', armorKey, false)
                     else if (canSelect) onResolveChoiceSelection('armor', armorKey, true)
                   }}
-                  onMouseEnter={() => {
-                    onFocusChange({
-                      type: 'item',
-                      category: 'armor',
-                      name: armorKey,
-                      isProficient: isSelected,
-                    })
-                    onExpandDetails()
-                  }}
+                  onMouseEnter={focusArmor}
+                  onFocus={focusArmor}
+                  title={
+                    canDeselect
+                      ? `Remove choice: ${formatProfLabel(armorKey)}`
+                      : isSelected
+                        ? `${formatProfLabel(armorKey)} is granted and cannot be removed`
+                        : canSelect
+                          ? `Choose ${formatProfLabel(armorKey)}`
+                          : undefined
+                  }
                   className={cn(
-                    'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                    'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-background px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                    canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
                     isChoiceSelected
                       ? choiceSelectedClass
                       : isSelected
                         ? fixedSelectedClass
                         : canSelect
-                          ? 'border-border bg-card text-foreground hover:border-accent'
-                          : 'border-border bg-card text-muted-foreground opacity-50',
-                    focused?.type === 'item' &&
-                      focused.name === armorKey &&
-                      'ring-2 ring-accent ring-offset-2',
+                          ? 'bg-background text-foreground hover:bg-primary/5'
+                          : 'bg-background text-foreground hover:bg-primary/5',
                   )}
                 >
-                  {isSelected ? (
-                    <Check className="h-3.5 w-3.5" />
-                  ) : (
-                    <Shield className="h-3.5 w-3.5" />
-                  )}
+                  <ProficiencyStateIcon
+                    state={rowState}
+                    actionable={canSelect || canDeselect}
+                    fallback={<Shield className="size-3.5 shrink-0" aria-hidden="true" />}
+                  />
                   <span>{formatProfLabel(armorKey)}</span>
+                  <span className="ml-auto flex shrink-0 items-center gap-2">
+                    <ProficiencyStatus state={rowState} />
+                  </span>
                 </button>
               )
             })}
@@ -739,7 +856,7 @@ export function BuildProficienciesTabsPanel({
             <div className="flex items-center justify-end gap-2">
               <span className="text-xs text-muted-foreground">Sort:</span>
               <Select value={weaponSort} onValueChange={(v) => setWeaponSort(v as WeaponSort)}>
-                <SelectTrigger className="h-7 w-[140px] text-xs">
+                <SelectTrigger className="h-8 w-[150px] cursor-pointer text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -768,16 +885,13 @@ export function BuildProficienciesTabsPanel({
                     <div className="flex-1 h-px bg-border" />
                   </div>
                 )}
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background 2xl:grid-cols-2">
                   {groupWeapons.map((weaponKey) => {
                     const normWeapon = normalizeKey(weaponKey)
-                    const hasLedgerGrant =
-                      (ledger.proficiencies.weapons[normWeapon] ?? []).length > 0
+                    const sourceTags = ledger.proficiencies.weapons[normWeapon] ?? []
+                    const hasLedgerGrant = sourceTags.length > 0
                     const isSelected =
                       hasProfInArray(currentProficiencies.weapons, weaponKey) || hasLedgerGrant
-                    const isFixed = (ledger.proficiencies.weapons[normWeapon] ?? []).some(
-                      (tag) => tag.grantType === 'fixed',
-                    )
                     const isChoiceSelected = ledger.choices.some(
                       (choice) =>
                         choice.domain === 'weapons' &&
@@ -794,7 +908,23 @@ export function BuildProficienciesTabsPanel({
                               (poolEntry) => normalizeKey(poolEntry) === normWeapon,
                             )),
                       )
-                    const canDeselect = isChoiceSelected && !isFixed
+                    const canDeselect = isChoiceSelected
+                    const rowState: ProficiencyRowState = isChoiceSelected
+                      ? 'chosen'
+                      : isSelected
+                        ? 'granted'
+                        : canSelect
+                          ? 'available'
+                          : 'unavailable'
+                    const focusWeapon = () => {
+                      onFocusChange({
+                        type: 'item',
+                        category: 'weapons',
+                        name: weaponKey,
+                        isProficient: isSelected,
+                      })
+                      onExpandDetails()
+                    }
                     return (
                       <button
                         key={weaponKey}
@@ -803,36 +933,39 @@ export function BuildProficienciesTabsPanel({
                           if (canDeselect) onResolveChoiceSelection('weapons', weaponKey, false)
                           else if (canSelect) onResolveChoiceSelection('weapons', weaponKey, true)
                         }}
-                        onMouseEnter={() => {
-                          onFocusChange({
-                            type: 'item',
-                            category: 'weapons',
-                            name: weaponKey,
-                            isProficient: isSelected,
-                          })
-                          onExpandDetails()
-                        }}
+                        onMouseEnter={focusWeapon}
+                        onFocus={focusWeapon}
+                        title={
+                          canDeselect
+                            ? `Remove choice: ${formatProfLabel(weaponKey)}`
+                            : isSelected
+                              ? `${formatProfLabel(weaponKey)} is granted and cannot be removed`
+                              : canSelect
+                                ? `Choose ${formatProfLabel(weaponKey)}`
+                                : undefined
+                        }
                         className={cn(
-                          'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                          'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-background px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                          canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
                           isChoiceSelected
                             ? choiceSelectedClass
                             : isSelected
                               ? fixedSelectedClass
                               : canSelect
-                                ? 'border-border bg-card text-foreground hover:border-accent'
-                                : 'border-border bg-card text-muted-foreground opacity-50',
-                          focused?.type === 'item' &&
-                            focused.name === weaponKey &&
-                            'ring-2 ring-accent ring-offset-2',
+                                ? 'bg-background text-foreground hover:bg-primary/5'
+                                : 'bg-background text-foreground hover:bg-primary/5',
                         )}
                       >
-                        {isSelected ? (
-                          <Check className="h-3.5 w-3.5" />
-                        ) : (
-                          <Sword className="h-3.5 w-3.5" />
-                        )}
+                        <ProficiencyStateIcon
+                          state={rowState}
+                          actionable={canSelect || canDeselect}
+                          fallback={<Sword className="size-3.5 shrink-0" aria-hidden="true" />}
+                        />
                         <span>
                           {formatWeaponCategoryLabel(weaponKey) ?? formatProfLabel(weaponKey)}
+                        </span>
+                        <span className="ml-auto flex shrink-0 items-center gap-2">
+                          <ProficiencyStatus state={rowState} />
                         </span>
                       </button>
                     )
@@ -850,9 +983,9 @@ export function BuildProficienciesTabsPanel({
                 {dropdownToolSlots.map((slot) => (
                   <div
                     key={slot.id}
-                    className="w-full max-w-lg rounded-lg border border-border bg-card p-2.5"
+                    className="w-full max-w-lg border-l-2 border-primary/50 bg-secondary/20 px-3 py-2.5"
                   >
-                    <p className="text-xs text-muted-foreground mb-2">
+                    <p className="mb-2 text-sm text-muted-foreground">
                       {slot.sourceName}: choose {formatProfLabel(slot.label)}
                     </p>
                     <Select
@@ -868,7 +1001,7 @@ export function BuildProficienciesTabsPanel({
                       }}
                       disabled={slot.options.length === 0}
                     >
-                      <SelectTrigger className="h-9 border-dashed">
+                      <SelectTrigger className="h-9 cursor-pointer border-dashed">
                         <SelectValue placeholder={`${formatProfLabel(slot.label)} (choose type)`} />
                       </SelectTrigger>
                       <SelectContent>
@@ -886,7 +1019,7 @@ export function BuildProficienciesTabsPanel({
             <div className="flex items-center justify-end gap-2">
               <span className="text-xs text-muted-foreground">Sort:</span>
               <Select value={toolSort} onValueChange={(v) => setToolSort(v as ToolSort)}>
-                <SelectTrigger className="h-7 w-[140px] text-xs">
+                <SelectTrigger className="h-8 w-[150px] cursor-pointer text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -915,7 +1048,7 @@ export function BuildProficienciesTabsPanel({
                       <div className="flex-1 h-px bg-border" />
                     </div>
                   )}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background 2xl:grid-cols-2">
                     {groupTools.map((toolName) => {
                       const normTool = normalizeKey(toolName)
                       const genericKind = normalizeGenericToolKind(toolName)
@@ -923,12 +1056,10 @@ export function BuildProficienciesTabsPanel({
                       const hasOptionalChoiceForKind = genericKind
                         ? hasUnresolvedChoiceForKind(ledger.choices, genericKind)
                         : false
-                      const hasLedgerGrant = (ledger.proficiencies.tools[normTool] ?? []).length > 0
+                      const sourceTags = ledger.proficiencies.tools[normTool] ?? []
+                      const hasLedgerGrant = sourceTags.length > 0
                       const isSelected =
                         hasProfInArray(currentProficiencies.tools, toolName) || hasLedgerGrant
-                      const isFixed = (ledger.proficiencies.tools[normTool] ?? []).some(
-                        (tag) => tag.grantType === 'fixed',
-                      )
                       const isChoiceSelected = ledger.choices.some(
                         (choice) =>
                           choice.domain === 'tools' &&
@@ -949,7 +1080,23 @@ export function BuildProficienciesTabsPanel({
                           artisanToolSlots.some((slot) =>
                             slot.options.some((opt) => normalizeKey(opt) === normTool),
                           ))
-                      const canDeselect = isChoiceSelected && !isFixed
+                      const canDeselect = isChoiceSelected
+                      const rowState: ProficiencyRowState = isChoiceSelected
+                        ? 'chosen'
+                        : isSelected
+                          ? 'granted'
+                          : canSelect || (isGenericKind && hasOptionalChoiceForKind)
+                            ? 'available'
+                            : 'unavailable'
+                      const focusTool = () => {
+                        onFocusChange({
+                          type: 'item',
+                          category: 'tools',
+                          name: toolName,
+                          isProficient: isSelected,
+                        })
+                        onExpandDetails()
+                      }
 
                       return (
                         <button
@@ -961,39 +1108,44 @@ export function BuildProficienciesTabsPanel({
                             else if (canSelect)
                               onResolveChoiceSelection('tools', toolName, true, artisanChoiceId)
                           }}
-                          onMouseEnter={() => {
-                            onFocusChange({
-                              type: 'item',
-                              category: 'tools',
-                              name: toolName,
-                              isProficient: isSelected,
-                            })
-                            onExpandDetails()
-                          }}
+                          onMouseEnter={focusTool}
+                          onFocus={focusTool}
+                          title={
+                            canDeselect
+                              ? `Remove choice: ${formatProfLabel(toolName)}`
+                              : isSelected
+                                ? `${formatProfLabel(toolName)} is granted and cannot be removed`
+                                : canSelect
+                                  ? `Choose ${formatProfLabel(toolName)}`
+                                  : undefined
+                          }
                           className={cn(
-                            'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                            'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-background px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                            !isGenericKind && (canSelect || canDeselect)
+                              ? 'cursor-pointer'
+                              : 'cursor-default',
                             isGenericKind
                               ? hasOptionalChoiceForKind
-                                ? 'border-border border-dashed bg-card text-foreground/80 cursor-default'
-                                : 'border-border border-dashed bg-card text-muted-foreground opacity-50 cursor-default'
+                                ? 'bg-primary/5 text-foreground hover:bg-primary/10'
+                                : 'bg-background text-foreground hover:bg-primary/5'
                               : isChoiceSelected
                                 ? choiceSelectedClass
                                 : isSelected
                                   ? fixedSelectedClass
                                   : canSelect
-                                    ? 'border-border bg-card text-foreground hover:border-accent'
-                                    : 'border-border bg-card text-muted-foreground opacity-50',
-                            focused?.type === 'item' &&
-                              focused.name === toolName &&
-                              'ring-2 ring-accent/70 ring-offset-2',
+                                    ? 'bg-background text-foreground hover:bg-primary/5'
+                                    : 'bg-background text-foreground hover:bg-primary/5',
                           )}
                         >
-                          {isSelected ? (
-                            <Check className="h-3.5 w-3.5" />
-                          ) : (
-                            <Wrench className="h-3.5 w-3.5" />
-                          )}
-                          {formatProfLabel(toolName)}
+                          <ProficiencyStateIcon
+                            state={rowState}
+                            actionable={!isGenericKind && (canSelect || canDeselect)}
+                            fallback={<Wrench className="size-3.5 shrink-0" aria-hidden="true" />}
+                          />
+                          <span className="truncate">{formatProfLabel(toolName)}</span>
+                          <span className="ml-auto flex shrink-0 items-center gap-2">
+                            <ProficiencyStatus state={rowState} />
+                          </span>
                         </button>
                       )
                     })}
@@ -1009,7 +1161,7 @@ export function BuildProficienciesTabsPanel({
             <div className="flex items-center justify-end gap-2">
               <span className="text-xs text-muted-foreground">Sort:</span>
               <Select value={langSort} onValueChange={(v) => setLangSort(v as LangSort)}>
-                <SelectTrigger className="h-7 w-[140px] text-xs">
+                <SelectTrigger className="h-8 w-[150px] cursor-pointer text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1038,17 +1190,14 @@ export function BuildProficienciesTabsPanel({
                       <div className="flex-1 h-px bg-border" />
                     </div>
                   )}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background 2xl:grid-cols-2">
                     {groupLangs.map((languageName) => {
                       const normLang = normalizeKey(languageName)
-                      const hasLedgerGrant =
-                        (ledger.proficiencies.languages[normLang] ?? []).length > 0
+                      const sourceTags = ledger.proficiencies.languages[normLang] ?? []
+                      const hasLedgerGrant = sourceTags.length > 0
                       const isSelected =
                         hasProfInArray(currentProficiencies.languages, languageName) ||
                         hasLedgerGrant
-                      const isFixed = (ledger.proficiencies.languages[normLang] ?? []).some(
-                        (tag) => tag.grantType === 'fixed',
-                      )
                       const isChoiceSelected = ledger.choices.some(
                         (choice) =>
                           choice.domain === 'languages' &&
@@ -1065,7 +1214,23 @@ export function BuildProficienciesTabsPanel({
                                 (poolEntry) => normalizeKey(poolEntry) === normLang,
                               )),
                         )
-                      const canDeselect = isChoiceSelected && !isFixed
+                      const canDeselect = isChoiceSelected
+                      const rowState: ProficiencyRowState = isChoiceSelected
+                        ? 'chosen'
+                        : isSelected
+                          ? 'granted'
+                          : canSelect
+                            ? 'available'
+                            : 'unavailable'
+                      const focusLanguage = () => {
+                        onFocusChange({
+                          type: 'item',
+                          category: 'languages',
+                          name: languageName,
+                          isProficient: isSelected,
+                        })
+                        onExpandDetails()
+                      }
 
                       return (
                         <button
@@ -1077,35 +1242,43 @@ export function BuildProficienciesTabsPanel({
                             else if (canSelect)
                               onResolveChoiceSelection('languages', languageName, true)
                           }}
-                          onMouseEnter={() => {
-                            onFocusChange({
-                              type: 'item',
-                              category: 'languages',
-                              name: languageName,
-                              isProficient: isSelected,
-                            })
-                            onExpandDetails()
-                          }}
+                          onMouseEnter={focusLanguage}
+                          onFocus={focusLanguage}
+                          title={
+                            canDeselect
+                              ? `Remove choice: ${formatProfLabel(languageName)}`
+                              : isSelected
+                                ? `${formatProfLabel(languageName)} is granted and cannot be removed`
+                                : canSelect
+                                  ? `Choose ${formatProfLabel(languageName)}`
+                                  : undefined
+                          }
                           className={cn(
-                            'px-3 py-2 rounded-lg border text-sm transition-all font-medium inline-flex items-center gap-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
+                            'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-background px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                            canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
                             isChoiceSelected
                               ? choiceSelectedClass
                               : isSelected
                                 ? fixedSelectedClass
                                 : canSelect
-                                  ? 'border-border bg-card text-foreground hover:border-accent'
-                                  : 'border-border bg-card text-muted-foreground opacity-50',
-                            focused?.type === 'item' &&
-                              focused.name === languageName &&
-                              'ring-2 ring-accent/70 ring-offset-2',
+                                  ? 'bg-background text-foreground hover:bg-primary/5'
+                                  : 'bg-background text-foreground hover:bg-primary/5',
                           )}
                         >
-                          {isSelected ? (
-                            <Check className="h-3.5 w-3.5" />
-                          ) : (
-                            <GlobeHemisphereWest className="h-3.5 w-3.5" />
-                          )}
-                          {formatProfLabel(languageName)}
+                          <ProficiencyStateIcon
+                            state={rowState}
+                            actionable={canSelect || canDeselect}
+                            fallback={
+                              <GlobeHemisphereWest
+                                className="size-3.5 shrink-0"
+                                aria-hidden="true"
+                              />
+                            }
+                          />
+                          <span className="truncate">{formatProfLabel(languageName)}</span>
+                          <span className="ml-auto flex shrink-0 items-center gap-2">
+                            <ProficiencyStatus state={rowState} />
+                          </span>
                         </button>
                       )
                     })}

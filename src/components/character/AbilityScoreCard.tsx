@@ -1,5 +1,8 @@
-import type { AbilityName } from '@/lib/calculations/abilityScores'
-import { ABILITY_ABBREVIATIONS, formatModifier } from '@/lib/calculations/abilityScores'
+import {
+  ABILITY_ABBREVIATIONS,
+  type AbilityName,
+  formatModifier,
+} from '@/lib/calculations/abilityScores'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +14,7 @@ interface AbilityScoreCardProps {
   interactive?: boolean
   selected?: boolean
   onSelect?: () => void
+  variant?: 'card' | 'console'
 }
 
 export function AbilityScoreCard({
@@ -21,9 +25,63 @@ export function AbilityScoreCard({
   interactive = false,
   selected = false,
   onSelect,
+  variant = 'card',
 }: AbilityScoreCardProps) {
   const total = score + bonus
   const mod = getAbilityModifier(total)
+
+  if (variant === 'console') {
+    return (
+      <div
+        className={cn(
+          'flex h-56 w-full max-w-40 flex-col overflow-hidden border-2 bg-sidebar/35 transition-colors [clip-path:polygon(8px_0,calc(100%_-_8px)_0,100%_8px,100%_calc(100%_-_8px),calc(100%_-_8px)_100%,8px_100%,0_calc(100%_-_8px),0_8px)]',
+          selected
+            ? 'border-primary bg-primary/5'
+            : interactive
+              ? 'border-border hover:border-primary/60'
+              : 'border-border',
+        )}
+      >
+        <div
+          className={cn(
+            'flex h-9 shrink-0 items-center justify-center border-b px-3',
+            selected ? 'border-primary/50 bg-primary/15' : 'border-border bg-muted/30',
+          )}
+        >
+          <span className="truncate text-xs font-bold uppercase tracking-[0.13em]">{ability}</span>
+        </div>
+
+        <button
+          type="button"
+          onClick={onSelect}
+          className="flex flex-1 cursor-default flex-col items-center justify-center bg-transparent px-3 py-3 transition-colors hover:bg-primary/5"
+          aria-label={`Show ${ability} details`}
+        >
+          <div className="font-mono text-5xl font-bold leading-none tabular-nums">{total}</div>
+          <div
+            className={cn(
+              'mt-2.5 min-w-14 rounded-full border-2 bg-background px-2.5 py-1 font-mono text-base font-bold leading-none tabular-nums',
+              mod >= 0
+                ? 'border-success/70 text-success'
+                : 'border-destructive/70 text-destructive',
+            )}
+          >
+            {formatModifier(mod)}
+          </div>
+          <div className="mt-2.5 text-xs font-medium text-muted-foreground tabular-nums">
+            Base {score}
+            {bonus !== 0 && ` · Bonus ${bonus > 0 ? '+' : ''}${bonus}`}
+          </div>
+        </button>
+
+        {children && (
+          <div className="flex h-[3.25rem] shrink-0 items-center justify-center border-t border-border/70 px-2">
+            {children}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   const scoreBody = (
     <div className="flex-1 flex flex-col items-center justify-center py-3 px-3">

@@ -88,4 +88,40 @@ describe('app header character summary', () => {
     expect(screen.getByText('18')).toBeTruthy()
     expect(screen.getByText('42')).toBeTruthy()
   })
+
+  test('keeps character workflow actions out of browsing workspaces', () => {
+    render(
+      <MemoryRouter initialEntries={['/compendium']}>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Level up character' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save character' })).toBeNull()
+  })
+
+  test('shows level up in the build workspace', () => {
+    render(
+      <MemoryRouter initialEntries={['/build/race']}>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Level up character' })).toBeTruthy()
+  })
+
+  test('uses the active character portrait when one is available', () => {
+    const portrait = 'data:image/png;base64,cG9ydHJhaXQ='
+    useCharacterStore.setState((state) => ({
+      activeCharacter: state.activeCharacter ? { ...state.activeCharacter, portrait } : null,
+    }))
+
+    render(
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('img', { name: 'Aelar portrait' }).getAttribute('src')).toBe(portrait)
+  })
 })

@@ -28,15 +28,7 @@
 
   body {
     font-family: "Inter", sans-serif;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: "Cinzel", serif;
+    overflow: hidden;
   }
 
   .font-display {
@@ -131,6 +123,10 @@
   .app-drag [role="button"],
   .app-drag input,
   .app-drag select {
+    -webkit-app-region: no-drag;
+  }
+
+  .app-no-drag {
     -webkit-app-region: no-drag;
   }
 

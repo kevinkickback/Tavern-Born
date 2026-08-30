@@ -13,6 +13,7 @@ import {
 export const UI_SCALE_OPTIONS = [80, 90, 100, 110, 120] as const
 export type UiScale = (typeof UI_SCALE_OPTIONS)[number]
 export const DEFAULT_UI_SCALE: UiScale = 100
+export type CharacterViewMode = 'gallery' | 'list'
 
 export function applyUiScale(scale: UiScale) {
   document.documentElement.style.fontSize = `${scale}%`
@@ -44,6 +45,8 @@ interface AppPreferencesState {
   autoUpdate: boolean
   uiScale: UiScale
   sidebarOpen: boolean
+  compendiumFiltersOpen: boolean
+  characterViewMode: CharacterViewMode
   setHomeCardSize: (size: number) => void
   setThemeAccent: (accent: AccentTheme) => void
   setThemeAppearance: (appearance: AppearanceTheme) => void
@@ -51,6 +54,8 @@ interface AppPreferencesState {
   setAutoUpdate: (enabled: boolean) => void
   setUiScale: (scale: UiScale) => void
   setSidebarOpen: (open: boolean) => void
+  setCompendiumFiltersOpen: (open: boolean) => void
+  setCharacterViewMode: (mode: CharacterViewMode) => void
 }
 
 export const useAppPreferencesStore = create<AppPreferencesState>()(
@@ -63,9 +68,13 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
       autoUpdate: true,
       uiScale: DEFAULT_UI_SCALE,
       sidebarOpen: true,
+      compendiumFiltersOpen: true,
+      characterViewMode: 'gallery',
 
       setHomeCardSize: (size) => set({ homeCardSize: clampHomeCardSize(size) }),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
+      setCompendiumFiltersOpen: (open) => set({ compendiumFiltersOpen: open }),
+      setCharacterViewMode: (mode) => set({ characterViewMode: mode }),
 
       setUiScale: (scale) => set({ uiScale: scale }),
 
@@ -87,6 +96,9 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         autoRefreshGameData: state.autoRefreshGameData,
         autoUpdate: state.autoUpdate,
         uiScale: state.uiScale,
+        sidebarOpen: state.sidebarOpen,
+        compendiumFiltersOpen: state.compendiumFiltersOpen,
+        characterViewMode: state.characterViewMode,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) {
@@ -98,6 +110,9 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         state.themeAppearance = normalizeAppearanceTheme(state.themeAppearance)
         state.autoRefreshGameData = state.autoRefreshGameData !== false
         state.autoUpdate = state.autoUpdate !== false
+        state.sidebarOpen = state.sidebarOpen !== false
+        state.compendiumFiltersOpen = state.compendiumFiltersOpen !== false
+        state.characterViewMode = state.characterViewMode === 'list' ? 'list' : 'gallery'
         const validScales: number[] = [...UI_SCALE_OPTIONS]
         state.uiScale = validScales.includes(state.uiScale) ? state.uiScale : DEFAULT_UI_SCALE
       },

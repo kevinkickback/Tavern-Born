@@ -22,6 +22,7 @@ import {
   setProfileSpells as setProfileSpellsCommand,
   toggleSpellPrepared,
 } from '@/lib/character/commands/spellCommands'
+import { normalizeKey } from '@/lib/provenance/normalization'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { SpellProfile } from '@/types/character'
 
@@ -130,13 +131,16 @@ export function useSpellProfileMutations(
   const removeSpellFromProfile = useCallback(
     (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
       if (!character || !commandCharacter) return
+      const profile = spellProfiles.find((entry) => entry.id === profileId)
+      const spellKey = normalizeKey(name)
+      if (profile?.fixedSpells?.some((fixedName) => normalizeKey(fixedName) === spellKey)) return
       const result = removeSpellFromCharacter(commandCharacter, currentLedger, name, {
         spellKind: kind,
         profileId,
       })
       applySpellCommand(result)
     },
-    [character, commandCharacter, currentLedger, applySpellCommand],
+    [character, commandCharacter, currentLedger, spellProfiles, applySpellCommand],
   )
 
   /**
@@ -188,8 +192,18 @@ export function useSpellProfileMutations(
       if (!character || !commandCharacter) return
       const currentProfile = spellProfiles.find((profile) => profile.id === profileId)
       if (!currentProfile || currentProfile.alwaysPrepared) return
+      const spellKey = normalizeKey(name)
+      if (
+        currentProfile.alwaysPreparedSpells?.some(
+          (preparedName) => normalizeKey(preparedName) === spellKey,
+        )
+      ) {
+        return
+      }
 
-      const isPrepared = currentProfile.preparedSpells.includes(name)
+      const isPrepared = currentProfile.preparedSpells.some(
+        (preparedName) => normalizeKey(preparedName) === spellKey,
+      )
       const detail = spellcastingDetailByProfileId.get(profileId)
       const preparedLimit =
         detail?.isPreparedCaster === true ? (detail.preparedSpellLimit ?? null) : null
@@ -209,7 +223,12 @@ export function useSpellProfileMutations(
       if (
         !isPrepared &&
         preparedLimit !== null &&
-        currentProfile.preparedSpells.length >= preparedLimit
+        currentProfile.preparedSpells.filter(
+          (preparedName) =>
+            !currentProfile.alwaysPreparedSpells?.some(
+              (alwaysName) => normalizeKey(alwaysName) === normalizeKey(preparedName),
+            ),
+        ).length >= preparedLimit
       ) {
         return
       }

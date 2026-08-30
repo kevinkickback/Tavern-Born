@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  CaretDown,
   Lightning,
   PencilSimple,
   Plus,
@@ -13,6 +12,7 @@ import {
 import { memo, useCallback, useMemo, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
+import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +25,15 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { SplitPane } from '@/components/ui/SplitPane'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import {
+  WorkspaceBody,
+  WorkspaceDetailContent,
+  WorkspacePage,
+  WorkspacePaneHeader,
+} from '@/components/workspace'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -70,6 +78,8 @@ interface FeatDetailCardProps {
   optionsPending?: boolean
   /** True when this feat has been configured and can be re-edited. */
   optionsConfigured?: boolean
+  selected?: boolean
+  onSelect?: (name: string) => void
 }
 
 const FeatDetailCard = memo(function FeatDetailCard({
@@ -84,8 +94,9 @@ const FeatDetailCard = memo(function FeatDetailCard({
   grantedBy,
   optionsPending,
   optionsConfigured,
+  selected,
+  onSelect,
 }: FeatDetailCardProps) {
-  const [expanded, setExpanded] = useState(false)
   const categoryLabel =
     typeof featData?.category === 'string' && featData.category.length > 0
       ? featCategoryToFull(featData.category)
@@ -107,27 +118,15 @@ const FeatDetailCard = memo(function FeatDetailCard({
 
   const grantLabel: string | null = !isOrigin && grantedBy ? grantedBy : null
 
-  const allEntries = featData?.entries ?? []
-  const visibleEntries = expanded ? allEntries : allEntries.slice(0, 2)
+  const visibleEntries = (featData?.entries ?? []).slice(0, 1)
   const descHtml = useMemo(
     () =>
       visibleEntries
         .map((e) => renderEntryCached(e))
         .filter(Boolean)
         .join('<br/>'),
-    // `renderEntryCached` is a stable shared utility; include only entry visibility changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [visibleEntries],
   )
-  const hasMore = allEntries.length > 2
-
-  const accentBorder = isBonus
-    ? 'border-l-primary'
-    : isOrigin
-      ? 'border-l-amber-500'
-      : grantedBy
-        ? 'border-l-violet-500'
-        : 'border-l-accent'
 
   const iconBg = isBonus
     ? 'bg-primary/10'
@@ -148,14 +147,21 @@ const FeatDetailCard = memo(function FeatDetailCard({
   return (
     <div
       className={cn(
-        'rounded-xl border border-border border-l-4 bg-card overflow-hidden transition-colors hover:border-accent/30',
-        accentBorder,
+        'relative min-w-0 cursor-default rounded-xl border border-border bg-background transition-colors hover:bg-secondary/25',
+        selected && 'bg-primary/5 ring-1 ring-inset ring-primary/40',
       )}
     >
-      <div className="p-4">
-        <div className="flex items-start gap-3">
+      <button
+        type="button"
+        aria-label={`Select ${feat.name}`}
+        aria-pressed={selected}
+        className="absolute inset-0 z-0 cursor-default rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        onClick={() => onSelect?.(feat.name)}
+      />
+      <div className="pointer-events-none relative z-10 p-4">
+        <div className="flex items-start gap-4">
           {/* Type icon square */}
-          <div className={cn('rounded-lg p-1.5 flex-shrink-0 mt-0.5', iconBg)}>
+          <div className={cn('rounded p-1.5 flex-shrink-0 mt-0.5', iconBg)}>
             {isBonus ? (
               <Lightning className={cn('h-4 w-4', iconColor)} weight="duotone" />
             ) : isOrigin ? (
@@ -170,24 +176,8 @@ const FeatDetailCard = memo(function FeatDetailCard({
           <div className="flex-1 min-w-0">
             {/* Name + badges */}
             <div className="flex items-start gap-2 flex-wrap mb-1.5">
-              <span className="font-semibold text-sm leading-tight">{feat.name}</span>
+              <h3 className="text-left text-base font-semibold leading-tight">{feat.name}</h3>
               <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                {feat.source && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs px-1.5 py-0 h-5 text-muted-foreground"
-                  >
-                    {feat.source}
-                  </Badge>
-                )}
-                {categoryLabel && (
-                  <Badge
-                    variant="outline"
-                    className="text-xs px-1.5 py-0 h-5 text-muted-foreground"
-                  >
-                    {categoryLabel}
-                  </Badge>
-                )}
                 {isBonus && (
                   <Badge className="text-xs px-1.5 py-0 h-5 bg-primary/10 text-primary border border-primary/30">
                     Bonus
@@ -221,34 +211,27 @@ const FeatDetailCard = memo(function FeatDetailCard({
               </div>
             </div>
 
+            {(categoryLabel || feat.source) && (
+              <p className="mb-2 text-xs text-muted-foreground">
+                {[categoryLabel, feat.source].filter(Boolean).join(' · ')}
+              </p>
+            )}
+
             {/* Prereq failure detail */}
             {!met && failures.length > 0 && (
-              <p className="text-xs text-warning/80 mb-1.5">{failures.join(' · ')}</p>
+              <p className="mb-2 text-sm text-warning/90">{failures.join(' · ')}</p>
             )}
 
             {/* Description */}
             {descHtml ? (
               <div
-                className="text-xs text-muted-foreground leading-relaxed"
+                className="line-clamp-2 text-sm leading-relaxed text-muted-foreground"
                 // renderEntry outputs safe HTML from structured 5etools entries.
                 // eslint-disable-next-line react/no-danger
                 dangerouslySetInnerHTML={{ __html: descHtml }}
               />
             ) : (
-              <p className="text-xs text-muted-foreground italic">No description available.</p>
-            )}
-
-            {hasMore && (
-              <button
-                type="button"
-                onClick={() => setExpanded((v) => !v)}
-                className="flex items-center gap-1 mt-1.5 text-xs text-accent-foreground hover:text-accent-foreground/80 transition-colors"
-              >
-                <CaretDown
-                  className={cn('h-3 w-3 transition-transform', expanded && 'rotate-180')}
-                />
-                {expanded ? 'Show less' : 'Show more'}
-              </button>
+              <p className="text-sm italic text-muted-foreground">No description available.</p>
             )}
 
             {optionsPending && onCompleteSetup && (
@@ -256,8 +239,11 @@ const FeatDetailCard = memo(function FeatDetailCard({
                 size="sm"
                 variant="outline"
                 data-feat-setup-btn="true"
-                className="mt-2 h-7 text-xs gap-1.5 border-warning/40 text-warning hover:bg-warning/10 hover:border-warning/60"
-                onClick={() => onCompleteSetup(feat.name)}
+                className="pointer-events-auto mt-3 h-8 gap-1.5 border-warning/40 text-sm text-warning hover:border-warning/60 hover:bg-warning/10"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onCompleteSetup(feat.name)
+                }}
               >
                 Complete Setup
                 <ArrowRight className="h-3 w-3" />
@@ -267,8 +253,11 @@ const FeatDetailCard = memo(function FeatDetailCard({
               <Button
                 size="sm"
                 variant="ghost"
-                className="mt-2 h-7 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
-                onClick={() => onEditSetup(feat.name)}
+                className="pointer-events-auto mt-3 h-8 gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onEditSetup(feat.name)
+                }}
               >
                 <PencilSimple className="h-3 w-3" />
                 Edit Setup
@@ -280,11 +269,15 @@ const FeatDetailCard = memo(function FeatDetailCard({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
-              onClick={() => onRemove(feat.name)}
+              className="pointer-events-auto size-9 cursor-pointer p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive flex-shrink-0"
+              onClick={(event) => {
+                event.stopPropagation()
+                onRemove(feat.name)
+              }}
               title="Remove feat"
+              aria-label={`Remove ${feat.name}`}
             >
-              <Trash className="h-3.5 w-3.5" />
+              <Trash className="size-4" />
             </Button>
           )}
         </div>
@@ -292,6 +285,77 @@ const FeatDetailCard = memo(function FeatDetailCard({
     </div>
   )
 })
+
+function FeatDetailsInspector({
+  featName,
+  featData,
+  characterSnapshot,
+}: {
+  featName: string | null
+  featData: Feat5e | undefined
+  characterSnapshot: PrereqCharacterSnapshot
+}) {
+  const categoryLabel =
+    typeof featData?.category === 'string' && featData.category.length > 0
+      ? featCategoryToFull(featData.category)
+      : null
+  const prerequisiteResult = featData
+    ? checkAllPrerequisites(featData as { prerequisite?: Raw5ePrereq[] }, characterSnapshot)
+    : { met: true, failures: [] }
+  const description = (featData?.entries ?? [])
+    .map((entry) => renderEntryCached(entry))
+    .filter(Boolean)
+    .join('<br/>')
+
+  return (
+    <>
+      <WorkspacePaneHeader title="Feat details" className="pr-20" />
+      <ScrollArea className="flex-1 overflow-hidden">
+        <WorkspaceDetailContent className="space-y-4">
+          {!featName ? (
+            <div className="flex h-32 items-center justify-center text-center text-sm text-muted-foreground">
+              Select a feat to inspect its rules.
+            </div>
+          ) : (
+            <>
+              <div>
+                <h2 className="text-xl font-display font-bold">{featName}</h2>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {featData?.source && <Badge variant="outline">{featData.source}</Badge>}
+                  {categoryLabel && <Badge variant="secondary">{categoryLabel}</Badge>}
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      prerequisiteResult.met
+                        ? 'border-success/40 text-success'
+                        : 'border-warning/50 text-warning',
+                    )}
+                  >
+                    {prerequisiteResult.met ? 'Prerequisites met' : 'Prerequisites unmet'}
+                  </Badge>
+                </div>
+              </div>
+              <Separator />
+              {!prerequisiteResult.met && prerequisiteResult.failures.length > 0 && (
+                <div className="border-l-2 border-warning bg-warning/5 px-3 py-2 text-sm text-warning">
+                  {prerequisiteResult.failures.join(' · ')}
+                </div>
+              )}
+              {description ? (
+                <div
+                  className="space-y-2 text-sm leading-relaxed [&_li]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:ml-4 [&_ul]:list-disc"
+                  dangerouslySetInnerHTML={{ __html: description }}
+                />
+              ) : (
+                <p className="text-sm italic text-muted-foreground">No description available.</p>
+              )}
+            </>
+          )}
+        </WorkspaceDetailContent>
+      </ScrollArea>
+    </>
+  )
+}
 
 export function FeatsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -303,7 +367,10 @@ export function FeatsPage() {
     commitFeatWithOptions,
     editFeatWithOptions,
   } = useFeatProvenanceMutations()
-  const { ledger } = useProvenanceLedger()
+  const { ledger, getSourcesRowsBySection } = useProvenanceLedger()
+  const [listCollapsed, setListCollapsed] = useState(false)
+  const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [selectedFeatName, setSelectedFeatName] = useState<string | null>(null)
   const [bonusModalOpen, setBonusModalOpen] = useState(false)
   const [featOptionsTarget, setFeatOptionsTarget] = useState<Feat5e | null>(null)
   const [featEditCandidate, setFeatEditCandidate] = useState<{
@@ -315,6 +382,11 @@ export function FeatsPage() {
     priorOptions: FeatOptionSelections
   } | null>(null)
   const classLookup = useClassLookup()
+
+  const handleSelectFeat = useCallback((featName: string) => {
+    setSelectedFeatName(featName)
+    setDetailCollapsed(false)
+  }, [])
 
   // ASI calculations for the warning banner (multiclass-aware)
   const classProgression = useMemo(() => getCharacterClassEntries(character), [character])
@@ -440,15 +512,17 @@ export function FeatsPage() {
         .filter((f) => f.name !== featName)
         .map((f) => ({ name: f.name, source: f.source }) as Feat5e)
       replaceFeatSelections(remaining)
+      if (selectedFeatName === featName) setSelectedFeatName(null)
     },
-    [character, replaceFeatSelections],
+    [character, replaceFeatSelections, selectedFeatName],
   )
 
   const handleRemoveGrantedChoice = useCallback(
     (choiceId: string, featName: string) => {
       removeFeatChoiceSelection(choiceId, featName)
+      if (selectedFeatName === featName) setSelectedFeatName(null)
     },
-    [removeFeatChoiceSelection],
+    [removeFeatChoiceSelection, selectedFeatName],
   )
 
   const handleBonusModalConfirm = useCallback(
@@ -479,8 +553,9 @@ export function FeatsPage() {
       updateCharacter(character.id, {
         specialFeats: (character.specialFeats ?? []).filter((f) => f.name !== featName),
       })
+      if (selectedFeatName === featName) setSelectedFeatName(null)
     },
-    [character, updateCharacter],
+    [character, selectedFeatName, updateCharacter],
   )
 
   // Open the options wizard for a feat that needs setup
@@ -570,351 +645,392 @@ export function FeatsPage() {
     pendingRacialChoices.length > 0 ||
     pendingOriginChoices.length > 0 ||
     pendingOptionCount > 0
+  const activeFeatName = selectedFeatName
+  const activeFeatData = (feats as Feat5e[]).find((feat) => feat.name === activeFeatName)
   return (
-    <div>
-      <div className="px-6 py-5 page-header-band">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Star className="h-6 w-6 text-primary" weight="duotone" />
-            <div>
-              <h1 className="text-2xl font-display font-bold">Feats</h1>
-              <p className="text-sm text-muted-foreground">
-                Manage your feats and ability score improvements
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <WorkspacePage className="p-3">
+      <WorkspaceBody className="flex overflow-hidden rounded-lg border border-border bg-background">
+        <SplitPane
+          className="my-0 h-full"
+          leftClassName="bg-background"
+          rightClassName="border-l-2 border-border bg-sidebar/50"
+          leftCollapsed={listCollapsed}
+          rightCollapsed={detailCollapsed}
+          onLeftCollapsedChange={setListCollapsed}
+          onRightCollapsedChange={setDetailCollapsed}
+          rightFixedWidth="var(--workspace-master-width)"
+          left={
+            <>
+              <WorkspacePaneHeader title="Feats">
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {characterFeatCount + bonusFeats.length} selected
+                </span>
+              </WorkspacePaneHeader>
+              <ScrollArea className="flex-1 overflow-hidden">
+                <div className="mx-auto w-full max-w-5xl space-y-4 p-4">
+                  {showSetupHint && hintPosition ? (
+                    <div
+                      className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
+                      style={{ top: hintPosition.top, left: hintPosition.left }}
+                    >
+                      <div className="pointer-events-auto animate-hint-bounce relative w-[300px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
+                        <div
+                          className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
+                          style={{ left: hintPosition.arrowLeft - 7 }}
+                        />
+                        <button
+                          type="button"
+                          className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
+                          onClick={handleDismissSetupHint}
+                          aria-label="Dismiss hint"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                        <p className="leading-snug text-accent-foreground/95 pr-8">
+                          Some feats need extra setup — like choosing a cantrip, skill, or spell.
+                          Click <strong>Complete Setup</strong> to finish configuring this feat.
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
 
-      <div className="px-6 pb-6 max-w-7xl mx-auto w-full space-y-4">
-        {showSetupHint && hintPosition ? (
-          <div
-            className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
-            style={{ top: hintPosition.top, left: hintPosition.left }}
-          >
-            <div className="pointer-events-auto animate-hint-bounce relative w-[300px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
-              <div
-                className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
-                style={{ left: hintPosition.arrowLeft - 7 }}
-              />
-              <button
-                type="button"
-                className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
-                onClick={handleDismissSetupHint}
-                aria-label="Dismiss hint"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-              <p className="leading-snug text-accent-foreground/95 pr-8">
-                Some feats need extra setup — like choosing a cantrip, skill, or spell. Click{' '}
-                <strong>Complete Setup</strong> to finish configuring this feat.
-              </p>
-            </div>
-          </div>
-        ) : null}
+                  {/* Pending choice warnings */}
+                  {hasPendingWarnings && (
+                    <div className="divide-y divide-warning/20 border-l-2 border-warning bg-warning/5">
+                      {remainingASI > 0 && (
+                        <div className="flex items-center gap-3 px-4 py-2.5">
+                          <WarningCircle
+                            className="h-4 w-4 text-warning flex-shrink-0"
+                            weight="fill"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-warning">
+                              {remainingASI} ASI slot{remainingASI !== 1 ? 's' : ''} available
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              Visit the Class page to choose feats or stat increases.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {pendingRacialChoices.length > 0 && (
+                        <div className="flex items-center gap-3 px-4 py-2.5">
+                          <WarningCircle
+                            className="h-4 w-4 text-warning flex-shrink-0"
+                            weight="fill"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-warning">
+                              {pendingRacialChoices.length} racial feat
+                              {pendingRacialChoices.length !== 1 ? 's' : ''} pending
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              Visit the Race page to make your selection.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {pendingOriginChoices.length > 0 && (
+                        <div className="flex items-center gap-3 px-4 py-2.5">
+                          <WarningCircle
+                            className="h-4 w-4 text-warning flex-shrink-0"
+                            weight="fill"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-warning">
+                              {pendingOriginChoices.length} origin feat
+                              {pendingOriginChoices.length !== 1 ? 's' : ''} pending
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              Visit the Background page to make your selection.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {pendingOptionCount > 0 && (
+                        <div className="flex items-center gap-3 px-4 py-2.5">
+                          <WarningCircle
+                            className="h-4 w-4 text-warning flex-shrink-0"
+                            weight="fill"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-warning">
+                              {pendingOptionCount} feat{pendingOptionCount !== 1 ? 's' : ''} need
+                              setup
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-2">
+                              Use the "Complete Setup" button on each feat below.
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-        {/* Pending choice warnings */}
-        {hasPendingWarnings && (
-          <div className="space-y-2">
-            {remainingASI > 0 && (
-              <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 flex items-center gap-3">
-                <WarningCircle className="h-4 w-4 text-warning flex-shrink-0" weight="fill" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-warning">
-                    {remainingASI} ASI slot{remainingASI !== 1 ? 's' : ''} available
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    Visit the Class page to choose feats or stat increases.
-                  </span>
+                  <section className="w-full overflow-hidden rounded-md border border-border">
+                    <div className="flex h-10 items-center justify-between border-b border-border bg-sidebar/50 px-4">
+                      <div className="flex items-center gap-2">
+                        <Star
+                          className="h-4 w-4 text-violet-600 dark:text-violet-400"
+                          weight="duotone"
+                        />
+                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                          Character Feats
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="text-xs h-5 px-2">
+                        {characterFeatCount} total
+                      </Badge>
+                    </div>
+                    <div>
+                      {hasCharacterSection ? (
+                        <div className="space-y-3 p-3">
+                          {(character.feats ?? []).map((feat) => {
+                            const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
+                            const isPending = pendingOptionFeatNames.has(feat.name)
+                            const isConfigured = !isPending && !!feat.options
+                            return (
+                              <FeatDetailCard
+                                key={feat.id}
+                                feat={feat}
+                                featData={featData}
+                                characterSnapshot={characterSnapshot}
+                                selected={activeFeatName === feat.name}
+                                onSelect={handleSelectFeat}
+                                onRemove={handleRemoveFeat}
+                                onCompleteSetup={isPending ? handleCompleteSetup : undefined}
+                                onEditSetup={isConfigured ? handleEditSetup : undefined}
+                                optionsPending={isPending}
+                                optionsConfigured={isConfigured}
+                              />
+                            )
+                          })}
+                          {racialFixedFeats.map((granted) => (
+                            <FeatDetailCard
+                              key={`fixed-${granted.name}|${granted.source}`}
+                              feat={{
+                                id: `fixed-${granted.name}`,
+                                name: granted.name,
+                                source: granted.source,
+                              }}
+                              featData={granted.featData}
+                              characterSnapshot={characterSnapshot}
+                              selected={activeFeatName === granted.name}
+                              onSelect={handleSelectFeat}
+                              grantedBy={granted.sourceLabel}
+                            />
+                          ))}
+                          {resolvedRacialChoices.flatMap((choice) =>
+                            choice.selected.map((selectedName) => {
+                              const data = (feats as Feat5e[]).find(
+                                (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
+                              )
+                              return (
+                                <FeatDetailCard
+                                  key={`choice-${choice.id}-${selectedName}`}
+                                  feat={{
+                                    id: `choice-${choice.id}-${selectedName}`,
+                                    name: data?.name ?? selectedName,
+                                    source: data?.source ?? '',
+                                  }}
+                                  featData={data}
+                                  characterSnapshot={characterSnapshot}
+                                  selected={activeFeatName === selectedName}
+                                  onSelect={handleSelectFeat}
+                                  grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
+                                  onRemove={() =>
+                                    handleRemoveGrantedChoice(choice.id, selectedName)
+                                  }
+                                />
+                              )
+                            }),
+                          )}
+                          {originFixedFeats.map((granted) => (
+                            <FeatDetailCard
+                              key={`fixed-${granted.name}|${granted.source}`}
+                              feat={{
+                                id: `fixed-${granted.name}`,
+                                name: granted.name,
+                                source: granted.source,
+                              }}
+                              featData={granted.featData}
+                              characterSnapshot={characterSnapshot}
+                              selected={activeFeatName === granted.name}
+                              onSelect={handleSelectFeat}
+                              grantedBy={granted.sourceLabel}
+                              isOrigin
+                            />
+                          ))}
+                          {resolvedOriginChoices.flatMap((choice) =>
+                            choice.selected.map((selectedName) => {
+                              const data = (feats as Feat5e[]).find(
+                                (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
+                              )
+                              return (
+                                <FeatDetailCard
+                                  key={`choice-${choice.id}-${selectedName}`}
+                                  feat={{
+                                    id: `choice-${choice.id}-${selectedName}`,
+                                    name: data?.name ?? selectedName,
+                                    source: data?.source ?? '',
+                                  }}
+                                  featData={data}
+                                  characterSnapshot={characterSnapshot}
+                                  selected={activeFeatName === selectedName}
+                                  onSelect={handleSelectFeat}
+                                  grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
+                                  onRemove={() =>
+                                    handleRemoveGrantedChoice(choice.id, selectedName)
+                                  }
+                                  isOrigin
+                                />
+                              )
+                            }),
+                          )}
+                        </div>
+                      ) : (
+                        <div className="min-h-48 flex flex-col items-center justify-center text-center p-6">
+                          <Star
+                            className="h-8 w-8 text-muted-foreground/30 mb-3"
+                            weight="duotone"
+                          />
+                          <h3 className="text-sm font-semibold">No Character Feats</h3>
+                          <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+                            Feats are gained from class ASI selections, your race, or background.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="w-full overflow-hidden rounded-md border border-border">
+                    <div className="flex h-10 items-center justify-between border-b border-border bg-sidebar/50 px-4">
+                      <div className="flex items-center gap-2">
+                        <Lightning className="h-4 w-4 text-primary" weight="duotone" />
+                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                          Bonus Feats
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="text-xs h-5 px-2">
+                        {bonusFeats.length} total
+                      </Badge>
+                    </div>
+                    <div className="space-y-3 p-3">
+                      {bonusFeats.map((feat) => {
+                        const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
+                        return (
+                          <FeatDetailCard
+                            key={feat.id}
+                            feat={feat}
+                            featData={featData}
+                            characterSnapshot={characterSnapshot}
+                            selected={activeFeatName === feat.name}
+                            onSelect={handleSelectFeat}
+                            onRemove={handleRemoveBonusFeat}
+                            isBonus
+                          />
+                        )
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => setBonusModalOpen(true)}
+                        className="group flex min-h-24 w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background px-5 py-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                          <Plus className="h-5 w-5" />
+                        </span>
+                        <span>
+                          <span className="block text-base font-semibold">Add Bonus Feat</span>
+                          <span className="mt-1 block text-sm text-muted-foreground">
+                            Optional feats that do not use normal feat slots.
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  </section>
                 </div>
+              </ScrollArea>
+              <div className="border-t border-border px-4 pb-4">
+                <SourcesAccordion
+                  sectionId="feats"
+                  title="Sources"
+                  rows={getSourcesRowsBySection('feats')}
+                />
               </div>
-            )}
-            {pendingRacialChoices.length > 0 && (
-              <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 flex items-center gap-3">
-                <WarningCircle className="h-4 w-4 text-warning flex-shrink-0" weight="fill" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-warning">
-                    {pendingRacialChoices.length} racial feat
-                    {pendingRacialChoices.length !== 1 ? 's' : ''} pending
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    Visit the Race page to make your selection.
-                  </span>
-                </div>
-              </div>
-            )}
-            {pendingOriginChoices.length > 0 && (
-              <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 flex items-center gap-3">
-                <WarningCircle className="h-4 w-4 text-warning flex-shrink-0" weight="fill" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-warning">
-                    {pendingOriginChoices.length} origin feat
-                    {pendingOriginChoices.length !== 1 ? 's' : ''} pending
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    Visit the Background page to make your selection.
-                  </span>
-                </div>
-              </div>
-            )}
-            {pendingOptionCount > 0 && (
-              <div className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-2.5 flex items-center gap-3">
-                <WarningCircle className="h-4 w-4 text-warning flex-shrink-0" weight="fill" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-warning">
-                    {pendingOptionCount} feat{pendingOptionCount !== 1 ? 's' : ''} need setup
-                  </span>
-                  <span className="text-xs text-muted-foreground ml-2">
-                    Use the "Complete Setup" button on each feat below.
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Character Feats card */}
-        <Card className="w-full overflow-hidden">
-          <div className="h-10 bg-gradient-to-r from-violet-500/20 via-violet-500/10 to-transparent flex items-center justify-between px-4">
-            <div className="flex items-center gap-2">
-              <Star className="h-4 w-4 text-violet-600 dark:text-violet-400" weight="duotone" />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Character Feats
-              </span>
-            </div>
-            <Badge variant="outline" className="text-xs h-5 px-2">
-              {characterFeatCount} total
-            </Badge>
-          </div>
-          <CardContent className="p-4">
-            {hasCharacterSection ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {(character.feats ?? []).map((feat) => {
-                  const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
-                  const isPending = pendingOptionFeatNames.has(feat.name)
-                  const isConfigured = !isPending && !!feat.options
-                  return (
-                    <FeatDetailCard
-                      key={feat.id}
-                      feat={feat}
-                      featData={featData}
-                      characterSnapshot={characterSnapshot}
-                      onRemove={handleRemoveFeat}
-                      onCompleteSetup={isPending ? handleCompleteSetup : undefined}
-                      onEditSetup={isConfigured ? handleEditSetup : undefined}
-                      optionsPending={isPending}
-                      optionsConfigured={isConfigured}
-                    />
-                  )
-                })}
-                {racialFixedFeats.map((granted) => (
-                  <FeatDetailCard
-                    key={`fixed-${granted.name}|${granted.source}`}
-                    feat={{
-                      id: `fixed-${granted.name}`,
-                      name: granted.name,
-                      source: granted.source,
-                    }}
-                    featData={granted.featData}
-                    characterSnapshot={characterSnapshot}
-                    grantedBy={granted.sourceLabel}
-                  />
-                ))}
-                {resolvedRacialChoices.flatMap((choice) =>
-                  choice.selected.map((selectedName) => {
-                    const data = (feats as Feat5e[]).find(
-                      (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
-                    )
-                    return (
-                      <FeatDetailCard
-                        key={`choice-${choice.id}-${selectedName}`}
-                        feat={{
-                          id: `choice-${choice.id}-${selectedName}`,
-                          name: data?.name ?? selectedName,
-                          source: data?.source ?? '',
-                        }}
-                        featData={data}
-                        characterSnapshot={characterSnapshot}
-                        grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
-                        onRemove={() => handleRemoveGrantedChoice(choice.id, selectedName)}
-                      />
-                    )
-                  }),
-                )}
-                {originFixedFeats.map((granted) => (
-                  <FeatDetailCard
-                    key={`fixed-${granted.name}|${granted.source}`}
-                    feat={{
-                      id: `fixed-${granted.name}`,
-                      name: granted.name,
-                      source: granted.source,
-                    }}
-                    featData={granted.featData}
-                    characterSnapshot={characterSnapshot}
-                    grantedBy={granted.sourceLabel}
-                    isOrigin
-                  />
-                ))}
-                {resolvedOriginChoices.flatMap((choice) =>
-                  choice.selected.map((selectedName) => {
-                    const data = (feats as Feat5e[]).find(
-                      (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
-                    )
-                    return (
-                      <FeatDetailCard
-                        key={`choice-${choice.id}-${selectedName}`}
-                        feat={{
-                          id: `choice-${choice.id}-${selectedName}`,
-                          name: data?.name ?? selectedName,
-                          source: data?.source ?? '',
-                        }}
-                        featData={data}
-                        characterSnapshot={characterSnapshot}
-                        grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
-                        onRemove={() => handleRemoveGrantedChoice(choice.id, selectedName)}
-                        isOrigin
-                      />
-                    )
-                  }),
-                )}
-              </div>
-            ) : (
-              <div className="min-h-48 flex flex-col items-center justify-center text-center p-6">
-                <Star className="h-8 w-8 text-muted-foreground/30 mb-3" weight="duotone" />
-                <h3 className="text-sm font-semibold">No Character Feats</h3>
-                <p className="mt-1 text-xs text-muted-foreground max-w-sm">
-                  Feats are gained from class ASI selections, your race, or background.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Bonus Feats card */}
-        <Card className="w-full overflow-hidden">
-          <div className="h-10 bg-gradient-to-r from-primary/20 via-primary/10 to-transparent flex items-center justify-between px-4">
-            <div className="flex items-center gap-2">
-              <Lightning className="h-4 w-4 text-primary" weight="duotone" />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Bonus Feats
-              </span>
-            </div>
-            <Badge variant="outline" className="text-xs h-5 px-2">
-              {bonusFeats.length} total
-            </Badge>
-          </div>
-          <CardContent className="p-4">
-            {bonusFeats.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {bonusFeats.map((feat) => {
-                  const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
-                  return (
-                    <FeatDetailCard
-                      key={feat.id}
-                      feat={feat}
-                      featData={featData}
-                      characterSnapshot={characterSnapshot}
-                      onRemove={handleRemoveBonusFeat}
-                      isBonus
-                    />
-                  )
-                })}
-                <button
-                  type="button"
-                  onClick={() => setBonusModalOpen(true)}
-                  className="rounded-xl border border-dashed border-border bg-card p-4 min-h-32 flex flex-col items-center justify-center text-center transition-colors hover:border-accent/40 hover:bg-muted/20"
-                >
-                  <Plus className="h-5 w-5 text-primary mb-2" />
-                  <span className="text-sm font-semibold">Add Bonus Feat</span>
-                  <span className="mt-1 text-xs text-muted-foreground max-w-xs">
-                    Bonus feats don&apos;t use your normal feat slots.
-                  </span>
-                </button>
-              </div>
-            ) : (
-              <div className="min-h-48 flex flex-col items-center justify-center text-center p-6">
-                <Lightning className="h-8 w-8 text-muted-foreground/30 mb-3" weight="duotone" />
-                <h3 className="text-sm font-semibold">No Bonus Feats Selected</h3>
-                <p className="mt-1 text-xs text-muted-foreground max-w-sm">
-                  Bonus feats are optional and don&apos;t use your normal feat slots.
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-1.5 mt-4"
-                  onClick={() => setBonusModalOpen(true)}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Feat
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Bonus feat modal — no selection limit */}
-        <FeatSelectionModal
-          open={bonusModalOpen}
-          onOpenChange={setBonusModalOpen}
-          feats={feats as Feat5e[]}
-          maxSelections={999}
-          initialSelectedIds={bonusInitialSelectedIds}
-          characterSnapshot={characterSnapshot}
-          onConfirm={handleBonusModalConfirm}
-          allowIgnoreLimit={false}
+            </>
+          }
+          right={
+            <FeatDetailsInspector
+              featName={activeFeatName}
+              featData={activeFeatData}
+              characterSnapshot={characterSnapshot}
+            />
+          }
         />
+      </WorkspaceBody>
 
-        {/* Feat options wizard — opened via "Complete Setup" on a pending feat */}
-        {featOptionsTarget && (
-          <FeatOptionsModal
-            open={true}
-            onOpenChange={(isOpen) => {
-              if (!isOpen) setFeatOptionsTarget(null)
-            }}
-            feat={featOptionsTarget}
-            proficientSkillNames={proficientSkillNames}
-            onFinish={handleFeatOptionsFinish}
-            onDismiss={() => setFeatOptionsTarget(null)}
-          />
-        )}
+      {/* Bonus feat modal — no selection limit */}
+      <FeatSelectionModal
+        open={bonusModalOpen}
+        onOpenChange={setBonusModalOpen}
+        feats={feats as Feat5e[]}
+        maxSelections={999}
+        initialSelectedIds={bonusInitialSelectedIds}
+        characterSnapshot={characterSnapshot}
+        onConfirm={handleBonusModalConfirm}
+        allowIgnoreLimit={false}
+      />
 
-        {/* Edit Setup confirmation dialog */}
-        <AlertDialog
-          open={!!featEditCandidate}
-          onOpenChange={(open) => {
-            if (!open) setFeatEditCandidate(null)
+      {/* Feat options wizard — opened via "Complete Setup" on a pending feat */}
+      {featOptionsTarget && (
+        <FeatOptionsModal
+          open={true}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setFeatOptionsTarget(null)
           }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Edit feat setup?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Changing spell or proficiency selections may affect your prepared spells. Your
-                current choices will be replaced. Continue?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleEditConfirm}>Continue</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          feat={featOptionsTarget}
+          proficientSkillNames={proficientSkillNames}
+          onFinish={handleFeatOptionsFinish}
+          onDismiss={() => setFeatOptionsTarget(null)}
+        />
+      )}
 
-        {/* Feat options wizard — opened after confirming Edit Setup */}
-        {featEditTarget && (
-          <FeatOptionsModal
-            open={true}
-            onOpenChange={(isOpen) => {
-              if (!isOpen) setFeatEditTarget(null)
-            }}
-            feat={featEditTarget.feat5e}
-            proficientSkillNames={proficientSkillNames}
-            initialSelections={featEditTarget.priorOptions}
-            onFinish={handleEditFinish}
-            onDismiss={() => setFeatEditTarget(null)}
-          />
-        )}
-      </div>
-    </div>
+      {/* Edit Setup confirmation dialog */}
+      <AlertDialog
+        open={!!featEditCandidate}
+        onOpenChange={(open) => {
+          if (!open) setFeatEditCandidate(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Edit feat setup?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Changing spell or proficiency selections may affect your prepared spells. Your current
+              choices will be replaced. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleEditConfirm}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Feat options wizard — opened after confirming Edit Setup */}
+      {featEditTarget && (
+        <FeatOptionsModal
+          open={true}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setFeatEditTarget(null)
+          }}
+          feat={featEditTarget.feat5e}
+          proficientSkillNames={proficientSkillNames}
+          initialSelections={featEditTarget.priorOptions}
+          onFinish={handleEditFinish}
+          onDismiss={() => setFeatEditTarget(null)}
+        />
+      )}
+    </WorkspacePage>
   )
 }

@@ -1,8 +1,8 @@
 import { Sword, X } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
-import { Card } from '@/components/ui/card'
 import { SplitPane } from '@/components/ui/SplitPane'
+import { WorkspaceBody, WorkspacePage } from '@/components/workspace'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
@@ -34,7 +34,12 @@ import {
 } from '@/pages/build/class/components/DetailsPanel'
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
-import { applyClassAsiChoice, resetClassAsiChoice } from '@/pages/build/class/model/asi'
+import {
+  applyClassAsiChoice,
+  assignLegacyClassAsiFeats,
+  isClassAsiFeatForSlot,
+  resetClassAsiChoice,
+} from '@/pages/build/class/model/asi'
 import type {
   ClassFeatProgression,
   OptionalFeatureProgression,
@@ -44,7 +49,6 @@ import {
   buildFeatModalFeats,
   buildLevelsToShow,
   countTotalAsiAcrossClasses,
-  countTotalFeatSlots,
 } from '@/pages/build/class/model/pageUtils'
 import { useClassPageState } from '@/pages/build/class/useClassPageState'
 import { useCharacterStore } from '@/store/characterStore'
@@ -87,6 +91,7 @@ export function BuildClassPage() {
     selectedFeature,
     optPickerState,
     featPickerOpen,
+    featPickerLevel,
     classFeatPickerState,
     asiPickerLevel,
     asiModeByLevel,
@@ -101,6 +106,7 @@ export function BuildClassPage() {
     setSelectedFeature,
     setOptPickerState,
     setFeatPickerOpen,
+    setFeatPickerLevel,
     setClassFeatPickerState,
     setAsiPickerLevel,
     handleSelectClassTab,
@@ -338,31 +344,92 @@ export function BuildClassPage() {
 
   const usedASI = character?.feats?.length ?? 0
 
-  // Feat slots = total ASI levels earned minus those committed to ability score increases
-  const totalFeatSlots = useMemo(
+  const earnedAsiSlots = useMemo(
     () =>
-      countTotalFeatSlots({
-        classProgression,
-        character,
-        classLookup,
-        fallbackClassByName,
+      classProgression.flatMap((entry) => {
+        const classData =
+          classLookup[getEntityLookupKey(entry.name, entry.source)] ??
+          fallbackClassByName.get(entry.name)
+        return getASILevelsFromClass(classData)
+          .filter((level) => level <= entry.levels)
+          .map((level) => ({ className: entry.name, classSource: entry.source, level }))
       }),
-    [classLookup, classProgression, fallbackClassByName, character],
+    [classProgression, classLookup, fallbackClassByName],
   )
+
+  const effectiveFeats = useMemo(
+    () =>
+      assignLegacyClassAsiFeats(
+        character?.feats ?? [],
+        earnedAsiSlots,
+        character?.asiChoices ?? [],
+      ),
+    [character?.feats, character?.asiChoices, earnedAsiSlots],
+  )
+
+  useEffect(() => {
+    if (!character) return
+    const metadataChanged = effectiveFeats.some((feat, index) => {
+      const existing = character.feats[index]
+      return (
+        existing?.className !== feat.className ||
+        existing?.classSource !== feat.classSource ||
+        existing?.classLevel !== feat.classLevel
+      )
+    })
+    if (metadataChanged) updateCharacter(character.id, { feats: effectiveFeats })
+  }, [character, effectiveFeats, updateCharacter])
 
   // Applied ASI choices for the currently-viewed class (used in the accordion rows)
   const appliedAsiChoicesForClass = useMemo(
-    () => (character?.asiChoices ?? []).filter((ac) => ac.className === viewingClass),
-    [character?.asiChoices, viewingClass],
+    () =>
+      (character?.asiChoices ?? []).filter(
+        (choice) =>
+          choice.className === viewingClass &&
+          (choice.classSource == null || (choice.classSource ?? '') === (viewingClassSource ?? '')),
+      ),
+    [character?.asiChoices, viewingClass, viewingClassSource],
+  )
+
+  const classAsiFeats = useMemo(
+    () =>
+      effectiveFeats.filter(
+        (feat) =>
+          !!viewingClass &&
+          feat.classLevel != null &&
+          isClassAsiFeatForSlot(feat, viewingClass, viewingClassSource),
+      ),
+    [effectiveFeats, viewingClass, viewingClassSource],
   )
 
   const [optionsPendingFeat, setOptionsPendingFeat] = useState<Feat5e | null>(null)
 
   const handleFeatConfirm = (selectedFeats: Feat5e[]) => {
-    const prevNames = new Set((character?.feats ?? []).map((f) => f.name))
-    replaceFeatSelections(selectedFeats)
+    if (!character || !viewingClass || featPickerLevel == null) return
+    const prevNames = new Set(effectiveFeats.map((feat) => feat.name))
+    const otherFeats = effectiveFeats.filter(
+      (feat) => !isClassAsiFeatForSlot(feat, viewingClass, viewingClassSource, featPickerLevel),
+    )
+    const scopedSelections = selectedFeats.slice(0, 1).map((feat) => ({
+      ...feat,
+      className: viewingClass,
+      classSource: viewingClassSource,
+      classLevel: featPickerLevel,
+    }))
+    replaceFeatSelections([...otherFeats, ...scopedSelections])
     const newlyAdded = selectedFeats.find((f) => !prevNames.has(f.name) && hasFeatOptions(f))
     if (newlyAdded) setOptionsPendingFeat(newlyAdded)
+    setFeatPickerOpen(false)
+    setFeatPickerLevel(null)
+  }
+
+  const clearFeatSelectionForAsi = (level: number) => {
+    if (!character || !viewingClass) return
+    replaceFeatSelections(
+      effectiveFeats.filter(
+        (feat) => !isClassAsiFeatForSlot(feat, viewingClass, viewingClassSource, level),
+      ),
+    )
   }
 
   const handleAsiApply = (level: number, abilityChanges: Record<string, 1 | 2>) => {
@@ -370,6 +437,7 @@ export function BuildClassPage() {
     const asiChoices = applyClassAsiChoice({
       currentAsiChoices: character.asiChoices ?? [],
       className: viewingClass,
+      classSource: viewingClassSource,
       level,
       abilityChanges,
     })
@@ -382,20 +450,21 @@ export function BuildClassPage() {
     const asiChoices = resetClassAsiChoice({
       currentAsiChoices: character.asiChoices ?? [],
       className: viewingClass,
+      classSource: viewingClassSource,
       level,
     })
     if (!asiChoices) return
     updateCharacter(character.id, { asiChoices })
-    const levelKey = `${level}|${viewingClass}`
+    const levelKey = `${level}|${viewingClass}|${viewingClassSource ?? ''}`
     clearAsiMode(levelKey)
   }
 
   // Merged feat list for the picker: available + any saved feats outside allowed sources
   const featModalFeats = useMemo(() => {
     const available = ((feats ?? []) as Feat5e[]).filter(isNormallySelectableFeat)
-    return buildFeatModalFeats({
+    const merged = buildFeatModalFeats({
       availableFeats: available,
-      selectedFeats: character?.feats ?? [],
+      selectedFeats: effectiveFeats,
       createFallback: (selected) =>
         ({
           name: selected.name,
@@ -403,7 +472,30 @@ export function BuildClassPage() {
           entries: [],
         }) as Feat5e,
     })
-  }, [feats, character?.feats])
+    const assignedElsewhere = new Set(
+      effectiveFeats
+        .filter(
+          (feat) =>
+            !viewingClass ||
+            !isClassAsiFeatForSlot(
+              feat,
+              viewingClass,
+              viewingClassSource,
+              featPickerLevel ?? undefined,
+            ),
+        )
+        .map((feat) => `${feat.name}|${feat.source ?? ''}`),
+    )
+    return merged.filter((feat) => !assignedElsewhere.has(`${feat.name}|${feat.source ?? ''}`))
+  }, [feats, effectiveFeats, featPickerLevel, viewingClass, viewingClassSource])
+
+  const featPickerInitialSelectedIds = useMemo(
+    () =>
+      classAsiFeats
+        .filter((feat) => feat.classLevel === featPickerLevel)
+        .map((feat) => `${feat.name}|${feat.source ?? ''}`),
+    [classAsiFeats, featPickerLevel],
+  )
 
   const viewingClassEntries = useMemo(
     () => (Array.isArray(viewingClassData?.entries) ? (viewingClassData.entries as unknown[]) : []),
@@ -430,21 +522,7 @@ export function BuildClassPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="px-6 py-5 page-header-band">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Sword className="h-6 w-6 text-accent" weight="duotone" />
-            <div>
-              <h1 className="text-2xl font-display font-bold">Class</h1>
-              <p className="text-sm text-muted-foreground">
-                Choose your class and manage level progression
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <WorkspacePage className="p-3">
       {showLevelUpHint && hintPosition ? (
         <div
           className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
@@ -471,80 +549,83 @@ export function BuildClassPage() {
         </div>
       ) : null}
 
-      <div className="flex-1 overflow-hidden px-6 pb-6">
-        <div className="max-w-7xl mx-auto h-full">
-          <Card className="h-full overflow-hidden flex flex-col">
-            <SplitPane
-              leftCollapsed={leftCollapsed}
-              rightCollapsed={detailCollapsed}
-              onLeftCollapsedChange={setLeftCollapsed}
-              onRightCollapsedChange={setDetailCollapsed}
-              rightWidth="w-1/2 min-w-[320px]"
-              left={
-                <BuildClassLevelsPanel
-                  classProgression={classProgression}
-                  selectedClassTab={selectedClassTab}
-                  onSelectClassTab={handleSelectClassTab}
-                  character={character}
-                  levelsToShow={levelsToShow}
-                  subclassLevel={subclassLevel}
-                  asiLevels={asiLevels}
-                  spellChoicesByLevel={spellChoicesByLevel}
-                  optFeatureProgressions={optFeatureProgressions}
-                  classFeatProgressions={classFeatProgressions}
-                  featuresByLevel={featuresByLevel}
-                  subclassFeatureName={subclassFeatureName}
-                  selectedFeature={selectedFeature}
-                  viewingClassData={viewingClassData}
-                  viewingSubclass={viewingSubclass}
-                  viewingSubclassData={viewingSubclassData}
-                  detailCollapsed={detailCollapsed}
-                  viewingClass={viewingClass ?? ''}
-                  viewingClassSource={viewingClassSource}
-                  viewingClassLevel={viewingClassLevel}
-                  classEquipmentBlockChoices={classEquipmentBlockChoices}
-                  selectedNames={selectedNames}
-                  optFeatures={optFeatures}
-                  featByCompositeId={featByCompositeId}
-                  feats={(feats ?? []) as Feat5e[]}
-                  spellByName={spellByName}
-                  appliedAsiChoicesForClass={appliedAsiChoicesForClass}
-                  asiModeByLevel={asiModeByLevel}
-                  usedASI={usedASI}
-                  totalASIAcrossClasses={totalASIAcrossClasses}
-                  onOpenClassPicker={() => setClassPickerOpen(true)}
-                  onOpenSubclassPicker={() => setSubclassPickerOpen(true)}
-                  onOpenSpellPicker={setSpellPickerLevel}
-                  onOpenSpellSwap={setSpellSwapLevel}
-                  onOpenFeatPicker={() => setFeatPickerOpen(true)}
-                  onOpenAsiPicker={setAsiPickerLevel}
-                  onOpenOptPicker={setOptPickerState}
-                  onOpenClassFeatPicker={setClassFeatPickerState}
-                  onBlockChoiceChange={(blockIndex, choice) => {
-                    if (!viewingClassData) return
-                    applyClassEquipmentChoice(viewingClassData, blockIndex, choice)
-                  }}
-                  onSelectFeature={setSelectedFeature}
-                  onExpandDetails={() => setDetailCollapsed(false)}
-                  onAsiReset={handleAsiReset}
-                  onSetAsiModeByLevel={setAsiMode}
-                  onClearFeatSelectionsForAsi={() => replaceFeatSelections([])}
-                  getOrdinalForm={getOrdinalForm}
-                />
-              }
-              right={
-                <BuildClassDetailsPanel
-                  selectedFeature={selectedFeature}
-                  viewingClassData={viewingClassData}
-                  viewingClassEntries={viewingClassEntries}
-                  viewingSubclass={viewingSubclass}
-                  onClearSelection={() => setSelectedFeature(null)}
-                />
-              }
+      <WorkspaceBody className="flex overflow-hidden rounded-lg border border-border bg-background">
+        <SplitPane
+          className="my-0 h-full"
+          leftClassName="bg-sidebar/70"
+          rightClassName="border-l-2 border-border bg-background"
+          leftCollapsed={leftCollapsed}
+          rightCollapsed={detailCollapsed}
+          onLeftCollapsedChange={setLeftCollapsed}
+          onRightCollapsedChange={setDetailCollapsed}
+          leftWidth="var(--workspace-master-width)"
+          left={
+            <BuildClassLevelsPanel
+              classProgression={classProgression}
+              selectedClassTab={selectedClassTab}
+              onSelectClassTab={handleSelectClassTab}
+              character={character}
+              levelsToShow={levelsToShow}
+              subclassLevel={subclassLevel}
+              asiLevels={asiLevels}
+              spellChoicesByLevel={spellChoicesByLevel}
+              optFeatureProgressions={optFeatureProgressions}
+              classFeatProgressions={classFeatProgressions}
+              featuresByLevel={featuresByLevel}
+              subclassFeatureName={subclassFeatureName}
+              selectedFeature={selectedFeature}
+              viewingClassData={viewingClassData}
+              viewingSubclass={viewingSubclass}
+              viewingSubclassData={viewingSubclassData}
+              detailCollapsed={detailCollapsed}
+              viewingClass={viewingClass ?? ''}
+              viewingClassSource={viewingClassSource}
+              viewingClassLevel={viewingClassLevel}
+              classEquipmentBlockChoices={classEquipmentBlockChoices}
+              selectedNames={selectedNames}
+              optFeatures={optFeatures}
+              featByCompositeId={featByCompositeId}
+              feats={(feats ?? []) as Feat5e[]}
+              spellByName={spellByName}
+              appliedAsiChoicesForClass={appliedAsiChoicesForClass}
+              classAsiFeats={classAsiFeats}
+              asiModeByLevel={asiModeByLevel}
+              usedASI={usedASI}
+              totalASIAcrossClasses={totalASIAcrossClasses}
+              onOpenClassPicker={() => setClassPickerOpen(true)}
+              onOpenSubclassPicker={() => setSubclassPickerOpen(true)}
+              onOpenSpellPicker={setSpellPickerLevel}
+              onOpenSpellSwap={setSpellSwapLevel}
+              onOpenFeatPicker={(level) => {
+                setFeatPickerLevel(level)
+                setFeatPickerOpen(true)
+              }}
+              onOpenAsiPicker={setAsiPickerLevel}
+              onOpenOptPicker={setOptPickerState}
+              onOpenClassFeatPicker={setClassFeatPickerState}
+              onBlockChoiceChange={(blockIndex, choice) => {
+                if (!viewingClassData) return
+                applyClassEquipmentChoice(viewingClassData, blockIndex, choice)
+              }}
+              onSelectFeature={setSelectedFeature}
+              onExpandDetails={() => setDetailCollapsed(false)}
+              onAsiReset={handleAsiReset}
+              onSetAsiModeByLevel={setAsiMode}
+              onClearFeatSelectionsForAsi={clearFeatSelectionForAsi}
+              getOrdinalForm={getOrdinalForm}
             />
-          </Card>
-        </div>
-      </div>
+          }
+          right={
+            <BuildClassDetailsPanel
+              selectedFeature={selectedFeature}
+              viewingClassData={viewingClassData}
+              viewingClassEntries={viewingClassEntries}
+              viewingSubclass={viewingSubclass}
+              onClearSelection={() => setSelectedFeature(null)}
+            />
+          }
+        />
+      </WorkspaceBody>
       <BuildClassModals
         character={character}
         classes={classes as Class5e[]}
@@ -577,10 +658,12 @@ export function BuildClassPage() {
         appliedAsiChoicesForClass={appliedAsiChoicesForClass}
         onAsiApply={handleAsiApply}
         featPickerOpen={featPickerOpen}
-        onFeatPickerOpenChange={setFeatPickerOpen}
+        onFeatPickerOpenChange={(open) => {
+          setFeatPickerOpen(open)
+          if (!open) setFeatPickerLevel(null)
+        }}
         featModalFeats={featModalFeats}
-        totalFeatSlots={totalFeatSlots}
-        usedASI={usedASI}
+        featPickerInitialSelectedIds={featPickerInitialSelectedIds}
         onFeatConfirm={handleFeatConfirm}
         classFeatPickerState={classFeatPickerState}
         onClassFeatPickerStateChange={setClassFeatPickerState}
@@ -610,6 +693,6 @@ export function BuildClassPage() {
           onDismiss={() => setOptionsPendingFeat(null)}
         />
       )}
-    </div>
+    </WorkspacePage>
   )
 }

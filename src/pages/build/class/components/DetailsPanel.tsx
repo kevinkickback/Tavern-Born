@@ -1,14 +1,14 @@
 import { CaretLeft, Sword } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
+import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
 import {
   formatProficiencyList,
   getSavingThrowsDisplay,
   getSpellcastingStatDisplay,
 } from '@/lib/calculations/classUtils'
 import { renderEntry } from '@/lib/renderer'
-import { InfoTile } from '@/pages/_shared'
+import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 
 export interface ClassFeatureDisplay {
@@ -41,40 +41,45 @@ export function BuildClassDetailsPanel({
 }: BuildClassDetailsPanelProps) {
   return (
     <>
-      <div className="bg-gradient-to-r from-accent/10 to-transparent px-4 py-3 flex-shrink-0 flex flex-col gap-2">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Details
-        </span>
-        <div className="flex items-start gap-2 min-h-8">
+      <WorkspacePaneHeader
+        title={selectedFeature ? 'Feature details' : 'Class details'}
+        className="pr-20"
+      >
+        <div className="ml-auto flex min-w-0 items-center gap-2">
           {selectedFeature ? (
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-bold font-display leading-tight">
-                  {selectedFeature.name}
-                </span>
-                {selectedFeature.source && (
-                  <Badge variant="outline" className="text-xs shrink-0">
-                    {selectedFeature.source}
-                  </Badge>
-                )}
-              </div>
+            <>
               <button
                 type="button"
                 onClick={onClearSelection}
-                className="text-xs text-accent hover:underline flex items-center gap-0.5 mt-1"
+                className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                aria-label="Show class overview"
+                title="Show class overview"
               >
-                <CaretLeft className="h-3 w-3" /> All features
+                <CaretLeft className="size-4" />
               </button>
-            </div>
+              <span className="truncate text-sm font-semibold">{selectedFeature.name}</span>
+              {selectedFeature.source && (
+                <Badge variant="outline" className="shrink-0 text-xs">
+                  {selectedFeature.source}
+                </Badge>
+              )}
+            </>
+          ) : viewingClassData ? (
+            <>
+              <span className="truncate text-sm font-semibold">{viewingClassData.name}</span>
+              <Badge variant="outline" className="shrink-0 text-xs">
+                {viewingClassData.source}
+              </Badge>
+            </>
           ) : (
             <span className="text-sm text-muted-foreground">Select a feature…</span>
           )}
         </div>
-      </div>
+      </WorkspacePaneHeader>
 
       {selectedFeature ? (
         <ScrollArea className="flex-1 overflow-hidden">
-          <div className="p-4 space-y-4">
+          <WorkspaceDetailContent className="space-y-4">
             {selectedFeature.levelFeatures ? (
               <>
                 {selectedFeature.entries
@@ -127,77 +132,71 @@ export function BuildClassDetailsPanel({
             ) : (
               <p className="text-sm text-muted-foreground italic">No description available.</p>
             )}
-          </div>
+          </WorkspaceDetailContent>
         </ScrollArea>
       ) : viewingClassData ? (
         <ScrollArea className="flex-1 overflow-hidden">
-          <div className="p-4 space-y-4">
-            <div>
-              <h2 className="text-2xl font-display font-bold">{viewingClassData.name}</h2>
-              <Badge variant="outline" className="mt-2">
-                {viewingClassData.source}
-              </Badge>
+          <WorkspaceDetailContent className="space-y-5">
+            <div className="grid grid-cols-3 border-y border-border">
+              {[
+                { label: 'Hit Die', value: `d${viewingClassData.hd?.faces ?? 8}` },
+                { label: 'Subclass', value: viewingSubclass ?? '—' },
+                { label: 'Spellcasting', value: getSpellcastingStatDisplay(viewingClassData) },
+              ].map(({ label, value }, index) => (
+                <div
+                  key={label}
+                  className={cn(
+                    'flex min-h-16 flex-col justify-center px-4 py-2.5',
+                    index < 2 && 'border-r border-border',
+                  )}
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {label}
+                  </span>
+                  <span className="mt-1 text-sm font-semibold tabular-nums">{value}</span>
+                </div>
+              ))}
             </div>
 
-            <Separator />
-
-            <div className="grid grid-cols-3 gap-3">
-              <InfoTile title="Hit Die">
-                <span className="text-sm font-mono">d{viewingClassData.hd?.faces ?? 8}</span>
-              </InfoTile>
-
-              <InfoTile title="Subclass">
-                <span className="text-sm">
-                  {viewingSubclass ?? <span className="text-muted-foreground">-</span>}
-                </span>
-              </InfoTile>
-
-              <InfoTile title="Spellcasting">
-                <span className="text-sm">{getSpellcastingStatDisplay(viewingClassData)}</span>
-              </InfoTile>
+            <div className="border-y border-border">
+              {[
+                {
+                  label: 'Armor',
+                  value: formatProficiencyList(viewingClassData.startingProficiencies?.armor),
+                },
+                {
+                  label: 'Weapons',
+                  value: formatProficiencyList(viewingClassData.startingProficiencies?.weapons),
+                },
+                {
+                  label: 'Tools',
+                  value: formatProficiencyList(viewingClassData.startingProficiencies?.tools),
+                },
+                {
+                  label: 'Saving throws',
+                  value:
+                    (viewingClassData.proficiency?.length ?? 0) > 0
+                      ? getSavingThrowsDisplay(viewingClassData)
+                      : '',
+                },
+              ]
+                .filter(({ value }) => value)
+                .map(({ label, value }, index, rows) => (
+                  <div
+                    key={label}
+                    className={cn(
+                      'grid grid-cols-[7.5rem_minmax(0,1fr)] gap-3 px-4 py-2.5 text-sm',
+                      index < rows.length - 1 && 'border-b border-border/70',
+                    )}
+                  >
+                    <span className="font-semibold">{label}</span>
+                    <span
+                      className="text-muted-foreground [&_a]:text-primary [&_a]:no-underline"
+                      dangerouslySetInnerHTML={{ __html: value ?? '' }}
+                    />
+                  </div>
+                ))}
             </div>
-
-            {(viewingClassData.startingProficiencies?.armor?.length ?? 0) > 0 && (
-              <InfoTile title="Armor Proficiencies">
-                <span
-                  className="text-sm [&_a]:text-accent [&_a]:no-underline"
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      formatProficiencyList(viewingClassData.startingProficiencies?.armor) ?? '',
-                  }}
-                />
-              </InfoTile>
-            )}
-
-            {(viewingClassData.startingProficiencies?.weapons?.length ?? 0) > 0 && (
-              <InfoTile title="Weapon Proficiencies">
-                <span
-                  className="text-sm [&_a]:text-accent [&_a]:no-underline"
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      formatProficiencyList(viewingClassData.startingProficiencies?.weapons) ?? '',
-                  }}
-                />
-              </InfoTile>
-            )}
-
-            {(viewingClassData.startingProficiencies?.tools?.length ?? 0) > 0 && (
-              <InfoTile title="Tool Proficiencies">
-                <span
-                  className="text-sm [&_a]:text-accent [&_a]:no-underline"
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      formatProficiencyList(viewingClassData.startingProficiencies?.tools) ?? '',
-                  }}
-                />
-              </InfoTile>
-            )}
-
-            {(viewingClassData.proficiency?.length ?? 0) > 0 && (
-              <InfoTile title="Saving Throws">
-                <span className="text-sm">{getSavingThrowsDisplay(viewingClassData)}</span>
-              </InfoTile>
-            )}
 
             {viewingClassEntries.length > 0 && (
               <div>
@@ -246,7 +245,10 @@ export function BuildClassDetailsPanel({
             )}
 
             {(viewingClassData.classFluffImages?.length ?? 0) > 0 && (
-              <InfoTile title="Class Artwork">
+              <section className="border-t border-border pt-4">
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Class artwork
+                </h4>
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   {viewingClassData.classFluffImages?.map((image) => (
                     <li
@@ -257,9 +259,9 @@ export function BuildClassDetailsPanel({
                     </li>
                   ))}
                 </ul>
-              </InfoTile>
+              </section>
             )}
-          </div>
+          </WorkspaceDetailContent>
         </ScrollArea>
       ) : (
         <div className="flex items-center justify-center flex-1 text-muted-foreground text-sm p-8 text-center">

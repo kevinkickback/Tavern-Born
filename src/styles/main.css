@@ -33,6 +33,12 @@
 */
 :root {
   --radius: 0.625rem;
+  --workspace-titlebar-height: 3rem;
+  --workspace-toolbar-height: 2.75rem;
+  --workspace-rail-width: 3.5rem;
+  --workspace-context-width: 14rem;
+  --workspace-master-width: clamp(24rem, 34%, 42rem);
+  --workspace-row-height: 2.25rem;
   /* Dark light-theme: slate-7 page base with raised cards (cards lighter than
      background). theme.css defaults --color-bg to neutral-5; override here.
      Dark theme is unaffected — .dark overrides these with oklch values directly. */

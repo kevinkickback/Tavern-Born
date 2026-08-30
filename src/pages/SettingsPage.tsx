@@ -1,70 +1,33 @@
-import { Database, Gear, Info, Palette, Sliders } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { AboutPanel } from '@/components/settings/AboutPanel'
 import { AppearancePanel } from '@/components/settings/AppearancePanel'
 import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigurator'
 import { GeneralPanel } from '@/components/settings/GeneralPanel'
-import { cn } from '@/lib/utils'
+import { WorkspaceBody, WorkspacePage } from '@/components/workspace'
 
-const TABS = [
-  { id: 'general', label: 'General', Icon: Sliders },
-  { id: 'appearance', label: 'Appearance', Icon: Palette },
-  { id: 'data', label: 'Game Data', Icon: Database },
-  { id: 'about', label: 'About', Icon: Info },
-] as const
+type SettingsPanel = 'general' | 'appearance' | 'data' | 'about'
 
-type TabId = (typeof TABS)[number]['id']
+function getActivePanel(pathname: string): SettingsPanel {
+  const segments = pathname.split('/')
+  const panel = segments[segments.length - 1]
+  if (panel === 'appearance' || panel === 'data' || panel === 'about') return panel
+  return 'general'
+}
 
 export function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('general')
+  const location = useLocation()
+  const activePanel = getActivePanel(location.pathname)
 
   return (
-    <div>
-      <div className="px-6 py-5 page-header-band">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Gear className="h-6 w-6 text-primary" weight="duotone" />
-            <div>
-              <h1 className="text-2xl font-display font-bold">Settings</h1>
-              <p className="text-sm text-muted-foreground">
-                Configure app preferences and game data sources
-              </p>
-            </div>
-          </div>
+    <WorkspacePage>
+      <WorkspaceBody>
+        <div className="mx-auto w-full max-w-4xl px-6 py-5">
+          {activePanel === 'general' && <GeneralPanel />}
+          {activePanel === 'appearance' && <AppearancePanel />}
+          {activePanel === 'data' && <DataSourceConfigurator />}
+          {activePanel === 'about' && <AboutPanel />}
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto w-full">
-        {/* Tab navigation */}
-        <div className="border-b border-border mb-6 px-6">
-          <nav className="flex gap-1">
-            {TABS.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActiveTab(id)}
-                className={cn(
-                  'flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                  activeTab === id
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-                )}
-              >
-                <Icon className="h-4 w-4" weight="duotone" />
-                {label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Tab content */}
-        <div className="px-6 pb-6">
-          {activeTab === 'appearance' && <AppearancePanel />}
-          {activeTab === 'data' && <DataSourceConfigurator />}
-          {activeTab === 'general' && <GeneralPanel />}
-          {activeTab === 'about' && <AboutPanel />}
-        </div>
-      </div>
-    </div>
+      </WorkspaceBody>
+    </WorkspacePage>
   )
 }

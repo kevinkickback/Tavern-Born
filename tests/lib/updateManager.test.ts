@@ -53,6 +53,7 @@ import {
   compareSemver,
   getUpdateStatus,
   initAutoUpdater,
+  installUpdate,
   startAutoCheckSchedule,
   stopAutoCheckSchedule,
 } from '../../electron/updateManager'
@@ -135,5 +136,27 @@ describe('updateManager offline safeguards', () => {
 
     expect(checkForUpdatesMock).not.toHaveBeenCalled()
     expect(getUpdateStatus().status).toBe('not-available')
+  })
+})
+
+describe('installUpdate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  test('installs silently and relaunches the packaged app', () => {
+    appState.isPackaged = true
+
+    installUpdate()
+
+    expect(quitAndInstallMock).toHaveBeenCalledWith(true, true)
+  })
+
+  test('does not invoke the installer during development', () => {
+    appState.isPackaged = false
+
+    installUpdate()
+
+    expect(quitAndInstallMock).not.toHaveBeenCalled()
   })
 })

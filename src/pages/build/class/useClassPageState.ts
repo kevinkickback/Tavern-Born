@@ -26,6 +26,7 @@ export function useClassPageState() {
   const [selectedFeature, setSelectedFeature] = useState<SelectedFeatureState | null>(null)
   const [optPickerState, setOptPickerState] = useState<OptPickerState | null>(null)
   const [featPickerOpen, setFeatPickerOpen] = useState(false)
+  const [featPickerLevel, setFeatPickerLevel] = useState<number | null>(null)
   const [classFeatPickerState, setClassFeatPickerState] = useState<ClassFeatPickerState | null>(
     null,
   )
@@ -75,6 +76,7 @@ export function useClassPageState() {
     selectedFeature,
     optPickerState,
     featPickerOpen,
+    featPickerLevel,
     classFeatPickerState,
     asiPickerLevel,
     asiModeByLevel,
@@ -91,6 +93,7 @@ export function useClassPageState() {
     setSelectedFeature,
     setOptPickerState,
     setFeatPickerOpen,
+    setFeatPickerLevel,
     setClassFeatPickerState,
     setAsiPickerLevel,
     handleSelectClassTab,

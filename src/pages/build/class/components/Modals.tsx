@@ -119,8 +119,7 @@ interface BuildClassModalsProps {
   featPickerOpen: boolean
   onFeatPickerOpenChange: (open: boolean) => void
   featModalFeats: Feat5e[]
-  totalFeatSlots: number
-  usedASI: number
+  featPickerInitialSelectedIds: string[]
   onFeatConfirm: (selectedFeats: Feat5e[]) => void
 
   classFeatPickerState: ClassFeatPickerState | null
@@ -170,8 +169,7 @@ export function BuildClassModals({
   featPickerOpen,
   onFeatPickerOpenChange,
   featModalFeats,
-  totalFeatSlots,
-  usedASI,
+  featPickerInitialSelectedIds,
   onFeatConfirm,
   classFeatPickerState,
   onClassFeatPickerStateChange,
@@ -444,10 +442,8 @@ export function BuildClassModals({
         open={featPickerOpen}
         onOpenChange={onFeatPickerOpenChange}
         feats={featModalFeats}
-        maxSelections={Math.max(totalFeatSlots, usedASI)}
-        initialSelectedIds={(character.feats ?? []).map(
-          (feat) => `${feat.name}|${feat.source ?? ''}`,
-        )}
+        maxSelections={1}
+        initialSelectedIds={featPickerInitialSelectedIds}
         characterSnapshot={characterSnapshot}
         allowIgnoreLimit={false}
         onConfirm={onFeatConfirm}
