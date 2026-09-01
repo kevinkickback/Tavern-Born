@@ -2,7 +2,7 @@ import { Barbell, Brain, Star, Translate, Wrench } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
+import { WorkspaceDetailContent } from '@/components/workspace'
 import {
   formatEquipmentOptionEntries,
   type ResolvedEquipmentBlock,
@@ -186,7 +186,7 @@ function BackgroundDetails2024({
       <EquipmentSection equipmentBlocks={equipmentBlocks} bgEquipmentChoices={bgEquipmentChoices} />
 
       {narrativeEntries.length > 0 && (
-        <div>
+        <div className="mx-auto w-full max-w-[72ch]">
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Features
           </h4>
@@ -296,7 +296,7 @@ function BackgroundDetails2014({
       <EquipmentSection equipmentBlocks={equipmentBlocks} bgEquipmentChoices={bgEquipmentChoices} />
 
       {namedSections.length > 0 && (
-        <div>
+        <div className="mx-auto w-full max-w-[72ch]">
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Features
           </h4>
@@ -334,56 +334,38 @@ export function BuildBackgroundDetailsPanel({
   bgChoices,
 }: BuildBackgroundDetailsPanelProps) {
   return (
-    <>
-      <WorkspacePaneHeader title="Background details" className="pr-20">
-        <div className="ml-auto flex min-w-0 items-center gap-2">
-          {selectedBackground ? (
-            <>
-              <span className="truncate text-sm font-semibold leading-tight">
-                {selectedBackground.name}
-              </span>
-              <Badge variant="outline" className="text-xs shrink-0">
-                {selectedBackground.source}
-              </Badge>
-            </>
+    <ScrollArea className="flex-1 overflow-hidden">
+      <WorkspaceDetailContent>
+        {selectedBackground ? (
+          selectedBackground.edition === 'one' ? (
+            <BackgroundDetails2024
+              background={selectedBackground}
+              skillNames={skillNames}
+              toolNames={toolNames}
+              fixedBgFeats={fixedBgFeats}
+              chosenOriginFeat={chosenOriginFeat}
+              bgAsiData={bgAsiData}
+              bgBlockIndex={bgBlockIndex}
+              bgChoices={bgChoices}
+              equipmentBlocks={equipmentBlocks}
+              bgEquipmentChoices={bgEquipmentChoices}
+            />
           ) : (
-            <span className="text-sm text-muted-foreground">Select a background…</span>
-          )}
-        </div>
-      </WorkspacePaneHeader>
-      <ScrollArea className="flex-1 overflow-hidden">
-        <WorkspaceDetailContent>
-          {selectedBackground ? (
-            selectedBackground.edition === 'one' ? (
-              <BackgroundDetails2024
-                background={selectedBackground}
-                skillNames={skillNames}
-                toolNames={toolNames}
-                fixedBgFeats={fixedBgFeats}
-                chosenOriginFeat={chosenOriginFeat}
-                bgAsiData={bgAsiData}
-                bgBlockIndex={bgBlockIndex}
-                bgChoices={bgChoices}
-                equipmentBlocks={equipmentBlocks}
-                bgEquipmentChoices={bgEquipmentChoices}
-              />
-            ) : (
-              <BackgroundDetails2014
-                background={selectedBackground}
-                skillNames={skillNames}
-                languageNames={languageNames}
-                toolNames={toolNames}
-                equipmentBlocks={equipmentBlocks}
-                bgEquipmentChoices={bgEquipmentChoices}
-              />
-            )
-          ) : (
-            <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-              Select a background to view details
-            </div>
-          )}
-        </WorkspaceDetailContent>
-      </ScrollArea>
-    </>
+            <BackgroundDetails2014
+              background={selectedBackground}
+              skillNames={skillNames}
+              languageNames={languageNames}
+              toolNames={toolNames}
+              equipmentBlocks={equipmentBlocks}
+              bgEquipmentChoices={bgEquipmentChoices}
+            />
+          )
+        ) : (
+          <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+            Select a background to view details
+          </div>
+        )}
+      </WorkspaceDetailContent>
+    </ScrollArea>
   )
 }

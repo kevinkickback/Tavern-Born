@@ -38,22 +38,47 @@
   --workspace-rail-width: 3.5rem;
   --workspace-context-width: 14rem;
   --workspace-master-width: clamp(24rem, 34%, 42rem);
-  --workspace-row-height: 2.25rem;
-  /* Dark light-theme: slate-7 page base with raised cards (cards lighter than
-     background). theme.css defaults --color-bg to neutral-5; override here.
-     Dark theme is unaffected — .dark overrides these with oklch values directly. */
-  --color-bg: var(--color-neutral-7);
-  --background: var(--color-bg);
+  --workspace-pane-header-height: 2.75rem;
+  --workspace-row-height: 2.5rem;
+  --control-height-sm: 2rem;
+  --control-height-md: 2.25rem;
+  --control-height-lg: 2.5rem;
+
+  /* Semantic surface ladder. Neutral roles remain stable when the accent changes. */
+  --app-shell: var(--color-neutral-2);
+  --workspace-canvas: var(--color-neutral-1);
+  --workspace-pane: var(--color-neutral-2);
+  --workspace-detail: var(--color-neutral-3);
+  --surface-raised: var(--color-neutral-3);
+  --surface-hover: var(--color-neutral-4);
+  --surface-selected: var(--color-accent-3);
+  --surface-selected-hover: var(--color-accent-4);
+  --border-subtle: var(--color-neutral-6);
+  --border-default: var(--color-neutral-7);
+  --border-strong: var(--color-neutral-8);
+
+  /* Type roles use rem so the Settings interface scale remains authoritative. */
+  --font-size-caption: 0.6875rem;
+  --font-size-label: 0.75rem;
+  --font-size-body: 0.875rem;
+  --font-size-pane-title: 0.75rem;
+  --font-size-page-title: 1.25rem;
+  --line-height-caption: 1rem;
+  --line-height-label: 1rem;
+  --line-height-body: 1.25rem;
+  --line-height-page-title: 1.75rem;
+
+  --background: var(--app-shell);
   --foreground: var(--color-fg);
-  --card: var(--color-neutral-6);
+  --card: var(--workspace-canvas);
   --card-foreground: var(--color-fg);
-  --popover: var(--color-neutral-4);
+  --popover: var(--surface-raised);
   --popover-foreground: var(--color-fg);
   --primary: var(--color-accent-10);
   --primary-foreground: var(--color-accent-contrast);
-  --secondary: var(--color-neutral-8);
+  --secondary: var(--surface-hover);
   --secondary-foreground: var(--color-fg);
-  --muted: var(--color-neutral-8);
+  --muted: var(--surface-raised);
   --muted-foreground: var(--color-fg-secondary);
   --accent: var(--color-accent-10);
   --accent-foreground: var(--color-accent-contrast);
@@ -66,21 +91,21 @@
   --info-foreground: var(--blue-12);
   --accent-secondary: var(--color-accent-secondary-9);
   --accent-secondary-foreground: var(--color-accent-secondary-12);
-  --border: var(--color-neutral-8);
-  --input: var(--color-neutral-8);
+  --border: var(--border-default);
+  --input: var(--border-strong);
   --ring: var(--color-focus-ring);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: var(--color-neutral-7);
+  --sidebar: var(--app-shell);
   --sidebar-foreground: var(--color-fg);
   --sidebar-primary: var(--color-accent-10);
   --sidebar-primary-foreground: var(--color-accent-contrast);
   --sidebar-accent: var(--color-accent-10);
   --sidebar-accent-foreground: var(--color-accent-contrast);
-  --sidebar-border: var(--color-neutral-8);
+  --sidebar-border: var(--border-default);
   --sidebar-ring: var(--color-focus-ring);
 }
 
@@ -88,36 +113,47 @@
   ---break---
 */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  --app-shell: var(--color-neutral-1);
+  --workspace-canvas: var(--color-neutral-2);
+  --workspace-pane: var(--color-neutral-3);
+  --workspace-detail: color-mix(in oklab, var(--color-neutral-3) 70%, var(--color-neutral-4));
+  --surface-raised: var(--color-neutral-4);
+  --surface-hover: var(--color-neutral-5);
+  --surface-selected: var(--color-accent-3);
+  --surface-selected-hover: var(--color-accent-4);
+  --border-subtle: var(--color-neutral-5);
+  --border-default: var(--color-neutral-6);
+  --border-strong: var(--color-neutral-7);
+  --background: var(--app-shell);
+  --foreground: var(--color-neutral-12);
+  --card: var(--workspace-canvas);
+  --card-foreground: var(--color-neutral-12);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--color-neutral-12);
   --primary: var(--color-accent-10);
   --primary-foreground: var(--color-accent-contrast);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --secondary: var(--surface-hover);
+  --secondary-foreground: var(--color-neutral-12);
+  --muted: var(--surface-raised);
+  --muted-foreground: var(--color-neutral-11);
   --accent: var(--color-accent-10);
   --accent-foreground: var(--color-accent-contrast);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --border: var(--border-default);
+  --input: var(--border-strong);
   --ring: var(--color-focus-ring);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar: var(--app-shell);
+  --sidebar-foreground: var(--color-neutral-12);
   --sidebar-primary: var(--color-accent-10);
   --sidebar-primary-foreground: var(--color-accent-contrast);
   --sidebar-accent: var(--color-accent-10);
   --sidebar-accent-foreground: var(--color-accent-contrast);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-border: var(--border-default);
   --sidebar-ring: var(--color-focus-ring);
 }
 
@@ -133,6 +169,17 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-app-shell: var(--app-shell);
+  --color-workspace-canvas: var(--workspace-canvas);
+  --color-workspace-pane: var(--workspace-pane);
+  --color-workspace-detail: var(--workspace-detail);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-selected: var(--surface-selected);
+  --color-surface-selected-hover: var(--surface-selected-hover);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);

@@ -5,7 +5,10 @@ export function WorkspacePage({ className, ...props }: ComponentProps<'section'>
   return (
     <section
       data-slot="workspace-page"
-      className={cn('flex h-full min-h-0 flex-col overflow-hidden', className)}
+      className={cn(
+        'flex h-full min-h-0 flex-col overflow-hidden bg-workspace-canvas text-sm leading-5',
+        className,
+      )}
       {...props}
     />
   )
@@ -16,7 +19,7 @@ export function WorkspaceToolbar({ className, ...props }: ComponentProps<'header
     <header
       data-slot="workspace-toolbar"
       className={cn(
-        'flex h-11 shrink-0 items-center gap-2 border-b border-border bg-background px-3',
+        'flex h-[var(--workspace-pane-header-height)] shrink-0 items-center gap-2 border-b border-border bg-surface-raised px-3',
         className,
       )}
       {...props}

@@ -39,7 +39,6 @@ describe('appPreferencesStore', () => {
       themeAccent: 'blue',
       themeAppearance: 'light',
       autoRefreshGameData: true,
-      sidebarOpen: true,
       compendiumFiltersOpen: true,
       characterViewMode: 'gallery',
     })
@@ -102,7 +101,6 @@ describe('appPreferencesStore', () => {
       autoRefreshGameData: true,
       autoUpdate: true,
       uiScale: 100,
-      sidebarOpen: true,
       compendiumFiltersOpen: true,
       characterViewMode: 'gallery',
     })

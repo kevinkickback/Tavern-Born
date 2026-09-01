@@ -28,6 +28,7 @@ import { getCharacterClassEntries, getTotalLevel } from '@/lib/characterUtils'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SourceRow } from '@/lib/provenance/types'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
+import { cn } from '@/lib/utils'
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
 import { SpellNameTooltip } from '@/pages/spells/components/SpellNameTooltip'
 import {
@@ -47,6 +48,8 @@ import { NoCharCard } from '../_shared'
 
 const SPELLS_PREPARE_SELECTOR = '[data-spell-prepare-toggle="true"]'
 const SPELLS_HINT_WIDTH = 300
+
+type SpellView = 'all' | 'class' | 'racial' | 'bonus'
 
 export function SpellsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -89,6 +92,7 @@ export function SpellsPage() {
   const [bonusSpellModalOpen, setBonusSpellModalOpen] = useState(false)
   const [listCollapsed, setListCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [spellView, setSpellView] = useState<SpellView>('all')
   const [activeRacialChoice, setActiveRacialChoice] = useState<{
     profileId: string
     choiceId: string
@@ -303,6 +307,41 @@ export function SpellsPage() {
     }
     return map
   }, [spellListItems])
+
+  const spellCountsByView = useMemo(() => {
+    const counts: Record<SpellView, number> = { all: 0, class: 0, racial: 0, bonus: 0 }
+
+    for (const profile of spellProfiles) {
+      const profileItems = groupedItems.get(profile.id) ?? []
+      const detail = detailsByProfileId.get(profile.id)
+      const count = detail?.isTruePreparedCaster
+        ? profileItems.filter((item) => item.kind === 'cantrip').length +
+          (preparedCasterItemsByProfile.get(profile.id)?.length ?? 0)
+        : profileItems.length
+      const view: Exclude<SpellView, 'all'> =
+        profile.id === SPECIAL_SPELL_PROFILE_ID
+          ? 'bonus'
+          : profile.type === 'racial'
+            ? 'racial'
+            : 'class'
+
+      counts[view] += count
+      counts.all += count
+    }
+
+    return counts
+  }, [detailsByProfileId, groupedItems, preparedCasterItemsByProfile, spellProfiles])
+
+  const visibleSpellProfiles = useMemo(
+    () =>
+      spellProfiles.filter((profile) => {
+        if (spellView === 'all') return true
+        if (spellView === 'bonus') return profile.id === SPECIAL_SPELL_PROFILE_ID
+        if (spellView === 'racial') return profile.type === 'racial'
+        return profile.type === 'class'
+      }),
+    [spellProfiles, spellView],
+  )
 
   const selectionSourceByProfileAndSpell = useMemo(() => {
     const map = buildSpellSelectionSourceMap({ spellProfiles, ledger })
@@ -570,11 +609,20 @@ export function SpellsPage() {
         </div>
       ) : null}
 
-      <WorkspaceBody className="flex overflow-hidden rounded-lg border border-border bg-background">
+      <WorkspaceBody className="flex overflow-hidden">
         <SplitPane
-          className="my-0 h-full"
-          leftClassName="bg-background"
-          rightClassName="border-l-2 border-border bg-sidebar/50"
+          className={cn(
+            'my-0 h-full overflow-visible',
+            !listCollapsed && !detailCollapsed && 'gap-3',
+          )}
+          leftClassName={cn(
+            'rounded-lg bg-workspace-pane',
+            listCollapsed ? 'border-0' : 'border border-border',
+          )}
+          rightClassName={cn(
+            'rounded-lg bg-workspace-detail',
+            detailCollapsed ? 'border-0' : 'border border-border',
+          )}
           leftCollapsed={listCollapsed}
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setListCollapsed}
@@ -582,11 +630,50 @@ export function SpellsPage() {
           rightFixedWidth="var(--workspace-master-width)"
           left={
             <>
-              <WorkspacePaneHeader title="Spells" count={`${spellListItems.length} assigned`} />
+              <WorkspacePaneHeader ariaLabel="Spell view">
+                <div className="h-full min-w-0 flex-1 overflow-x-auto">
+                  <div
+                    className="inline-flex h-full min-w-max items-stretch gap-5"
+                    role="tablist"
+                    aria-label="Spell view"
+                  >
+                    {(
+                      [
+                        { value: 'all', label: 'All' },
+                        { value: 'class', label: 'Class' },
+                        { value: 'racial', label: 'Racial' },
+                        { value: 'bonus', label: 'Bonus' },
+                      ] as const
+                    ).map(({ value, label }) => {
+                      const active = spellView === value
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => setSpellView(value)}
+                          className={cn(
+                            'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',
+                            active
+                              ? 'border-primary text-foreground'
+                              : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+                          )}
+                        >
+                          <span>{label}</span>
+                          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold leading-none text-primary">
+                            {spellCountsByView[value]}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
                 <div className="mx-auto w-full max-w-6xl p-4">
                   <SpellProfileManager
-                    spellProfiles={spellProfiles}
+                    spellProfiles={visibleSpellProfiles}
                     detailsByProfileId={detailsByProfileId}
                     groupedItems={groupedItems}
                     selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}

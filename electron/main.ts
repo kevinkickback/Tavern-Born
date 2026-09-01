@@ -46,7 +46,17 @@ async function createWindow(): Promise<void> {
     ...(windowState.y !== undefined ? { y: windowState.y } : {}),
     minWidth: MIN_WIDTH,
     minHeight: MIN_HEIGHT,
-    backgroundColor: '#111113',
+    backgroundColor: '#0a0a0a',
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hiddenInset' as const }
+      : {
+          titleBarStyle: 'hidden' as const,
+          titleBarOverlay: {
+            color: '#0a0a0a',
+            symbolColor: '#fafafa',
+            height: 32,
+          },
+        }),
     webPreferences: {
       preload: join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
@@ -193,6 +203,23 @@ app.on('ready', () => {
     forceClose = true
     mainWindow?.close()
   })
+
+  ipcMain.on(
+    'window:set-title-bar-overlay',
+    (event, colors: { color?: unknown; symbolColor?: unknown }) => {
+      if (process.platform === 'darwin') return
+
+      const senderWindow = BrowserWindow.fromWebContents(event.sender)
+      if (!senderWindow || senderWindow !== mainWindow) return
+
+      const color = typeof colors?.color === 'string' ? colors.color : ''
+      const symbolColor = typeof colors?.symbolColor === 'string' ? colors.symbolColor : ''
+      const hexColor = /^#[0-9a-f]{6}$/i
+      if (!hexColor.test(color) || !hexColor.test(symbolColor)) return
+
+      senderWindow.setTitleBarOverlay({ color, symbolColor, height: 32 })
+    },
+  )
 
   ipcMain.handle('update:check', async () => {
     try {

@@ -9,7 +9,7 @@ import {
   WarningCircle,
   X,
 } from '@phosphor-icons/react'
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
@@ -61,6 +61,8 @@ const FEATS_SETUP_BTN_SELECTOR = '[data-feat-setup-btn="true"]'
 const FEATS_HINT_WIDTH = 300
 
 const EMPTY_STRINGS: string[] = []
+
+type FeatView = 'all' | 'character' | 'bonus' | 'needs-setup'
 
 interface FeatDetailCardProps {
   feat: { id: string; name: string; source: string }
@@ -147,8 +149,8 @@ const FeatDetailCard = memo(function FeatDetailCard({
   return (
     <div
       className={cn(
-        'relative min-w-0 cursor-default rounded-xl border border-border bg-background transition-colors hover:bg-secondary/25',
-        selected && 'bg-primary/5 ring-1 ring-inset ring-primary/40',
+        'relative min-w-0 cursor-default rounded-xl border border-border bg-workspace-pane transition-colors hover:bg-surface-hover',
+        selected && 'bg-surface-selected ring-1 ring-inset ring-primary/45',
       )}
     >
       <button
@@ -371,6 +373,7 @@ export function FeatsPage() {
   const [listCollapsed, setListCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [selectedFeatName, setSelectedFeatName] = useState<string | null>(null)
+  const [featView, setFeatView] = useState<FeatView>('all')
   const [bonusModalOpen, setBonusModalOpen] = useState(false)
   const [featOptionsTarget, setFeatOptionsTarget] = useState<Feat5e | null>(null)
   const [featEditCandidate, setFeatEditCandidate] = useState<{
@@ -635,11 +638,23 @@ export function FeatsPage() {
     setHintDismissed(FEATS_SETUP_HINT_ID, true)
   }
 
+  const pendingOptionCount = pendingOptionFeatNames.size
+  const needsSetupCount =
+    Math.max(0, remainingASI) +
+    pendingRacialChoices.length +
+    pendingOriginChoices.length +
+    pendingOptionCount
+
+  useEffect(() => {
+    if (featView === 'needs-setup' && needsSetupCount === 0) {
+      setFeatView('all')
+    }
+  }, [featView, needsSetupCount])
+
   if (!character) {
     return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />
   }
 
-  const pendingOptionCount = pendingOptionFeatNames.size
   const hasPendingWarnings =
     remainingASI > 0 ||
     pendingRacialChoices.length > 0 ||
@@ -647,13 +662,32 @@ export function FeatsPage() {
     pendingOptionCount > 0
   const activeFeatName = selectedFeatName
   const activeFeatData = (feats as Feat5e[]).find((feat) => feat.name === activeFeatName)
+  const visibleCharacterFeats = (character.feats ?? []).filter(
+    (feat) => featView !== 'needs-setup' || pendingOptionFeatNames.has(feat.name),
+  )
+  const showCharacterGroup =
+    featView === 'all' ||
+    featView === 'character' ||
+    (featView === 'needs-setup' && visibleCharacterFeats.length > 0)
+  const showBonusGroup = featView === 'all' || featView === 'bonus'
+  const hasVisibleCharacterFeats =
+    featView === 'needs-setup' ? visibleCharacterFeats.length > 0 : hasCharacterSection
   return (
     <WorkspacePage className="p-3">
-      <WorkspaceBody className="flex overflow-hidden rounded-lg border border-border bg-background">
+      <WorkspaceBody className="flex overflow-hidden">
         <SplitPane
-          className="my-0 h-full"
-          leftClassName="bg-background"
-          rightClassName="border-l-2 border-border bg-sidebar/50"
+          className={cn(
+            'my-0 h-full overflow-visible',
+            !listCollapsed && !detailCollapsed && 'gap-3',
+          )}
+          leftClassName={cn(
+            'rounded-lg bg-workspace-pane',
+            listCollapsed ? 'border-0' : 'border border-border',
+          )}
+          rightClassName={cn(
+            'rounded-lg bg-workspace-detail',
+            detailCollapsed ? 'border-0' : 'border border-border',
+          )}
           leftCollapsed={listCollapsed}
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setListCollapsed}
@@ -661,10 +695,67 @@ export function FeatsPage() {
           rightFixedWidth="var(--workspace-master-width)"
           left={
             <>
-              <WorkspacePaneHeader title="Feats">
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {characterFeatCount + bonusFeats.length} selected
-                </span>
+              <WorkspacePaneHeader ariaLabel="Feat view">
+                <div className="h-full min-w-0 flex-1 overflow-x-auto">
+                  <div
+                    className="inline-flex h-full min-w-max items-stretch gap-5"
+                    role="tablist"
+                    aria-label="Feat view"
+                  >
+                    {(
+                      [
+                        {
+                          value: 'all',
+                          label: 'All',
+                          count: characterFeatCount + bonusFeats.length,
+                        },
+                        { value: 'character', label: 'Character', count: characterFeatCount },
+                        { value: 'bonus', label: 'Bonus', count: bonusFeats.length },
+                        ...(needsSetupCount > 0
+                          ? [
+                              {
+                                value: 'needs-setup' as const,
+                                label: 'Needs Setup',
+                                count: needsSetupCount,
+                              },
+                            ]
+                          : []),
+                      ] as Array<{ value: FeatView; label: string; count: number }>
+                    ).map(({ value, label, count }) => {
+                      const active = featView === value
+                      const needsAttention = value === 'needs-setup'
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => setFeatView(value)}
+                          className={cn(
+                            'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',
+                            active
+                              ? needsAttention
+                                ? 'border-warning text-foreground'
+                                : 'border-primary text-foreground'
+                              : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+                          )}
+                        >
+                          <span>{label}</span>
+                          <span
+                            className={cn(
+                              'flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold leading-none',
+                              needsAttention
+                                ? 'bg-warning/15 text-warning'
+                                : 'bg-primary/15 text-primary',
+                            )}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
                 <div className="mx-auto w-full max-w-5xl space-y-4 p-4">
@@ -695,7 +786,7 @@ export function FeatsPage() {
                   ) : null}
 
                   {/* Pending choice warnings */}
-                  {hasPendingWarnings && (
+                  {hasPendingWarnings && featView !== 'bonus' && (
                     <div className="divide-y divide-warning/20 border-l-2 border-warning bg-warning/5">
                       {remainingASI > 0 && (
                         <div className="flex items-center gap-3 px-4 py-2.5">
@@ -767,28 +858,180 @@ export function FeatsPage() {
                     </div>
                   )}
 
-                  <section className="w-full overflow-hidden rounded-md border border-border">
-                    <div className="flex h-10 items-center justify-between border-b border-border bg-sidebar/50 px-4">
-                      <div className="flex items-center gap-2">
-                        <Star
-                          className="h-4 w-4 text-violet-600 dark:text-violet-400"
-                          weight="duotone"
-                        />
-                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                          Character Feats
-                        </span>
+                  {showCharacterGroup && (
+                    <section className="w-full">
+                      <div className="flex h-10 items-center justify-between border-b border-border px-1">
+                        <div className="flex items-center gap-2">
+                          <Star
+                            className="h-4 w-4 text-violet-600 dark:text-violet-400"
+                            weight="duotone"
+                          />
+                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                            Character Feats
+                          </span>
+                        </div>
+                        <Badge variant="outline" className="text-xs h-5 px-2">
+                          {featView === 'needs-setup'
+                            ? `${visibleCharacterFeats.length} pending`
+                            : `${characterFeatCount} total`}
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className="text-xs h-5 px-2">
-                        {characterFeatCount} total
-                      </Badge>
-                    </div>
-                    <div>
-                      {hasCharacterSection ? (
-                        <div className="space-y-3 p-3">
-                          {(character.feats ?? []).map((feat) => {
+                      <div className="mt-3">
+                        {hasVisibleCharacterFeats ? (
+                          <div className="space-y-3">
+                            {visibleCharacterFeats.map((feat) => {
+                              const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
+                              const isPending = pendingOptionFeatNames.has(feat.name)
+                              const isConfigured = !isPending && !!feat.options
+                              return (
+                                <FeatDetailCard
+                                  key={feat.id}
+                                  feat={feat}
+                                  featData={featData}
+                                  characterSnapshot={characterSnapshot}
+                                  selected={activeFeatName === feat.name}
+                                  onSelect={handleSelectFeat}
+                                  onRemove={handleRemoveFeat}
+                                  onCompleteSetup={isPending ? handleCompleteSetup : undefined}
+                                  onEditSetup={isConfigured ? handleEditSetup : undefined}
+                                  optionsPending={isPending}
+                                  optionsConfigured={isConfigured}
+                                />
+                              )
+                            })}
+                            {featView !== 'needs-setup' &&
+                              racialFixedFeats.map((granted) => (
+                                <FeatDetailCard
+                                  key={`fixed-${granted.name}|${granted.source}`}
+                                  feat={{
+                                    id: `fixed-${granted.name}`,
+                                    name: granted.name,
+                                    source: granted.source,
+                                  }}
+                                  featData={granted.featData}
+                                  characterSnapshot={characterSnapshot}
+                                  selected={activeFeatName === granted.name}
+                                  onSelect={handleSelectFeat}
+                                  grantedBy={granted.sourceLabel}
+                                />
+                              ))}
+                            {featView !== 'needs-setup' &&
+                              resolvedRacialChoices.flatMap((choice) =>
+                                choice.selected.map((selectedName) => {
+                                  const data = (feats as Feat5e[]).find(
+                                    (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
+                                  )
+                                  return (
+                                    <FeatDetailCard
+                                      key={`choice-${choice.id}-${selectedName}`}
+                                      feat={{
+                                        id: `choice-${choice.id}-${selectedName}`,
+                                        name: data?.name ?? selectedName,
+                                        source: data?.source ?? '',
+                                      }}
+                                      featData={data}
+                                      characterSnapshot={characterSnapshot}
+                                      selected={activeFeatName === selectedName}
+                                      onSelect={handleSelectFeat}
+                                      grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
+                                      onRemove={() =>
+                                        handleRemoveGrantedChoice(choice.id, selectedName)
+                                      }
+                                    />
+                                  )
+                                }),
+                              )}
+                            {featView !== 'needs-setup' &&
+                              originFixedFeats.map((granted) => (
+                                <FeatDetailCard
+                                  key={`fixed-${granted.name}|${granted.source}`}
+                                  feat={{
+                                    id: `fixed-${granted.name}`,
+                                    name: granted.name,
+                                    source: granted.source,
+                                  }}
+                                  featData={granted.featData}
+                                  characterSnapshot={characterSnapshot}
+                                  selected={activeFeatName === granted.name}
+                                  onSelect={handleSelectFeat}
+                                  grantedBy={granted.sourceLabel}
+                                  isOrigin
+                                />
+                              ))}
+                            {featView !== 'needs-setup' &&
+                              resolvedOriginChoices.flatMap((choice) =>
+                                choice.selected.map((selectedName) => {
+                                  const data = (feats as Feat5e[]).find(
+                                    (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
+                                  )
+                                  return (
+                                    <FeatDetailCard
+                                      key={`choice-${choice.id}-${selectedName}`}
+                                      feat={{
+                                        id: `choice-${choice.id}-${selectedName}`,
+                                        name: data?.name ?? selectedName,
+                                        source: data?.source ?? '',
+                                      }}
+                                      featData={data}
+                                      characterSnapshot={characterSnapshot}
+                                      selected={activeFeatName === selectedName}
+                                      onSelect={handleSelectFeat}
+                                      grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
+                                      onRemove={() =>
+                                        handleRemoveGrantedChoice(choice.id, selectedName)
+                                      }
+                                      isOrigin
+                                    />
+                                  )
+                                }),
+                              )}
+                          </div>
+                        ) : (
+                          <div className="min-h-48 flex flex-col items-center justify-center text-center p-6">
+                            <Star
+                              className="h-8 w-8 text-muted-foreground/30 mb-3"
+                              weight="duotone"
+                            />
+                            <h3 className="text-sm font-semibold">No Character Feats</h3>
+                            <p className="mt-1 text-xs text-muted-foreground max-w-sm">
+                              Feats are gained from class ASI selections, your race, or background.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {showBonusGroup && (
+                    <section className="w-full">
+                      <div className="flex h-10 items-center justify-between border-b border-border px-1">
+                        <div className="flex items-center gap-2">
+                          <Lightning className="h-4 w-4 text-primary" weight="duotone" />
+                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                            Bonus Feats
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="h-5 px-2 text-xs">
+                            {bonusFeats.length} total
+                          </Badge>
+                          {bonusFeats.length > 0 && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 cursor-pointer px-3 text-xs"
+                              onClick={() => setBonusModalOpen(true)}
+                            >
+                              <Plus className="mr-1 h-3.5 w-3.5" />
+                              Add Feat
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {bonusFeats.length > 0 ? (
+                        <div className="mt-3 space-y-3">
+                          {bonusFeats.map((feat) => {
                             const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
-                            const isPending = pendingOptionFeatNames.has(feat.name)
-                            const isConfigured = !isPending && !!feat.options
                             return (
                               <FeatDetailCard
                                 key={feat.id}
@@ -797,157 +1040,37 @@ export function FeatsPage() {
                                 characterSnapshot={characterSnapshot}
                                 selected={activeFeatName === feat.name}
                                 onSelect={handleSelectFeat}
-                                onRemove={handleRemoveFeat}
-                                onCompleteSetup={isPending ? handleCompleteSetup : undefined}
-                                onEditSetup={isConfigured ? handleEditSetup : undefined}
-                                optionsPending={isPending}
-                                optionsConfigured={isConfigured}
+                                onRemove={handleRemoveBonusFeat}
+                                isBonus
                               />
                             )
                           })}
-                          {racialFixedFeats.map((granted) => (
-                            <FeatDetailCard
-                              key={`fixed-${granted.name}|${granted.source}`}
-                              feat={{
-                                id: `fixed-${granted.name}`,
-                                name: granted.name,
-                                source: granted.source,
-                              }}
-                              featData={granted.featData}
-                              characterSnapshot={characterSnapshot}
-                              selected={activeFeatName === granted.name}
-                              onSelect={handleSelectFeat}
-                              grantedBy={granted.sourceLabel}
-                            />
-                          ))}
-                          {resolvedRacialChoices.flatMap((choice) =>
-                            choice.selected.map((selectedName) => {
-                              const data = (feats as Feat5e[]).find(
-                                (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
-                              )
-                              return (
-                                <FeatDetailCard
-                                  key={`choice-${choice.id}-${selectedName}`}
-                                  feat={{
-                                    id: `choice-${choice.id}-${selectedName}`,
-                                    name: data?.name ?? selectedName,
-                                    source: data?.source ?? '',
-                                  }}
-                                  featData={data}
-                                  characterSnapshot={characterSnapshot}
-                                  selected={activeFeatName === selectedName}
-                                  onSelect={handleSelectFeat}
-                                  grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
-                                  onRemove={() =>
-                                    handleRemoveGrantedChoice(choice.id, selectedName)
-                                  }
-                                />
-                              )
-                            }),
-                          )}
-                          {originFixedFeats.map((granted) => (
-                            <FeatDetailCard
-                              key={`fixed-${granted.name}|${granted.source}`}
-                              feat={{
-                                id: `fixed-${granted.name}`,
-                                name: granted.name,
-                                source: granted.source,
-                              }}
-                              featData={granted.featData}
-                              characterSnapshot={characterSnapshot}
-                              selected={activeFeatName === granted.name}
-                              onSelect={handleSelectFeat}
-                              grantedBy={granted.sourceLabel}
-                              isOrigin
-                            />
-                          ))}
-                          {resolvedOriginChoices.flatMap((choice) =>
-                            choice.selected.map((selectedName) => {
-                              const data = (feats as Feat5e[]).find(
-                                (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
-                              )
-                              return (
-                                <FeatDetailCard
-                                  key={`choice-${choice.id}-${selectedName}`}
-                                  feat={{
-                                    id: `choice-${choice.id}-${selectedName}`,
-                                    name: data?.name ?? selectedName,
-                                    source: data?.source ?? '',
-                                  }}
-                                  featData={data}
-                                  characterSnapshot={characterSnapshot}
-                                  selected={activeFeatName === selectedName}
-                                  onSelect={handleSelectFeat}
-                                  grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
-                                  onRemove={() =>
-                                    handleRemoveGrantedChoice(choice.id, selectedName)
-                                  }
-                                  isOrigin
-                                />
-                              )
-                            }),
-                          )}
                         </div>
                       ) : (
-                        <div className="min-h-48 flex flex-col items-center justify-center text-center p-6">
-                          <Star
-                            className="h-8 w-8 text-muted-foreground/30 mb-3"
+                        <div className="flex min-h-40 flex-col items-center justify-center p-6 text-center">
+                          <Lightning
+                            className="mb-2 h-6 w-6 text-muted-foreground"
                             weight="duotone"
                           />
-                          <h3 className="text-sm font-semibold">No Character Feats</h3>
-                          <p className="mt-1 text-xs text-muted-foreground max-w-sm">
-                            Feats are gained from class ASI selections, your race, or background.
+                          <h3 className="text-sm font-semibold">No Bonus Feats</h3>
+                          <p className="mt-1 max-w-md text-xs text-muted-foreground">
+                            Track feats granted outside normal progression, such as a free feat from
+                            your DM or one provided by a legendary item. These do not use normal
+                            feat slots.
                           </p>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-4 h-8 cursor-pointer px-3 text-xs"
+                            onClick={() => setBonusModalOpen(true)}
+                          >
+                            <Plus className="mr-1 h-3.5 w-3.5" />
+                            Add Bonus Feat
+                          </Button>
                         </div>
                       )}
-                    </div>
-                  </section>
-
-                  <section className="w-full overflow-hidden rounded-md border border-border">
-                    <div className="flex h-10 items-center justify-between border-b border-border bg-sidebar/50 px-4">
-                      <div className="flex items-center gap-2">
-                        <Lightning className="h-4 w-4 text-primary" weight="duotone" />
-                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                          Bonus Feats
-                        </span>
-                      </div>
-                      <Badge variant="outline" className="text-xs h-5 px-2">
-                        {bonusFeats.length} total
-                      </Badge>
-                    </div>
-                    <div className="space-y-3 p-3">
-                      {bonusFeats.map((feat) => {
-                        const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
-                        return (
-                          <FeatDetailCard
-                            key={feat.id}
-                            feat={feat}
-                            featData={featData}
-                            characterSnapshot={characterSnapshot}
-                            selected={activeFeatName === feat.name}
-                            onSelect={handleSelectFeat}
-                            onRemove={handleRemoveBonusFeat}
-                            isBonus
-                          />
-                        )
-                      })}
-                      <button
-                        type="button"
-                        onClick={() => setBonusModalOpen(true)}
-                        className="group flex min-h-24 w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background px-5 py-4 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      >
-                        <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
-                          <Plus className="h-5 w-5" />
-                        </span>
-                        <span>
-                          <span className="block text-base font-semibold">Add Bonus Feat</span>
-                          <span className="mt-1 block text-sm text-muted-foreground">
-                            Optional feats that do not use normal feat slots.
-                          </span>
-                        </span>
-                      </button>
-                    </div>
-                  </section>
+                    </section>
+                  )}
                 </div>
               </ScrollArea>
               <div className="border-t border-border px-4 pb-4">

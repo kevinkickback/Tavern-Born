@@ -34,7 +34,7 @@ Deadlock Mod Manager reinforces the direction already chosen for Tavern-Born whi
 
 Deadlock Mod Manager separates profile and launch commands in the top toolbar from connectivity, filesystem, download, update, and readiness state in a bottom bar. Tavern-Born now applies the same general information hierarchy with its own content and denser 24 px geometry.
 
-The implemented Tavern-Born status strip shows only real, durable state:
+The implemented Tavern-Born status strip spans the bottom edge to the right of the full-height primary rail, beneath contextual navigation and the workspace. It belongs to the dark outer application shell and shows only real, durable state:
 
 - Game data loading progress and the current resource.
 - Background refresh, cached/offline, unconfigured, ready, and error states.
@@ -44,9 +44,11 @@ The implemented Tavern-Born status strip shows only real, durable state:
 
 This strip is deliberately informational. Page commands stay in the workspace toolbar, character commands stay in the header, and transient confirmations remain toasts.
 
+The native platform title bar is replaced by a 32 px application-owned drag surface using the same outer-shell background. Electron's native caption controls remain overlaid on Windows/Linux, preserving minimize, maximize/restore, close, snapping, and platform behavior; macOS retains its native traffic lights through the hidden-inset title-bar mode. The overlay colors follow the app's light/dark appearance setting.
+
 ### 2. Group navigation by user task
 
-Deadlock Mod Manager uses labeled navigation groups and count/status badges rather than an undifferentiated icon list. Tavern-Born already follows the useful portion of this convention: stable global workspaces in the primary rail and labeled task groups inside the Build and Settings contextual panes.
+Deadlock Mod Manager uses labeled navigation groups and count/status badges rather than an undifferentiated icon list. Tavern-Born already follows the useful portion of this convention: stable global workspaces in the primary rail and labeled task groups inside the Start and Build contextual panes.
 
 Badges should be introduced only for actionable state—for example, validation issues in a build section—not as decoration or a count on every destination.
 
@@ -62,20 +64,7 @@ Tavern-Born should retain its current approach: the header describes the active 
 
 Vortex's modern layout composes a narrow `Spine`, a `Header`, a contextual `Menu`, and a `ModernContentPane` into one edge-to-edge application shell. These are structural regions rather than rounded surfaces floating over a background.
 
-Tavern-Born currently does the opposite at its outermost level:
-
-- The header is an inset, rounded, translucent card with a border and shadow.
-- The sidebar is another floating, rounded card.
-- Pages are generally centered inside `max-w-7xl` containers.
-- Large page introductions consume vertical space before the work begins.
-- The dotted page texture reinforces the feeling that panels sit on a web canvas.
-
-Recommended adaptation:
-
-- Attach the application rail, navigation pane, header, and content pane directly to the window edges.
-- Separate structural regions with background tone and one-pixel dividers, not shadows or large radii.
-- Remove global content width caps from data and editing screens.
-- Reserve centered readable widths for prose-heavy content such as About, release notes, and documentation.
+Tavern-Born uses a controlled inversion of that pattern. Primary/context navigation and the status bar sit directly on one dark outer shell, while the page header and working content form one inset focal workspace. The primary rail spans the complete window height through the title and status rows. The inset is structural rather than a dashboard card: it consumes the remaining window, uses only a small gutter and one-pixel boundary, and contains no decorative shadow or marketing presentation. Data and editing screens have no global content-width cap; centered readable widths remain reserved for prose-heavy content such as About, release notes, and documentation.
 
 ### 2. It separates global navigation from contextual navigation
 
@@ -83,25 +72,23 @@ Vortex's modern interface has a narrow primary spine and a second menu region. T
 
 Recommended Tavern-Born primary rail:
 
-1. Characters
+1. Start
 2. Build
 3. Character Sheet
 4. Compendium
-5. Settings
 
-The contextual pane is workspace-specific and is only rendered when it contains meaningful navigation:
+The contextual pane is workspace-specific but remains rendered at a stable width in every workspace:
 
 | Workspace | Context pane |
 | --- | --- |
-| Characters | None. The collection itself is the navigation surface. |
-| Build | Race, Class, Background, Ability Scores, Proficiencies, Feats, Spells, Equipment |
+| Start | Characters and Settings. Settings owns its categories as in-page tabs. |
+| Build (`Character Core`) | Race, Class, Background, Ability Scores, Proficiencies, Feats, Spells, Equipment |
 | Character Sheet | Sheet sections, PDF/export options, validation summary |
-| Compendium | None. The results master pane is the navigation surface. |
-| Settings | General, Appearance, Game Data, About |
+| Compendium | Persistent pane; useful browse shortcuts and context will be assigned in a later pass. |
 
 This is clearer than placing the entire information architecture in one large sidebar. It also allows the primary rail to remain stable while the second pane provides the detailed navigation appropriate to the current task.
 
-Do not keep a contextual pane merely to repeat a single route or hold commands. Characters and Compendium deliberately omit it, reclaiming the width for their collection and master-detail layouts. Where a contextual pane exists, it is collapsible and its preference is remembered.
+The contextual pane is now a permanent part of every workspace. Pages that do not yet have meaningful contextual content retain the empty region temporarily rather than changing the shell geometry; future passes should populate it with useful navigation, commands, or summaries without inventing filler. Primary and contextual navigation remain transparent over the same dark shell used by the status bar. The contextual pane has no hard right border or separate header; navigation begins directly at the top of its content row. The primary rail spans the title, content, and status rows, while neither navigation region repeats the application logo or title.
 
 ### 3. It gives the active context a first-class place
 
@@ -111,15 +98,15 @@ The implemented active-character context in the top bar contains:
 
 - The actual character portrait when available, with a restrained fallback when absent.
 - Character name.
-- Race/class/level summary.
+- Race, total character level, and compact class summary. One or two classes remain visible by name without a tooltip. Three or more are represented semantically as `3 classes`, `6 classes`, and so on; only that condensed form receives a tooltip containing the full class/level breakdown.
 - Compact, labeled AC and HP values.
 
-The header is 56 px tall so the portrait, name, class summary, AC, and HP remain readable without becoming a second content panel. These elements are grouped at the center of the title bar with deliberate spacing rather than distributed across unrelated header regions.
+The focal workspace header is 64 px tall. Its left region pairs a larger page title with an even larger matching contextual-navigation icon, while its center enlarges the character portrait, name, class summary, AC, and HP. AC and HP icons remain visually larger than their labels and values. These elements remain deliberately grouped rather than distributed across unrelated header regions.
 
 `Level Up` and `Save` are contextual commands:
 
-- Save appears as a prominent action only while changes are pending. The persistent status strip owns the unsaved-state indicator, so the button does not repeat it.
-- Level Up appears only in Build, Character Sheet, and related character-editing workspaces.
+- Save remains visible in every workspace and is disabled when no character is loaded or there are no changes to save. The persistent status strip owns the unsaved-state indicator, so the button does not repeat it.
+- Level Up appears only in Build, Character Sheet, and related character-editing workspaces and always uses a visible button surface rather than relying on hover to communicate interactivity.
 
 ### 4. It uses page primitives rather than bespoke page wrappers
 
@@ -209,30 +196,30 @@ Vortex's feature registration and extension model are central to its product. Ta
 
 ### Primary rail
 
-- Width: 48-56 px.
+- Width: 64 px.
 - Edge-to-edge, square structural surface.
 - Icon plus tooltip for each primary workspace.
-- Selected item uses an accent edge and subtle filled background.
-- Settings and help can sit at the bottom.
+- Each workspace target uses a clearly visible but neutral one-pixel outline so neighboring icons read as distinct controls. Hover strengthens the neutral outline, while the selected item replaces it with the accent edge and subtle filled background.
+- Application settings belong to the Start contextual pane instead of consuming a primary workspace slot.
 - Avoid nested controls and decorative separators.
 
 ### Context pane
 
 - Default width: 208-240 px.
 - Resizable where item names benefit from additional width.
-- Collapsible to the primary rail.
+- Permanently visible so workspace geometry and navigation location remain stable.
 - Contains navigation, searchable lists, or filters, depending on workspace.
 - Uses compact 32-40 px rows.
 - Uses group labels and dividers rather than cards.
 
-### Title and command bar
+### Title and command surfaces
 
-- Height: 56 px.
-- Flush to the window; it can also provide the Electron drag region.
-- Left: current page title or back/breadcrumb control.
+- The unbranded Electron drag surface is 32 px tall and flush to the window.
+- The inset focal workspace header is 64 px tall.
+- Left: larger current-page title with the matching navigation icon.
 - Center: enlarged active-character portrait, name, race/class/level summary, AC, and HP.
-- Right: only commands relevant to the current workspace and state.
-- Use a single bottom divider instead of a rounded border and shadow.
+- Right: vertically centered Level Up where relevant and an always-present Save control.
+- The focal header and page canvas form one continuous surface, so the header has no bottom divider. Page inset, pane borders, and local pane headers establish the content hierarchy without adding another full-width line.
 
 ### Main pane
 
@@ -244,7 +231,7 @@ Vortex's feature registration and extension model are central to its product. Ta
 ### Status strip
 
 - Height: 24 px.
-- Flush to the bottom of the working region with a one-pixel top divider.
+- Flush to the bottom of the window without an additional top divider.
 - Left: game-data readiness/loading/error state and active-character save state.
 - Right: configured source type and application version.
 - Long details such as a source path or error message are available on hover instead of expanding the strip.
@@ -256,16 +243,19 @@ Vortex's feature registration and extension model are central to its product. Ta
 
 Create a density system independently from the existing UI scale. UI scale enlarges everything; density determines how much information fits in a workspace.
 
+The implementation uses `rem` for typography, controls, pane headers, rows, spacing, and shell geometry. The existing 80–120% Interface Scale preference changes the root font size and therefore remains the single authoritative scale control. One-pixel borders and other intentionally physical separators do not scale. Do not introduce a second transform-based zoom or page-specific scale multiplier.
+
 Recommended default targets:
 
 | Element | Target |
 | --- | --- |
-| Title bar | 56 px |
+| Draggable title surface | 32 px |
+| Focal workspace header | 64 px |
 | Toolbar | 40-44 px |
 | Standard control | 32-36 px |
 | Compact row | 32 px |
 | Comfortable row | 40 px |
-| Primary rail | 48-56 px |
+| Primary rail | 64 px |
 | Base spacing grid | 4 px |
 | Common content gap | 8 or 12 px |
 
@@ -285,7 +275,7 @@ An optional Compact/Comfortable density preference can be added later. Do not co
 
 These conventions capture the detailed adjustments made during the completed redesign passes and are the default for every page converted afterward:
 
-- Give redesigned pages a 12 px outer inset and place their working panes inside one rounded, one-pixel bordered workbench. Do not let page content crowd the application header or status strip.
+- Give redesigned pages a 12 px outer inset. In split workspaces, frame each working pane independently with a rounded one-pixel border and separate visible panes with a 12 px gap. Collection and navigation panes use `--workspace-pane`; rules and inspector panes use `--workspace-detail`. Both remain distinct from `--workspace-canvas` and the darker `--app-shell`. Do not propagate extra structural surfaces into nested entity cards or controls. Do not let page content crowd the application header or status strip.
 - Use matching 44 px pane headers. Inspector headers describe the pane (`Race details`, `Feat details`, `Ability details`) and do not repeat the currently selected entity; the entity name belongs in the inspector content heading.
 - Use `--workspace-master-width: clamp(24rem, 34%, 42rem)` for either a left master pane or a right inspector. The side may change, but comparable panes should remain aligned across pages.
 - Give each pane one explicit scroll owner. Fixed headers, pane-local search, command strips, and the Sources footer remain outside the scrolling content region.
@@ -294,6 +284,7 @@ These conventions capture the detailed adjustments made during the completed red
 - Use restrained fills for selected, granted, warning, and unavailable states; balance their apparent brightness so one passive state does not overpower another. Do not add a second hover or selection border when spacing, fill, and focus already communicate state.
 - Whole-row inspection is click/keyboard selected and persistent unless a page explicitly benefits from temporary hover preview. Hovering only an entity name must never be the sole way to update an inspector.
 - Keep related rows and collection-local actions in the same padded stack. A dashed add/import/create tile uses the same width, inset, radius, background, and vertical gap as its neighboring entities; it must not gain an extra divider or wrapper surface.
+- Optional collections use state-aware creation placement. When empty, show one restrained centered empty state with a meaningful icon, a concise explanation of the feature, and a conventional labeled button. Once the collection contains entries, move the add command to the section header's trailing edge and let the entries occupy the content stack. Do not retain a large add tile beneath an already populated collection unless creation itself is a peer item, as on the Characters page.
 - Keep ordinary descriptive text at a comfortable reading size and line height. Small uppercase text is reserved for pane headings, short metadata, counts, and badges.
 - Use at least 32 px action targets; destructive row actions use a 36 px target where space permits. Only the actionable subcontrol receives the pointer cursor when the surrounding entity is inspect-only.
 - Preserve a compact Sources footer on data-derived build pages. Avoid repeating full provenance in every row when the footer and inspector already communicate it.
@@ -323,12 +314,28 @@ These conventions capture the detailed adjustments made during the completed red
 - Reserve the accent color for selection, focus, primary commands, and important state.
 - Reserve semantic colors for warnings, errors, success, and informational status.
 
+The surface hierarchy is implemented as semantic roles rather than page-specific colors:
+
+| Role | Purpose |
+| --- | --- |
+| `--app-shell` | Title surface, navigation regions, and status chrome outside the focal workspace |
+| `--workspace-canvas` | Main inset content window and page canvas |
+| `--workspace-pane` | Collection, navigator, progression, or editing pane |
+| `--workspace-detail` | Inspector and rules-detail pane, one neutral step above the collection pane |
+| `--surface-raised` | Headers, table headings, controls, and locally raised sections |
+| `--surface-hover` | Neutral transient hover state |
+| `--surface-selected` | Persistent accent-derived selection state |
+| `--border-subtle/default/strong` | Internal grouping, pane structure, and emphasized shell/control boundaries |
+
+Neutral surface roles derive only from the active light/dark neutral scale. Selection, focus, and primary actions derive from the complete user-selected accent scale, so Blue, Violet, Grove, and Crimson retain equivalent hierarchy rather than relying on blue-specific utilities. Adjacent workbench panes must use `--workspace-pane` and `--workspace-detail`; sidebar translucency is not a substitute for a content-surface role.
+
 ### Typography
 
 - Use the system sans-serif for application chrome, page titles, panels, tabs, forms, and tables.
 - Keep Cinzel for the Tavern-Born brand, character names, and rare thematic moments.
-- Standard page titles should be approximately 16-18 px rather than 24 px display headings.
+- Standard page titles should be approximately 20 px rather than oversized display headings.
 - Use tabular numerals for scores, modifiers, levels, currency, armor class, hit points, and other aligned values.
+- Use the shared caption, label, body, pane-title, and page-title roles. Ordinary instructions and rules prose use the body role with a relaxed line height; caption text is limited to short metadata, badges, counts, status text, and uppercase structural labels.
 
 ### Iconography
 
@@ -341,7 +348,7 @@ These conventions capture the detailed adjustments made during the completed red
 
 ### Characters
 
-- The page uses no contextual pane and no outer structural Card.
+- Characters is the first destination in the permanent Start contextual pane, alongside application settings destinations.
 - The inset command region contains only collection utilities: search, sort, group, result count, and Gallery/List selection.
 - Gallery view retains portrait-rich entity cards; List view uses compact data rows.
 - New Character and Import live inside the collection instead of the toolbar. Gallery uses a rounded, dashed, two-part action tile with New Character on top and Import below. Each half has an independent styling hook for optional future background artwork.
@@ -360,14 +367,17 @@ These conventions capture the detailed adjustments made during the completed red
 
 ### Race, class, and background
 
-Use a master-detail-inspector layout:
+Use a selection/configuration layout for choice-driven pages:
 
 ```text
-Searchable options | Selection details and choices | Rules/source inspector
+Searchable options | Configuration and rules canvas
 ```
 
 - Option lists should be rows, not cards.
-- Search fields for a master list belong inside that pane, immediately below its header; do not reserve a page-wide toolbar for a control that filters only the left pane.
+- Search fields for a master list belong directly in that pane's header; do not reserve a page-wide toolbar for a control that filters only the left pane.
+- Do not force the navigator and configuration canvas into one shared bordered card. Frame each region independently with a restrained one-pixel boundary, separate them with a 12 px workspace gap, and let the larger canvas read as the primary task surface. This preserves clear containment without returning to one oversized card.
+- Move controls for the selected option out of dense list rows and into a persistent configuration strip at the top of the canvas.
+- Constrain long rules prose to approximately 72 characters while allowing compact summary data to use the wider content measure.
 - The selected option may receive a richer summary header.
 - Related traits should use flat sections or a compact table.
 - Collapse the inspector when window width is constrained.
@@ -390,21 +400,21 @@ Searchable options | Selection details and choices | Rules/source inspector
 
 ### Equipment
 
-- Replace the four prominent summary cards with a compact summary strip.
-- Use a table for inventory with sortable columns, selection, context actions, and keyboard navigation.
-- Open item details in an inspector rather than expanding multiple nested cards.
-- Keep encumbrance visible as a restrained status meter.
-- Make currency editable in a compact aligned group.
+- Use the standard inset, independently framed collection/inspector workbench: Inventory on the left and Item details on the right.
+- Keep weight, encumbrance, attunement, armor class, and editable currency in one compact horizontally resilient summary strip rather than separate dashboard cards.
+- Present equipment as a searchable, category-filtered table-like list with stable columns for quantity, equipped state, attunement, and removal.
+- Selecting an item's identity region opens its full statistics in the inspector; embedded row controls remain independent and retain their existing behavior.
+- Preserve the add-item modal, restriction override, onboarding hint, source attribution, attunement limits, and armor-class calculation.
 
 ### Compendium
 
 Compendium is the implemented master-detail reference screen.
 
-- It has no contextual pane; the wider results pane already provides contextual navigation.
+- The permanent contextual pane is currently empty; a later pass should add useful browse shortcuts or context without duplicating the Results master pane.
 - The inset command region contains the prominent search field, result count, filter toggle, and expanded type/source filters.
 - Filters default to open and their open/closed state is persisted independently from sidebar state.
 - The results pane uses dense rows with type, source, and preview metadata and is wider than the initial pilot width.
-- The command region and master-detail workbench use the same 12 px page inset, rounded border, matched 44 px pane headers, stronger master divider, and contrasting selection surface as the Race screen.
+- The command region and master-detail workspace use the standard 12 px page inset and matched 44 px pane headers. Results and Entry Details are independently framed with restrained one-pixel borders and a 12 px gap because they have distinct navigation and inspection roles; the search/filter command region remains one toolbar rather than becoming an unnecessary third workbench.
 - The detail pane owns its own scrolling and displays the selected entry without a nested structural Card.
 
 ### Character sheet and PDF preview
@@ -416,7 +426,8 @@ Compendium is the implemented master-detail reference screen.
 
 ### Settings
 
-- Use the contextual pane for categories instead of a wide horizontal tab row.
+- Keep Settings as one Start-context destination and one canonical page.
+- Switch General, Appearance, Game Data, and About with compact header tabs matching the established Proficiencies category pattern.
 - Present settings as flat labeled rows grouped by section headings and separators.
 - Keep descriptions concise and adjacent to their controls.
 - Retain visual theme previews only where they materially aid the choice.
@@ -499,46 +510,47 @@ Status: substantially complete. Workspace page, toolbar, body, pane header, mast
 1. Replace the floating header and sidebar with the primary rail, contextual pane, and flush title/command bar.
 2. Add the active-character context control.
 3. Add the durable application status strip.
-4. Add navigation state persistence and pane collapse/resize behavior.
+4. Keep the contextual navigation width stable across workspaces; page-local master/detail panes retain their own collapse behavior.
 5. Remove the global dotted texture.
 6. Establish clear overflow ownership for every pane.
 
 Exit criterion: all existing pages run inside the new shell even if their internal layouts remain temporarily unchanged.
 
-Status: complete for the current shell. The edge-to-edge rail, conditional contextual pane, 56 px title bar, active-character context, 24 px operational status strip, persisted collapse state, and explicit pane overflow are implemented.
+Status: complete for the current shell. The full-height 64 px edge-to-edge primary rail, headerless permanent contextual pane, minimal unbranded 32 px draggable title surface, 64 px focal page header, enlarged active-character context, persistent Save command, 24 px operational status strip, and explicit pane overflow are implemented. Start owns Characters and application settings so the primary rail remains focused on major workflows.
 
 ### Phase 3: Pilot screens
 
 1. Convert Compendium to the new master-detail pattern.
-2. Convert Settings to a contextual category pane and flat grouped rows.
+2. Convert Settings to one tabbed page with flat grouped rows.
 3. Validate keyboard navigation, narrow-window behavior, light/dark themes, and scaling.
 
 Exit criterion: the chosen patterns work for both data browsing and forms/preferences.
 
-Status: complete. Compendium and Settings are converted; focused regression coverage and production builds validate the current patterns.
+Status: complete. Compendium is converted, and Settings is consolidated into one canonical page with header-integrated General, Appearance, Game Data, and About tabs; focused regression coverage and production builds validate the current patterns.
 
 ### Phase 4: Character and build flow
 
 1. Characters conversion is complete: inset collection utilities, persisted Gallery/List modes, collection-local creation/import actions, and selection workflows.
 2. The persistent Build contextual outline is implemented; completion and issue indicators remain to be added.
-3. Race is the reference Build master-detail screen. Class and Background now use the same inset workbench, matched pane headers, contrasting master surfaces, compact collapse controls, and flat outer structure. Race and Background place their primary search field directly in the master-pane header instead of repeating an `Available…` label above it; the compact result count remains visible at the trailing edge. When a character is multiclassed, the Class progression header changes to `Current class` and pairs that context label with the full-name class selector. Background's 2024 origin ability and feat choices remain in a compact contextual strip above the workbench.
+3. Race, Background, and Class use the approved independently framed workspace. Their navigation/progression and configuration/rules panes use restrained one-pixel borders with a 12 px gap, while the standard left/right collapse controls remain in the top-right of the details pane. Each details header is followed by a stronger selected-entity identity strip with the larger name, source, and page-specific context. Race exposes subrace and racial-feat decisions. Background exposes 2024 ability/feat decisions and starting-equipment choices, using an independently scrollable configuration region when those controls become tall. Class preserves progression as the primary task pane and uses the second pane as an independently framed class/feature inspector; its identity strip shows the active class or feature, source, level, and subclass context. Long rules prose uses a narrower 72-character reading measure where appropriate. Race and Background place their primary search field directly in the navigator header instead of repeating an `Available…` label above it; the compact result count remains visible at the trailing edge. When a character is multiclassed, the Class progression header changes to `Current class` and pairs that context label with the full-name class selector.
    - Class level headers use a warning-colored choice badge while any user decision at that level remains unresolved. Once subclass, ASI/feat, spell, and progression choices are all complete, the badge changes to the success treatment and gains a check mark for at-a-glance scanning.
    - ASI and feat decisions are owned by a specific class, source, and class level. Multiclass characters therefore receive independent Level 4 choices for each eligible class. Legacy unscoped feat selections are migrated in class-progression order to the first unresolved earned ASI slots.
    - Split workbenches must establish an explicit full-height flex viewport so fixed pane headers remain visible and each pane's scroll region receives a bounded height.
    - Redesigned master/list panes and right-side rules inspectors use the shared `--workspace-master-width` token: `clamp(24rem, 34%, 42rem)`. This keeps either pane near one-third of the workbench, allows it to contract on smaller windows, and preserves a practical 24rem floor for selection controls and readable rules text. Race, Background, Class, Ability Scores, Proficiencies, Feats, and future pages migrated to this workbench pattern should opt into the token; untouched legacy pages retain their existing splits until redesigned.
-   - Build workbenches use 12 px page padding and one bordered split-pane surface rather than touching the viewport edges.
+   - Build workbenches use 12 px page padding rather than touching the viewport edges. Independently framed panes with a restrained one-pixel border and 12 px inter-pane gap are the standard for all redesigned split workspaces, including editor/inspector pages. Ability Scores, Proficiencies, Feats, and Spells now use this treatment alongside Race, Background, and Class. Do not manufacture extra workbenches around controls or content that do not have an independent navigation, editing, or inspection role; toolbars and single-purpose canvases remain singular surfaces.
    - Master and detail panes use matching 44 px section headers, with a stronger divider and contrasting navigation surface separating available choices from details. When the pane's purpose is already clear, its primary local control may replace a redundant static title: search for Race/Background, method selection for Ability Scores, and category selection for Proficiencies. Embedded search fields use identical flexible tracks, fixed-width result counters, and optical vertical centering. Header switchers use flat desktop tabs with a bottom-edge active indicator rather than nesting another bordered segmented container inside the header.
    - Build detail panes use `WorkspaceDetailContent` for a universal centered `max-w-4xl` reading width and 20 px content padding. Race, Background, Class, Ability Scores, and future redesigned detail panes must use this wrapper rather than page-specific width rules.
-4. Ability Scores now uses the inset Build workbench with matched pane headers, independent scrolling, a details inspector using the shared responsive master-pane width, and responsive 10rem × 14rem chamfered ability tiles with appropriately scaled typography. The inspector header remains the static `Ability details` label; the selected ability name appears only in the content heading. Every tile reserves the same 3.25rem control bay, so Point Buy buttons, Standard Array selects, and Custom number inputs never change the tile or grid dimensions when switching methods. The score-display area intentionally uses the default cursor even though it can update the details inspector; only explicit editing controls use their control-specific cursor, including the pointer cursor on Point Buy `−/+` buttons. The scoring-method switcher replaces the redundant `Ability scores` pane title and stays horizontally scrollable at compact widths. The larger Point Buy usage meter remains right-aligned in the content command strip when relevant, using the explicit `used / budget` value and progress bar without a redundant remaining-points label. The narrower centered `max-w-xl` racial allocation dock contains the fixed bonuses and ability assignments, with the matching racial-distribution segmented control right-aligned in its header. Sources remains the standard persistent footer pattern.
-5. Proficiencies now uses the same inset Build workbench and a right-side inspector using the shared responsive master-pane width. Its compact horizontally scrollable category switcher replaces the redundant `Proficiencies` pane title and retains the available-choice count for Skills, Armor, Weapons, Tools, and Languages, while every category always exposes its complete catalog without a separate scope toggle. Every row uses a readable neutral surface with an explicit Chosen, Granted, Available, or Unavailable badge, a minimum comfortable row height, whole-row inspector preview, and matching keyboard-focus behavior. Chosen rows use a restrained primary-accent surface, check-to-undo hover affordance, and pointer cursor; permanently granted rows use a distinct success tint balanced to the same visual brightness, lock icon, and default cursor. Neutral hover uses a lighter primary wash rather than a darker secondary fill. Grid shells use the pane background so unused cells disappear into the canvas, while a slightly brighter inset structural separator is drawn only around real entries. Inspector preview and selection do not add another border or ring to rows; only actual keyboard focus replaces the structural separator with its accessibility ring. Inline source names are omitted because provenance remains available through the Details context and persistent Sources footer. Only rows that can currently be selected or deselected use the pointer cursor; fixed, unavailable, generic, and inspect-only rows retain the default cursor, while the expertise control independently uses a pointer only when it can be toggled. The page and details-pane headers remain concise without redundant scope or selected-item labels. Sorting, grouping, choice selection, expertise, specialized tool selectors, and provenance remain intact. The Details pane uses the universal content width, and Sources remains pinned below the independently scrolling data region. This is the second Proficiencies design pass and remains subject to final visual validation. Convert Feats next using the dense list/detail pattern.
-6. Feats now uses an inset list/detail workbench with a right-side rules inspector using the shared responsive master-pane width. The inspector header remains the static `Feat details` label; the selected feat name appears only in the content heading. Character and bonus feats are comfortable grouped rows rather than expandable cards; clicking or keyboard-selecting a feat updates the full description and prerequisite state in the inspector, while hover and ordinary focus no longer replace the current selection. Rows retain the default cursor despite supporting selection, and only explicit controls use their normal interactive cursor. Each feat receives the same 12px section inset, rounded neutral border, and 12px vertical separation as the Add Bonus Feat action, keeping every entry aligned while clearly separating adjacent feats. Ordinary rows have no colored left border, and only the selected feat receives a restrained inset selection treatment. Source and category are quiet plain metadata while semantic conditions remain badges, reducing header clutter. Setup, edit, remove, grant-origin, and bonus-feat actions remain inline with each row; remove uses a larger 36px target. Add Bonus Feat is consistently presented as a rounded, dashed action tile whether or not bonus feats already exist, and no extra divider or wrapper surface separates it from the preceding feat rows. Pending ASI, racial, origin, and setup issues share one restrained issue region, while Sources remains pinned below the independently scrolling list.
-7. Spells now uses the same inset collection/inspector workbench and responsive right-side width. The page-level marketing header and structural cards are removed. Spell profiles remain collapsible, but each profile is one flat bordered section with restrained status badges and level groups rather than a stacked dashboard card. Because spell names already provide complete, pinnable rules tooltips, rows do not duplicate spell descriptions in the right pane or add a second selection mode. The static `Spellcasting details` pane is reserved for compact class/racial casting statistics and slot summaries, with no redundant nested title. Spell-level collections follow the Proficiencies list treatment: one rounded structural border, a neutral header, a responsive gap-pixel grid, comfortable 44 px rows, and restrained inset separators only around real entries. Prepared state remains separately visible, and removable spells receive the standard 36 px destructive target. A profile's `Total` badge counts every spell row actually displayed; for true prepared casters this means the available class list plus displayed cantrips, rather than only the smaller set stored directly on the character profile. Subclass-granted spells belong to their parent class profile rather than creating a separate subclass card. Every automatic subclass grant is locked against removal; `prepared` and `innate` grants are additionally always prepared and do not consume the class preparation allowance, while `known` grants retain the preparation behavior of their parent class. The spell tooltip and Sources footer identify the subclass that supplied each grant. The final Bonus Spells profile retains the same complete border as every preceding profile. Racial selection, bonus-spell selection, known/prepared limits, spell swaps, removal, preparation, and existing hover references remain functional. Sources is pinned beneath the independently scrolling collection. Equipment is the next untouched data-heavy workspace.
+4. Ability Scores uses the inset Build workbench with matched pane headers, independent scrolling, a details inspector using the shared responsive master-pane width, and responsive rounded ability tiles with a conventional one-pixel neutral border. The inspector header remains the static `Ability details` label; the selected ability name appears only in the content heading. Every tile reserves the same 3.25rem control bay, so Point Buy buttons, Standard Array selects, and Custom number inputs never change the tile or grid dimensions when switching methods. Base and bonus metadata occupies a reserved, centered, two-line-capable region so narrow tiles cannot push controls outside their boundary. The score-display area intentionally uses the default cursor; only explicit editing controls use their control-specific cursor. The scoring-method switcher replaces the redundant pane title and stays horizontally scrollable at compact widths. The Point Buy meter remains right-aligned in the content command strip and uses only the explicit `used / budget` value and progress bar. Racial bonuses use a centered `max-w-2xl` bounded control group with a clear heading, concise explanation, centered assignments, and the racial-distribution switcher aligned to the header's trailing edge. Unnecessary dividers between the point meter, tiles, and racial controls are omitted. Sources remains the standard persistent footer pattern.
+5. Proficiencies uses the same inset Build workbench and a right-side inspector using the shared responsive master-pane width. Its compact horizontally scrollable category switcher replaces the redundant pane title and retains available-choice counts, while every category always exposes its complete catalog without a separate scope toggle. Every real row uses the full `--surface-raised` neutral background, a comfortable minimum height, and an explicit Chosen, Granted, Available, or Unavailable badge. Neutral hover advances to `--surface-hover`; chosen and granted states retain restrained, brightness-balanced accent and success treatments. Grid shells use the collection-pane background so unused cells disappear rather than resembling selected entries. Only rows that can currently be selected or deselected use the pointer cursor; fixed, unavailable, generic, and inspect-only rows retain the default cursor. Inspector preview and selection add no extra border or ring; keyboard focus owns the accessibility ring. Saving Throws and Armor reserve the same 32px command row and following gap used by sortable categories, keeping every list aligned beneath the header. Sorting, grouping, choices, expertise, specialized tool selectors, provenance, and the persistent Sources footer remain intact.
+6. Feats uses an inset list/detail workbench with a right-side rules inspector using the shared responsive master-pane width. The collection header is functional: count-bearing `All`, `Character`, and `Bonus` tabs filter one shared page, while `Needs Setup` appears only when outstanding ASI, racial, origin, or feat-configuration work exists. `All` is the default. Character and Bonus are flat section groups with a heading and divider rather than bordered outer cards; individual feats remain comfortable rounded entity rows. Clicking or keyboard-selecting a feat updates the inspector, while hover and ordinary focus do not replace the current selection. Rows retain the default cursor, only selected feats receive the restrained inset selection treatment, and explicit setup, edit, remove, and add controls use their normal interactive affordances. When Bonus Feats is empty it follows the optional-collection empty-state standard with a lightning icon, concise examples of DM- or item-granted feats, and a conventional `Add Bonus Feat` button. Once populated, the add command moves to the section header and the content region contains only feat rows. Pending work shares one restrained issue region, while Sources remains pinned below the independently scrolling list.
+7. Spells uses the same inset collection/inspector workbench and responsive right-side width. Its collection header provides count-bearing `All`, `Class`, `Racial`, and `Bonus` filters over one shared page, with `All` as the default. Spell profiles remain collapsible but are flat section groups: the profile trigger is a simple divider-backed heading, not a rounded bordered outer card. Spell levels remain bounded collections because that hierarchy materially improves scanning; each uses one rounded structural border, neutral header, responsive gap-pixel grid, comfortable 44px rows, and separators only around real entries. Because spell names provide complete pinnable rules tooltips, rows do not duplicate spell descriptions or add a second inspector selection model. The static `Spellcasting details` pane remains reserved for compact casting statistics and slot summaries. Profile totals count every displayed row, including the available class list for true prepared casters. Subclass grants remain within their parent class profile, carry source attribution, and respect fixed/always-prepared behavior. Bonus Spells follows the optional-collection pattern: the empty profile presents an icon, concise explanation, and normal add button; after spells exist, the add command moves to the profile section's trailing action region. Racial selection, bonus selection, known/prepared limits, swaps, removal, preparation, tooltips, and Sources remain functional.
+8. Equipment now uses the standard inset collection/inspector workbench and responsive right-side width. Four oversized summary cards and the nested inventory card have been replaced by a compact horizontal character-equipment strip plus a flat, searchable inventory table. Weight and encumbrance, attunement usage, derived armor class, and editable denomination fields remain continuously visible without dominating the workspace. Category tabs and search sit directly above the independently scrolling list. Each row retains quantity editing, equip and attune switches, restriction handling, and removal, while its item-identity control selects a structured rules inspector without turning the row's embedded controls into one ambiguous click target. The add-item modal, onboarding hint, restriction override, provenance footer, attunement limits, and armor calculations remain intact. Narrow workspaces allow the data table and summary strip to scroll horizontally rather than clipping controls.
 
 Exit criterion: the complete character-building workflow no longer depends on nested structural cards.
 
 ### Phase 5: Data-heavy workspaces
 
-1. Convert Equipment to a table and inspector.
+1. Equipment is converted to a compact table and item inspector while retaining all inventory-management behavior.
 2. Spells and Feats are converted to dense list/detail layouts; complete representative visual validation before closing the phase.
 3. Convert Character Sheet and PDF preview to a document workspace.
 
@@ -556,7 +568,6 @@ Exit criterion: desktop behavior supports the visual redesign rather than merely
 
 ## Known issues
 
-- Background → Available backgrounds: a selected starting-equipment option with a particularly long label can still cause the trailing dropdown or source metadata to clip while the application window is being narrowed. The issue is isolated to the selected-row control's intrinsic sizing and is deferred for a later focused responsive-layout pass.
 - Proficiencies: a second readability-focused pass now provides explicit shared states and an always-visible complete catalog across every category. Keep it marked for final visual validation until it has been reviewed in the running desktop application at representative window sizes.
 
 ## Suggested code ownership
@@ -594,7 +605,7 @@ The existing low-level `components/ui` directory should continue to own generic 
 
 The redesign should be considered successful when:
 
-- The shell is edge-to-edge and uses no card-like structural containers.
+- Navigation and status chrome remain edge-to-edge, while the header and page content form one restrained inset focal workspace rather than multiple card-like shell containers.
 - Core pages use the full available desktop window.
 - A user can always identify the active character and current workspace.
 - Search, filter, selection, and commands occupy predictable workspace-specific locations; entity creation may live in the collection when that is the clearer context.

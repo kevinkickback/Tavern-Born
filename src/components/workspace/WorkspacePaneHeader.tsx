@@ -19,12 +19,12 @@ export function WorkspacePaneHeader({
   return (
     <header
       className={cn(
-        'flex h-11 shrink-0 items-center gap-3 border-b border-border bg-muted/20 px-4',
+        'flex h-[var(--workspace-pane-header-height)] shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4',
         className,
       )}
     >
       {title ? (
-        <h2 className="shrink-0 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+        <h2 className="shrink-0 text-[length:var(--font-size-pane-title)] font-semibold uppercase leading-[var(--line-height-label)] tracking-[0.08em] text-muted-foreground">
           {title}
         </h2>
       ) : ariaLabel ? (

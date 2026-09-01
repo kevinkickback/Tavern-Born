@@ -353,8 +353,8 @@ export function HomePage() {
 
   return (
     <WorkspacePage>
-      <div className="shrink-0 border-b border-border bg-muted/10 px-4 py-3">
-        <WorkspaceToolbar className="h-9 gap-3 border-0 bg-transparent px-0">
+      <div className="shrink-0 bg-surface-raised">
+        <WorkspaceToolbar className="h-11 gap-3 border-b border-border-subtle bg-transparent px-4">
           <div className="relative min-w-56 flex-1">
             <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-foreground/65" />
             <Input
@@ -363,7 +363,7 @@ export function HomePage() {
               placeholder="Search characters"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              className="h-9 border-border bg-background pl-9 pr-20 shadow-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
+              className="h-9 border-border-strong bg-workspace-pane pl-9 pr-20 shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
             />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] tabular-nums text-muted-foreground">
               {sortedCharacters.length} / {characters.length}
@@ -403,12 +403,12 @@ export function HomePage() {
         </WorkspaceToolbar>
 
         {filterPanelOpen && characters.length > 0 && (
-          <div className="mt-3 flex items-center gap-3 border-t border-border/70 pt-3">
+          <div className="flex items-center gap-3 border-b border-border-subtle px-4 py-3">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Sort
             </span>
             <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-              <SelectTrigger className="h-8 w-44 bg-background text-xs shadow-none">
+              <SelectTrigger className="h-8 w-44 bg-workspace-pane text-xs shadow-none">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -423,7 +423,7 @@ export function HomePage() {
               Group
             </span>
             <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupByOption)}>
-              <SelectTrigger className="h-8 w-36 bg-background text-xs shadow-none">
+              <SelectTrigger className="h-8 w-36 bg-workspace-pane text-xs shadow-none">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

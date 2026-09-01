@@ -121,7 +121,7 @@ export function AppStatusBar() {
     <div
       role="status"
       aria-label="Application status"
-      className="app-no-drag flex h-6 shrink-0 items-center justify-between border-t border-border bg-sidebar px-3 text-[11px] text-muted-foreground"
+      className="app-no-drag col-[2/4] row-start-3 flex h-6 shrink-0 items-center justify-between bg-app-shell px-3 text-[length:var(--font-size-caption)] leading-[var(--line-height-caption)] text-muted-foreground"
     >
       <div className="flex min-w-0 items-center gap-2">
         <span

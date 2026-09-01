@@ -149,8 +149,8 @@ export function CompendiumPage() {
 
   return (
     <WorkspacePage className="gap-3 p-3">
-      <div className="shrink-0 rounded-md border border-border bg-sidebar/30 px-3 py-2">
-        <WorkspaceToolbar className="h-9 gap-3 border-0 bg-transparent px-0">
+      <div className="shrink-0 overflow-hidden rounded-md border border-border-subtle bg-surface-raised">
+        <WorkspaceToolbar className="h-11 gap-3 border-0 bg-transparent px-3">
           <div className="relative min-w-0 flex-1">
             <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-foreground/65" />
             <Input
@@ -159,7 +159,7 @@ export function CompendiumPage() {
               placeholder="Search names, descriptions, traits, and sources"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              className="h-9 border-border bg-background pl-9 pr-24 text-sm shadow-sm focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
+              className="h-9 border-border-strong bg-workspace-pane pl-9 pr-24 text-sm shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25"
             />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] tabular-nums text-muted-foreground">
               {filteredEntries.length.toLocaleString()} results
@@ -185,7 +185,7 @@ export function CompendiumPage() {
         </WorkspaceToolbar>
 
         {filtersOpen && (
-          <div className="mt-3 border-t border-border/70 pt-3">
+          <div className="border-t border-border-subtle px-3 py-3">
             <div className="flex items-start gap-3">
               <span className="w-12 shrink-0 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Type
@@ -201,7 +201,7 @@ export function CompendiumPage() {
                       'h-6 rounded border px-2 text-[11px] transition-colors',
                       activeTypes.has(type)
                         ? 'border-primary/60 bg-primary/15 text-primary'
-                        : 'border-border bg-background/50 text-muted-foreground hover:text-foreground',
+                        : 'border-border bg-workspace-pane text-muted-foreground hover:bg-surface-hover hover:text-foreground',
                     )}
                   >
                     {type}
@@ -216,7 +216,7 @@ export function CompendiumPage() {
               </span>
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
                 <Select value="" onValueChange={(source) => source && toggleSource(source)}>
-                  <SelectTrigger className="h-7 w-48 bg-background text-xs shadow-none">
+                  <SelectTrigger className="h-7 w-48 bg-workspace-pane text-xs shadow-none">
                     <SelectValue placeholder="Add source filter" />
                   </SelectTrigger>
                   <SelectContent>
@@ -257,11 +257,12 @@ export function CompendiumPage() {
         )}
       </div>
 
-      <WorkspaceBody className="overflow-hidden rounded-lg border border-border bg-background">
+      <WorkspaceBody className="overflow-hidden">
         <MasterDetail
+          className="gap-3 overflow-visible"
           masterWidth="clamp(21rem, 36vw, 28rem)"
-          masterClassName="border-r-2 border-border bg-sidebar/70"
-          detailClassName="bg-background"
+          masterClassName="overflow-hidden rounded-lg border border-border bg-workspace-pane"
+          detailClassName="overflow-hidden rounded-lg border border-border bg-workspace-detail"
           master={
             <div className="flex h-full min-h-0 flex-col">
               <WorkspacePaneHeader

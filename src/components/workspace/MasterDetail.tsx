@@ -36,17 +36,19 @@ export function MasterDetail({
     >
       <aside
         className={cn(
-          'min-h-0 overflow-auto border-r border-border bg-sidebar/40',
+          'min-h-0 overflow-auto border-r border-border bg-workspace-pane',
           masterClassName,
         )}
       >
         {master}
       </aside>
-      <div className={cn('min-h-0 min-w-0 overflow-auto', detailClassName)}>{detail}</div>
+      <div className={cn('min-h-0 min-w-0 overflow-auto bg-workspace-detail', detailClassName)}>
+        {detail}
+      </div>
       {inspector && (
         <aside
           className={cn(
-            'min-h-0 overflow-auto border-l border-border bg-sidebar/30',
+            'min-h-0 overflow-auto border-l border-border bg-workspace-detail',
             inspectorClassName,
           )}
         >

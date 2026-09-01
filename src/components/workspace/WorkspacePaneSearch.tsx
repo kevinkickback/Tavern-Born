@@ -15,7 +15,7 @@ export function WorkspacePaneSearch({
   return (
     <div
       className={cn(
-        'flex shrink-0 items-center border-b border-border bg-sidebar/40 p-2',
+        'flex shrink-0 items-center border-b border-border bg-surface-raised p-2',
         containerClassName,
       )}
     >
@@ -24,7 +24,7 @@ export function WorkspacePaneSearch({
         <Input
           type="search"
           className={cn(
-            'h-8 border-border bg-background pl-8 text-sm shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25',
+            'h-[var(--control-height-sm)] border-border-strong bg-workspace-pane pl-8 text-sm shadow-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25',
             className,
           )}
           {...props}

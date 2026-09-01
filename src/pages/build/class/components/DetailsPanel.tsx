@@ -27,6 +27,7 @@ export interface SelectedFeatureState {
 export interface BuildClassDetailsPanelProps {
   selectedFeature: SelectedFeatureState | null
   viewingClassData?: Class5e
+  viewingClassLevel: number
   viewingClassEntries: unknown[]
   viewingSubclass?: string
   onClearSelection: () => void
@@ -35,6 +36,7 @@ export interface BuildClassDetailsPanelProps {
 export function BuildClassDetailsPanel({
   selectedFeature,
   viewingClassData,
+  viewingClassLevel,
   viewingClassEntries,
   viewingSubclass,
   onClearSelection,
@@ -45,37 +47,43 @@ export function BuildClassDetailsPanel({
         title={selectedFeature ? 'Feature details' : 'Class details'}
         className="pr-20"
       >
-        <div className="ml-auto flex min-w-0 items-center gap-2">
-          {selectedFeature ? (
-            <>
-              <button
-                type="button"
-                onClick={onClearSelection}
-                className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-                aria-label="Show class overview"
-                title="Show class overview"
-              >
-                <CaretLeft className="size-4" />
-              </button>
-              <span className="truncate text-sm font-semibold">{selectedFeature.name}</span>
-              {selectedFeature.source && (
-                <Badge variant="outline" className="shrink-0 text-xs">
-                  {selectedFeature.source}
+        {selectedFeature && (
+          <button
+            type="button"
+            onClick={onClearSelection}
+            className="ml-auto flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            aria-label="Show class overview"
+            title="Show class overview"
+          >
+            <CaretLeft className="size-4" />
+          </button>
+        )}
+      </WorkspacePaneHeader>
+
+      {(selectedFeature || viewingClassData) && (
+        <section className="shrink-0 border-b border-border bg-surface-raised/60 px-5 py-4">
+          <div className="mx-auto w-full max-w-4xl">
+            <h3 className="truncate font-display text-xl font-semibold leading-tight text-foreground">
+              {selectedFeature?.name ?? viewingClassData?.name}
+            </h3>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {(selectedFeature?.source ?? viewingClassData?.source) && (
+                <Badge variant="outline" className="text-xs">
+                  {selectedFeature?.source ?? viewingClassData?.source}
                 </Badge>
               )}
-            </>
-          ) : viewingClassData ? (
-            <>
-              <span className="truncate text-sm font-semibold">{viewingClassData.name}</span>
-              <Badge variant="outline" className="shrink-0 text-xs">
-                {viewingClassData.source}
-              </Badge>
-            </>
-          ) : (
-            <span className="text-sm text-muted-foreground">Select a feature…</span>
-          )}
-        </div>
-      </WorkspacePaneHeader>
+              {!selectedFeature && (
+                <>
+                  <span className="text-xs text-muted-foreground">Level {viewingClassLevel}</span>
+                  {viewingSubclass && (
+                    <span className="text-xs text-muted-foreground">· {viewingSubclass}</span>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {selectedFeature ? (
         <ScrollArea className="flex-1 overflow-hidden">

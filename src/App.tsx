@@ -137,11 +137,8 @@ function App() {
             <Route path="/character-sheet" element={<CharacterSheetPage />} />
             <Route path="/compendium" element={<CompendiumPage />} />
             <Route path="/sources" element={<SourcesPage />} />
-            <Route path="/settings" element={<Navigate to="/settings/general" replace />} />
-            <Route path="/settings/general" element={<SettingsPage />} />
-            <Route path="/settings/appearance" element={<SettingsPage />} />
-            <Route path="/settings/data" element={<SettingsPage />} />
-            <Route path="/settings/about" element={<SettingsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings/*" element={<Navigate to="/settings" replace />} />
           </Routes>
         </AppLayout>
         <Toaster position="bottom-right" />

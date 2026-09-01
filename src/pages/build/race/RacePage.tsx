@@ -13,6 +13,7 @@ import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import type { ActiveFilters } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -22,7 +23,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  MasterDetail,
   WorkspaceBody,
   WorkspaceDetailContent,
   WorkspacePage,
@@ -64,6 +64,8 @@ export function BuildRacePage() {
   const { resolveFeatChoiceSelection, commitFeatWithOptions } = useFeatProvenanceMutations()
   const { ledger } = useProvenanceLedger()
   const [raceSearch, setRaceSearch] = useState('')
+  const [leftCollapsed, setLeftCollapsed] = useState(false)
+  const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [featModalOpen, setFeatModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
   const [optionsPendingFeat, setOptionsPendingFeat] = useState<Feat5e | null>(null)
@@ -220,20 +222,43 @@ export function BuildRacePage() {
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
 
+  const selectedRaceFeatChoices = racialFeatChoices.filter(
+    (choice) =>
+      choice.sourceTag.sourceName === selectedRace?.name ||
+      choice.sourceTag.sourceName === character?.subrace,
+  )
+
   if (!character) {
     return <NoCharCard icon={<PersonSimple weight="duotone" />} noun="choose a race" />
   }
 
   return (
     <WorkspacePage className="p-3">
-      <WorkspaceBody className="overflow-hidden rounded-lg border border-border bg-background">
-        <MasterDetail
-          masterWidth="var(--workspace-master-width)"
-          masterClassName="border-r-2 border-border bg-sidebar/70"
-          detailClassName="bg-background"
-          master={
+      <WorkspaceBody className="flex overflow-hidden">
+        <SplitPane
+          leftWidth="var(--workspace-master-width)"
+          leftCollapsed={leftCollapsed}
+          rightCollapsed={detailCollapsed}
+          onLeftCollapsedChange={setLeftCollapsed}
+          onRightCollapsedChange={setDetailCollapsed}
+          className={cn(
+            'my-0 h-full overflow-visible',
+            !leftCollapsed && !detailCollapsed && 'gap-3',
+          )}
+          leftClassName={cn(
+            'rounded-lg bg-workspace-pane',
+            leftCollapsed ? 'border-0' : 'border border-border',
+          )}
+          rightClassName={cn(
+            'rounded-lg bg-workspace-detail',
+            detailCollapsed ? 'border-0' : 'border border-border',
+          )}
+          left={
             <div className="flex h-full min-h-0 flex-col">
-              <WorkspacePaneHeader ariaLabel="Available races">
+              <WorkspacePaneHeader
+                ariaLabel="Available races"
+                className={detailCollapsed ? 'pr-20' : undefined}
+              >
                 <WorkspacePaneSearch
                   aria-label="Search races"
                   placeholder="Search available races"
@@ -258,7 +283,9 @@ export function BuildRacePage() {
                         ref={isSelected ? selectedRaceRef : null}
                         className={cn(
                           'relative flex w-full items-center gap-3 border-b border-border/70 px-3 py-2.5 transition-colors [scroll-margin-top:8px]',
-                          isSelected ? 'bg-secondary text-foreground' : 'hover:bg-secondary/45',
+                          isSelected
+                            ? 'bg-surface-selected text-foreground'
+                            : 'hover:bg-surface-hover',
                         )}
                       >
                         {isSelected && (
@@ -296,118 +323,16 @@ export function BuildRacePage() {
                           </div>
                         </button>
 
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          {isSelected && hasSubraces ? (
-                            <Select
-                              value={
-                                character.subrace
-                                  ? `${character.subrace}|${character.subraceSource ?? ''}`
-                                  : ''
-                              }
-                              onValueChange={(v) => {
-                                const [subraceNameOrFull, ...sourceParts] = v.split('|')
-                                const subraceSource =
-                                  sourceParts.length > 0 ? sourceParts.join('|') : undefined
-                                const subraceNameFromKey = subraceNameOrFull
-                                const sr = namedSubraces.find(
-                                  (s) =>
-                                    s.name === subraceNameFromKey &&
-                                    (subraceSource ?? '') === (s.source ?? ''),
-                                )
-                                updateCharacter(character.id, {
-                                  subrace: subraceNameFromKey,
-                                  subraceSource: subraceSource ?? undefined,
-                                  raceAsiChoices: [],
-                                })
-                                applySubraceChange(race, sr)
-                              }}
-                            >
-                              <SelectTrigger className="h-7 text-xs min-w-[120px] max-w-[180px]">
-                                <SelectValue placeholder="Subrace…" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {namedSubraces.map((sr) => (
-                                  <SelectItem
-                                    key={`${sr.name}|${sr.source ?? ''}`}
-                                    value={`${sr.name}|${sr.source ?? ''}`}
-                                    className="text-xs"
-                                  >
-                                    {sr.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <>
-                              {hasSubraces && (
-                                <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                                  {namedSubraces.length} subraces
-                                </Badge>
-                              )}
-                              <Badge variant="outline" className="text-xs">
-                                {race.source}
-                              </Badge>
-                            </>
+                        <div className="flex shrink-0 items-center gap-1">
+                          {hasSubraces && (
+                            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+                              {namedSubraces.length} subraces
+                            </Badge>
                           )}
+                          <Badge variant="outline" className="text-xs">
+                            {race.source}
+                          </Badge>
                         </div>
-                        {isSelected &&
-                          (() => {
-                            const raceChoices = racialFeatChoices.filter(
-                              (c) =>
-                                c.sourceTag.sourceName === race.name ||
-                                c.sourceTag.sourceName === character.subrace,
-                            )
-                            if (raceChoices.length === 0) return null
-                            return raceChoices.map((choice) => {
-                              const isResolved = choice.selected.length > 0
-                              const poolLabel = choice.optionPool
-                                .filter((p) => p.startsWith('category:'))
-                                .map((p) => featCategoryToFull(p.replace('category:', '')))
-                                .join(', ')
-                              const resolvedFeat = isResolved
-                                ? (feats as Feat5e[]).find(
-                                    (f) =>
-                                      f.name.toLowerCase() === choice.selected[0].toLowerCase(),
-                                  )
-                                : undefined
-                              return (
-                                <div
-                                  key={choice.id}
-                                  className="flex items-center gap-1.5 flex-shrink-0"
-                                >
-                                  {isResolved ? (
-                                    <>
-                                      <Badge
-                                        variant="outline"
-                                        className="text-xs px-1.5 py-0 h-5 text-success border-success/50 gap-1"
-                                      >
-                                        <Check className="h-2.5 w-2.5" />
-                                        {resolvedFeat?.name ?? choice.selected[0]}
-                                      </Badge>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-6 text-xs px-1.5"
-                                        onClick={() => handleOpenFeatModal(choice.id)}
-                                      >
-                                        Change
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 text-xs gap-1"
-                                      onClick={() => handleOpenFeatModal(choice.id)}
-                                    >
-                                      <Star className="h-3 w-3" weight="duotone" />
-                                      {poolLabel ? `Choose ${poolLabel} Feat` : 'Choose Feat'}
-                                    </Button>
-                                  )}
-                                </div>
-                              )
-                            })
-                          })()}
                       </div>
                     )
                   })}
@@ -415,24 +340,134 @@ export function BuildRacePage() {
               </ScrollArea>
             </div>
           }
-          detail={
+          right={
             <div className="flex h-full min-h-0 flex-col">
-              <WorkspacePaneHeader title="Race details">
-                <div className="ml-auto flex min-w-0 items-center gap-2">
-                  {displayRace ? (
-                    <>
-                      <span className="truncate text-sm font-semibold leading-tight">
-                        {displayRace.name}
-                      </span>
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        {displayRace.source}
-                      </Badge>
-                    </>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Select a race…</span>
-                  )}
-                </div>
-              </WorkspacePaneHeader>
+              <WorkspacePaneHeader title="Race details" className="pr-20" />
+              {displayRace && (
+                <section className="shrink-0 border-b border-border bg-surface-raised/60 px-5 py-4">
+                  <div className="mx-auto flex w-full max-w-4xl flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-display text-xl font-semibold leading-tight text-foreground">
+                        {selectedRace?.name ?? displayRace.name}
+                      </h3>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {selectedRace?.source ?? displayRace.source}
+                        </Badge>
+                        {character.subrace && (
+                          <span className="truncate text-xs text-muted-foreground">
+                            {character.subrace}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-end justify-end gap-4">
+                      {selectedRace && subraces.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            Subrace
+                          </span>
+                          <Select
+                            value={
+                              character.subrace
+                                ? `${character.subrace}|${character.subraceSource ?? ''}`
+                                : ''
+                            }
+                            onValueChange={(value) => {
+                              const [subraceName, ...sourceParts] = value.split('|')
+                              const subraceSource =
+                                sourceParts.length > 0 ? sourceParts.join('|') : undefined
+                              const nextSubrace = subraces.find(
+                                (candidate) =>
+                                  candidate.name === subraceName &&
+                                  (candidate.source ?? '') === (subraceSource ?? ''),
+                              )
+                              updateCharacter(character.id, {
+                                subrace: subraceName,
+                                subraceSource,
+                                raceAsiChoices: [],
+                              })
+                              applySubraceChange(selectedRace, nextSubrace)
+                            }}
+                          >
+                            <SelectTrigger
+                              aria-label="Subrace"
+                              className="h-8 min-w-44 max-w-60 bg-background text-xs"
+                            >
+                              <SelectValue placeholder="Choose a subrace" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {subraces.map((subrace) => (
+                                <SelectItem
+                                  key={`${subrace.name}|${subrace.source ?? ''}`}
+                                  value={`${subrace.name}|${subrace.source ?? ''}`}
+                                  className="text-xs"
+                                >
+                                  {subrace.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {selectedRaceFeatChoices.map((choice) => {
+                        const isResolved = choice.selected.length > 0
+                        const poolLabel = choice.optionPool
+                          .filter((option) => option.startsWith('category:'))
+                          .map((option) => featCategoryToFull(option.replace('category:', '')))
+                          .join(', ')
+                        const resolvedFeat = isResolved
+                          ? (feats as Feat5e[]).find(
+                              (feat) =>
+                                feat.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                            )
+                          : undefined
+
+                        return (
+                          <div key={choice.id} className="flex flex-col gap-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Racial feat
+                            </span>
+                            <div className="flex items-center gap-2">
+                              {isResolved ? (
+                                <>
+                                  <Badge
+                                    variant="outline"
+                                    className="h-6 gap-1 border-success/50 px-2 text-xs text-success"
+                                  >
+                                    <Check className="size-3" />
+                                    {resolvedFeat?.name ?? choice.selected[0]}
+                                  </Badge>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 px-2 text-xs"
+                                    onClick={() => handleOpenFeatModal(choice.id)}
+                                  >
+                                    Change
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 gap-1.5 text-xs"
+                                  onClick={() => handleOpenFeatModal(choice.id)}
+                                >
+                                  <Star className="size-3.5" weight="duotone" />
+                                  {poolLabel ? `Choose ${poolLabel} feat` : 'Choose feat'}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </section>
+              )}
               <ScrollArea className="flex-1 overflow-hidden">
                 <WorkspaceDetailContent>
                   {displayRace ? (
@@ -523,41 +558,43 @@ export function BuildRacePage() {
                         ))}
                       </div>
 
-                      {getRaceTraits(displayRace).length > 0 && (
-                        <section>
-                          <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                            Traits
-                          </h4>
-                          <div className="border-t border-border">
-                            {getRaceTraits(displayRace).map((trait) => (
-                              <div
-                                key={`${trait.name}|${trait.entries?.length ?? 0}`}
-                                className="border-b border-border py-3"
-                              >
-                                <div className="mb-1.5 text-sm font-semibold">{trait.name}</div>
+                      <div className="mx-auto w-full max-w-[72ch] space-y-6">
+                        {getRaceTraits(displayRace).length > 0 && (
+                          <section>
+                            <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                              Traits
+                            </h4>
+                            <div className="border-t border-border">
+                              {getRaceTraits(displayRace).map((trait) => (
                                 <div
-                                  className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
-                                  dangerouslySetInnerHTML={{
-                                    __html: trait.entries.map((e) => renderEntry(e)).join(''),
-                                  }}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </section>
-                      )}
+                                  key={`${trait.name}|${trait.entries?.length ?? 0}`}
+                                  className="border-b border-border py-3"
+                                >
+                                  <div className="mb-1.5 text-sm font-semibold">{trait.name}</div>
+                                  <div
+                                    className="text-sm leading-relaxed text-muted-foreground [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
+                                    dangerouslySetInnerHTML={{
+                                      __html: trait.entries.map((e) => renderEntry(e)).join(''),
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        )}
 
-                      {(displayRace.entries ?? [])
-                        .filter((e) => typeof e === 'string')
-                        .map((e) => (
-                          <div
-                            key={e as string}
-                            className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1"
-                            dangerouslySetInnerHTML={{
-                              __html: renderEntry(e),
-                            }}
-                          />
-                        ))}
+                        {(displayRace.entries ?? [])
+                          .filter((entry) => typeof entry === 'string')
+                          .map((entry) => (
+                            <div
+                              key={entry as string}
+                              className="text-sm leading-relaxed [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-1"
+                              dangerouslySetInnerHTML={{
+                                __html: renderEntry(entry),
+                              }}
+                            />
+                          ))}
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">

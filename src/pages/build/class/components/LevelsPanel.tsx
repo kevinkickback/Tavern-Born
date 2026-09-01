@@ -162,7 +162,7 @@ export function BuildClassLevelsPanel({
     <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
       <WorkspacePaneHeader
         title={classProgression.length > 1 ? 'Current class' : 'Class progression'}
-        className="pr-20"
+        className={detailCollapsed ? 'pr-20' : undefined}
       >
         <div className="ml-auto flex min-w-0 flex-1 items-center justify-end">
           {classProgression.length > 1 ? (

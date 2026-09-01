@@ -12,6 +12,7 @@ import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencie
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { normalizeKey } from '@/lib/provenance'
 import { getImplicitSource } from '@/lib/sourcePresets'
+import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildProficienciesDetailsPanel } from '@/pages/build/proficiencies/components/DetailsPanel'
 import {
@@ -229,11 +230,20 @@ export function BuildProficienciesPage() {
 
   return (
     <WorkspacePage className="p-3">
-      <WorkspaceBody className="flex overflow-hidden rounded-lg border border-border bg-background">
+      <WorkspaceBody className="flex overflow-hidden">
         <SplitPane
-          className="my-0 h-full"
-          leftClassName="bg-background"
-          rightClassName="border-l-2 border-border bg-sidebar/50"
+          className={cn(
+            'my-0 h-full overflow-visible',
+            !leftCollapsed && !detailCollapsed && 'gap-3',
+          )}
+          leftClassName={cn(
+            'rounded-lg bg-workspace-pane',
+            leftCollapsed ? 'border-0' : 'border border-border',
+          )}
+          rightClassName={cn(
+            'rounded-lg bg-workspace-detail',
+            detailCollapsed ? 'border-0' : 'border border-border',
+          )}
           leftCollapsed={leftCollapsed}
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}

@@ -45,7 +45,10 @@ export function SplitPane({
   rightClassName,
 }: SplitPaneProps) {
   return (
-    <div className={cn('relative flex min-h-0 flex-1 flex-row overflow-hidden -my-6', className)}>
+    <div
+      data-slot="split-pane"
+      className={cn('relative flex min-h-0 flex-1 flex-row overflow-hidden -my-6', className)}
+    >
       {/* Toggle buttons — absolute top-right */}
       <div className="absolute top-2 right-2 z-10 flex gap-1">
         {/* Left-pane toggle */}
@@ -54,7 +57,7 @@ export function SplitPane({
           onClick={() => onLeftCollapsedChange(!leftCollapsed)}
           disabled={rightCollapsed}
           title={leftCollapsed ? 'Expand list panel' : 'Collapse list panel'}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex size-7 cursor-pointer items-center justify-center rounded-md border border-border-strong bg-surface-raised text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Sidebar className="h-3.5 w-3.5" weight={leftCollapsed ? 'regular' : 'fill'} />
         </button>
@@ -64,7 +67,7 @@ export function SplitPane({
           onClick={() => onRightCollapsedChange(!rightCollapsed)}
           disabled={leftCollapsed}
           title={rightCollapsed ? 'Expand details panel' : 'Collapse details panel'}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex size-7 cursor-pointer items-center justify-center rounded-md border border-border-strong bg-surface-raised text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Sidebar
             className="h-3.5 w-3.5"
@@ -77,7 +80,7 @@ export function SplitPane({
       {/* Left pane wrapper — collapses to 0 via CSS transition */}
       <div
         className={cn(
-          'flex flex-col overflow-hidden transition-all duration-300 ease-in-out',
+          'flex flex-col overflow-hidden bg-workspace-pane transition-all duration-300 ease-in-out',
           leftCollapsed
             ? 'w-0 min-w-0 opacity-0 pointer-events-none flex-none'
             : rightCollapsed || !leftWidth
@@ -93,7 +96,7 @@ export function SplitPane({
       {/* Right pane wrapper — collapses to 0 via CSS transition */}
       <div
         className={cn(
-          'flex flex-col overflow-hidden border-l border-border bg-muted/30 transition-all duration-300 ease-in-out',
+          'flex flex-col overflow-hidden border-l border-border bg-workspace-detail transition-all duration-300 ease-in-out',
           rightCollapsed
             ? 'w-0 min-w-0 opacity-0 pointer-events-none'
             : leftCollapsed || leftWidth

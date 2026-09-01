@@ -1,10 +1,9 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
 vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => ({
@@ -25,10 +24,6 @@ function renderSidebar(path = '/build/class') {
 }
 
 describe('desktop workspace navigation', () => {
-  beforeEach(() => {
-    useAppPreferencesStore.setState({ sidebarOpen: true })
-  })
-
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
@@ -42,37 +37,34 @@ describe('desktop workspace navigation', () => {
     expect(screen.getByRole('link', { name: 'Class' }).getAttribute('aria-current')).toBe('page')
   })
 
-  test('switches primary workspaces and their contextual navigation', async () => {
+  test('keeps application settings in the Start context navigation', async () => {
     const user = userEvent.setup()
     renderSidebar()
 
-    await user.click(screen.getByRole('button', { name: 'Settings' }))
+    await user.click(screen.getByRole('button', { name: 'Start' }))
 
-    expect(screen.getByRole('complementary', { name: 'Settings navigation' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'General' })).toBeTruthy()
+    expect(screen.getByRole('complementary', { name: 'Start navigation' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Characters' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull()
   })
 
-  test('persists context pane collapse state through preferences', async () => {
-    const user = userEvent.setup()
+  test('keeps the context pane open without a collapse control', () => {
     renderSidebar()
 
-    await user.click(screen.getByRole('button', { name: 'Collapse context pane' }))
-
-    expect(useAppPreferencesStore.getState().sidebarOpen).toBe(false)
-    expect(screen.getByRole('button', { name: 'Expand context pane' })).toBeTruthy()
+    expect(screen.getByRole('complementary', { name: 'Build navigation' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /context pane/i })).toBeNull()
   })
 
-  test('does not render a redundant context pane for the compendium', () => {
+  test('renders the permanent context pane for the compendium', () => {
     renderSidebar('/compendium')
 
-    expect(screen.queryByRole('complementary', { name: 'Compendium navigation' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Collapse context pane' })).toBeNull()
+    expect(screen.getByRole('complementary', { name: 'Compendium navigation' })).toBeTruthy()
   })
 
-  test('does not render a redundant context pane for the character collection', () => {
+  test('renders the permanent Start context pane for the character collection', () => {
     renderSidebar('/')
 
-    expect(screen.queryByRole('complementary', { name: 'Characters navigation' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Collapse context pane' })).toBeNull()
+    expect(screen.getByRole('complementary', { name: 'Start navigation' })).toBeTruthy()
   })
 })

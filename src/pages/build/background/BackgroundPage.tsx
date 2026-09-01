@@ -264,189 +264,195 @@ export function BuildBackgroundPage() {
   const showBackgroundAsiPanel = character.originSystem === '2024'
   const showBackgroundAsiCard = !!selectedBg && bgAsiData.blocks.length > 0
 
-  return (
-    <WorkspacePage className="gap-3 p-3">
-      {showBackgroundAsiPanel ? (
-        <div className="shrink-0 rounded-md border border-border bg-sidebar/30 p-3">
-          <div className="flex items-start gap-6">
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Ability Score Improvements
-              </div>
-              {showBackgroundAsiCard ? (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {bgAsiData.blocks.length > 1 && (
-                    <div className="inline-flex shrink-0 rounded-md border border-border overflow-hidden text-xs h-8">
-                      <button
-                        type="button"
-                        onClick={() => applyBackgroundAbilityChoices(selectedBg, 0, [])}
-                        className={cn(
-                          'px-3 h-full transition-colors',
-                          bgBlockIndex === 0
-                            ? 'bg-accent text-accent-foreground'
-                            : 'bg-card hover:bg-muted',
-                        )}
-                      >
-                        +2 / +1
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const block1 = bgAsiData.blocks[1]
-                          const autoChoices =
-                            selectedBg?.source === 'XPHB' &&
-                            block1 &&
-                            block1.from.length === block1.weights.length
-                              ? [...block1.from]
-                              : []
-                          applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
-                        }}
-                        className={cn(
-                          'px-3 h-full border-l border-border transition-colors',
-                          bgBlockIndex === 1
-                            ? 'bg-accent text-accent-foreground'
-                            : 'bg-card hover:bg-muted',
-                        )}
-                      >
-                        +1 / +1 / +1
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {(() => {
-                      const block = bgAsiData.blocks[bgBlockIndex] ?? bgAsiData.blocks[0]
-                      const slotLabels = ['first', 'second', 'third']
-                      const slots = block.weights.map((weight, i) => ({
-                        weight,
-                        key: slotLabels[i] ?? `slot${i + 1}`,
-                        index: i,
-                      }))
-                      return slots.map(({ weight, key, index: slotIndex }) => {
-                        const currentChoice =
-                          (bgChoices[slotIndex] as AbilityName | undefined) ?? ''
-                        return (
-                          <div key={key} className="flex items-center gap-2 h-8 w-44">
-                            <span className="text-xs font-semibold text-primary w-6 text-right shrink-0">
-                              +{weight}
-                            </span>
-                            <Select
-                              value={currentChoice}
-                              disabled={isXphbAutoAssign}
-                              onValueChange={(val) => {
-                                const newChoices = Array.from<string>({
-                                  length: block.weights.length,
-                                }).map((_, i) => bgChoices[i] ?? '')
-                                newChoices[slotIndex] = val
-                                applyBackgroundAbilityChoices(selectedBg, bgBlockIndex, newChoices)
-                              }}
-                            >
-                              <SelectTrigger className="h-8 text-xs flex-1 bg-background">
-                                <SelectValue placeholder="Choose ability…" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {block.from.map((ability) => (
-                                  <SelectItem
-                                    key={ability}
-                                    value={ability}
-                                    disabled={
-                                      bgChoices.includes(ability) && currentChoice !== ability
-                                    }
-                                  >
-                                    {ABILITY_ABBREVIATIONS[ability]} -{' '}
-                                    {ability.charAt(0).toUpperCase() + ability.slice(1)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )
-                      })
-                    })()}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2 text-sm text-muted-foreground">
-                  Select a background to assign origin ability scores here.
+  const backgroundConfigurationPanel = showBackgroundAsiPanel ? (
+    <div className="mt-4 border-t border-border pt-3">
+      <div className="flex items-start gap-6">
+        <div className="min-w-0 flex-1">
+          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Ability Score Improvements
+          </div>
+          {showBackgroundAsiCard ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {bgAsiData.blocks.length > 1 && (
+                <div className="inline-flex shrink-0 rounded-md border border-border overflow-hidden text-xs h-8">
+                  <button
+                    type="button"
+                    onClick={() => applyBackgroundAbilityChoices(selectedBg, 0, [])}
+                    className={cn(
+                      'px-3 h-full transition-colors',
+                      bgBlockIndex === 0
+                        ? 'bg-accent text-accent-foreground'
+                        : 'bg-card hover:bg-muted',
+                    )}
+                  >
+                    +2 / +1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const block1 = bgAsiData.blocks[1]
+                      const autoChoices =
+                        selectedBg?.source === 'XPHB' &&
+                        block1 &&
+                        block1.from.length === block1.weights.length
+                          ? [...block1.from]
+                          : []
+                      applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
+                    }}
+                    className={cn(
+                      'px-3 h-full border-l border-border transition-colors',
+                      bgBlockIndex === 1
+                        ? 'bg-accent text-accent-foreground'
+                        : 'bg-card hover:bg-muted',
+                    )}
+                  >
+                    +1 / +1 / +1
+                  </button>
                 </div>
               )}
-            </div>
-
-            <div className="self-stretch w-px bg-border shrink-0" />
-
-            <div className="shrink-0 min-w-[200px]">
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Origin Feat
-              </div>
-              {fixedBgFeats.length > 0 ? (
-                <div className="mt-2 flex flex-col gap-1">
-                  {fixedBgFeats.map((name) => (
-                    <Badge key={name} variant="outline" className="text-xs gap-1 opacity-70 w-fit">
-                      <Star className="h-3 w-3" weight="duotone" />
-                      {name}
-                    </Badge>
-                  ))}
-                  <p className="text-xs text-muted-foreground mt-0.5">Provided by background</p>
-                </div>
-              ) : originFeatChoices.length > 0 ? (
-                <div className="mt-2 flex flex-col gap-1.5">
-                  {originFeatChoices.map((choice) => {
-                    const isResolved = choice.selected.length > 0
-                    const poolLabel = choice.optionPool
-                      .filter((p) => p.startsWith('category:'))
-                      .map((p) => featCategoryToFull(p.replace('category:', '')))
-                      .join(', ')
-                    const resolvedFeat = isResolved
-                      ? (feats as Feat5e[]).find(
-                          (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
-                        )
-                      : undefined
+              <div className="flex flex-wrap gap-2">
+                {(() => {
+                  const block = bgAsiData.blocks[bgBlockIndex] ?? bgAsiData.blocks[0]
+                  const slotLabels = ['first', 'second', 'third']
+                  const slots = block.weights.map((weight, i) => ({
+                    weight,
+                    key: slotLabels[i] ?? `slot${i + 1}`,
+                    index: i,
+                  }))
+                  return slots.map(({ weight, key, index: slotIndex }) => {
+                    const currentChoice = (bgChoices[slotIndex] as AbilityName | undefined) ?? ''
                     return (
-                      <div key={choice.id}>
-                        {isResolved ? (
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant="outline" className="text-xs gap-1 opacity-70 w-fit">
-                              <Star className="h-3 w-3" weight="duotone" />
-                              {resolvedFeat?.name ?? choice.selected[0]}
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 text-xs px-1.5"
-                              onClick={() => handleOpenFeatModal(choice.id)}
-                            >
-                              Change
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-xs gap-1.5"
-                            onClick={() => handleOpenFeatModal(choice.id)}
-                          >
-                            <Star className="h-3 w-3" weight="duotone" />
-                            {poolLabel ? `Choose ${poolLabel} Feat` : 'Choose Origin Feat'}
-                          </Button>
-                        )}
+                      <div key={key} className="flex items-center gap-2 h-8 w-44">
+                        <span className="text-xs font-semibold text-primary w-6 text-right shrink-0">
+                          +{weight}
+                        </span>
+                        <Select
+                          value={currentChoice}
+                          disabled={isXphbAutoAssign}
+                          onValueChange={(val) => {
+                            const newChoices = Array.from<string>({
+                              length: block.weights.length,
+                            }).map((_, i) => bgChoices[i] ?? '')
+                            newChoices[slotIndex] = val
+                            applyBackgroundAbilityChoices(selectedBg, bgBlockIndex, newChoices)
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-xs flex-1 bg-background">
+                            <SelectValue placeholder="Choose ability…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {block.from.map((ability) => (
+                              <SelectItem
+                                key={ability}
+                                value={ability}
+                                disabled={bgChoices.includes(ability) && currentChoice !== ability}
+                              >
+                                {ABILITY_ABBREVIATIONS[ability]} -{' '}
+                                {ability.charAt(0).toUpperCase() + ability.slice(1)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )
-                  })}
-                </div>
-              ) : (
-                <div className="mt-2 text-sm text-muted-foreground">
-                  Select a background to assign origin feat here.
-                </div>
-              )}
+                  })
+                })()}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mt-2 text-sm text-muted-foreground">
+              Select a background to assign origin ability scores here.
+            </div>
+          )}
         </div>
-      ) : null}
 
-      <WorkspaceBody className="flex overflow-hidden rounded-lg border border-border bg-background">
+        <div className="self-stretch w-px bg-border shrink-0" />
+
+        <div className="shrink-0 min-w-[200px]">
+          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Origin Feat
+          </div>
+          {fixedBgFeats.length > 0 ? (
+            <div className="mt-2 flex flex-col gap-1">
+              {fixedBgFeats.map((name) => (
+                <Badge key={name} variant="outline" className="text-xs gap-1 opacity-70 w-fit">
+                  <Star className="h-3 w-3" weight="duotone" />
+                  {name}
+                </Badge>
+              ))}
+              <p className="text-xs text-muted-foreground mt-0.5">Provided by background</p>
+            </div>
+          ) : originFeatChoices.length > 0 ? (
+            <div className="mt-2 flex flex-col gap-1.5">
+              {originFeatChoices.map((choice) => {
+                const isResolved = choice.selected.length > 0
+                const poolLabel = choice.optionPool
+                  .filter((p) => p.startsWith('category:'))
+                  .map((p) => featCategoryToFull(p.replace('category:', '')))
+                  .join(', ')
+                const resolvedFeat = isResolved
+                  ? (feats as Feat5e[]).find(
+                      (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                    )
+                  : undefined
+                return (
+                  <div key={choice.id}>
+                    {isResolved ? (
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="outline" className="text-xs gap-1 opacity-70 w-fit">
+                          <Star className="h-3 w-3" weight="duotone" />
+                          {resolvedFeat?.name ?? choice.selected[0]}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 text-xs px-1.5"
+                          onClick={() => handleOpenFeatModal(choice.id)}
+                        >
+                          Change
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs gap-1.5"
+                        onClick={() => handleOpenFeatModal(choice.id)}
+                      >
+                        <Star className="h-3 w-3" weight="duotone" />
+                        {poolLabel ? `Choose ${poolLabel} Feat` : 'Choose Origin Feat'}
+                      </Button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="mt-2 text-sm text-muted-foreground">
+              Select a background to assign origin feat here.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : null
+
+  return (
+    <WorkspacePage className="p-3">
+      <WorkspaceBody className="flex overflow-hidden">
         <SplitPane
-          className="my-0 h-full"
-          leftClassName="bg-sidebar/70"
-          rightClassName="border-l-2 border-border bg-background"
+          className={cn(
+            'my-0 h-full overflow-visible',
+            !leftCollapsed && !detailCollapsed && 'gap-3',
+          )}
+          leftClassName={cn(
+            'rounded-lg bg-workspace-pane',
+            leftCollapsed ? 'border-0' : 'border border-border',
+          )}
+          rightClassName={cn(
+            'rounded-lg bg-workspace-detail',
+            detailCollapsed ? 'border-0' : 'border border-border',
+          )}
           leftCollapsed={leftCollapsed}
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
@@ -474,7 +480,6 @@ export function BuildBackgroundPage() {
                   {filteredBackgrounds.map((bg) => {
                     const bgKey = `${bg.name}|${bg.source ?? ''}`
                     const isSelected = selectedBackgroundKey === bgKey
-                    const rowChoiceBlocks = isSelected ? choiceBlocks : []
                     const bgOptionCount = optionCountByBackground.get(bgKey) ?? 0
                     return (
                       <div
@@ -482,7 +487,9 @@ export function BuildBackgroundPage() {
                         ref={isSelected ? selectedBackgroundRef : null}
                         className={cn(
                           'relative flex w-full items-center gap-3 border-b border-border/70 px-3 py-2.5 transition-colors [scroll-margin-top:8px]',
-                          isSelected ? 'bg-secondary text-foreground' : 'hover:bg-secondary/45',
+                          isSelected
+                            ? 'bg-surface-selected text-foreground'
+                            : 'hover:bg-surface-hover',
                         )}
                       >
                         {isSelected && (
@@ -508,70 +515,15 @@ export function BuildBackgroundPage() {
                             <div className="text-xs text-muted-foreground">{bg.source}</div>
                           </div>
                         </button>
-                        <div
-                          className={cn(
-                            'flex min-w-0 flex-wrap items-center justify-end gap-1',
-                            isSelected && rowChoiceBlocks.length > 0
-                              ? 'w-1/2 shrink-0'
-                              : 'max-w-[50%]',
+                        <div className="flex max-w-[50%] min-w-0 flex-wrap items-center justify-end gap-1">
+                          {bgOptionCount > 0 && (
+                            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+                              {bgOptionCount} item option{bgOptionCount === 1 ? '' : 's'}
+                            </Badge>
                           )}
-                        >
-                          {isSelected && rowChoiceBlocks.length > 0 ? (
-                            <div className="flex w-full min-w-0 flex-col items-end gap-1.5">
-                              {rowChoiceBlocks.map((block) => {
-                                const currentChoice =
-                                  bgEquipmentChoices[block.index]?.toLowerCase() ??
-                                  block.choiceKeys[0] ??
-                                  'a'
-                                return (
-                                  <Select
-                                    key={block.index}
-                                    value={currentChoice}
-                                    onValueChange={(val) => {
-                                      if (!selectedBg) return
-                                      const next = [...bgEquipmentChoices]
-                                      while (next.length <= block.index) next.push('a')
-                                      next[block.index] = val
-                                      applyBackgroundSelection(selectedBg, next)
-                                      updateCharacter(character.id, {
-                                        backgroundEquipmentChoices: next,
-                                      })
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-7 w-fit max-w-full overflow-hidden text-xs [&_[data-slot=select-value]]:min-w-0">
-                                      <SelectValue placeholder={`Choice ${block.index + 1}…`} />
-                                    </SelectTrigger>
-                                    <SelectContent
-                                      className="w-max max-w-[min(32rem,var(--radix-select-content-available-width))]"
-                                      align="end"
-                                    >
-                                      {block.choiceKeys.map((key) => {
-                                        const optionData = block.options[key]
-                                        const label =
-                                          formatEquipmentOptionEntries(optionData).join(', ')
-                                        return (
-                                          <SelectItem key={key} value={key} className="text-xs">
-                                            ({key.toUpperCase()}) {label}
-                                          </SelectItem>
-                                        )
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                )
-                              })}
-                            </div>
-                          ) : (
-                            <>
-                              {bgOptionCount > 0 && (
-                                <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                                  {bgOptionCount} item option{bgOptionCount === 1 ? '' : 's'}
-                                </Badge>
-                              )}
-                              <Badge variant="outline" className="text-xs">
-                                {bg.source}
-                              </Badge>
-                            </>
-                          )}
+                          <Badge variant="outline" className="text-xs">
+                            {bg.source}
+                          </Badge>
                         </div>
                       </div>
                     )
@@ -581,19 +533,97 @@ export function BuildBackgroundPage() {
             </div>
           }
           right={
-            <BuildBackgroundDetailsPanel
-              selectedBackground={selectedBg}
-              skillNames={skills}
-              languageNames={langs}
-              toolNames={tools}
-              equipmentBlocks={equipmentBlocks}
-              bgEquipmentChoices={bgEquipmentChoices}
-              fixedBgFeats={fixedBgFeats}
-              chosenOriginFeat={chosenOriginFeat}
-              bgAsiData={bgAsiData}
-              bgBlockIndex={bgBlockIndex}
-              bgChoices={bgChoices}
-            />
+            <div className="flex h-full min-h-0 flex-col">
+              <WorkspacePaneHeader title="Background details" className="pr-20" />
+              {selectedBg && (
+                <section className="max-h-[45%] shrink-0 overflow-auto border-b border-border bg-surface-raised/60 px-5 py-4">
+                  <div className="mx-auto w-full max-w-4xl">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-display text-xl font-semibold leading-tight text-foreground">
+                        {selectedBg.name}
+                      </h3>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          {selectedBg.source}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {selectedBg.edition === 'one' ? '2024 rules' : '2014 rules'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {backgroundConfigurationPanel}
+
+                    {choiceBlocks.length > 0 && (
+                      <div className="mt-4 border-t border-border pt-3">
+                        <div className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          Starting Equipment
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          {choiceBlocks.map((block) => {
+                            const currentChoice =
+                              bgEquipmentChoices[block.index]?.toLowerCase() ??
+                              block.choiceKeys[0] ??
+                              'a'
+                            return (
+                              <div key={block.index} className="min-w-0 max-w-md flex-1 basis-72">
+                                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                  Equipment choice {block.index + 1}
+                                </div>
+                                <Select
+                                  value={currentChoice}
+                                  onValueChange={(value) => {
+                                    const next = [...bgEquipmentChoices]
+                                    while (next.length <= block.index) next.push('a')
+                                    next[block.index] = value
+                                    applyBackgroundSelection(selectedBg, next)
+                                    updateCharacter(character.id, {
+                                      backgroundEquipmentChoices: next,
+                                    })
+                                  }}
+                                >
+                                  <SelectTrigger
+                                    aria-label={`Equipment choice ${block.index + 1}`}
+                                    className="h-8 w-full overflow-hidden bg-background text-xs [&_[data-slot=select-value]]:min-w-0"
+                                  >
+                                    <SelectValue placeholder={`Choice ${block.index + 1}…`} />
+                                  </SelectTrigger>
+                                  <SelectContent className="w-max max-w-[min(32rem,var(--radix-select-content-available-width))]">
+                                    {block.choiceKeys.map((key) => {
+                                      const optionData = block.options[key]
+                                      const label =
+                                        formatEquipmentOptionEntries(optionData).join(', ')
+                                      return (
+                                        <SelectItem key={key} value={key} className="text-xs">
+                                          ({key.toUpperCase()}) {label}
+                                        </SelectItem>
+                                      )
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+              <BuildBackgroundDetailsPanel
+                selectedBackground={selectedBg}
+                skillNames={skills}
+                languageNames={langs}
+                toolNames={tools}
+                equipmentBlocks={equipmentBlocks}
+                bgEquipmentChoices={bgEquipmentChoices}
+                fixedBgFeats={fixedBgFeats}
+                chosenOriginFeat={chosenOriginFeat}
+                bgAsiData={bgAsiData}
+                bgBlockIndex={bgBlockIndex}
+                bgChoices={bgChoices}
+              />
+            </div>
           }
         />
       </WorkspaceBody>

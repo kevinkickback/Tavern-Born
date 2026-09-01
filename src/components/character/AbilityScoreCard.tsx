@@ -34,12 +34,12 @@ export function AbilityScoreCard({
     return (
       <div
         className={cn(
-          'flex h-56 w-full max-w-40 flex-col overflow-hidden border-2 bg-sidebar/35 transition-colors [clip-path:polygon(8px_0,calc(100%_-_8px)_0,100%_8px,100%_calc(100%_-_8px),calc(100%_-_8px)_100%,8px_100%,0_calc(100%_-_8px),0_8px)]',
+          'flex h-56 w-full max-w-40 flex-col overflow-hidden rounded-lg border bg-surface-raised/45 transition-colors',
           selected
             ? 'border-primary bg-primary/5'
             : interactive
-              ? 'border-border hover:border-primary/60'
-              : 'border-border',
+              ? 'border-border-strong hover:border-primary/60'
+              : 'border-border-strong',
         )}
       >
         <div
@@ -54,7 +54,7 @@ export function AbilityScoreCard({
         <button
           type="button"
           onClick={onSelect}
-          className="flex flex-1 cursor-default flex-col items-center justify-center bg-transparent px-3 py-3 transition-colors hover:bg-primary/5"
+          className="flex min-h-0 flex-1 cursor-default flex-col items-center justify-center overflow-hidden bg-transparent px-3 py-3 transition-colors hover:bg-primary/5"
           aria-label={`Show ${ability} details`}
         >
           <div className="font-mono text-5xl font-bold leading-none tabular-nums">{total}</div>
@@ -68,14 +68,19 @@ export function AbilityScoreCard({
           >
             {formatModifier(mod)}
           </div>
-          <div className="mt-2.5 text-xs font-medium text-muted-foreground tabular-nums">
-            Base {score}
-            {bonus !== 0 && ` · Bonus ${bonus > 0 ? '+' : ''}${bonus}`}
+          <div className="mt-2 flex min-h-8 w-full flex-wrap content-center items-center justify-center gap-x-2 gap-y-0 text-center text-[0.6875rem] font-medium leading-tight text-muted-foreground tabular-nums">
+            <span className="whitespace-nowrap">Base {score}</span>
+            {bonus !== 0 && (
+              <span className="whitespace-nowrap">
+                Bonus {bonus > 0 ? '+' : ''}
+                {bonus}
+              </span>
+            )}
           </div>
         </button>
 
         {children && (
-          <div className="flex h-[3.25rem] shrink-0 items-center justify-center border-t border-border/70 px-2">
+          <div className="flex h-[3.25rem] min-h-[3.25rem] shrink-0 items-center justify-center border-t border-border/70 px-2">
             {children}
           </div>
         )}

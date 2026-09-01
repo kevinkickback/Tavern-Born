@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeListener('app:confirmClose', callback)
   },
   forceClose: () => ipcRenderer.send('app:forceClose'),
+  setTitleBarOverlay: (color: string, symbolColor: string) =>
+    ipcRenderer.send('window:set-title-bar-overlay', { color, symbolColor }),
 
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: () => ipcRenderer.invoke('update:download'),
@@ -104,6 +106,7 @@ declare global {
       onConfirmClose: (callback: () => void) => void
       removeConfirmCloseListener: (callback: () => void) => void
       forceClose: () => void
+      setTitleBarOverlay: (color: string, symbolColor: string) => void
       // Update methods
       checkForUpdate: () => Promise<{ success: boolean; data: unknown; error: string | null }>
       downloadUpdate: () => Promise<{ success: boolean; data: null; error: string | null }>

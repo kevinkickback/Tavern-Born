@@ -27,6 +27,7 @@ import { getOrdinalForm } from '@/lib/calculations/spellUtils'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
+import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import {
   BuildClassDetailsPanel,
@@ -549,11 +550,20 @@ export function BuildClassPage() {
         </div>
       ) : null}
 
-      <WorkspaceBody className="flex overflow-hidden rounded-lg border border-border bg-background">
+      <WorkspaceBody className="flex overflow-hidden">
         <SplitPane
-          className="my-0 h-full"
-          leftClassName="bg-sidebar/70"
-          rightClassName="border-l-2 border-border bg-background"
+          className={cn(
+            'my-0 h-full overflow-visible',
+            !leftCollapsed && !detailCollapsed && 'gap-3',
+          )}
+          leftClassName={cn(
+            'rounded-lg bg-workspace-pane',
+            leftCollapsed ? 'border-0' : 'border border-border',
+          )}
+          rightClassName={cn(
+            'rounded-lg bg-workspace-detail',
+            detailCollapsed ? 'border-0' : 'border border-border',
+          )}
           leftCollapsed={leftCollapsed}
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
@@ -619,6 +629,7 @@ export function BuildClassPage() {
             <BuildClassDetailsPanel
               selectedFeature={selectedFeature}
               viewingClassData={viewingClassData}
+              viewingClassLevel={viewingClassLevel}
               viewingClassEntries={viewingClassEntries}
               viewingSubclass={viewingSubclass}
               onClearSelection={() => setSelectedFeature(null)}

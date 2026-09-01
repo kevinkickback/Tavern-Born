@@ -44,7 +44,6 @@ interface AppPreferencesState {
   autoRefreshGameData: boolean
   autoUpdate: boolean
   uiScale: UiScale
-  sidebarOpen: boolean
   compendiumFiltersOpen: boolean
   characterViewMode: CharacterViewMode
   setHomeCardSize: (size: number) => void
@@ -53,7 +52,6 @@ interface AppPreferencesState {
   setAutoRefreshGameData: (enabled: boolean) => void
   setAutoUpdate: (enabled: boolean) => void
   setUiScale: (scale: UiScale) => void
-  setSidebarOpen: (open: boolean) => void
   setCompendiumFiltersOpen: (open: boolean) => void
   setCharacterViewMode: (mode: CharacterViewMode) => void
 }
@@ -67,12 +65,10 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
       autoRefreshGameData: true,
       autoUpdate: true,
       uiScale: DEFAULT_UI_SCALE,
-      sidebarOpen: true,
       compendiumFiltersOpen: true,
       characterViewMode: 'gallery',
 
       setHomeCardSize: (size) => set({ homeCardSize: clampHomeCardSize(size) }),
-      setSidebarOpen: (open) => set({ sidebarOpen: open }),
       setCompendiumFiltersOpen: (open) => set({ compendiumFiltersOpen: open }),
       setCharacterViewMode: (mode) => set({ characterViewMode: mode }),
 
@@ -96,7 +92,6 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         autoRefreshGameData: state.autoRefreshGameData,
         autoUpdate: state.autoUpdate,
         uiScale: state.uiScale,
-        sidebarOpen: state.sidebarOpen,
         compendiumFiltersOpen: state.compendiumFiltersOpen,
         characterViewMode: state.characterViewMode,
       }),
@@ -110,7 +105,6 @@ export const useAppPreferencesStore = create<AppPreferencesState>()(
         state.themeAppearance = normalizeAppearanceTheme(state.themeAppearance)
         state.autoRefreshGameData = state.autoRefreshGameData !== false
         state.autoUpdate = state.autoUpdate !== false
-        state.sidebarOpen = state.sidebarOpen !== false
         state.compendiumFiltersOpen = state.compendiumFiltersOpen !== false
         state.characterViewMode = state.characterViewMode === 'list' ? 'list' : 'gallery'
         const validScales: number[] = [...UI_SCALE_OPTIONS]

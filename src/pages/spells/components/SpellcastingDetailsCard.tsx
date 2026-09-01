@@ -80,9 +80,9 @@ export function SpellcastingDetailsCard({
               return (
                 <div
                   key={detail.profileId}
-                  className="overflow-hidden rounded-lg border border-border bg-background"
+                  className="overflow-hidden rounded-lg border border-border bg-surface-raised/55"
                 >
-                  <div className="flex items-center gap-3 px-3 py-2.5 border-b border-border/40 bg-card">
+                  <div className="flex items-center gap-3 border-b border-border bg-surface-raised px-3 py-2.5">
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10">
                       {classIconUrl ? (
                         <img
@@ -145,9 +145,9 @@ export function SpellcastingDetailsCard({
               return (
                 <div
                   key={profile.id}
-                  className="overflow-hidden rounded-lg border border-border bg-background"
+                  className="overflow-hidden rounded-lg border border-border bg-surface-raised/55"
                 >
-                  <div className="flex items-center gap-3 px-3 py-2.5 border-b border-border/40 bg-card">
+                  <div className="flex items-center gap-3 border-b border-border bg-surface-raised px-3 py-2.5">
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-primary/30 bg-primary/10">
                       <MagicWand className="h-5 w-5 text-primary" weight="duotone" />
                     </div>

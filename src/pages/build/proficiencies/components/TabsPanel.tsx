@@ -575,7 +575,7 @@ export function BuildProficienciesTabsPanel({
                     <div className="flex-1 h-px bg-border" />
                   </div>
                 )}
-                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background 2xl:grid-cols-2">
+                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane 2xl:grid-cols-2">
                   {groupSkills.map((skill) => {
                     const normName = skill.name
                     const sourceTags = ledger.proficiencies.skills[normName] ?? []
@@ -628,14 +628,14 @@ export function BuildProficienciesTabsPanel({
                         onFocusCapture={focusSkill}
                         aria-label={`${formatProfLabel(skill.name)} proficiency`}
                         className={cn(
-                          'inline-flex min-h-11 min-w-0 items-stretch overflow-hidden bg-background text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-within:z-10 focus-within:ring-2 focus-within:ring-primary focus-within:ring-inset',
+                          'inline-flex min-h-11 min-w-0 items-stretch overflow-hidden bg-surface-raised text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-within:z-10 focus-within:ring-2 focus-within:ring-primary focus-within:ring-inset',
                           isChoiceSelected
                             ? choiceSelectedClass
                             : isSelected
                               ? fixedSelectedClass
                               : canSelect
-                                ? 'bg-background text-foreground hover:bg-primary/5'
-                                : 'bg-background text-foreground hover:bg-primary/5',
+                                ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
+                                : 'bg-surface-raised text-foreground hover:bg-surface-hover',
                         )}
                       >
                         <button
@@ -715,139 +715,147 @@ export function BuildProficienciesTabsPanel({
         </TabsContent>
 
         <TabsContent value="saving-throws">
-          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background sm:grid-cols-2 2xl:grid-cols-3">
-            {savingThrows.map((save) => {
-              const normAbility = normalizeKey(save.ability)
-              const abbr = SAVE_ABBREVIATIONS[normAbility]
-              const sourceTags = [
-                ...(ledger.proficiencies.savingThrows[normAbility] ?? []),
-                ...(abbr ? (ledger.proficiencies.savingThrows[abbr] ?? []) : []),
-              ]
-              const hasLedgerGrant = sourceTags.length > 0
-              const isSelected = save.proficient || hasLedgerGrant
-              const rowState: ProficiencyRowState = isSelected ? 'granted' : 'unavailable'
-              const focusSave = () => {
-                onFocusChange({
-                  type: 'save',
-                  ability: save.ability,
-                  proficient: isSelected,
-                  modifierString: save.modifierString,
-                })
-                onExpandDetails()
-              }
+          <div className="space-y-4">
+            <div className="h-8" aria-hidden="true" />
+            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane sm:grid-cols-2 2xl:grid-cols-3">
+              {savingThrows.map((save) => {
+                const normAbility = normalizeKey(save.ability)
+                const abbr = SAVE_ABBREVIATIONS[normAbility]
+                const sourceTags = [
+                  ...(ledger.proficiencies.savingThrows[normAbility] ?? []),
+                  ...(abbr ? (ledger.proficiencies.savingThrows[abbr] ?? []) : []),
+                ]
+                const hasLedgerGrant = sourceTags.length > 0
+                const isSelected = save.proficient || hasLedgerGrant
+                const rowState: ProficiencyRowState = isSelected ? 'granted' : 'unavailable'
+                const focusSave = () => {
+                  onFocusChange({
+                    type: 'save',
+                    ability: save.ability,
+                    proficient: isSelected,
+                    modifierString: save.modifierString,
+                  })
+                  onExpandDetails()
+                }
 
-              return (
-                <button
-                  key={save.ability}
-                  type="button"
-                  onMouseEnter={focusSave}
-                  onFocus={focusSave}
-                  className={cn(
-                    'group inline-flex min-h-11 min-w-0 cursor-default items-center gap-2 bg-background px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                    isSelected
-                      ? fixedSelectedClass
-                      : 'bg-background text-foreground hover:bg-primary/5',
-                  )}
-                >
-                  <ProficiencyStateIcon
-                    state={rowState}
-                    fallback={<ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />}
-                  />
-                  <span>{formatProfLabel(save.ability)}</span>
-                  <span className="ml-auto flex shrink-0 items-center gap-2">
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {save.modifierString}
+                return (
+                  <button
+                    key={save.ability}
+                    type="button"
+                    onMouseEnter={focusSave}
+                    onFocus={focusSave}
+                    className={cn(
+                      'group inline-flex min-h-11 min-w-0 cursor-default items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                      isSelected
+                        ? fixedSelectedClass
+                        : 'bg-surface-raised text-foreground hover:bg-surface-hover',
+                    )}
+                  >
+                    <ProficiencyStateIcon
+                      state={rowState}
+                      fallback={<ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />}
+                    />
+                    <span>{formatProfLabel(save.ability)}</span>
+                    <span className="ml-auto flex shrink-0 items-center gap-2">
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {save.modifierString}
+                      </span>
+                      <ProficiencyStatus state={rowState} />
                     </span>
-                    <ProficiencyStatus state={rowState} />
-                  </span>
-                </button>
-              )
-            })}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="armor">
-          <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background sm:grid-cols-2">
-            {availableArmor.map((armorKey) => {
-              const normArmor = normalizeKey(armorKey)
-              const sourceTags = ledger.proficiencies.armor[normArmor] ?? []
-              const hasLedgerGrant = sourceTags.length > 0
-              const isSelected =
-                hasProfInArray(currentProficiencies.armor, armorKey) || hasLedgerGrant
-              const isChoiceSelected = ledger.choices.some(
-                (choice) =>
-                  choice.domain === 'armor' &&
-                  choice.selected.some((selected) => normalizeKey(selected) === normArmor),
-              )
-              const canSelect =
-                !isSelected &&
-                ledger.choices.some(
+          <div className="space-y-4">
+            <div className="h-8" aria-hidden="true" />
+            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane sm:grid-cols-2">
+              {availableArmor.map((armorKey) => {
+                const normArmor = normalizeKey(armorKey)
+                const sourceTags = ledger.proficiencies.armor[normArmor] ?? []
+                const hasLedgerGrant = sourceTags.length > 0
+                const isSelected =
+                  hasProfInArray(currentProficiencies.armor, armorKey) || hasLedgerGrant
+                const isChoiceSelected = ledger.choices.some(
                   (choice) =>
                     choice.domain === 'armor' &&
-                    choice.selected.length < choice.chooseCount &&
-                    (choice.optionPool.length === 0 ||
-                      choice.optionPool.some((poolEntry) => normalizeKey(poolEntry) === normArmor)),
+                    choice.selected.some((selected) => normalizeKey(selected) === normArmor),
                 )
-              const canDeselect = isChoiceSelected
-              const rowState: ProficiencyRowState = isChoiceSelected
-                ? 'chosen'
-                : isSelected
-                  ? 'granted'
-                  : canSelect
-                    ? 'available'
-                    : 'unavailable'
-              const focusArmor = () => {
-                onFocusChange({
-                  type: 'item',
-                  category: 'armor',
-                  name: armorKey,
-                  isProficient: isSelected,
-                })
-                onExpandDetails()
-              }
-              return (
-                <button
-                  key={armorKey}
-                  type="button"
-                  onClick={() => {
-                    if (canDeselect) onResolveChoiceSelection('armor', armorKey, false)
-                    else if (canSelect) onResolveChoiceSelection('armor', armorKey, true)
-                  }}
-                  onMouseEnter={focusArmor}
-                  onFocus={focusArmor}
-                  title={
-                    canDeselect
-                      ? `Remove choice: ${formatProfLabel(armorKey)}`
-                      : isSelected
-                        ? `${formatProfLabel(armorKey)} is granted and cannot be removed`
-                        : canSelect
-                          ? `Choose ${formatProfLabel(armorKey)}`
-                          : undefined
-                  }
-                  className={cn(
-                    'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-background px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                    canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
-                    isChoiceSelected
-                      ? choiceSelectedClass
-                      : isSelected
-                        ? fixedSelectedClass
-                        : canSelect
-                          ? 'bg-background text-foreground hover:bg-primary/5'
-                          : 'bg-background text-foreground hover:bg-primary/5',
-                  )}
-                >
-                  <ProficiencyStateIcon
-                    state={rowState}
-                    actionable={canSelect || canDeselect}
-                    fallback={<Shield className="size-3.5 shrink-0" aria-hidden="true" />}
-                  />
-                  <span>{formatProfLabel(armorKey)}</span>
-                  <span className="ml-auto flex shrink-0 items-center gap-2">
-                    <ProficiencyStatus state={rowState} />
-                  </span>
-                </button>
-              )
-            })}
+                const canSelect =
+                  !isSelected &&
+                  ledger.choices.some(
+                    (choice) =>
+                      choice.domain === 'armor' &&
+                      choice.selected.length < choice.chooseCount &&
+                      (choice.optionPool.length === 0 ||
+                        choice.optionPool.some(
+                          (poolEntry) => normalizeKey(poolEntry) === normArmor,
+                        )),
+                  )
+                const canDeselect = isChoiceSelected
+                const rowState: ProficiencyRowState = isChoiceSelected
+                  ? 'chosen'
+                  : isSelected
+                    ? 'granted'
+                    : canSelect
+                      ? 'available'
+                      : 'unavailable'
+                const focusArmor = () => {
+                  onFocusChange({
+                    type: 'item',
+                    category: 'armor',
+                    name: armorKey,
+                    isProficient: isSelected,
+                  })
+                  onExpandDetails()
+                }
+                return (
+                  <button
+                    key={armorKey}
+                    type="button"
+                    onClick={() => {
+                      if (canDeselect) onResolveChoiceSelection('armor', armorKey, false)
+                      else if (canSelect) onResolveChoiceSelection('armor', armorKey, true)
+                    }}
+                    onMouseEnter={focusArmor}
+                    onFocus={focusArmor}
+                    title={
+                      canDeselect
+                        ? `Remove choice: ${formatProfLabel(armorKey)}`
+                        : isSelected
+                          ? `${formatProfLabel(armorKey)} is granted and cannot be removed`
+                          : canSelect
+                            ? `Choose ${formatProfLabel(armorKey)}`
+                            : undefined
+                    }
+                    className={cn(
+                      'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                      canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
+                      isChoiceSelected
+                        ? choiceSelectedClass
+                        : isSelected
+                          ? fixedSelectedClass
+                          : canSelect
+                            ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
+                            : 'bg-surface-raised text-foreground hover:bg-surface-hover',
+                    )}
+                  >
+                    <ProficiencyStateIcon
+                      state={rowState}
+                      actionable={canSelect || canDeselect}
+                      fallback={<Shield className="size-3.5 shrink-0" aria-hidden="true" />}
+                    />
+                    <span>{formatProfLabel(armorKey)}</span>
+                    <span className="ml-auto flex shrink-0 items-center gap-2">
+                      <ProficiencyStatus state={rowState} />
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </TabsContent>
 
@@ -885,7 +893,7 @@ export function BuildProficienciesTabsPanel({
                     <div className="flex-1 h-px bg-border" />
                   </div>
                 )}
-                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background 2xl:grid-cols-2">
+                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane 2xl:grid-cols-2">
                   {groupWeapons.map((weaponKey) => {
                     const normWeapon = normalizeKey(weaponKey)
                     const sourceTags = ledger.proficiencies.weapons[normWeapon] ?? []
@@ -945,15 +953,15 @@ export function BuildProficienciesTabsPanel({
                                 : undefined
                         }
                         className={cn(
-                          'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-background px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                          'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
                           canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
                           isChoiceSelected
                             ? choiceSelectedClass
                             : isSelected
                               ? fixedSelectedClass
                               : canSelect
-                                ? 'bg-background text-foreground hover:bg-primary/5'
-                                : 'bg-background text-foreground hover:bg-primary/5',
+                                ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
+                                : 'bg-surface-raised text-foreground hover:bg-surface-hover',
                         )}
                       >
                         <ProficiencyStateIcon
@@ -1048,7 +1056,7 @@ export function BuildProficienciesTabsPanel({
                       <div className="flex-1 h-px bg-border" />
                     </div>
                   )}
-                  <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background 2xl:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane 2xl:grid-cols-2">
                     {groupTools.map((toolName) => {
                       const normTool = normalizeKey(toolName)
                       const genericKind = normalizeGenericToolKind(toolName)
@@ -1120,21 +1128,21 @@ export function BuildProficienciesTabsPanel({
                                   : undefined
                           }
                           className={cn(
-                            'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-background px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                            'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
                             !isGenericKind && (canSelect || canDeselect)
                               ? 'cursor-pointer'
                               : 'cursor-default',
                             isGenericKind
                               ? hasOptionalChoiceForKind
                                 ? 'bg-primary/5 text-foreground hover:bg-primary/10'
-                                : 'bg-background text-foreground hover:bg-primary/5'
+                                : 'bg-surface-raised text-foreground hover:bg-surface-hover'
                               : isChoiceSelected
                                 ? choiceSelectedClass
                                 : isSelected
                                   ? fixedSelectedClass
                                   : canSelect
-                                    ? 'bg-background text-foreground hover:bg-primary/5'
-                                    : 'bg-background text-foreground hover:bg-primary/5',
+                                    ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
+                                    : 'bg-surface-raised text-foreground hover:bg-surface-hover',
                           )}
                         >
                           <ProficiencyStateIcon
@@ -1190,7 +1198,7 @@ export function BuildProficienciesTabsPanel({
                       <div className="flex-1 h-px bg-border" />
                     </div>
                   )}
-                  <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-background 2xl:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane 2xl:grid-cols-2">
                     {groupLangs.map((languageName) => {
                       const normLang = normalizeKey(languageName)
                       const sourceTags = ledger.proficiencies.languages[normLang] ?? []
@@ -1254,15 +1262,15 @@ export function BuildProficienciesTabsPanel({
                                   : undefined
                           }
                           className={cn(
-                            'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-background px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
+                            'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
                             canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
                             isChoiceSelected
                               ? choiceSelectedClass
                               : isSelected
                                 ? fixedSelectedClass
                                 : canSelect
-                                  ? 'bg-background text-foreground hover:bg-primary/5'
-                                  : 'bg-background text-foreground hover:bg-primary/5',
+                                  ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
+                                  : 'bg-surface-raised text-foreground hover:bg-surface-hover',
                           )}
                         >
                           <ProficiencyStateIcon

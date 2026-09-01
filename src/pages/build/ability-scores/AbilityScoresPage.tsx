@@ -126,11 +126,20 @@ export function BuildAbilityScoresPage() {
 
   return (
     <WorkspacePage className="p-3">
-      <WorkspaceBody className="flex overflow-hidden rounded-lg border border-border bg-background">
+      <WorkspaceBody className="flex overflow-hidden">
         <SplitPane
-          className="my-0 h-full"
-          leftClassName="bg-background"
-          rightClassName="border-l-2 border-border bg-sidebar/50"
+          className={cn(
+            'my-0 h-full overflow-visible',
+            !leftCollapsed && !detailCollapsed && 'gap-3',
+          )}
+          leftClassName={cn(
+            'rounded-lg bg-workspace-pane',
+            leftCollapsed ? 'border-0' : 'border border-border',
+          )}
+          rightClassName={cn(
+            'rounded-lg bg-workspace-detail',
+            detailCollapsed ? 'border-0' : 'border border-border',
+          )}
           leftCollapsed={leftCollapsed}
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
@@ -201,7 +210,7 @@ export function BuildAbilityScoresPage() {
                         })
                       }
                     >
-                      <div className="mb-5 flex flex-wrap items-center justify-end gap-3 border-b border-border pb-3">
+                      <div className="mb-5 flex flex-wrap items-center justify-end gap-3">
                         {method === 'point-buy' && (
                           <div className="ml-auto min-w-72">
                             <div className="min-w-0 flex-1">
@@ -252,14 +261,19 @@ export function BuildAbilityScoresPage() {
                       </TabsContent>
                     </Tabs>
                     {raceAsiData.choices.length > 0 && (
-                      <section className="mx-auto mt-6 w-full max-w-xl border-t border-border pt-3">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            Racial bonuses
-                          </span>
+                      <section className="mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              Racial bonuses
+                            </h3>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Assign the ability increases granted by your race.
+                            </p>
+                          </div>
                           {isLineageRaceAsiFallback && (
                             <fieldset
-                              className="inline-flex w-fit gap-1 rounded-md border border-border bg-sidebar/40 p-1"
+                              className="inline-flex w-fit shrink-0 gap-1 rounded-md border border-border bg-background/45 p-1"
                               aria-label="Racial bonus distribution"
                             >
                               {(
@@ -296,11 +310,11 @@ export function BuildAbilityScoresPage() {
                             </fieldset>
                           )}
                         </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
                           {raceAsiData.fixed.map((fb) => (
                             <div
                               key={`${fb.ability}|${fb.value}`}
-                              className="flex items-center gap-2"
+                              className="flex min-h-9 items-center gap-2 rounded-md border border-border bg-background/35 px-3"
                             >
                               <span className="text-xs font-semibold text-muted-foreground">
                                 +{fb.value}
@@ -323,8 +337,11 @@ export function BuildAbilityScoresPage() {
                                 ),
                               ])
                               return (
-                                <div key={slotId} className="flex items-center gap-2">
-                                  <span className="text-xs font-semibold text-muted-foreground">
+                                <div
+                                  key={slotId}
+                                  className="flex min-w-44 items-center gap-2 rounded-md border border-border bg-background/35 p-1 pl-3"
+                                >
+                                  <span className="shrink-0 text-xs font-semibold text-muted-foreground">
                                     +{block.amount}
                                   </span>
                                   <Select
@@ -339,7 +356,7 @@ export function BuildAbilityScoresPage() {
                                       applyRaceAsiChoices(next)
                                     }}
                                   >
-                                    <SelectTrigger className="h-7 w-28 px-2 text-xs">
+                                    <SelectTrigger className="h-8 min-w-0 flex-1 border-0 bg-transparent px-2 text-xs shadow-none focus:ring-0">
                                       <SelectValue placeholder="Ability…" />
                                     </SelectTrigger>
                                     <SelectContent>

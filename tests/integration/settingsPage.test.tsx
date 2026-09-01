@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { SettingsPage } from '@/pages/SettingsPage'
@@ -27,22 +28,37 @@ function renderSettings(path: string) {
   )
 }
 
-describe('settings workspace routes', () => {
+describe('settings page categories', () => {
   afterEach(cleanup)
 
-  test.each([
-    ['/settings/general', 'General settings panel'],
-    ['/settings/appearance', 'Appearance settings panel'],
-    ['/settings/data', 'Game data settings panel'],
-    ['/settings/about', 'About settings panel'],
-  ])('renders the panel selected by %s', (path, panelLabel) => {
-    renderSettings(path)
+  test('switches settings sections with the in-page tabs', async () => {
+    const user = userEvent.setup()
+    renderSettings('/settings')
 
-    expect(screen.getByText(panelLabel)).toBeTruthy()
+    expect(screen.getByText('General settings panel')).toBeTruthy()
+
+    await user.click(screen.getByRole('tab', { name: 'Appearance' }))
+    expect(screen.getByText('Appearance settings panel')).toBeTruthy()
+    expect(screen.queryByText('General settings panel')).toBeNull()
+
+    await user.click(screen.getByRole('tab', { name: 'Game Data' }))
+    expect(screen.getByText('Game data settings panel')).toBeTruthy()
+
+    await user.click(screen.getByRole('tab', { name: 'About' }))
+    expect(screen.getByText('About settings panel')).toBeTruthy()
   })
 
-  test('falls back to general settings for an unknown settings path', () => {
-    renderSettings('/settings/unknown')
+  test('supports direct links to a settings section', () => {
+    renderSettings('/settings?section=appearance')
+
+    expect(screen.getByText('Appearance settings panel')).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Appearance' }).getAttribute('aria-selected')).toBe(
+      'true',
+    )
+  })
+
+  test('falls back to general settings for an unknown section', () => {
+    renderSettings('/settings?section=unknown')
 
     expect(screen.getByText('General settings panel')).toBeTruthy()
   })

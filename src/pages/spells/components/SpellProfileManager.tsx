@@ -91,11 +91,11 @@ const CantripGroup = memo(function CantripGroup({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-md border border-border bg-background',
+        'overflow-hidden rounded-md border border-border bg-surface-raised/35',
         getColSpanClasses(span),
       )}
     >
-      <div className="flex h-10 items-center border-b border-border bg-sidebar/40 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="flex h-10 items-center border-b border-border bg-surface-raised px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Cantrips
       </div>
       <div className={getInnerColumnClasses(span)}>
@@ -107,7 +107,7 @@ const CantripGroup = memo(function CantripGroup({
           return (
             <div
               key={`${item.profileId}|${item.kind}|${item.name}`}
-              className="flex min-h-11 min-w-0 break-inside-avoid items-center gap-3 bg-background px-3 py-2.5 text-sm ring-1 ring-inset ring-border/75 transition-colors hover:bg-primary/5"
+              className="flex min-h-11 min-w-0 break-inside-avoid items-center gap-3 bg-workspace-pane px-3 py-2.5 text-sm ring-1 ring-inset ring-border/75 transition-colors hover:bg-surface-hover"
             >
               <div className="min-w-0 flex-1">
                 {renderSpellName({
@@ -258,7 +258,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
         <Accordion
           type="multiple"
           defaultValue={spellProfiles.map((profile) => profile.id)}
-          className="space-y-3"
+          className="space-y-6"
         >
           {spellProfiles.map((profile) => {
             const items = groupedItems.get(profile.id) ?? []
@@ -352,9 +352,9 @@ export const SpellProfileManager = memo(function SpellProfileManager({
               <AccordionItem
                 key={profile.id}
                 value={profile.id}
-                className="overflow-hidden rounded-md border border-border bg-background last:border-b"
+                className="border-0 bg-transparent last:border-b-0"
               >
-                <AccordionTrigger className="min-h-11 cursor-pointer rounded-none bg-sidebar/50 px-4 py-2.5 transition-colors hover:bg-sidebar/80 hover:no-underline">
+                <AccordionTrigger className="min-h-11 cursor-pointer rounded-none border-b border-border bg-transparent px-1 py-2.5 transition-colors hover:bg-surface-hover/35 hover:no-underline">
                   <div className="flex items-center gap-2 text-left w-full min-w-0">
                     <span className="font-medium text-sm">{profile.label}</span>
                     <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5 pr-1">
@@ -428,9 +428,9 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                     </div>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="border-t border-border bg-background pb-0">
+                <AccordionContent className="bg-transparent pb-0">
                   {isBonusProfile && !showDefaultEmptyState ? (
-                    <div className="flex items-center justify-end px-3 pt-3">
+                    <div className="flex items-center justify-end pt-3">
                       <Button
                         size="sm"
                         variant="outline"
@@ -507,7 +507,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                         const totalGroups = (levels.includes(0) ? 1 : 0) + availLevels.length
                         let groupIndex = 0
                         return (
-                          <div className="grid grid-cols-1 gap-3 p-3 xl:grid-cols-2 2xl:grid-cols-3">
+                          <div className="grid grid-cols-1 gap-3 pt-3 xl:grid-cols-2 2xl:grid-cols-3">
                             {levels.includes(0)
                               ? (() => {
                                   const cantripCount = items.filter((i) => i.level === 0).length
@@ -544,11 +544,11 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                 <div
                                   key={`${profile.id}|avail|${spellLevel}`}
                                   className={cn(
-                                    'overflow-hidden rounded-md border border-border bg-background',
+                                    'overflow-hidden rounded-md border border-border bg-surface-raised/35',
                                     getColSpanClasses(span),
                                   )}
                                 >
-                                  <div className="flex h-10 items-center border-b border-border bg-sidebar/40 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                  <div className="flex h-10 items-center border-b border-border bg-surface-raised px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                     {formatSpellLevel(spellLevel)}s
                                   </div>
                                   <div className={getInnerColumnClasses(span)}>
@@ -571,7 +571,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                             'flex min-h-11 min-w-0 break-inside-avoid items-center gap-3 px-3 py-2.5 text-sm ring-1 ring-inset ring-border/75 transition-colors',
                                             isPrepared
                                               ? 'bg-primary/10 hover:bg-primary/15'
-                                              : 'bg-background hover:bg-primary/5',
+                                              : 'bg-workspace-pane hover:bg-surface-hover',
                                           )}
                                         >
                                           <div className="min-w-0 flex-1">
@@ -643,7 +643,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                         const totalGroups = levels.length
                         let groupIndex = 0
                         return (
-                          <div className="grid grid-cols-1 gap-3 p-3 xl:grid-cols-2 2xl:grid-cols-3">
+                          <div className="grid grid-cols-1 gap-3 pt-3 xl:grid-cols-2 2xl:grid-cols-3">
                             {levels.includes(0)
                               ? (() => {
                                   const cantripCount = items.filter((i) => i.level === 0).length
@@ -680,11 +680,11 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                   <div
                                     key={`${profile.id}|level|${level}`}
                                     className={cn(
-                                      'overflow-hidden rounded-md border border-border bg-background',
+                                      'overflow-hidden rounded-md border border-border bg-surface-raised/35',
                                       getColSpanClasses(span),
                                     )}
                                   >
-                                    <div className="flex h-10 items-center border-b border-border bg-sidebar/40 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    <div className="flex h-10 items-center border-b border-border bg-surface-raised px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                       {formatSpellLevel(level)}s
                                     </div>
                                     <div className={getInnerColumnClasses(span)}>
@@ -702,7 +702,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                         return (
                                           <div
                                             key={`${item.profileId}|${item.kind}|${item.name}`}
-                                            className="flex min-h-11 min-w-0 break-inside-avoid items-center gap-3 bg-background px-3 py-2.5 text-sm ring-1 ring-inset ring-border/75 transition-colors hover:bg-primary/5"
+                                            className="flex min-h-11 min-w-0 break-inside-avoid items-center gap-3 bg-workspace-pane px-3 py-2.5 text-sm ring-1 ring-inset ring-border/75 transition-colors hover:bg-surface-hover"
                                           >
                                             <div className="min-w-0 flex-1">
                                               {renderSpellName({
