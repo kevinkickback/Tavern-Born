@@ -13,9 +13,9 @@ import {
   Sword,
   Target,
   Trash,
-  X,
 } from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
+import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Badge } from '@/components/ui/badge'
@@ -26,6 +26,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
+  AnchoredHint,
   WorkspaceBody,
   WorkspaceDetailContent,
   WorkspacePage,
@@ -35,6 +36,7 @@ import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
 import { useEquipmentProvenanceMutations } from '@/hooks/character/useEquipmentProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
+import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { ARMOR_TYPE_MAP } from '@/lib/calculations/armorClass'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
@@ -180,6 +182,7 @@ export function EquipmentPage() {
   const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup)
   const itemPropertyByAbbr =
     useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr) ?? EMPTY_RECORD
+  const recursiveLookup = useRecursiveLookup()
   const originSystem = character?.originSystem ?? '2024'
   const preferNewerPrintings = character?.variantRules?.preferNewerPrintings ?? false
 
@@ -250,6 +253,12 @@ export function EquipmentPage() {
   }, [equipment, itemSearch, itemTypeFilter])
   const selectedItem =
     equipment.find((item) => item.id === selectedItemId) ?? filteredEquipment[0] ?? null
+  const selectedItemData = selectedItem
+    ? itemLookup?.get(
+      `${selectedItem.name.trim().toLowerCase()}|${(selectedItem.source ?? 'phb').trim().toLowerCase()}`,
+    )
+    : undefined
+  const selectedItemEntries = selectedItemData?.entries ?? []
 
   const handleAddItem = (item: Item5e) => {
     addFromGameData(item)
@@ -268,31 +277,14 @@ export function EquipmentPage() {
 
   return (
     <WorkspacePage className="p-3">
-      {showEquipHint && hintPosition ? (
-        <div
-          className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
-          style={{ top: hintPosition.top, left: hintPosition.left }}
-        >
-          <div className="pointer-events-auto animate-hint-bounce relative w-[300px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
-            <div
-              className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
-              style={{ left: hintPosition.arrowLeft - 7 }}
-            />
-            <button
-              type="button"
-              className="absolute top-1.5 right-1.5 inline-flex size-6 cursor-pointer items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
-              onClick={handleDismissEquipHint}
-              aria-label="Dismiss hint"
-            >
-              <X className="size-3.5" />
-            </button>
-            <p className="pr-8 leading-snug text-accent-foreground/95">
-              Toggle <strong>Equip</strong> on armor, weapons, and worn magic items to mark them
-              active and applying their effect.
-            </p>
-          </div>
-        </div>
-      ) : null}
+      <AnchoredHint
+        position={showEquipHint ? hintPosition : null}
+        width={EQUIP_HINT_WIDTH}
+        onDismiss={handleDismissEquipHint}
+      >
+        Toggle <strong>Equip</strong> on armor, weapons, and worn magic items to mark them active
+        and applying their effect.
+      </AnchoredHint>
 
       <WorkspaceBody className="flex overflow-hidden">
         <SplitPane
@@ -511,40 +503,40 @@ export function EquipmentPage() {
                 </div>
               </div>
 
-              <ScrollArea className="flex-1 overflow-hidden">
-                <div className="overflow-x-auto p-4">
-                  {filteredEquipment.length === 0 ? (
-                    <div className="flex min-h-52 flex-col items-center justify-center text-center">
-                      <Backpack className="mb-3 size-9 text-muted-foreground/35" />
-                      <h3 className="text-sm font-semibold">
-                        {equipment.length === 0 ? 'No equipment yet' : 'No matching equipment'}
-                      </h3>
-                      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                        {equipment.length === 0
-                          ? 'Add an item to begin building this character’s inventory.'
-                          : 'Adjust the search or category filter to see more items.'}
-                      </p>
-                      {equipment.length === 0 && (
-                        <Button
-                          size="sm"
-                          className="mt-4 gap-1.5"
-                          onClick={() => setAddItemOpen(true)}
-                        >
-                          <Plus className="size-4" />
-                          Add Item
-                        </Button>
-                      )}
+              <div className="min-h-0 flex-1 overflow-x-auto p-4">
+                {filteredEquipment.length === 0 ? (
+                  <div className="flex min-h-52 flex-col items-center justify-center text-center">
+                    <Backpack className="mb-3 size-9 text-muted-foreground/35" />
+                    <h3 className="text-sm font-semibold">
+                      {equipment.length === 0 ? 'No equipment yet' : 'No matching equipment'}
+                    </h3>
+                    <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                      {equipment.length === 0
+                        ? 'Add an item to begin building this character’s inventory.'
+                        : 'Adjust the search or category filter to see more items.'}
+                    </p>
+                    {equipment.length === 0 && (
+                      <Button
+                        size="sm"
+                        className="mt-4 gap-1.5"
+                        onClick={() => setAddItemOpen(true)}
+                      >
+                        <Plus className="size-4" />
+                        Add Item
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex h-full min-w-[760px] flex-col overflow-hidden rounded-md border border-border bg-background">
+                    <div className="grid shrink-0 grid-cols-[minmax(16rem,1fr)_7rem_8rem_8rem_2.5rem] items-center border-b border-border bg-surface-raised px-3 py-2 text-[length:var(--font-size-caption)] font-semibold uppercase leading-[var(--line-height-caption)] tracking-[0.08em] text-muted-foreground">
+                      <span>Item</span>
+                      <span className="text-center">Quantity</span>
+                      <span className="text-center">Equipped</span>
+                      <span className="text-center">Attuned</span>
+                      <span className="sr-only">Actions</span>
                     </div>
-                  ) : (
-                    <div className="overflow-hidden rounded-md border border-border bg-background">
-                      <div className="grid min-w-[760px] grid-cols-[minmax(16rem,1fr)_7rem_8rem_8rem_2.5rem] items-center border-b border-border bg-surface-raised px-3 py-2 text-[length:var(--font-size-caption)] font-semibold uppercase leading-[var(--line-height-caption)] tracking-[0.08em] text-muted-foreground">
-                        <span>Item</span>
-                        <span className="text-center">Quantity</span>
-                        <span className="text-center">Equipped</span>
-                        <span className="text-center">Attuned</span>
-                        <span className="sr-only">Actions</span>
-                      </div>
-                      <div className="min-w-[760px] divide-y divide-border">
+                    <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+                      <div className="divide-y divide-border">
                         {filteredEquipment.map((item) => {
                           const category = getItemCategory(item)
                           const ItemIcon =
@@ -683,10 +675,10 @@ export function EquipmentPage() {
                           )
                         })}
                       </div>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
+                    </ScrollArea>
+                  </div>
+                )}
+              </div>
 
               <div className="shrink-0 border-t border-border px-4 pb-4">
                 <SourcesAccordion
@@ -763,7 +755,19 @@ export function EquipmentPage() {
                         ))}
                       </div>
 
-                      {selectedItem.description ? (
+                      {selectedItemEntries.length > 0 ? (
+                        <section className="border-t border-border pt-4">
+                          <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                            Description
+                          </h3>
+                          <div className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert">
+                            <RenderedEntryWithTooltip
+                              entry={selectedItemEntries}
+                              recursiveLookup={recursiveLookup}
+                            />
+                          </div>
+                        </section>
+                      ) : selectedItem.description ? (
                         <section className="border-t border-border pt-4">
                           <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                             Description

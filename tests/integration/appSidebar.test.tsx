@@ -39,11 +39,13 @@ describe('desktop workspace navigation', () => {
     vi.clearAllMocks()
   })
 
-  test('maps build routes to the Build workspace and active context page', () => {
+  test('maps build routes to the Builder workspace and active context page', () => {
     renderSidebar()
 
-    expect(screen.getByRole('button', { name: 'Build' }).getAttribute('aria-current')).toBe('page')
-    expect(screen.getByRole('complementary', { name: 'Build navigation' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Builder' }).getAttribute('aria-current')).toBe(
+      'page',
+    )
+    expect(screen.getByRole('complementary', { name: 'Builder navigation' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Class' }).getAttribute('aria-current')).toBe('page')
   })
 
@@ -51,9 +53,9 @@ describe('desktop workspace navigation', () => {
     const user = userEvent.setup()
     renderSidebar()
 
-    await user.click(screen.getByRole('button', { name: 'Start' }))
+    await user.click(screen.getByRole('button', { name: 'Characters' }))
 
-    expect(screen.getByRole('complementary', { name: 'Start navigation' })).toBeTruthy()
+    expect(screen.getByRole('complementary', { name: 'Characters navigation' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Characters' })).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Settings' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Settings' })).toBeTruthy()
@@ -62,8 +64,38 @@ describe('desktop workspace navigation', () => {
   test('keeps the context pane open without a collapse control', () => {
     renderSidebar()
 
-    expect(screen.getByRole('complementary', { name: 'Build navigation' })).toBeTruthy()
+    expect(screen.getByRole('complementary', { name: 'Builder navigation' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: /context pane/i })).toBeNull()
+  })
+
+  test('disables character-scoped workspaces until a character is active', () => {
+    renderSidebar('/')
+
+    expect(screen.getByRole('button', { name: 'Builder' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    )
+    expect(
+      screen.getByRole('button', { name: 'Character Sheet' }).getAttribute('aria-disabled'),
+    ).toBe('true')
+    expect(
+      screen.getByRole('button', { name: 'Compendium' }).getAttribute('aria-disabled'),
+    ).toBeNull()
+  })
+
+  test('enables character-scoped workspaces for the active character', () => {
+    const character = makeCharacterFixture()
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    renderSidebar('/')
+
+    expect(screen.getByRole('button', { name: 'Builder' }).getAttribute('aria-disabled')).toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Character Sheet' }).getAttribute('aria-disabled'),
+    ).toBeNull()
   })
 
   test('renders the permanent context pane for the compendium', () => {
@@ -102,10 +134,10 @@ describe('desktop workspace navigation', () => {
     ).toBeNull()
   })
 
-  test('renders the permanent Start context pane for the character collection', () => {
+  test('renders the permanent Characters context pane for the character collection', () => {
     renderSidebar('/')
 
-    expect(screen.getByRole('complementary', { name: 'Start navigation' })).toBeTruthy()
+    expect(screen.getByRole('complementary', { name: 'Characters navigation' })).toBeTruthy()
     expect(screen.getByText('Character Library')).toBeTruthy()
     expect(screen.getByText('Recent Characters')).toBeTruthy()
     expect(screen.getByText(/created and imported characters/i)).toBeTruthy()

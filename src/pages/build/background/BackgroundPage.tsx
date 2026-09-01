@@ -39,6 +39,8 @@ import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSys
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { getTotalCharacterLevel, matchesGameDataEntry } from '@/lib/characterUtils'
+import { getFixedFeatOptionKey, resolveFixedFeatGrant } from '@/lib/featGrants'
+import { parseFeatGrantBlocks } from '@/lib/provenance/applyFeatAndOptionalFeatureGrants'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel'
@@ -52,6 +54,10 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type { Background5e, Feat5e, Item5e, Spell5e } from '@/types/5etools'
 
 const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
+type FeatOptionsTarget = Feat5e & {
+  grantVariant?: string
+  fixedSpellcastingClass?: string
+}
 
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -69,7 +75,7 @@ export function BuildBackgroundPage() {
   const selectedBackgroundRef = useRef<HTMLDivElement | null>(null)
   const [featModalOpen, setFeatModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
-  const [optionsPendingFeat, setOptionsPendingFeat] = useState<Feat5e | null>(null)
+  const [optionsPendingFeat, setOptionsPendingFeat] = useState<FeatOptionsTarget | null>(null)
   const isInitialLoadRef = useRef(true)
   const previousSearchRef = useRef('')
 
@@ -98,8 +104,8 @@ export function BuildBackgroundPage() {
 
   const selectedBg = character
     ? (backgrounds.find((b) =>
-        matchesGameDataEntry(character.background, character.backgroundSource, b),
-      ) as Background5e | undefined)
+      matchesGameDataEntry(character.background, character.backgroundSource, b),
+    ) as Background5e | undefined)
     : undefined
   const normalizedSelectedBg = normalizeBackgroundForOriginSystem(
     selectedBg,
@@ -136,11 +142,18 @@ export function BuildBackgroundPage() {
   const fixedBgFeats = useMemo(() => {
     if (!selectedBg) return []
     return Object.entries(ledger.feats)
-      .filter(([, tags]) =>
-        tags.some((t) => t.sourceType === 'background' && t.grantType === 'fixed'),
+      .flatMap(([name, tags]) =>
+        tags
+          .filter(
+            (tag) =>
+              tag.sourceType === 'background' &&
+              tag.sourceName === selectedBg.name &&
+              tag.grantType === 'fixed',
+          )
+          .map((tag) => resolveFixedFeatGrant(feats as Feat5e[], name, tag)),
       )
-      .map(([name]) => name)
-  }, [selectedBg, ledger.feats])
+      .map((grant) => (grant.variantLabel ? `${grant.name} (${grant.variantLabel})` : grant.name))
+  }, [selectedBg, ledger.feats, feats])
 
   const activeFeatChoice = useMemo(
     () => originFeatChoices.find((c) => c.id === activeFeatChoiceId),
@@ -251,6 +264,33 @@ export function BuildBackgroundPage() {
       backgroundSource: bgSource ?? undefined,
       backgroundEquipmentChoices: [],
     })
+    const normalizedBackground = normalizeBackgroundForOriginSystem(bg, character.originSystem)
+    const fixedGrant = parseFeatGrantBlocks(
+      normalizedBackground?.feats as unknown[] | undefined,
+    ).find((grant) => grant.type === 'fixed')
+    if (fixedGrant?.type === 'fixed') {
+      const tag = {
+        sourceType: 'background' as const,
+        sourceName: bg.name,
+        sourceRef: fixedGrant.source || bg.source,
+        grantType: 'fixed' as const,
+        grantVariant: fixedGrant.variant,
+        label: bg.name,
+      }
+      const resolved = resolveFixedFeatGrant(feats as Feat5e[], fixedGrant.name, tag)
+      const optionKey = getFixedFeatOptionKey(resolved.name, resolved.source, resolved.variant)
+      if (
+        resolved.feat &&
+        hasFeatOptions(resolved.feat) &&
+        !character.fixedFeatOptions?.[optionKey]
+      ) {
+        setOptionsPendingFeat({
+          ...resolved.feat,
+          grantVariant: resolved.variant,
+          fixedSpellcastingClass: resolved.fixedSpellcastingClass,
+        })
+      }
+    }
     if (detailCollapsed) setDetailCollapsed(false)
   }
 
@@ -293,8 +333,8 @@ export function BuildBackgroundPage() {
                       const block1 = bgAsiData.blocks[1]
                       const autoChoices =
                         selectedBg?.source === 'XPHB' &&
-                        block1 &&
-                        block1.from.length === block1.weights.length
+                          block1 &&
+                          block1.from.length === block1.weights.length
                           ? [...block1.from]
                           : []
                       applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
@@ -392,8 +432,8 @@ export function BuildBackgroundPage() {
                   .join(', ')
                 const resolvedFeat = isResolved
                   ? (feats as Feat5e[]).find(
-                      (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
-                    )
+                    (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                  )
                   : undefined
                 return (
                   <div key={choice.id}>
@@ -649,6 +689,7 @@ export function BuildBackgroundPage() {
             if (!isOpen) setOptionsPendingFeat(null)
           }}
           feat={optionsPendingFeat}
+          fixedSpellcastingClass={optionsPendingFeat.fixedSpellcastingClass}
           proficientSkillNames={character?.proficiencies?.skills ?? []}
           onFinish={(selections) => {
             commitFeatWithOptions(optionsPendingFeat, selections, spells as Spell5e[])

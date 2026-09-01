@@ -37,7 +37,8 @@ Key scripts in package.json:
 	- src/pages/build/class/model/levelsUtils.ts
 	- Grouped tool-choice expansion coverage (gaming set/musical instrument/artisan's tools/any-tool)
 	- `formatWeaponCategoryLabel` weapon category key → display label
-- Compendium entry shaping and filtering in src/lib/compendiumEntries.ts
+- Compendium entry shaping and filtering in src/lib/compendiumEntries.ts, including 5e / 5.5e / Both edition classification and composition with type, source, and text filters
+- Equipment page detail rendering, recursive link tooltips, and persistent inventory headers in tests/integration/equipmentPage.test.tsx; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
 - Integration workflows: home page, startup modals, level-up modal (tests/integration/*)
 - Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
 - Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
@@ -60,6 +61,10 @@ Key scripts in package.json:
 - Ingestion null entity array resilience in tests/lib/5etools/dataLoader.test.ts (class files with null entity arrays handled gracefully)
 - Ingestion offline fail-fast coverage in tests/lib/5etools/dataLoader.test.ts (throws when zero top-level remote resources are reachable)
 - Feat options parser coverage in tests/lib/5etools/featOptions.test.ts (parseFeatSpellFilter, deriveFeatOptionSteps all step kinds, hasFeatOptions, deriveSpellStepsForClass)
+- Bonus feat option workflow coverage in tests/hooks/useFeatProvenanceMutations.test.tsx and tests/integration/featsPage.test.tsx (automatic configuration after selection, setup persistence, and grant cleanup on removal)
+- Parameterized fixed feat coverage in tests/lib/featGrants.test.ts, tests/lib/provenance/applyFeatGrantBlocks.test.ts, tests/lib/migrations.test.ts, tests/integration/featOptionsModal.test.tsx, and tests/integration/featsPage.test.tsx (canonical lookup, variant migration, fixed-step skipping, fixed spell-list setup, and option persistence)
+- Feats page Edit Setup hint coverage in tests/integration/featsPage.test.tsx (configured character and bonus feat anchors)
+- Compendium edition selector coverage in tests/integration/compendiumPage.test.tsx (Both default, rendered filtering, and isolation from active-character ruleset/source restrictions)
 - SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
 - Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 - Electron updater offline safeguards in tests/lib/updateManager.test.ts (offline short-circuit and startup schedule skip)
@@ -69,7 +74,7 @@ Key scripts in package.json:
 
 1. **Corrupted character recovery**: Import of invalid/schema-mismatched characters beyond the valid+invalid payload cases already covered.
 2. **SpellProfileManager decomposition**: Large component (~783 lines); defer until next feature touch.
-3. **FeatOptionsModal**: Multi-step feat-options wizard (~682 lines) has no dedicated test coverage. Add unit tests for step generation and selection persistence when next touched.
+3. **FeatOptionsModal**: Fixed-step skipping and unrestricted spellcasting-list initialization are covered; broader multi-step navigation and every option kind still need dedicated component coverage.
 4. **Auto-update lifecycle**: `electron/updateManager.ts` has partial unit tests (semver comparator in `tests/lib/updateManager.test.ts`) but key lifecycle logic remains untested: portable detection, event forwarding, cancel-in-flight guard.
 
 ## Test Coverage by Layer

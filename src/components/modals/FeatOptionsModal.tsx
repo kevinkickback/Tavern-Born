@@ -87,15 +87,17 @@ const SpellcastingClassStep = memo(function SpellcastingClassStep({
   step,
   value,
   onChange,
+  disabled,
 }: {
   step: Extract<FeatOptionStep, { kind: 'spellcastingClass' }>
   value: string
   onChange: (v: string) => void
+  disabled?: boolean
 }) {
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{step.label}</p>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger>
           <SelectValue placeholder="Select a class…" />
         </SelectTrigger>
@@ -400,16 +402,40 @@ function seedStepSelections(steps: FeatOptionStep[], init: FeatOptionSelections)
   return result
 }
 
+function validateFixedSpellcastingClass(
+  feat: Feat5e,
+  fixedSpellcastingClass?: string,
+): string | undefined {
+  if (!fixedSpellcastingClass) return undefined
+  const classStep = deriveFeatOptionSteps(feat).find((step) => step.kind === 'spellcastingClass')
+  return classStep?.kind === 'spellcastingClass' &&
+    classStep.classOptions.some((option) => option.name === fixedSpellcastingClass)
+    ? fixedSpellcastingClass
+    : undefined
+}
+
 function initWizardState(
   feat: Feat5e,
   initialSelections?: FeatOptionSelections,
+  fixedSpellcastingClass?: string,
 ): { steps: FeatOptionStep[]; stepSels: StepSelections } {
   let steps = deriveFeatOptionSteps(feat)
+  const validatedFixedClass = validateFixedSpellcastingClass(feat, fixedSpellcastingClass)
+  const seededSelections = validatedFixedClass
+    ? {
+      ...initialSelections,
+      spellcastingClass: validatedFixedClass,
+      spells:
+        initialSelections?.spellcastingClass === validatedFixedClass
+          ? initialSelections.spells
+          : undefined,
+    }
+    : initialSelections
 
-  if (initialSelections?.spellcastingClass) {
+  if (seededSelections?.spellcastingClass) {
     const classIdx = steps.findIndex((s) => s.kind === 'spellcastingClass')
     if (classIdx >= 0) {
-      const spellSteps = deriveSpellStepsForClass(feat, initialSelections.spellcastingClass).map(
+      const spellSteps = deriveSpellStepsForClass(feat, seededSelections.spellcastingClass).map(
         ({ count, chooseFilter, label }): FeatOptionStep => ({
           kind: 'spells',
           label,
@@ -417,17 +443,23 @@ function initWizardState(
           chooseFilter,
         }),
       )
-      steps = [
-        ...steps.slice(0, classIdx + 1),
-        ...spellSteps,
-        ...steps.slice(classIdx + 1).filter((s) => s.kind !== 'spells'),
-      ]
+      steps = validatedFixedClass
+        ? [
+          ...steps.slice(0, classIdx),
+          ...spellSteps,
+          ...steps.slice(classIdx + 1).filter((s) => s.kind !== 'spells'),
+        ]
+        : [
+          ...steps.slice(0, classIdx + 1),
+          ...spellSteps,
+          ...steps.slice(classIdx + 1).filter((s) => s.kind !== 'spells'),
+        ]
     }
   }
 
   return {
     steps,
-    stepSels: initialSelections ? seedStepSelections(steps, initialSelections) : {},
+    stepSels: seededSelections ? seedStepSelections(steps, seededSelections) : {},
   }
 }
 
@@ -437,6 +469,7 @@ export interface FeatOptionsModalProps {
   feat: Feat5e
   proficientSkillNames?: string[]
   initialSelections?: FeatOptionSelections
+  fixedSpellcastingClass?: string
   onFinish: (selections: FeatOptionSelections) => void
   onDismiss?: () => void
 }
@@ -447,17 +480,22 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   feat,
   proficientSkillNames = [],
   initialSelections,
+  fixedSpellcastingClass,
   onFinish,
   onDismiss,
 }: FeatOptionsModalProps) {
   const { spells, optionalfeatures } = useFilteredGameData()
+  const validatedFixedSpellcastingClass = validateFixedSpellcastingClass(
+    feat,
+    fixedSpellcastingClass,
+  )
 
   const [stepIndex, setStepIndex] = useState(0)
   const [allSteps, setAllSteps] = useState<FeatOptionStep[]>(
-    () => initWizardState(feat, initialSelections).steps,
+    () => initWizardState(feat, initialSelections, validatedFixedSpellcastingClass).steps,
   )
   const [stepSels, setStepSels] = useState<StepSelections>(
-    () => initWizardState(feat, initialSelections).stepSels,
+    () => initWizardState(feat, initialSelections, validatedFixedSpellcastingClass).stepSels,
   )
 
   const currentStep = allSteps[stepIndex]
@@ -496,7 +534,9 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   )
 
   const buildSelections = useCallback((): FeatOptionSelections => {
-    const result: FeatOptionSelections = {}
+    const result: FeatOptionSelections = validatedFixedSpellcastingClass
+      ? { spellcastingClass: validatedFixedSpellcastingClass }
+      : {}
     const skills: string[] = []
     const languages: string[] = []
     const tools: string[] = []
@@ -536,7 +576,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
     if (languages.length > 0) result.languages = languages
     if (tools.length > 0) result.tools = tools
     return result
-  }, [allSteps, stepSels])
+  }, [allSteps, stepSels, validatedFixedSpellcastingClass])
 
   const isLast = stepIndex === allSteps.length - 1
   const canAdvance = currentStep ? isStepComplete(currentStep, stepSels, stepIndex) : false
@@ -598,6 +638,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
               step={currentStep}
               value={typeof currentValue === 'string' ? currentValue : ''}
               onChange={(v) => handleClassChosen(v, stepIndex)}
+              disabled={!!validatedFixedSpellcastingClass}
             />
           )}
           {currentStep.kind === 'spells' && (

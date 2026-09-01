@@ -99,6 +99,14 @@ describe('spellProfiles', () => {
 
     const classesById = new Map([
       [
+        'class:Wizard|PHB',
+        makeClassFixture({
+          name: 'Wizard',
+          source: 'PHB',
+          casterProgression: 'full',
+        }),
+      ],
+      [
         'class:Fighter|PHB',
         makeClassFixture({
           name: 'Fighter',
@@ -319,6 +327,50 @@ describe('spellProfiles', () => {
     expect(slots.pact[1]?.max).toBe(2)
   })
 
+  test('calculateCharacterSpellSlots prefers 2024 progression for mixed-edition classes', () => {
+    const phbRows = Array.from({ length: 20 }, () => [2])
+    const xphbRows = Array.from({ length: 20 }, () => [2])
+    phbRows[16] = [4, 3, 3, 3, 3, 1, 1, 1, 1]
+    xphbRows[16] = [4, 3, 3, 3, 2, 1, 1, 1, 1]
+    const classesById = new Map([
+      [
+        'class:Wizard|PHB',
+        makeClassFixture({
+          name: 'Wizard',
+          source: 'PHB',
+          edition: 'classic',
+          classTableGroups: [{ rowsSpellProgression: phbRows }],
+        }),
+      ],
+      [
+        'class:Wizard|XPHB',
+        makeClassFixture({
+          name: 'Wizard',
+          source: 'XPHB',
+          edition: 'one',
+          classTableGroups: [{ rowsSpellProgression: xphbRows }],
+        }),
+      ],
+      ['class:Cleric|PHB', makeClassFixture({ name: 'Cleric', source: 'PHB', edition: 'classic' })],
+      ['class:Cleric|XPHB', makeClassFixture({ name: 'Cleric', source: 'XPHB', edition: 'one' })],
+    ])
+    const classicCharacter = makeCharacterFixture({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 9 },
+        { name: 'Cleric', source: 'PHB', levels: 8 },
+      ],
+    })
+    const mixedCharacter = makeCharacterFixture({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 9 },
+        { name: 'Cleric', source: 'XPHB', levels: 8 },
+      ],
+    })
+
+    expect(calculateCharacterSpellSlots(classicCharacter, classesById).shared[5]?.max).toBe(3)
+    expect(calculateCharacterSpellSlots(mixedCharacter, classesById).shared[5]?.max).toBe(2)
+  })
+
   test('calculateCharacterSpellSlots uses subclass caster progression for non-caster classes', () => {
     const character = makeCharacterFixture({
       class: 'Fighter',
@@ -342,6 +394,14 @@ describe('spellProfiles', () => {
     })
 
     const classesById = new Map([
+      [
+        'class:Wizard|PHB',
+        makeClassFixture({
+          name: 'Wizard',
+          source: 'PHB',
+          casterProgression: 'full',
+        }),
+      ],
       [
         'class:Fighter|PHB',
         makeClassFixture({

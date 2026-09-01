@@ -123,6 +123,7 @@ Every mutation path (`updateCharacter`, `updateActiveCharacter`, `updateActiveCh
 - Attribution may be exact (class page level picker) or inferred (spells page lowest-eligible assignment).
 - Class-page per-level spell displays are derived from provenance attribution metadata.
 - Multiclass slot derivation follows 5e caster progression rules, including Artificer using ceiling half-caster contribution.
+- Shared spell-slot maxima come from parsed PHB/XPHB full-caster progression rows. A progression containing any 2024 class uses the XPHB table; otherwise it uses PHB. Missing canonical rows produce no synthetic slots and are reported during development.
 - This is a hard cutover model; legacy spell arrays and `spellsByLevel` are not used.
 
 ## Implementation Checklist for State Changes

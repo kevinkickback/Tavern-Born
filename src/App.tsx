@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
@@ -41,6 +41,11 @@ import { useCharacterStore } from '@/store/characterStore'
 function CharacterSheetRedirect() {
   const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
   return <Navigate to={`/character-sheet/${originSystem ?? '2024'}`} replace />
+}
+
+function RequireActiveCharacter() {
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
+  return activeCharacter ? <Outlet /> : <Navigate to="/" replace />
 }
 
 function CloseConfirmDialog() {
@@ -127,30 +132,32 @@ function App() {
         <AppLayout>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/build" element={<Navigate to="/build/race" replace />} />
-            <Route path="/build/race" element={<BuildRacePage />} />
-            <Route path="/build/class" element={<BuildClassPage />} />
-            <Route path="/build/background" element={<BuildBackgroundPage />} />
-            <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
-            <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
-            <Route path="/feats" element={<FeatsPage />} />
-            <Route path="/spells" element={<SpellsPage />} />
-            <Route path="/equipment" element={<EquipmentPage />} />
-            <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
-            <Route path="/details/portrait" element={<PortraitPage />} />
-            <Route path="/details/characteristics" element={<CharacteristicsPage />} />
-            <Route path="/details/conditions" element={<ConditionsPage />} />
-            <Route path="/character-sheet" element={<CharacterSheetRedirect />} />
-            <Route
-              path="/character-sheet/2014"
-              element={<CharacterSheetPage key="character-sheet-2014" templateId="2014" />}
-            />
-            <Route
-              path="/character-sheet/2024"
-              element={<CharacterSheetPage key="character-sheet-2024" templateId="2024" />}
-            />
+            <Route element={<RequireActiveCharacter />}>
+              <Route path="/build" element={<Navigate to="/build/race" replace />} />
+              <Route path="/build/race" element={<BuildRacePage />} />
+              <Route path="/build/class" element={<BuildClassPage />} />
+              <Route path="/build/background" element={<BuildBackgroundPage />} />
+              <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
+              <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
+              <Route path="/feats" element={<FeatsPage />} />
+              <Route path="/spells" element={<SpellsPage />} />
+              <Route path="/equipment" element={<EquipmentPage />} />
+              <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
+              <Route path="/details/portrait" element={<PortraitPage />} />
+              <Route path="/details/characteristics" element={<CharacteristicsPage />} />
+              <Route path="/details/conditions" element={<ConditionsPage />} />
+              <Route path="/sources" element={<SourcesPage />} />
+              <Route path="/character-sheet" element={<CharacterSheetRedirect />} />
+              <Route
+                path="/character-sheet/2014"
+                element={<CharacterSheetPage key="character-sheet-2014" templateId="2014" />}
+              />
+              <Route
+                path="/character-sheet/2024"
+                element={<CharacterSheetPage key="character-sheet-2024" templateId="2024" />}
+              />
+            </Route>
             <Route path="/compendium" element={<CompendiumPage />} />
-            <Route path="/sources" element={<SourcesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/settings/*" element={<Navigate to="/settings" replace />} />
           </Routes>

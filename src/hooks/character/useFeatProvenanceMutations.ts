@@ -3,6 +3,7 @@ import { useLedgerPatch } from '@/hooks/character/useLedgerPatch'
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { mergeSkillState } from '@/lib/calculations/skills'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
+import { getFixedFeatOptionKey } from '@/lib/featGrants'
 import {
   addAbilityBonus,
   addGrant,
@@ -18,6 +19,12 @@ import type { ChoiceDomain, ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
+
+type FeatOptionTarget = { name: string; source?: string; grantVariant?: string }
+
+function getFeatOptionSourceName(feat: FeatOptionTarget): string {
+  return feat.grantVariant ? `${feat.name}; ${feat.grantVariant}` : feat.name
+}
 
 export function useFeatProvenanceMutations() {
   // Domain mutation hook contract:
@@ -155,6 +162,96 @@ export function useFeatProvenanceMutations() {
             classSource: feat.classSource ?? existing?.classSource,
             classLevel: feat.classLevel ?? existing?.classLevel,
           }
+        }),
+        provenance: newLedger,
+        spells: { ...character.spells, spellProfiles: nextSpellProfiles },
+        proficiencies: newProficiencies,
+        skills: newSkills,
+        abilityScores: newAbilityScores,
+      })
+    },
+    [character, ledger, updateCharacter],
+  )
+
+  const replaceBonusFeatSelections = useCallback(
+    (selectedFeats: Array<{ name: string; source?: string }>) => {
+      if (!character) return
+
+      const selectedKeys = new Set(selectedFeats.map((feat) => `${feat.name}|${feat.source ?? ''}`))
+      const removedWithOptions = (character.specialFeats ?? []).filter(
+        (feat) => feat.options != null && !selectedKeys.has(`${feat.name}|${feat.source ?? ''}`),
+      )
+
+      let newLedger = ledger
+      let nextSpellProfiles = character.spells.spellProfiles
+      let newProficiencies = { ...character.proficiencies }
+      let newAbilityScores = { ...character.abilityScores }
+
+      for (const removedFeat of removedWithOptions) {
+        const options = removedFeat.options as NonNullable<typeof removedFeat.options>
+        const spellNames = new Set((options.spells ?? []).map((key) => key.split('|')[0]))
+
+        if (spellNames.size > 0) {
+          nextSpellProfiles = nextSpellProfiles.map((profile) => {
+            if (profile.id !== SPECIAL_SPELL_PROFILE_ID) return profile
+            return {
+              ...profile,
+              cantrips: profile.cantrips.filter((spell) => !spellNames.has(spell)),
+              spellsKnown: profile.spellsKnown.filter((spell) => !spellNames.has(spell)),
+            }
+          })
+        }
+
+        for (const skillName of options.skills ?? []) {
+          const normalizedSkill = normalizeKey(skillName)
+          newProficiencies = {
+            ...newProficiencies,
+            skills: newProficiencies.skills.filter(
+              (skill) => normalizeKey(skill) !== normalizedSkill,
+            ),
+          }
+        }
+        for (const language of options.languages ?? []) {
+          newProficiencies = {
+            ...newProficiencies,
+            languages: newProficiencies.languages.filter((entry) => entry !== language),
+          }
+        }
+        for (const tool of options.tools ?? []) {
+          newProficiencies = {
+            ...newProficiencies,
+            tools: newProficiencies.tools.filter((entry) => entry !== tool),
+          }
+        }
+
+        if (options.abilityScore) {
+          const abilityName = normalizeAbilityName(options.abilityScore)
+          if (abilityName) {
+            newAbilityScores = {
+              ...newAbilityScores,
+              [abilityName]: Math.max(1, (newAbilityScores[abilityName] ?? 10) - 1),
+            }
+          }
+        }
+
+        newLedger = removeGrantsBySource(newLedger, 'feat', removedFeat.name)
+      }
+
+      const newSkills = mergeSkillState(character.skills ?? {}, newProficiencies.skills)
+
+      updateCharacter(character.id, {
+        specialFeats: selectedFeats.map((feat) => {
+          const existing = (character.specialFeats ?? []).find(
+            (entry) => entry.name === feat.name && entry.source === (feat.source ?? ''),
+          )
+          return (
+            existing ?? {
+              id: `bonus-${feat.name}-${feat.source ?? ''}`,
+              name: feat.name,
+              source: feat.source ?? '',
+              description: '',
+            }
+          )
         }),
         provenance: newLedger,
         spells: { ...character.spells, spellProfiles: nextSpellProfiles },
@@ -401,14 +498,11 @@ export function useFeatProvenanceMutations() {
   )
 
   const commitFeatWithOptions = useCallback(
-    (
-      feat: { name: string; source?: string },
-      selections: FeatOptionSelections,
-      allSpells?: Spell5e[],
-    ) => {
+    (feat: FeatOptionTarget, selections: FeatOptionSelections, allSpells?: Spell5e[]) => {
       if (!character) return
 
-      const featTag = makeSourceTag('feat', feat.name, 'choice', feat.source)
+      const featSourceName = getFeatOptionSourceName(feat)
+      const featTag = makeSourceTag('feat', featSourceName, 'choice', feat.source)
       let newLedger = ledger
 
       const existingSpecial = character.spells.spellProfiles.find(
@@ -514,20 +608,31 @@ export function useFeatProvenanceMutations() {
       newLedger = {
         ...newLedger,
         choices: newLedger.choices.filter(
-          (c) => !(c.domain === 'featOptions' && c.sourceTag.sourceName === feat.name),
+          (c) => !(c.domain === 'featOptions' && c.sourceTag.sourceName === featSourceName),
         ),
       }
 
       const nextFeats = (character.feats ?? []).map((f) =>
-        f.name === feat.name ? { ...f, options: selections } : f,
+        f.name === feat.name && f.source === (feat.source ?? '')
+          ? { ...f, options: selections }
+          : f,
       )
       const nextSpecialFeats = (character.specialFeats ?? []).map((f) =>
-        f.name === feat.name ? { ...f, options: selections } : f,
+        f.name === feat.name && f.source === (feat.source ?? '')
+          ? { ...f, options: selections }
+          : f,
       )
+      const nextFixedFeatOptions = feat.grantVariant
+        ? {
+            ...(character.fixedFeatOptions ?? {}),
+            [getFixedFeatOptionKey(feat.name, feat.source ?? '', feat.grantVariant)]: selections,
+          }
+        : character.fixedFeatOptions
 
       updateCharacter(character.id, {
         feats: nextFeats,
         specialFeats: nextSpecialFeats,
+        fixedFeatOptions: nextFixedFeatOptions,
         provenance: newLedger,
         spells: { ...character.spells, spellProfiles: nextSpellProfiles },
         proficiencies: newProficiencies,
@@ -539,10 +644,10 @@ export function useFeatProvenanceMutations() {
   )
 
   const retractFeatOptionGrants = useCallback(
-    (feat: { name: string }, featOptions: FeatOptionSelections) => {
+    (feat: FeatOptionTarget, featOptions: FeatOptionSelections) => {
       if (!character) return
 
-      const newLedger = removeGrantsBySource(ledger, 'feat', feat.name)
+      const newLedger = removeGrantsBySource(ledger, 'feat', getFeatOptionSourceName(feat))
 
       const spellNames = new Set((featOptions.spells ?? []).map((key) => key.split('|')[0]))
       const nextSpellProfiles = character.spells.spellProfiles.map((p) => {
@@ -615,14 +720,15 @@ export function useFeatProvenanceMutations() {
 
   const editFeatWithOptions = useCallback(
     (
-      feat: { name: string; source?: string },
+      feat: FeatOptionTarget,
       oldOptions: FeatOptionSelections,
       newSelections: FeatOptionSelections,
       allSpells?: Spell5e[],
     ) => {
       if (!character) return
 
-      let newLedger = removeGrantsBySource(ledger, 'feat', feat.name)
+      const featSourceName = getFeatOptionSourceName(feat)
+      let newLedger = removeGrantsBySource(ledger, 'feat', featSourceName)
 
       const oldSpellNames = new Set((oldOptions.spells ?? []).map((key) => key.split('|')[0]))
       let nextSpellProfiles = character.spells.spellProfiles.map((p) => {
@@ -679,7 +785,7 @@ export function useFeatProvenanceMutations() {
         }
       }
 
-      const featTag = makeSourceTag('feat', feat.name, 'choice', feat.source)
+      const featTag = makeSourceTag('feat', featSourceName, 'choice', feat.source)
 
       const existingSpecial = nextSpellProfiles.find((p) => p.id === SPECIAL_SPELL_PROFILE_ID)
       const nextCantrips = [...(existingSpecial?.cantrips ?? [])]
@@ -774,20 +880,31 @@ export function useFeatProvenanceMutations() {
       newLedger = {
         ...newLedger,
         choices: newLedger.choices.filter(
-          (c) => !(c.domain === 'featOptions' && c.sourceTag.sourceName === feat.name),
+          (c) => !(c.domain === 'featOptions' && c.sourceTag.sourceName === featSourceName),
         ),
       }
 
       const nextFeats = (character.feats ?? []).map((f) =>
-        f.name === feat.name ? { ...f, options: newSelections } : f,
+        f.name === feat.name && f.source === (feat.source ?? '')
+          ? { ...f, options: newSelections }
+          : f,
       )
       const nextSpecialFeats = (character.specialFeats ?? []).map((f) =>
-        f.name === feat.name ? { ...f, options: newSelections } : f,
+        f.name === feat.name && f.source === (feat.source ?? '')
+          ? { ...f, options: newSelections }
+          : f,
       )
+      const nextFixedFeatOptions = feat.grantVariant
+        ? {
+            ...(character.fixedFeatOptions ?? {}),
+            [getFixedFeatOptionKey(feat.name, feat.source ?? '', feat.grantVariant)]: newSelections,
+          }
+        : character.fixedFeatOptions
 
       updateCharacter(character.id, {
         feats: nextFeats,
         specialFeats: nextSpecialFeats,
+        fixedFeatOptions: nextFixedFeatOptions,
         provenance: newLedger,
         spells: { ...character.spells, spellProfiles: nextSpellProfiles },
         proficiencies: newProficiencies,
@@ -802,6 +919,7 @@ export function useFeatProvenanceMutations() {
     applyFeatSelection,
     removeFeatProvenance,
     replaceFeatSelections,
+    replaceBonusFeatSelections,
     applyOptionalFeatureSelection,
     resolveFeatChoiceSelection,
     removeFeatChoiceSelection,

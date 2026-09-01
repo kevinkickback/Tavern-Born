@@ -27,6 +27,7 @@ interface PortraitPickerProps {
   onPortraitChange: (portrait: string | null) => void
   onTransformChange: (transform: PortraitTransform) => void
   density?: 'default' | 'compact'
+  collapsible?: boolean
 }
 
 export function PortraitPicker({
@@ -41,6 +42,7 @@ export function PortraitPicker({
   onPortraitChange,
   onTransformChange,
   density = 'default',
+  collapsible = true,
 }: PortraitPickerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
@@ -106,26 +108,25 @@ export function PortraitPicker({
         rightCollapsed={libraryCollapsed}
         onLeftCollapsedChange={setPreviewCollapsed}
         onRightCollapsedChange={setLibraryCollapsed}
+        showCollapseControls={collapsible}
         left={
           <section className="flex h-full w-full flex-col overflow-hidden">
             <WorkspacePaneHeader
               title="Card preview"
               icon={<Image className="size-4 text-primary" weight="duotone" />}
-              className="pr-20"
+              className={cn(collapsible && 'pr-20')}
             />
             <div className="space-y-4 p-4">
-              <div className="rounded-lg border border-border bg-workspace-pane p-2 sm:p-3">
-                <PortraitCardPreview
-                  image={portrait}
-                  name={name}
-                  level={level}
-                  race={race}
-                  characterClass={characterClass}
-                  gender={gender}
-                  lastModified={lastModified}
-                  transform={t}
-                />
-              </div>
+              <PortraitCardPreview
+                image={portrait}
+                name={name}
+                level={level}
+                race={race}
+                characterClass={characterClass}
+                gender={gender}
+                lastModified={lastModified}
+                transform={t}
+              />
 
               {/* Image Controls — inline below preview */}
               <div className="space-y-3 border-t border-border pt-3">
@@ -201,7 +202,7 @@ export function PortraitPicker({
             <WorkspacePaneHeader
               title="Portrait library"
               icon={<Images className="size-4 text-primary" weight="duotone" />}
-              className="pr-20"
+              className={cn(collapsible && 'pr-20')}
             />
             <div
               className={cn(

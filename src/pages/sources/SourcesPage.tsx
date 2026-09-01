@@ -1,10 +1,11 @@
-import { BookOpen, Books, Question, Sparkle, Warning, X } from '@phosphor-icons/react'
+import { BookOpen, Books, Question, Sparkle, Warning } from '@phosphor-icons/react'
 import { useId, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
+  AnchoredHint,
   WorkspaceBody,
   WorkspacePage,
   WorkspacePaneHeader,
@@ -171,37 +172,17 @@ export function SourcesPage() {
 
   return (
     <TooltipProvider>
-      <WorkspacePage className="p-3">
-        {showHint && hintPosition ? (
-          <div
-            className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
-            style={{ top: hintPosition.top, left: hintPosition.left }}
-          >
-            <div
-              className="pointer-events-auto relative rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20"
-              style={{ width: HINT_WIDTH }}
-            >
-              <div
-                className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
-                style={{ left: hintPosition.arrowLeft - 7 }}
-              />
-              <button
-                type="button"
-                className="absolute top-1.5 right-1.5 inline-flex size-6 cursor-pointer items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
-                onClick={handleDismissHint}
-                aria-label="Dismiss hint"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-              <p className="leading-snug text-accent-foreground/95 pr-8">
-                <span className="font-semibold">{implicitSourceName}</span> is always included —
-                it's tied to your ruleset and can't be removed here.
-              </p>
-            </div>
-          </div>
-        ) : null}
+      <WorkspacePage>
+        <AnchoredHint
+          position={showHint ? hintPosition : null}
+          width={HINT_WIDTH}
+          onDismiss={handleDismissHint}
+        >
+          <span className="font-semibold">{implicitSourceName}</span> is always included — it's tied
+          to your ruleset and can't be removed here.
+        </AnchoredHint>
 
-        <WorkspaceBody className="mx-auto flex w-full max-w-[var(--workspace-collection-max-width)] flex-col overflow-hidden rounded-lg border border-border bg-workspace-pane">
+        <WorkspaceBody className="flex flex-col overflow-hidden bg-workspace-pane">
           <aside className="flex shrink-0 gap-3 border-b border-warning/35 bg-warning/10 px-4 py-3">
             <Warning className="mt-0.5 size-5 shrink-0 text-warning" />
             <div className="min-w-0">
@@ -301,54 +282,56 @@ export function SourcesPage() {
               No sources available. Please load game data in Settings first.
             </div>
           ) : (
-            <div className="flex-1 min-h-0 flex flex-col gap-2 p-4">
-              <div className="flex-1 overflow-y-auto pr-1 space-y-4">
-                {groupOrder.map((group) => {
-                  const groupSources = sourcesByGroup[group]?.filter(
-                    (s) => !IMPLICIT_SOURCES.has(s.abbreviation),
-                  )
-                  if (!groupSources?.length) return null
-                  return (
-                    <div key={group} className="space-y-1.5">
-                      <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                        {groupLabels[group]}
-                      </h5>
-                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                        {groupSources.map((source) => {
-                          const enabled = allowedSources.includes(source.abbreviation)
-                          return (
-                            <button
-                              type="button"
-                              key={source.abbreviation}
-                              onClick={() => toggleSource(source.abbreviation)}
-                              aria-pressed={enabled}
-                              className={cn(
-                                'flex min-h-14 cursor-pointer items-start gap-2 rounded-md border px-3 py-2.5 text-left text-sm transition-colors',
-                                enabled
-                                  ? 'border-accent bg-accent/10 text-foreground'
-                                  : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
-                              )}
-                            >
-                              <BookOpen
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="mx-auto flex min-h-full w-full max-w-[var(--workspace-collection-max-width)] flex-col gap-2 p-4">
+                <div className="flex-1 space-y-4 pr-1">
+                  {groupOrder.map((group) => {
+                    const groupSources = sourcesByGroup[group]?.filter(
+                      (s) => !IMPLICIT_SOURCES.has(s.abbreviation),
+                    )
+                    if (!groupSources?.length) return null
+                    return (
+                      <div key={group} className="space-y-1.5">
+                        <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          {groupLabels[group]}
+                        </h5>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                          {groupSources.map((source) => {
+                            const enabled = allowedSources.includes(source.abbreviation)
+                            return (
+                              <button
+                                type="button"
+                                key={source.abbreviation}
+                                onClick={() => toggleSource(source.abbreviation)}
+                                aria-pressed={enabled}
                                 className={cn(
-                                  'h-4 w-4 shrink-0 mt-0.5',
-                                  enabled ? 'text-primary' : 'text-muted-foreground',
+                                  'flex min-h-14 cursor-pointer items-start gap-2 rounded-md border px-3 py-2.5 text-left text-sm transition-colors',
+                                  enabled
+                                    ? 'border-accent bg-accent/10 text-foreground'
+                                    : 'border-border hover:border-accent/50 text-muted-foreground hover:text-foreground',
                                 )}
-                              />
-                              <div className="min-w-0">
-                                <div className="font-semibold truncate">{source.name}</div>
-                                <div className="text-xs font-mono text-muted-foreground">
-                                  {source.abbreviation}
-                                  {source.year && ` (${source.year})`}
+                              >
+                                <BookOpen
+                                  className={cn(
+                                    'h-4 w-4 shrink-0 mt-0.5',
+                                    enabled ? 'text-primary' : 'text-muted-foreground',
+                                  )}
+                                />
+                                <div className="min-w-0">
+                                  <div className="font-semibold truncate">{source.name}</div>
+                                  <div className="text-xs font-mono text-muted-foreground">
+                                    {source.abbreviation}
+                                    {source.year && ` (${source.year})`}
+                                  </div>
                                 </div>
-                              </div>
-                            </button>
-                          )
-                        })}
+                              </button>
+                            )
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
             </div>
           )}

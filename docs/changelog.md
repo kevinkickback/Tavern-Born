@@ -3,12 +3,16 @@
 
 ## ✨ Changes
 
+* **Complete UI overhaul with a redesigned look and feel**
 * New app icon
-* Updates install silently now
+* Updates now install automatically after download
+* Added zoom controls to PDF character sheet previews
+* Fixed multiclass ASIs and feats overlapping across classes
+* Fixed several issues affecting subclass-granted spells
 
 ## ⚠️ Known Issues
 
-* PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development.
+* PDF generation for the 2014 and 2024 character sheets is working but incomplete. Still under active development.
 
 </details>
 

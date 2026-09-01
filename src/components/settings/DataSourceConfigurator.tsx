@@ -31,6 +31,19 @@ type DataSourceConfiguratorProps = {
   selectorOnly?: boolean
 }
 
+export function isValidatableRemoteUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
+
+    const hostname = url.hostname.replace(/\.$/, '')
+    const labels = hostname.split('.')
+    return labels.length >= 2 && labels.every((label) => label.length > 0)
+  } catch {
+    return false
+  }
+}
+
 export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfiguratorProps) {
   const dataSourceConfig = useGameDataStore((state) => state.dataSourceConfig)
   const gameData = useGameDataStore((state) => state.gameData)
@@ -64,12 +77,15 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
   const autoOpenedSelectorRef = useRef(!hasActiveDataSource)
 
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const validationRequestRef = useRef(0)
 
   const handleSourceTypeChange = (newType: 'local' | 'remote') => {
     setSourceType(newType)
     setSourcePath('')
     setValidationStatus('idle')
+    setIsValidating(false)
     setValidationResult(null)
+    validationRequestRef.current += 1
     if (validationTimeoutRef.current) {
       clearTimeout(validationTimeoutRef.current)
     }
@@ -97,8 +113,11 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
   }, [hasActiveDataSource, selectorOnly])
 
   const performValidation = async (path: string, type: 'local' | 'remote') => {
+    const requestId = ++validationRequestRef.current
+
     if (!path) {
       setValidationStatus('idle')
+      setIsValidating(false)
       setValidationResult(null)
       return
     }
@@ -113,6 +132,8 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
         isValid: false,
       })
 
+      if (requestId !== validationRequestRef.current) return
+
       setValidationResult(result)
       setValidationStatus(result.isValid ? 'valid' : 'invalid')
 
@@ -122,6 +143,8 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
         })
       }
     } catch (error) {
+      if (requestId !== validationRequestRef.current) return
+
       setValidationResult({
         isValid: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -129,13 +152,17 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
       setValidationStatus('invalid')
       toast.error('Validation failed')
     } finally {
-      setIsValidating(false)
+      if (requestId === validationRequestRef.current) {
+        setIsValidating(false)
+      }
     }
   }
 
   const handleLocalPathChange = (value: string) => {
+    validationRequestRef.current += 1
     setSourcePath(value)
     setValidationStatus('idle')
+    setIsValidating(false)
     setValidationResult(null)
 
     if (validationTimeoutRef.current) {
@@ -150,8 +177,10 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
   }
 
   const handleUrlChange = (value: string) => {
+    validationRequestRef.current += 1
     setSourcePath(value)
     setValidationStatus('idle')
+    setIsValidating(false)
     setValidationResult(null)
 
     if (validationTimeoutRef.current) {
@@ -159,13 +188,15 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
     }
 
     if (value && sourceType === 'remote') {
-      try {
-        new URL(value)
+      if (isValidatableRemoteUrl(value)) {
+        setValidationStatus('validating')
+        setIsValidating(true)
         validationTimeoutRef.current = setTimeout(() => {
           performValidation(value, 'remote')
-        }, 1500)
-      } catch {
+        }, 400)
+      } else {
         setValidationStatus('idle')
+        setIsValidating(false)
       }
     }
   }

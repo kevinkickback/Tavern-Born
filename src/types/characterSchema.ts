@@ -378,6 +378,7 @@ export const sourceTagSchema = z.object({
   sourceType: sourceTypeSchema,
   sourceName: z.string(),
   sourceRef: z.string().optional(),
+  grantVariant: z.string().optional(),
   grantType: grantTypeSchema,
   label: z.string(),
 })
@@ -630,6 +631,7 @@ export const characterSchema = z
     portraitTransform: portraitTransformSchema.optional(),
     asiChoices: z.array(asiChoiceSchema).optional(),
     specialFeats: z.array(featSchema).optional(),
+    fixedFeatOptions: z.record(featOptionSelectionsSchema).optional(),
     provenance: provenanceLedgerSchema.optional(),
     inspiration: z.boolean().optional(),
     deathSaves: z

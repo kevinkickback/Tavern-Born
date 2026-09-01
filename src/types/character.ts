@@ -111,6 +111,9 @@ export interface Character {
    *  are never removed by normal feat-slot management (e.g. level-down, class change). */
   specialFeats?: Feat[]
 
+  /** Follow-up selections for fixed provenance feat grants, keyed by name|source|variant. */
+  fixedFeatOptions?: Record<string, FeatOptionSelections>
+
   /** Provenance ledger tracking the origin of every granted option. */
   provenance?: ProvenanceLedger
 

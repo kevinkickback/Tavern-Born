@@ -154,34 +154,36 @@ export function AppHeader() {
                   </p>
                 )}
               </div>
-              <div className="ml-1 hidden items-center gap-3 border-l border-border pl-5 xl:flex">
+              <div className="ml-1 hidden items-center gap-1.5 border-l border-border pl-4 xl:flex">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div
-                      className="flex h-9 items-center gap-2 px-1 text-sm tabular-nums text-muted-foreground"
+                      className="relative flex size-10 items-center justify-center tabular-nums"
                       data-testid="header-ac-badge"
                     >
-                      <Shield className="size-6 text-primary" weight="fill" />
-                      <span className="text-[11px] font-semibold uppercase tracking-wide">AC</span>
-                      <span className="text-base font-semibold text-foreground">{effectiveAC}</span>
+                      <Shield className="absolute inset-0 size-10 text-primary" weight="fill" />
+                      <span className="relative z-10 mt-0.5 text-xs font-bold leading-none text-primary-foreground drop-shadow-sm">
+                        {effectiveAC}
+                      </span>
+                      <span className="sr-only">Armor Class {effectiveAC}</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>Armor Class</TooltipContent>
+                  <TooltipContent>Armor Class: {effectiveAC}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div
-                      className="flex h-9 items-center gap-2 px-1 text-sm tabular-nums text-muted-foreground"
+                      className="relative flex size-10 items-center justify-center tabular-nums"
                       data-testid="header-hp-badge"
                     >
-                      <Heart className="size-6 text-red-500" weight="fill" />
-                      <span className="text-[11px] font-semibold uppercase tracking-wide">HP</span>
-                      <span className="text-base font-semibold text-foreground">
+                      <Heart className="absolute inset-0 size-10 text-red-500" weight="fill" />
+                      <span className="relative z-10 -mt-0.5 text-xs font-bold leading-none text-white drop-shadow-sm">
                         {effectiveMaxHP}
                       </span>
+                      <span className="sr-only">Maximum Hit Points {effectiveMaxHP}</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>Maximum Hit Points</TooltipContent>
+                  <TooltipContent>Maximum Hit Points: {effectiveMaxHP}</TooltipContent>
                 </Tooltip>
               </div>
             </div>
@@ -198,6 +200,7 @@ export function AppHeader() {
                   variant="outline"
                   size="sm"
                   className="h-9 px-3"
+                  data-level-up-button="true"
                   aria-label="Level up character"
                   disabled={!activeCharacter}
                   onClick={() => setLevelUpOpen(true)}

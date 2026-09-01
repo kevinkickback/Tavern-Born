@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Sword,
   Wrench,
-  X,
 } from '@phosphor-icons/react'
 import { type ReactNode, useState } from 'react'
 import {
@@ -21,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { AnchoredHint } from '@/components/workspace'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { normalizeKey } from '@/lib/provenance'
 import type { ChoiceRecord, ProficiencyProvenance } from '@/lib/provenance/types'
@@ -515,31 +515,14 @@ export function BuildProficienciesTabsPanel({
 
   return (
     <>
-      {showExpertiseHint && expertiseHintPos ? (
-        <div
-          className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
-          style={{ top: expertiseHintPos.top, left: expertiseHintPos.left }}
-        >
-          <div className="pointer-events-auto animate-hint-bounce relative w-[280px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
-            <div
-              className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
-              style={{ left: expertiseHintPos.arrowLeft - 7 }}
-            />
-            <button
-              type="button"
-              className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
-              onClick={handleDismissExpertiseHint}
-              aria-label="Dismiss hint"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-            <p className="leading-snug text-accent-foreground/95 pr-8">
-              Click the two dots on a proficient skill to toggle expertise — doubling your
-              proficiency bonus for that skill.
-            </p>
-          </div>
-        </div>
-      ) : null}
+      <AnchoredHint
+        position={showExpertiseHint ? expertiseHintPos : null}
+        width={EXPERTISE_HINT_WIDTH}
+        onDismiss={handleDismissExpertiseHint}
+      >
+        Click the two dots on a proficient skill to toggle expertise — doubling your proficiency
+        bonus for that skill.
+      </AnchoredHint>
       <Tabs
         value={currentActiveTab}
         onValueChange={(value) => handleActiveTabChange(value as ProficiencyTabValue)}

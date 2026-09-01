@@ -163,9 +163,9 @@ export function ConditionsPage() {
   }
 
   return (
-    <WorkspacePage className="p-3">
-      <WorkspaceBody className="mx-auto w-full max-w-[var(--workspace-form-max-width)] overflow-auto rounded-lg border border-border bg-workspace-pane">
-        <div className="min-h-full">
+    <WorkspacePage>
+      <WorkspaceBody className="overflow-auto bg-workspace-pane">
+        <div className="mx-auto min-h-full w-full max-w-[var(--workspace-form-max-width)]">
           {/* ── Combat State ───────────────────────────────────────── */}
           <section className="border-b border-border">
             <SectionHeader icon={<Heart weight="duotone" />} title="Combat State" />

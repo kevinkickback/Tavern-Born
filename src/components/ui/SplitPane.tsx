@@ -17,6 +17,8 @@ interface SplitPaneProps {
   rightCollapsed: boolean
   onLeftCollapsedChange: (collapsed: boolean) => void
   onRightCollapsedChange: (collapsed: boolean) => void
+  /** Whether pane collapse controls are shown. Defaults to true. */
+  showCollapseControls?: boolean
   className?: string
   leftClassName?: string
   rightClassName?: string
@@ -40,6 +42,7 @@ export function SplitPane({
   rightCollapsed,
   onLeftCollapsedChange,
   onRightCollapsedChange,
+  showCollapseControls = true,
   className,
   leftClassName,
   rightClassName,
@@ -50,32 +53,34 @@ export function SplitPane({
       className={cn('relative flex min-h-0 flex-1 flex-row overflow-hidden -my-6', className)}
     >
       {/* Toggle buttons — absolute top-right */}
-      <div className="absolute top-2 right-2 z-10 flex gap-1">
-        {/* Left-pane toggle */}
-        <button
-          type="button"
-          onClick={() => onLeftCollapsedChange(!leftCollapsed)}
-          disabled={rightCollapsed}
-          title={leftCollapsed ? 'Expand list panel' : 'Collapse list panel'}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-md border border-border-strong bg-surface-raised text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Sidebar className="h-3.5 w-3.5" weight={leftCollapsed ? 'regular' : 'fill'} />
-        </button>
-        {/* Right-pane toggle */}
-        <button
-          type="button"
-          onClick={() => onRightCollapsedChange(!rightCollapsed)}
-          disabled={leftCollapsed}
-          title={rightCollapsed ? 'Expand details panel' : 'Collapse details panel'}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-md border border-border-strong bg-surface-raised text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          <Sidebar
-            className="h-3.5 w-3.5"
-            weight={rightCollapsed ? 'regular' : 'fill'}
-            style={{ transform: 'scaleX(-1)' }}
-          />
-        </button>
-      </div>
+      {showCollapseControls && (
+        <div className="absolute top-2 right-2 z-10 flex gap-1">
+          {/* Left-pane toggle */}
+          <button
+            type="button"
+            onClick={() => onLeftCollapsedChange(!leftCollapsed)}
+            disabled={rightCollapsed}
+            title={leftCollapsed ? 'Expand list panel' : 'Collapse list panel'}
+            className="flex size-7 cursor-pointer items-center justify-center rounded-md border border-border-strong bg-surface-raised text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Sidebar className="h-3.5 w-3.5" weight={leftCollapsed ? 'regular' : 'fill'} />
+          </button>
+          {/* Right-pane toggle */}
+          <button
+            type="button"
+            onClick={() => onRightCollapsedChange(!rightCollapsed)}
+            disabled={leftCollapsed}
+            title={rightCollapsed ? 'Expand details panel' : 'Collapse details panel'}
+            className="flex size-7 cursor-pointer items-center justify-center rounded-md border border-border-strong bg-surface-raised text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Sidebar
+              className="h-3.5 w-3.5"
+              weight={rightCollapsed ? 'regular' : 'fill'}
+              style={{ transform: 'scaleX(-1)' }}
+            />
+          </button>
+        </div>
+      )}
 
       {/* Left pane wrapper — collapses to 0 via CSS transition */}
       <div

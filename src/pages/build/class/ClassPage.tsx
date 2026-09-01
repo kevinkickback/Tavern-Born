@@ -1,8 +1,8 @@
-import { Sword, X } from '@phosphor-icons/react'
+import { Sword } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { SplitPane } from '@/components/ui/SplitPane'
-import { WorkspaceBody, WorkspacePage } from '@/components/workspace'
+import { AnchoredHint, WorkspaceBody, WorkspacePage } from '@/components/workspace'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
@@ -524,31 +524,14 @@ export function BuildClassPage() {
 
   return (
     <WorkspacePage className="p-3">
-      {showLevelUpHint && hintPosition ? (
-        <div
-          className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
-          style={{ top: hintPosition.top, left: hintPosition.left }}
-        >
-          <div className="pointer-events-auto animate-hint-bounce relative w-[320px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
-            <div
-              className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
-              style={{ left: hintPosition.arrowLeft - 7 }}
-            />
-            <button
-              type="button"
-              className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
-              onClick={handleDismissLevelUpHint}
-              aria-label="Dismiss class page hint"
-              title="Dismiss hint"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-            <p className="leading-snug text-accent-foreground/95 pr-8">
-              Use the Level Up button to add, remove, or change your classes.
-            </p>
-          </div>
-        </div>
-      ) : null}
+      <AnchoredHint
+        position={showLevelUpHint ? hintPosition : null}
+        width={LEVEL_UP_HINT_WIDTH}
+        onDismiss={handleDismissLevelUpHint}
+        dismissLabel="Dismiss class page hint"
+      >
+        Use the Level Up button to add, remove, or change your classes.
+      </AnchoredHint>
 
       <WorkspaceBody className="flex overflow-hidden">
         <SplitPane

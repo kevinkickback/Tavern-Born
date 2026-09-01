@@ -55,12 +55,13 @@ interface Workspace {
   icon: Icon
   matches: (pathname: string) => boolean
   groups: ContextGroup[]
+  requiresCharacter?: boolean
 }
 
 const workspaces: Workspace[] = [
   {
     id: 'start',
-    label: 'Start',
+    label: 'Characters',
     path: '/',
     icon: Users,
     matches: (pathname) => pathname === '/' || pathname.startsWith('/settings'),
@@ -73,9 +74,10 @@ const workspaces: Workspace[] = [
   },
   {
     id: 'build',
-    label: 'Build',
+    label: 'Builder',
     path: '/build/race',
     icon: Wrench,
+    requiresCharacter: true,
     matches: (pathname) =>
       ['/build', '/feats', '/spells', '/equipment', '/details', '/sources'].some((prefix) =>
         pathname.startsWith(prefix),
@@ -110,6 +112,7 @@ const workspaces: Workspace[] = [
     label: 'Character Sheet',
     path: '/character-sheet',
     icon: FilePdf,
+    requiresCharacter: true,
     matches: (pathname) => pathname.startsWith('/character-sheet'),
     groups: [
       {
@@ -213,6 +216,7 @@ export function AppSidebar() {
   const navigate = useNavigate()
   const characters = useCharacterStore((state) => state.characters)
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
+  const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(null)
@@ -261,6 +265,7 @@ export function AppSidebar() {
           {workspaces.map((workspace) => {
             const WorkspaceIcon = workspace.icon
             const active = workspace.id === activeWorkspace.id
+            const unavailable = Boolean(workspace.requiresCharacter && !activeCharacter)
 
             return (
               <Tooltip key={workspace.id}>
@@ -269,12 +274,17 @@ export function AppSidebar() {
                     type="button"
                     aria-label={workspace.label}
                     aria-current={active ? 'page' : undefined}
-                    onClick={() => navigate(workspace.path)}
+                    aria-disabled={unavailable || undefined}
+                    onClick={() => {
+                      if (!unavailable) navigate(workspace.path)
+                    }}
                     className={cn(
                       'relative flex size-12 items-center justify-center rounded-md border text-[1.625rem] transition-colors',
-                      active
-                        ? 'border-primary/50 bg-sidebar-accent/15 text-primary'
-                        : 'border-muted-foreground/45 bg-background/10 text-muted-foreground hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground',
+                      unavailable
+                        ? 'cursor-not-allowed border-muted-foreground/20 bg-background/5 text-muted-foreground/35'
+                        : active
+                          ? 'border-primary/50 bg-sidebar-accent/15 text-primary'
+                          : 'border-muted-foreground/45 bg-background/10 text-muted-foreground hover:border-muted-foreground/75 hover:bg-secondary hover:text-foreground',
                     )}
                   >
                     {active && (
@@ -284,7 +294,9 @@ export function AppSidebar() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={8}>
-                  {workspace.label}
+                  {unavailable
+                    ? `Open or create a character to use ${workspace.label}.`
+                    : workspace.label}
                 </TooltipContent>
               </Tooltip>
             )

@@ -1,10 +1,11 @@
-import { MagicWand, X } from '@phosphor-icons/react'
+import { MagicWand } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
+  AnchoredHint,
   WorkspaceBody,
   WorkspaceDetailContent,
   WorkspacePage,
@@ -583,31 +584,14 @@ export function SpellsPage() {
 
   return (
     <WorkspacePage className="p-3">
-      {showPreparedHint && hintPosition ? (
-        <div
-          className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
-          style={{ top: hintPosition.top, left: hintPosition.left }}
-        >
-          <div className="pointer-events-auto animate-hint-bounce relative w-[300px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
-            <div
-              className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
-              style={{ left: hintPosition.arrowLeft - 7 }}
-            />
-            <button
-              type="button"
-              className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
-              onClick={handleDismissPreparedHint}
-              aria-label="Dismiss hint"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-            <p className="leading-snug text-accent-foreground/95 pr-8">
-              Toggle this circle to mark a spell prepared — as a prepared caster you can freely swap
-              prepared spells between rests.
-            </p>
-          </div>
-        </div>
-      ) : null}
+      <AnchoredHint
+        position={showPreparedHint ? hintPosition : null}
+        width={SPELLS_HINT_WIDTH}
+        onDismiss={handleDismissPreparedHint}
+      >
+        Toggle this circle to mark a spell prepared — as a prepared caster you can freely swap
+        prepared spells between rests.
+      </AnchoredHint>
 
       <WorkspaceBody className="flex overflow-hidden">
         <SplitPane

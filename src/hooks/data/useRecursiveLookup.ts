@@ -12,7 +12,7 @@ export function useRecursiveLookup(): RecursiveLookup {
   return useMemo(
     () => ({
       spells: buildNameMap(gameData?.spells ?? []),
-      items: buildNameMap(gameData?.items ?? []),
+      items: buildNameMap([...(gameData?.items ?? []), ...(gameData?.itemsBase ?? [])]),
       feats: buildNameMap(gameData?.feats ?? []),
       races: buildNameMap(gameData?.races ?? []),
       classes: buildNameMap(gameData?.classes ?? []),

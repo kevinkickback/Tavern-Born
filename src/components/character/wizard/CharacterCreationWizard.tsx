@@ -306,7 +306,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="character-wizard-modal flex flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0">
+      <DialogContent className="character-wizard-modal flex flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 [&_[data-slot=dialog-close]]:right-3 [&_[data-slot=dialog-close]]:top-3 [&_[data-slot=dialog-close]]:z-20 [&_[data-slot=dialog-close]]:flex [&_[data-slot=dialog-close]]:size-8 [&_[data-slot=dialog-close]]:items-center [&_[data-slot=dialog-close]]:justify-center [&_[data-slot=dialog-close]]:border [&_[data-slot=dialog-close]]:border-border [&_[data-slot=dialog-close]]:bg-workspace-pane">
         <DialogTitle className="sr-only">Create New Character</DialogTitle>
         <DialogDescription className="sr-only">
           Step through the wizard to configure your new character.
@@ -315,7 +315,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         <div className="flex min-h-0 flex-1">
           <WizardNavigation steps={WIZARD_STEPS} currentStep={currentStep} />
           <div className="flex min-w-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto px-8 py-6">
+            <div className="min-h-0 flex-1 overflow-y-auto py-6 pl-8 pr-14">
               {validationError && invalidFields.size === 0 && (
                 <Alert variant="destructive" className="mb-4">
                   <Warning className="size-4" />

@@ -1,5 +1,5 @@
 import { Book, Funnel, MagnifyingGlass } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   MasterDetail,
   WorkspaceBody,
@@ -22,14 +23,13 @@ import {
 } from '@/components/workspace'
 import {
   buildCompendiumEntries,
+  type CompendiumEditionFilter,
   type CompendiumEntry,
   filterCompendiumEntries,
 } from '@/lib/compendiumEntries'
 import { renderEntry } from '@/lib/renderer'
-import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
-import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
 const ENTRY_TYPES = [
@@ -55,12 +55,12 @@ const ENTRY_TYPES = [
 const MAX_DISPLAY = 200
 
 export function CompendiumPage() {
+  const editionLabelId = useId()
   const [searchParams] = useSearchParams()
   const gameData = useGameDataStore((state) => state.gameData)
-  const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
-  const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
   const [searchQuery, setSearchQuery] = useState('')
   const [activeSources, setActiveSources] = useState<Set<string>>(new Set())
+  const [editionFilter, setEditionFilter] = useState<CompendiumEditionFilter>('both')
   const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(null)
 
   const activeTypes = useMemo(
@@ -73,12 +73,6 @@ export function CompendiumPage() {
     [searchParams],
   )
 
-  const effectiveAllowedSources = useMemo(() => {
-    if (!allowedSources) return undefined
-    const implicit = getImplicitSource(originSystem ?? '2014')
-    return allowedSources.includes(implicit) ? allowedSources : [...allowedSources, implicit]
-  }, [allowedSources, originSystem])
-
   const sourceNameMap = useMemo(() => {
     const map = new Map<string, string>()
     for (const source of gameData?.sources ?? []) {
@@ -87,12 +81,7 @@ export function CompendiumPage() {
     return map
   }, [gameData?.sources])
 
-  const allEntries = useMemo(() => {
-    const entries = buildCompendiumEntries(gameData)
-    if (!effectiveAllowedSources || effectiveAllowedSources.length === 0) return entries
-    const sourcesSet = new Set(effectiveAllowedSources.map((source) => source.toUpperCase()))
-    return entries.filter((entry) => sourcesSet.has(entry.source.toUpperCase()))
-  }, [gameData, effectiveAllowedSources])
+  const allEntries = useMemo(() => buildCompendiumEntries(gameData), [gameData])
 
   const allSources = useMemo(
     () =>
@@ -120,8 +109,9 @@ export function CompendiumPage() {
   }
 
   const filteredEntries = useMemo(
-    () => filterCompendiumEntries(allEntries, searchQuery, activeTypes, activeSources),
-    [allEntries, searchQuery, activeTypes, activeSources],
+    () =>
+      filterCompendiumEntries(allEntries, searchQuery, activeTypes, activeSources, editionFilter),
+    [allEntries, searchQuery, activeTypes, activeSources, editionFilter],
   )
 
   const displayedEntries = filteredEntries.slice(0, MAX_DISPLAY)
@@ -164,7 +154,37 @@ export function CompendiumPage() {
               {filteredEntries.length.toLocaleString()} results
             </span>
           </div>
-          <div className="shrink-0 border-l border-border pl-3">
+          <div className="flex shrink-0 items-center gap-2 border-l border-border pl-3">
+            <span id={editionLabelId} className="text-xs font-medium text-muted-foreground">
+              Edition
+            </span>
+            <ToggleGroup
+              type="single"
+              value={editionFilter}
+              onValueChange={(value) => {
+                if (value) setEditionFilter(value as CompendiumEditionFilter)
+              }}
+              variant="outline"
+              aria-labelledby={editionLabelId}
+            >
+              <ToggleGroupItem value="5e" aria-label="5e edition" className="h-9 px-2.5 text-xs">
+                5e
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="5.5e"
+                aria-label="5.5e edition"
+                className="h-9 px-2.5 text-xs"
+              >
+                5.5e
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="both"
+                aria-label="Both editions"
+                className="h-9 px-2.5 text-xs"
+              >
+                Both
+              </ToggleGroupItem>
+            </ToggleGroup>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

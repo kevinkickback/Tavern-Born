@@ -43,6 +43,7 @@ Spellcasting note:
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.
 - Key files: src/pages/*, src/components/*, src/pages/build/ability-scores/model/data.ts, src/pages/build/class/model/pageUtils.ts, src/pages/build/class/model/asi.ts, src/pages/build/class/model/levelsUtils.ts, src/lib/character/commands/classCommands.ts, src/lib/character/commands/classSelectionOrchestrationCommand.ts, src/hooks/character/useUnifiedClassSelection.ts, src/pages/build/proficiencies/model/data.ts, src/pages/build/proficiencies/model/types.ts, src/pages/build/background/model/data.ts, src/pages/build/ability-scores/components/MethodPanels.tsx, src/pages/build/ability-scores/components/DetailsPanel.tsx, src/pages/build/ability-scores/components/RacialBonusesPanel.tsx, src/pages/build/class/components/AsiSection.tsx, src/pages/build/class/components/SpellSection.tsx, src/pages/build/class/components/SubclassSection.tsx, src/pages/build/class/components/PassiveFeatureList.tsx, src/pages/build/class/components/ProgressionChoiceCard.tsx, src/pages/build/proficiencies/components/DetailsPanel.tsx, src/pages/build/proficiencies/components/TabsPanel.tsx, src/pages/build/background/components/DetailsPanel.tsx, src/pages/compendium/CompendiumPage.tsx, src/pages/compendium/CompendiumEntryDetails.tsx, src/lib/compendiumEntries.ts, src/components/modals/FeatOptionsModal.tsx, src/components/updates/ChangelogModal.tsx, src/components/updates/UpdateProgressModal.tsx.
+- Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through `RenderedEntryWithTooltip`; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items.
 
 Current implementation notes:
 - Spell and class mutation flows are now command-backed at the domain layer.
@@ -58,8 +59,26 @@ Auto-update note:
 Feat options note:
 - `src/components/modals/FeatOptionsModal.tsx` is a multi-step wizard for feats with optional player choices (spell picks, proficiency selections, ability score bonuses, optional features, expertise).
 - Steps are generated dynamically from the feat's `additionalSpells` and option blocks; dynamic steps are injected after the user chooses a spellcasting class.
-- Completed selections are persisted on `character.feats[].options` as `FeatOptionSelections`.
+- Valid fixed spellcasting classes are retained in completed selections but omitted from wizard navigation, which starts on the remaining spell choices.
+- Completed selections are persisted on `character.feats[].options` or
+	`character.specialFeats[].options` as `FeatOptionSelections`; both collections use the same
+	provenance-aware commit, edit, and removal workflow.
+- Selecting a new configurable bonus feat continues directly from the selection modal into the
+	options wizard; pending cards retain Complete Setup as a recovery action.
+- Configured feat cards anchor a one-time Edit Setup hint; its dismissal uses the
+	`feats-edit-setup` local-storage hint key.
 - Parsing support lives in `src/lib/5etools/parsers/featOptions.ts`.
+
+Compendium edition filtering note:
+- `src/lib/compendiumEntries.ts` classifies entries with `edition: "one"` or source `XPHB` as
+	5.5e; untagged entries are classified as 5e.
+- `src/pages/compendium/CompendiumPage.tsx` exposes a local 5e / 5.5e / Both selector beside
+	Sources and always defaults to Both.
+- Compendium builds its index from all loaded game data and does not read the active character's
+	`originSystem` or `allowedSources`. Its edition, source, type, and text filters are explicit local
+	UI state and do not mutate or persist character state.
+- Character build and gameplay surfaces remain character-scoped through their existing ruleset and
+	allowed-source filtering; the global Compendium behavior is intentionally page-local.
 
 Character sheet PDF note:
 - Route src/pages/CharacterSheetPage.tsx renders the PDF preview/download workflow.

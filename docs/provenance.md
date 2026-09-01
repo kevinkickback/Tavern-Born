@@ -49,6 +49,13 @@ The character carries a provenance ledger with source-tagged grant maps for:
 
 **`SpellSourceTag`** extends `SourceTag` with optional `spellGrantedAtLevel` and `spellAttributionMode` fields. These fields are only meaningful in the `spells` domain and must not appear on general-purpose `SourceTag` values. Always construct spell tags as `SpellSourceTag` and use `addSpellGrant`.
 
+Fixed feat `SourceTag` values may include `grantVariant`, which preserves a parameter encoded in a
+5etools grant reference. For example, Acolyte's `magic initiate; cleric|xphb` grant is stored under
+the canonical `magic initiate` ledger key with `grantVariant: "cleric"`. Tag identity includes the
+variant so multiple fixed forms remain distinct. Follow-up selections for these grants are stored in
+`character.fixedFeatOptions` under a normalized `name|source|variant` key; they do not consume class
+feat slots or become bonus feats.
+
 ## Background Ability Score Choices (XPHB 2024)
 
 XPHB 2024 backgrounds carry two alternative ability score blocks (field `ability[]`):
@@ -80,6 +87,8 @@ Origin-system normalization behavior:
 - `2014`: race/subrace retains origin ASI, background origin ASI and background origin feat are stripped.
 - `2024`: background retains origin ASI and exactly one origin feat, race/subrace origin ASI and starting feat are stripped.
 - Missing canonical origin data is synthesized only at normalization time (for example: fallback 2014 race ASI choice, fallback 2024 background ASI/feat choice).
+- Character schema v4 migrates legacy semicolon-bearing fixed feat ledger keys to canonical keys and
+  preserves the suffix in `grantVariant`.
 
 Mutation hooks should stay separate from row-derivation hooks: grant/reconciliation callbacks belong in the mutation layer, while UI-facing source rows and collapse-state helpers belong in the derived-view layer.
 

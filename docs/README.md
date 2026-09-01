@@ -24,6 +24,7 @@ If you are new to the repository, read these in order:
 - codebase-tour.md: Concern-to-file routing table for fast navigation.
 - contributor-start-here.md: Practical onboarding sequence and first-change checklist.
 - desktop-ui-redesign.md: Desktop-oriented UI redesign direction, Vortex pattern review, and phased implementation plan.
+- review/structural-consistency-report.md: Structural consistency audit findings and prioritized resolution directions.
 
 ## Update Policy
 

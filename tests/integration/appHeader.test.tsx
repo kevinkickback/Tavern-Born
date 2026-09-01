@@ -118,8 +118,8 @@ describe('app header character summary', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByTestId('header-ac-badge')).toBeTruthy()
-    expect(screen.getByTestId('header-hp-badge')).toBeTruthy()
+    expect(screen.getByTestId('header-ac-badge').textContent).toContain('Armor Class 18')
+    expect(screen.getByTestId('header-hp-badge').textContent).toContain('Maximum Hit Points 42')
     expect(screen.getByText('18')).toBeTruthy()
     expect(screen.getByText('42')).toBeTruthy()
   })
@@ -144,7 +144,11 @@ describe('app header character summary', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('button', { name: 'Level up character' })).toBeTruthy()
+    expect(
+      screen
+        .getByRole('button', { name: 'Level up character' })
+        .getAttribute('data-level-up-button'),
+    ).toBe('true')
     expect(screen.getByText('Race')).toBeTruthy()
   })
 
