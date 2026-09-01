@@ -65,7 +65,7 @@ export function AppearancePanel() {
             <RadioGroup
               value={themeAppearance}
               onValueChange={(v) => setThemeAppearance(v as AppearanceTheme)}
-              className="flex gap-3"
+              className="flex gap-2"
             >
               {APPEARANCE_THEMES.map((theme) => {
                 const isSelected = themeAppearance === theme
@@ -75,7 +75,7 @@ export function AppearancePanel() {
                     key={theme}
                     onClick={() => setThemeAppearance(theme)}
                     className={cn(
-                      'relative cursor-pointer rounded-xl border-2 overflow-hidden transition-all w-28',
+                      'relative w-24 cursor-pointer overflow-hidden rounded-lg border transition-colors',
                       isSelected
                         ? 'border-accent shadow-md'
                         : 'border-border hover:border-muted-foreground/40',
@@ -85,7 +85,7 @@ export function AppearancePanel() {
                     {/* Mini UI preview */}
                     <div
                       className={cn(
-                        'h-14 p-2 flex flex-col gap-1',
+                        'flex h-10 flex-col gap-1 p-1.5',
                         isDark ? 'bg-zinc-900' : 'bg-gray-100',
                       )}
                     >
@@ -119,7 +119,7 @@ export function AppearancePanel() {
                     )}
                     <div
                       className={cn(
-                        'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium',
+                        'flex h-7 items-center gap-1.5 px-2 text-xs font-medium',
                         isSelected ? 'text-accent-foreground' : 'text-foreground',
                       )}
                     >
@@ -144,7 +144,7 @@ export function AppearancePanel() {
             <RadioGroup
               value={themeAccent}
               onValueChange={(v) => setThemeAccent(v as AccentTheme)}
-              className="flex flex-wrap gap-3"
+              className="flex flex-wrap gap-2"
             >
               {ACCENT_THEMES.map((accent) => {
                 const { label } = ACCENT_CONFIG[accent]
@@ -159,7 +159,7 @@ export function AppearancePanel() {
                     key={accent}
                     onClick={() => setThemeAccent(accent)}
                     className={cn(
-                      'relative cursor-pointer rounded-xl border-2 overflow-hidden transition-all w-28',
+                      'relative w-24 cursor-pointer overflow-hidden rounded-lg border transition-colors',
                       isSelected
                         ? 'border-accent shadow-md'
                         : 'border-border hover:border-muted-foreground/40',
@@ -167,16 +167,16 @@ export function AppearancePanel() {
                   >
                     <RadioGroupItem value={accent} className="sr-only" />
                     {/* Mini accent preview with left stripe */}
-                    <div className="h-14 flex">
-                      <div className={cn('w-4 h-full', stripeClass)} />
-                      <div className="flex-1 h-full bg-muted" />
+                    <div className="flex h-10">
+                      <div className={cn('h-full w-3', stripeClass)} />
+                      <div className="h-full flex-1 bg-muted" />
                     </div>
                     {isSelected && (
                       <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent" />
                     )}
                     <div
                       className={cn(
-                        'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium',
+                        'flex h-7 items-center gap-1.5 px-2 text-xs font-medium',
                         isSelected ? 'text-accent-foreground' : 'text-foreground',
                       )}
                     >

@@ -5,13 +5,14 @@ import { useEffect, useRef, useState } from 'react'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
-const RENDER_SCALE = 1.5
+const BASE_RENDER_SCALE = 1.5
 
 interface PdfCanvasPreviewProps {
   pdfBytes: Uint8Array
+  zoom?: number
 }
 
-export function PdfCanvasPreview({ pdfBytes }: PdfCanvasPreviewProps) {
+export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [rendering, setRendering] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -33,12 +34,12 @@ export function PdfCanvasPreview({ pdfBytes }: PdfCanvasPreviewProps) {
           if (canceled) return
 
           const page = await pdf.getPage(i)
-          const viewport = page.getViewport({ scale: RENDER_SCALE })
+          const viewport = page.getViewport({ scale: BASE_RENDER_SCALE * (zoom / 100) })
 
           const canvas = document.createElement('canvas')
           canvas.width = viewport.width
           canvas.height = viewport.height
-          canvas.className = 'mx-auto block max-w-full'
+          canvas.className = 'mx-auto block max-w-none rounded-sm bg-white shadow-md'
 
           const ctx = canvas.getContext('2d')
           if (!ctx) continue
@@ -62,27 +63,27 @@ export function PdfCanvasPreview({ pdfBytes }: PdfCanvasPreviewProps) {
     return () => {
       canceled = true
     }
-  }, [pdfBytes])
+  }, [pdfBytes, zoom])
 
   if (error) {
     return (
-      <div className="flex h-[70vh] items-center justify-center px-6">
+      <div className="flex min-h-full items-center justify-center px-6">
         <p className="text-sm text-destructive">{error}</p>
       </div>
     )
   }
 
   return (
-    <>
+    <div className="relative min-h-full bg-muted/20 p-4">
       {rendering && (
-        <div className="flex h-[70vh] items-center justify-center bg-muted/30">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-workspace-detail/90">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Sparkle className="h-4 w-4 animate-pulse" weight="duotone" />
             Rendering preview…
           </div>
         </div>
       )}
-      <div ref={containerRef} className="space-y-4 bg-muted/30 p-4" />
-    </>
+      <div ref={containerRef} className="space-y-4" />
+    </div>
   )
 }

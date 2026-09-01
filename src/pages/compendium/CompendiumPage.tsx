@@ -1,16 +1,18 @@
-import { Book, Funnel, MagnifyingGlass, X } from '@phosphor-icons/react'
+import { Book, Funnel, MagnifyingGlass } from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
 import {
   MasterDetail,
   WorkspaceBody,
@@ -27,7 +29,6 @@ import { renderEntry } from '@/lib/renderer'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import { CompendiumEntryDetails } from '@/pages/compendium/CompendiumEntryDetails'
-import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
@@ -54,15 +55,23 @@ const ENTRY_TYPES = [
 const MAX_DISPLAY = 200
 
 export function CompendiumPage() {
+  const [searchParams] = useSearchParams()
   const gameData = useGameDataStore((state) => state.gameData)
   const allowedSources = useCharacterStore((state) => state.activeCharacter?.allowedSources)
   const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set())
   const [activeSources, setActiveSources] = useState<Set<string>>(new Set())
-  const filtersOpen = useAppPreferencesStore((state) => state.compendiumFiltersOpen)
-  const setFiltersOpen = useAppPreferencesStore((state) => state.setCompendiumFiltersOpen)
   const [selectedEntry, setSelectedEntry] = useState<CompendiumEntry | null>(null)
+
+  const activeTypes = useMemo(
+    () =>
+      new Set(
+        searchParams
+          .getAll('type')
+          .filter((type) => ENTRY_TYPES.includes(type as (typeof ENTRY_TYPES)[number])),
+      ),
+    [searchParams],
+  )
 
   const effectiveAllowedSources = useMemo(() => {
     if (!allowedSources) return undefined
@@ -95,16 +104,7 @@ export function CompendiumPage() {
     [allEntries, sourceNameMap],
   )
 
-  const activeFilterCount = activeTypes.size + activeSources.size
-
-  const toggleType = (type: string) => {
-    setActiveTypes((previous) => {
-      const next = new Set(previous)
-      if (next.has(type)) next.delete(type)
-      else next.add(type)
-      return next
-    })
-  }
+  const activeFilterCount = activeSources.size
 
   const toggleSource = (source: string) => {
     setActiveSources((previous) => {
@@ -116,7 +116,6 @@ export function CompendiumPage() {
   }
 
   const clearFilters = () => {
-    setActiveTypes(new Set())
     setActiveSources(new Set())
   }
 
@@ -166,95 +165,54 @@ export function CompendiumPage() {
             </span>
           </div>
           <div className="shrink-0 border-l border-border pl-3">
-            <Button
-              variant={filtersOpen || activeFilterCount > 0 ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-9 gap-1.5 px-3"
-              aria-expanded={filtersOpen}
-              onClick={() => setFiltersOpen(!filtersOpen)}
-            >
-              <Funnel weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
-              Filters
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="h-4 min-w-4 px-1 text-[10px] tabular-nums">
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={activeFilterCount > 0 ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-9 gap-1.5 px-3"
+                >
+                  <Funnel weight={activeFilterCount > 0 ? 'fill' : 'regular'} />
+                  Sources
+                  {activeFilterCount > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="h-4 min-w-4 px-1 text-[10px] tabular-nums"
+                    >
+                      {activeFilterCount}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel>Filter by source</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {allSources.map((source) => (
+                  <DropdownMenuCheckboxItem
+                    key={source}
+                    checked={activeSources.has(source)}
+                    onCheckedChange={() => toggleSource(source)}
+                    onSelect={(event) => event.preventDefault()}
+                    className="cursor-pointer"
+                  >
+                    <span className="min-w-0 flex-1 truncate">
+                      {sourceNameMap.get(source) ?? source}
+                    </span>
+                    <span className="shrink-0 text-[10px] text-muted-foreground">{source}</span>
+                  </DropdownMenuCheckboxItem>
+                ))}
+                {activeFilterCount > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={clearFilters} className="cursor-pointer">
+                      Clear source filters
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </WorkspaceToolbar>
-
-        {filtersOpen && (
-          <div className="border-t border-border-subtle px-3 py-3">
-            <div className="flex items-start gap-3">
-              <span className="w-12 shrink-0 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Type
-              </span>
-              <div className="flex flex-1 flex-wrap gap-1">
-                {ENTRY_TYPES.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    aria-pressed={activeTypes.has(type)}
-                    onClick={() => toggleType(type)}
-                    className={cn(
-                      'h-6 rounded border px-2 text-[11px] transition-colors',
-                      activeTypes.has(type)
-                        ? 'border-primary/60 bg-primary/15 text-primary'
-                        : 'border-border bg-workspace-pane text-muted-foreground hover:bg-surface-hover hover:text-foreground',
-                    )}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-2 flex items-start gap-3">
-              <span className="w-12 shrink-0 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Source
-              </span>
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
-                <Select value="" onValueChange={(source) => source && toggleSource(source)}>
-                  <SelectTrigger className="h-7 w-48 bg-workspace-pane text-xs shadow-none">
-                    <SelectValue placeholder="Add source filter" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allSources
-                      .filter((source) => !activeSources.has(source))
-                      .map((source) => (
-                        <SelectItem key={source} value={source} className="text-xs">
-                          {sourceNameMap.get(source) ?? source}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-                {Array.from(activeSources)
-                  .sort()
-                  .map((source) => (
-                    <button
-                      key={source}
-                      type="button"
-                      onClick={() => toggleSource(source)}
-                      className="flex h-6 items-center gap-1 rounded border border-primary/60 bg-primary/15 px-2 text-[11px] text-primary"
-                    >
-                      {sourceNameMap.get(source) ?? source}
-                      <X className="size-2.5" />
-                    </button>
-                  ))}
-                {activeFilterCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="ml-1 h-6 text-[11px] text-muted-foreground hover:text-foreground"
-                  >
-                    Clear all
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       <WorkspaceBody className="overflow-hidden">

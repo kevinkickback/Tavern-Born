@@ -36,6 +36,12 @@ import { SettingsPage } from '@/pages/SettingsPage'
 import { SourcesPage } from '@/pages/sources/SourcesPage'
 import { SpellsPage } from '@/pages/spells/SpellsPage'
 import { applyUiScale, useAppPreferencesStore } from '@/store/appPreferencesStore'
+import { useCharacterStore } from '@/store/characterStore'
+
+function CharacterSheetRedirect() {
+  const originSystem = useCharacterStore((state) => state.activeCharacter?.originSystem)
+  return <Navigate to={`/character-sheet/${originSystem ?? '2024'}`} replace />
+}
 
 function CloseConfirmDialog() {
   const [open, setOpen] = useState(false)
@@ -134,7 +140,15 @@ function App() {
             <Route path="/details/portrait" element={<PortraitPage />} />
             <Route path="/details/characteristics" element={<CharacteristicsPage />} />
             <Route path="/details/conditions" element={<ConditionsPage />} />
-            <Route path="/character-sheet" element={<CharacterSheetPage />} />
+            <Route path="/character-sheet" element={<CharacterSheetRedirect />} />
+            <Route
+              path="/character-sheet/2014"
+              element={<CharacterSheetPage key="character-sheet-2014" templateId="2014" />}
+            />
+            <Route
+              path="/character-sheet/2024"
+              element={<CharacterSheetPage key="character-sheet-2024" templateId="2024" />}
+            />
             <Route path="/compendium" element={<CompendiumPage />} />
             <Route path="/sources" element={<SourcesPage />} />
             <Route path="/settings" element={<SettingsPage />} />

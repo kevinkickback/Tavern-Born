@@ -14,7 +14,6 @@ import { toast } from 'sonner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
@@ -274,24 +273,28 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <Section
-        title="Data Source Configuration"
-        description="Configure where to load game data from."
+        title={selectorOnly ? 'Choose a data source' : 'Data Source Configuration'}
+        description={
+          selectorOnly
+            ? 'Use a remote repository or a local 5etools data directory.'
+            : 'Configure where to load game data from.'
+        }
         className="pt-0"
       >
-        <div className="space-y-6">
+        <div className="space-y-4">
           {!selectorOnly && hasActiveDataSource && !isSelectingDataSource ? (
-            <div className="relative space-y-3 bg-muted/50 p-4 rounded-lg">
-              <Badge variant="default" className="gap-1 absolute top-3 right-3">
-                <CheckCircle size={14} />
+            <div className="relative space-y-3 rounded-md border border-border bg-workspace-pane p-4">
+              <Badge variant="default" className="absolute right-3 top-3 gap-1">
+                <CheckCircle className="size-3.5" />
                 Active
               </Badge>
               <div className="flex items-center gap-2">
                 {dataSourceConfig.type === 'remote' ? (
-                  <CloudArrowDown size={18} className="text-muted-foreground" />
+                  <CloudArrowDown className="size-[1.125rem] text-muted-foreground" />
                 ) : (
-                  <FolderOpen size={18} className="text-muted-foreground" />
+                  <FolderOpen className="size-[1.125rem] text-muted-foreground" />
                 )}
                 <span className="text-sm font-medium capitalize">
                   {dataSourceConfig.type === 'remote' ? 'Remote URL' : 'Local Directory'}
@@ -321,9 +324,9 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
           ) : (
             <>
               {!selectorOnly && !hasActiveDataSource && (
-                <div className="relative space-y-3 bg-muted/50 p-4 rounded-lg">
+                <div className="relative space-y-3 rounded-md border border-border bg-workspace-pane p-4">
                   <div className="flex items-center gap-2">
-                    <XCircle size={18} className="text-muted-foreground" />
+                    <XCircle className="size-[1.125rem] text-muted-foreground" />
                     <span className="text-sm font-medium">None</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -339,19 +342,17 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                 value={sourceType}
                 onValueChange={(v) => handleSourceTypeChange(v as 'local' | 'remote')}
               >
-                <div className="flex justify-center">
-                  <div className="w-1/2 min-w-[280px]">
-                    <TabsList className="grid grid-cols-2 w-full">
-                      <TabsTrigger value="remote" className="gap-2">
-                        <CloudArrowDown size={18} />
-                        Remote URL
-                      </TabsTrigger>
-                      <TabsTrigger value="local" className="gap-2">
-                        <FolderOpen size={18} />
-                        Local Directory
-                      </TabsTrigger>
-                    </TabsList>
-                  </div>
+                <div className="mx-auto w-full max-w-xl">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="remote" className="gap-2">
+                      <CloudArrowDown className="size-[1.125rem]" />
+                      Remote URL
+                    </TabsTrigger>
+                    <TabsTrigger value="local" className="gap-2">
+                      <FolderOpen className="size-[1.125rem]" />
+                      Local Directory
+                    </TabsTrigger>
+                  </TabsList>
                 </div>
                 <TabsContent value="remote" className="space-y-4 mt-4">
                   <div className="space-y-2">
@@ -372,12 +373,12 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                       )}
                       {validationStatus === 'valid' && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <CheckCircle size={18} className="text-success" />
+                          <CheckCircle className="size-[1.125rem] text-success" />
                         </div>
                       )}
                       {validationStatus === 'invalid' && (
                         <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <XCircle size={18} className="text-destructive" />
+                          <XCircle className="size-[1.125rem] text-destructive" />
                         </div>
                       )}
                     </div>
@@ -415,7 +416,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                         variant="outline"
                         className="gap-2 shrink-0"
                       >
-                        <FolderOpen size={16} />
+                        <FolderOpen className="size-4" />
                         {isValidating ? 'Selecting...' : 'Select Folder'}
                       </Button>
                     </div>
@@ -447,7 +448,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                 variant="destructive"
                 className="gap-2"
               >
-                <Trash size={16} />
+                <Trash className="size-4" />
                 Clear Data
               </Button>
             )}
@@ -462,7 +463,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                   variant="outline"
                   className="gap-2"
                 >
-                  <ArrowsLeftRight size={16} />
+                  <ArrowsLeftRight className="size-4" />
                   Change Source
                 </Button>
               )}
@@ -487,7 +488,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                   variant="outline"
                   className="gap-2"
                 >
-                  <ArrowClockwise size={16} />
+                  <ArrowClockwise className="size-4" />
                   Update Data
                 </Button>
               )}
@@ -498,7 +499,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                   variant="outline"
                   className={`gap-2 ${!isLoading && sourcePath && isValidSource ? '!bg-success !text-success-foreground !border-success hover:!bg-success/90 hover:!border-success/90' : 'text-muted-foreground'}`}
                 >
-                  <Database size={16} />
+                  <Database className="size-4" />
                   {isLoading ? 'Saving...' : 'Save & Load'}
                 </Button>
               )}
@@ -520,32 +521,28 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
       )}
 
       {isLoading && loadProgress && (
-        <Card className="border-primary/50">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10 animate-pulse">
-                <Database size={20} className="text-primary" />
-              </div>
-              <div className="flex-1">
-                <CardTitle className="text-base">Loading Game Data</CardTitle>
-                <CardDescription>
-                  {loadProgress.resource} ({loadProgress.current} of {loadProgress.total})
-                </CardDescription>
-              </div>
-              <Badge variant="secondary" className="font-mono">
-                {getProgressPercent()}%
-              </Badge>
+        <div className="rounded-md border border-primary/50 bg-workspace-pane p-4">
+          <div className="flex items-center gap-3">
+            <div className="animate-pulse rounded-md bg-primary/10 p-2">
+              <Database className="size-5 text-primary" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <Progress value={getProgressPercent()} className="h-2" />
-          </CardContent>
-        </Card>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-semibold">Loading Game Data</h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {loadProgress.resource} ({loadProgress.current} of {loadProgress.total})
+              </p>
+            </div>
+            <Badge variant="secondary" className="tabular-nums">
+              {getProgressPercent()}%
+            </Badge>
+          </div>
+          <Progress value={getProgressPercent()} className="mt-3 h-2" />
+        </div>
       )}
 
       {error && (
         <Alert variant="destructive">
-          <Warning size={18} />
+          <Warning className="size-[1.125rem]" />
           <AlertTitle>Loading Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>

@@ -9,52 +9,59 @@ interface WizardNavigationProps {
 
 export function WizardNavigation({ steps, currentStep }: WizardNavigationProps) {
   return (
-    <div className="flex items-start pl-6 pr-12 pt-5 pb-4 border-b border-border bg-muted/20 flex-shrink-0">
-      {steps.map((step, index) => {
-        const Icon = step.icon
-        const isActive = currentStep === step.id
-        const isCompleted = currentStep > step.id
-        const isLast = index === steps.length - 1
+    <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-workspace-pane p-4">
+      <div className="mb-5 px-2">
+        <h2 className="text-base font-semibold">Create Character</h2>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          Guided setup for a playable character.
+        </p>
+      </div>
+      <ol className="space-y-0.5">
+        {steps.map((step) => {
+          const Icon = step.icon
+          const isActive = currentStep === step.id
+          const isCompleted = currentStep > step.id
 
-        return (
-          <>
-            <div key={step.id} className="flex flex-col items-center gap-1.5 flex-shrink-0">
+          return (
+            <li key={step.id}>
               <div
+                aria-current={isActive ? 'step' : undefined}
                 className={cn(
-                  'flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors',
-                  isActive && 'border-accent bg-accent text-accent-foreground',
-                  isCompleted && 'border-accent/60 bg-accent/15 text-accent-foreground',
-                  !isActive && !isCompleted && 'border-border bg-background text-muted-foreground',
+                  'relative flex h-10 items-center gap-3 rounded-md px-2 text-sm transition-colors',
+                  isActive && 'bg-secondary font-medium text-primary',
+                  isCompleted && !isActive && 'text-foreground',
+                  !isActive && !isCompleted && 'text-muted-foreground',
                 )}
               >
-                {isCompleted ? (
-                  <Check className="size-4" weight="bold" />
-                ) : (
-                  <Icon className="size-4" weight={isActive ? 'fill' : 'regular'} />
+                {isActive && (
+                  <span className="absolute inset-y-2 left-0 w-0.5 rounded-r-full bg-primary" />
                 )}
+                <span
+                  className={cn(
+                    'flex size-7 shrink-0 items-center justify-center rounded-md border',
+                    isActive && 'border-primary/50 bg-primary/10 text-primary',
+                    isCompleted && !isActive && 'border-success/40 bg-success/10 text-success',
+                    !isActive && !isCompleted && 'border-border bg-surface-raised',
+                  )}
+                >
+                  {isCompleted ? (
+                    <Check className="size-3.5" weight="bold" />
+                  ) : (
+                    <Icon className="size-3.5" weight={isActive ? 'fill' : 'regular'} />
+                  )}
+                </span>
+                <span className="truncate">{step.label}</span>
+                <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+                  {step.id}
+                </span>
               </div>
-              <span
-                className={cn(
-                  'text-xs font-medium whitespace-nowrap',
-                  isActive && 'text-foreground',
-                  isCompleted && 'text-muted-foreground',
-                  !isActive && !isCompleted && 'text-muted-foreground/60',
-                )}
-              >
-                {step.label}
-              </span>
-            </div>
-            {!isLast && (
-              <div
-                className={cn(
-                  'flex-1 h-px mx-2 mt-4 transition-colors',
-                  isCompleted ? 'bg-accent/60' : 'bg-border',
-                )}
-              />
-            )}
-          </>
-        )
-      })}
-    </div>
+            </li>
+          )
+        })}
+      </ol>
+      <p className="mt-auto px-2 pt-4 text-xs text-muted-foreground">
+        Step {currentStep} of {steps.length}
+      </p>
+    </aside>
   )
 }

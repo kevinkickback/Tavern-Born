@@ -81,14 +81,14 @@ The contextual pane is workspace-specific but remains rendered at a stable width
 
 | Workspace | Context pane |
 | --- | --- |
-| Start | Characters and Settings. Settings owns its categories as in-page tabs. |
+| Start | A Character Library group containing Characters, followed by a compact recent-character switcher. Settings is a primary-rail utility and owns its categories as in-page tabs. |
 | Build (`Character Core`) | Race, Class, Background, Ability Scores, Proficiencies, Feats, Spells, Equipment |
-| Character Sheet | Sheet sections, PDF/export options, validation summary |
-| Compendium | Persistent pane; useful browse shortcuts and context will be assigned in a later pass. |
+| Character Sheet | Separate 5e (2014) and 5.5e (2024) document-template destinations |
+| Compendium | The complete content taxonomy grouped into Character Options, Rules & Play, and Reference. The sidebar owns type selection while the filter panel owns source refinement. |
 
 This is clearer than placing the entire information architecture in one large sidebar. It also allows the primary rail to remain stable while the second pane provides the detailed navigation appropriate to the current task.
 
-The contextual pane is now a permanent part of every workspace. Pages that do not yet have meaningful contextual content retain the empty region temporarily rather than changing the shell geometry; future passes should populate it with useful navigation, commands, or summaries without inventing filler. Primary and contextual navigation remain transparent over the same dark shell used by the status bar. The contextual pane has no hard right border or separate header; navigation begins directly at the top of its content row. The primary rail spans the title, content, and status rows, while neither navigation region repeats the application logo or title.
+The contextual pane is now a permanent part of every workspace. Start uses its lower region for a five-item recent-character switcher with unsaved-change protection. Settings is pinned to the bottom of the primary rail as an application utility instead of posing as Character Library content. Compendium exposes its complete taxonomy in grouped shortcuts that apply the existing type filter without creating duplicate pages; its Filters control is reserved for secondary source refinement. Context panes should contain useful navigation, commands, or summaries rather than filler. Primary and contextual navigation remain transparent over the same dark shell used by the status bar. The contextual pane has no hard right border or separate header; navigation begins directly at the top of its content row. The primary rail spans the title, content, and status rows, while neither navigation region repeats the application logo or title.
 
 ### 3. It gives the active context a first-class place
 
@@ -106,7 +106,7 @@ The focal workspace header is 64 px tall. Its left region pairs a larger page ti
 `Level Up` and `Save` are contextual commands:
 
 - Save remains visible in every workspace and is disabled when no character is loaded or there are no changes to save. The persistent status strip owns the unsaved-state indicator, so the button does not repeat it.
-- Level Up appears only in Build, Character Sheet, and related character-editing workspaces and always uses a visible button surface rather than relying on hover to communicate interactivity.
+- Level Up appears throughout the complete Build workspace, including Character Core and Character Details, and always uses a visible button surface rather than relying on hover to communicate interactivity. It is omitted from Start, Compendium, Settings, and Character Sheet, where leveling is outside the current task context.
 
 ### 4. It uses page primitives rather than bespoke page wrappers
 
@@ -200,7 +200,7 @@ Vortex's feature registration and extension model are central to its product. Ta
 - Edge-to-edge, square structural surface.
 - Icon plus tooltip for each primary workspace.
 - Each workspace target uses a clearly visible but neutral one-pixel outline so neighboring icons read as distinct controls. Hover strengthens the neutral outline, while the selected item replaces it with the accent edge and subtle filled background.
-- Application settings belong to the Start contextual pane instead of consuming a primary workspace slot.
+- Application settings are a bottom-pinned primary-rail utility rather than a Character Library destination or full workspace.
 - Avoid nested controls and decorative separators.
 
 ### Context pane
@@ -237,6 +237,10 @@ Vortex's feature registration and extension model are central to its product. Ta
 - Long details such as a source path or error message are available on hover instead of expanding the strip.
 - Future import, export, PDF generation, and update progress may temporarily replace lower-priority status items while active.
 
+### Modal workbenches
+
+Large modal workflows follow the same surface hierarchy as the main application. Selection dialogs use a functional title/search header, optional neutral filter pane, independently scrolling result collection, and persistent selection/action footer. Their shared structure applies to feats, spells, equipment, subclasses, fighting styles, metamagic, and optional features without changing domain-specific selection rules. Level Up uses a restrained class list and multiclass section instead of per-class gradients or nested presentation cards. Character creation uses a stable vertical step navigator beside one scrollable work area; navigation remains guided and validation-gated rather than pretending its steps are freely selectable tabs.
+
 ## Visual system changes
 
 ### Density
@@ -244,6 +248,8 @@ Vortex's feature registration and extension model are central to its product. Ta
 Create a density system independently from the existing UI scale. UI scale enlarges everything; density determines how much information fits in a workspace.
 
 The implementation uses `rem` for typography, controls, pane headers, rows, spacing, and shell geometry. The existing 80–120% Interface Scale preference changes the root font size and therefore remains the single authoritative scale control. One-pixel borders and other intentionally physical separators do not scale. Do not introduce a second transform-based zoom or page-specific scale multiplier.
+
+Viewport size controls layout, not apparent component scale. Resizing the window may change column count, wrapping, pane behavior, or overflow, but must not enlarge a card or control merely because fewer columns fit. Gallery entities therefore use stable, bounded `rem`-based tracks; Interface Scale remains the only app-level mechanism that changes their physical size. When a compact visual indicator needs a comfortable interaction target, keep the target at least 32 px while sizing the indicator inside it independently.
 
 Recommended default targets:
 
@@ -408,7 +414,7 @@ Searchable options | Configuration and rules canvas
 
 ### Compendium
 
-Compendium is the implemented master-detail reference screen.
+Compendium is the implemented master-detail reference screen. Its contextual sidebar owns the complete, grouped content taxonomy. The compact toolbar `Sources` dropdown provides multi-source refinement without duplicating type controls or expanding a second filter row.
 
 - The permanent contextual pane is currently empty; a later pass should add useful browse shortcuts or context without duplicating the Results master pane.
 - The inset command region contains the prominent search field, result count, filter toggle, and expanded type/source filters.
@@ -419,10 +425,11 @@ Compendium is the implemented master-detail reference screen.
 
 ### Character sheet and PDF preview
 
-- Treat the character sheet as a document workspace.
-- Use toolbar controls for view mode, zoom, export, and print.
-- Allow Generated Sheet, PDF Preview, and Validation/Issues as tabs or view modes.
-- Keep document controls visually distinct from character editing commands.
+- Character Sheet is a document workspace with sibling `5e (2014)` and `5.5e (2024)` destinations in its permanent contextual pane. Both routes render one shared page implementation with a fixed template, ensuring that their geometry, states, and commands remain identical.
+- Entering the workspace through its primary-rail destination redirects to the active character's ruleset; users may deliberately open the other template from contextual navigation. A compact warning badge identifies that mismatch without preventing export.
+- The single functional toolbar identifies the template and owns generation state, document zoom, regeneration, and PDF download. Template selection does not reappear as an in-page dropdown.
+- The preview consumes the remaining bounded workspace height and owns horizontal and vertical scrolling. Zoom changes only the rendered document, not the application shell or Interface Scale.
+- Loading, empty, error, and ready states occupy the same preview surface. Do not wrap export options and preview in separate gradient-header cards.
 
 ### Settings
 
@@ -545,6 +552,7 @@ Status: complete. Compendium is converted, and Settings is consolidated into one
 6. Feats uses an inset list/detail workbench with a right-side rules inspector using the shared responsive master-pane width. The collection header is functional: count-bearing `All`, `Character`, and `Bonus` tabs filter one shared page, while `Needs Setup` appears only when outstanding ASI, racial, origin, or feat-configuration work exists. `All` is the default. Character and Bonus are flat section groups with a heading and divider rather than bordered outer cards; individual feats remain comfortable rounded entity rows. Clicking or keyboard-selecting a feat updates the inspector, while hover and ordinary focus do not replace the current selection. Rows retain the default cursor, only selected feats receive the restrained inset selection treatment, and explicit setup, edit, remove, and add controls use their normal interactive affordances. When Bonus Feats is empty it follows the optional-collection empty-state standard with a lightning icon, concise examples of DM- or item-granted feats, and a conventional `Add Bonus Feat` button. Once populated, the add command moves to the section header and the content region contains only feat rows. Pending work shares one restrained issue region, while Sources remains pinned below the independently scrolling list.
 7. Spells uses the same inset collection/inspector workbench and responsive right-side width. Its collection header provides count-bearing `All`, `Class`, `Racial`, and `Bonus` filters over one shared page, with `All` as the default. Spell profiles remain collapsible but are flat section groups: the profile trigger is a simple divider-backed heading, not a rounded bordered outer card. Spell levels remain bounded collections because that hierarchy materially improves scanning; each uses one rounded structural border, neutral header, responsive gap-pixel grid, comfortable 44px rows, and separators only around real entries. Because spell names provide complete pinnable rules tooltips, rows do not duplicate spell descriptions or add a second inspector selection model. The static `Spellcasting details` pane remains reserved for compact casting statistics and slot summaries. Profile totals count every displayed row, including the available class list for true prepared casters. Subclass grants remain within their parent class profile, carry source attribution, and respect fixed/always-prepared behavior. Bonus Spells follows the optional-collection pattern: the empty profile presents an icon, concise explanation, and normal add button; after spells exist, the add command moves to the profile section's trailing action region. Racial selection, bonus selection, known/prepared limits, swaps, removal, preparation, tooltips, and Sources remain functional.
 8. Equipment now uses the standard inset collection/inspector workbench and responsive right-side width. Four oversized summary cards and the nested inventory card have been replaced by a compact horizontal character-equipment strip plus a flat, searchable inventory table. Weight and encumbrance, attunement usage, derived armor class, and editable denomination fields remain continuously visible without dominating the workspace. Category tabs and search sit directly above the independently scrolling list. Each row retains quantity editing, equip and attune switches, restriction handling, and removal, while its item-identity control selects a structured rules inspector without turning the row's embedded controls into one ambiguous click target. The add-item modal, onboarding hint, restriction override, provenance footer, attunement limits, and armor calculations remain intact. Narrow workspaces allow the data table and summary strip to scroll horizontally rather than clipping controls.
+9. Character Details pages use the same 12 px inset and bounded workspace surfaces without repeating the canvas page title. Portrait is a collapsible two-pane editor: the standard-width preview and transform pane sits beside a flexible portrait library, both regions use matched pane headers and restrained borders, and the standard paired pane controls remain in the library header area. Library thumbnails use a comfortable 9rem minimum track because this page benefits more from visual recognition than dense scanning. Characteristics replaces its long four-card stack with functional Identity, Personality, Story, and Connections tabs; fields remain mounted while inactive sections are hidden so in-progress edits retain state. Its identity summary inputs use compact neutral fields rather than colorful dashboard tiles. Conditions presents combat state, exhaustion, active conditions, and class resources as sections of one scrollable session-state workbench rather than separate cards. Form/session workbenches are centered with an 80rem maximum, while collection-oriented Sources may expand to 90rem for useful additional columns. Sources keeps its edition rule, presets, selected count, conflicts, and grouped choices attached to one collection and consolidates source-related cautions into one notice region above the controls. All selectable portraits, conditions, sourcebooks, and visual presets expose persistent pressed state, while explicit actions use the pointer cursor.
 
 Exit criterion: the complete character-building workflow no longer depends on nested structural cards.
 
@@ -552,7 +560,9 @@ Exit criterion: the complete character-building workflow no longer depends on ne
 
 1. Equipment is converted to a compact table and item inspector while retaining all inventory-management behavior.
 2. Spells and Feats are converted to dense list/detail layouts; complete representative visual validation before closing the phase.
-3. Convert Character Sheet and PDF preview to a document workspace.
+3. Character Sheet and PDF preview are converted to a document workspace. Separate 5e (2014) and 5.5e (2024) contextual destinations share one fixed-template implementation, while the toolbar provides generation status, zoom, regeneration, and download controls.
+
+Status: complete for the current PDF workflow. Printing and a dedicated validation/issues view remain optional future capabilities rather than empty tabs.
 
 Exit criterion: large collections remain usable without excessive scrolling or visual noise.
 

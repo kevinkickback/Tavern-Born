@@ -148,6 +148,28 @@ describe('app header character summary', () => {
     expect(screen.getByText('Race')).toBeTruthy()
   })
 
+  test('keeps level up available throughout Character Details', () => {
+    render(
+      <MemoryRouter initialEntries={['/details/portrait']}>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Level up character' })).toBeTruthy()
+    expect(screen.getByText('Portrait')).toBeTruthy()
+  })
+
+  test('omits level up from the separate Character Sheet workspace', () => {
+    render(
+      <MemoryRouter initialEntries={['/character-sheet/2024']}>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Level up character' })).toBeNull()
+    expect(screen.getByText('Character Sheet')).toBeTruthy()
+  })
+
   test('uses the active character portrait when one is available', () => {
     const portrait = 'data:image/png;base64,cG9ydHJhaXQ='
     useCharacterStore.setState((state) => ({

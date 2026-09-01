@@ -242,14 +242,14 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg flex flex-col gap-0 p-0 overflow-hidden max-h-[90vh]">
-          <div className="h-12 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent flex items-center gap-3 px-5 shrink-0">
-            <Scroll className="h-4 w-4 text-indigo-600 dark:text-indigo-400" weight="duotone" />
-            <span className="text-sm font-bold">Level Up</span>
-            <span className="text-sm text-muted-foreground truncate min-w-0">{character.name}</span>
-            <div className="ml-auto mr-8 flex items-center gap-2 shrink-0">
+        <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 sm:max-w-xl">
+          <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-5 pr-12">
+            <Scroll className="size-5 text-primary" weight="duotone" />
+            <span className="text-base font-semibold">Level Up</span>
+            <span className="min-w-0 truncate text-sm text-muted-foreground">{character.name}</span>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <span className="text-xs text-muted-foreground">Total Level</span>
-              <span className="inline-flex items-center justify-center h-6 min-w-[1.5rem] px-1.5 rounded-md bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-bold tabular-nums">
+              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-2 text-sm font-semibold tabular-nums text-primary">
                 {totalLevel}
               </span>
             </div>
@@ -261,71 +261,51 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
           </DialogHeader>
 
           <ScrollArea className="flex-1 overflow-hidden">
-            <div className="px-5 py-4 space-y-4">
+            <div className="space-y-5 px-5 py-5">
               <div>
-                <div className="flex items-center gap-2 mb-2.5">
-                  <Scroll className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <Scroll className="size-4 text-muted-foreground" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Your Classes
                   </span>
                 </div>
 
                 {classProgression.length > 0 ? (
-                  <div className="border border-border rounded-xl overflow-hidden">
-                    {classProgression.map((entry, index) => {
-                      const colors = [
-                        'from-indigo-500 to-indigo-600/60',
-                        'from-violet-500 to-violet-600/60',
-                        'from-teal-500 to-teal-600/60',
-                        'from-amber-500 to-amber-600/60',
-                        'from-rose-500 to-rose-600/60',
-                      ]
-                      const gradient = colors[index % colors.length]
-                      return (
-                        <div
-                          key={`${entry.name}|${entry.source ?? ''}`}
-                          className="flex items-center gap-3 px-4 py-3 border-b border-border/40 last:border-b-0 hover:bg-muted/20 transition-colors"
-                        >
-                          <div
-                            className={cn(
-                              'h-9 w-9 rounded-lg bg-gradient-to-br flex items-center justify-center shrink-0',
-                              gradient,
-                            )}
-                          >
-                            {(() => {
-                              const iconUrl = getClassIconUrl(entry.name)
-                              return iconUrl ? (
-                                <img
-                                  src={iconUrl}
-                                  alt={entry.name}
-                                  className="h-5 w-5"
-                                  style={{ filter: 'brightness(0) invert(1)' }}
-                                />
-                              ) : (
-                                <Sword className="h-4 w-4 text-white" weight="bold" />
-                              )
-                            })()}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-sm leading-tight truncate">
-                              {entry.name}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
-                              Level {entry.levels}
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            disabled={isAtCap}
-                            onClick={() => handleAddLevel(index)}
-                            className="h-8 gap-1 shrink-0"
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                            Level Up
-                          </Button>
+                  <div className="overflow-hidden rounded-md border border-border bg-workspace-pane">
+                    {classProgression.map((entry, index) => (
+                      <div
+                        key={`${entry.name}|${entry.source ?? ''}`}
+                        className="flex min-h-14 items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-b-0"
+                      >
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border bg-primary/10 text-primary">
+                          {(() => {
+                            const iconUrl = getClassIconUrl(entry.name)
+                            return iconUrl ? (
+                              <img src={iconUrl} alt={entry.name} className="size-5" />
+                            ) : (
+                              <Sword className="size-4" weight="bold" />
+                            )
+                          })()}
                         </div>
-                      )
-                    })}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold leading-tight">
+                            {entry.name}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            Level {entry.levels} · {entry.source || 'Unknown source'}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          disabled={isAtCap}
+                          onClick={() => handleAddLevel(index)}
+                          className="h-8 shrink-0 gap-1.5"
+                        >
+                          <Plus className="size-3.5" />
+                          Level Up
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-3">
@@ -333,14 +313,14 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                   </p>
                 )}
 
-                <div className="flex items-center justify-between mt-2 min-h-[28px]">
+                <div className="mt-2 flex min-h-7 items-center justify-between">
                   {classProgression.length > 0 && totalLevel > 1 ? (
                     <button
                       type="button"
-                      className="flex items-center gap-1 text-xs text-destructive/70 hover:text-destructive font-medium transition-colors"
+                      className="flex cursor-pointer items-center gap-1 text-xs font-medium text-destructive/75 transition-colors hover:text-destructive"
                       onClick={() => setConfirmRemoveOpen(true)}
                     >
-                      <ArrowDown className="h-3 w-3" />
+                      <ArrowDown className="size-3" />
                       Remove last level
                       {lastClassName && <span className="opacity-80">({lastClassName})</span>}
                     </button>
@@ -348,43 +328,46 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                     <span />
                   )}
                   {isAtCap && (
-                    <span className="text-xs text-warning-foreground dark:text-warning bg-warning/10 border border-warning/30 rounded-md px-2 py-1">
+                    <span className="rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-xs text-warning-foreground dark:text-warning">
                       Level cap reached ({MAX_CHARACTER_LEVEL})
                     </span>
                   )}
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center gap-2 mb-2.5">
-                  <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              <div className="border-t border-border pt-4">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <Users className="size-4 text-muted-foreground" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Multiclass
                   </span>
                 </div>
 
                 {isAtCap ? (
-                  <p className="text-xs text-muted-foreground text-center py-3 border border-border/50 rounded-xl bg-muted/10">
+                  <p className="rounded-md border border-border bg-workspace-pane py-3 text-center text-xs text-muted-foreground">
                     Maximum level reached.
                   </p>
                 ) : (
-                  <div className="border border-border rounded-xl p-3 bg-muted/5 space-y-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <Label
-                        htmlFor={ignoreRestrictionsId}
-                        className="text-xs text-muted-foreground cursor-pointer select-none"
-                      >
-                        Ignore ability score requirements
-                      </Label>
-                      <Switch
-                        id={ignoreRestrictionsId}
-                        checked={ignoreRestrictions}
-                        onCheckedChange={setIgnoreRestrictions}
-                      />
+                  <div className="space-y-3 rounded-md border border-border bg-workspace-pane p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs text-muted-foreground">Add level 1 in another class.</p>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Label
+                          htmlFor={ignoreRestrictionsId}
+                          className="cursor-pointer select-none text-xs text-muted-foreground"
+                        >
+                          Ignore requirements
+                        </Label>
+                        <Switch
+                          id={ignoreRestrictionsId}
+                          checked={ignoreRestrictions}
+                          onCheckedChange={setIgnoreRestrictions}
+                        />
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <Select value={multiclassSelection} onValueChange={setMulticlassSelection}>
-                        <SelectTrigger className="flex-1 h-9">
+                        <SelectTrigger className="h-9 flex-1 bg-workspace-detail shadow-none">
                           <SelectValue placeholder="Choose a class..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -424,9 +407,9 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                       <Button
                         onClick={handleAddMulticlass}
                         disabled={!multiclassSelection}
-                        className="h-9 shrink-0 gap-1"
+                        className="h-9 shrink-0 gap-1.5"
                       >
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="size-3.5" />
                         Add
                       </Button>
                     </div>
@@ -436,7 +419,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
             </div>
           </ScrollArea>
 
-          <div className="px-5 py-3 border-t border-border/40 flex justify-end shrink-0">
+          <div className="flex shrink-0 justify-end border-t border-border bg-surface-raised px-5 py-3">
             <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
               Close
             </Button>

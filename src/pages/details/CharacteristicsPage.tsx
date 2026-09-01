@@ -20,7 +20,6 @@ import {
 import { toast } from 'sonner'
 import { RichTextArea } from '@/components/editor/RichTextArea'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -31,6 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { ALIGNMENTS, LIFESTYLES } from '@/lib/5etools/constants'
 import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
@@ -40,6 +40,8 @@ import { useCharacterStore } from '@/store/characterStore'
 import { NoCharCard } from '../_shared'
 
 const EMPTY_ORGANIZATIONS: [] = []
+
+type CharacteristicsSection = 'identity' | 'personality' | 'story' | 'connections'
 
 const CUSTOM_GRADIENT_PRESETS = [
   { key: 'indigo', className: 'from-indigo-500/80 to-indigo-700/80' },
@@ -114,6 +116,7 @@ function Field({ id, label, children }: { id: string; label: string; children: R
 }
 
 export function CharacteristicsPage() {
+  const [activeSection, setActiveSection] = useState<CharacteristicsSection>('identity')
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const updateActiveCharacterDetails = useCharacterStore(
@@ -358,531 +361,616 @@ export function CharacteristicsPage() {
   }
 
   return (
-    <div>
-      {/* Page header */}
-      <div className="px-6 py-5 page-header-band shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <Sparkle className="h-6 w-6 text-primary" weight="duotone" />
-            <div>
-              <h1 className="text-2xl font-display font-bold">Characteristics</h1>
-              <p className="text-sm text-muted-foreground">Identity, personality, and story</p>
-            </div>
+    <WorkspacePage className="p-3">
+      <WorkspaceBody className="mx-auto flex w-full max-w-[var(--workspace-form-max-width)] flex-col overflow-hidden rounded-lg border border-border bg-workspace-pane">
+        <WorkspacePaneHeader ariaLabel="Characteristic sections" className="overflow-x-auto">
+          <div className="flex h-full min-w-max items-stretch gap-5" role="tablist">
+            {(
+              [
+                ['identity', 'Identity', IdentificationCard],
+                ['personality', 'Personality', Brain],
+                ['story', 'Story', Scroll],
+                ['connections', 'Connections', Users],
+              ] as const
+            ).map(([value, label, Icon]) => {
+              const selected = activeSection === value
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => setActiveSection(value)}
+                  className={cn(
+                    'relative flex cursor-pointer items-center gap-2 border-b-2 px-0.5 text-sm font-semibold transition-colors',
+                    selected
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+                  )}
+                >
+                  <Icon className="size-4" weight={selected ? 'fill' : 'regular'} />
+                  {label}
+                </button>
+              )
+            })}
           </div>
-        </div>
-      </div>
+        </WorkspacePaneHeader>
 
-      <div className="px-6 pb-6">
-        {/* Top input tiles */}
-        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          {/* Character Name tile */}
-          <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center gap-3 p-4">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                <TextAa className="h-5 w-5 text-white" weight="bold" />
-              </div>
-              <div className="flex-1 min-w-0 space-y-1">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Character Name
-                </p>
-                <Input
-                  id={charNameId}
-                  value={charName}
-                  onChange={(e) => {
-                    setCharName(e.target.value)
-                    updateCharacter(activeCharacter.id, { name: e.target.value })
-                  }}
-                  placeholder="Character name"
-                  className="h-7 text-sm font-semibold border-0 bg-transparent p-0 pl-2 shadow-none focus-visible:ring-0"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Player Name tile */}
-          <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center gap-3 p-4">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                <TextAa className="h-5 w-5 text-white" weight="bold" />
-              </div>
-              <div className="flex-1 min-w-0 space-y-1">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Player Name
-                </p>
-                <Input
-                  id={playerNameId}
-                  value={playerName}
-                  onChange={(e) => {
-                    setPlayerName(e.target.value)
-                    updateActiveCharacterDetails({ playerName: e.target.value })
-                  }}
-                  placeholder="Player name"
-                  className="h-7 text-sm font-semibold border-0 bg-transparent p-0 pl-2 shadow-none focus-visible:ring-0"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* XP tile */}
-          <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center gap-3 p-4">
-              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                <Star className="h-5 w-5 text-white" weight="bold" />
-              </div>
-              <div className="flex-1 min-w-0 space-y-1">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Experience Points
-                </p>
-                <Input
-                  id={xpId}
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={xp || ''}
-                  onChange={(e) => {
-                    const raw = e.target.value
-                    if (raw === '') {
-                      setXp(0)
-                      updateCharacter(activeCharacter.id, { experiencePoints: 0 })
-                      return
-                    }
-                    const parsed = Number.parseInt(raw, 10)
-                    if (Number.isNaN(parsed)) return
-                    const val = Math.max(0, parsed)
-                    setXp(val)
-                    updateCharacter(activeCharacter.id, { experiencePoints: val })
-                  }}
-                  placeholder="0"
-                  className="h-7 text-sm font-semibold border-0 bg-transparent p-0 pl-2 shadow-none focus-visible:ring-0"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Cards */}
-        <div className="max-w-7xl mx-auto w-full space-y-4">
-          {/* ── Identity ── */}
-          <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
-              <IdentificationCard
-                className="h-4 w-4 text-indigo-600 dark:text-indigo-400"
-                weight="duotone"
-              />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Identity
-              </span>
-            </div>
-            <div className="p-4 space-y-4">
-              {/* Dropdowns + deity */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <Field id={genderId} label="Gender">
-                  <Select
-                    value={gender}
-                    onValueChange={(value) => {
-                      setGender(value)
-                      updateActiveCharacterDetails({ gender: value })
-                    }}
-                  >
-                    <SelectTrigger id={genderId}>
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Male">Male</SelectItem>
-                      <SelectItem value="Female">Female</SelectItem>
-                      <SelectItem value="Non-binary">Non-binary</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
-
-                <Field id={alignmentId} label="Alignment">
-                  <Select
-                    value={alignment}
-                    onValueChange={(value) => {
-                      setAlignment(value)
-                      updateActiveCharacterDetails({ alignment: value })
-                    }}
-                  >
-                    <SelectTrigger id={alignmentId}>
-                      <SelectValue placeholder="Select alignment" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ALIGNMENTS.map((align) => (
-                        <SelectItem key={align} value={align.toLowerCase().replace(' ', '-')}>
-                          {align}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-
-                <Field id={lifestyleId} label="Lifestyle">
-                  <Select
-                    value={lifestyle}
-                    onValueChange={(value) => {
-                      setLifestyle(value)
-                      updateActiveCharacterDetails({ lifestyle: value })
-                    }}
-                  >
-                    <SelectTrigger id={lifestyleId}>
-                      <SelectValue placeholder="Select lifestyle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LIFESTYLES.map((ls) => (
-                        <SelectItem key={ls} value={ls.toLowerCase()}>
-                          {ls}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-
-                <Field id={deityId} label="Deity">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {/* Top input tiles */}
+          <div
+            className={cn(
+              'mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3',
+              activeSection !== 'identity' && 'hidden',
+            )}
+          >
+            {/* Character Name tile */}
+            <div className="overflow-hidden rounded-md border border-border bg-surface-raised">
+              <div className="flex items-center gap-3 p-4">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface-selected">
+                  <TextAa className="size-4 text-primary" weight="bold" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Character Name
+                  </p>
                   <Input
-                    id={deityId}
-                    list={deityListId}
-                    value={faith}
+                    id={charNameId}
+                    value={charName}
                     onChange={(e) => {
-                      setFaith(e.target.value)
-                      updateActiveCharacterDetails({ faith: e.target.value })
+                      setCharName(e.target.value)
+                      updateCharacter(activeCharacter.id, { name: e.target.value })
                     }}
-                    placeholder="Enter or select deity"
+                    placeholder="Character name"
+                    className="h-7 text-sm font-semibold border-0 bg-transparent p-0 pl-2 shadow-none focus-visible:ring-0"
                   />
-                  <datalist id={deityListId}>
-                    {deityNames.map((name) => (
-                      <option key={name} value={name} />
-                    ))}
-                  </datalist>
-                </Field>
+                </div>
               </div>
+            </div>
 
-              {/* Physical traits */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
-                <Field id={ageId} label="Age">
+            {/* Player Name tile */}
+            <div className="overflow-hidden rounded-md border border-border bg-surface-raised">
+              <div className="flex items-center gap-3 p-4">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface-selected">
+                  <TextAa className="size-4 text-primary" weight="bold" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Player Name
+                  </p>
                   <Input
-                    id={ageId}
+                    id={playerNameId}
+                    value={playerName}
+                    onChange={(e) => {
+                      setPlayerName(e.target.value)
+                      updateActiveCharacterDetails({ playerName: e.target.value })
+                    }}
+                    placeholder="Player name"
+                    className="h-7 text-sm font-semibold border-0 bg-transparent p-0 pl-2 shadow-none focus-visible:ring-0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* XP tile */}
+            <div className="overflow-hidden rounded-md border border-border bg-surface-raised">
+              <div className="flex items-center gap-3 p-4">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-surface-selected">
+                  <Star className="size-4 text-primary" weight="bold" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Experience Points
+                  </p>
+                  <Input
+                    id={xpId}
                     type="number"
                     min={0}
-                    value={age}
+                    step={1}
+                    value={xp || ''}
                     onChange={(e) => {
-                      setAge(e.target.value)
-                      updateActiveCharacterDetails({
-                        age: e.target.value ? Number.parseInt(e.target.value, 10) : undefined,
-                      })
+                      const raw = e.target.value
+                      if (raw === '') {
+                        setXp(0)
+                        updateCharacter(activeCharacter.id, { experiencePoints: 0 })
+                        return
+                      }
+                      const parsed = Number.parseInt(raw, 10)
+                      if (Number.isNaN(parsed)) return
+                      const val = Math.max(0, parsed)
+                      setXp(val)
+                      updateCharacter(activeCharacter.id, { experiencePoints: val })
                     }}
-                    placeholder="25"
+                    placeholder="0"
+                    className="h-7 text-sm font-semibold border-0 bg-transparent p-0 pl-2 shadow-none focus-visible:ring-0"
                   />
-                </Field>
-                <Field id={heightId} label="Height">
-                  <Input
-                    id={heightId}
-                    value={height}
-                    onChange={(e) => {
-                      setHeight(e.target.value)
-                      updateActiveCharacterDetails({ height: e.target.value })
-                    }}
-                    placeholder={`5'10"`}
-                  />
-                </Field>
-                <Field id={weightId} label="Weight">
-                  <Input
-                    id={weightId}
-                    value={weight}
-                    onChange={(e) => {
-                      setWeight(e.target.value)
-                      updateActiveCharacterDetails({ weight: e.target.value })
-                    }}
-                    placeholder="180 lbs"
-                  />
-                </Field>
-                <Field id={eyesId} label="Eyes">
-                  <Input
-                    id={eyesId}
-                    value={eyes}
-                    onChange={(e) => {
-                      setEyes(e.target.value)
-                      updateActiveCharacterDetails({ eyes: e.target.value })
-                    }}
-                    placeholder="Blue"
-                  />
-                </Field>
-                <Field id={hairId} label="Hair">
-                  <Input
-                    id={hairId}
-                    value={hair}
-                    onChange={(e) => {
-                      setHair(e.target.value)
-                      updateActiveCharacterDetails({ hair: e.target.value })
-                    }}
-                    placeholder="Black"
-                  />
-                </Field>
-                <Field id={skinId} label="Skin">
-                  <Input
-                    id={skinId}
-                    value={skin}
-                    onChange={(e) => {
-                      setSkin(e.target.value)
-                      updateActiveCharacterDetails({ skin: e.target.value })
-                    }}
-                    placeholder="Tan"
-                  />
-                </Field>
-              </div>
-              <RichTextArea
-                id={appearanceId}
-                label="Appearance"
-                value={appearance}
-                onChange={(value) => {
-                  setAppearance(value)
-                  updateActiveCharacterDetails({ appearance: value })
-                }}
-                placeholder="Add details not captured above — unique scars, tattoos, distinctive features, build, posture, or anything else that defines how your character looks."
-                rows={4}
-              />
-            </div>
-          </Card>
-
-          {/* ── Personality ── */}
-          <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-violet-500/20 via-violet-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
-              <Brain className="h-4 w-4 text-violet-400" weight="duotone" />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Personality
-              </span>
-            </div>
-            <div className="p-4 space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <RichTextArea
-                  id={personalityTraitsId}
-                  label="Personality Traits"
-                  value={personalityTraits}
-                  onChange={(value) => {
-                    setPersonalityTraits(value)
-                    updateActiveCharacterDetails({ personalityTraits: value })
-                  }}
-                  placeholder="Describe your character's personality traits."
-                  rows={5}
-                />
-                <RichTextArea
-                  id={idealsId}
-                  label="Ideals"
-                  value={ideals}
-                  onChange={(value) => {
-                    setIdeals(value)
-                    updateActiveCharacterDetails({ ideals: value })
-                  }}
-                  placeholder="What does your character believe in?"
-                  rows={5}
-                />
-                <RichTextArea
-                  id={bondsId}
-                  label="Bonds"
-                  value={bonds}
-                  onChange={(value) => {
-                    setBonds(value)
-                    updateActiveCharacterDetails({ bonds: value })
-                  }}
-                  placeholder="What ties bind your character to the world?"
-                  rows={5}
-                />
-                <RichTextArea
-                  id={flawsId}
-                  label="Flaws"
-                  value={flaws}
-                  onChange={(value) => {
-                    setFlaws(value)
-                    updateActiveCharacterDetails({ flaws: value })
-                  }}
-                  placeholder="What weaknesses does your character have?"
-                  rows={5}
-                />
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4 pt-2 border-t border-border/40">
-                <RichTextArea
-                  id={goalsId}
-                  label="Goals"
-                  value={goals}
-                  onChange={(value) => {
-                    setGoals(value)
-                    updateActiveCharacterDetails({ goals: value })
-                  }}
-                  placeholder="What does your character strive toward?"
-                  rows={4}
-                />
-                <RichTextArea
-                  id={fearsId}
-                  label="Fears"
-                  value={fears}
-                  onChange={(value) => {
-                    setFears(value)
-                    updateActiveCharacterDetails({ fears: value })
-                  }}
-                  placeholder="What does your character dread?"
-                  rows={4}
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* ── Story ── */}
-          <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
-              <Scroll className="h-4 w-4 text-amber-400" weight="duotone" />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Story
-              </span>
-            </div>
-            <div className="p-4 space-y-4">
-              <RichTextArea
-                id={backstoryId}
-                label="Backstory"
-                value={backstory}
-                onChange={(value) => {
-                  setBackstory(value)
-                  updateActiveCharacterDetails({ backstory: value })
-                }}
-                placeholder="Your character's history, background, and how they came to be where they are."
-                rows={10}
-              />
-            </div>
-          </Card>
-
-          {/* ── Connections ── */}
-          <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-teal-500/20 via-teal-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
-              <Users className="h-4 w-4 text-teal-400" weight="duotone" />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Connections
-              </span>
-            </div>
-            <div className="p-4 space-y-4">
-              {/* Dropdown — always its own row */}
-              <Field id={organizationSelectId} label="Allies & Organizations">
-                <Select value={organizationSelectionKey} onValueChange={handleOrganizationSelect}>
-                  <SelectTrigger id={organizationSelectId}>
-                    <SelectValue placeholder="Select an organization or choose custom" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {organizationOptions.map((option) => (
-                      <SelectItem key={option.key} value={option.key}>
-                        {option.organization.name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value={CUSTOM_ORGANIZATION_KEY}>Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              {/* Custom controls row */}
-              {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY && (
-                <div className="flex flex-wrap items-end gap-4">
-                  <div className="flex-1 min-w-[160px]">
-                    <Field id={organizationCustomNameId} label="Name">
-                      <Input
-                        id={organizationCustomNameId}
-                        value={organizationCustomName}
-                        onChange={(event) => {
-                          const value = event.target.value
-                          setOrganizationCustomName(value)
-                          updateActiveCharacterDetails({ organizationCustomName: value })
-                        }}
-                        placeholder="Organization name"
-                      />
-                    </Field>
-                  </div>
-
-                  <div className="hidden sm:block self-stretch w-px bg-border/50 mx-2" />
-
-                  <div className="shrink-0 space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Image
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => customImageInputRef.current?.click()}
-                      >
-                        <Upload className="h-4 w-4 mr-1.5" />
-                        Upload
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClearCustomImage}
-                        disabled={!organizationCustomImage}
-                      >
-                        Clear
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="hidden sm:block self-stretch w-px bg-border/50 mx-2" />
-
-                  <div className="shrink-0 space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Background
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      {CUSTOM_GRADIENT_PRESETS.map((preset) => (
-                        <button
-                          key={preset.key}
-                          type="button"
-                          onClick={() => {
-                            setOrganizationCustomGradient(preset.key)
-                            updateActiveCharacterDetails({ organizationCustomGradient: preset.key })
-                          }}
-                          className={cn(
-                            `h-8 w-8 rounded-md bg-gradient-to-br ${preset.className} shrink-0 transition-all`,
-                            organizationCustomGradient === preset.key
-                              ? 'ring-2 ring-offset-2 ring-offset-background ring-white/70 scale-110'
-                              : 'opacity-60 hover:opacity-100',
-                          )}
-                          title={preset.key.charAt(0).toUpperCase() + preset.key.slice(1)}
-                        />
-                      ))}
-                    </div>
-                  </div>
                 </div>
-              )}
+              </div>
+            </div>
+          </div>
 
-              {/* Description — custom only, always its own row */}
-              {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY && (
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor={organizationCustomDescriptionId}
-                    className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
-                  >
-                    Description
-                  </Label>
-                  <Textarea
-                    id={organizationCustomDescriptionId}
-                    value={organizationCustomDescription}
-                    onChange={(event) => {
-                      const value = event.target.value
-                      setOrganizationCustomDescription(value)
-                      updateActiveCharacterDetails({
-                        organizationCustomDescription: value,
-                        alliesAndOrganizations: value,
-                      })
+          {/* Cards */}
+          <div className="w-full">
+            {/* ── Identity ── */}
+            <section
+              className={cn(
+                'w-full overflow-hidden rounded-md border border-border bg-workspace-detail',
+                activeSection !== 'identity' && 'hidden',
+              )}
+            >
+              <div className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
+                <IdentificationCard
+                  className="h-4 w-4 text-indigo-600 dark:text-indigo-400"
+                  weight="duotone"
+                />
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Identity
+                </span>
+              </div>
+              <div className="p-4 space-y-4">
+                {/* Dropdowns + deity */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Field id={genderId} label="Gender">
+                    <Select
+                      value={gender}
+                      onValueChange={(value) => {
+                        setGender(value)
+                        updateActiveCharacterDetails({ gender: value })
+                      }}
+                    >
+                      <SelectTrigger id={genderId}>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Non-binary">Non-binary</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  <Field id={alignmentId} label="Alignment">
+                    <Select
+                      value={alignment}
+                      onValueChange={(value) => {
+                        setAlignment(value)
+                        updateActiveCharacterDetails({ alignment: value })
+                      }}
+                    >
+                      <SelectTrigger id={alignmentId}>
+                        <SelectValue placeholder="Select alignment" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ALIGNMENTS.map((align) => (
+                          <SelectItem key={align} value={align.toLowerCase().replace(' ', '-')}>
+                            {align}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  <Field id={lifestyleId} label="Lifestyle">
+                    <Select
+                      value={lifestyle}
+                      onValueChange={(value) => {
+                        setLifestyle(value)
+                        updateActiveCharacterDetails({ lifestyle: value })
+                      }}
+                    >
+                      <SelectTrigger id={lifestyleId}>
+                        <SelectValue placeholder="Select lifestyle" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LIFESTYLES.map((ls) => (
+                          <SelectItem key={ls} value={ls.toLowerCase()}>
+                            {ls}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  <Field id={deityId} label="Deity">
+                    <Input
+                      id={deityId}
+                      list={deityListId}
+                      value={faith}
+                      onChange={(e) => {
+                        setFaith(e.target.value)
+                        updateActiveCharacterDetails({ faith: e.target.value })
+                      }}
+                      placeholder="Enter or select deity"
+                    />
+                    <datalist id={deityListId}>
+                      {deityNames.map((name) => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
+                  </Field>
+                </div>
+
+                {/* Physical traits */}
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+                  <Field id={ageId} label="Age">
+                    <Input
+                      id={ageId}
+                      type="number"
+                      min={0}
+                      value={age}
+                      onChange={(e) => {
+                        setAge(e.target.value)
+                        updateActiveCharacterDetails({
+                          age: e.target.value ? Number.parseInt(e.target.value, 10) : undefined,
+                        })
+                      }}
+                      placeholder="25"
+                    />
+                  </Field>
+                  <Field id={heightId} label="Height">
+                    <Input
+                      id={heightId}
+                      value={height}
+                      onChange={(e) => {
+                        setHeight(e.target.value)
+                        updateActiveCharacterDetails({ height: e.target.value })
+                      }}
+                      placeholder={`5'10"`}
+                    />
+                  </Field>
+                  <Field id={weightId} label="Weight">
+                    <Input
+                      id={weightId}
+                      value={weight}
+                      onChange={(e) => {
+                        setWeight(e.target.value)
+                        updateActiveCharacterDetails({ weight: e.target.value })
+                      }}
+                      placeholder="180 lbs"
+                    />
+                  </Field>
+                  <Field id={eyesId} label="Eyes">
+                    <Input
+                      id={eyesId}
+                      value={eyes}
+                      onChange={(e) => {
+                        setEyes(e.target.value)
+                        updateActiveCharacterDetails({ eyes: e.target.value })
+                      }}
+                      placeholder="Blue"
+                    />
+                  </Field>
+                  <Field id={hairId} label="Hair">
+                    <Input
+                      id={hairId}
+                      value={hair}
+                      onChange={(e) => {
+                        setHair(e.target.value)
+                        updateActiveCharacterDetails({ hair: e.target.value })
+                      }}
+                      placeholder="Black"
+                    />
+                  </Field>
+                  <Field id={skinId} label="Skin">
+                    <Input
+                      id={skinId}
+                      value={skin}
+                      onChange={(e) => {
+                        setSkin(e.target.value)
+                        updateActiveCharacterDetails({ skin: e.target.value })
+                      }}
+                      placeholder="Tan"
+                    />
+                  </Field>
+                </div>
+                <RichTextArea
+                  id={appearanceId}
+                  label="Appearance"
+                  value={appearance}
+                  onChange={(value) => {
+                    setAppearance(value)
+                    updateActiveCharacterDetails({ appearance: value })
+                  }}
+                  placeholder="Add details not captured above — unique scars, tattoos, distinctive features, build, posture, or anything else that defines how your character looks."
+                  rows={4}
+                />
+              </div>
+            </section>
+
+            {/* ── Personality ── */}
+            <section
+              className={cn(
+                'w-full overflow-hidden rounded-md border border-border bg-workspace-detail',
+                activeSection !== 'personality' && 'hidden',
+              )}
+            >
+              <div className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
+                <Brain className="h-4 w-4 text-violet-400" weight="duotone" />
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Personality
+                </span>
+              </div>
+              <div className="p-4 space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <RichTextArea
+                    id={personalityTraitsId}
+                    label="Personality Traits"
+                    value={personalityTraits}
+                    onChange={(value) => {
+                      setPersonalityTraits(value)
+                      updateActiveCharacterDetails({ personalityTraits: value })
                     }}
-                    placeholder="Describe the custom ally or organization."
+                    placeholder="Describe your character's personality traits."
+                    rows={5}
+                  />
+                  <RichTextArea
+                    id={idealsId}
+                    label="Ideals"
+                    value={ideals}
+                    onChange={(value) => {
+                      setIdeals(value)
+                      updateActiveCharacterDetails({ ideals: value })
+                    }}
+                    placeholder="What does your character believe in?"
+                    rows={5}
+                  />
+                  <RichTextArea
+                    id={bondsId}
+                    label="Bonds"
+                    value={bonds}
+                    onChange={(value) => {
+                      setBonds(value)
+                      updateActiveCharacterDetails({ bonds: value })
+                    }}
+                    placeholder="What ties bind your character to the world?"
+                    rows={5}
+                  />
+                  <RichTextArea
+                    id={flawsId}
+                    label="Flaws"
+                    value={flaws}
+                    onChange={(value) => {
+                      setFlaws(value)
+                      updateActiveCharacterDetails({ flaws: value })
+                    }}
+                    placeholder="What weaknesses does your character have?"
+                    rows={5}
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 pt-2 border-t border-border/40">
+                  <RichTextArea
+                    id={goalsId}
+                    label="Goals"
+                    value={goals}
+                    onChange={(value) => {
+                      setGoals(value)
+                      updateActiveCharacterDetails({ goals: value })
+                    }}
+                    placeholder="What does your character strive toward?"
+                    rows={4}
+                  />
+                  <RichTextArea
+                    id={fearsId}
+                    label="Fears"
+                    value={fears}
+                    onChange={(value) => {
+                      setFears(value)
+                      updateActiveCharacterDetails({ fears: value })
+                    }}
+                    placeholder="What does your character dread?"
                     rows={4}
                   />
                 </div>
-              )}
+              </div>
+            </section>
 
-              {/* Preview */}
-              {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY ? (
-                <div className="space-y-2 rounded-lg border border-border/60 p-3">
-                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Preview
+            {/* ── Story ── */}
+            <section
+              className={cn(
+                'w-full overflow-hidden rounded-md border border-border bg-workspace-detail',
+                activeSection !== 'story' && 'hidden',
+              )}
+            >
+              <div className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
+                <Scroll className="h-4 w-4 text-amber-400" weight="duotone" />
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Story
+                </span>
+              </div>
+              <div className="p-4 space-y-4">
+                <RichTextArea
+                  id={backstoryId}
+                  label="Backstory"
+                  value={backstory}
+                  onChange={(value) => {
+                    setBackstory(value)
+                    updateActiveCharacterDetails({ backstory: value })
+                  }}
+                  placeholder="Your character's history, background, and how they came to be where they are."
+                  rows={10}
+                />
+              </div>
+            </section>
+
+            {/* ── Connections ── */}
+            <section
+              className={cn(
+                'w-full overflow-hidden rounded-md border border-border bg-workspace-detail',
+                activeSection !== 'connections' && 'hidden',
+              )}
+            >
+              <div className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
+                <Users className="h-4 w-4 text-teal-400" weight="duotone" />
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Connections
+                </span>
+              </div>
+              <div className="p-4 space-y-4">
+                {/* Dropdown — always its own row */}
+                <Field id={organizationSelectId} label="Allies & Organizations">
+                  <Select value={organizationSelectionKey} onValueChange={handleOrganizationSelect}>
+                    <SelectTrigger id={organizationSelectId}>
+                      <SelectValue placeholder="Select an organization or choose custom" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {organizationOptions.map((option) => (
+                        <SelectItem key={option.key} value={option.key}>
+                          {option.organization.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value={CUSTOM_ORGANIZATION_KEY}>Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                {/* Custom controls row */}
+                {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY && (
+                  <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex-1 min-w-[160px]">
+                      <Field id={organizationCustomNameId} label="Name">
+                        <Input
+                          id={organizationCustomNameId}
+                          value={organizationCustomName}
+                          onChange={(event) => {
+                            const value = event.target.value
+                            setOrganizationCustomName(value)
+                            updateActiveCharacterDetails({ organizationCustomName: value })
+                          }}
+                          placeholder="Organization name"
+                        />
+                      </Field>
+                    </div>
+
+                    <div className="hidden sm:block self-stretch w-px bg-border/50 mx-2" />
+
+                    <div className="shrink-0 space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Image
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => customImageInputRef.current?.click()}
+                        >
+                          <Upload className="h-4 w-4 mr-1.5" />
+                          Upload
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleClearCustomImage}
+                          disabled={!organizationCustomImage}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="hidden sm:block self-stretch w-px bg-border/50 mx-2" />
+
+                    <div className="shrink-0 space-y-1.5">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Background
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        {CUSTOM_GRADIENT_PRESETS.map((preset) => (
+                          <button
+                            key={preset.key}
+                            type="button"
+                            onClick={() => {
+                              setOrganizationCustomGradient(preset.key)
+                              updateActiveCharacterDetails({
+                                organizationCustomGradient: preset.key,
+                              })
+                            }}
+                            aria-label={`Use ${preset.key} organization background`}
+                            aria-pressed={organizationCustomGradient === preset.key}
+                            className={cn(
+                              `size-8 shrink-0 cursor-pointer rounded-md bg-gradient-to-br ${preset.className} transition-all`,
+                              organizationCustomGradient === preset.key
+                                ? 'ring-2 ring-offset-2 ring-offset-background ring-white/70 scale-110'
+                                : 'opacity-60 hover:opacity-100',
+                            )}
+                            title={preset.key.charAt(0).toUpperCase() + preset.key.slice(1)}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
+                )}
+
+                {/* Description — custom only, always its own row */}
+                {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY && (
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor={organizationCustomDescriptionId}
+                      className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
+                    >
+                      Description
+                    </Label>
+                    <Textarea
+                      id={organizationCustomDescriptionId}
+                      value={organizationCustomDescription}
+                      onChange={(event) => {
+                        const value = event.target.value
+                        setOrganizationCustomDescription(value)
+                        updateActiveCharacterDetails({
+                          organizationCustomDescription: value,
+                          alliesAndOrganizations: value,
+                        })
+                      }}
+                      placeholder="Describe the custom ally or organization."
+                      rows={4}
+                    />
+                  </div>
+                )}
+
+                {/* Preview */}
+                {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY ? (
+                  <div className="space-y-2 rounded-lg border border-border/60 p-3">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Preview
+                    </div>
+                    <div
+                      className={`relative overflow-hidden rounded-md border border-border/60 bg-gradient-to-br ${previewGradient}`}
+                    >
+                      {showPreviewImage ? (
+                        <>
+                          <div className="pointer-events-none absolute inset-0 bg-black/15" />
+                          <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 overflow-hidden">
+                            <img
+                              src={previewImage}
+                              alt={previewTitle || 'Organization preview'}
+                              className="absolute right-2 top-1/2 h-[88%] w-auto -translate-y-1/2 object-contain opacity-95 drop-shadow-xl"
+                              onError={() => setFailedOrganizationPreviewImagePath(previewImage)}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex w-1/3 items-center justify-center">
+                          <span className="text-4xl font-display font-bold text-white/90 tracking-widest">
+                            {getInitials(previewTitle || 'ORG')}
+                          </span>
+                        </div>
+                      )}
+                      <div className="relative z-10 min-h-44 space-y-2 p-4 pr-28 sm:pr-40">
+                        <h4 className="text-sm font-semibold text-white">
+                          {previewTitle || (
+                            <span className="opacity-40 italic">Organization name</span>
+                          )}
+                        </h4>
+                        <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
+                          {previewDescription}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : previewTitle || previewDescription ? (
                   <div
                     className={`relative overflow-hidden rounded-md border border-border/60 bg-gradient-to-br ${previewGradient}`}
                   >
@@ -901,72 +989,38 @@ export function CharacteristicsPage() {
                     ) : (
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex w-1/3 items-center justify-center">
                         <span className="text-4xl font-display font-bold text-white/90 tracking-widest">
-                          {getInitials(previewTitle || 'ORG')}
+                          {getInitials(previewTitle || 'Organization')}
                         </span>
                       </div>
                     )}
                     <div className="relative z-10 min-h-44 space-y-2 p-4 pr-28 sm:pr-40">
-                      <h4 className="text-sm font-semibold text-white">
-                        {previewTitle || (
-                          <span className="opacity-40 italic">Organization name</span>
-                        )}
-                      </h4>
+                      <h4 className="text-sm font-semibold text-white">{previewTitle}</h4>
                       <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
                         {previewDescription}
                       </p>
                     </div>
                   </div>
-                </div>
-              ) : previewTitle || previewDescription ? (
-                <div
-                  className={`relative overflow-hidden rounded-md border border-border/60 bg-gradient-to-br ${previewGradient}`}
-                >
-                  {showPreviewImage ? (
-                    <>
-                      <div className="pointer-events-none absolute inset-0 bg-black/15" />
-                      <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 overflow-hidden">
-                        <img
-                          src={previewImage}
-                          alt={previewTitle || 'Organization preview'}
-                          className="absolute right-2 top-1/2 h-[88%] w-auto -translate-y-1/2 object-contain opacity-95 drop-shadow-xl"
-                          onError={() => setFailedOrganizationPreviewImagePath(previewImage)}
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex w-1/3 items-center justify-center">
-                      <span className="text-4xl font-display font-bold text-white/90 tracking-widest">
-                        {getInitials(previewTitle || 'Organization')}
-                      </span>
-                    </div>
-                  )}
-                  <div className="relative z-10 min-h-44 space-y-2 p-4 pr-28 sm:pr-40">
-                    <h4 className="text-sm font-semibold text-white">{previewTitle}</h4>
-                    <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
-                      {previewDescription}
+                ) : (
+                  !organizationSelectionKey && (
+                    <p className="text-sm text-muted-foreground">
+                      Select an organization to preview its details, or choose Custom to upload an
+                      image and write your own description.
                     </p>
-                  </div>
-                </div>
-              ) : (
-                !organizationSelectionKey && (
-                  <p className="text-sm text-muted-foreground">
-                    Select an organization to preview its details, or choose Custom to upload an
-                    image and write your own description.
-                  </p>
-                )
-              )}
-            </div>
+                  )
+                )}
+              </div>
 
-            <input
-              ref={customImageInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleOrganizationImageUpload}
-              className="hidden"
-            />
-          </Card>
+              <input
+                ref={customImageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleOrganizationImageUpload}
+                className="hidden"
+              />
+            </section>
+          </div>
         </div>
-      </div>
-    </div>
+      </WorkspaceBody>
+    </WorkspacePage>
   )
 }

@@ -54,7 +54,6 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
             onChange={(e) => onChange({ name: e.target.value })}
             placeholder="Enter character name"
             className={cn(
-              'text-lg',
               hasError('name') && 'border-destructive focus-visible:ring-destructive animate-shake',
             )}
           />
@@ -127,6 +126,7 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
           gender={data.gender}
           onPortraitChange={handlePortraitChange}
           onTransformChange={handleTransformChange}
+          density="compact"
         />
       </div>
     </div>

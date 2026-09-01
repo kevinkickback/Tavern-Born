@@ -1,21 +1,20 @@
-import { ArrowsClockwise, DownloadSimple, Eye, FilePdf } from '@phosphor-icons/react'
+import {
+  ArrowsClockwise,
+  DownloadSimple,
+  FilePdf,
+  Minus,
+  Plus,
+  Warning,
+} from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
 import { useBackgrounds, useClasses, useRaces } from '@/hooks/data/useGameData'
 import {
-  CHARACTER_SHEET_TEMPLATES,
   type CharacterSheetTemplateId,
-  DEFAULT_CHARACTER_SHEET_TEMPLATE,
   generateFilledCharacterSheetPdf,
   getCharacterSheetTemplate,
 } from '@/lib/pdf/characterSheetPdf'
@@ -26,51 +25,38 @@ function getSafeFileName(name: string): string {
   return name.trim().replace(/[^a-zA-Z0-9_-]+/g, '_') || 'character'
 }
 
-export function CharacterSheetPage() {
-  const character = useCharacterStore((s) => s.activeCharacter)
+interface CharacterSheetPageProps {
+  templateId: CharacterSheetTemplateId
+}
+
+export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
+  const character = useCharacterStore((state) => state.activeCharacter)
   const classes = useClasses()
   const races = useRaces()
   const backgrounds = useBackgrounds()
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [selectedTemplateId, setSelectedTemplateId] = useState<CharacterSheetTemplateId>(
-    () => character?.originSystem ?? DEFAULT_CHARACTER_SHEET_TEMPLATE.id,
-  )
+  const [zoom, setZoom] = useState(100)
   const cancelRef = useRef<{ canceled: boolean } | null>(null)
+  const selectedTemplate = useMemo(() => getCharacterSheetTemplate(templateId), [templateId])
 
-  // Cancel any in-flight generation when the component unmounts.
   useEffect(() => {
     return () => {
       if (cancelRef.current) cancelRef.current.canceled = true
     }
   }, [])
 
-  useEffect(() => {
-    if (character?.originSystem) {
-      setSelectedTemplateId(character.originSystem)
-      setPdfBytes(null)
-      setErrorMessage(null)
-    }
-  }, [character?.originSystem])
-
-  const selectedTemplate = useMemo(
-    () => getCharacterSheetTemplate(selectedTemplateId),
-    [selectedTemplateId],
-  )
-
   const characterName = character?.name?.trim() || 'Unnamed Character'
   const downloadName = useMemo(
-    () => `${getSafeFileName(characterName)}_character_sheet.pdf`,
-    [characterName],
+    () => `${getSafeFileName(characterName)}_${templateId}_character_sheet.pdf`,
+    [characterName, templateId],
   )
 
   const handleGenerate = useCallback(async () => {
     if (!character) return
 
-    if (cancelRef.current) {
-      cancelRef.current.canceled = true
-    }
+    if (cancelRef.current) cancelRef.current.canceled = true
     const handle = { canceled: false }
     cancelRef.current = handle
 
@@ -87,17 +73,15 @@ export function CharacterSheetPage() {
       const filledBytes = await generateFilledCharacterSheetPdf(
         character,
         templateBytes,
-        selectedTemplateId,
+        templateId,
         classes,
         races,
         backgrounds,
       )
 
-      if (handle.canceled) return
-
-      setPdfBytes(filledBytes)
+      if (!handle.canceled) setPdfBytes(filledBytes)
     } catch (error) {
-      console.error('[PDF] generation failed', { error, characterId: character?.id })
+      console.error('[PDF] generation failed', { error, characterId: character.id })
       const message =
         error instanceof Error ? error.message : 'Failed to generate character sheet PDF.'
       if (!handle.canceled) {
@@ -105,11 +89,9 @@ export function CharacterSheetPage() {
         setPdfBytes(null)
       }
     } finally {
-      if (!handle.canceled) {
-        setIsGenerating(false)
-      }
+      if (!handle.canceled) setIsGenerating(false)
     }
-  }, [character, classes, races, backgrounds, selectedTemplate, selectedTemplateId])
+  }, [backgrounds, character, classes, races, selectedTemplate, templateId])
 
   const handleDownload = () => {
     if (!pdfBytes) {
@@ -134,119 +116,128 @@ export function CharacterSheetPage() {
     return <NoCharCard icon={<FilePdf weight="duotone" />} noun="generate a character sheet PDF" />
   }
 
+  const rulesetMismatch = character.originSystem !== templateId
+  const editionLabel = templateId === '2014' ? '5e · 2014 rules' : '5.5e · 2024 rules'
+
   return (
-    <div className="h-full flex flex-col">
-      <div className="px-6 py-5 page-header-band shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
-          <FilePdf className="h-6 w-6 text-primary" weight="duotone" />
-          <div>
-            <h1 className="text-2xl font-display font-bold">Character Sheet</h1>
-            <p className="text-sm text-muted-foreground">Export a filled PDF character sheet</p>
+    <WorkspacePage className="p-3">
+      <WorkspaceBody className="mx-auto flex w-full max-w-[var(--workspace-collection-max-width)] flex-col overflow-hidden rounded-lg border border-border bg-workspace-pane">
+        <WorkspaceToolbar className="overflow-x-auto px-4">
+          <FilePdf className="size-5 shrink-0 text-primary" weight="fill" />
+          <div className="min-w-0 shrink-0">
+            <p className="text-sm font-semibold leading-tight">{selectedTemplate.name}</p>
+            <p className="mt-0.5 text-xs leading-tight text-muted-foreground">{editionLabel}</p>
           </div>
-        </div>
-      </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
-        <div className="max-w-7xl mx-auto w-full space-y-4">
-          {/* ── Export Options ── */}
-          <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-rose-500/20 via-rose-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
-              <FilePdf className="h-4 w-4 text-rose-400" weight="duotone" />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Export Options
-              </span>
-            </div>
-            <div className="p-4 flex items-center gap-3">
-              <span className="text-sm font-medium text-muted-foreground shrink-0">Template:</span>
-              <Select
-                value={selectedTemplateId}
-                onValueChange={(value) => {
-                  setSelectedTemplateId(value as CharacterSheetTemplateId)
-                  setPdfBytes(null)
-                  setErrorMessage(null)
-                }}
+          {rulesetMismatch && (
+            <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning">
+              <Warning className="size-3.5" />
+              Different from character ruleset
+            </Badge>
+          )}
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <span className="mr-1 text-xs text-muted-foreground" aria-live="polite">
+              {isGenerating
+                ? 'Generating…'
+                : errorMessage
+                  ? 'Generation failed'
+                  : pdfBytes
+                    ? 'Preview ready'
+                    : 'Not generated'}
+            </span>
+            <div className="mr-1 flex h-8 items-center rounded-md border border-border bg-background">
+              <button
+                type="button"
+                aria-label="Zoom out"
+                disabled={zoom <= 75}
+                onClick={() => setZoom((current) => Math.max(75, current - 25))}
+                className="flex size-8 cursor-pointer items-center justify-center rounded-l-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHARACTER_SHEET_TEMPLATES.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="ml-auto flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  className="gap-2"
-                >
-                  <ArrowsClockwise
-                    className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`}
-                    weight="bold"
-                  />
-                  {pdfBytes || errorMessage ? 'Regenerate' : 'Generate'}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleDownload}
-                  disabled={isGenerating || !pdfBytes}
-                  className="gap-2"
-                >
-                  <DownloadSimple className="h-4 w-4" weight="bold" />
-                  Download PDF
+                <Minus className="size-3.5" />
+              </button>
+              <span className="w-11 text-center text-xs font-medium tabular-nums">{zoom}%</span>
+              <button
+                type="button"
+                aria-label="Zoom in"
+                disabled={zoom >= 200}
+                onClick={() => setZoom((current) => Math.min(200, current + 25))}
+                className="flex size-8 cursor-pointer items-center justify-center rounded-r-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Plus className="size-3.5" />
+              </button>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="h-8 gap-1.5"
+            >
+              <ArrowsClockwise
+                className={`size-4 ${isGenerating ? 'animate-spin' : ''}`}
+                weight="bold"
+              />
+              {pdfBytes || errorMessage ? 'Regenerate' : 'Generate'}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleDownload}
+              disabled={isGenerating || !pdfBytes}
+              className="h-8 gap-1.5"
+            >
+              <DownloadSimple className="size-4" weight="bold" />
+              Download PDF
+            </Button>
+          </div>
+        </WorkspaceToolbar>
+
+        <div className="min-h-0 flex-1 overflow-auto bg-workspace-detail">
+          {isGenerating && (
+            <div className="flex min-h-full items-center justify-center p-8">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ArrowsClockwise className="size-4 animate-spin" weight="bold" />
+                Generating PDF preview…
+              </div>
+            </div>
+          )}
+
+          {!isGenerating && errorMessage && (
+            <div className="flex min-h-full items-center justify-center p-8">
+              <div className="max-w-md space-y-3 text-center">
+                <Warning className="mx-auto size-8 text-destructive" weight="duotone" />
+                <p className="text-sm font-semibold">Preview could not be generated</p>
+                <p className="text-sm text-muted-foreground">{errorMessage}</p>
+                <Button type="button" variant="outline" size="sm" onClick={handleGenerate}>
+                  Try Again
                 </Button>
               </div>
             </div>
-          </Card>
+          )}
 
-          {/* ── PDF Preview ── */}
-          <Card className="w-full overflow-hidden">
-            <div className="h-10 bg-gradient-to-r from-slate-500/20 via-slate-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
-              <Eye className="h-4 w-4 text-slate-400" weight="duotone" />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Preview
-              </span>
-            </div>
-
-            {isGenerating && (
-              <div className="flex min-h-[240px] items-center justify-center bg-muted/30">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <ArrowsClockwise className="h-4 w-4 animate-spin" weight="bold" />
-                  Generating PDF preview…
-                </div>
-              </div>
-            )}
-
-            {!isGenerating && errorMessage && (
-              <div className="flex min-h-[240px] items-center justify-center px-6">
-                <div className="max-w-md space-y-3 text-center">
-                  <p className="text-sm text-destructive">{errorMessage}</p>
-                  <Button type="button" variant="outline" size="sm" onClick={handleGenerate}>
-                    Try Again
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {!isGenerating && !errorMessage && !pdfBytes && (
-              <div className="flex min-h-[240px] items-center justify-center bg-muted/30">
-                <p className="text-sm text-muted-foreground">
-                  Click Generate to preview your character sheet.
+          {!isGenerating && !errorMessage && !pdfBytes && (
+            <div className="flex min-h-full items-center justify-center p-8">
+              <div className="max-w-sm text-center">
+                <FilePdf className="mx-auto size-10 text-muted-foreground/45" weight="duotone" />
+                <h2 className="mt-3 text-sm font-semibold">Preview not generated</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Generate a filled {selectedTemplate.name.toLowerCase()} for {characterName}.
                 </p>
+                <Button type="button" size="sm" onClick={handleGenerate} className="mt-4 gap-1.5">
+                  <ArrowsClockwise className="size-4" />
+                  Generate Preview
+                </Button>
               </div>
-            )}
+            </div>
+          )}
 
-            {!isGenerating && !errorMessage && pdfBytes && <PdfCanvasPreview pdfBytes={pdfBytes} />}
-          </Card>
+          {!isGenerating && !errorMessage && pdfBytes && (
+            <PdfCanvasPreview pdfBytes={pdfBytes} zoom={zoom} />
+          )}
         </div>
-      </div>
-    </div>
+      </WorkspaceBody>
+    </WorkspacePage>
   )
 }

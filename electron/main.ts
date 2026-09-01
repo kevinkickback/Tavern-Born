@@ -46,13 +46,13 @@ async function createWindow(): Promise<void> {
     ...(windowState.y !== undefined ? { y: windowState.y } : {}),
     minWidth: MIN_WIDTH,
     minHeight: MIN_HEIGHT,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#111113',
     ...(process.platform === 'darwin'
       ? { titleBarStyle: 'hiddenInset' as const }
       : {
           titleBarStyle: 'hidden' as const,
           titleBarOverlay: {
-            color: '#0a0a0a',
+            color: '#111113',
             symbolColor: '#fafafa',
             height: 32,
           },
@@ -206,7 +206,7 @@ app.on('ready', () => {
 
   ipcMain.on(
     'window:set-title-bar-overlay',
-    (event, colors: { color?: unknown; symbolColor?: unknown }) => {
+    (event, colors: { color?: unknown; symbolColor?: unknown; height?: unknown }) => {
       if (process.platform === 'darwin') return
 
       const senderWindow = BrowserWindow.fromWebContents(event.sender)
@@ -214,10 +214,12 @@ app.on('ready', () => {
 
       const color = typeof colors?.color === 'string' ? colors.color : ''
       const symbolColor = typeof colors?.symbolColor === 'string' ? colors.symbolColor : ''
+      const requestedHeight = typeof colors?.height === 'number' ? colors.height : 32
+      const height = Math.min(48, Math.max(24, Math.round(requestedHeight)))
       const hexColor = /^#[0-9a-f]{6}$/i
       if (!hexColor.test(color) || !hexColor.test(symbolColor)) return
 
-      senderWindow.setTitleBarOverlay({ color, symbolColor, height: 32 })
+      senderWindow.setTitleBarOverlay({ color, symbolColor, height })
     },
   )
 

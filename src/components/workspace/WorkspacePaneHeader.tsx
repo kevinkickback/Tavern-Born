@@ -2,7 +2,8 @@ import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 interface WorkspacePaneHeaderProps {
-  title?: string
+  title?: ReactNode
+  icon?: ReactNode
   ariaLabel?: string
   count?: ReactNode
   children?: ReactNode
@@ -11,6 +12,7 @@ interface WorkspacePaneHeaderProps {
 
 export function WorkspacePaneHeader({
   title,
+  icon,
   ariaLabel,
   count,
   children,
@@ -23,6 +25,7 @@ export function WorkspacePaneHeader({
         className,
       )}
     >
+      {icon ? <span className="shrink-0">{icon}</span> : null}
       {title ? (
         <h2 className="shrink-0 text-[length:var(--font-size-pane-title)] font-semibold uppercase leading-[var(--line-height-label)] tracking-[0.08em] text-muted-foreground">
           {title}

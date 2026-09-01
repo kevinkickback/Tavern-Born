@@ -598,12 +598,10 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                                   onTogglePrepared(profile.id, item.name)
                                                 }}
                                                 className={cn(
-                                                  'h-5 w-5 cursor-pointer rounded-full border-2 transition-colors flex-shrink-0',
-                                                  isPrepared
-                                                    ? 'bg-accent border-accent'
-                                                    : atLimit
-                                                      ? 'border-muted-foreground/30 cursor-not-allowed'
-                                                      : 'border-muted-foreground hover:border-accent/60',
+                                                  'flex size-8 flex-shrink-0 items-center justify-center rounded-md transition-colors',
+                                                  atLimit
+                                                    ? 'cursor-not-allowed'
+                                                    : 'cursor-pointer hover:bg-workspace-row-hover',
                                                 )}
                                                 title={
                                                   isPrepared
@@ -612,7 +610,18 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                                       ? `Prepare limit reached (${preparedCount}/${preparedTotal})`
                                                       : 'Not prepared — click to prepare'
                                                 }
-                                              />
+                                              >
+                                                <span
+                                                  className={cn(
+                                                    'size-4 rounded-full border-2 transition-colors',
+                                                    isPrepared
+                                                      ? 'border-accent bg-accent'
+                                                      : atLimit
+                                                        ? 'border-muted-foreground/30'
+                                                        : 'border-muted-foreground',
+                                                  )}
+                                                />
+                                              </button>
                                             ) : null}
                                             {item.isFixed ? (
                                               <Lock
@@ -747,16 +756,20 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                                     event.stopPropagation()
                                                     onTogglePrepared(item.profileId, item.name)
                                                   }}
-                                                  className={cn(
-                                                    'h-5 w-5 cursor-pointer rounded-full border-2 transition-colors',
-                                                    item.prepared
-                                                      ? 'bg-accent border-accent'
-                                                      : 'border-muted-foreground',
-                                                  )}
+                                                  className="flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-workspace-row-hover"
                                                   title={
                                                     item.prepared ? 'Prepared' : 'Not prepared'
                                                   }
-                                                />
+                                                >
+                                                  <span
+                                                    className={cn(
+                                                      'size-4 rounded-full border-2 transition-colors',
+                                                      item.prepared
+                                                        ? 'border-accent bg-accent'
+                                                        : 'border-muted-foreground',
+                                                    )}
+                                                  />
+                                                </button>
                                               ) : null}
                                               {item.isFixed ? (
                                                 <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />

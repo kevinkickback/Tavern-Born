@@ -306,63 +306,66 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="character-wizard-modal p-0 gap-0 bg-card border-border flex flex-col">
+      <DialogContent className="character-wizard-modal flex flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0">
         <DialogTitle className="sr-only">Create New Character</DialogTitle>
         <DialogDescription className="sr-only">
           Step through the wizard to configure your new character.
         </DialogDescription>
 
-        <WizardNavigation steps={WIZARD_STEPS} currentStep={currentStep} />
+        <div className="flex min-h-0 flex-1">
+          <WizardNavigation steps={WIZARD_STEPS} currentStep={currentStep} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto px-8 py-6">
+              {validationError && invalidFields.size === 0 && (
+                <Alert variant="destructive" className="mb-4">
+                  <Warning className="size-4" />
+                  <AlertDescription>{validationError}</AlertDescription>
+                </Alert>
+              )}
 
-        <div className="flex-1 overflow-y-auto px-8 py-6 min-h-0">
-          {validationError && invalidFields.size === 0 && (
-            <Alert variant="destructive" className="mb-4">
-              <Warning className="h-4 w-4" />
-              <AlertDescription>{validationError}</AlertDescription>
-            </Alert>
-          )}
+              {currentStep === 1 && (
+                <BasicsStep
+                  data={characterData}
+                  onChange={updateCharacterData}
+                  invalidFields={invalidFields}
+                />
+              )}
+              {currentStep === 2 && (
+                <RulesStep
+                  data={characterData}
+                  onChange={updateCharacterData}
+                  gameData={gameData ?? undefined}
+                  invalidFields={invalidFields}
+                />
+              )}
+              {currentStep === 3 && (
+                <RaceStep data={characterData} onChange={updateCharacterData} races={races} />
+              )}
+              {currentStep === 4 && (
+                <ClassStep data={characterData} onChange={updateCharacterData} classes={classes} />
+              )}
+              {currentStep === 5 && (
+                <BackgroundStep
+                  data={characterData}
+                  onChange={updateCharacterData}
+                  backgrounds={backgrounds}
+                />
+              )}
+              {currentStep === 6 && (
+                <AbilityScoresStep data={characterData} onChange={updateCharacterData} />
+              )}
+              {currentStep === 7 && <ReviewStep data={characterData} />}
+            </div>
 
-          {currentStep === 1 && (
-            <BasicsStep
-              data={characterData}
-              onChange={updateCharacterData}
-              invalidFields={invalidFields}
+            <WizardFooter
+              currentStep={currentStep}
+              totalSteps={WIZARD_STEPS.length}
+              onBack={handleBack}
+              onNext={handleNext}
+              onCancel={handleClose}
             />
-          )}
-          {currentStep === 2 && (
-            <RulesStep
-              data={characterData}
-              onChange={updateCharacterData}
-              gameData={gameData ?? undefined}
-              invalidFields={invalidFields}
-            />
-          )}
-          {currentStep === 3 && (
-            <RaceStep data={characterData} onChange={updateCharacterData} races={races} />
-          )}
-          {currentStep === 4 && (
-            <ClassStep data={characterData} onChange={updateCharacterData} classes={classes} />
-          )}
-          {currentStep === 5 && (
-            <BackgroundStep
-              data={characterData}
-              onChange={updateCharacterData}
-              backgrounds={backgrounds}
-            />
-          )}
-          {currentStep === 6 && (
-            <AbilityScoresStep data={characterData} onChange={updateCharacterData} />
-          )}
-          {currentStep === 7 && <ReviewStep data={characterData} />}
+          </div>
         </div>
-
-        <WizardFooter
-          currentStep={currentStep}
-          totalSteps={WIZARD_STEPS.length}
-          onBack={handleBack}
-          onNext={handleNext}
-          onCancel={handleClose}
-        />
       </DialogContent>
     </Dialog>
   )

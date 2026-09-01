@@ -9,9 +9,12 @@ export function AppTitleBar() {
     const titleBar = titleBarRef.current
     if (!titleBar) return
 
-    const shellColor = window.getComputedStyle(titleBar).backgroundColor
+    // Electron's native title-bar overlay accepts hex colors. Computed Radix colors may
+    // serialize as display-p3, which the main-process validation intentionally rejects.
+    const shellColor = appearance === 'dark' ? '#111113' : '#f9f9fb'
     const symbolColor = appearance === 'dark' ? '#fafafa' : '#1c2024'
-    window.electronAPI?.setTitleBarOverlay?.(shellColor, symbolColor)
+    const height = Math.round(titleBar.getBoundingClientRect().height)
+    window.electronAPI?.setTitleBarOverlay?.(shellColor, symbolColor, height)
   }, [appearance])
 
   return (

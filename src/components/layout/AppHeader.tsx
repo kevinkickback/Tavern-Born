@@ -67,15 +67,9 @@ export function AppHeader() {
   const { effectiveMaxHP } = useHitPoints()
   const pageDetails = getPageDetails(location.pathname)
   const PageIcon = pageDetails?.[2]
-  const showLevelUp = [
-    '/build',
-    '/feats',
-    '/spells',
-    '/equipment',
-    '/details',
-    '/sources',
-    '/character-sheet',
-  ].some((prefix) => location.pathname.startsWith(prefix))
+  const showLevelUp = ['/build', '/feats', '/spells', '/equipment', '/details', '/sources'].some(
+    (prefix) => location.pathname.startsWith(prefix),
+  )
 
   const characterSummary = useMemo(() => {
     if (!activeCharacter) return { visible: '', classBreakdown: '', isCondensed: false }

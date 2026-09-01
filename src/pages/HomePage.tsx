@@ -523,7 +523,7 @@ export function HomePage() {
                     <div
                       className={cn(
                         viewMode === 'gallery' &&
-                          'grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-4 pt-4',
+                          'grid grid-cols-[repeat(auto-fill,minmax(min(100%,22.5rem),22.5rem))] justify-start gap-4 pt-4',
                       )}
                     >
                       {groupCharacters.map(renderCharacter)}
@@ -535,7 +535,7 @@ export function HomePage() {
               <div
                 className={cn(
                   viewMode === 'gallery' &&
-                    'grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-4',
+                    'grid grid-cols-[repeat(auto-fill,minmax(min(100%,22.5rem),22.5rem))] justify-start gap-4',
                 )}
               >
                 {viewMode === 'gallery' ? (
