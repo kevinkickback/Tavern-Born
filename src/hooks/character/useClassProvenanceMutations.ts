@@ -1,31 +1,16 @@
 import { useCallback, useMemo } from 'react'
+import { useItemLookup } from '@/hooks/data/useGameData'
 import {
-  getClassDefaultEquipmentBlocks,
-  resolveEquipmentWithBlockChoices,
-} from '@/lib/5etools/startingEquipment'
-import {
-  computeApplyClassSelectionUpdates,
-  replaceClassEquipmentGrants,
-} from '@/lib/character/commands/classSelectionOrchestrationCommand'
-import {
-  removeSourceGrantedEquipment,
-  upsertGrantedEquipment,
-} from '@/lib/character/equipmentHelpers'
+  applyClassEquipmentChoiceCommand,
+  applyClassSelectionCommand,
+} from '@/lib/character/commands/classCommands'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
-import type { Item5e } from '@/types/5etools'
-
-const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
-
-function getClassChoiceKey(name: string, source?: string): string {
-  return `${name}|${source ?? ''}`
-}
 
 export function useClassProvenanceMutations() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
+  const itemLookup = useItemLookup()
 
   const ledger = useMemo<ProvenanceLedger>(
     () => character?.provenance ?? emptyProvenance(),
@@ -53,14 +38,11 @@ export function useClassProvenanceMutations() {
       subclass?: { name: string; source?: string },
     ) => {
       if (!character) return
-      const updates = computeApplyClassSelectionUpdates(
-        character,
-        ledger,
-        cls,
-        subclass,
-        itemLookup,
-      )
-      updateCharacter(character.id, updates)
+      const result = applyClassSelectionCommand(character, ledger, cls, subclass, itemLookup)
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
     },
     [character, ledger, updateCharacter, itemLookup],
   )
@@ -76,49 +58,17 @@ export function useClassProvenanceMutations() {
       choice: string,
     ) => {
       if (!character) return
-
-      const classEquipmentToRemove = Object.entries(ledger.equipment)
-        .filter(([, tags]) =>
-          tags.some(
-            (tag) =>
-              tag.sourceType === 'class' &&
-              tag.sourceName === cls.name &&
-              (tag.sourceRef ?? '') === (cls.source ?? ''),
-          ),
-        )
-        .map(([name]) => name)
-
-      const nextEquipment = removeSourceGrantedEquipment(
-        [...(character.equipment ?? [])],
-        classEquipmentToRemove,
-      )
-      const classChoiceKey = getClassChoiceKey(cls.name, cls.source)
-      const currentChoices = [...(character.classEquipmentChoices?.[classChoiceKey] ?? [])]
-      while (currentChoices.length <= blockIndex) {
-        currentChoices.push('a')
-      }
-      currentChoices[blockIndex] = choice.toLowerCase()
-
-      const classBlocks = getClassDefaultEquipmentBlocks(cls.startingEquipment)
-      const resolvedClassEquipment = resolveEquipmentWithBlockChoices(
-        classBlocks,
-        itemLookup,
-        currentChoices,
-      )
-      const nextLedger = replaceClassEquipmentGrants(
+      const result = applyClassEquipmentChoiceCommand(
+        character,
         ledger,
-        cls.name,
-        cls.source,
-        resolvedClassEquipment.items.map((item) => item.name),
+        cls,
+        blockIndex,
+        choice,
+        itemLookup,
       )
-
       updateCharacter(character.id, {
-        provenance: nextLedger,
-        equipment: upsertGrantedEquipment(nextEquipment, resolvedClassEquipment.items),
-        classEquipmentChoices: {
-          ...(character.classEquipmentChoices ?? {}),
-          [classChoiceKey]: currentChoices,
-        },
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
       })
     },
     [character, ledger, itemLookup, updateCharacter],

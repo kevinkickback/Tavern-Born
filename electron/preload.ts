@@ -1,4 +1,16 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron'
+
+function onIpcEvent(channel: string, callback: () => void): () => void {
+  const listener = () => callback()
+  ipcRenderer.on(channel, listener)
+  return () => ipcRenderer.removeListener(channel, listener)
+}
+
+function onIpcPayload<T>(channel: string, callback: (data: T) => void): () => void {
+  const listener = (_event: IpcRendererEvent, data: T) => callback(data)
+  ipcRenderer.on(channel, listener)
+  return () => ipcRenderer.removeListener(channel, listener)
+}
 
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
@@ -10,7 +22,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectFolder: () => ipcRenderer.invoke('dialog:selectFolder'),
   readLocalJson: (filePath: string) => ipcRenderer.invoke('fs:readJson', filePath),
   setUnsavedChanges: (value: boolean) => ipcRenderer.send('state:setUnsavedChanges', value),
-  setLocalDataPath: (folderPath: string) => ipcRenderer.send('config:setLocalDataPath', folderPath),
   onConfirmClose: (callback: () => void) => {
     ipcRenderer.on('app:confirmClose', callback)
   },
@@ -18,9 +29,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeListener('app:confirmClose', callback)
   },
   forceClose: () => ipcRenderer.send('app:forceClose'),
+  setTitleBarOverlay: (color: string, symbolColor: string, height: number) =>
+    ipcRenderer.send('window:set-title-bar-overlay', { color, symbolColor, height }),
 
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: () => ipcRenderer.invoke('update:download'),
+  openPortableUpdatePage: () => ipcRenderer.invoke('update:open-portable-page'),
   cancelUpdate: () => ipcRenderer.invoke('update:cancel'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
   getUpdateStatus: () => ipcRenderer.invoke('update:status'),
@@ -32,33 +46,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
       changelog: string | null
     }>,
 
-  onUpdateChecking: (callback: () => void) => {
-    const listener = () => callback()
-    ipcRenderer.on('update-checking', listener)
-    return () => ipcRenderer.removeListener('update-checking', listener)
-  },
+  onUpdateChecking: (callback: () => void) => onIpcEvent('update-checking', callback),
   onUpdateAvailable: (
     callback: (data: { version: string; changelog: string | null; isPortable: boolean }) => void,
-  ) => {
-    const listener = (
-      _event: unknown,
-      data: { version: string; changelog: string | null; isPortable: boolean },
-    ) => callback(data)
-    ipcRenderer.on('update-available', listener as (...args: unknown[]) => void)
-    return () =>
-      ipcRenderer.removeListener('update-available', listener as (...args: unknown[]) => void)
-  },
-  onUpdateNotAvailable: (callback: () => void) => {
-    const listener = () => callback()
-    ipcRenderer.on('update-not-available', listener)
-    return () => ipcRenderer.removeListener('update-not-available', listener)
-  },
-  onUpdateError: (callback: (data: { message: string }) => void) => {
-    const listener = (_event: unknown, data: { message: string }) => callback(data)
-    ipcRenderer.on('update-error', listener as (...args: unknown[]) => void)
-    return () =>
-      ipcRenderer.removeListener('update-error', listener as (...args: unknown[]) => void)
-  },
+  ) => onIpcPayload('update-available', callback),
+  onUpdateNotAvailable: (callback: () => void) => onIpcEvent('update-not-available', callback),
+  onUpdateError: (callback: (data: { message: string }) => void) =>
+    onIpcPayload('update-error', callback),
   onDownloadProgress: (
     callback: (data: {
       percentage: number
@@ -66,26 +60,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       total: number
       transferred: number
     }) => void,
-  ) => {
-    const listener = (
-      _event: unknown,
-      data: { percentage: number; bytesPerSecond: number; total: number; transferred: number },
-    ) => callback(data)
-    ipcRenderer.on('download-progress', listener as (...args: unknown[]) => void)
-    return () =>
-      ipcRenderer.removeListener('download-progress', listener as (...args: unknown[]) => void)
-  },
-  onUpdateDownloaded: (callback: (data: { version: string }) => void) => {
-    const listener = (_event: unknown, data: { version: string }) => callback(data)
-    ipcRenderer.on('update-downloaded', listener as (...args: unknown[]) => void)
-    return () =>
-      ipcRenderer.removeListener('update-downloaded', listener as (...args: unknown[]) => void)
-  },
-  onUpdateCancelled: (callback: () => void) => {
-    const listener = () => callback()
-    ipcRenderer.on('update-cancelled', listener)
-    return () => ipcRenderer.removeListener('update-cancelled', listener)
-  },
+  ) => onIpcPayload('download-progress', callback),
+  onUpdateDownloaded: (callback: (data: { version: string }) => void) =>
+    onIpcPayload('update-downloaded', callback),
+  onUpdateCancelled: (callback: () => void) => onIpcEvent('update-cancelled', callback),
 })
 
 declare global {
@@ -100,13 +78,18 @@ declare global {
       selectFolder: () => Promise<string | null>
       readLocalJson: (filePath: string) => Promise<unknown>
       setUnsavedChanges?: (value: boolean) => void
-      setLocalDataPath: (folderPath: string) => void
       onConfirmClose: (callback: () => void) => void
       removeConfirmCloseListener: (callback: () => void) => void
       forceClose: () => void
+      setTitleBarOverlay: (color: string, symbolColor: string, height: number) => void
       // Update methods
       checkForUpdate: () => Promise<{ success: boolean; data: unknown; error: string | null }>
       downloadUpdate: () => Promise<{ success: boolean; data: null; error: string | null }>
+      openPortableUpdatePage: () => Promise<{
+        success: boolean
+        data: null
+        error: string | null
+      }>
       cancelUpdate: () => Promise<{ success: boolean; data: null; error: string | null }>
       installUpdate: () => Promise<void>
       getUpdateStatus: () => Promise<unknown>

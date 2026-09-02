@@ -12,6 +12,7 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 vi.mock('@/hooks/data/useGameData', () => ({
   useClasses: () => [],
   useClassLookup: () => ({}),
+  useRaceLookup: () => ({}),
   useRaces: () => [],
 }))
 
@@ -131,13 +132,13 @@ describe('useSpellSlots hook', () => {
     const { result } = renderHook(() => useSpellActions())
 
     act(() => {
-      result.current.addSpellKnown('Shield', 'class:Wizard|PHB')
+      result.current.addSpellToProfile('class:Wizard|PHB', 'Shield', 'spell')
     })
     act(() => {
       result.current.togglePrepared('class:Wizard|PHB', 'Shield')
     })
     act(() => {
-      result.current.removeSpellKnown('Magic Missile', 'class:Wizard|PHB')
+      result.current.removeSpellFromProfile('class:Wizard|PHB', 'Magic Missile', 'spell')
     })
 
     const classProfile =
@@ -152,7 +153,7 @@ describe('useSpellSlots hook', () => {
     expect(classProfile?.preparedSpells).toContain('Shield')
   })
 
-  test('addCantrip with default profile uses first class profile', () => {
+  test('addSpellToProfile adds a cantrip to an explicit class profile', () => {
     const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
@@ -163,7 +164,7 @@ describe('useSpellSlots hook', () => {
     const { result } = renderHook(() => useSpellActions())
 
     act(() => {
-      result.current.addCantrip('Light')
+      result.current.addSpellToProfile('class:Wizard|PHB', 'Light', 'cantrip')
     })
 
     const classProfile = useCharacterStore
@@ -173,7 +174,7 @@ describe('useSpellSlots hook', () => {
     expect(classProfile?.cantrips).toContain('Light')
   })
 
-  test('addCantrip with explicit profile ID uses that profile', () => {
+  test('addSpellToProfile adds a cantrip to an explicit special profile', () => {
     const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
@@ -184,7 +185,7 @@ describe('useSpellSlots hook', () => {
     const { result } = renderHook(() => useSpellActions())
 
     act(() => {
-      result.current.addCantrip('Guidance', 'special:unrestricted')
+      result.current.addSpellToProfile('special:unrestricted', 'Guidance', 'cantrip')
     })
 
     const specialProfile = useCharacterStore
@@ -196,7 +197,7 @@ describe('useSpellSlots hook', () => {
     expect(specialProfile?.cantrips).toContain('Guidance')
   })
 
-  test('removeCantrip removes cantrip from profile and prepared spells', () => {
+  test('removeSpellFromProfile removes cantrip from profile and prepared spells', () => {
     const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
@@ -221,7 +222,7 @@ describe('useSpellSlots hook', () => {
     const { result } = renderHook(() => useSpellActions())
 
     act(() => {
-      result.current.removeCantrip('Fire Bolt', 'class:Wizard|PHB')
+      result.current.removeSpellFromProfile('class:Wizard|PHB', 'Fire Bolt', 'cantrip')
     })
 
     const classProfile = useCharacterStore
@@ -307,7 +308,7 @@ describe('useSpellSlots hook', () => {
     expect(classProfile?.preparedSpells).not.toContain('Shield')
   })
 
-  test('removeSpellKnown removes spell from spellsKnown and prepared', () => {
+  test('removeSpellFromProfile removes spell from spellsKnown and prepared', () => {
     const character = makeWizardCharacter()
     useCharacterStore.setState({
       characters: [character],
@@ -318,7 +319,7 @@ describe('useSpellSlots hook', () => {
     const { result } = renderHook(() => useSpellActions())
 
     act(() => {
-      result.current.removeSpellKnown('Magic Missile', 'class:Wizard|PHB')
+      result.current.removeSpellFromProfile('class:Wizard|PHB', 'Magic Missile', 'spell')
     })
 
     const classProfile = useCharacterStore

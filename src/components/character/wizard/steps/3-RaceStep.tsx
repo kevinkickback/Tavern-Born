@@ -1,7 +1,6 @@
 import { BookOpen, ChartBar, Eye, MagnifyingGlass, Shield, Users, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
-import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import { getRaceSummary } from '@/lib/calculations/entrySummary'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import {
@@ -13,7 +12,6 @@ import {
   getSpeedDisplay,
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
-import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { Race5e } from '@/types/5etools'
 import { DetailSection } from '../../DetailCards'
@@ -26,24 +24,7 @@ interface RaceStepProps extends StepProps {
 
 export function RaceStep({ data, onChange, races }: RaceStepProps) {
   const [search, setSearch] = useState('')
-  const allowedSources = useMemo(() => {
-    const base = data.allowedSources ?? []
-    const implicit = getImplicitSource((data.originSystem || '2014') as '2014' | '2024')
-    return base.includes(implicit) ? base : [...base, implicit]
-  }, [data.allowedSources, data.originSystem])
-
-  const filteredRaces = useMemo(() => {
-    const allowedUpper = new Set(allowedSources.map((s) => s.toUpperCase()))
-    const sourceFiltered =
-      allowedSources.length > 0
-        ? races.filter((race) => allowedUpper.has(race.source.toUpperCase()))
-        : races
-    const suppressedKeys =
-      data.variantRules?.preferNewerPrintings && allowedSources.length > 0
-        ? buildSuppressedKeys(sourceFiltered, new Set(allowedSources))
-        : undefined
-    return sourceFiltered.filter((race) => !suppressedKeys?.has(`${race.name}|${race.source}`))
-  }, [races, allowedSources, data.variantRules?.preferNewerPrintings])
+  const filteredRaces = races
 
   const searchFilteredRaces = useMemo(() => {
     if (!search.trim()) return filteredRaces
@@ -63,19 +44,8 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
     : undefined
 
   const getAvailableSubraces = useCallback(
-    (race?: Race5e) =>
-      (race?.subraces || []).filter((sr) => {
-        if (!sr.name) return false
-        if (allowedSources.length === 0) return true
-        const src = (sr as { source?: string }).source ?? race?.source ?? ''
-        if (!allowedSources.some((s) => s.toUpperCase() === src.toUpperCase())) return false
-        const suppressedKeys =
-          data.variantRules?.preferNewerPrintings && allowedSources.length > 0
-            ? buildSuppressedKeys(filteredRaces, new Set(allowedSources))
-            : undefined
-        return !suppressedKeys?.has(`${sr.name}|${src}`)
-      }),
-    [allowedSources, data.variantRules?.preferNewerPrintings, filteredRaces],
+    (race?: Race5e) => (race?.subraces || []).filter((subrace) => Boolean(subrace.name)),
+    [],
   )
 
   useEffect(() => {
@@ -400,11 +370,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {traits.map((trait) => (
-                      <TraitTooltip
-                        key={`${trait.name}|${trait.entries?.length ?? 0}`}
-                        name={trait.name}
-                        entries={trait.entries}
-                      >
+                      <TraitTooltip key={trait.name} name={trait.name} entries={trait.entries}>
                         <span className="inline-flex items-center px-3 py-1.5 rounded-md border border-border bg-muted/40 hover:bg-accent/10 hover:border-accent transition-colors cursor-help text-sm font-medium">
                           {trait.name}
                         </span>

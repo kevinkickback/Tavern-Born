@@ -1,9 +1,7 @@
-import { Barbell } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { AbilityScoreCard } from '@/components/character/AbilityScoreCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
 import {
   Select,
   SelectContent,
@@ -17,7 +15,6 @@ import {
   isValidStandardArrayAssignment,
 } from '@/lib/calculations/abilityScores'
 import {
-  POINT_BUY_BUDGET,
   POINT_BUY_COSTS,
   POINT_BUY_MAX,
   POINT_BUY_MIN,
@@ -34,7 +31,6 @@ interface SharedPanelProps {
 }
 
 interface PointBuyPanelProps extends SharedPanelProps {
-  pointBuyTotal: number
   pointBuyRemaining: number
   setScore: (ability: AbilityName, score: number) => void
 }
@@ -42,97 +38,61 @@ interface PointBuyPanelProps extends SharedPanelProps {
 export function BuildAbilityScoresPointBuyPanel({
   scores,
   racialBonuses,
-  pointBuyTotal,
   pointBuyRemaining,
   setScore,
   selectedAbility,
   onSelectAbility,
 }: PointBuyPanelProps) {
-  const budgetPct = Math.min(100, (pointBuyTotal / POINT_BUY_BUDGET) * 100)
-
   return (
-    <div className="flex flex-col gap-5">
-      {/* Points Used — dashboard stat card style */}
-      <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-        <div className="h-9 bg-gradient-to-r from-accent/60 via-accent/30 to-transparent flex items-center px-3 gap-2">
-          <Barbell className="h-4 w-4 text-accent/80" weight="bold" />
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Points Used
-          </span>
-          <span
-            className={cn(
-              'ml-auto text-sm font-bold font-mono',
-              pointBuyRemaining < 0 ? 'text-destructive' : 'text-foreground',
-            )}
-          >
-            {pointBuyTotal} / {POINT_BUY_BUDGET}
-          </span>
-        </div>
-        <div className="px-4 pt-3 pb-3">
-          <Progress value={budgetPct} className="h-1.5" />
-          <p
-            className={cn(
-              'text-xs mt-1.5 text-right',
-              pointBuyRemaining < 0 ? 'text-destructive font-semibold' : 'text-muted-foreground',
-            )}
-          >
-            {pointBuyRemaining >= 0
-              ? `${pointBuyRemaining} remaining`
-              : `${Math.abs(pointBuyRemaining)} over budget`}
-          </p>
-        </div>
-      </div>
+    <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 2xl:grid-cols-6">
+      {ABILITY_NAMES.map((ability) => {
+        const score = scores[ability] ?? POINT_BUY_MIN
+        const racial = racialBonuses[ability] ?? 0
+        const cost = POINT_BUY_COSTS[score] ?? 0
+        const nextCost = POINT_BUY_COSTS[score + 1] ?? 999
+        const canDecrease = score > POINT_BUY_MIN
+        const canIncrease = score < POINT_BUY_MAX && pointBuyRemaining >= nextCost - cost
 
-      {/* Ability score cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {ABILITY_NAMES.map((ability) => {
-          const score = scores[ability] ?? POINT_BUY_MIN
-          const racial = racialBonuses[ability] ?? 0
-          const cost = POINT_BUY_COSTS[score] ?? 0
-          const nextCost = POINT_BUY_COSTS[score + 1] ?? 999
-          const canDecrease = score > POINT_BUY_MIN
-          const canIncrease = score < POINT_BUY_MAX && pointBuyRemaining >= nextCost - cost
-
-          return (
-            <AbilityScoreCard
-              key={ability}
-              ability={ability}
-              score={score}
-              bonus={racial}
-              interactive
-              selected={selectedAbility === ability}
-              onSelect={() => onSelectAbility(ability)}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={cn(
-                    'h-7 w-7 shrink-0 text-base font-bold border-accent/30 bg-accent/5 text-accent hover:bg-accent/15 hover:border-accent/50',
-                    !canDecrease && 'opacity-30 cursor-not-allowed',
-                  )}
-                  onClick={() => setScore(ability, Math.max(POINT_BUY_MIN, score - 1))}
-                  disabled={!canDecrease}
-                >
-                  −
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={cn(
-                    'h-7 w-7 shrink-0 text-base font-bold border-accent/30 bg-accent/5 text-accent hover:bg-accent/15 hover:border-accent/50',
-                    !canIncrease && 'opacity-30 cursor-not-allowed',
-                  )}
-                  onClick={() => setScore(ability, Math.min(POINT_BUY_MAX, score + 1))}
-                  disabled={!canIncrease}
-                >
-                  +
-                </Button>
-              </div>
-            </AbilityScoreCard>
-          )
-        })}
-      </div>
+        return (
+          <AbilityScoreCard
+            key={ability}
+            ability={ability}
+            score={score}
+            bonus={racial}
+            interactive
+            variant="console"
+            selected={selectedAbility === ability}
+            onSelect={() => onSelectAbility(ability)}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn(
+                  'h-7 w-7 shrink-0 text-base font-bold border-accent/30 bg-accent/5 text-accent hover:bg-accent/15 hover:border-accent/50',
+                  !canDecrease && 'opacity-30 cursor-not-allowed',
+                )}
+                onClick={() => setScore(ability, Math.max(POINT_BUY_MIN, score - 1))}
+                disabled={!canDecrease}
+              >
+                −
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn(
+                  'h-7 w-7 shrink-0 text-base font-bold border-accent/30 bg-accent/5 text-accent hover:bg-accent/15 hover:border-accent/50',
+                  !canIncrease && 'opacity-30 cursor-not-allowed',
+                )}
+                onClick={() => setScore(ability, Math.min(POINT_BUY_MAX, score + 1))}
+                disabled={!canIncrease}
+              >
+                +
+              </Button>
+            </div>
+          </AbilityScoreCard>
+        )
+      })}
     </div>
   )
 }
@@ -191,7 +151,7 @@ export function BuildAbilityScoresStandardArrayPanel({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 2xl:grid-cols-6">
       {ABILITY_NAMES.map((ability) => {
         const racial = racialBonuses[ability] ?? 0
         const base = assignments[ability]
@@ -203,6 +163,7 @@ export function BuildAbilityScoresStandardArrayPanel({
             score={base ?? 8}
             bonus={racial}
             interactive
+            variant="console"
             selected={selectedAbility === ability}
             onSelect={() => onSelectAbility(ability)}
           >
@@ -242,7 +203,7 @@ export function BuildAbilityScoresCustomScoresPanel({
   onSelectAbility,
 }: CustomScoresPanelProps) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 2xl:grid-cols-6">
       {ABILITY_NAMES.map((ability) => {
         const value = scores[ability] ?? 10
         const racial = racialBonuses[ability] ?? 0
@@ -254,6 +215,7 @@ export function BuildAbilityScoresCustomScoresPanel({
             score={value}
             bonus={racial}
             interactive
+            variant="console"
             selected={selectedAbility === ability}
             onSelect={() => onSelectAbility(ability)}
           >

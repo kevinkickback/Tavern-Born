@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
-  buildCharacterSnapshot,
   buildFeatModalFeats,
   buildLevelsToShow,
   countTotalAsiAcrossClasses,
@@ -159,60 +158,6 @@ describe('buildClassPageUtils', () => {
         fallbackClassByName: fallback,
       }),
     ).toBe(2)
-  })
-
-  test('buildCharacterSnapshot includes progression and spell details', () => {
-    const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
-      spells: {
-        spellProfiles: [
-          {
-            id: 'class:Wizard|PHB',
-            type: 'class',
-            label: 'Wizard (Lv 3)',
-            className: 'Wizard',
-            classSource: 'PHB',
-            cantrips: ['Fire Bolt'],
-            spellsKnown: ['Shield'],
-            preparedSpells: ['Magic Missile'],
-            alwaysPrepared: false,
-          },
-          {
-            id: 'special:unrestricted',
-            type: 'special',
-            label: 'Special (Unrestricted)',
-            cantrips: [],
-            spellsKnown: [],
-            preparedSpells: [],
-            alwaysPrepared: true,
-          },
-        ],
-        spellSlots: {
-          1: { max: 4, used: 0 },
-          2: { max: 3, used: 0 },
-          3: { max: 2, used: 0 },
-          4: { max: 0, used: 0 },
-          5: { max: 0, used: 0 },
-          6: { max: 0, used: 0 },
-          7: { max: 0, used: 0 },
-          8: { max: 0, used: 0 },
-          9: { max: 0, used: 0 },
-        },
-      },
-    })
-
-    const snapshot = buildCharacterSnapshot({
-      character,
-      classProgression: getCharacterClassEntries(character),
-      viewingClass: 'Wizard',
-    })
-
-    expect(snapshot.class).toBe('Wizard')
-    expect(snapshot.progression?.classes).toEqual([{ name: 'Wizard', levels: 3, source: 'PHB' }])
-    expect(snapshot.spells?.cantrips).toEqual(['Fire Bolt'])
-    expect(snapshot.spells?.spellsKnown).toEqual(['Shield'])
   })
 
   test('buildLevelsToShow merges feature, asi, subclass, spell, and progression trigger levels', () => {

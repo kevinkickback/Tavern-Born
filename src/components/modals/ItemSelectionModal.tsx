@@ -5,10 +5,10 @@ import {
   SelectionModal,
 } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
+import { useItemPropertyLookup } from '@/hooks/data/useGameData'
 import { RARITY_COLORS, RARITY_ORDER } from '@/lib/5etools/constants'
 import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
-import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e } from '@/types/5etools'
 
 export interface ItemSelectionModalProps {
@@ -46,8 +46,6 @@ const PROPERTY_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'consumable', label: 'Consumable' },
   { value: 'cursed', label: 'Cursed' },
 ]
-
-const EMPTY_RECORD: Record<string, string> = {}
 
 function getPropertyLabel(tag: string, propertyByAbbr: Record<string, string>): string {
   const key = tag.trim().split('|')[0].toUpperCase()
@@ -224,8 +222,7 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
   const normalizedRarity =
     item.rarity && item.rarity.toLowerCase() === 'unknown (magic)' ? 'unknown' : (item.rarity ?? '')
   const rarityColorClass = RARITY_COLORS[normalizedRarity.toLowerCase()] ?? ''
-  const itemPropertyByAbbr =
-    useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr) ?? EMPTY_RECORD
+  const itemPropertyByAbbr = useItemPropertyLookup()
 
   return (
     <div className="p-3.5">

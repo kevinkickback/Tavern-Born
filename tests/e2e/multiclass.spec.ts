@@ -177,7 +177,7 @@ async function seedCharacter(page: import('@playwright/test').Page) {
   )
 }
 
-test('multiclass character shows both class tabs on class page', async ({ page }) => {
+test('multiclass character shows both classes in the class switcher', async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
   await seedCharacter(page)
@@ -189,12 +189,14 @@ test('multiclass character shows both class tabs on class page', async ({ page }
   await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)
 
-  // Both classes should appear as tab triggers
-  await expect(page.getByRole('tab', { name: /Fighter/ })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Wizard/ })).toBeVisible()
+  const classSwitcher = page.getByRole('combobox', { name: 'Switch class' })
+  await expect(classSwitcher).toHaveAttribute('title', 'Fighter, level 5')
+  await classSwitcher.click()
+  await expect(page.getByRole('option', { name: 'Fighter · Level 5' })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Wizard · Level 3' })).toBeVisible()
 })
 
-test('multiclass class tabs show correct level badges', async ({ page }) => {
+test('multiclass class options show correct levels', async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
   await seedCharacter(page)
@@ -205,15 +207,13 @@ test('multiclass class tabs show correct level badges', async ({ page }) => {
   await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)
 
-  // Fighter tab should display level 5 badge, Wizard level 3
-  const fighterTab = page.getByRole('tab', { name: /Fighter/ })
-  const wizardTab = page.getByRole('tab', { name: /Wizard/ })
-
-  await expect(fighterTab).toContainText('5')
-  await expect(wizardTab).toContainText('3')
+  const classSwitcher = page.getByRole('combobox', { name: 'Switch class' })
+  await classSwitcher.click()
+  await expect(page.getByRole('option', { name: 'Fighter · Level 5' })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Wizard · Level 3' })).toBeVisible()
 })
 
-test('multiclass tab switch updates the visible class panel', async ({ page }) => {
+test('multiclass switch updates the visible class panel', async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
   await seedCharacter(page)
@@ -224,13 +224,10 @@ test('multiclass tab switch updates the visible class panel', async ({ page }) =
   await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)
 
-  // Fighter tab is default (first entry) — activate it explicitly
-  await page.getByRole('tab', { name: /Fighter/ }).click()
-
-  // Switch to Wizard
-  await page.getByRole('tab', { name: /Wizard/ }).click()
-  const wizardTab = page.getByRole('tab', { name: /Wizard/ })
-  await expect(wizardTab).toHaveAttribute('data-state', 'active')
+  const classSwitcher = page.getByRole('combobox', { name: 'Switch class' })
+  await classSwitcher.click()
+  await page.getByRole('option', { name: 'Wizard · Level 3' }).click()
+  await expect(classSwitcher).toHaveAttribute('title', 'Wizard, level 3')
 })
 
 test('multiclass character persists both classes after reload', async ({ page }) => {
@@ -244,21 +241,24 @@ test('multiclass character persists both classes after reload', async ({ page })
   await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)
 
-  // Verify both tabs exist before reload
-  await expect(page.getByRole('tab', { name: /Fighter/ })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Wizard/ })).toBeVisible()
+  const classSwitcher = page.getByRole('combobox', { name: 'Switch class' })
+  await classSwitcher.click()
+  await expect(page.getByRole('option', { name: 'Fighter · Level 5' })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Wizard · Level 3' })).toBeVisible()
+  await page.keyboard.press('Escape')
 
   // Reload and re-navigate
   await page.reload()
   await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
-  await page.getByRole('list').getByRole('link', { name: 'Home' }).click()
+  await page.getByRole('button', { name: 'Characters' }).click()
   await selectCharacterFromHome(page, 'Multiclass E2E Hero')
   await navigateToClassPage(page)
   await expect(page).toHaveURL(/\/build\/class$/)
 
-  // Both classes should still be present after reload
-  await expect(page.getByRole('tab', { name: /Fighter/ })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Wizard/ })).toBeVisible()
+  const reloadedSwitcher = page.getByRole('combobox', { name: 'Switch class' })
+  await reloadedSwitcher.click()
+  await expect(page.getByRole('option', { name: 'Fighter · Level 5' })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Wizard · Level 3' })).toBeVisible()
 })
 
 test('multiclass character total level shows in character header', async ({ page }) => {

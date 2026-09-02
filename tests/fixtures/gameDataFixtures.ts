@@ -1,4 +1,34 @@
-import type { Class5e, Race5e, Spell5e } from '@/types/5etools'
+import type { Class5e, GameData, Race5e, Spell5e } from '@/types/5etools'
+
+export function makeGameDataFixture(overrides: Partial<GameData> = {}): GameData {
+  return {
+    races: [],
+    classes: [],
+    backgrounds: [],
+    organizations: [],
+    spells: [],
+    feats: [],
+    items: [],
+    itemsBase: [],
+    itemProperties: [],
+    itemTypes: [],
+    classFeatures: [],
+    actions: [],
+    conditions: [],
+    deities: [],
+    skills: [],
+    senses: [],
+    languages: [],
+    magicvariants: [],
+    optionalfeatures: [],
+    variantrules: [],
+    trapHazards: [],
+    rewards: [],
+    cultsBoons: [],
+    sources: [],
+    ...overrides,
+  }
+}
 
 function buildClassFeatureRefs(cls: Class5e) {
   const refs = Array.isArray(cls.classFeatures) ? cls.classFeatures : []

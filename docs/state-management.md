@@ -123,6 +123,7 @@ Every mutation path (`updateCharacter`, `updateActiveCharacter`, `updateActiveCh
 - Attribution may be exact (class page level picker) or inferred (spells page lowest-eligible assignment).
 - Class-page per-level spell displays are derived from provenance attribution metadata.
 - Multiclass slot derivation follows 5e caster progression rules, including Artificer using ceiling half-caster contribution.
+- Shared spell-slot maxima come from parsed PHB/XPHB full-caster progression rows. A progression containing any 2024 class uses the XPHB table; otherwise it uses PHB. Missing canonical rows produce no synthetic slots and are reported during development.
 - This is a hard cutover model; legacy spell arrays and `spellsByLevel` are not used.
 
 ## Implementation Checklist for State Changes
@@ -224,6 +225,21 @@ Increment `CURRENT_SCHEMA_VERSION` and create a new migration when:
 
 ## Current Domain Workflows
 
+### Character Command Contract
+
+Pure domain transitions under `src/lib/character/commands/` return a complete
+`{ characterPatch, provenanceUpdate }` result. A command owns identity fields, reset policy,
+materialized fields, and provenance for its transition. React hooks only read state/dependencies and
+apply the result through one `updateCharacter` call.
+
+This contract also covers manual equipment add/remove/proficiency actions, class/background
+starting-equipment choices, and optional-feature replacement. Batch choices accumulate all ledger
+changes before the adapter performs one store write.
+
+Initial creation uses `buildInitialCharacter` from `originSelectionCommand.ts`, which composes the
+same race, class, and background commands used by editing flows over the shared pure character
+factory in `src/lib/character/createCharacter.ts`.
+
 ### Spell Mutation Workflow
 
 **Current State:**
@@ -274,8 +290,15 @@ addSpellToProfile(profileId, name, 'spell')
 **Mutation Workflow:**
 - Domain commands in `src/lib/character/commands/classCommands.ts` coordinate progression updates and mirrored top-level class fields.
 - `useUnifiedClassSelection()` and Level Up flows use the command layer instead of the deleted patch-builder path.
-- Class selection provenance orchestration is delegated through `src/lib/character/commands/classSelectionOrchestrationCommand.ts`.
+- Class identity, provenance, proficiencies, skills, and equipment are consolidated in `applyClassSelectionCommand`.
 
 **Schema:** characterSchema validates both, but doesn't enforce which is canonical during mutations.
 
 Progression-sensitive reads use shared selectors across class page, model, and provenance callsites, while mirrored top-level fields remain as persisted compatibility data.
+
+### Class Page Controllers
+
+`BuildClassPage` is a route compositor. Focused hooks under `src/pages/build/class/hooks/` own
+subclass selection, progression spell choices, ASI/feat choices, and optional-feature choices.
+These hooks expose derived view state and command-backed actions; route code must not reconstruct
+their game rules or sequence domain writes.

@@ -94,6 +94,70 @@ describe('migrateCharacter', () => {
     expect(result.version).toBe(`${CURRENT_SCHEMA_VERSION}.0.0`)
   })
 
+  it('normalizes parameterized fixed feat grants from version 3', () => {
+    const result = migrateCharacter(
+      {
+        ...baseCharacter,
+        version: '3.0.0',
+        provenance: {
+          feats: {
+            'magic initiate; cleric': [
+              {
+                sourceType: 'background',
+                sourceName: 'Acolyte',
+                sourceRef: 'XPHB',
+                grantType: 'fixed',
+                label: 'Acolyte',
+              },
+            ],
+          },
+        },
+      },
+      3,
+    )
+
+    expect(result.provenance?.feats['magic initiate']).toEqual([
+      expect.objectContaining({ grantVariant: 'cleric' }),
+    ])
+    expect(result.provenance?.feats['magic initiate; cleric']).toBeUndefined()
+  })
+
+  it('merges a parameterized fixed grant with an existing base feat key', () => {
+    const result = migrateCharacter(
+      {
+        ...baseCharacter,
+        version: '3.0.0',
+        provenance: {
+          feats: {
+            'magic initiate': [
+              {
+                sourceType: 'manual',
+                sourceName: 'User Choice',
+                grantType: 'choice',
+                label: 'User Choice',
+              },
+            ],
+            'magic initiate; wizard': [
+              {
+                sourceType: 'background',
+                sourceName: 'Sage',
+                sourceRef: 'XPHB',
+                grantType: 'fixed',
+                label: 'Sage',
+              },
+            ],
+          },
+        },
+      },
+      3,
+    )
+
+    expect(result.provenance?.feats['magic initiate']).toHaveLength(2)
+    expect(result.provenance?.feats['magic initiate']).toContainEqual(
+      expect.objectContaining({ sourceName: 'Sage', grantVariant: 'wizard' }),
+    )
+  })
+
   it('throws when migration result is missing required fields (id/name)', () => {
     // An empty object gets version stamped via the 0→1 migration,
     // but lacks id and name — isValidCharacter rejects it

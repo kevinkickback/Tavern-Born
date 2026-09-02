@@ -4,6 +4,8 @@ export interface AnchoredHintPosition {
   top: number
   left: number
   arrowLeft: number
+  anchorTop: number
+  gap: number
 }
 
 interface UseAnchoredHintPositionOptions {
@@ -65,7 +67,11 @@ function positionsMatch(current: AnchoredHintPosition | null, next: AnchoredHint
   if (current === next) return true
   if (!current || !next) return false
   return (
-    current.top === next.top && current.left === next.left && current.arrowLeft === next.arrowLeft
+    current.top === next.top &&
+    current.left === next.left &&
+    current.arrowLeft === next.arrowLeft &&
+    current.anchorTop === next.anchorTop &&
+    current.gap === next.gap
   )
 }
 
@@ -111,11 +117,22 @@ export function useAnchoredHintPosition({
       if (anchor) {
         const rect = anchor.getBoundingClientRect()
         const centerX = rect.left + rect.width / 2
-        const maxLeft = Math.max(16, window.innerWidth - width - 16)
-        const preferredLeft = horizontalAlign === 'end' ? rect.right - width : centerX - width / 2
+        const rootFontSize = Number.parseFloat(
+          window.getComputedStyle(document.documentElement).fontSize,
+        )
+        const scaledWidth = width * ((Number.isFinite(rootFontSize) ? rootFontSize : 16) / 16)
+        const maxLeft = Math.max(16, window.innerWidth - scaledWidth - 16)
+        const preferredLeft =
+          horizontalAlign === 'end' ? rect.right - scaledWidth : centerX - scaledWidth / 2
         const left = Math.min(Math.max(preferredLeft, 16), maxLeft)
-        const arrowLeft = Math.min(Math.max(centerX - left, 18), width - 18)
-        nextPosition = { top: rect.bottom + gap, left, arrowLeft }
+        const arrowLeft = Math.min(Math.max(centerX - left, 18), scaledWidth - 18)
+        nextPosition = {
+          top: rect.bottom + gap,
+          left,
+          arrowLeft,
+          anchorTop: rect.top,
+          gap,
+        }
       }
 
       setPosition((currentPosition) =>

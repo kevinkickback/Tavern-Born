@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import {
+  applyClassSelectionCommand,
   buildInitialCharacterProficiencies,
-  computeApplyClassSelectionUpdates,
-} from '@/lib/character/commands/classSelectionOrchestrationCommand'
+} from '@/lib/character/commands/classCommands'
 import { applyClassGrants } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
@@ -124,7 +124,7 @@ describe('buildInitialCharacterProficiencies', () => {
 // computeApplyClassSelectionUpdates
 // ---------------------------------------------------------------------------
 
-describe('computeApplyClassSelectionUpdates', () => {
+describe('applyClassSelectionCommand', () => {
   test('adds armor proficiencies for a new class', () => {
     const character = makeCharacterFixture({
       class: '',
@@ -151,17 +151,41 @@ describe('computeApplyClassSelectionUpdates', () => {
       },
     }
 
-    const updates = computeApplyClassSelectionUpdates(
+    const result = applyClassSelectionCommand(character, ledger, cls, undefined, EMPTY_LOOKUP)
+    expect(result.characterPatch.proficiencies?.armor).toContain('light armor')
+    expect(result.characterPatch.proficiencies?.weapons).toContain('simple weapons')
+    expect(result.characterPatch.proficiencies?.savingThrows).toContain('strength')
+    expect(result.characterPatch.proficiencies?.savingThrows).toContain('constitution')
+  })
+
+  test('ignores non-string armor/weapons entries (e.g. Artificer firearms variant object)', () => {
+    const character = makeCharacterFixture({
+      class: '',
+      classSource: '',
+      classProgression: [],
+    })
+    const ledger = emptyProvenance()
+
+    const cls = {
+      name: 'Artificer',
+      source: 'UAArtificer',
+      proficiency: [] as string[],
+      startingProficiencies: {
+        armor: ['light', 'medium', 'shield'],
+        weapons: ['simple', { proficiency: 'firearms', optional: true }],
+        tools: [],
+      },
+    }
+
+    const result = applyClassSelectionCommand(
       character,
       ledger,
-      cls,
+      cls as never,
       undefined,
       EMPTY_LOOKUP,
     )
-    expect(updates.proficiencies?.armor).toContain('light armor')
-    expect(updates.proficiencies?.weapons).toContain('simple weapons')
-    expect(updates.proficiencies?.savingThrows).toContain('strength')
-    expect(updates.proficiencies?.savingThrows).toContain('constitution')
+    expect(result.characterPatch.proficiencies?.weapons).toContain('simple')
+    expect(result.characterPatch.proficiencies?.weapons).toHaveLength(1)
   })
 
   test('removes old class proficiencies when switching class', () => {
@@ -205,7 +229,7 @@ describe('computeApplyClassSelectionUpdates', () => {
       },
     }
 
-    const updates = computeApplyClassSelectionUpdates(
+    const result = applyClassSelectionCommand(
       character,
       ledgerWithFighter,
       wizardCls,
@@ -214,13 +238,13 @@ describe('computeApplyClassSelectionUpdates', () => {
     )
 
     // Fighter's armor should be removed
-    expect(updates.proficiencies?.armor ?? []).not.toContain('light armor')
-    expect(updates.proficiencies?.armor ?? []).not.toContain('medium armor')
+    expect(result.characterPatch.proficiencies?.armor ?? []).not.toContain('light armor')
+    expect(result.characterPatch.proficiencies?.armor ?? []).not.toContain('medium armor')
     // Wizard weapons should be present
-    expect(updates.proficiencies?.weapons).toContain('dagger')
+    expect(result.characterPatch.proficiencies?.weapons).toContain('dagger')
     // Wizard's saving throws are added
-    expect(updates.proficiencies?.savingThrows).toContain('intelligence')
-    expect(updates.proficiencies?.savingThrows).toContain('wisdom')
+    expect(result.characterPatch.proficiencies?.savingThrows).toContain('intelligence')
+    expect(result.characterPatch.proficiencies?.savingThrows).toContain('wisdom')
   })
 
   test('adds starting equipment from class blocks', () => {
@@ -249,8 +273,8 @@ describe('computeApplyClassSelectionUpdates', () => {
       startingProficiencies: {},
     }
 
-    const updates = computeApplyClassSelectionUpdates(character, ledger, cls, undefined, lookup)
-    expect(updates.equipment?.some((e) => e.name === 'Dagger')).toBe(true)
+    const result = applyClassSelectionCommand(character, ledger, cls, undefined, lookup)
+    expect(result.characterPatch.equipment?.some((e) => e.name === 'Dagger')).toBe(true)
   })
 
   test('removes old class equipment when switching class', () => {
@@ -291,7 +315,7 @@ describe('computeApplyClassSelectionUpdates', () => {
       startingProficiencies: { weapons: ['dagger'] },
     }
 
-    const updates = computeApplyClassSelectionUpdates(
+    const result = applyClassSelectionCommand(
       character,
       ledgerWithRogue,
       wizardCls,
@@ -299,7 +323,7 @@ describe('computeApplyClassSelectionUpdates', () => {
       lookup,
     )
     // Rogue's class-granted dagger should be removed from equipment
-    expect(updates.equipment?.some((e) => e.name === 'Dagger')).toBe(false)
+    expect(result.characterPatch.equipment?.some((e) => e.name === 'Dagger')).toBe(false)
   })
 
   test('merges with existing non-class equipment', () => {
@@ -339,9 +363,9 @@ describe('computeApplyClassSelectionUpdates', () => {
       startingProficiencies: {},
     }
 
-    const updates = computeApplyClassSelectionUpdates(character, ledger, cls, undefined, lookup)
-    expect(updates.equipment?.some((e) => e.name === 'Torch')).toBe(true)
-    expect(updates.equipment?.some((e) => e.name === 'Dagger')).toBe(true)
+    const result = applyClassSelectionCommand(character, ledger, cls, undefined, lookup)
+    expect(result.characterPatch.equipment?.some((e) => e.name === 'Torch')).toBe(true)
+    expect(result.characterPatch.equipment?.some((e) => e.name === 'Dagger')).toBe(true)
   })
 
   test('returns a provenance update', () => {
@@ -360,13 +384,7 @@ describe('computeApplyClassSelectionUpdates', () => {
     const ledger = emptyProvenance()
     const cls = { name: 'Wizard', source: 'PHB', startingProficiencies: {} }
 
-    const updates = computeApplyClassSelectionUpdates(
-      character,
-      ledger,
-      cls,
-      undefined,
-      EMPTY_LOOKUP,
-    )
-    expect(updates.provenance).toBeDefined()
+    const result = applyClassSelectionCommand(character, ledger, cls, undefined, EMPTY_LOOKUP)
+    expect(result.provenanceUpdate).toBeDefined()
   })
 })

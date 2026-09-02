@@ -104,7 +104,7 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     render(<DataSourceStartupModal />)
 
-    expect(screen.getByText('Welcome to Tavern Born!')).toBeTruthy()
+    expect(screen.getByText('Welcome to Tavern Born')).toBeTruthy()
     expect(screen.getByText('Data Source Configurator')).toBeTruthy()
   })
 
@@ -180,7 +180,7 @@ describe('startup integration: loading overlay and startup modal', () => {
 
     render(<DataSourceStartupModal />)
 
-    expect(screen.getByText('Data Source Setup')).toBeTruthy()
+    expect(screen.getByText('Game Data Setup')).toBeTruthy()
     expect(screen.getByText('Data Source Configurator')).toBeTruthy()
   })
 })

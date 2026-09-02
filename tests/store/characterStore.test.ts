@@ -70,6 +70,32 @@ describe('characterStore', () => {
     expect(state.characters[0]?.id).toBe(created.id)
   })
 
+  test('addCharacter assigns a fresh ID when an imported ID already exists', () => {
+    const existing = makeCharacterFixture({ id: 'duplicate-id', name: 'Original' })
+    const imported = makeCharacterFixture({ id: 'duplicate-id', name: 'Imported Copy' })
+    useCharacterStore.setState({ characters: [existing] })
+
+    const added = useCharacterStore.getState().addCharacter(imported)
+    const state = useCharacterStore.getState()
+
+    expect(added.id).not.toBe(existing.id)
+    expect(state.characters).toHaveLength(2)
+    expect(new Set(state.characters.map((character) => character.id)).size).toBe(2)
+    expect(state.characters[1]).toEqual(added)
+  })
+
+  test('setCharacters repairs duplicate IDs from persisted data', () => {
+    const first = makeCharacterFixture({ id: 'duplicate-id', name: 'First' })
+    const second = makeCharacterFixture({ id: 'duplicate-id', name: 'Second' })
+
+    useCharacterStore.getState().setCharacters([first, second])
+
+    const characters = useCharacterStore.getState().characters
+    expect(characters[0]?.id).toBe('duplicate-id')
+    expect(characters[1]?.id).not.toBe('duplicate-id')
+    expect(new Set(characters.map((character) => character.id)).size).toBe(2)
+  })
+
   test('updateCharacter updates active character as draft and not persisted list', () => {
     const existing = makeCharacterFixture({ id: 'c1', name: 'Before' })
     useCharacterStore.setState({

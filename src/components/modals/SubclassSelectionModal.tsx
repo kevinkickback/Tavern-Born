@@ -2,12 +2,9 @@ import { memo, useCallback, useMemo } from 'react'
 import { type ActiveFilters, SelectionModal } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import type { Subclass5e } from '@/types/5etools'
 
-type SubclassOption = {
-  name: string
-  source?: string
-  entries?: unknown[]
-}
+type SubclassOption = Subclass5e
 
 interface SubclassCardProps {
   subclass: SubclassOption

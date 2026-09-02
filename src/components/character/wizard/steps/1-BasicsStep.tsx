@@ -1,4 +1,4 @@
-import { User } from '@phosphor-icons/react'
+import { IdentificationCard } from '@phosphor-icons/react'
 import { useCallback, useId } from 'react'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
 import { Input } from '@/components/ui/input'
@@ -41,82 +41,81 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
   )
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4 shrink-0">
-        <div className="rounded-lg border border-border bg-muted/20 p-4">
-          <Label htmlFor={characterNameId} className="flex items-center gap-2 mb-2">
-            <User className="h-4 w-4" />
-            Character Name
-          </Label>
-          <Input
-            id={characterNameId}
-            value={data.name}
-            onChange={(e) => onChange({ name: e.target.value })}
-            placeholder="Enter character name"
-            className={cn(
-              'text-lg',
-              hasError('name') && 'border-destructive focus-visible:ring-destructive animate-shake',
-            )}
-          />
+    <div className="flex min-h-full flex-col gap-5">
+      <section className="overflow-hidden rounded-lg border border-border bg-workspace-pane">
+        <div className="flex items-center gap-2 border-b border-border bg-surface-raised px-4 py-3">
+          <IdentificationCard className="size-4 text-primary" weight="duotone" />
+          <div>
+            <h3 className="text-sm font-semibold">Character identity</h3>
+            <p className="text-xs text-muted-foreground">
+              Add the details used on your character sheet.
+            </p>
+          </div>
         </div>
-        <div className="rounded-lg border border-border bg-muted/20 p-4">
-          <Label htmlFor={playerNameId} className="flex items-center gap-2 mb-2">
-            <User className="h-4 w-4" />
-            Player Name
-          </Label>
-          <Input
-            id={playerNameId}
-            value={data.playerName}
-            onChange={(e) => onChange({ playerName: e.target.value })}
-            placeholder="Enter player name"
-          />
+        <div className="grid grid-cols-1 gap-x-5 gap-y-4 p-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="space-y-2">
+            <Label htmlFor={characterNameId}>Character Name</Label>
+            <Input
+              id={characterNameId}
+              value={data.name}
+              onChange={(e) => onChange({ name: e.target.value })}
+              placeholder="Enter character name"
+              className={cn(
+                hasError('name') &&
+                  'border-destructive focus-visible:ring-destructive animate-shake',
+              )}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={playerNameId}>Player Name</Label>
+            <Input
+              id={playerNameId}
+              value={data.playerName}
+              onChange={(e) => onChange({ playerName: e.target.value })}
+              placeholder="Enter player name"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={ageId}>Age</Label>
+            <Input
+              id={ageId}
+              type="number"
+              min={0}
+              step={1}
+              value={data.age ?? ''}
+              onChange={(e) => {
+                const raw = e.target.value
+                if (raw === '') {
+                  onChange({ age: null })
+                  return
+                }
+                const parsed = Number.parseInt(raw, 10)
+                if (Number.isNaN(parsed)) {
+                  return
+                }
+                onChange({ age: Math.max(0, parsed) })
+              }}
+              placeholder="Enter age"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={genderId}>Gender</Label>
+            <Select value={data.gender} onValueChange={(value) => onChange({ gender: value })}>
+              <SelectTrigger id={genderId}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="Non-binary">Non-binary</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="rounded-lg border border-border bg-muted/20 p-4">
-          <Label htmlFor={ageId} className="flex items-center gap-2 mb-2">
-            <User className="h-4 w-4" />
-            Age
-          </Label>
-          <Input
-            id={ageId}
-            type="number"
-            min={0}
-            step={1}
-            value={data.age ?? ''}
-            onChange={(e) => {
-              const raw = e.target.value
-              if (raw === '') {
-                onChange({ age: null })
-                return
-              }
-              const parsed = Number.parseInt(raw, 10)
-              if (Number.isNaN(parsed)) {
-                return
-              }
-              onChange({ age: Math.max(0, parsed) })
-            }}
-            placeholder="Enter age"
-          />
-        </div>
-        <div className="rounded-lg border border-border bg-muted/20 p-4">
-          <Label htmlFor={genderId} className="flex items-center gap-2 mb-2">
-            <User className="h-4 w-4" />
-            Gender
-          </Label>
-          <Select value={data.gender} onValueChange={(value) => onChange({ gender: value })}>
-            <SelectTrigger id={genderId}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Male">Male</SelectItem>
-              <SelectItem value="Female">Female</SelectItem>
-              <SelectItem value="Non-binary">Non-binary</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      </section>
 
-      <div className="flex flex-col rounded-lg border border-border bg-muted/20 p-4">
+      <section className="min-h-[28rem] flex-1">
         <PortraitPicker
           portrait={data.portrait}
           transform={data.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
@@ -127,8 +126,10 @@ export function BasicsStep({ data, onChange, invalidFields = new Set() }: StepPr
           gender={data.gender}
           onPortraitChange={handlePortraitChange}
           onTransformChange={handleTransformChange}
+          density="compact"
+          collapsible={false}
         />
-      </div>
+      </section>
     </div>
   )
 }

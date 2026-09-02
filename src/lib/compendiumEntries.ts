@@ -29,6 +29,8 @@ export type CompendiumEntry =
   | (CompendiumEntryBase & { type: 'Feat'; data: Feat5e })
   | (CompendiumEntryBase & { type: UntypedEntryType; data: Record<string, unknown> })
 
+export type CompendiumEditionFilter = '5e' | '5.5e' | 'both'
+
 interface CompendiumGameData {
   races?: Race5e[] | Record<string, Race5e>
   classes?: Class5e[] | Record<string, Class5e>
@@ -469,11 +471,19 @@ export function buildCompendiumEntries(
   return entries
 }
 
+export function getCompendiumEntryEdition(
+  entry: CompendiumEntry,
+): Exclude<CompendiumEditionFilter, 'both'> {
+  const data = entry.data as Record<string, unknown>
+  return data.edition === 'one' || entry.source.toUpperCase() === 'XPHB' ? '5.5e' : '5e'
+}
+
 export function filterCompendiumEntries(
   entries: CompendiumEntry[],
   searchQuery: string,
   activeTypes: Set<string>,
   activeSources: Set<string>,
+  editionFilter: CompendiumEditionFilter = 'both',
 ): CompendiumEntry[] {
   let filtered = entries
 
@@ -483,6 +493,10 @@ export function filterCompendiumEntries(
 
   if (activeSources.size > 0) {
     filtered = filtered.filter((entry) => activeSources.has(entry.source))
+  }
+
+  if (editionFilter !== 'both') {
+    filtered = filtered.filter((entry) => getCompendiumEntryEdition(entry) === editionFilter)
   }
 
   if (searchQuery) {

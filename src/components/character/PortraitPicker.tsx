@@ -1,10 +1,11 @@
 import { Crop, Image, Images, Upload, X } from '@phosphor-icons/react'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PortraitCardPreview } from '@/components/character/PortraitCardPreview'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { SplitPane } from '@/components/ui/SplitPane'
 import { Slider } from '@/components/ui/slider'
+import { WorkspacePaneHeader } from '@/components/workspace'
 import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
 import {
   DEFAULT_PORTRAIT_TRANSFORM,
@@ -25,6 +26,8 @@ interface PortraitPickerProps {
   lastModified?: string
   onPortraitChange: (portrait: string | null) => void
   onTransformChange: (transform: PortraitTransform) => void
+  density?: 'default' | 'compact'
+  collapsible?: boolean
 }
 
 export function PortraitPicker({
@@ -38,8 +41,12 @@ export function PortraitPicker({
   lastModified,
   onPortraitChange,
   onTransformChange,
+  density = 'default',
+  collapsible = true,
 }: PortraitPickerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [previewCollapsed, setPreviewCollapsed] = useState(false)
+  const [libraryCollapsed, setLibraryCollapsed] = useState(false)
   const t = transform ?? DEFAULT_PORTRAIT_TRANSFORM
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,19 +89,34 @@ export function PortraitPicker({
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 lg:items-stretch">
-      {/* Left col: Card Preview + Image Controls */}
-      <div className="w-full lg:w-[42%]">
-        {/* ── Card Preview + Image Controls ── */}
-        <Card className="w-full overflow-hidden">
-          <div className="h-10 bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
-            <Image className="h-4 w-4 text-indigo-600 dark:text-indigo-400" weight="duotone" />
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              Card Preview
-            </span>
-          </div>
-          <div className="p-4 space-y-4">
-            <div className="rounded-xl border-2 border-dashed border-border p-2 sm:p-3">
+    <>
+      <SplitPane
+        className={cn(
+          'my-0 h-full overflow-visible',
+          !previewCollapsed && !libraryCollapsed && 'gap-3',
+        )}
+        leftClassName={cn(
+          'rounded-lg bg-workspace-detail',
+          previewCollapsed ? 'border-0' : 'border border-border',
+        )}
+        rightClassName={cn(
+          'rounded-lg bg-workspace-pane',
+          libraryCollapsed ? 'border-0' : 'border border-border',
+        )}
+        leftWidth="var(--workspace-master-width)"
+        leftCollapsed={previewCollapsed}
+        rightCollapsed={libraryCollapsed}
+        onLeftCollapsedChange={setPreviewCollapsed}
+        onRightCollapsedChange={setLibraryCollapsed}
+        showCollapseControls={collapsible}
+        left={
+          <section className="flex h-full w-full flex-col overflow-hidden">
+            <WorkspacePaneHeader
+              title="Card preview"
+              icon={<Image className="size-4 text-primary" weight="duotone" />}
+              className={cn(collapsible && 'pr-20')}
+            />
+            <div className="space-y-4 p-4">
               <PortraitCardPreview
                 image={portrait}
                 name={name}
@@ -105,132 +127,142 @@ export function PortraitPicker({
                 lastModified={lastModified}
                 transform={t}
               />
-            </div>
 
-            {/* Image Controls — inline below preview */}
-            <div className="border-t border-border/40 pt-3 space-y-3">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Crop className="h-3.5 w-3.5" weight="duotone" />
-                <span className="text-[11px] font-bold uppercase tracking-wider">
-                  Image Controls
-                </span>
+              {/* Image Controls — inline below preview */}
+              <div className="space-y-3 border-t border-border pt-3">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Crop className="h-3.5 w-3.5" weight="duotone" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider">
+                    Image Controls
+                  </span>
+                </div>
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-10 shrink-0">Zoom</span>
+                    <Slider
+                      value={[t.zoom]}
+                      onValueChange={(value) => handleTransformChange({ zoom: value[0] })}
+                      min={50}
+                      max={400}
+                      step={5}
+                      disabled={!portrait}
+                      className="flex-1"
+                    />
+                    <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
+                      {t.zoom}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-10 shrink-0">Pan X</span>
+                    <Slider
+                      value={[t.panX]}
+                      onValueChange={(value) => handleTransformChange({ panX: value[0] })}
+                      min={-240}
+                      max={240}
+                      step={5}
+                      disabled={!portrait}
+                      className="flex-1"
+                    />
+                    <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
+                      {t.panX}px
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground w-10 shrink-0">Pan Y</span>
+                    <Slider
+                      value={[t.panY]}
+                      onValueChange={(value) => handleTransformChange({ panY: value[0] })}
+                      min={-240}
+                      max={240}
+                      step={5}
+                      disabled={!portrait}
+                      className="flex-1"
+                    />
+                    <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
+                      {t.panY}px
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onTransformChange(DEFAULT_PORTRAIT_TRANSFORM)}
+                  disabled={!portrait}
+                  className="h-8 w-full text-xs"
+                >
+                  Reset View
+                </Button>
               </div>
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-10 shrink-0">Zoom</span>
-                  <Slider
-                    value={[t.zoom]}
-                    onValueChange={(value) => handleTransformChange({ zoom: value[0] })}
-                    min={50}
-                    max={400}
-                    step={5}
-                    disabled={!portrait}
-                    className="flex-1"
-                  />
-                  <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-                    {t.zoom}%
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-10 shrink-0">Pan X</span>
-                  <Slider
-                    value={[t.panX]}
-                    onValueChange={(value) => handleTransformChange({ panX: value[0] })}
-                    min={-240}
-                    max={240}
-                    step={5}
-                    disabled={!portrait}
-                    className="flex-1"
-                  />
-                  <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-                    {t.panX}px
-                  </span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-10 shrink-0">Pan Y</span>
-                  <Slider
-                    value={[t.panY]}
-                    onValueChange={(value) => handleTransformChange({ panY: value[0] })}
-                    min={-240}
-                    max={240}
-                    step={5}
-                    disabled={!portrait}
-                    className="flex-1"
-                  />
-                  <span className="text-xs font-medium tabular-nums w-10 text-right shrink-0">
-                    {t.panY}px
-                  </span>
-                </div>
+            </div>
+          </section>
+        }
+        right={
+          <section className="flex h-full w-full flex-col overflow-hidden">
+            <WorkspacePaneHeader
+              title="Portrait library"
+              icon={<Images className="size-4 text-primary" weight="duotone" />}
+              className={cn(collapsible && 'pr-20')}
+            />
+            <div
+              className={cn(
+                'flex min-h-0 flex-1 flex-col',
+                density === 'compact' ? 'gap-3 p-3' : 'gap-4 p-4',
+              )}
+            >
+              <div
+                className={cn(
+                  'grid flex-1 content-start overflow-y-auto pr-1',
+                  density === 'compact'
+                    ? 'grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2'
+                    : 'grid-cols-[repeat(auto-fill,minmax(9rem,1fr))] gap-3',
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-accent/60 hover:bg-surface-hover hover:text-accent-foreground"
+                >
+                  <Upload className="h-5 w-5" />
+                  <span className="text-xs leading-tight">Upload</span>
+                </button>
+
+                {PLACEHOLDER_PORTRAITS.map((src, i) => (
+                  <button
+                    key={src}
+                    type="button"
+                    onClick={() => handlePlaceholder(src)}
+                    aria-pressed={Boolean(portrait && resolvePortraitSrc(portrait) === src)}
+                    className={cn(
+                      'relative aspect-square cursor-pointer overflow-hidden rounded-lg border transition-colors',
+                      portrait && resolvePortraitSrc(portrait) === src
+                        ? 'border-accent bg-surface-selected ring-1 ring-accent/50'
+                        : 'border-border hover:border-accent/50 hover:bg-surface-hover',
+                    )}
+                  >
+                    <img
+                      src={src}
+                      alt={`Placeholder ${i + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
               </div>
+
               <Button
                 type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => onTransformChange(DEFAULT_PORTRAIT_TRANSFORM)}
+                variant="outline"
+                onClick={handleClear}
                 disabled={!portrait}
-                className="w-full h-7 text-xs"
+                className="w-full"
               >
-                Reset View
+                <X className="h-4 w-4 mr-2" />
+                Clear Portrait
               </Button>
             </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Right col: Select Portrait */}
-      <div className="w-full lg:w-[58%] lg:flex lg:flex-col">
-        <Card className="w-full overflow-hidden lg:flex lg:flex-col lg:flex-1">
-          <div className="h-10 bg-gradient-to-r from-violet-500/20 via-violet-500/10 to-transparent flex items-center gap-3 px-4 shrink-0">
-            <Images className="h-4 w-4 text-violet-600 dark:text-violet-400" weight="duotone" />
-            <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              Select Portrait
-            </span>
-          </div>
-          <div className="p-4 flex flex-col flex-1 gap-4">
-            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 flex-1 content-start">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="relative aspect-square rounded-lg border-2 border-dashed border-border hover:border-accent/60 transition-all flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-accent-foreground"
-              >
-                <Upload className="h-5 w-5" />
-                <span className="text-xs leading-tight">Upload</span>
-              </button>
-
-              {PLACEHOLDER_PORTRAITS.map((src, i) => (
-                <button
-                  key={src}
-                  type="button"
-                  onClick={() => handlePlaceholder(src)}
-                  className={cn(
-                    'relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:scale-105',
-                    portrait && resolvePortraitSrc(portrait) === src
-                      ? 'border-accent ring-2 ring-accent/50'
-                      : 'border-border hover:border-accent/50',
-                  )}
-                >
-                  <img
-                    src={src}
-                    alt={`Placeholder ${i + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClear}
-              disabled={!portrait}
-              className="w-full"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Clear Portrait
-            </Button>
-          </div>
-        </Card>
-      </div>
+          </section>
+        }
+      />
 
       <input
         ref={fileInputRef}
@@ -239,6 +271,6 @@ export function PortraitPicker({
         onChange={handleUpload}
         className="hidden"
       />
-    </div>
+    </>
   )
 }

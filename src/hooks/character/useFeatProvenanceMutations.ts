@@ -1,158 +1,75 @@
 import { useCallback, useMemo } from 'react'
-import { useLedgerPatch } from '@/hooks/character/useLedgerPatch'
-import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
-import { mergeSkillState } from '@/lib/calculations/skills'
-import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
+import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import {
-  addAbilityBonus,
-  addGrant,
-  addSpellGrant,
-  applyFeatGrant,
-  applyOptionalFeatureGrant,
-  makeSourceTag,
-  removeGrantsBySource,
-  resolveChoice,
-} from '@/lib/provenance'
-import { normalizeKey } from '@/lib/provenance/normalization'
+  applyFeatSelectionCommand,
+  applyOptionalFeatureSelectionCommand,
+  commitFeatOptionsCommand,
+  editFeatOptionsCommand,
+  type FeatOptionTarget,
+  removeFeatChoiceCommand,
+  removeFeatProvenanceCommand,
+  replaceBonusFeatSelectionsCommand,
+  replaceFeatSelectionsCommand,
+  replaceOptionalFeatureSelectionsCommand,
+  resolveFeatChoiceCommand,
+  resolveProficiencyChoiceCommand,
+  retractFeatOptionsCommand,
+  type SelectedFeat,
+} from '@/lib/character/commands/featCommands'
 import type { ChoiceDomain, ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 
 export function useFeatProvenanceMutations() {
-  // Domain mutation hook contract:
-  // 1. Read character + ledger from store (via useLedgerPatch or direct store selectors).
-  // 2. Reconcile: remove grants from the old source (reconcile* functions in lib/provenance).
-  // 3. Apply: add grants from the new source (apply* functions in lib/provenance).
-  // 4. Sync derived character fields (proficiencies, skills via mergeSkillState, equipment).
-  // 5. Write via updateCharacter(character.id, patch) or patchLedger for ledger-only writes.
-  const character = useCharacterStore((s) => s.activeCharacter)
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-
+  const character = useCharacterStore((state) => state.activeCharacter)
+  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const ledger = useMemo<ProvenanceLedger>(
     () => character?.provenance ?? emptyProvenance(),
     [character],
   )
 
-  const patch = useLedgerPatch()
+  const applyCommand = useCallback(
+    (result: CharacterCommandResult) => {
+      if (!character) return
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    },
+    [character, updateCharacter],
+  )
 
   const applyFeatSelection = useCallback(
     (featName: string, featSource: string | undefined) => {
       if (!character) return
-      const newLedger = applyFeatGrant(ledger, featName, featSource, true)
-      patch(newLedger)
+      applyCommand(applyFeatSelectionCommand(ledger, featName, featSource))
     },
-    [character, ledger, patch],
+    [character, ledger, applyCommand],
   )
 
   const removeFeatProvenance = useCallback(
     (featName: string) => {
       if (!character) return
-      const normKey = normalizeKey(featName)
-      const newFeats = { ...ledger.feats }
-      delete newFeats[normKey]
-      patch({ ...ledger, feats: newFeats })
+      applyCommand(removeFeatProvenanceCommand(ledger, featName))
     },
-    [character, ledger, patch],
+    [character, ledger, applyCommand],
   )
 
   const replaceFeatSelections = useCallback(
+    (selectedFeats: SelectedFeat[]) => {
+      if (!character) return
+      applyCommand(replaceFeatSelectionsCommand(character, ledger, selectedFeats))
+    },
+    [character, ledger, applyCommand],
+  )
+
+  const replaceBonusFeatSelections = useCallback(
     (selectedFeats: Array<{ name: string; source?: string }>) => {
       if (!character) return
-      const oldNames = new Set((character.feats ?? []).map((feat) => feat.name))
-      const newNames = new Set(selectedFeats.map((feat) => feat.name))
-
-      const removedWithOptions = (character.feats ?? []).filter(
-        (f) => !newNames.has(f.name) && f.options != null,
-      )
-
-      let newLedger = { ...ledger, feats: { ...ledger.feats } }
-      for (const name of oldNames) {
-        if (!newNames.has(name)) {
-          const normKey = normalizeKey(name)
-          delete newLedger.feats[normKey]
-        }
-      }
-      for (const feat of selectedFeats) {
-        if (!oldNames.has(feat.name)) {
-          newLedger = applyFeatGrant(newLedger, feat.name, feat.source, true)
-        }
-      }
-
-      let nextSpellProfiles = character.spells.spellProfiles
-      let newProficiencies = { ...character.proficiencies }
-      let newAbilityScores = { ...character.abilityScores }
-
-      for (const removedFeat of removedWithOptions) {
-        const opts = removedFeat.options as NonNullable<typeof removedFeat.options>
-
-        const spellNames = new Set((opts.spells ?? []).map((key) => key.split('|')[0]))
-        if (spellNames.size > 0) {
-          nextSpellProfiles = nextSpellProfiles.map((p) => {
-            if (p.id !== SPECIAL_SPELL_PROFILE_ID) return p
-            return {
-              ...p,
-              cantrips: p.cantrips.filter((s) => !spellNames.has(s)),
-              spellsKnown: p.spellsKnown.filter((s) => !spellNames.has(s)),
-            }
-          })
-        }
-
-        for (const skillName of opts.skills ?? []) {
-          const normKey = normalizeKey(skillName)
-          newProficiencies = {
-            ...newProficiencies,
-            skills: newProficiencies.skills.filter((s) => normalizeKey(s) !== normKey),
-          }
-        }
-
-        for (const lang of opts.languages ?? []) {
-          newProficiencies = {
-            ...newProficiencies,
-            languages: newProficiencies.languages.filter((l) => l !== lang),
-          }
-        }
-        for (const tool of opts.tools ?? []) {
-          newProficiencies = {
-            ...newProficiencies,
-            tools: newProficiencies.tools.filter((t) => t !== tool),
-          }
-        }
-
-        if (opts.abilityScore) {
-          const abilityName = normalizeAbilityName(opts.abilityScore)
-          if (abilityName) {
-            newAbilityScores = {
-              ...newAbilityScores,
-              [abilityName]: Math.max(1, (newAbilityScores[abilityName] ?? 10) - 1),
-            }
-          }
-        }
-
-        newLedger = removeGrantsBySource(newLedger, 'feat', removedFeat.name)
-      }
-
-      const newSkills = mergeSkillState(character.skills ?? {}, newProficiencies.skills)
-
-      updateCharacter(character.id, {
-        feats: selectedFeats.map((feat) => {
-          const existing = (character.feats ?? []).find((f) => f.name === feat.name)
-          return {
-            id: existing?.id ?? `${feat.name}-${feat.source ?? ''}`,
-            name: feat.name,
-            source: feat.source ?? '',
-            description: existing?.description ?? '',
-            options: existing?.options,
-          }
-        }),
-        provenance: newLedger,
-        spells: { ...character.spells, spellProfiles: nextSpellProfiles },
-        proficiencies: newProficiencies,
-        skills: newSkills,
-        abilityScores: newAbilityScores,
-      })
+      applyCommand(replaceBonusFeatSelectionsCommand(character, ledger, selectedFeats))
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, applyCommand],
   )
 
   const applyOptionalFeatureSelection = useCallback(
@@ -163,82 +80,55 @@ export function useFeatProvenanceMutations() {
       grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
     ) => {
       if (!character) return
-      const newLedger = applyOptionalFeatureGrant(
-        ledger,
-        featureName,
-        featureSource,
-        grantingSourceName,
-        grantingSourceType,
+      applyCommand(
+        applyOptionalFeatureSelectionCommand(
+          ledger,
+          featureName,
+          featureSource,
+          grantingSourceName,
+          grantingSourceType,
+        ),
       )
-      patch(newLedger)
     },
-    [character, ledger, patch],
+    [character, ledger, applyCommand],
+  )
+
+  const replaceOptionalFeatureSelections = useCallback(
+    (
+      replacedFeatures: Array<{ name: string; source?: string }>,
+      selectedFeatures: Array<{ name: string; source?: string }>,
+      grantingSourceName: string,
+      grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
+    ) => {
+      if (!character) return
+      applyCommand(
+        replaceOptionalFeatureSelectionsCommand(
+          character,
+          ledger,
+          replacedFeatures,
+          selectedFeatures,
+          grantingSourceName,
+          grantingSourceType,
+        ),
+      )
+    },
+    [character, ledger, applyCommand],
   )
 
   const resolveFeatChoiceSelection = useCallback(
     (choiceId: string, feat: { name: string; source?: string }) => {
       if (!character) return
-      const choice = ledger.choices.find((c) => c.id === choiceId && c.domain === 'feats')
-      if (!choice) return
-
-      let newLedger = ledger
-
-      if (choice.selected.length > 0) {
-        for (const prevName of choice.selected) {
-          const normKey = normalizeKey(prevName)
-          const tags = newLedger.feats[normKey] ?? []
-          const filtered = tags.filter(
-            (t) => !(t.grantType === 'choice' && t.sourceName === choice.sourceTag.sourceName),
-          )
-          const newFeats =
-            filtered.length > 0
-              ? { ...newLedger.feats, [normKey]: filtered }
-              : Object.fromEntries(Object.entries(newLedger.feats).filter(([k]) => k !== normKey))
-          newLedger = { ...newLedger, feats: newFeats }
-        }
-        newLedger = resolveChoice(newLedger, choiceId, [feat.name])
-      } else if (choice.selected.length < choice.chooseCount) {
-        newLedger = resolveChoice(newLedger, choiceId, [...choice.selected, feat.name])
-      } else {
-        return
-      }
-
-      const tag = makeSourceTag(
-        choice.sourceTag.sourceType,
-        choice.sourceTag.sourceName,
-        'choice',
-        choice.sourceTag.sourceRef,
-      )
-      newLedger = addGrant(newLedger, 'feats', feat.name, tag)
-
-      updateCharacter(character.id, { provenance: newLedger })
+      applyCommand(resolveFeatChoiceCommand(ledger, choiceId, feat))
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, applyCommand],
   )
 
   const removeFeatChoiceSelection = useCallback(
     (choiceId: string, featName: string) => {
       if (!character) return
-      const normKey = normalizeKey(featName)
-      const choice = ledger.choices.find((c) => c.id === choiceId && c.domain === 'feats')
-      if (!choice) return
-
-      const newSelected = choice.selected.filter((s) => normalizeKey(s) !== normKey)
-      let newLedger = resolveChoice(ledger, choiceId, newSelected)
-
-      const tags = newLedger.feats[normKey] ?? []
-      const filtered = tags.filter(
-        (t) => !(t.grantType === 'choice' && t.sourceName === choice.sourceTag.sourceName),
-      )
-      const newFeats =
-        filtered.length > 0
-          ? { ...newLedger.feats, [normKey]: filtered }
-          : Object.fromEntries(Object.entries(newLedger.feats).filter(([k]) => k !== normKey))
-      newLedger = { ...newLedger, feats: newFeats }
-
-      updateCharacter(character.id, { provenance: newLedger })
+      applyCommand(removeFeatChoiceCommand(ledger, choiceId, featName))
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, applyCommand],
   )
 
   const resolveChoiceSelection = useCallback(
@@ -249,549 +139,51 @@ export function useFeatProvenanceMutations() {
       choiceId?: string,
     ) => {
       if (!character) return
-      const normKey = normalizeKey(itemName)
-
-      if (adding) {
-        const matchingChoice = choiceId
-          ? ledger.choices.find(
-              (choice) =>
-                choice.id === choiceId &&
-                choice.domain === domain &&
-                choice.selected.length < choice.chooseCount,
-            )
-          : (() => {
-              const candidates = ledger.choices.filter(
-                (choice) =>
-                  choice.domain === domain &&
-                  choice.selected.length < choice.chooseCount &&
-                  (choice.optionPool.length === 0 ||
-                    choice.optionPool.some((poolEntry) => normalizeKey(poolEntry) === normKey)),
-              )
-              return candidates.find((c) => c.optionPool.length > 0) ?? candidates[0]
-            })()
-        if (!matchingChoice) return
-
-        const newSelected = [...matchingChoice.selected, itemName]
-        let newLedger = resolveChoice(ledger, matchingChoice.id, newSelected)
-        const tag = makeSourceTag(
-          matchingChoice.sourceTag.sourceType,
-          matchingChoice.sourceTag.sourceName,
-          'choice',
-          matchingChoice.sourceTag.sourceRef,
-        )
-        newLedger = addGrant(newLedger, domain, itemName, tag)
-
-        if (domain === 'skills') {
-          const nextSkillProficiencies = [
-            ...new Set([...(character.proficiencies.skills ?? []), normalizeKey(itemName)]),
-          ]
-          updateCharacter(character.id, {
-            provenance: newLedger,
-            proficiencies: {
-              ...character.proficiencies,
-              skills: nextSkillProficiencies,
-            },
-            skills: {
-              ...(character.skills ?? {}),
-              [normKey]: {
-                ...(character.skills?.[normKey] ?? {
-                  bonus: 0,
-                  expertise: false,
-                }),
-                proficient: true,
-              },
-            },
-          })
-        } else {
-          const profDomain = domain as 'armor' | 'weapons' | 'tools' | 'languages'
-          updateCharacter(character.id, {
-            provenance: newLedger,
-            proficiencies: {
-              ...character.proficiencies,
-              [profDomain]: [...new Set([...character.proficiencies[profDomain], itemName])],
-            },
-          })
-        }
-      } else {
-        const matchingChoice = choiceId
-          ? ledger.choices.find(
-              (choice) =>
-                choice.id === choiceId &&
-                choice.domain === domain &&
-                choice.selected.some((selected) => normalizeKey(selected) === normKey),
-            )
-          : ledger.choices.find(
-              (choice) =>
-                choice.domain === domain &&
-                choice.selected.some((selected) => normalizeKey(selected) === normKey),
-            )
-        if (!matchingChoice) return
-
-        const newSelected = matchingChoice.selected.filter(
-          (selected) => normalizeKey(selected) !== normKey,
-        )
-        let newLedger = resolveChoice(ledger, matchingChoice.id, newSelected)
-
-        const map = newLedger.proficiencies[
-          domain as keyof typeof newLedger.proficiencies
-        ] as Record<string, import('@/lib/provenance/types').SourceTag[]>
-        if (map) {
-          const tags = map[normKey] ?? []
-          const filtered = tags.filter(
-            (tag) =>
-              !(
-                tag.grantType === 'choice' && tag.sourceName === matchingChoice.sourceTag.sourceName
-              ),
-          )
-          const newMap =
-            filtered.length > 0
-              ? { ...map, [normKey]: filtered }
-              : Object.fromEntries(Object.entries(map).filter(([key]) => key !== normKey))
-          newLedger = {
-            ...newLedger,
-            proficiencies: { ...newLedger.proficiencies, [domain]: newMap },
-          }
-        }
-
-        if (domain === 'skills') {
-          const nextSkillProficiencies = (character.proficiencies.skills ?? []).filter(
-            (proficiency) => normalizeKey(proficiency) !== normKey,
-          )
-          updateCharacter(character.id, {
-            provenance: newLedger,
-            proficiencies: {
-              ...character.proficiencies,
-              skills: nextSkillProficiencies,
-            },
-            skills: {
-              ...(character.skills ?? {}),
-              [normKey]: {
-                ...(character.skills?.[normKey] ?? {}),
-                proficient: false,
-                expertise: false,
-              },
-            },
-          })
-        } else {
-          const profDomain = domain as 'armor' | 'weapons' | 'tools' | 'languages'
-          updateCharacter(character.id, {
-            provenance: newLedger,
-            proficiencies: {
-              ...character.proficiencies,
-              [profDomain]: character.proficiencies[profDomain].filter(
-                (proficiency) => normalizeKey(proficiency) !== normKey,
-              ),
-            },
-          })
-        }
-      }
+      applyCommand(
+        resolveProficiencyChoiceCommand(character, ledger, domain, itemName, adding, choiceId),
+      )
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, applyCommand],
   )
 
   const commitFeatWithOptions = useCallback(
-    (
-      feat: { name: string; source?: string },
-      selections: FeatOptionSelections,
-      allSpells?: Spell5e[],
-    ) => {
+    (feat: FeatOptionTarget, selections: FeatOptionSelections, allSpells?: Spell5e[]) => {
       if (!character) return
-
-      const featTag = makeSourceTag('feat', feat.name, 'choice', feat.source)
-      let newLedger = ledger
-
-      const existingSpecial = character.spells.spellProfiles.find(
-        (p) => p.id === SPECIAL_SPELL_PROFILE_ID,
-      )
-      const nextCantrips = [...(existingSpecial?.cantrips ?? [])]
-      const nextSpellsKnown = [...(existingSpecial?.spellsKnown ?? [])]
-
-      for (const compositeKey of selections.spells ?? []) {
-        const spellName = compositeKey.split('|')[0]
-        newLedger = addSpellGrant(newLedger, spellName, featTag)
-        const spellData = allSpells?.find(
-          (s) => `${s.name}|${s.source ?? ''}` === compositeKey || s.name === spellName,
-        )
-        if (spellData?.level === 0) {
-          if (!nextCantrips.includes(spellName)) nextCantrips.push(spellName)
-        } else {
-          if (!nextSpellsKnown.includes(spellName)) nextSpellsKnown.push(spellName)
-        }
-      }
-
-      const nextSpellProfiles = existingSpecial
-        ? character.spells.spellProfiles.map((p) =>
-            p.id === SPECIAL_SPELL_PROFILE_ID
-              ? { ...p, cantrips: nextCantrips, spellsKnown: nextSpellsKnown }
-              : p,
-          )
-        : [
-            ...character.spells.spellProfiles,
-            {
-              id: SPECIAL_SPELL_PROFILE_ID,
-              type: 'special' as const,
-              label: 'Special',
-              cantrips: nextCantrips,
-              spellsKnown: nextSpellsKnown,
-              preparedSpells: [],
-              alwaysPrepared: true,
-            },
-          ]
-
-      let newProficiencies = { ...character.proficiencies }
-      const newSkills = { ...(character.skills ?? {}) }
-
-      for (const skillName of selections.skills ?? []) {
-        const normKey = normalizeKey(skillName)
-        newLedger = addGrant(newLedger, 'skills', skillName, featTag)
-        if (!newProficiencies.skills.includes(normKey)) {
-          newProficiencies = { ...newProficiencies, skills: [...newProficiencies.skills, normKey] }
-        }
-        newSkills[normKey] = {
-          proficient: true,
-          expertise: newSkills[normKey]?.expertise ?? false,
-          bonus: newSkills[normKey]?.bonus ?? 0,
-        }
-      }
-
-      for (const lang of selections.languages ?? []) {
-        newLedger = addGrant(newLedger, 'languages', lang, featTag)
-        if (!newProficiencies.languages.includes(lang)) {
-          newProficiencies = {
-            ...newProficiencies,
-            languages: [...newProficiencies.languages, lang],
-          }
-        }
-      }
-
-      for (const tool of selections.tools ?? []) {
-        newLedger = addGrant(newLedger, 'tools', tool, featTag)
-        if (!newProficiencies.tools.includes(tool)) {
-          newProficiencies = { ...newProficiencies, tools: [...newProficiencies.tools, tool] }
-        }
-      }
-
-      let newAbilityScores = { ...character.abilityScores }
-      if (selections.abilityScore) {
-        const abilityName = normalizeAbilityName(selections.abilityScore)
-        if (abilityName) {
-          newLedger = addAbilityBonus(newLedger, {
-            ability: abilityName,
-            value: 1,
-            sourceTag: featTag,
-          })
-          newAbilityScores = {
-            ...newAbilityScores,
-            [abilityName]: (newAbilityScores[abilityName] ?? 10) + 1,
-          }
-        }
-      }
-
-      if (selections.optionalFeature) {
-        newLedger = addGrant(newLedger, 'features', selections.optionalFeature, featTag)
-      }
-
-      if (selections.expertiseSkill) {
-        const normKey = normalizeKey(selections.expertiseSkill)
-        newSkills[normKey] = {
-          proficient: newSkills[normKey]?.proficient ?? true,
-          expertise: true,
-          bonus: newSkills[normKey]?.bonus ?? 0,
-        }
-      }
-
-      newLedger = {
-        ...newLedger,
-        choices: newLedger.choices.filter(
-          (c) => !(c.domain === 'featOptions' && c.sourceTag.sourceName === feat.name),
-        ),
-      }
-
-      const nextFeats = (character.feats ?? []).map((f) =>
-        f.name === feat.name ? { ...f, options: selections } : f,
-      )
-      const nextSpecialFeats = (character.specialFeats ?? []).map((f) =>
-        f.name === feat.name ? { ...f, options: selections } : f,
-      )
-
-      updateCharacter(character.id, {
-        feats: nextFeats,
-        specialFeats: nextSpecialFeats,
-        provenance: newLedger,
-        spells: { ...character.spells, spellProfiles: nextSpellProfiles },
-        proficiencies: newProficiencies,
-        skills: newSkills,
-        abilityScores: newAbilityScores,
-      })
+      applyCommand(commitFeatOptionsCommand(character, ledger, feat, selections, allSpells))
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, applyCommand],
   )
 
   const retractFeatOptionGrants = useCallback(
-    (feat: { name: string }, featOptions: FeatOptionSelections) => {
+    (feat: FeatOptionTarget, selections: FeatOptionSelections) => {
       if (!character) return
-
-      const newLedger = removeGrantsBySource(ledger, 'feat', feat.name)
-
-      const spellNames = new Set((featOptions.spells ?? []).map((key) => key.split('|')[0]))
-      const nextSpellProfiles = character.spells.spellProfiles.map((p) => {
-        if (p.id !== SPECIAL_SPELL_PROFILE_ID) return p
-        return {
-          ...p,
-          cantrips: p.cantrips.filter((s) => !spellNames.has(s)),
-          spellsKnown: p.spellsKnown.filter((s) => !spellNames.has(s)),
-        }
-      })
-
-      let newProficiencies = { ...character.proficiencies }
-      const newSkills = { ...(character.skills ?? {}) }
-
-      for (const skillName of featOptions.skills ?? []) {
-        const normKey = normalizeKey(skillName)
-        newProficiencies = {
-          ...newProficiencies,
-          skills: newProficiencies.skills.filter((s) => normalizeKey(s) !== normKey),
-        }
-        const existing = newSkills[normKey]
-        newSkills[normKey] = { proficient: false, expertise: false, bonus: existing?.bonus ?? 0 }
-      }
-
-      for (const lang of featOptions.languages ?? []) {
-        newProficiencies = {
-          ...newProficiencies,
-          languages: newProficiencies.languages.filter((l) => l !== lang),
-        }
-      }
-
-      for (const tool of featOptions.tools ?? []) {
-        newProficiencies = {
-          ...newProficiencies,
-          tools: newProficiencies.tools.filter((t) => t !== tool),
-        }
-      }
-
-      let newAbilityScores = { ...character.abilityScores }
-      if (featOptions.abilityScore) {
-        const abilityName = normalizeAbilityName(featOptions.abilityScore)
-        if (abilityName) {
-          newAbilityScores = {
-            ...newAbilityScores,
-            [abilityName]: Math.max(1, (newAbilityScores[abilityName] ?? 10) - 1),
-          }
-        }
-      }
-
-      if (featOptions.expertiseSkill) {
-        const normKey = normalizeKey(featOptions.expertiseSkill)
-        const existing = newSkills[normKey]
-        newSkills[normKey] = {
-          proficient: existing?.proficient ?? false,
-          expertise: false,
-          bonus: existing?.bonus ?? 0,
-        }
-      }
-
-      updateCharacter(character.id, {
-        provenance: newLedger,
-        spells: { ...character.spells, spellProfiles: nextSpellProfiles },
-        proficiencies: newProficiencies,
-        skills: newSkills,
-        abilityScores: newAbilityScores,
-      })
+      applyCommand(retractFeatOptionsCommand(character, ledger, feat, selections))
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, applyCommand],
   )
 
   const editFeatWithOptions = useCallback(
     (
-      feat: { name: string; source?: string },
+      feat: FeatOptionTarget,
       oldOptions: FeatOptionSelections,
       newSelections: FeatOptionSelections,
       allSpells?: Spell5e[],
     ) => {
       if (!character) return
-
-      let newLedger = removeGrantsBySource(ledger, 'feat', feat.name)
-
-      const oldSpellNames = new Set((oldOptions.spells ?? []).map((key) => key.split('|')[0]))
-      let nextSpellProfiles = character.spells.spellProfiles.map((p) => {
-        if (p.id !== SPECIAL_SPELL_PROFILE_ID) return p
-        return {
-          ...p,
-          cantrips: p.cantrips.filter((s) => !oldSpellNames.has(s)),
-          spellsKnown: p.spellsKnown.filter((s) => !oldSpellNames.has(s)),
-        }
-      })
-
-      let newProficiencies = { ...character.proficiencies }
-      const newSkills = { ...(character.skills ?? {}) }
-
-      for (const skillName of oldOptions.skills ?? []) {
-        const normKey = normalizeKey(skillName)
-        newProficiencies = {
-          ...newProficiencies,
-          skills: newProficiencies.skills.filter((s) => normalizeKey(s) !== normKey),
-        }
-        const existing = newSkills[normKey]
-        newSkills[normKey] = { proficient: false, expertise: false, bonus: existing?.bonus ?? 0 }
-      }
-      for (const lang of oldOptions.languages ?? []) {
-        newProficiencies = {
-          ...newProficiencies,
-          languages: newProficiencies.languages.filter((l) => l !== lang),
-        }
-      }
-      for (const tool of oldOptions.tools ?? []) {
-        newProficiencies = {
-          ...newProficiencies,
-          tools: newProficiencies.tools.filter((t) => t !== tool),
-        }
-      }
-
-      let newAbilityScores = { ...character.abilityScores }
-      if (oldOptions.abilityScore) {
-        const abilityName = normalizeAbilityName(oldOptions.abilityScore)
-        if (abilityName) {
-          newAbilityScores = {
-            ...newAbilityScores,
-            [abilityName]: Math.max(1, (newAbilityScores[abilityName] ?? 10) - 1),
-          }
-        }
-      }
-      if (oldOptions.expertiseSkill) {
-        const normKey = normalizeKey(oldOptions.expertiseSkill)
-        const existing = newSkills[normKey]
-        newSkills[normKey] = {
-          proficient: existing?.proficient ?? false,
-          expertise: false,
-          bonus: existing?.bonus ?? 0,
-        }
-      }
-
-      const featTag = makeSourceTag('feat', feat.name, 'choice', feat.source)
-
-      const existingSpecial = nextSpellProfiles.find((p) => p.id === SPECIAL_SPELL_PROFILE_ID)
-      const nextCantrips = [...(existingSpecial?.cantrips ?? [])]
-      const nextSpellsKnown = [...(existingSpecial?.spellsKnown ?? [])]
-
-      for (const compositeKey of newSelections.spells ?? []) {
-        const spellName = compositeKey.split('|')[0]
-        newLedger = addSpellGrant(newLedger, spellName, featTag)
-        const spellData = allSpells?.find(
-          (s) => `${s.name}|${s.source ?? ''}` === compositeKey || s.name === spellName,
-        )
-        if (spellData?.level === 0) {
-          if (!nextCantrips.includes(spellName)) nextCantrips.push(spellName)
-        } else {
-          if (!nextSpellsKnown.includes(spellName)) nextSpellsKnown.push(spellName)
-        }
-      }
-
-      nextSpellProfiles = existingSpecial
-        ? nextSpellProfiles.map((p) =>
-            p.id === SPECIAL_SPELL_PROFILE_ID
-              ? { ...p, cantrips: nextCantrips, spellsKnown: nextSpellsKnown }
-              : p,
-          )
-        : [
-            ...nextSpellProfiles,
-            {
-              id: SPECIAL_SPELL_PROFILE_ID,
-              type: 'special' as const,
-              label: 'Special',
-              cantrips: nextCantrips,
-              spellsKnown: nextSpellsKnown,
-              preparedSpells: [],
-              alwaysPrepared: true,
-            },
-          ]
-
-      for (const skillName of newSelections.skills ?? []) {
-        const normKey = normalizeKey(skillName)
-        newLedger = addGrant(newLedger, 'skills', skillName, featTag)
-        if (!newProficiencies.skills.includes(normKey)) {
-          newProficiencies = { ...newProficiencies, skills: [...newProficiencies.skills, normKey] }
-        }
-        newSkills[normKey] = {
-          proficient: true,
-          expertise: newSkills[normKey]?.expertise ?? false,
-          bonus: newSkills[normKey]?.bonus ?? 0,
-        }
-      }
-      for (const lang of newSelections.languages ?? []) {
-        newLedger = addGrant(newLedger, 'languages', lang, featTag)
-        if (!newProficiencies.languages.includes(lang)) {
-          newProficiencies = {
-            ...newProficiencies,
-            languages: [...newProficiencies.languages, lang],
-          }
-        }
-      }
-      for (const tool of newSelections.tools ?? []) {
-        newLedger = addGrant(newLedger, 'tools', tool, featTag)
-        if (!newProficiencies.tools.includes(tool)) {
-          newProficiencies = { ...newProficiencies, tools: [...newProficiencies.tools, tool] }
-        }
-      }
-
-      if (newSelections.abilityScore) {
-        const abilityName = normalizeAbilityName(newSelections.abilityScore)
-        if (abilityName) {
-          newLedger = addAbilityBonus(newLedger, {
-            ability: abilityName,
-            value: 1,
-            sourceTag: featTag,
-          })
-          newAbilityScores = {
-            ...newAbilityScores,
-            [abilityName]: (newAbilityScores[abilityName] ?? 10) + 1,
-          }
-        }
-      }
-      if (newSelections.optionalFeature) {
-        newLedger = addGrant(newLedger, 'features', newSelections.optionalFeature, featTag)
-      }
-      if (newSelections.expertiseSkill) {
-        const normKey = normalizeKey(newSelections.expertiseSkill)
-        newSkills[normKey] = {
-          proficient: newSkills[normKey]?.proficient ?? true,
-          expertise: true,
-          bonus: newSkills[normKey]?.bonus ?? 0,
-        }
-      }
-
-      newLedger = {
-        ...newLedger,
-        choices: newLedger.choices.filter(
-          (c) => !(c.domain === 'featOptions' && c.sourceTag.sourceName === feat.name),
-        ),
-      }
-
-      const nextFeats = (character.feats ?? []).map((f) =>
-        f.name === feat.name ? { ...f, options: newSelections } : f,
+      applyCommand(
+        editFeatOptionsCommand(character, ledger, feat, oldOptions, newSelections, allSpells),
       )
-      const nextSpecialFeats = (character.specialFeats ?? []).map((f) =>
-        f.name === feat.name ? { ...f, options: newSelections } : f,
-      )
-
-      updateCharacter(character.id, {
-        feats: nextFeats,
-        specialFeats: nextSpecialFeats,
-        provenance: newLedger,
-        spells: { ...character.spells, spellProfiles: nextSpellProfiles },
-        proficiencies: newProficiencies,
-        skills: newSkills,
-        abilityScores: newAbilityScores,
-      })
     },
-    [character, ledger, updateCharacter],
+    [character, ledger, applyCommand],
   )
 
   return {
     applyFeatSelection,
     removeFeatProvenance,
     replaceFeatSelections,
+    replaceBonusFeatSelections,
     applyOptionalFeatureSelection,
+    replaceOptionalFeatureSelections,
     resolveFeatChoiceSelection,
     removeFeatChoiceSelection,
     resolveChoiceSelection,

@@ -39,6 +39,8 @@ describe('appPreferencesStore', () => {
       themeAccent: 'blue',
       themeAppearance: 'light',
       autoRefreshGameData: true,
+      compendiumFiltersOpen: true,
+      characterViewMode: 'gallery',
     })
     useCharacterStore.setState({
       characters: [],
@@ -99,7 +101,21 @@ describe('appPreferencesStore', () => {
       autoRefreshGameData: true,
       autoUpdate: true,
       uiScale: 100,
+      compendiumFiltersOpen: true,
+      characterViewMode: 'gallery',
     })
+  })
+
+  test('remembers the compendium filter panel state', () => {
+    useAppPreferencesStore.getState().setCompendiumFiltersOpen(false)
+
+    expect(useAppPreferencesStore.getState().compendiumFiltersOpen).toBe(false)
+  })
+
+  test('remembers the character collection view mode', () => {
+    useAppPreferencesStore.getState().setCharacterViewMode('list')
+
+    expect(useAppPreferencesStore.getState().characterViewMode).toBe('list')
   })
 
   test('persist rehydrate sanitizes values and reapplies theme', () => {

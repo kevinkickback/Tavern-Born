@@ -13,6 +13,16 @@ import type { DataSourceConfig, GameData } from '@/types/5etools'
 
 let activeLoadController: AbortController | null = null
 let activeLoadRequestId = 0
+let cacheMutationQueue: Promise<void> = Promise.resolve()
+
+function enqueueCacheMutation<T>(mutation: () => Promise<T>): Promise<T> {
+  const operation = cacheMutationQueue.then(mutation)
+  cacheMutationQueue = operation.then(
+    () => undefined,
+    () => undefined,
+  )
+  return operation
+}
 
 function getCatalogEntityCount(data: GameData): number {
   return (
@@ -98,7 +108,7 @@ interface GameDataState {
    */
   loadGameData: (config: DataSourceConfig, background?: boolean) => Promise<boolean>
   refreshGameData: () => Promise<void>
-  clearGameData: () => void
+  clearGameData: () => Promise<void>
 }
 
 export const useGameDataStore = create<GameDataState>()(
@@ -246,10 +256,18 @@ export const useGameDataStore = create<GameDataState>()(
           const prevChangedAt = get().lastDataChangedAt
           const prevFingerprint = get().lastContentFingerprint
           const hadGameData = get().gameData !== null
-          const cacheEntry = await writeGameDataCache(data, config, {
-            fingerprint: prevFingerprint,
-            lastDataChangedAt: prevChangedAt,
-          })
+          const cacheEntry = await enqueueCacheMutation(() =>
+            writeGameDataCache(data, config, {
+              fingerprint: prevFingerprint,
+              lastDataChangedAt: prevChangedAt,
+            }),
+          )
+
+          // A clear or newer load may have started while the cache write was queued.
+          // The queued clear still runs after this write; do not restore stale state.
+          if (requestId !== activeLoadRequestId) {
+            return false
+          }
           const contentChanged = cacheEntry.lastDataChangedAt !== prevChangedAt
           const shouldHydrateMemory = contentChanged || !hadGameData
           set({
@@ -306,11 +324,12 @@ export const useGameDataStore = create<GameDataState>()(
         }
       },
 
-      clearGameData: () => {
+      clearGameData: async () => {
+        // Invalidate results even when the underlying operation (notably local IPC
+        // reads or an IndexedDB write) cannot be cancelled by AbortController.
+        activeLoadRequestId += 1
         activeLoadController?.abort()
         activeLoadController = null
-        // Fire-and-forget IDB cache clear.
-        clearGameDataCache().catch(console.error)
         set({
           gameData: null,
           dataSourceConfig: null,
@@ -324,6 +343,9 @@ export const useGameDataStore = create<GameDataState>()(
           lastUpdateCheckAt: null,
           cacheStatus: 'unconfigured',
         })
+        // Serialize cache mutations so a write already in flight is always followed
+        // by this deletion, while later user-initiated loads write after the clear.
+        await enqueueCacheMutation(clearGameDataCache)
       },
     }),
     {

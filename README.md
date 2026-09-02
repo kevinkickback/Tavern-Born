@@ -4,7 +4,7 @@
 
 <img src="public/assets/images/ui/logo_name.png" alt="Tavern Born Logo" width="250"/>
 
-**A comprehensive Dungeons & Dragons 5th Edition character creator**
+**A desktop Dungeons & Dragons 5th Edition character creator**
 
 [![Electron](https://img.shields.io/badge/Electron-Latest-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
@@ -75,27 +75,45 @@
 
 ## 🚀 Getting Started
 
-### Option 1: Download Release (Recommended)
+### Option 1: Download a Release (Recommended)
 
-1. Download the latest `.exe` from the [Releases](../../releases) page
-2. Run the executable
+Download the latest installer or portable build for your platform from the
+[Releases](../../releases) page. Published builds do not bundle game data; configure a compatible
+data source when the app first starts.
 
 ### Option 2: Build from Source
 
-**Prerequisites:** [Node.js](https://nodejs.org/) (LTS recommended)
+**Prerequisites:** [Node.js](https://nodejs.org/) 20.19 or newer and npm. CI uses Node 20.19.0.
 
 ```bash
 git clone https://github.com/kevinkickback/Tavern-Born.git
 cd Tavern-Born
-npm install
+npm ci
 npm run dev
+```
+
+Useful validation commands:
+
+```bash
+npx biome ci .
+npx tsc -b
+npm test
+npm run build
 ```
 
 ## 📊 Game Data
 
 > **⚠️ Important:** Tavern-Born does **NOT** include Dungeons & Dragons game data.
 
-You must provide your own compatible data JSON files. The [5etools Wiki](https://wiki.tercept.net/en/home) (see: Download the Source code) might be helpful.
+You must provide your own compatible 5etools JSON data, either from a local folder or an HTTPS
+source. See [Data Ingestion](docs/data-ingestion.md) for the supported source model and loading
+pipeline. The [5etools Wiki](https://wiki.tercept.net/en/home) may help you obtain the source data.
+
+## Contributing
+
+Start with the [documentation hub](docs/README.md) and
+[contributor guide](docs/contributor-start-here.md). Keep game data outside source control and do
+not edit `data/`; parser fixups belong under `src/lib/5etools/`.
 
 
 ## 📄 License

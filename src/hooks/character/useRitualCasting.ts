@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
-import { useClasses } from '@/hooks/data/useGameData'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useClassLookup } from '@/hooks/data/useGameData'
 import { getClassHasRitualCasting } from '@/lib/5etools/classData'
+import { resolveClassReference } from '@/lib/5etools/entityResolvers'
+import { buildClassLookup } from '@/lib/5etools/lookups'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
 
@@ -11,7 +14,9 @@ import { useCharacterStore } from '@/store/characterStore'
  */
 export function useRitualCasting(): boolean {
   const character = useCharacterStore((s) => s.activeCharacter)
-  const classes = useClasses()
+  const { classes } = useFilteredGameData()
+  const rawClassLookup = useClassLookup()
+  const filteredClassLookup = useMemo(() => buildClassLookup(classes), [classes])
 
   return useMemo(() => {
     if (!character) return false
@@ -19,10 +24,12 @@ export function useRitualCasting(): boolean {
 
     const progression = getCharacterClassEntries(character)
     return progression.some((entry) => {
-      const cls =
-        classes.find((c) => c.name === entry.name && c.source === entry.source) ??
-        classes.find((c) => c.name === entry.name)
+      const cls = resolveClassReference(
+        entry,
+        { classesByKey: filteredClassLookup },
+        { classesByKey: rawClassLookup },
+      )
       return getClassHasRitualCasting(cls)
     })
-  }, [character, classes])
+  }, [character, filteredClassLookup, rawClassLookup])
 }

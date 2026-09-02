@@ -1,11 +1,6 @@
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
-import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
-import {
-  collectKnownSpells,
-  ensureSpellProfiles,
-  isSpellOnClassList,
-} from '@/lib/calculations/spellProfiles'
+import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import type { Class5e } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 
@@ -14,12 +9,6 @@ interface CountAsiAndFeatSlotsParams {
   character: Character | null
   classLookup: Record<string, Class5e | undefined>
   fallbackClassByName: Map<string, Class5e>
-}
-
-interface BuildCharacterSnapshotParams {
-  character: Character | null
-  classProgression: CharacterClassEntry[]
-  viewingClass?: string
 }
 
 interface BuildLevelsToShowParams {
@@ -105,39 +94,6 @@ export function countTotalFeatSlots({
     count += earned.length - usedForAsi
   }
   return count
-}
-
-export function buildCharacterSnapshot({
-  character,
-  classProgression,
-  viewingClass,
-}: BuildCharacterSnapshotParams): PrereqCharacterSnapshot {
-  const profileSpells = character ? collectKnownSpells(ensureSpellProfiles(character)) : null
-  const progressionLevel = classProgression.reduce((sum, entry) => sum + (entry.levels ?? 0), 0)
-
-  return {
-    level: progressionLevel > 0 ? progressionLevel : (character?.level ?? 0),
-    class: viewingClass,
-    race: character?.race,
-    abilityScores: character?.abilityScores,
-    features: character?.features ?? [],
-    spells: {
-      cantrips: profileSpells?.cantrips ?? [],
-      spellsKnown: profileSpells?.spellsKnown ?? [],
-      preparedSpells: profileSpells?.preparedSpells ?? [],
-    },
-    ...(classProgression.length > 0
-      ? {
-          progression: {
-            classes: classProgression.map((entry) => ({
-              name: entry.name,
-              levels: entry.levels,
-              source: entry.source,
-            })),
-          },
-        }
-      : {}),
-  }
 }
 
 export function buildLevelsToShow({

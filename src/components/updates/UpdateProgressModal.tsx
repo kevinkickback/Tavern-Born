@@ -34,6 +34,37 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
   const [restartCountdown, setRestartCountdown] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const beginDownload = useCallback(async () => {
+    const api = window.electronAPI
+    if (!api) {
+      setPhase('error')
+      setError('Updates are only available in the desktop app.')
+      return
+    }
+
+    setPhase('downloading')
+    setPercentage(0)
+    setBytesPerSecond(0)
+    setTotal(0)
+    setTransferred(0)
+    setError(null)
+
+    try {
+      const result = await api.downloadUpdate()
+      if (!result.success) {
+        setPhase('error')
+        setError(result.error ?? 'The update download could not be started.')
+      }
+    } catch (downloadError) {
+      setPhase('error')
+      setError(
+        downloadError instanceof Error
+          ? downloadError.message
+          : 'The update download could not be started.',
+      )
+    }
+  }, [])
+
   useEffect(() => {
     if (!open) {
       setPhase('downloading')
@@ -80,12 +111,16 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
       )
     }
 
+    // Subscribe before starting the download so immediate progress/error events
+    // cannot be lost between opening the dialog and mounting this effect.
+    void beginDownload()
+
     return () => {
       unsubs.forEach((unsub) => {
         unsub()
       })
     }
-  }, [open])
+  }, [beginDownload, open])
 
   useEffect(() => {
     if (restartCountdown === null || restartCountdown <= 0) return
@@ -104,11 +139,8 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
   }, [])
 
   const handleRetry = useCallback(() => {
-    setPhase('downloading')
-    setPercentage(0)
-    setError(null)
-    window.electronAPI?.downloadUpdate()
-  }, [])
+    void beginDownload()
+  }, [beginDownload])
 
   const handleDismiss = useCallback(() => {
     onOpenChange(false)

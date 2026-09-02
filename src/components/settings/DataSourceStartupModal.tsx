@@ -1,3 +1,4 @@
+import { Database } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import {
   Dialog,
@@ -59,7 +60,7 @@ export function DataSourceStartupModal() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="max-w-3xl max-h-[90vh] overflow-y-auto [&>button:last-child]:hidden"
+        className="flex max-h-[90vh] max-w-3xl flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 [&>button:last-child]:hidden"
         onPointerDownOutside={(e) => {
           if (!gameData && !isLoading && !isForced) e.preventDefault()
         }}
@@ -67,11 +68,21 @@ export function DataSourceStartupModal() {
           if (!gameData && !isLoading && !isForced) e.preventDefault()
         }}
       >
-        <DialogHeader>
-          <DialogTitle className="font-display text-2xl">
-            {isForced ? 'Data Source Setup' : 'Welcome to Tavern Born!'}
-          </DialogTitle>
-          <DialogDescription>
+        <DialogHeader className="shrink-0 gap-2 border-b border-border bg-surface-raised px-6 py-5">
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-primary/40 bg-primary/10 text-primary">
+              <Database className="size-5" weight="duotone" />
+            </span>
+            <div className="min-w-0">
+              <DialogTitle className="text-lg">
+                {isForced ? 'Game Data Setup' : 'Welcome to Tavern Born'}
+              </DialogTitle>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Connect the rules data used by the character builder.
+              </p>
+            </div>
+          </div>
+          <DialogDescription className="pt-1 leading-relaxed">
             {isForced ? (
               'Reconfigure your data source. Close when done.'
             ) : (
@@ -92,7 +103,9 @@ export function DataSourceStartupModal() {
           </DialogDescription>
         </DialogHeader>
 
-        <DataSourceConfigurator selectorOnly={shouldShowSelectorOnly} />
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <DataSourceConfigurator selectorOnly={shouldShowSelectorOnly} />
+        </div>
       </DialogContent>
     </Dialog>
   )

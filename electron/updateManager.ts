@@ -54,22 +54,57 @@ function isConnectivityError(err: unknown): boolean {
 
 /** @internal exported for tests only */
 export function compareSemver(a: string, b: string): number {
-  const [aCore, aPre = ''] = a.split('-', 2)
-  const [bCore, bPre = ''] = b.split('-', 2)
-  const aParts = aCore.split('.').map((p) => parseInt(p, 10) || 0)
-  const bParts = bCore.split('.').map((p) => parseInt(p, 10) || 0)
+  const parseVersion = (version: string) => {
+    const withoutBuild = version.replace(/^v/, '').split('+', 1)[0]
+    const separatorIndex = withoutBuild.indexOf('-')
+    return {
+      core: (separatorIndex === -1 ? withoutBuild : withoutBuild.slice(0, separatorIndex)).split(
+        '.',
+      ),
+      prerelease: separatorIndex === -1 ? [] : withoutBuild.slice(separatorIndex + 1).split('.'),
+    }
+  }
+  const compareNumericIdentifier = (left: string, right: string) => {
+    const normalizedLeft = left.replace(/^0+(?=\d)/, '')
+    const normalizedRight = right.replace(/^0+(?=\d)/, '')
+    if (normalizedLeft.length !== normalizedRight.length) {
+      return normalizedLeft.length > normalizedRight.length ? 1 : -1
+    }
+    if (normalizedLeft === normalizedRight) return 0
+    return normalizedLeft > normalizedRight ? 1 : -1
+  }
+
+  const aVersion = parseVersion(a)
+  const bVersion = parseVersion(b)
+  const aParts = aVersion.core
+  const bParts = bVersion.core
   const max = Math.max(aParts.length, bParts.length)
 
   for (let i = 0; i < max; i++) {
-    const av = aParts[i] ?? 0
-    const bv = bParts[i] ?? 0
-    if (av !== bv) return av > bv ? 1 : -1
+    const comparison = compareNumericIdentifier(aParts[i] ?? '0', bParts[i] ?? '0')
+    if (comparison !== 0) return comparison
   }
 
-  if (!aPre && bPre) return 1
-  if (aPre && !bPre) return -1
-  if (aPre === bPre) return 0
-  return aPre > bPre ? 1 : -1
+  if (aVersion.prerelease.length === 0 && bVersion.prerelease.length > 0) return 1
+  if (aVersion.prerelease.length > 0 && bVersion.prerelease.length === 0) return -1
+
+  const prereleaseLength = Math.max(aVersion.prerelease.length, bVersion.prerelease.length)
+  for (let i = 0; i < prereleaseLength; i++) {
+    const left = aVersion.prerelease[i]
+    const right = bVersion.prerelease[i]
+    if (left === undefined) return -1
+    if (right === undefined) return 1
+    if (left === right) continue
+
+    const leftIsNumeric = /^\d+$/.test(left)
+    const rightIsNumeric = /^\d+$/.test(right)
+    if (leftIsNumeric && rightIsNumeric) return compareNumericIdentifier(left, right)
+    if (leftIsNumeric) return -1
+    if (rightIsNumeric) return 1
+    return left > right ? 1 : -1
+  }
+
+  return 0
 }
 
 function getMainWindow(): BrowserWindow | null {
@@ -309,14 +344,23 @@ export async function downloadUpdate(): Promise<void> {
   }
 
   if (isPortableMode) {
-    const version = currentStatus.version ?? ''
-    const tag = version ? `tag/v${version}` : 'latest'
-    await shell.openExternal(`${GITHUB_RELEASES_BASE}/${tag}`)
-    return
+    throw new Error('Automatic updates are unavailable in portable builds')
   }
 
   cancellationToken = new CancellationToken()
   await autoUpdater.downloadUpdate(cancellationToken)
+}
+
+export async function openPortableUpdatePage(): Promise<void> {
+  if (!isPortableMode) {
+    throw new Error('The portable download page is only available in portable builds')
+  }
+  if (currentStatus.status !== 'available' || !currentStatus.version) {
+    throw new Error('No portable update is currently available')
+  }
+
+  const releaseTag = encodeURIComponent(`v${currentStatus.version}`)
+  await shell.openExternal(`${GITHUB_RELEASES_BASE}/tag/${releaseTag}`)
 }
 
 export function cancelDownload(): boolean {
@@ -338,10 +382,10 @@ export function cancelDownload(): boolean {
 }
 
 export function installUpdate(): void {
-  if (!app.isPackaged) {
+  if (!app.isPackaged || isPortableMode) {
     return
   }
-  autoUpdater.quitAndInstall(false, true)
+  autoUpdater.quitAndInstall(true, true)
 }
 
 export function getUpdateStatus(): UpdateStatus {

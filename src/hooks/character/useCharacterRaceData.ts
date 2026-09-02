@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { matchesGameDataEntry } from '@/lib/characterUtils'
+import { useRaceLookup } from '@/hooks/data/useGameData'
+import { resolveRaceReference } from '@/lib/5etools/entityResolvers'
+import { buildRaceLookup } from '@/lib/5etools/lookups'
 import type { Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
@@ -23,6 +25,8 @@ export interface CharacterRaceData {
  */
 export function useCharacterRaceData(character: Character | null | undefined): CharacterRaceData {
   const { races: allRaces } = useFilteredGameData()
+  const rawRaceLookup = useRaceLookup()
+  const filteredRaceLookup = useMemo(() => buildRaceLookup(allRaces), [allRaces])
 
   return useMemo(() => {
     if (!character?.race) {
@@ -35,29 +39,20 @@ export function useCharacterRaceData(character: Character | null | undefined): C
       }
     }
 
-    const parentMatch = allRaces.find((r) =>
-      matchesGameDataEntry(character.race, character.raceSource, r),
+    const {
+      parentRace: parentMatch,
+      subraceData: subraceMatch,
+      subraceIsNested,
+    } = resolveRaceReference(
+      {
+        name: character.race,
+        source: character.raceSource,
+        subraceName: character.subrace,
+        subraceSource: character.subraceSource,
+      },
+      { racesByKey: filteredRaceLookup },
+      { racesByKey: rawRaceLookup },
     )
-
-    let subraceMatch: Race5e | undefined
-    let subraceIsNested = false
-    if (character.subrace && parentMatch?.subraces) {
-      subraceMatch = parentMatch.subraces.find(
-        (sr) =>
-          sr.name === character.subrace &&
-          (!character.subraceSource || (sr.source ?? '') === (character.subraceSource ?? '')),
-      )
-      if (subraceMatch) subraceIsNested = true
-    }
-
-    if (!subraceMatch && character.subrace) {
-      const topLevel = allRaces.find(
-        (r) =>
-          r.name === character.subrace &&
-          (!character.subraceSource || (r.source ?? '') === (character.subraceSource ?? '')),
-      )
-      if (topLevel) subraceMatch = topLevel
-    }
 
     const parentSpells = parentMatch?.additionalSpells ?? []
     const filteredParentSpells =
@@ -87,6 +82,7 @@ export function useCharacterRaceData(character: Character | null | undefined): C
     character?.subrace,
     character?.raceSource,
     character?.subraceSource,
-    allRaces,
+    filteredRaceLookup,
+    rawRaceLookup,
   ])
 }
