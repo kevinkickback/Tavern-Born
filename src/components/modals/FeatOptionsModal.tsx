@@ -30,7 +30,7 @@ import { ALL_SKILLS } from '@/lib/calculations/skills'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { getSchoolName } from '@/lib/calculations/spellUtils'
 import { cn } from '@/lib/utils'
-import type { Feat5e, OptionalFeatureLike, Spell5e } from '@/types/5etools'
+import type { Feat5e, Language5e, OptionalFeatureLike, Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 
 const ABILITY_LABELS: Record<string, string> = {
@@ -41,25 +41,6 @@ const ABILITY_LABELS: Record<string, string> = {
   wis: 'Wisdom',
   cha: 'Charisma',
 }
-
-const STANDARD_LANGUAGES = [
-  'Common',
-  'Dwarvish',
-  'Elvish',
-  'Giant',
-  'Gnomish',
-  'Goblin',
-  'Halfling',
-  'Orc',
-  'Abyssal',
-  'Celestial',
-  'Deep Speech',
-  'Draconic',
-  'Infernal',
-  'Primordial',
-  'Sylvan',
-  'Undercommon',
-]
 
 type StepSelections = Record<number, string | string[]>
 
@@ -189,17 +170,21 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
   step,
   selected,
   onToggle,
+  languages,
 }: {
   step: Extract<FeatOptionStep, { kind: 'proficiency' }>
   selected: string[]
   onToggle: (name: string) => void
+  languages: Language5e[]
 }) {
   const pool = useMemo(() => {
     if (step.optionPool && step.optionPool.length > 0) return step.optionPool
     if (step.domain === 'skills') return ALL_SKILLS as string[]
-    if (step.domain === 'languages') return STANDARD_LANGUAGES
+    if (step.domain === 'languages') {
+      return [...new Set(languages.map((l) => l.name))].sort()
+    }
     return []
-  }, [step.domain, step.optionPool])
+  }, [step.domain, step.optionPool, languages])
 
   return (
     <div className="space-y-3">
@@ -484,7 +469,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   onFinish,
   onDismiss,
 }: FeatOptionsModalProps) {
-  const { spells, optionalfeatures } = useFilteredGameData()
+  const { spells, optionalfeatures, languages } = useFilteredGameData()
   const validatedFixedSpellcastingClass = validateFixedSpellcastingClass(
     feat,
     fixedSpellcastingClass,
@@ -654,6 +639,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
               step={currentStep}
               selected={Array.isArray(currentValue) ? currentValue : []}
               onToggle={(name) => toggleMulti(stepIndex, name, currentStep.count)}
+              languages={languages}
             />
           )}
           {currentStep.kind === 'abilityScore' && (

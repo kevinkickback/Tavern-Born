@@ -5,16 +5,17 @@
 
 * **Complete UI overhaul with a redesigned look and feel**
 * New app icon
-* Updates now install automatically after download
 * Added zoom controls to PDF character sheet previews
-* Fixed 2024 PDF previews rendering much larger than the selected zoom level
-* Kept Rules warnings visible while scrolling allowed sources during character creation
-* Fixed multiclass ASIs and feats overlapping across classes
+* Future updates will install automatically after download
+* Various security and stability improvements
 * Fixed several issues affecting subclass-granted spells
+* Fixed ASIs, feats, and subclasses from overlapping when multiclassing
+
 
 ## ⚠️ Known Issues
 
-* PDF generation for the 2014 and 2024 character sheets is working but incomplete. Still under active development.
+* Due to security improvements, users may need to reconfigure their game data source. Local folder users may need to reselect their game data directory, while remote URL users may need to update their source URL because only HTTPS URLs are now supported.
+* PDF generation for the 2014 and 2024 character sheets is working but incomplete. Still under active development
 
 </details>
 
@@ -31,7 +32,7 @@
 
 ## ⚠️ Known Issues
 
-* PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development.
+* PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development
 
 </details>
 
@@ -50,7 +51,7 @@
 
 ## ⚠️ Known Issues
 
-* PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development.
+* PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development
 
 </details>
 
@@ -67,7 +68,7 @@
 
 ## ⚠️ Known Issues
 
-* PDF generation for both the 2024 character sheets is incomplete and under active development.
+* PDF generation for both the 2024 character sheets is incomplete and under active development
 
 </details>
 
@@ -83,7 +84,7 @@
 
 ## ⚠️ Known Issues
 
-* PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development.
+* PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development
 
 </details>
 
@@ -92,10 +93,10 @@
 
 ## Initial Public Release
 
-As this is the initial public release, bugs and incomplete features are expected. If you encounter any issues, please report them using the GitHub Issues page.
+As this is the initial public release, bugs and incomplete features are expected. If you encounter any issues, please report them using the GitHub Issues page
 
 ## ⚠️ Known Issues
 
-* PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development.
+* PDF generation for both the 2014 and 2024 character sheets is incomplete. The 2024 format is especially unfinished and still under active development
 
 </details>

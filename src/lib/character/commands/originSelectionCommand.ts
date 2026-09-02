@@ -29,6 +29,22 @@ export function buildInitialCharacter(
   let character = createEmptyCharacter(selections.initial)
   let ledger = character.provenance ?? emptyProvenance()
 
+  // Background is applied before race: under the 2024 origin system, the race and
+  // background commands each independently re-validate the full origin invariant set
+  // (e.g. "exactly one background origin feat"), so background's grant must already
+  // be in the ledger by the time the race command's check runs.
+  if (selections.background) {
+    const result = applyBackgroundSelectionCommand(
+      character,
+      ledger,
+      selections.background,
+      selections.backgroundEquipmentChoices ?? [],
+      itemLookup,
+    )
+    character = applyPatch(character, result.characterPatch)
+    ledger = result.provenanceUpdate
+  }
+
   if (selections.race) {
     const result = applyRaceSelectionCommand(
       character,
@@ -55,18 +71,6 @@ export function buildInitialCharacter(
       ledger,
       selections.classEntity,
       undefined,
-      itemLookup,
-    )
-    character = applyPatch(character, result.characterPatch)
-    ledger = result.provenanceUpdate
-  }
-
-  if (selections.background) {
-    const result = applyBackgroundSelectionCommand(
-      character,
-      ledger,
-      selections.background,
-      selections.backgroundEquipmentChoices ?? [],
       itemLookup,
     )
     character = applyPatch(character, result.characterPatch)

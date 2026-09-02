@@ -370,11 +370,7 @@ export function RaceStep({ data, onChange, races }: RaceStepProps) {
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {traits.map((trait) => (
-                      <TraitTooltip
-                        key={`${trait.name}|${trait.entries?.length ?? 0}`}
-                        name={trait.name}
-                        entries={trait.entries}
-                      >
+                      <TraitTooltip key={trait.name} name={trait.name} entries={trait.entries}>
                         <span className="inline-flex items-center px-3 py-1.5 rounded-md border border-border bg-muted/40 hover:bg-accent/10 hover:border-accent transition-colors cursor-help text-sm font-medium">
                           {trait.name}
                         </span>

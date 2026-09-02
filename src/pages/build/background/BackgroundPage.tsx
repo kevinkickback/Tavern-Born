@@ -166,7 +166,7 @@ export function BuildBackgroundPage() {
     if (!activeFeatChoice) return { eligibleFeats: [], initialFilters: undefined }
     return resolveFeatChoicePool(feats as Feat5e[], activeFeatChoice.optionPool)
   }, [activeFeatChoice, feats])
-  const characterSnapshot = buildPrerequisiteSnapshot({ character })
+  const characterSnapshot = useMemo(() => buildPrerequisiteSnapshot({ character }), [character])
 
   const handleOpenFeatModal = useCallback((choiceId: string) => {
     setActiveFeatChoiceId(choiceId)
