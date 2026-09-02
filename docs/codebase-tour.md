@@ -26,8 +26,10 @@ Game data load and cache:
 - src/hooks/data/useDataInit.ts
 - src/hooks/data/useFilteredGameData.ts — use useFilteredGameDataParams({ allowedSources, preferNewerPrintings }) when filtering outside a character context
 - src/hooks/data/useGameData.ts
+- src/hooks/data/useRecursiveLookup.ts
 - src/hooks/data/useAvailableProficiencies.ts
 - src/hooks/data/useSeedData.ts
+- src/hooks/data/useWizardGameData.ts — draft-scoped filtered collections and source-qualified resolvers for character creation
 - src/lib/storage/dataCache.ts
 - src/lib/storage/idb-storage.ts
 - src/lib/storage/collapseState.ts
@@ -40,6 +42,7 @@ Game data load and cache:
 - src/lib/5etools/validator.ts
 - src/lib/5etools/schemas.ts
 - src/lib/5etools/lookups.ts
+- src/lib/5etools/entityResolvers.ts — exact primary/raw fallback resolution for persisted class, race/subrace, and background references
 - src/lib/5etools/filters.ts
 - src/lib/5etools/urlUtils.ts
 - src/lib/5etools/sourceFallbacks.ts
@@ -50,6 +53,8 @@ Game rules and derived calculations (search here before adding new logic):
 - src/lib/calculations/abilityScores.ts — ability modifiers, ASI grants, background ability data
 - src/lib/calculations/gameRules.ts — proficiency bonus, level rules
 - src/lib/calculations/prerequisites.ts — feat/feature prerequisite checks
+- src/lib/calculations/featChoices.ts — shared feat option-pool filtering and initial modal filters
+- src/lib/calculations/subclassEligibility.ts — parsed subclass prerequisites and isolated legacy restrictions
 - src/lib/calculations/spellSlots.ts — multiclass slot derivation
 - src/lib/calculations/armorClass.ts — AC computation
 - src/lib/calculations/itemEquippable.ts — isEquippable() predicate (type codes + wondrous/tattoo/focus flags)
@@ -59,14 +64,16 @@ Game rules and derived calculations (search here before adding new logic):
 
 Provenance and source attribution:
 - src/lib/provenance/* — pure grant/reconciliation logic
+- src/lib/character/commands/* — complete pure character transitions returning characterPatch + provenanceUpdate
+- src/lib/character/commands/equipmentCommands.ts — atomic manual inventory/proficiency and provenance transitions
 - src/components/provenance/* — provenance UI (ledger display)
 - src/hooks/character/useProvenance.ts — public hook (aggregates mutations + rows)
 - src/hooks/character/useProvenanceMutations.ts — thin aggregator; delegates to domain hooks
-- src/hooks/character/useRaceProvenanceMutations.ts — race and subrace grant mutations
-- src/hooks/character/useClassProvenanceMutations.ts — class selection and equipment mutations
-- src/hooks/character/useBackgroundProvenanceMutations.ts — background and ability score mutations
+- src/hooks/character/useRaceProvenanceMutations.ts — race command adapter
+- src/hooks/character/useClassProvenanceMutations.ts — class command adapter
+- src/hooks/character/useBackgroundProvenanceMutations.ts — background command adapter
 - src/hooks/character/useSpellProvenanceMutations.ts — spell grant/swap/remove mutations
-- src/hooks/character/useFeatProvenanceMutations.ts — feat selection, options, choice resolution
+- src/hooks/character/useFeatProvenanceMutations.ts — feat command adapter
 - src/hooks/character/useEquipmentProvenanceMutations.ts — manual equipment and proficiency toggles
 - src/hooks/character/useProvenanceLedger.ts — read-only ledger derivation hook for pages that only display provenance state
 - src/hooks/character/provenanceHelpers.ts — shared pure helpers (extractFixedGrantNames, upsertGrantedEquipment, removeSourceGrantedEquipment)
@@ -78,12 +85,20 @@ Build flow orchestration helpers:
 - src/pages/build/class/model/pageUtils.ts
 - src/pages/build/class/model/asi.ts
 - src/lib/character/commands/classCommands.ts
-- src/lib/character/commands/classSelectionOrchestrationCommand.ts
+- src/lib/character/commands/raceCommands.ts
+- src/lib/character/commands/backgroundCommands.ts
+- src/lib/character/commands/featCommands.ts
+- src/lib/character/commands/spellCommands.ts
+- src/lib/character/commands/originSelectionCommand.ts
 - src/hooks/character/useUnifiedClassSelection.ts
 - src/pages/build/proficiencies/model/data.ts
 - src/pages/build/proficiencies/model/types.ts
 - src/pages/build/background/model/data.ts
 - src/pages/build/class/model/levelsUtils.ts
+- src/pages/build/class/hooks/useSubclassSelectionController.ts
+- src/pages/build/class/hooks/useClassSpellChoiceController.ts
+- src/pages/build/class/hooks/useClassAsiFeatController.ts
+- src/pages/build/class/hooks/useClassOptionalFeatureController.ts
 - src/pages/build/ability-scores/components/MethodPanels.tsx
 - src/pages/build/ability-scores/components/DetailsPanel.tsx
 - src/pages/build/ability-scores/components/RacialBonusesPanel.tsx
@@ -112,7 +127,14 @@ Spells page UI orchestration:
 
 5etools rich text rendering:
 - src/lib/renderer.ts
+- src/lib/renderer/recursiveTooltip.ts — shared recursive tooltip types, reference resolution, positioning, and explicit collection-set lookup builder
 - src/components/editor/FormattedTextRenderer.tsx
+
+Character sheet PDF:
+- src/lib/pdf/characterSheetViewModel.ts — pure character and raw game-data projection
+- src/lib/pdf/characterSheetMapping2014.ts and src/lib/pdf/characterSheetMapping2024.ts — pure template field maps
+- src/lib/pdf/pdfFormAdapter.ts and src/lib/pdf/pdfImageAdapter.ts — AcroForm/MPMB and portrait I/O adapters
+- src/lib/pdf/characterSheetPdf.ts — thin template/orchestration API
 
 Settings and source configuration:
 - src/pages/SettingsPage.tsx

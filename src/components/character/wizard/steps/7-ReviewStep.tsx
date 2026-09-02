@@ -2,6 +2,7 @@ import { BookOpen, Eye, EyeSlash, Sparkle, Warning } from '@phosphor-icons/react
 import { PortraitCardPreview } from '@/components/character/PortraitCardPreview'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
@@ -17,12 +18,13 @@ import {
   usesRaceOriginBenefits,
 } from '@/lib/calculations/originSystem'
 import { cn } from '@/lib/utils'
-import { useGameDataStore } from '@/store/gameDataStore'
-import type { Race5e } from '@/types/5etools'
+import type { Race5e, SourceBook } from '@/types/5etools'
 import type { CharacterWizardData } from '../types'
 
 interface ReviewStepProps {
   data: CharacterWizardData
+  raceResolution: ResolvedRaceReference
+  sources: SourceBook[]
 }
 
 type RaceWithOverwrite = Race5e & {
@@ -74,8 +76,7 @@ function InfoRow({ label, value, warn }: { label: string; value?: string; warn?:
   )
 }
 
-export function ReviewStep({ data }: ReviewStepProps) {
-  const gameData = useGameDataStore((s) => s.gameData)
+export function ReviewStep({ data, raceResolution, sources }: ReviewStepProps) {
   const showRaceOriginBonuses = usesRaceOriginBenefits(
     (data.originSystem || '2014') as '2014' | '2024',
   )
@@ -86,13 +87,8 @@ export function ReviewStep({ data }: ReviewStepProps) {
   if (!data.class) missingFields.push('Class')
   if (!data.background) missingFields.push('Background')
 
-  const raceObj = (gameData?.races ?? []).find(
-    (r) => r.name === data.race && (!data.raceSource || r.source === data.raceSource),
-  )
-  const subraceObj = raceObj?.subraces?.find(
-    (sr) =>
-      sr.name === data.subrace && (sr.source ?? '') === (data.subraceSource ?? sr.source ?? ''),
-  )
+  const raceObj = raceResolution.parentRace
+  const subraceObj = raceResolution.subraceData
   const normalizedSelection = normalizeRaceSelectionForOriginSystem(
     raceObj,
     subraceObj,
@@ -122,7 +118,7 @@ export function ReviewStep({ data }: ReviewStepProps) {
   }
 
   const sourceLabelByAbbreviation = new Map(
-    (gameData?.sources ?? []).map((source) => [source.abbreviation, source.name]),
+    sources.map((source) => [source.abbreviation, source.name]),
   )
   const allowedSources = data.allowedSources ?? []
   const hasRestrictedSources = allowedSources.length > 0

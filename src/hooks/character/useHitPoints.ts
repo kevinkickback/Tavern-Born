@@ -1,5 +1,8 @@
 import { useMemo } from 'react'
-import { useClasses } from '@/hooks/data/useGameData'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useClassLookup } from '@/hooks/data/useGameData'
+import { resolveClassReference } from '@/lib/5etools/entityResolvers'
+import { buildClassLookup } from '@/lib/5etools/lookups'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
 import { calculateHPBreakdown, getCharacterClassEntries } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
@@ -21,7 +24,9 @@ export interface HitPointsState {
 export function useHitPoints(): HitPointsState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const classes = useClasses()
+  const { classes } = useFilteredGameData()
+  const rawClassLookup = useClassLookup()
+  const filteredClassLookup = useMemo(() => buildClassLookup(classes), [classes])
 
   const resolvedProgression = useMemo(() => {
     return getCharacterClassEntries(character)
@@ -31,11 +36,19 @@ export function useHitPoints(): HitPointsState {
     const primary = resolvedProgression[0]
     const name = primary?.name ?? character?.class ?? ''
     const source = primary?.source ?? character?.classSource
-    const found =
-      classes.find((c) => c.name === name && (source == null || c.source === source)) ??
-      classes.find((c) => c.name === name)
+    const found = resolveClassReference(
+      { name, source },
+      { classesByKey: filteredClassLookup },
+      { classesByKey: rawClassLookup },
+    )
     return getHitDiceFromClass(found)
-  }, [character?.class, character?.classSource, resolvedProgression, classes])
+  }, [
+    character?.class,
+    character?.classSource,
+    resolvedProgression,
+    filteredClassLookup,
+    rawClassLookup,
+  ])
 
   const conMod = useMemo(
     () => getAbilityModifier(character?.abilityScores.constitution ?? 10),
@@ -44,15 +57,23 @@ export function useHitPoints(): HitPointsState {
 
   const useAverage = character?.variantRules?.averageHitPoints !== false
   const levelsHPBreakdown = useMemo(() => {
+    const resolvedClasses = resolvedProgression.flatMap((entry) => {
+      const resolved = resolveClassReference(
+        entry,
+        { classesByKey: filteredClassLookup },
+        { classesByKey: rawClassLookup },
+      )
+      return resolved ? [resolved] : []
+    })
     const breakdown = calculateHPBreakdown({ classes: resolvedProgression }, conMod, {
       averageHp: useAverage,
-      classesData: classes,
+      classesData: resolvedClasses,
     })
     if (breakdown.length === 1) {
       breakdown.push(Math.max(1, hitDie + conMod))
     }
     return breakdown
-  }, [resolvedProgression, conMod, useAverage, classes, hitDie])
+  }, [resolvedProgression, conMod, useAverage, filteredClassLookup, rawClassLookup, hitDie])
 
   const calculatedMaxHP = useMemo(
     () => levelsHPBreakdown.reduce((sum, v) => sum + v, 0),

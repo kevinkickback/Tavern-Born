@@ -2,9 +2,8 @@ import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import {
   getCasterLevelContribution,
   getEffectiveCasterProgression,
-  getPactMagicSlots,
   getSpellSlotsFromClassData,
-  getStandardSpellSlots,
+  getStandardSpellSlotsFromClassData,
   mergeSpellSlots,
   type SpellSlotsResult,
 } from '@/lib/calculations/spellSlots'
@@ -60,6 +59,7 @@ export function calculateCharacterSpellSlots(
   const entries = getCharacterClassEntries(character)
 
   let combinedCasterLevel = 0
+  let has2024Class = false
   const pact: SpellSlotsResult = {}
 
   // Collect non-pact caster entries so we can prefer class data for single-class characters.
@@ -67,12 +67,19 @@ export function calculateCharacterSpellSlots(
 
   for (const entry of entries) {
     const classData = classesById.get(toClassProfileId(entry.name, entry.source))
+    if (classData?.edition === 'one' || classData?.source === 'XPHB') has2024Class = true
     const subclassData = getSelectedSubclassData(classData, entry)
     const progression = normalizeProgression(getEffectiveCasterProgression(classData, subclassData))
 
     if (progression === 'pact') {
       const pactRows = classData ? getSpellSlotsFromClassData(classData, entry.levels) : null
-      addSlotRows(pact, pactRows ?? getPactMagicSlots(entry.levels), true)
+      if (pactRows) {
+        addSlotRows(pact, pactRows, true)
+      } else if (import.meta.env.DEV) {
+        console.warn(
+          `[spellSlots] Missing parsed pact progression for ${entry.name}|${entry.source ?? ''}.`,
+        )
+      }
       continue
     }
 
@@ -82,6 +89,12 @@ export function calculateCharacterSpellSlots(
 
   let shared: SpellSlotsResult = {}
   if (combinedCasterLevel > 0) {
+    const ruleset = has2024Class ? '2024' : '2014'
+    const parsedStandardSlots = getStandardSpellSlotsFromClassData(
+      classesById.values(),
+      combinedCasterLevel,
+      ruleset,
+    )
     if (sharedEntries.length === 1 && sharedEntries[0].classData) {
       const { classData, levels } = sharedEntries[0]
       // Only use the class's own progression table when the class itself (not a subclass)
@@ -89,15 +102,17 @@ export function calculateCharacterSpellSlots(
       // Eldritch Knight), the class won't have a matching progression table.
       const classOwnProgression = classData.casterProgression as string | undefined
       if (classOwnProgression && classOwnProgression !== 'none') {
-        shared =
-          getSpellSlotsFromClassData(classData, levels) ??
-          getStandardSpellSlots(combinedCasterLevel)
+        shared = getSpellSlotsFromClassData(classData, levels) ?? parsedStandardSlots ?? {}
       } else {
-        shared = getStandardSpellSlots(combinedCasterLevel)
+        shared = parsedStandardSlots ?? {}
       }
     } else {
-      // Multiclass: combine caster levels and look up the shared table per PHB rules.
-      shared = getStandardSpellSlots(combinedCasterLevel)
+      shared = parsedStandardSlots ?? {}
+    }
+    if (!parsedStandardSlots && Object.keys(shared).length === 0 && import.meta.env.DEV) {
+      console.warn(
+        `[spellSlots] Missing parsed ${ruleset} full-caster progression for effective caster level ${combinedCasterLevel}.`,
+      )
     }
   }
   const usedMap = getSpellSlotFieldMap(character.spells.spellSlots, 'used')

@@ -9,19 +9,16 @@ import type { SourceBook } from '@/types/5etools'
 import type { StepProps } from '../types'
 
 interface RulesStepProps extends StepProps {
-  gameData?: {
-    sources?: SourceBook[]
-  }
+  sources?: SourceBook[]
 }
 
-export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStepProps) {
+export function RulesStep({ data, onChange, sources = [], invalidFields }: RulesStepProps) {
   const optionalClassFeaturesId = useId()
   const averageHitPointsId = useId()
   const bladesingerAnyRaceId = useId()
   const battleragerAnyRaceId = useId()
 
   const preferNewerPrintingsId = useId()
-  const sources = gameData?.sources || []
   const allowedSources = data.allowedSources || []
   const availableSourceSet = new Set(sources.map((source) => source.abbreviation))
 
@@ -144,11 +141,16 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col h-full gap-4">
-        <div className="shrink-0 rounded-lg border border-border bg-muted/20 p-4 space-y-3">
-          <div className="flex items-center gap-2 pb-1 border-b border-border">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-workspace-pane">
+        <section className="shrink-0 space-y-3 border-b border-border p-4">
+          <div className="flex items-center gap-2">
             <Sparkle className="h-4 w-4 text-primary" weight="fill" />
-            <h3 className="font-semibold">Ruleset</h3>
+            <div>
+              <h3 className="text-sm font-semibold">Ruleset</h3>
+              <p className="text-xs text-muted-foreground">
+                Choose the rules foundation for this character.
+              </p>
+            </div>
           </div>
 
           <div
@@ -178,12 +180,19 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
                   type="button"
                   onClick={() => onChange({ originSystem: option.value })}
                   className={cn(
-                    'rounded-lg border px-4 py-3 text-left transition-colors',
+                    'relative rounded-md border px-4 py-3 pl-10 text-left transition-colors',
                     selected
-                      ? 'border-accent bg-accent/10 shadow-sm'
-                      : 'border-border bg-card hover:border-accent/40 hover:bg-accent/5',
+                      ? 'border-primary/60 bg-surface-selected'
+                      : 'border-border bg-surface-raised/45 hover:border-primary/40 hover:bg-surface-hover',
                   )}
                 >
+                  <span
+                    className={cn(
+                      'absolute left-4 top-4 size-3.5 rounded-full border',
+                      selected ? 'border-primary bg-primary' : 'border-muted-foreground/60',
+                    )}
+                    aria-hidden="true"
+                  />
                   <div className="font-semibold text-sm">{option.label}</div>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                     {option.description}
@@ -195,13 +204,13 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
           {invalidFields?.has('originSystem') && (
             <p className="text-xs text-destructive">Please select a ruleset to continue.</p>
           )}
-        </div>
+        </section>
 
-        <div className="shrink-0 grid grid-cols-2 gap-6 w-full">
-          <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
-            <div className="flex items-center gap-2 pb-1 border-b border-border">
+        <div className="grid shrink-0 w-full border-b border-border md:grid-cols-2">
+          <section className="space-y-3 p-4 md:border-r md:border-border">
+            <div className="flex items-center gap-2">
               <Sparkle className="h-4 w-4 text-primary" weight="fill" />
-              <h3 className="font-semibold">Ability Score Generation</h3>
+              <h3 className="text-sm font-semibold">Ability Score Generation</h3>
             </div>
 
             <div className="flex rounded-lg overflow-hidden border border-border">
@@ -226,12 +235,12 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
             <p className="text-xs text-muted-foreground leading-relaxed min-h-[2.5rem]">
               {AS_METHODS.find((m) => m.value === data.abilityScoreMethod)?.description ?? ''}
             </p>
-          </div>
+          </section>
 
-          <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
-            <div className="flex items-center gap-2 pb-1 border-b border-border">
+          <section className="space-y-3 p-4">
+            <div className="flex items-center gap-2">
               <Sparkle className="h-4 w-4 text-primary" weight="fill" />
-              <h3 className="font-semibold">Variant Rules</h3>
+              <h3 className="text-sm font-semibold">Variant Rules</h3>
             </div>
 
             <div className="columns-2 gap-x-6">
@@ -299,10 +308,10 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col rounded-lg border border-border bg-muted/20 p-4">
+        <section className="flex min-h-0 flex-1 flex-col p-4">
           <div className="flex items-center justify-between mb-3 flex-shrink-0">
             <div className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" weight="fill" />
@@ -356,7 +365,10 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
             </div>
           ) : (
             <div className="flex-1 min-h-0 flex flex-col gap-2">
-              <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+              <section
+                aria-label="Allowed sources"
+                className="flex-1 overflow-y-auto pr-1 space-y-4"
+              >
                 {groupOrder.map((group) => {
                   const groupSources = sourcesByGroup[group]?.filter(
                     (s) => !IMPLICIT_SOURCES.has(s.abbreviation),
@@ -402,42 +414,44 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
                     </div>
                   )
                 })}
+              </section>
+
+              <div aria-live="polite" className="contents">
+                {hasNonPresetSourcesSelected && (
+                  <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
+                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                    <span>
+                      Non-recommended sources often contain DM-only or outdated content. These may
+                      clutter your options with material not intended for players.
+                    </span>
+                  </div>
+                )}
+
+                {data.originSystem === '2024' && (
+                  <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
+                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                    <span>
+                      {preferNewerPrintingsEnabled
+                        ? 'Older options are hidden when newer versions exist. Disable "Prefer Newer Printings" to see all options (will show duplicate entries).'
+                        : 'Some content exists in both Legacy (2014) and Revised (2024) editions. Enable "Prefer Newer Printings" to only see the most recent version.'}
+                    </span>
+                  </div>
+                )}
+
+                {data.originSystem === '2014' && (
+                  <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
+                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                    <span>
+                      {preferNewerPrintingsEnabled
+                        ? 'Older printings are hidden where a newer version exists in your selected sources. Disable "Prefer Newer Printings" to see all options.'
+                        : 'Some races and features appear in multiple printings across your selected sources (e.g., ERLW content updated in MPMM). Enable "Prefer Newer Printings" to automatically hide older versions.'}
+                    </span>
+                  </div>
+                )}
               </div>
-
-              {hasNonPresetSourcesSelected && (
-                <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-                  <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
-                  <span>
-                    Non-recommended sources often contain DM-only or outdated content. These may
-                    clutter your options with material not intended for players.
-                  </span>
-                </div>
-              )}
-
-              {data.originSystem === '2024' && (
-                <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-                  <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
-                  <span>
-                    {preferNewerPrintingsEnabled
-                      ? 'Older options are hidden when newer versions exist. Disable "Prefer Newer Printings" to see all options (will show duplicate entries).'
-                      : 'Some content exists in both Legacy (2014) and Revised (2024) editions. Enable "Prefer Newer Printings" to only see the most recent version.'}
-                  </span>
-                </div>
-              )}
-
-              {data.originSystem === '2014' && (
-                <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-                  <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
-                  <span>
-                    {preferNewerPrintingsEnabled
-                      ? 'Older printings are hidden where a newer version exists in your selected sources. Disable "Prefer Newer Printings" to see all options.'
-                      : 'Some races and features appear in multiple printings across your selected sources (e.g., ERLW content updated in MPMM). Enable "Prefer Newer Printings" to automatically hide older versions.'}
-                  </span>
-                </div>
-              )}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </TooltipProvider>
   )

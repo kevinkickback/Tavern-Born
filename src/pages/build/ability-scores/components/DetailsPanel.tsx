@@ -1,5 +1,6 @@
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
 import type { AbilityName } from '@/lib/calculations/abilityScores'
 import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills'
 import { renderEntry } from '@/lib/renderer'
@@ -27,22 +28,11 @@ export function BuildAbilityScoresDetailsPanel({
 
   return (
     <>
-      <div className="bg-gradient-to-r from-accent/30 via-accent/15 to-transparent px-4 py-3 flex-shrink-0 flex flex-col gap-2">
-        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Details
-        </span>
-        <div className="flex items-center gap-2 min-h-8">
-          <span className="text-sm font-bold font-display leading-tight">
-            {formatTitleCase(selectedAbility)} Skills
-          </span>
-        </div>
-      </div>
+      <WorkspacePaneHeader title="Ability details" className="pr-20" />
       <ScrollArea className="flex-1 overflow-hidden">
-        <div className="p-4 space-y-4">
+        <WorkspaceDetailContent className="space-y-4">
           <div>
-            <h2 className="text-2xl font-display font-bold">
-              {formatTitleCase(selectedAbility)} Skills
-            </h2>
+            <h2 className="text-lg font-semibold">{formatTitleCase(selectedAbility)} Skills</h2>
             <p className="text-sm text-muted-foreground mt-1">
               Skills that use this ability score:
             </p>
@@ -78,7 +68,7 @@ export function BuildAbilityScoresDetailsPanel({
               </p>
             )}
           </div>
-        </div>
+        </WorkspaceDetailContent>
       </ScrollArea>
     </>
   )

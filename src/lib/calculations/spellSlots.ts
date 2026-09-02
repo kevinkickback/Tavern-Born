@@ -20,87 +20,6 @@ export function casterProgressionToFull(progression: string): string {
   return CASTER_PROGRESSION_TO_FULL[progression as CasterProgression] ?? progression
 }
 
-/**
- * Fallback-only table used when class spell progression data is unavailable.
- * Canonical values should come from parsed class data (`rowsSpellProgression`).
- * Each row is [level-1 slots, level-2 slots, ..., level-9 slots].
- */
-const FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL: number[][] = [
-  [],
-  /* lv 1  */ [2],
-  /* lv 2  */ [3],
-  /* lv 3  */ [4, 2],
-  /* lv 4  */ [4, 3],
-  /* lv 5  */ [4, 3, 2],
-  /* lv 6  */ [4, 3, 3],
-  /* lv 7  */ [4, 3, 3, 1],
-  /* lv 8  */ [4, 3, 3, 2],
-  /* lv 9  */ [4, 3, 3, 3, 1],
-  /* lv 10 */ [4, 3, 3, 3, 2],
-  /* lv 11 */ [4, 3, 3, 3, 2, 1],
-  /* lv 12 */ [4, 3, 3, 3, 2, 1],
-  /* lv 13 */ [4, 3, 3, 3, 2, 1, 1],
-  /* lv 14 */ [4, 3, 3, 3, 2, 1, 1],
-  /* lv 15 */ [4, 3, 3, 3, 2, 1, 1, 1],
-  /* lv 16 */ [4, 3, 3, 3, 2, 1, 1, 1],
-  /* lv 17 */ [4, 3, 3, 3, 3, 1, 1, 1, 1],
-  /* lv 18 */ [4, 3, 3, 3, 3, 2, 1, 1, 1],
-  /* lv 19 */ [4, 3, 3, 3, 3, 2, 2, 1, 1],
-  /* lv 20 */ [4, 3, 3, 3, 3, 2, 2, 2, 1],
-]
-
-/**
- * Fallback-only pact slot count table.
- * Prefer pact slot extraction from `classTableGroups.rows` when available.
- */
-const FALLBACK_PACT_SLOT_COUNT = [0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4]
-
-/**
- * Fallback-only pact slot level table.
- * Prefer pact slot extraction from `classTableGroups.rows` when available.
- */
-const FALLBACK_PACT_SLOT_LEVEL = [0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]
-
-// Used only as a last-resort fallback when class data is not loaded.
-// Prefer Class5e.casterProgression read from parsed data files.
-export const FALLBACK_CLASS_CASTER_PROGRESSION: Record<string, CasterProgression> = {
-  Bard: 'full',
-  Cleric: 'full',
-  Druid: 'full',
-  Sorcerer: 'full',
-  Wizard: 'full',
-  Artificer: 'artificer',
-  Paladin: '1/2',
-  Ranger: '1/2',
-  Warlock: 'pact',
-  Barbarian: 'none',
-  Fighter: 'none',
-  Monk: 'none',
-  Rogue: 'none',
-}
-
-/**
- * DEV-mode validator. Compares FALLBACK_CLASS_CASTER_PROGRESSION against parsed
- * class data. Call once after classes load. Logs a warning for every mismatch so
- * stale fallback values surface during development.
- */
-export function validateFallbackCasterProgression(
-  classes: Array<{ name: string; casterProgression?: string }>,
-): void {
-  for (const cls of classes) {
-    const fallback = FALLBACK_CLASS_CASTER_PROGRESSION[cls.name]
-    if (!fallback) continue // class not in the fallback map — new homebrew-style entry, not a problem
-    const parsed = cls.casterProgression as CasterProgression | undefined
-    if (!parsed || parsed === 'none') continue // class intentionally has no progression
-    if (fallback !== parsed) {
-      console.warn(
-        `[spellSlots] validateFallbackCasterProgression: mismatch for "${cls.name}": ` +
-          `fallback="${fallback}", parsed="${parsed}". Update FALLBACK_CLASS_CASTER_PROGRESSION.`,
-      )
-    }
-  }
-}
-
 export interface SpellSlotLevel {
   max: number
   used: number
@@ -108,6 +27,8 @@ export interface SpellSlotLevel {
 }
 
 export type SpellSlotsResult = Partial<Record<number, SpellSlotLevel>>
+
+export type SpellSlotRuleset = '2014' | '2024'
 
 export function getCasterLevelContribution(
   progression: CasterProgression,
@@ -139,46 +60,6 @@ export function getEffectiveSpellcastingAbility(
   subclassData?: Subclass5e,
 ): string | undefined {
   return subclassData?.spellcastingAbility ?? classData?.spellcastingAbility
-}
-
-function validateFallbackProgression(className: string, parsedCasterProgression?: string): void {
-  if (!parsedCasterProgression) return
-  const fallback = FALLBACK_CLASS_CASTER_PROGRESSION[className]
-  if (fallback && fallback !== parsedCasterProgression) {
-    console.warn(
-      `[spellSlots] Fallback caster progression mismatch for ${className}: fallback=${fallback}, parsed=${parsedCasterProgression}`,
-    )
-  }
-}
-
-/** Return the standard (non-pact) spell slot maximums for a given `casterLevel`.
- * Uses the fallback static table. For single-class characters, prefer
- * `getSpellSlotsFromClassData` which reads the parsed progression directly.
- * This function is correct for multiclass combined caster levels (PHB rules).
- */
-export function getStandardSpellSlots(casterLevel: number): SpellSlotsResult {
-  if (casterLevel < 1 || casterLevel > 20) return {}
-  const row = FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL[casterLevel] ?? []
-  const result: SpellSlotsResult = {}
-  for (let sl = 1; sl <= 9; sl++) {
-    const count = row[sl - 1]
-    if (count) result[sl] = { max: count, used: 0 }
-  }
-  return result
-}
-
-export function getPactMagicSlots(level: number): SpellSlotsResult {
-  if (level < 1 || level > 20) return {}
-  if (import.meta.env.DEV) {
-    console.warn(
-      `[spellSlots] getPactMagicSlots: using fallback table for level ${level}. ` +
-        'Prefer getPactMagicSlotsFromClassData when class data is available.',
-    )
-  }
-  const count = FALLBACK_PACT_SLOT_COUNT[level]
-  const slotLevel = FALLBACK_PACT_SLOT_LEVEL[level]
-  if (!count) return {}
-  return { [slotLevel]: { max: count, used: 0, isPactMagic: true } }
 }
 
 function findColumnIndex(labels: unknown[], matcher: (text: string) => boolean): number {
@@ -274,7 +155,52 @@ export function getSpellSlotsFromClassData(
   return result
 }
 
-export function getMaxSpellLevelForClassLevel(classData: Class5e, level: number): number {
+export function getStandardSpellSlotsFromClassData(
+  classes: Iterable<Class5e>,
+  casterLevel: number,
+  ruleset: SpellSlotRuleset,
+): SpellSlotsResult | null {
+  const source = ruleset === '2024' ? 'XPHB' : 'PHB'
+  const candidates = Array.from(classes).filter(
+    (classData) => classData.source === source && classData.casterProgression === 'full',
+  )
+  candidates.sort((left, right) => Number(right.name === 'Wizard') - Number(left.name === 'Wizard'))
+  for (const candidate of candidates) {
+    const slots = getSpellSlotsFromClassData(candidate, casterLevel)
+    if (slots !== null) return slots
+  }
+
+  return null
+}
+
+export function validateParsedSpellSlotProgressions(classes: Class5e[]): void {
+  for (const ruleset of ['2014', '2024'] as const) {
+    const source = ruleset === '2024' ? 'XPHB' : 'PHB'
+    if (!classes.some((classData) => classData.source === source)) continue
+    if (!getStandardSpellSlotsFromClassData(classes, 20, ruleset)) {
+      console.warn(
+        `[spellSlots] Missing parsed ${ruleset} full-caster progression at level 20 (${source}).`,
+      )
+    }
+  }
+
+  for (const classData of classes) {
+    if (classData.casterProgression !== 'pact') continue
+    if (getSpellSlotsFromClassData(classData, 1) !== null) continue
+    console.warn(
+      `[spellSlots] Missing parsed pact progression for ${classData.name}|${classData.source}.`,
+    )
+  }
+}
+
+export function getMaxSpellLevelForClassLevel(
+  classData: Class5e,
+  level: number,
+  standardProgressionClasses: Iterable<Class5e> = [],
+  ruleset: SpellSlotRuleset = classData.edition === 'one' || classData.source === 'XPHB'
+    ? '2024'
+    : '2014',
+): number {
   const spellSlots = getSpellSlotsFromClassData(classData, level)
   if (spellSlots) {
     return Object.keys(spellSlots)
@@ -284,72 +210,19 @@ export function getMaxSpellLevelForClassLevel(classData: Class5e, level: number)
   }
 
   const progression = (classData.casterProgression as CasterProgression | undefined) ?? 'none'
-  const fallbackSlots =
-    progression === 'pact'
-      ? getPactMagicSlots(level)
-      : getStandardSpellSlots(getCasterLevelContribution(progression, level))
-  return Object.keys(fallbackSlots)
+  if (progression === 'pact' || progression === 'none') return 0
+
+  const standardSlots = getStandardSpellSlotsFromClassData(
+    standardProgressionClasses,
+    getCasterLevelContribution(progression, level),
+    ruleset,
+  )
+  if (!standardSlots) return 0
+
+  return Object.keys(standardSlots)
     .map((key) => Number.parseInt(key, 10))
     .filter((value) => !Number.isNaN(value))
     .reduce((max, value) => Math.max(max, value), 0)
-}
-
-/**
- * Calculate the maximum spell slot array for a class at a given level.
- * Prefer `getSpellSlotsFromClassData` when the Class5e object is available.
- * This fallback uses the known-class lookup table when only a name is provided.
- *
- * @param className         - e.g. "Wizard"
- * @param level             - character class level (1–20)
- * @param casterProgression - from `Class5e.casterProgression`; overrides the table
- */
-export function calculateSpellSlots(
-  className: string,
-  level: number,
-  casterProgression?: string,
-): SpellSlotsResult {
-  validateFallbackProgression(className, casterProgression)
-
-  const progression: CasterProgression =
-    (casterProgression as CasterProgression) ??
-    (() => {
-      if (import.meta.env.DEV && className) {
-        console.warn(
-          `[spellSlots] calculateSpellSlots: no casterProgression supplied for "${className}"; ` +
-            'falling back to FALLBACK_CLASS_CASTER_PROGRESSION. Pass class data for accurate results.',
-        )
-      }
-      return FALLBACK_CLASS_CASTER_PROGRESSION[className] ?? 'none'
-    })()
-
-  if (progression === 'none') return {}
-  if (progression === 'pact') return getPactMagicSlots(level)
-
-  const casterLevel = getCasterLevelContribution(progression, level)
-
-  return getStandardSpellSlots(casterLevel)
-}
-
-/**
- * Is the given class name a spellcasting class (by the known progression table)?
- * Returns `false` for classes not in the table; use with game-data class objects
- * where `casterProgression` is available for better coverage.
- */
-export function isSpellcaster(className: string, casterProgression?: string): boolean {
-  validateFallbackProgression(className, casterProgression)
-
-  const prog =
-    (casterProgression as CasterProgression) ??
-    (() => {
-      if (import.meta.env.DEV && className) {
-        console.warn(
-          `[spellSlots] isSpellcaster: no casterProgression supplied for "${className}"; ` +
-            'falling back to FALLBACK_CLASS_CASTER_PROGRESSION. Pass class data for accurate results.',
-        )
-      }
-      return FALLBACK_CLASS_CASTER_PROGRESSION[className]
-    })()
-  return !!prog && prog !== 'none'
 }
 
 /**
@@ -371,84 +244,4 @@ export function mergeSpellSlots(
     result[sl] = { ...calc, used }
   }
   return result
-}
-
-/**
- * DEV-mode validator. Cross-checks the three spell-slot fallback tables against
- * parsed class data:
- *  - FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL vs. the Wizard's rowsSpellProgression
- *  - FALLBACK_PACT_SLOT_COUNT / FALLBACK_PACT_SLOT_LEVEL vs. the Warlock's classTableGroups
- *  - FALLBACK_CLASS_CASTER_PROGRESSION vs. all loaded classes that have a casterProgression
- *
- * Call once after class data finishes loading.
- */
-export function validateSpellSlotFallbacks(classes: Class5e[]): void {
-  // F8 — standard slot table vs. Wizard
-  const wizard = classes.find((c) => c.name === 'Wizard' && c.casterProgression === 'full')
-  if (wizard) {
-    const parsedSlots = getSpellSlotsFromClassData(wizard, 1)
-    if (parsedSlots === null) {
-      console.warn(
-        '[spellSlots] validateSpellSlotFallbacks: could not read Wizard spell-slot progression ' +
-          'from classTableGroups. Cannot validate FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL.',
-      )
-    } else {
-      for (let level = 1; level <= 20; level++) {
-        const fallbackRow = FALLBACK_STANDARD_SPELL_SLOTS_BY_CASTER_LEVEL[level] ?? []
-        const parsedAtLevel = getSpellSlotsFromClassData(wizard, level)
-        if (!parsedAtLevel) continue
-        for (let sl = 1; sl <= 9; sl++) {
-          const fallbackCount = fallbackRow[sl - 1] ?? 0
-          const parsedCount = parsedAtLevel[sl]?.max ?? 0
-          if (fallbackCount !== parsedCount) {
-            console.warn(
-              `[spellSlots] validateSpellSlotFallbacks: FALLBACK_STANDARD_SPELL_SLOTS mismatch ` +
-                `at caster level ${level}, slot level ${sl}: fallback=${fallbackCount}, wizard parsed=${parsedCount}`,
-            )
-          }
-        }
-      }
-    }
-  }
-
-  // F9 — pact slot tables vs. Warlock
-  const warlock = classes.find((c) => c.name === 'Warlock' && c.casterProgression === 'pact')
-  if (warlock) {
-    for (let level = 1; level <= 20; level++) {
-      const parsed = getSpellSlotsFromClassData(warlock, level)
-      if (!parsed) continue
-      const parsedEntry = Object.entries(parsed)[0]
-      if (!parsedEntry) continue
-      const [parsedSlotLevelStr, parsedSlotData] = parsedEntry
-      const parsedSlotLevel = Number(parsedSlotLevelStr)
-      const parsedCount = parsedSlotData?.max ?? 0
-      const fallbackCount = FALLBACK_PACT_SLOT_COUNT[level] ?? 0
-      const fallbackSlotLevel = FALLBACK_PACT_SLOT_LEVEL[level] ?? 0
-      if (fallbackCount !== parsedCount) {
-        console.warn(
-          `[spellSlots] validateSpellSlotFallbacks: FALLBACK_PACT_SLOT_COUNT mismatch at level ${level}: ` +
-            `fallback=${fallbackCount}, warlock parsed=${parsedCount}`,
-        )
-      }
-      if (fallbackSlotLevel !== parsedSlotLevel) {
-        console.warn(
-          `[spellSlots] validateSpellSlotFallbacks: FALLBACK_PACT_SLOT_LEVEL mismatch at level ${level}: ` +
-            `fallback=${fallbackSlotLevel}, warlock parsed=${parsedSlotLevel}`,
-        )
-      }
-    }
-  }
-
-  // F10 — warn for classes with a casterProgression not in the fallback map
-  for (const cls of classes) {
-    const progression = cls.casterProgression as string | undefined
-    if (!progression || progression === 'none') continue
-    if (!(cls.name in FALLBACK_CLASS_CASTER_PROGRESSION)) {
-      console.warn(
-        `[spellSlots] validateSpellSlotFallbacks: class "${cls.name}" has casterProgression ` +
-          `"${progression}" but is not in FALLBACK_CLASS_CASTER_PROGRESSION. ` +
-          'Add it to src/lib/calculations/spellSlots.ts so the fallback path works for this class.',
-      )
-    }
-  }
 }

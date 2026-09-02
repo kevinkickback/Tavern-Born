@@ -108,6 +108,44 @@ describe('SpellProfileManager', () => {
     expect(screen.getByText('Fire Bolt')).toBeTruthy()
   })
 
+  test('counts the full displayed list for true prepared casters', () => {
+    const cantrip = makeItem({ name: 'Guidance', level: 0, kind: 'cantrip' })
+    const preparedDetail = {
+      ...BASE_DETAIL,
+      isPreparedCaster: true,
+      isTruePreparedCaster: true,
+      preparedSpellLimit: 4,
+    }
+    const availableSpells = ['Cure Wounds', 'Heroism', 'Shield'].map((name) => ({
+      spell: {
+        name,
+        level: 1,
+        source: 'PHB',
+        school: 'A',
+        time: [{ number: 1, unit: 'action' }],
+        range: { type: 'point', distance: { type: 'feet', amount: 30 } },
+        duration: [{ type: 'instant' }],
+      },
+      item: makeItem({ name, level: 1, kind: 'spell', prepared: name !== 'Cure Wounds' }),
+    }))
+
+    render(
+      <SpellProfileManager
+        spellProfiles={[{ ...BASE_CLASS_PROFILE, preparedSpells: ['Cure Wounds'] }]}
+        detailsByProfileId={new Map([[BASE_CLASS_PROFILE.id, preparedDetail]])}
+        groupedItems={new Map([[BASE_CLASS_PROFILE.id, [cantrip]]])}
+        selectionSourceByProfileAndSpell={new Map()}
+        preparedCasterItemsByProfile={new Map([[BASE_CLASS_PROFILE.id, availableSpells]])}
+        getSpellByName={() => undefined}
+        onTogglePrepared={vi.fn()}
+        onRemoveSpell={vi.fn()}
+        renderSpellName={({ item }) => <span>{item.name}</span>}
+      />,
+    )
+
+    expect(screen.getByText('Total: 4')).toBeTruthy()
+  })
+
   test('calls onRemoveSpell when remove button clicked for a non-fixed spell', () => {
     const onRemoveSpell = vi.fn()
     const item = makeItem({ name: 'Fire Bolt', level: 0, kind: 'cantrip', isFixed: false })

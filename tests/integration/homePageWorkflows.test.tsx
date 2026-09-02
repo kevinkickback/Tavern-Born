@@ -1,8 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
 import { HomePage } from '@/pages/HomePage'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -86,6 +87,7 @@ function mockDynamicFileInput() {
 describe('home page integration workflows', () => {
   beforeEach(() => {
     resetCharacterStore()
+    useAppPreferencesStore.setState({ characterViewMode: 'gallery' })
   })
 
   afterEach(() => {
@@ -115,17 +117,69 @@ describe('home page integration workflows', () => {
 
     render(<HomePage />)
 
-    await user.click(screen.getByTitle('Show filters'))
-    await user.click(screen.getByRole('button', { name: 'Multi-Select' }))
+    await user.click(screen.getByRole('button', { name: 'Sort & Group' }))
+    await user.click(screen.getByRole('button', { name: 'Select Multiple' }))
 
     await user.click(screen.getByRole('button', { name: 'select-c1' }))
 
-    await user.click(screen.getByRole('button', { name: /delete \(1\)/i }))
+    await user.click(screen.getByRole('button', { name: /^Delete$/ }))
 
     expect(screen.getByText('Delete selected characters?')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Delete Selected' }))
 
     expect(useCharacterStore.getState().characters.map((c) => c.id)).toEqual(['c2'])
+  })
+
+  test('filters characters from the workspace toolbar', async () => {
+    const user = userEvent.setup()
+    useCharacterStore.setState({
+      characters: [
+        makeCharacterFixture({ id: 'c1', name: 'Alpha' }),
+        makeCharacterFixture({ id: 'c2', name: 'Bravo' }),
+      ],
+      activeCharacterId: null,
+      activeCharacter: null,
+    })
+
+    render(<HomePage />)
+    await user.type(screen.getByRole('searchbox', { name: 'Search characters' }), 'brav')
+
+    expect(screen.queryByTestId('card-c1')).toBeNull()
+    expect(screen.getByTestId('card-c2')).toBeTruthy()
+  })
+
+  test('switches to the dense list view and remembers the choice', async () => {
+    const user = userEvent.setup()
+    useCharacterStore.setState({
+      characters: [makeCharacterFixture({ id: 'c1', name: 'Alpha' })],
+      activeCharacterId: null,
+      activeCharacter: null,
+    })
+
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'List view' }))
+
+    expect(useAppPreferencesStore.getState().characterViewMode).toBe('list')
+    expect(screen.getByRole('button', { name: 'Actions for Alpha' })).toBeTruthy()
+  })
+
+  test('keeps creation commands in the collection instead of the search toolbar', () => {
+    useCharacterStore.setState({
+      characters: [makeCharacterFixture({ id: 'c1', name: 'Alpha' })],
+      activeCharacterId: null,
+      activeCharacter: null,
+    })
+
+    render(<HomePage />)
+    const toolbar = document.querySelector('[data-slot="workspace-toolbar"]')
+
+    expect(toolbar).toBeTruthy()
+    expect(
+      within(toolbar as HTMLElement).queryByRole('button', { name: 'New Character' }),
+    ).toBeNull()
+    expect(within(toolbar as HTMLElement).queryByRole('button', { name: 'Import' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'New Character' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Import' })).toBeTruthy()
   })
 
   test('supports single-character deletion through AlertDialog', async () => {

@@ -310,11 +310,9 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
     await expect(page.locator('button[title="Prepared"]').first()).toBeVisible()
   }
 
-  const spellRow = page.locator('div').filter({ hasText: 'Magic Missile' }).first()
-  await spellRow.locator('button').last().click()
+  const bonusSpellsContent = page.getByRole('region', { name: /Bonus Spells/ })
+  await bonusSpellsContent.getByRole('button', { name: 'Remove Magic Missile' }).click()
 
   // Wizard is a true prepared caster — Magic Missile always appears in its class spell list.
-  // Scope the check to the Bonus Spells accordion region only.
-  const bonusSpellsContent = page.getByRole('region', { name: /Bonus Spells/ })
   await expect(bonusSpellsContent.getByText('Magic Missile')).toHaveCount(0)
 })

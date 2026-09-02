@@ -1,21 +1,10 @@
 import { useCallback, useMemo } from 'react'
-import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
-import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
 import {
-  ensureOriginSystemInvariants,
-  normalizeRaceSelectionForOriginSystem,
-} from '@/lib/calculations/originSystem'
-import { mergeSkillState } from '@/lib/calculations/skills'
-import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
-import {
-  applyRaceGrants,
-  diffProficiencyGrants,
-  reconcileRaceChange,
-  reconcileSubraceChange,
-  resolveRaceAsiChoicesInLedger,
-  resolveRaceGrantFilterOptions,
-} from '@/lib/provenance'
-import { normalizeKey } from '@/lib/provenance/normalization'
+  applyRaceAsiChoicesCommand,
+  applyRaceSelectionCommand,
+  applySubraceSelectionCommand,
+} from '@/lib/character/commands/raceCommands'
+import { resolveRaceGrantFilterOptions } from '@/lib/provenance'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -23,32 +12,7 @@ import type { Race5e } from '@/types/5etools'
 
 const EMPTY_ITEMS: never[] = []
 
-function getEffectiveRaceLanguageBlocks(race: {
-  lineage?: string | boolean
-  languageProficiencies?: unknown[]
-}): unknown[] {
-  if (Array.isArray(race.languageProficiencies) && race.languageProficiencies.length > 0) {
-    return race.languageProficiencies
-  }
-  if (typeof race.lineage === 'string') {
-    return [{ common: true, anyStandard: 1 }]
-  }
-  return []
-}
-
-function dedupeValues(values: string[] | undefined): string[] | undefined {
-  if (!values || values.length === 0) return undefined
-  const deduped = Array.from(new Set(values.map(normalizeKey))).filter(Boolean)
-  return deduped.length > 0 ? deduped : undefined
-}
-
 export function useRaceProvenanceMutations() {
-  // Domain mutation hook contract:
-  // 1. Read character + ledger from store (via useLedgerPatch or direct store selectors).
-  // 2. Reconcile: remove grants from the old source (reconcile* functions in lib/provenance).
-  // 3. Apply: add grants from the new source (apply* functions in lib/provenance).
-  // 4. Sync derived character fields (proficiencies, skills via mergeSkillState, equipment).
-  // 5. Write via updateCharacter(character.id, patch) or patchLedger for ledger-only writes.
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const gameData = useGameDataStore((s) => s.gameData)
@@ -107,118 +71,17 @@ export function useRaceProvenanceMutations() {
       raceAsiBlockIndex: 0 | 1 = 0,
     ) => {
       if (!character) return
-      const normalizedSelection = normalizeRaceSelectionForOriginSystem(
+      const result = applyRaceSelectionCommand(
+        character,
+        ledger,
         race as Race5e,
         subrace as Race5e | undefined,
-        character.originSystem,
-      )
-      const normalizedRace = normalizedSelection.race
-      const normalizedSubrace = normalizedSelection.subrace
-      if (!normalizedRace) return
-      const oldRaceName = character.race || undefined
-      const oldSubraceName = character.subrace || undefined
-      let newLedger = reconcileRaceChange(ledger, oldRaceName, oldSubraceName)
-      newLedger = applyRaceGrants(
-        normalizedRace,
-        normalizedSubrace,
-        newLedger,
-        resolveRaceChoiceOptions,
         raceAsiBlockIndex,
-        1,
-        { suppressLanguageGrants: character.originSystem === '2024' },
+        resolveRaceChoiceOptions,
       )
-      newLedger = ensureOriginLanguageBaseline(newLedger, character.originSystem)
-      ensureOriginSystemInvariants(newLedger, character.originSystem)
-
-      let nextProficiencies = { ...character.proficiencies }
-
-      for (const [sourceType, sourceName] of [
-        ['race', oldRaceName],
-        ['subrace', oldSubraceName],
-      ] as const) {
-        if (!sourceName) continue
-        for (const domain of ['skills', 'languages', 'tools', 'armor', 'weapons'] as const) {
-          const { toRemove } = diffProficiencyGrants(ledger, domain, sourceType, sourceName)
-          if (toRemove.length === 0) continue
-
-          nextProficiencies = {
-            ...nextProficiencies,
-            [domain]: nextProficiencies[domain].filter(
-              (name) => !toRemove.includes(normalizeKey(name)),
-            ),
-          }
-        }
-      }
-
-      const raceSkills = extractProficiencyBlockNames(normalizedRace.skillProficiencies ?? [], {
-        includeAnyStandard: false,
-      }).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const raceLanguages = extractProficiencyBlockNames(
-        getEffectiveRaceLanguageBlocks(normalizedRace),
-        { includeAnyStandard: false },
-      ).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const subraceSkills = extractProficiencyBlockNames(
-        normalizedSubrace?.skillProficiencies ?? [],
-        { includeAnyStandard: false },
-      ).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const subraceLanguages = extractProficiencyBlockNames(
-        normalizedSubrace?.languageProficiencies ?? [],
-        { includeAnyStandard: false },
-      ).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const languagesToApply =
-        character.originSystem === '2024' ? [] : [...raceLanguages, ...subraceLanguages]
-
-      const raceTools = extractFixedGrantNames(normalizedRace.toolProficiencies)
-      const raceWeapons = extractFixedGrantNames(normalizedRace.weaponProficiencies)
-      const raceArmor = extractFixedGrantNames(normalizedRace.armorProficiencies)
-      const subraceTools = extractFixedGrantNames(normalizedSubrace?.toolProficiencies)
-      const subraceWeapons = extractFixedGrantNames(normalizedSubrace?.weaponProficiencies)
-      const subraceArmor = extractFixedGrantNames(normalizedSubrace?.armorProficiencies)
-
-      nextProficiencies = {
-        ...nextProficiencies,
-        skills: [
-          ...new Set([
-            ...nextProficiencies.skills,
-            ...raceSkills.map(normalizeKey),
-            ...subraceSkills.map(normalizeKey),
-          ]),
-        ],
-        languages: [...new Set([...nextProficiencies.languages, ...languagesToApply])],
-        tools: [...new Set([...nextProficiencies.tools, ...raceTools, ...subraceTools])],
-        weapons: [...new Set([...nextProficiencies.weapons, ...raceWeapons, ...subraceWeapons])],
-        armor: [...new Set([...nextProficiencies.armor, ...raceArmor, ...subraceArmor])],
-      }
-
-      const nextSkills = mergeSkillState(character.skills ?? {}, nextProficiencies.skills)
-
-      const darkvisionRange = normalizedSubrace?.darkvision ?? normalizedRace.darkvision
-      const nextVisions = (character.visions ?? []).filter((v) => v.type !== 'darkvision')
-      if (typeof darkvisionRange === 'number' && darkvisionRange > 0) {
-        nextVisions.push({ type: 'darkvision', range: darkvisionRange })
-      }
-
-      const damageResistances = dedupeValues([
-        ...(normalizedRace.resist ?? []),
-        ...(normalizedSubrace?.resist ?? []),
-      ])
-      const damageImmunities = dedupeValues([
-        ...(normalizedRace.immune ?? []),
-        ...(normalizedSubrace?.immune ?? []),
-      ])
-      const conditionImmunities = dedupeValues([
-        ...(normalizedRace.conditionImmune ?? []),
-        ...(normalizedSubrace?.conditionImmune ?? []),
-      ])
-
       updateCharacter(character.id, {
-        provenance: newLedger,
-        proficiencies: nextProficiencies,
-        skills: nextSkills,
-        visions: nextVisions.length > 0 ? nextVisions : undefined,
-        damageResistances,
-        damageImmunities,
-        conditionImmunities,
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
       })
     },
     [character, ledger, resolveRaceChoiceOptions, updateCharacter],
@@ -255,104 +118,16 @@ export function useRaceProvenanceMutations() {
       },
     ) => {
       if (!character) return
-      const normalizedSelection = normalizeRaceSelectionForOriginSystem(
+      const result = applySubraceSelectionCommand(
+        character,
+        ledger,
         race as Race5e,
         subrace as Race5e | undefined,
-        character.originSystem,
+        resolveRaceChoiceOptions,
       )
-      const normalizedSubrace = normalizedSelection.subrace
-      const oldSubraceName = character.subrace || undefined
-      let newLedger = reconcileSubraceChange(ledger, oldSubraceName)
-      if (normalizedSubrace) {
-        newLedger = applyRaceGrants(
-          {
-            name: race.name,
-            source: race.source,
-            skillProficiencies: [],
-            languageProficiencies: [],
-            toolProficiencies: [],
-            weaponProficiencies: [],
-            armorProficiencies: [],
-            ability: [],
-          },
-          normalizedSubrace,
-          newLedger,
-          resolveRaceChoiceOptions,
-          (character.raceAsiBlockIndex ?? 0) as 0 | 1,
-          1,
-          { suppressLanguageGrants: character.originSystem === '2024' },
-        )
-      }
-      newLedger = ensureOriginLanguageBaseline(newLedger, character.originSystem)
-      ensureOriginSystemInvariants(newLedger, character.originSystem)
-
-      let nextProficiencies = { ...character.proficiencies }
-
-      if (oldSubraceName) {
-        for (const domain of ['skills', 'languages', 'tools', 'armor', 'weapons'] as const) {
-          const { toRemove } = diffProficiencyGrants(ledger, domain, 'subrace', oldSubraceName)
-          if (toRemove.length === 0) continue
-
-          nextProficiencies = {
-            ...nextProficiencies,
-            [domain]: nextProficiencies[domain].filter(
-              (name) => !toRemove.includes(normalizeKey(name)),
-            ),
-          }
-        }
-      }
-
-      const subraceSkills = extractProficiencyBlockNames(
-        normalizedSubrace?.skillProficiencies ?? [],
-        { includeAnyStandard: false },
-      ).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const subraceLanguages = extractProficiencyBlockNames(
-        normalizedSubrace?.languageProficiencies ?? [],
-        { includeAnyStandard: false },
-      ).filter((name) => !name.toLowerCase().startsWith('choose '))
-      const subraceLanguagesToApply = character.originSystem === '2024' ? [] : subraceLanguages
-      const subraceTools = extractFixedGrantNames(normalizedSubrace?.toolProficiencies)
-      const subraceWeapons = extractFixedGrantNames(normalizedSubrace?.weaponProficiencies)
-      const subraceArmor = extractFixedGrantNames(normalizedSubrace?.armorProficiencies)
-
-      nextProficiencies = {
-        ...nextProficiencies,
-        skills: [...new Set([...nextProficiencies.skills, ...subraceSkills.map(normalizeKey)])],
-        languages: [...new Set([...nextProficiencies.languages, ...subraceLanguagesToApply])],
-        tools: [...new Set([...nextProficiencies.tools, ...subraceTools])],
-        weapons: [...new Set([...nextProficiencies.weapons, ...subraceWeapons])],
-        armor: [...new Set([...nextProficiencies.armor, ...subraceArmor])],
-      }
-
-      const nextSkills = mergeSkillState(character.skills ?? {}, nextProficiencies.skills)
-
-      const subraceVisions = (character.visions ?? []).filter((v) => v.type !== 'darkvision')
-      const darkvisionRange = normalizedSubrace?.darkvision ?? race.darkvision
-      if (typeof darkvisionRange === 'number' && darkvisionRange > 0) {
-        subraceVisions.push({ type: 'darkvision', range: darkvisionRange })
-      }
-
-      const damageResistances = dedupeValues([
-        ...(race.resist ?? []),
-        ...(normalizedSubrace?.resist ?? []),
-      ])
-      const damageImmunities = dedupeValues([
-        ...(race.immune ?? []),
-        ...(normalizedSubrace?.immune ?? []),
-      ])
-      const conditionImmunities = dedupeValues([
-        ...(race.conditionImmune ?? []),
-        ...(normalizedSubrace?.conditionImmune ?? []),
-      ])
-
       updateCharacter(character.id, {
-        provenance: newLedger,
-        proficiencies: nextProficiencies,
-        skills: nextSkills,
-        visions: subraceVisions.length > 0 ? subraceVisions : undefined,
-        damageResistances,
-        damageImmunities,
-        conditionImmunities,
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
       })
     },
     [character, ledger, resolveRaceChoiceOptions, updateCharacter],
@@ -361,8 +136,11 @@ export function useRaceProvenanceMutations() {
   const applyRaceAsiChoices = useCallback(
     (choices: string[][]) => {
       if (!character) return
-      const normalized = resolveRaceAsiChoicesInLedger(ledger, choices)
-      updateCharacter(character.id, { provenance: normalized, raceAsiChoices: choices })
+      const result = applyRaceAsiChoicesCommand(ledger, choices)
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
     },
     [character, ledger, updateCharacter],
   )

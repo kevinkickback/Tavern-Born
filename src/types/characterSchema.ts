@@ -208,6 +208,9 @@ export const featSchema = z.object({
   description: z.string(),
   prerequisites: z.string().optional(),
   options: featOptionSelectionsSchema.optional(),
+  className: z.string().optional(),
+  classSource: z.string().optional(),
+  classLevel: z.number().int().min(1).optional(),
 })
 
 export const equipmentSchema = z.object({
@@ -375,6 +378,7 @@ export const sourceTagSchema = z.object({
   sourceType: sourceTypeSchema,
   sourceName: z.string(),
   sourceRef: z.string().optional(),
+  grantVariant: z.string().optional(),
   grantType: grantTypeSchema,
   label: z.string(),
 })
@@ -506,6 +510,7 @@ export const spellProfileSchema = z
     castingAbilityOptions: z.array(z.string()).optional(),
     choices: z.array(raceSpellChoiceSchema).optional(),
     fixedSpells: z.array(z.string()).optional(),
+    alwaysPreparedSpells: z.array(z.string()).optional(),
     cantrips: z.array(z.string()).default([]),
     spellsKnown: z.array(z.string()).default([]),
     preparedSpells: z.array(z.string()).default([]),
@@ -558,6 +563,7 @@ export const asiChoiceSchema = z.object({
   id: z.string(),
   level: z.number().int(),
   className: z.string(),
+  classSource: z.string().optional(),
   abilityChanges: z.record(z.union([z.literal(1), z.literal(2)])),
 })
 
@@ -625,6 +631,7 @@ export const characterSchema = z
     portraitTransform: portraitTransformSchema.optional(),
     asiChoices: z.array(asiChoiceSchema).optional(),
     specialFeats: z.array(featSchema).optional(),
+    fixedFeatOptions: z.record(featOptionSelectionsSchema).optional(),
     provenance: provenanceLedgerSchema.optional(),
     inspiration: z.boolean().optional(),
     deathSaves: z

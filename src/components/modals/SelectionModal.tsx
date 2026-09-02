@@ -1,4 +1,4 @@
-import { Funnel, X } from '@phosphor-icons/react'
+import { Funnel, MagnifyingGlass, X } from '@phosphor-icons/react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -320,43 +320,48 @@ function SelectionModalInner<T>({
 
   return (
     <>
-      <DialogHeader className="px-5 pt-5 pb-0 flex-shrink-0">
-        <DialogTitle className="font-display text-xl leading-tight">{title}</DialogTitle>
+      <DialogHeader className="flex-shrink-0 gap-3 border-b border-border bg-surface-raised px-5 py-4 pr-12">
+        <div className="flex min-w-0 items-center justify-between gap-4">
+          <DialogTitle className="truncate text-lg leading-tight">{title}</DialogTitle>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            {filteredItems.length.toLocaleString()} results
+          </span>
+        </div>
         <DialogDescription className="sr-only">
           Browse and select items. Use the search and filters to narrow results.
         </DialogDescription>
-        <div className="flex items-center gap-2 mt-3 pb-3 border-b border-border">
+        <div className="flex items-center gap-2">
           {filterSections.length > 0 && (
             <Button
               type="button"
-              variant={sidebarOpen ? 'default' : 'outline'}
+              variant={sidebarOpen ? 'secondary' : 'outline'}
               size="sm"
-              className={cn(
-                'h-10 w-10 p-0 flex-shrink-0',
-                sidebarOpen && 'bg-accent text-accent-foreground hover:bg-accent/90',
-              )}
+              className="size-9 shrink-0 p-0"
               onClick={() => setSidebarOpen((v) => !v)}
-              title={sidebarOpen ? 'Hide filters' : 'Show filters'}
+              aria-label={sidebarOpen ? 'Hide filters' : 'Show filters'}
+              aria-expanded={sidebarOpen}
             >
-              <Funnel className="h-4 w-4" weight={sidebarOpen ? 'fill' : 'regular'} />
+              <Funnel className="size-4" weight={sidebarOpen ? 'fill' : 'regular'} />
             </Button>
           )}
           <div className="relative flex-1">
+            <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search..."
+              aria-label={`Search ${title.toLowerCase()}`}
+              placeholder="Search available options"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value)
                 resetScroll()
               }}
-              className="h-10 pr-16 text-sm"
+              className="h-9 bg-workspace-pane pl-9 pr-16 text-sm shadow-none"
               autoFocus
             />
             {search && (
               <button
                 type="button"
                 onClick={clearSearch}
-                className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded"
+                className="absolute right-2 top-1/2 flex -translate-y-1/2 cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="h-3 w-3" />
                 Clear
@@ -365,12 +370,12 @@ function SelectionModalInner<T>({
           </div>
         </div>
       </DialogHeader>
-      <div className="flex flex-row flex-1 overflow-hidden min-h-0">
+      <div className="flex min-h-0 flex-1 flex-row overflow-hidden bg-workspace-detail">
         {filterSections.length > 0 && (
           <div
-            className="flex-shrink-0 overflow-y-auto border-r border-border bg-muted/20 transition-all duration-200 ease-in-out"
+            className="flex-shrink-0 overflow-y-auto border-r border-border bg-workspace-pane transition-[width,opacity] duration-200 ease-out"
             style={{
-              width: sidebarOpen ? 250 : 0,
+              width: sidebarOpen ? '15rem' : 0,
               opacity: sidebarOpen ? 1 : 0,
               pointerEvents: sidebarOpen ? undefined : 'none',
             }}
@@ -399,7 +404,7 @@ function SelectionModalInner<T>({
                     key={virtualRow.key}
                     ref={rowVirtualizer.measureElement}
                     data-index={virtualRow.index}
-                    className="absolute top-0 left-0 w-full px-3 py-1"
+                    className="absolute left-0 top-0 w-full px-3 py-1"
                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                   >
                     <button
@@ -407,12 +412,12 @@ function SelectionModalInner<T>({
                       onClick={() => toggleItem(item)}
                       disabled={!isSelected && !canSel}
                       className={cn(
-                        'w-full text-left rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                        'w-full text-left rounded-md border bg-surface-raised transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                         isSelected
-                          ? 'border-accent bg-accent/10'
+                          ? 'border-primary/60 bg-primary/10'
                           : canSel
-                            ? 'border-border hover:border-accent/50 hover:bg-accent/5'
-                            : 'border-border opacity-40 cursor-not-allowed',
+                            ? 'cursor-pointer border-border-subtle hover:border-border-strong hover:bg-surface-hover'
+                            : 'cursor-not-allowed border-border-subtle opacity-40',
                       )}
                     >
                       {renderCard(item, isSelected, canSel)}
@@ -424,7 +429,7 @@ function SelectionModalInner<T>({
           )}
         </div>
       </div>
-      <div className="flex-shrink-0 border-t border-border px-5 py-3 flex items-center justify-between gap-4">
+      <div className="flex flex-shrink-0 items-center justify-between gap-4 border-t border-border bg-surface-raised px-5 py-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
             <span className="text-xs font-semibold uppercase text-muted-foreground">Selected</span>
@@ -435,10 +440,7 @@ function SelectionModalInner<T>({
                   <Badge
                     key={cat.key}
                     variant={full ? 'default' : 'secondary'}
-                    className={cn(
-                      'font-mono text-sm px-2 h-6',
-                      full && 'bg-accent text-accent-foreground',
-                    )}
+                    className={cn('h-6 px-2 text-xs tabular-nums', full && 'bg-primary')}
                   >
                     {cat.selected}/{cat.max === Number.POSITIVE_INFINITY ? '∞' : cat.max}{' '}
                     {cat.label}
@@ -446,7 +448,7 @@ function SelectionModalInner<T>({
                 )
               })
             ) : (
-              <Badge variant="secondary" className="font-mono text-sm px-2 h-6">
+              <Badge variant="secondary" className="h-6 px-2 text-xs tabular-nums">
                 {selectedIds.size}
               </Badge>
             )}
@@ -457,12 +459,7 @@ function SelectionModalInner<T>({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            onClick={handleConfirm}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            Confirm
-          </Button>
+          <Button onClick={handleConfirm}>Confirm</Button>
         </div>
       </div>
     </>
@@ -474,7 +471,7 @@ export function SelectionModal<T>(props: SelectionModalProps<T>) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex flex-col gap-0 p-0 overflow-hidden max-h-[90vh] sm:max-w-5xl w-full">
+      <DialogContent className="flex h-[min(90vh,56rem)] w-full flex-col gap-0 overflow-hidden border-border bg-workspace-detail p-0 sm:max-w-5xl">
         <SelectionModalInner key={String(open)} {...rest} onClose={() => onOpenChange(false)} />
       </DialogContent>
     </Dialog>

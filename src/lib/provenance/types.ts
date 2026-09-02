@@ -40,6 +40,8 @@ export interface SourceTag {
   sourceName: string
   /** Optional source code (e.g. 'PHB', 'XPHB') for cross-referencing. */
   sourceRef?: string
+  /** Optional parameter encoded in a fixed 5etools grant reference (e.g. 'cleric'). */
+  grantVariant?: string
   grantType: GrantType
   /**
    * User-visible label. Always 'User Choice' for manual toggling or user-driven

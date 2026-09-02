@@ -1,55 +1,53 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import {
-  calculateSpellSlots,
   casterProgressionToFull,
   getCasterLevelContribution,
   getEffectiveCasterProgression,
   getEffectiveSpellcastingAbility,
   getMaxSpellLevelForClassLevel,
-  getPactMagicSlots,
   getSpellSlotsFromClassData,
-  getStandardSpellSlots,
-  isSpellcaster,
+  getStandardSpellSlotsFromClassData,
   mergeSpellSlots,
+  validateParsedSpellSlotProgressions,
 } from '@/lib/calculations/spellSlots'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
 describe('spellSlots', () => {
-  test('getStandardSpellSlots returns expected row for caster levels', () => {
-    expect(getStandardSpellSlots(1)).toEqual({
-      1: { max: 2, used: 0 },
-    })
+  test('getStandardSpellSlotsFromClassData selects rows by ruleset', () => {
+    const phbRows = Array.from({ length: 20 }, () => [2])
+    const xphbRows = Array.from({ length: 20 }, () => [2])
+    phbRows[16] = [4, 3, 3, 3, 3, 1, 1, 1, 1]
+    xphbRows[16] = [4, 3, 3, 3, 2, 1, 1, 1, 1]
+    const classes = [
+      makeClassFixture({ source: 'PHB', classTableGroups: [{ rowsSpellProgression: phbRows }] }),
+      makeClassFixture({ source: 'XPHB', classTableGroups: [{ rowsSpellProgression: xphbRows }] }),
+    ]
 
-    expect(getStandardSpellSlots(20)[9]).toEqual({ max: 1, used: 0 })
+    expect(getStandardSpellSlotsFromClassData(classes, 17, '2014')?.[5]?.max).toBe(3)
+    expect(getStandardSpellSlotsFromClassData(classes, 17, '2024')?.[5]?.max).toBe(2)
+    expect(getStandardSpellSlotsFromClassData([], 17, '2024')).toBeNull()
   })
 
-  test('getPactMagicSlots returns pact slot level and count', () => {
-    expect(getPactMagicSlots(1)).toEqual({
-      1: { max: 1, used: 0, isPactMagic: true },
-    })
+  test('validateParsedSpellSlotProgressions uses source-qualified diagnostics', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
 
-    expect(getPactMagicSlots(11)).toEqual({
-      5: { max: 3, used: 0, isPactMagic: true },
-    })
-  })
+    validateParsedSpellSlotProgressions([
+      makeClassFixture({ source: 'PHB', classTableGroups: [] }),
+      makeClassFixture({
+        name: 'Warlock',
+        source: 'XPHB',
+        casterProgression: 'pact',
+        classTableGroups: [],
+      }),
+    ])
 
-  test('calculateSpellSlots handles full, half, artificer, pact, and non-caster progressions', () => {
-    expect(calculateSpellSlots('Wizard', 5, 'full')[3]).toEqual({
-      max: 2,
-      used: 0,
-    })
-    expect(calculateSpellSlots('Paladin', 5, '1/2')[1]).toEqual({
-      max: 3,
-      used: 0,
-    })
-    expect(calculateSpellSlots('Artificer', 5, 'artificer')[2]).toEqual({
-      max: 2,
-      used: 0,
-    })
-    expect(calculateSpellSlots('Warlock', 5, 'pact')).toEqual({
-      3: { max: 2, used: 0, isPactMagic: true },
-    })
-    expect(calculateSpellSlots('Fighter', 5, 'none')).toEqual({})
+    expect(warn).toHaveBeenCalledWith(
+      '[spellSlots] Missing parsed 2014 full-caster progression at level 20 (PHB).',
+    )
+    expect(warn).toHaveBeenCalledWith(
+      '[spellSlots] Missing parsed pact progression for Warlock|XPHB.',
+    )
+    warn.mockRestore()
   })
 
   test('getCasterLevelContribution applies progression math consistently', () => {
@@ -77,12 +75,6 @@ describe('spellSlots', () => {
 
     expect(getEffectiveCasterProgression(fighter, eldritchKnight)).toBe('1/3')
     expect(getEffectiveSpellcastingAbility(fighter, eldritchKnight)).toBe('int')
-  })
-
-  test('isSpellcaster uses supplied progression first, then fallback table', () => {
-    expect(isSpellcaster('Fighter')).toBe(false)
-    expect(isSpellcaster('Wizard')).toBe(true)
-    expect(isSpellcaster('UnknownClass', 'full')).toBe(true)
   })
 
   test('getSpellSlotsFromClassData reads rowsSpellProgression', () => {
@@ -130,7 +122,7 @@ describe('spellSlots', () => {
     expect(getSpellSlotsFromClassData(fighter, 1)).toBeNull()
   })
 
-  test('getMaxSpellLevelForClassLevel prefers parsed tables and handles pact fallback', () => {
+  test('getMaxSpellLevelForClassLevel prefers parsed tables and does not invent pact slots', () => {
     const wizard = makeClassFixture({
       classTableGroups: [
         {
@@ -149,7 +141,7 @@ describe('spellSlots', () => {
         }),
         5,
       ),
-    ).toBe(3)
+    ).toBe(0)
   })
 
   test('getMaxSpellLevelForClassLevel uses parsed pact slot level when available', () => {

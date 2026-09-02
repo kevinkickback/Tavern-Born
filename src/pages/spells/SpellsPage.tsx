@@ -1,16 +1,40 @@
-import { MagicWand, X } from '@phosphor-icons/react'
+import { MagicWand } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
+import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
+import { SplitPane } from '@/components/ui/SplitPane'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  AnchoredHint,
+  WorkspaceBody,
+  WorkspaceDetailContent,
+  WorkspacePage,
+  WorkspacePaneHeader,
+} from '@/components/workspace'
+import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
+import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { buildSpellSelectionSourceMap } from '@/lib/calculations/spellProfiles.attribution'
-import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
-import { getTotalLevel } from '@/lib/characterUtils'
+import {
+  SPECIAL_SPELL_PROFILE_ID,
+  toClassProfileId,
+} from '@/lib/calculations/spellProfiles.constants'
+import { getCharacterClassEntries, getTotalLevel } from '@/lib/characterUtils'
+import { normalizeKey } from '@/lib/provenance/normalization'
+import type { SourceRow } from '@/lib/provenance/types'
+import {
+  buildRecursiveLookup,
+  getEntityKey,
+  type RecursiveLookup,
+} from '@/lib/renderer/recursiveTooltip'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
+import { cn } from '@/lib/utils'
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
 import { SpellNameTooltip } from '@/pages/spells/components/SpellNameTooltip'
 import {
@@ -18,24 +42,22 @@ import {
   type SpellListItem,
   SpellProfileManager,
 } from '@/pages/spells/components/SpellProfileManager'
-import {
-  buildNameMap,
-  getEntityKey,
-  type RecursiveLookup,
-  type TooltipEntityLike,
-} from '@/pages/spells/components/spellTooltipUtils'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-import type { Spell5e } from '@/types/5etools'
+import type { Class5e, Spell5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
 
 const SPELLS_PREPARE_SELECTOR = '[data-spell-prepare-toggle="true"]'
 const SPELLS_HINT_WIDTH = 300
 
+type SpellView = 'all' | 'class' | 'racial' | 'bonus'
+
 export function SpellsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
+  const { getSourcesRowsBySection } = useProvenanceLedger()
   const {
     spells,
     items,
+    itemsBase,
     feats,
     races,
     classes,
@@ -69,6 +91,9 @@ export function SpellsPage() {
 
   const [racialChoiceModalOpen, setRacialChoiceModalOpen] = useState(false)
   const [bonusSpellModalOpen, setBonusSpellModalOpen] = useState(false)
+  const [listCollapsed, setListCollapsed] = useState(false)
+  const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [spellView, setSpellView] = useState<SpellView>('all')
   const [activeRacialChoice, setActiveRacialChoice] = useState<{
     profileId: string
     choiceId: string
@@ -80,35 +105,25 @@ export function SpellsPage() {
   } | null>(null)
 
   const allSpells = spells as Spell5e[]
-  const spellByName = useMemo(() => {
-    const map = new Map<string, Spell5e>()
-    for (const spell of allSpells) {
-      map.set(getEntityKey(spell.name, spell.source), spell)
-      const withoutSource = getEntityKey(spell.name)
-      if (!map.has(withoutSource)) {
-        map.set(withoutSource, spell)
-      }
-    }
-    return map
-  }, [allSpells])
-
   const recursiveLookup = useMemo<RecursiveLookup>(
-    () => ({
-      spells: spellByName,
-      items: buildNameMap(items as TooltipEntityLike[]),
-      feats: buildNameMap(feats as TooltipEntityLike[]),
-      races: buildNameMap(races as TooltipEntityLike[]),
-      classes: buildNameMap(classes as TooltipEntityLike[]),
-      backgrounds: buildNameMap(backgrounds as TooltipEntityLike[]),
-      optionalfeatures: buildNameMap(optionalfeatures as TooltipEntityLike[]),
-      actions: buildNameMap(actions as TooltipEntityLike[]),
-      conditions: buildNameMap(conditions as TooltipEntityLike[]),
-      deities: buildNameMap(deities as TooltipEntityLike[]),
-      skills: buildNameMap(skills as TooltipEntityLike[]),
-      senses: buildNameMap(senses as TooltipEntityLike[]),
-      variantrules: buildNameMap(variantrules as TooltipEntityLike[]),
-      languages: buildNameMap(languages as TooltipEntityLike[]),
-    }),
+    () =>
+      buildRecursiveLookup({
+        spells: allSpells,
+        items,
+        itemsBase,
+        feats,
+        races,
+        classes,
+        backgrounds,
+        optionalfeatures,
+        actions,
+        conditions,
+        deities,
+        skills,
+        senses,
+        variantrules,
+        languages,
+      }),
     [
       backgrounds,
       classes,
@@ -121,16 +136,54 @@ export function SpellsPage() {
       skills,
       variantrules,
       items,
+      itemsBase,
       optionalfeatures,
       races,
-      spellByName,
+      allSpells,
     ],
   )
+  const spellByName = recursiveLookup.spells
 
   const detailsByProfileId = useMemo(
     () => new Map(spellcastingDetails.map((detail) => [detail.profileId, detail] as const)),
     [spellcastingDetails],
   )
+
+  const subclassSpellSources = useMemo(() => {
+    const sourceMap = new Map<string, string>()
+    const rows: SourceRow[] = []
+    if (!character) return { sourceMap, rows }
+
+    const classesById = new Map(
+      (classes as Class5e[]).map((classData) => [
+        toClassProfileId(classData.name, classData.source),
+        classData,
+      ]),
+    )
+
+    for (const entry of getCharacterClassEntries(character)) {
+      if (!entry.subclass) continue
+      const profileId = toClassProfileId(entry.name, entry.source)
+      const subclassData = getSelectedSubclassData(classesById.get(profileId), entry)
+      const grants = parseSubclassSpells(subclassData?.additionalSpells, entry.levels).filter(
+        (grant) => grant.mode !== 'expanded',
+      )
+
+      for (const grant of grants) {
+        const attribution = `Subclass: ${entry.subclass}`
+        sourceMap.set(`${profileId}|${grant.spellName}`, attribution)
+        rows.push({
+          itemName: grant.spellName,
+          category: 'Spells',
+          attribution,
+          sourceTypes: ['subclass'],
+          isPending: false,
+        })
+      }
+    }
+
+    return { sourceMap, rows }
+  }, [character, classes])
 
   const preparedCasterItemsByProfile = useMemo(() => {
     const map = new Map<string, PreparedCasterSpellItem[]>()
@@ -139,31 +192,40 @@ export function SpellsPage() {
       const profile = spellProfiles.find((p) => p.id === detail.profileId)
       if (!profile || profile.type !== 'class') continue
 
-      const preparedSet = new Set(profile.preparedSpells ?? [])
+      const preparedSet = new Set((profile.preparedSpells ?? []).map(normalizeKey))
+      const fixedSet = new Set((profile.fixedSpells ?? []).map(normalizeKey))
+      const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(normalizeKey))
 
       const available = allSpells.filter(
         (spell) =>
           spell.level > 0 &&
           spell.level <= detail.maxSpellLevel &&
-          isSpellOnClassList(spell, profile.className, profile.classSource),
+          (isSpellOnClassList(spell, profile.className, profile.classSource) ||
+            fixedSet.has(normalizeKey(spell.name))),
       )
       available.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
       map.set(
         detail.profileId,
-        available.map((spell) => ({
-          spell,
-          item: {
-            profileId: profile.id,
-            profileLabel: profile.label,
-            className: profile.className,
-            classSource: profile.classSource,
-            name: spell.name,
-            level: spell.level,
-            kind: 'spell',
-            prepared: preparedSet.has(spell.name),
-            isPreparedCaster: true,
-          },
-        })),
+        available.map((spell) => {
+          const spellKey = normalizeKey(spell.name)
+          const alwaysPrepared = profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
+          return {
+            spell,
+            item: {
+              profileId: profile.id,
+              profileLabel: profile.label,
+              className: profile.className,
+              classSource: profile.classSource,
+              name: spell.name,
+              level: spell.level,
+              kind: 'spell',
+              prepared: alwaysPrepared || preparedSet.has(spellKey),
+              alwaysPrepared,
+              isFixed: fixedSet.has(spellKey),
+              isPreparedCaster: true,
+            },
+          }
+        }),
       )
     }
     return map
@@ -174,41 +236,46 @@ export function SpellsPage() {
 
     for (const profile of spellProfiles) {
       const detail = detailsByProfileId.get(profile.id)
-      const fixedSet =
-        profile.type === 'racial' && profile.fixedSpells ? new Set(profile.fixedSpells) : undefined
+      const fixedSet = new Set((profile.fixedSpells ?? []).map(normalizeKey))
+      const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(normalizeKey))
 
       for (const name of profile.cantrips) {
         const spell = spellByName.get(getEntityKey(name))
+        const spellKey = normalizeKey(name)
+        const alwaysPrepared = !!profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
         items.push({
           profileId: profile.id,
           profileLabel: profile.label,
           className: profile.className,
           classSource: profile.classSource,
-          alwaysPrepared: profile.alwaysPrepared,
+          alwaysPrepared,
           isPreparedCaster: detail?.isPreparedCaster,
           name,
           level: spell?.level ?? 0,
           kind: 'cantrip',
-          prepared: !!profile.alwaysPrepared,
-          isFixed: fixedSet?.has(name),
+          prepared: alwaysPrepared,
+          isFixed: fixedSet.has(spellKey),
         })
       }
 
       for (const name of profile.spellsKnown) {
         const spell = spellByName.get(getEntityKey(name))
-        const prepared = profile.alwaysPrepared ? true : profile.preparedSpells.includes(name)
+        const spellKey = normalizeKey(name)
+        const alwaysPrepared = !!profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
+        const prepared =
+          alwaysPrepared || profile.preparedSpells.some((item) => normalizeKey(item) === spellKey)
         items.push({
           profileId: profile.id,
           profileLabel: profile.label,
           className: profile.className,
           classSource: profile.classSource,
-          alwaysPrepared: profile.alwaysPrepared,
+          alwaysPrepared,
           isPreparedCaster: detail?.isPreparedCaster,
           name,
           level: spell?.level ?? 1,
           kind: 'spell',
           prepared,
-          isFixed: fixedSet?.has(name),
+          isFixed: fixedSet.has(spellKey),
         })
       }
     }
@@ -234,10 +301,59 @@ export function SpellsPage() {
     return map
   }, [spellListItems])
 
-  const selectionSourceByProfileAndSpell = useMemo(
-    () => buildSpellSelectionSourceMap({ spellProfiles, ledger }),
-    [spellProfiles, ledger],
+  const spellCountsByView = useMemo(() => {
+    const counts: Record<SpellView, number> = { all: 0, class: 0, racial: 0, bonus: 0 }
+
+    for (const profile of spellProfiles) {
+      const profileItems = groupedItems.get(profile.id) ?? []
+      const detail = detailsByProfileId.get(profile.id)
+      const count = detail?.isTruePreparedCaster
+        ? profileItems.filter((item) => item.kind === 'cantrip').length +
+          (preparedCasterItemsByProfile.get(profile.id)?.length ?? 0)
+        : profileItems.length
+      const view: Exclude<SpellView, 'all'> =
+        profile.id === SPECIAL_SPELL_PROFILE_ID
+          ? 'bonus'
+          : profile.type === 'racial'
+            ? 'racial'
+            : 'class'
+
+      counts[view] += count
+      counts.all += count
+    }
+
+    return counts
+  }, [detailsByProfileId, groupedItems, preparedCasterItemsByProfile, spellProfiles])
+
+  const visibleSpellProfiles = useMemo(
+    () =>
+      spellProfiles.filter((profile) => {
+        if (spellView === 'all') return true
+        if (spellView === 'bonus') return profile.id === SPECIAL_SPELL_PROFILE_ID
+        if (spellView === 'racial') return profile.type === 'racial'
+        return profile.type === 'class'
+      }),
+    [spellProfiles, spellView],
   )
+
+  const selectionSourceByProfileAndSpell = useMemo(() => {
+    const map = buildSpellSelectionSourceMap({ spellProfiles, ledger })
+    for (const [key, attribution] of subclassSpellSources.sourceMap) {
+      map.set(key, attribution)
+    }
+    return map
+  }, [spellProfiles, ledger, subclassSpellSources])
+
+  const spellSourceRows = useMemo(() => {
+    const rows = [...getSourcesRowsBySection('spells'), ...subclassSpellSources.rows]
+    const seen = new Set<string>()
+    return rows.filter((row) => {
+      const key = `${normalizeKey(row.itemName)}|${row.attribution}|${row.category}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [getSourcesRowsBySection, subclassSpellSources])
 
   const hasWarlockClass = useMemo(
     () => spellcastingDetails.some((detail) => detail.className.toLowerCase() === 'warlock'),
@@ -459,118 +575,161 @@ export function SpellsPage() {
   }
 
   return (
-    <div>
-      <div className="px-6 py-5 page-header-band">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <MagicWand className="h-6 w-6 text-primary" weight="duotone" />
-            <div>
-              <h1 className="text-2xl font-display font-bold">Spells</h1>
-              <p className="text-sm text-muted-foreground">
-                Browse and manage your character's spells
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <WorkspacePage className="p-3">
+      <AnchoredHint
+        position={showPreparedHint ? hintPosition : null}
+        width={SPELLS_HINT_WIDTH}
+        onDismiss={handleDismissPreparedHint}
+      >
+        Toggle this circle to mark a spell prepared — as a prepared caster you can freely swap
+        prepared spells between rests.
+      </AnchoredHint>
 
-      {showPreparedHint && hintPosition ? (
-        <div
-          className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
-          style={{ top: hintPosition.top, left: hintPosition.left }}
-        >
-          <div className="pointer-events-auto animate-hint-bounce relative w-[300px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
-            <div
-              className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
-              style={{ left: hintPosition.arrowLeft - 7 }}
-            />
-            <button
-              type="button"
-              className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
-              onClick={handleDismissPreparedHint}
-              aria-label="Dismiss hint"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-            <p className="leading-snug text-accent-foreground/95 pr-8">
-              Toggle this circle to mark a spell prepared — as a prepared caster you can freely swap
-              prepared spells between rests.
-            </p>
-          </div>
-        </div>
-      ) : null}
+      <WorkspaceBody className="flex overflow-hidden">
+        <SplitPane
+          className={cn(
+            'my-0 h-full overflow-visible',
+            !listCollapsed && !detailCollapsed && 'gap-3',
+          )}
+          leftClassName={cn(
+            'rounded-lg bg-workspace-pane',
+            listCollapsed ? 'border-0' : 'border border-border',
+          )}
+          rightClassName={cn(
+            'rounded-lg bg-workspace-detail',
+            detailCollapsed ? 'border-0' : 'border border-border',
+          )}
+          leftCollapsed={listCollapsed}
+          rightCollapsed={detailCollapsed}
+          onLeftCollapsedChange={setListCollapsed}
+          onRightCollapsedChange={setDetailCollapsed}
+          rightFixedWidth="var(--workspace-master-width)"
+          left={
+            <>
+              <WorkspacePaneHeader ariaLabel="Spell view">
+                <div className="h-full min-w-0 flex-1 overflow-x-auto">
+                  <div
+                    className="inline-flex h-full min-w-max items-stretch gap-5"
+                    role="tablist"
+                    aria-label="Spell view"
+                  >
+                    {(
+                      [
+                        { value: 'all', label: 'All' },
+                        { value: 'class', label: 'Class' },
+                        { value: 'racial', label: 'Racial' },
+                        { value: 'bonus', label: 'Bonus' },
+                      ] as const
+                    ).map(({ value, label }) => {
+                      const active = spellView === value
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => setSpellView(value)}
+                          className={cn(
+                            'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',
+                            active
+                              ? 'border-primary text-foreground'
+                              : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+                          )}
+                        >
+                          <span>{label}</span>
+                          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary/15 px-1 text-[10px] font-bold leading-none text-primary">
+                            {spellCountsByView[value]}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </WorkspacePaneHeader>
+              <ScrollArea className="flex-1 overflow-hidden">
+                <div className="mx-auto w-full max-w-6xl p-4">
+                  <SpellProfileManager
+                    spellProfiles={visibleSpellProfiles}
+                    detailsByProfileId={detailsByProfileId}
+                    groupedItems={groupedItems}
+                    selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}
+                    preparedCasterItemsByProfile={preparedCasterItemsByProfile}
+                    getSpellByName={(spellName) => spellByName.get(getEntityKey(spellName))}
+                    onTogglePrepared={togglePrepared}
+                    onRemoveSpell={handleRemoveSpell}
+                    onAddSpell={(profileId) => {
+                      if (profileId !== SPECIAL_SPELL_PROFILE_ID) return
+                      setBonusSpellModalOpen(true)
+                    }}
+                    onOpenRacialChoice={handleOpenRacialChoiceModal}
+                    renderSpellName={({ item, spell, sourceContext }) => (
+                      <SpellNameTooltip
+                        name={item.name}
+                        spell={spell}
+                        recursiveLookup={recursiveLookup}
+                        sourceContext={sourceContext}
+                      />
+                    )}
+                  />
+                </div>
+              </ScrollArea>
+              <div className="border-t border-border px-4 pb-4">
+                <SourcesAccordion sectionId="spells" title="Sources" rows={spellSourceRows} />
+              </div>
+            </>
+          }
+          right={
+            <>
+              <WorkspacePaneHeader title="Spellcasting details" className="pr-20" />
+              <ScrollArea className="flex-1 overflow-hidden">
+                <WorkspaceDetailContent>
+                  <SpellcastingDetailsCard
+                    isSpellcaster={isSpellcaster}
+                    spellcastingDetails={spellcastingDetails}
+                    racialProfiles={racialProfiles}
+                    proficiencyBonus={proficiencyBonus}
+                    abilityModifiers={abilityModifiers}
+                    onSetRacialCastingAbility={setRacialCastingAbility}
+                    hasMultipleSpellcastingClasses={hasMultipleSpellcastingClasses}
+                    hasWarlockClass={hasWarlockClass}
+                    sharedSlots={sharedSlots}
+                    pactSlots={pactSlots}
+                  />
+                </WorkspaceDetailContent>
+              </ScrollArea>
+            </>
+          }
+        />
+      </WorkspaceBody>
 
-      <div className="px-6 pb-6 max-w-7xl mx-auto w-full space-y-6">
-        <div className="space-y-6">
-          <SpellProfileManager
-            spellProfiles={spellProfiles}
-            detailsByProfileId={detailsByProfileId}
-            groupedItems={groupedItems}
-            selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}
-            preparedCasterItemsByProfile={preparedCasterItemsByProfile}
-            getSpellByName={(spellName) => spellByName.get(getEntityKey(spellName))}
-            onTogglePrepared={togglePrepared}
-            onRemoveSpell={handleRemoveSpell}
-            onAddSpell={(profileId) => {
-              if (profileId !== SPECIAL_SPELL_PROFILE_ID) return
-              setBonusSpellModalOpen(true)
-            }}
-            onOpenRacialChoice={handleOpenRacialChoiceModal}
-            renderSpellName={({ item, spell, sourceContext }) => (
-              <SpellNameTooltip
-                name={item.name}
-                spell={spell}
-                recursiveLookup={recursiveLookup}
-                sourceContext={sourceContext}
-              />
-            )}
-          />
+      <SpellSelectionModal
+        open={racialChoiceModalOpen && !!racialChoiceModalConfig}
+        onOpenChange={(open) => {
+          setRacialChoiceModalOpen(open)
+          if (!open) setActiveRacialChoice(null)
+        }}
+        title={racialChoiceModalConfig?.title}
+        spells={allSpells}
+        lockedNames={racialChoiceModalConfig?.lockedNames}
+        characterSpellNames={characterSpellNames}
+        categories={racialChoiceModalConfig?.categories}
+        initialSelectedNames={racialChoiceModalConfig?.initialSelectedNames}
+        initialFilters={racialChoiceModalConfig?.initialFilters}
+        allowedLevels={racialChoiceModalConfig?.allowedLevels}
+        className={racialChoiceModalConfig?.className}
+        classSource={racialChoiceModalConfig?.classSource}
+        classListOverrides={racialChoiceModalConfig?.classListOverrides}
+        onConfirm={handleConfirmRacialChoice}
+      />
 
-          <SpellSelectionModal
-            open={racialChoiceModalOpen && !!racialChoiceModalConfig}
-            onOpenChange={(open) => {
-              setRacialChoiceModalOpen(open)
-              if (!open) {
-                setActiveRacialChoice(null)
-              }
-            }}
-            title={racialChoiceModalConfig?.title}
-            spells={allSpells}
-            lockedNames={racialChoiceModalConfig?.lockedNames}
-            characterSpellNames={characterSpellNames}
-            categories={racialChoiceModalConfig?.categories}
-            initialSelectedNames={racialChoiceModalConfig?.initialSelectedNames}
-            initialFilters={racialChoiceModalConfig?.initialFilters}
-            allowedLevels={racialChoiceModalConfig?.allowedLevels}
-            className={racialChoiceModalConfig?.className}
-            classSource={racialChoiceModalConfig?.classSource}
-            classListOverrides={racialChoiceModalConfig?.classListOverrides}
-            onConfirm={handleConfirmRacialChoice}
-          />
-
-          <SpellSelectionModal
-            open={bonusSpellModalOpen}
-            onOpenChange={setBonusSpellModalOpen}
-            title="Add Bonus Spells"
-            spells={allSpells}
-            characterSpellNames={characterSpellNames}
-            onConfirm={handleConfirmBonusSpells}
-          />
-
-          <SpellcastingDetailsCard
-            isSpellcaster={isSpellcaster}
-            spellcastingDetails={spellcastingDetails}
-            racialProfiles={racialProfiles}
-            proficiencyBonus={proficiencyBonus}
-            abilityModifiers={abilityModifiers}
-            onSetRacialCastingAbility={setRacialCastingAbility}
-            hasMultipleSpellcastingClasses={hasMultipleSpellcastingClasses}
-            hasWarlockClass={hasWarlockClass}
-            sharedSlots={sharedSlots}
-            pactSlots={pactSlots}
-          />
-        </div>
-      </div>
-    </div>
+      <SpellSelectionModal
+        open={bonusSpellModalOpen}
+        onOpenChange={setBonusSpellModalOpen}
+        title="Add Bonus Spells"
+        spells={allSpells}
+        characterSpellNames={characterSpellNames}
+        onConfirm={handleConfirmBonusSpells}
+      />
+    </WorkspacePage>
   )
 }

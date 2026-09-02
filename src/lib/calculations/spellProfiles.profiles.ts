@@ -26,6 +26,9 @@ function cloneProfile(profile: SpellProfile): SpellProfile {
     spellsKnown: [...profile.spellsKnown],
     preparedSpells: [...profile.preparedSpells],
     ...(profile.fixedSpells ? { fixedSpells: [...profile.fixedSpells] } : {}),
+    ...(profile.alwaysPreparedSpells
+      ? { alwaysPreparedSpells: [...profile.alwaysPreparedSpells] }
+      : {}),
     ...(profile.choices
       ? { choices: profile.choices.map((c) => ({ ...c, selected: [...c.selected] })) }
       : {}),
@@ -44,10 +47,6 @@ function mergeSpellNames(existing: string[], additions: string[]): string[] {
     byKey.set(key, name)
   }
   return [...byKey.values()]
-}
-
-function toSubclassPreparedProfileId(entry: CharacterClassEntry): string {
-  return `subclass:${entry.name}|${entry.source ?? ''}:${entry.subclass ?? ''}|${entry.subclassSource ?? ''}:prepared`
 }
 
 export function getSubclassExpandedSpellNames(
@@ -216,20 +215,30 @@ export function ensureSpellProfiles(
     const classData = classesById?.get(id)
     const subclassData = getSelectedSubclassData(classData, entry)
     const subclassSpells = parseSubclassSpells(subclassData?.additionalSpells, entry.levels)
+    const grantedSubclassSpells = subclassSpells.filter((grant) => grant.mode !== 'expanded')
+    const grantedSubclassCantrips = grantedSubclassSpells
+      .filter((grant) => grant.isCantrip)
+      .map((grant) => grant.spellName)
+    const grantedSubclassLeveledSpells = grantedSubclassSpells
+      .filter((grant) => !grant.isCantrip)
+      .map((grant) => grant.spellName)
+    const alwaysPreparedSubclassSpells = grantedSubclassSpells
+      .filter((grant) => grant.mode === 'prepared' || grant.mode === 'innate')
+      .map((grant) => grant.spellName)
 
-    const knownSubclassCantrips = subclassSpells
-      .filter((grant) => grant.mode === 'known' && grant.isCantrip)
-      .map((grant) => grant.spellName)
-    const knownSubclassSpells = subclassSpells
-      .filter((grant) => grant.mode === 'known' && !grant.isCantrip)
-      .map((grant) => grant.spellName)
-
-    const preparedSubclassCantrips = subclassSpells
-      .filter((grant) => (grant.mode === 'prepared' || grant.mode === 'innate') && grant.isCantrip)
-      .map((grant) => grant.spellName)
-    const preparedSubclassSpells = subclassSpells
-      .filter((grant) => (grant.mode === 'prepared' || grant.mode === 'innate') && !grant.isCantrip)
-      .map((grant) => grant.spellName)
+    // Subclass grants are derived from the current selection. Remove the previous
+    // derived set before merging so changing subclasses or losing a level cannot
+    // leave stale grants behind in the parent class profile.
+    const previousFixedKeys = new Set(
+      (existingProfile?.fixedSpells ?? []).map((name) => normalizeKey(name)),
+    )
+    const retainedCantrips = (existingProfile?.cantrips ?? []).filter(
+      (name) => !previousFixedKeys.has(normalizeKey(name)),
+    )
+    const retainedSpellsKnown = (existingProfile?.spellsKnown ?? []).filter(
+      (name) => !previousFixedKeys.has(normalizeKey(name)),
+    )
+    const alwaysPreparedKeys = new Set(alwaysPreparedSubclassSpells.map(normalizeKey))
 
     next.push({
       id,
@@ -237,35 +246,20 @@ export function ensureSpellProfiles(
       label: buildClassProfileLabel(entry),
       className: entry.name,
       classSource: entry.source,
-      cantrips: mergeSpellNames(existingProfile?.cantrips ?? [], knownSubclassCantrips),
-      spellsKnown: mergeSpellNames(existingProfile?.spellsKnown ?? [], knownSubclassSpells),
-      preparedSpells: existingProfile?.preparedSpells ?? [],
+      cantrips: mergeSpellNames(retainedCantrips, grantedSubclassCantrips),
+      spellsKnown: mergeSpellNames(retainedSpellsKnown, grantedSubclassLeveledSpells),
+      preparedSpells: (existingProfile?.preparedSpells ?? []).filter(
+        (name) => !alwaysPreparedKeys.has(normalizeKey(name)),
+      ),
+      fixedSpells:
+        grantedSubclassSpells.length > 0
+          ? grantedSubclassSpells.map((grant) => grant.spellName)
+          : undefined,
+      alwaysPreparedSpells:
+        alwaysPreparedSubclassSpells.length > 0 ? alwaysPreparedSubclassSpells : undefined,
       alwaysPrepared: false,
       ...(existingProfile?.spellSwaps ? { spellSwaps: existingProfile.spellSwaps } : {}),
     })
-
-    if (
-      entry.subclass &&
-      (preparedSubclassCantrips.length > 0 || preparedSubclassSpells.length > 0)
-    ) {
-      const subclassPreparedId = toSubclassPreparedProfileId(entry)
-      const existingSubclassPrepared = byId.get(subclassPreparedId)
-      next.push({
-        id: subclassPreparedId,
-        type: 'special',
-        label: `${entry.subclass} Spells`,
-        cantrips: mergeSpellNames(
-          existingSubclassPrepared?.cantrips ?? [],
-          preparedSubclassCantrips,
-        ),
-        spellsKnown: mergeSpellNames(
-          existingSubclassPrepared?.spellsKnown ?? [],
-          preparedSubclassSpells,
-        ),
-        preparedSpells: [],
-        alwaysPrepared: true,
-      })
-    }
   }
 
   if (raceData?.additionalSpells && raceData.additionalSpells.length > 0) {
@@ -307,13 +301,20 @@ export function collectKnownSpells(profiles: SpellProfile[]): {
   const prepared = new Set<string>()
 
   for (const profile of profiles) {
+    const alwaysPreparedKeys = new Set(
+      (profile.alwaysPreparedSpells ?? []).map((name) => normalizeKey(name)),
+    )
     for (const name of profile.cantrips) {
       cantrips.add(name)
-      if (profile.alwaysPrepared) prepared.add(name)
+      if (profile.alwaysPrepared || alwaysPreparedKeys.has(normalizeKey(name))) prepared.add(name)
     }
     for (const name of profile.spellsKnown) {
       spellsKnown.add(name)
-      if (profile.alwaysPrepared || profile.preparedSpells.includes(name)) {
+      if (
+        profile.alwaysPrepared ||
+        alwaysPreparedKeys.has(normalizeKey(name)) ||
+        profile.preparedSpells.includes(name)
+      ) {
         prepared.add(name)
       }
     }

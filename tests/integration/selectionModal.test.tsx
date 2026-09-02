@@ -37,7 +37,7 @@ describe('SelectionModal', () => {
     expect(fullList).toBeTruthy()
     expect(Number.parseFloat(fullList?.style.height ?? '0')).toBeGreaterThan(50_000)
 
-    fireEvent.change(screen.getByPlaceholderText('Search...'), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search select an item' }), {
       target: { value: 'Item 499' },
     })
 

@@ -1,70 +1,85 @@
-import { Database, Gear, Info, Palette, Sliders } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { Database, Gear, Info, Palette } from '@phosphor-icons/react'
+import { useSearchParams } from 'react-router-dom'
 import { AboutPanel } from '@/components/settings/AboutPanel'
 import { AppearancePanel } from '@/components/settings/AppearancePanel'
 import { DataSourceConfigurator } from '@/components/settings/DataSourceConfigurator'
 import { GeneralPanel } from '@/components/settings/GeneralPanel'
+import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { cn } from '@/lib/utils'
 
-const TABS = [
-  { id: 'general', label: 'General', Icon: Sliders },
-  { id: 'appearance', label: 'Appearance', Icon: Palette },
-  { id: 'data', label: 'Game Data', Icon: Database },
-  { id: 'about', label: 'About', Icon: Info },
+type SettingsPanel = 'general' | 'appearance' | 'data' | 'about'
+
+const SETTINGS_SECTIONS = [
+  { value: 'general', label: 'General', icon: Gear },
+  { value: 'appearance', label: 'Appearance', icon: Palette },
+  { value: 'data', label: 'Game Data', icon: Database },
+  { value: 'about', label: 'About', icon: Info },
 ] as const
 
-type TabId = (typeof TABS)[number]['id']
+function getActivePanel(panel: string | null): SettingsPanel {
+  if (panel === 'appearance' || panel === 'data' || panel === 'about') return panel
+  return 'general'
+}
 
 export function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('general')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activePanel = getActivePanel(searchParams.get('section'))
+
+  const setActivePanel = (panel: SettingsPanel) => {
+    setSearchParams(panel === 'general' ? {} : { section: panel }, { replace: true })
+  }
 
   return (
-    <div>
-      <div className="px-6 py-5 page-header-band">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Gear className="h-6 w-6 text-primary" weight="duotone" />
-            <div>
-              <h1 className="text-2xl font-display font-bold">Settings</h1>
-              <p className="text-sm text-muted-foreground">
-                Configure app preferences and game data sources
-              </p>
-            </div>
+    <WorkspacePage>
+      <WorkspacePaneHeader ariaLabel="Settings category">
+        <div className="h-full min-w-0 flex-1 overflow-x-auto">
+          <div
+            className="inline-flex h-full min-w-max items-stretch gap-5"
+            role="tablist"
+            aria-label="Settings category"
+          >
+            {SETTINGS_SECTIONS.map(({ value, label, icon: Icon }) => {
+              const active = activePanel === value
+              return (
+                <button
+                  key={value}
+                  id={`settings-tab-${value}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  aria-controls={`settings-panel-${value}`}
+                  onClick={() => setActivePanel(value)}
+                  className={cn(
+                    'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',
+                    active
+                      ? 'border-primary text-foreground'
+                      : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+                  )}
+                >
+                  <Icon
+                    className={cn('size-4 shrink-0', active && 'text-primary')}
+                    weight={active ? 'fill' : 'regular'}
+                  />
+                  <span>{label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto w-full">
-        {/* Tab navigation */}
-        <div className="border-b border-border mb-6 px-6">
-          <nav className="flex gap-1">
-            {TABS.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActiveTab(id)}
-                className={cn(
-                  'flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors -mb-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                  activeTab === id
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border',
-                )}
-              >
-                <Icon className="h-4 w-4" weight="duotone" />
-                {label}
-              </button>
-            ))}
-          </nav>
+      </WorkspacePaneHeader>
+      <WorkspaceBody>
+        <div
+          id={`settings-panel-${activePanel}`}
+          role="tabpanel"
+          aria-labelledby={`settings-tab-${activePanel}`}
+          className="mx-auto w-full max-w-4xl px-6 py-5"
+        >
+          {activePanel === 'general' && <GeneralPanel />}
+          {activePanel === 'appearance' && <AppearancePanel />}
+          {activePanel === 'data' && <DataSourceConfigurator />}
+          {activePanel === 'about' && <AboutPanel />}
         </div>
-
-        {/* Tab content */}
-        <div className="px-6 pb-6">
-          {activeTab === 'appearance' && <AppearancePanel />}
-          {activeTab === 'data' && <DataSourceConfigurator />}
-          {activeTab === 'general' && <GeneralPanel />}
-          {activeTab === 'about' && <AboutPanel />}
-        </div>
-      </div>
-    </div>
+      </WorkspaceBody>
+    </WorkspacePage>
   )
 }

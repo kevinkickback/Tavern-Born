@@ -1,6 +1,8 @@
+import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import type { Progression } from '@/lib/characterUtils'
-import { getTotalLevel } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalLevel } from '@/lib/characterUtils'
 import type { Raw5ePrereq } from '@/types/5etools'
+import type { Character, CharacterClassEntry } from '@/types/character'
 import type { AbilityName } from './abilityScores'
 
 export interface PrereqCharacterSnapshot {
@@ -16,6 +18,45 @@ export interface PrereqCharacterSnapshot {
   }
   /** Optional multi-class progression. When present, takes precedence over `level`/`class`. */
   progression?: Progression
+}
+
+interface BuildPrerequisiteSnapshotParams {
+  character: Character | null
+  classProgression?: CharacterClassEntry[]
+  viewingClass?: string
+}
+
+export function buildPrerequisiteSnapshot({
+  character,
+  classProgression = getCharacterClassEntries(character),
+  viewingClass,
+}: BuildPrerequisiteSnapshotParams): PrereqCharacterSnapshot {
+  const profileSpells = character ? collectKnownSpells(ensureSpellProfiles(character)) : null
+  const progressionLevel = classProgression.reduce((sum, entry) => sum + (entry.levels ?? 0), 0)
+
+  return {
+    level: progressionLevel > 0 ? progressionLevel : (character?.level ?? 0),
+    class: viewingClass ?? character?.class,
+    race: character?.race,
+    abilityScores: character?.abilityScores,
+    features: character?.features ?? [],
+    spells: {
+      cantrips: profileSpells?.cantrips ?? [],
+      spellsKnown: profileSpells?.spellsKnown ?? [],
+      preparedSpells: profileSpells?.preparedSpells ?? [],
+    },
+    ...(classProgression.length > 0
+      ? {
+          progression: {
+            classes: classProgression.map((entry) => ({
+              name: entry.name,
+              levels: entry.levels,
+              source: entry.source,
+            })),
+          },
+        }
+      : {}),
+  }
 }
 
 /** Canonical 5etools pact prerequisite text normalizer (Parser.prereqPactToFull). */
