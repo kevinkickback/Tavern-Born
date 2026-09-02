@@ -142,6 +142,7 @@
       "artifactName": "${productName}-${version}-portable.${ext}"
     },
     "mac": {
+      "icon": "build/icon.ico",
       "target": "dmg",
       "identity": null,
       "hardenedRuntime": false,
@@ -149,7 +150,7 @@
     },
     "linux": {
       "icon": "build/icon.png",
-      "target": "AppImage"
+      "target": ["AppImage", "deb"]
     },
     "publish": {
       "provider": "github",
