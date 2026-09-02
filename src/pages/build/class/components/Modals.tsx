@@ -22,19 +22,8 @@ import {
 import { formatSpellLevel, getOrdinalForm } from '@/lib/calculations/spellUtils'
 import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog'
 import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelectionDialog'
-import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
+import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Character } from '@/types/character'
-
-interface SubclassOption {
-  name: string
-  source?: string
-  shortName?: string
-  entries?: unknown[]
-  levelFeatures?: {
-    level: number
-    features: { name: string; source?: string; entries?: unknown[] }[]
-  }[]
-}
 
 interface OptPickerState {
   progName: string
@@ -101,9 +90,9 @@ interface BuildClassModalsProps {
   subclassPickerOpen: boolean
   onSubclassPickerOpenChange: (open: boolean) => void
   subclassTitle: string
-  subclasses: SubclassOption[]
+  subclasses: Subclass5e[]
   viewingSubclass?: string
-  onSubclassConfirm: (subclass: SubclassOption) => void
+  onSubclassConfirm: (subclass: Subclass5e) => void
 
   optPickerState: OptPickerState | null
   onOptPickerStateChange: (state: OptPickerState | null) => void

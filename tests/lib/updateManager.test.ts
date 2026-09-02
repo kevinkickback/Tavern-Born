@@ -92,6 +92,22 @@ describe('compareSemver', () => {
     expect(compareSemver('1.0.0-beta', '1.0.0-alpha')).toBe(1)
   })
 
+  test('compares numeric pre-release identifiers numerically', () => {
+    expect(compareSemver('1.0.0-beta.10', '1.0.0-beta.2')).toBe(1)
+  })
+
+  test('numeric pre-release identifiers sort before non-numeric identifiers', () => {
+    expect(compareSemver('1.0.0-1', '1.0.0-alpha')).toBe(-1)
+  })
+
+  test('a longer matching pre-release sequence has higher precedence', () => {
+    expect(compareSemver('1.0.0-alpha.1', '1.0.0-alpha')).toBe(1)
+  })
+
+  test('ignores build metadata and accepts a v prefix', () => {
+    expect(compareSemver('v1.0.0+build.2', '1.0.0+build.1')).toBe(0)
+  })
+
   test('handles missing patch component', () => {
     expect(compareSemver('1.1', '1.0.9')).toBe(1)
   })

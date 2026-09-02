@@ -108,4 +108,55 @@ describe('class page controllers', () => {
       'Evocation',
     ])
   })
+
+  test('does not inherit the primary subclass when viewing another class', () => {
+    const character = makeCharacterFixture({
+      class: 'Sorcerer',
+      classSource: 'PHB',
+      subclass: 'Shadow Magic',
+      subclassSource: 'XGE',
+      classProgression: [
+        {
+          name: 'Sorcerer',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Shadow Magic',
+          subclassSource: 'XGE',
+        },
+        { name: 'Warlock', source: 'PHB', levels: 1 },
+      ],
+      level: 4,
+    })
+    const warlock = makeClassFixture({
+      name: 'Warlock',
+      source: 'PHB',
+      subclasses: [
+        {
+          name: 'The Fiend',
+          shortName: 'Fiend',
+          source: 'PHB',
+          className: 'Warlock',
+          classSource: 'PHB',
+        },
+      ],
+    })
+    const gameData = makeGameDataFixture({ classes: [warlock] })
+    gameData.lookups = buildGameDataLookups(gameData)
+    useGameDataStore.setState({ gameData })
+
+    const { result } = renderHook(() =>
+      useSubclassSelectionController({
+        character,
+        viewingClass: 'Warlock',
+        viewingClassSource: 'PHB',
+        viewingClassData: warlock,
+        viewingEntry: character.classProgression?.[1],
+        classProgression: character.classProgression ?? [],
+        onSelectionApplied: vi.fn(),
+      }),
+    )
+
+    expect(result.current.viewingSubclass).toBeUndefined()
+    expect(result.current.viewingSubclassData).toBeUndefined()
+  })
 })

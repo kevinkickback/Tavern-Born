@@ -5,21 +5,62 @@ on:
     branches: [dev]
   pull_request:
     branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
-  check:
-    name: Lint, type-check, and test
+  quality:
+    name: Lint, type-check, coverage, and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20.19.0
           cache: npm
       - run: npm ci
       - name: Lint
         run: npx biome ci .
       - name: Type-check
         run: npx tsc -b
-      - name: Test
-        run: npm run test
+      - name: Test with coverage thresholds
+        run: npm run test:coverage
+      - name: Build
+        run: npm run build
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+          if-no-files-found: ignore
+
+  e2e:
+    name: Browser end-to-end tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run end-to-end tests
+        run: npm run test:e2e
+      - name: Build desktop application
+        run: npm run build
+      - name: Run Electron smoke test
+        run: xvfb-run --auto-servernum npm run test:electron
+      - name: Upload Playwright diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore

@@ -7,11 +7,18 @@ This document maps current test coverage and practical priorities for expansion.
 - Unit and integration: Vitest
 - E2E: Playwright
 - Lint: Biome
+- Coverage: V8 via Vitest, with baseline regression thresholds enforced in CI
 
 Key scripts in package.json:
 - npm run lint
 - npm run test
+- npm run test:coverage
 - npm run test:e2e
+- npm run test:electron (run after `npm run build`)
+
+The current global coverage floor is 53% statements, 43% branches, 49% functions, and 56% lines.
+These values are an honest ratchet based on the measured suite, not the long-term target; raise them as
+new tests land and do not lower them to merge a change.
 
 ## Current Coverage Areas
 
@@ -77,6 +84,8 @@ Key scripts in package.json:
 - SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
 - Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 - Electron updater offline safeguards in tests/lib/updateManager.test.ts (offline short-circuit and startup schedule skip)
+- Electron security boundary coverage in tests/electron/security.test.ts (renderer origins and canonical local-root containment)
+- Compiled Electron smoke coverage in tests/electron-smoke/startup.ts (sandbox isolation, preload bridge, trusted IPC)
 - Store-level empty background refresh guard in tests/store/gameDataStore.test.ts (prevents clobbering existing cache/state)
 - Character sheet PDF boundary coverage for pure view-model entity projection, pure 2014/2024 mapping, form filling, and 2014 MPMB cleanup
 

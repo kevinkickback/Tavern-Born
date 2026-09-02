@@ -41,7 +41,7 @@ This guide is the fastest path to make safe changes in Tavern-Born.
 - Use source-aware keys for 5etools entities.
 - Route all character writes through the character store mutation API.
 - Add or update tests.
-- Run npm run lint.
+- Run `npm run lint`, `npm run test:coverage`, `npm run test:e2e`, and `npm run build`.
 - If architecture or flow changed, update docs in docs/ in the same change.
 
 ## Schema Migrations
@@ -49,18 +49,18 @@ This guide is the fastest path to make safe changes in Tavern-Born.
 When making **breaking changes** to the character data format:
 
 1. **Understand the migration system**: See `src/lib/schema/migrations.ts` and `docs/data-flow.md`.
-2. **Increment `CURRENT_SCHEMA_VERSION`** in migrations.ts (currently v2).
+2. **Increment `CURRENT_SCHEMA_VERSION`** in migrations.ts (currently v4).
 3. **Implement migration handler**:
    ```typescript
    registerMigration({
-     fromVersion: 1,
-     toVersion: 2,
-     up: (character) => { /* transform v1 → v2 */ },
-     down: (character) => { /* transform v2 → v1 for downgrade */ },
+     fromVersion: 4,
+     toVersion: 5,
+     up: (character) => { /* transform v4 → v5 */ },
+     down: (character) => { /* transform v5 → v4 for downgrade */ },
      description: 'Brief explanation of what changed',
    });
    ```
-4. **Test migration**: Add to `tests/integration/schemaMigrations.test.ts`.
+4. **Test migration**: Add to `tests/lib/migrations.test.ts`.
 5. **Document**: Update characters saved in older versions will auto-migrate on load.
 
 ### Example: Adding a Required Field

@@ -34,7 +34,7 @@ type DataSourceConfiguratorProps = {
 export function isValidatableRemoteUrl(value: string): boolean {
   try {
     const url = new URL(value)
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
+    if (url.protocol !== 'https:') return false
 
     const hostname = url.hostname.replace(/\.$/, '')
     const labels = hostname.split('.')
@@ -155,24 +155,6 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
       if (requestId === validationRequestRef.current) {
         setIsValidating(false)
       }
-    }
-  }
-
-  const handleLocalPathChange = (value: string) => {
-    validationRequestRef.current += 1
-    setSourcePath(value)
-    setValidationStatus('idle')
-    setIsValidating(false)
-    setValidationResult(null)
-
-    if (validationTimeoutRef.current) {
-      clearTimeout(validationTimeoutRef.current)
-    }
-
-    if (value) {
-      validationTimeoutRef.current = setTimeout(() => {
-        performValidation(value, 'local')
-      }, 1000)
     }
   }
 
@@ -424,7 +406,7 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                     )}
                     {validationStatus === 'idle' && (
                       <p className="text-sm text-muted-foreground">
-                        Enter URL to a 5etools data repository
+                        Enter an HTTPS URL to a 5etools data repository
                       </p>
                     )}
                   </div>
@@ -436,8 +418,8 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                       <Input
                         id={localPathId}
                         value={sourcePath}
-                        onChange={(e) => handleLocalPathChange(e.target.value)}
                         placeholder="/path/to/5etools/data"
+                        readOnly
                         disabled={isLoading}
                         className={`flex-1 ${getValidationBorderClass()}`}
                       />

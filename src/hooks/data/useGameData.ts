@@ -23,7 +23,8 @@ import type {
   Subclass5e,
 } from '@/types/5etools'
 
-const EMPTY_ENTITY_LOOKUP = {}
+const EMPTY_RACE_LOOKUP: Readonly<Record<string, Race5e>> = {}
+const EMPTY_BACKGROUND_LOOKUP: Readonly<Record<string, Background5e>> = {}
 const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 const EMPTY_STRING_LOOKUP: Readonly<Record<string, string>> = {}
 const EMPTY_STRING_LIST: readonly string[] = []
@@ -212,12 +213,13 @@ export function useClassLookup() {
 }
 
 export function useRaceLookup() {
-  return useGameDataStore((state) => state.gameData?.lookups?.racesByKey) ?? EMPTY_ENTITY_LOOKUP
+  return useGameDataStore((state) => state.gameData?.lookups?.racesByKey) ?? EMPTY_RACE_LOOKUP
 }
 
 export function useBackgroundLookup() {
   return (
-    useGameDataStore((state) => state.gameData?.lookups?.backgroundsByKey) ?? EMPTY_ENTITY_LOOKUP
+    useGameDataStore((state) => state.gameData?.lookups?.backgroundsByKey) ??
+    EMPTY_BACKGROUND_LOOKUP
   )
 }
 

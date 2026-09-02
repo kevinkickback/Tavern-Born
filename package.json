@@ -1,16 +1,25 @@
 {
   "name": "tavern-born",
+  "description": "A desktop Dungeons & Dragons 5th Edition character creator.",
   "private": true,
   "version": "0.1.6",
+  "author": "Tavern-Born contributors",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kevinkickback/Tavern-Born.git"
+  },
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b --noCheck && vite build",
+    "build": "tsc -b && vite build",
     "lint": "npx biome format --write . && npx biome check --write .",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
+    "test:electron": "playwright test --config playwright.electron.config.ts",
     "dist": "npm run build && electron-builder",
     "release": "npm run build && electron-builder --publish always"
   },
@@ -75,6 +84,7 @@
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react-swc": "^4.2.2",
+    "@vitest/coverage-v8": "^4.1.2",
     "autoprefixer": "^10.4.27",
     "electron": "^41.9.2",
     "electron-builder": "^26.8.1",
@@ -95,6 +105,15 @@
   "build": {
     "appId": "com.tavernborn.app",
     "productName": "Tavern-Born",
+    "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -123,7 +142,10 @@
       "artifactName": "${productName}-${version}-portable.${ext}"
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "identity": null,
+      "hardenedRuntime": false,
+      "notarize": false
     },
     "linux": {
       "target": "AppImage"
@@ -135,6 +157,9 @@
     }
   },
   "allowScripts": {
-    "electron@41.9.2": true
+    "@swc/core": true,
+    "electron": true,
+    "electron-winstaller": true,
+    "esbuild": true
   }
 }

@@ -5,7 +5,9 @@ This document describes the current Tavern-Born runtime architecture and where r
 ## Layered Architecture
 
 1. Electron host layer
-- Purpose: native window lifecycle, secure IPC bridge, filesystem access for local data source, auto-update management.
+- Purpose: native window lifecycle, secure IPC bridge, capability-scoped filesystem access for the
+  user-selected local data source, and auto-update management. IPC requests are restricted to the
+  top-level trusted renderer; local paths are canonicalized and confined to the native-picker root.
 - Key files: electron/main.ts, electron/preload.ts, electron/updateManager.ts, electron/windowState.ts.
 
 2. Application shell and routing

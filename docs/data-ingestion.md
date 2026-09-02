@@ -21,7 +21,11 @@ Core modules:
 
 ## Source Types
 
-- Local folder: loaded through Electron IPC (window.electronAPI.readLocalJson).
+- Local folder: loaded through Electron IPC (`window.electronAPI.readLocalJson`). The main process
+  authorizes only a directory chosen with the native folder picker, persists that authorization in
+  the Electron user-data directory, resolves symlinks before containment checks, and accepts only
+  JSON files up to 50 MB below that canonical root.
+- Remote repository: production accepts HTTPS only, matching the renderer content-security policy.
 - Remote source: loaded through fetch from normalized URL path.
 
 ## Pipeline Stages
