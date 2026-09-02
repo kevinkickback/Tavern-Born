@@ -27,7 +27,6 @@ lerna-debug.log*
 *.local
 
 # Tooling/CI artifacts
-docs/cicd-workflow.md
 docs/desktop-ui-redesign.md
 docs/review/
 
