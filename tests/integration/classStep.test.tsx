@@ -126,13 +126,8 @@ describe('ClassStep', () => {
     })
   })
 
-  test('suppresses older class reprints when preferNewerPrintings is enabled', () => {
+  test('renders the filtered class collection supplied by the wizard controller', () => {
     const classes: Class5e[] = [
-      {
-        name: 'Fighter',
-        source: 'MPMM',
-        reprintedAs: ['Fighter|XPHB'],
-      } as Class5e,
       {
         name: 'Fighter',
         source: 'XPHB',
@@ -145,11 +140,6 @@ describe('ClassStep', () => {
           ...INITIAL_CHARACTER_DATA,
           class: 'Fighter',
           classSource: 'XPHB',
-          allowedSources: ['XPHB', 'MPMM'],
-          variantRules: {
-            ...INITIAL_CHARACTER_DATA.variantRules,
-            preferNewerPrintings: true,
-          },
         }}
         onChange={vi.fn()}
         classes={classes}

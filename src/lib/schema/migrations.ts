@@ -11,7 +11,7 @@ import type { Character } from '@/types/character'
  * Current character schema version.
  * Increment when making breaking changes to the character format.
  */
-export const CURRENT_SCHEMA_VERSION = 3
+export const CURRENT_SCHEMA_VERSION = 4
 
 /**
  * Migration handler: transform character from version N to N+1.
@@ -242,5 +242,81 @@ registerMigration({
   down: (character) => {
     const c = character as unknown as Record<string, unknown>
     return { ...c, version: '2.0.0' }
+  },
+})
+
+type MigratedSourceTag = Record<string, unknown> & {
+  grantType?: string
+  grantVariant?: string
+}
+
+function migrateParameterizedFeatGrants(
+  feats: Record<string, MigratedSourceTag[]> | undefined,
+): Record<string, MigratedSourceTag[]> | undefined {
+  if (!feats) return feats
+
+  const migrated: Record<string, MigratedSourceTag[]> = {}
+  for (const [key, tags] of Object.entries(feats)) {
+    const semicolonIndex = key.indexOf(';')
+    const baseName = semicolonIndex >= 0 ? key.slice(0, semicolonIndex).trim() : key
+    const variant = semicolonIndex >= 0 ? key.slice(semicolonIndex + 1).trim() : ''
+    const fixedTags = variant ? tags.filter((tag) => tag.grantType === 'fixed') : []
+    const unchangedTags =
+      fixedTags.length > 0 ? tags.filter((tag) => tag.grantType !== 'fixed') : tags
+
+    if (unchangedTags.length > 0) migrated[key] = [...(migrated[key] ?? []), ...unchangedTags]
+    if (fixedTags.length > 0) {
+      migrated[baseName] = [
+        ...(migrated[baseName] ?? []),
+        ...fixedTags.map((tag) => ({ ...tag, grantVariant: tag.grantVariant ?? variant })),
+      ]
+    }
+  }
+  return migrated
+}
+
+function downgradeParameterizedFeatGrants(
+  feats: Record<string, MigratedSourceTag[]> | undefined,
+): Record<string, MigratedSourceTag[]> | undefined {
+  if (!feats) return feats
+
+  const downgraded: Record<string, MigratedSourceTag[]> = {}
+  for (const [key, tags] of Object.entries(feats)) {
+    for (const tag of tags) {
+      const targetKey = tag.grantVariant ? `${key}; ${tag.grantVariant}` : key
+      const { grantVariant: _grantVariant, ...downgradedTag } = tag
+      downgraded[targetKey] = [...(downgraded[targetKey] ?? []), downgradedTag]
+    }
+  }
+  return downgraded
+}
+
+registerMigration({
+  fromVersion: 3,
+  toVersion: 4,
+  description: 'Normalize parameterized fixed feat grants and preserve their variant metadata.',
+  up: (character) => {
+    const c = character as Record<string, unknown>
+    const provenance = c.provenance as Record<string, unknown> | undefined
+    const feats = provenance?.feats as Record<string, MigratedSourceTag[]> | undefined
+    return {
+      ...c,
+      ...(provenance
+        ? { provenance: { ...provenance, feats: migrateParameterizedFeatGrants(feats) } }
+        : {}),
+      version: '4.0.0',
+    } as Character
+  },
+  down: (character) => {
+    const c = character as unknown as Record<string, unknown>
+    const provenance = c.provenance as Record<string, unknown> | undefined
+    const feats = provenance?.feats as Record<string, MigratedSourceTag[]> | undefined
+    return {
+      ...c,
+      ...(provenance
+        ? { provenance: { ...provenance, feats: downgradeParameterizedFeatGrants(feats) } }
+        : {}),
+      version: '3.0.0',
+    }
   },
 })

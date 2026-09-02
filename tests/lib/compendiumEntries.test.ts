@@ -111,4 +111,67 @@ describe('compendiumEntries', () => {
 
     expect(filtered.map((entry) => entry.name)).toEqual(['Wizard'])
   })
+
+  test('filterCompendiumEntries filters entries by rules edition', () => {
+    const entries = [
+      {
+        name: 'Legacy Fighter',
+        type: 'Class',
+        source: 'PHB',
+        data: {},
+      },
+      {
+        name: 'Revised Fighter',
+        type: 'Class',
+        source: 'XPHB',
+        data: { edition: 'one' },
+      },
+      {
+        name: 'Revised Artificer',
+        type: 'Class',
+        source: 'EFA',
+        data: { edition: 'one' },
+      },
+    ] as CompendiumEntry[]
+
+    expect(filterCompendiumEntries(entries, '', new Set(), new Set(), '5e')).toEqual([entries[0]])
+    expect(filterCompendiumEntries(entries, '', new Set(), new Set(), '5.5e')).toEqual([
+      entries[2],
+      entries[1],
+    ])
+    expect(filterCompendiumEntries(entries, '', new Set(), new Set(), 'both')).toHaveLength(3)
+  })
+
+  test('edition filtering composes with type, source, and text filters', () => {
+    const entries = [
+      {
+        name: 'Legacy Fighter',
+        type: 'Class',
+        source: 'PHB',
+        data: {},
+      },
+      {
+        name: 'Revised Fighter',
+        type: 'Class',
+        source: 'XPHB',
+        data: { edition: 'one' },
+      },
+      {
+        name: 'Revised Wizard',
+        type: 'Class',
+        source: 'XPHB',
+        data: { edition: 'one' },
+      },
+    ] as CompendiumEntry[]
+
+    const filtered = filterCompendiumEntries(
+      entries,
+      'fighter',
+      new Set(['Class']),
+      new Set(['XPHB']),
+      '5.5e',
+    )
+
+    expect(filtered.map((entry) => entry.name)).toEqual(['Revised Fighter'])
+  })
 })

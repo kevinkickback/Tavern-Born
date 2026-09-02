@@ -5,10 +5,7 @@ import {
 } from '@/lib/5etools/constants'
 import { validateArmorTypeCodes } from '@/lib/calculations/armorClass'
 import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
-import {
-  validateFallbackCasterProgression,
-  validateSpellSlotFallbacks,
-} from '@/lib/calculations/spellSlots'
+import { validateParsedSpellSlotProgressions } from '@/lib/calculations/spellSlots'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 import { buildGameDataLookups } from './lookups'
 import {
@@ -160,9 +157,7 @@ export class FiveEToolsDataLoader {
               break
             case 'races':
               gameData.races = parseRaces(data) as GameData['races']
-              gameData.races.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.races, sourcesSet)
               break
             case 'raceFluff':
               raceFluffSummaryByKey = new Map(
@@ -174,110 +169,76 @@ export class FiveEToolsDataLoader {
               break
             case 'backgroundFluff':
               gameData.organizations = parseOrganizations(data)
-              gameData.organizations.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.organizations, sourcesSet)
               break
             case 'backgrounds':
               gameData.backgrounds = parseBackgrounds(data) as GameData['backgrounds']
-              gameData.backgrounds.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.backgrounds, sourcesSet)
               break
             case 'feats':
               gameData.feats = parseFeats(data) as GameData['feats']
-              gameData.feats.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.feats, sourcesSet)
               break
             case 'items':
               gameData.items = parseItems(data) as GameData['items']
-              gameData.items.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.items, sourcesSet)
               break
             case 'itemsBase':
               gameData.itemsBase = parseItems(data) as GameData['itemsBase']
               gameData.itemProperties = parseItemProperties(data)
               gameData.itemTypes = parseItemTypes(data)
-              gameData.itemsBase.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.itemsBase, sourcesSet)
               break
             case 'actions':
               gameData.actions = parseActions(data)
-              gameData.actions.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.actions, sourcesSet)
               break
             case 'conditions':
               gameData.conditions = parseConditions(data)
-              gameData.conditions.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.conditions, sourcesSet)
               break
             case 'deities':
               gameData.deities = parseDeities(data)
-              gameData.deities.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.deities, sourcesSet)
               break
             case 'skills':
               gameData.skills = parseSkills(data)
-              gameData.skills.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.skills, sourcesSet)
               if (import.meta.env.DEV) {
                 validateSkillToAbilityMap(gameData.skills)
               }
               break
             case 'senses':
               gameData.senses = parseSenses(data)
-              gameData.senses.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.senses, sourcesSet)
               break
             case 'languages':
               gameData.languages = parseLanguages(data)
-              gameData.languages.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.languages, sourcesSet)
               break
             case 'magicvariants':
               gameData.magicvariants = parseMagicVariants(data)
-              gameData.magicvariants.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.magicvariants, sourcesSet)
               break
             case 'optionalfeatures':
               gameData.optionalfeatures = parseOptionalFeatures(data)
-              gameData.optionalfeatures.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.optionalfeatures, sourcesSet)
               break
             case 'variantrules':
               gameData.variantrules = parseVariantRules(data)
-              gameData.variantrules.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.variantrules, sourcesSet)
               break
             case 'trapHazards':
               gameData.trapHazards = parseTrapHazards(data)
-              gameData.trapHazards.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.trapHazards, sourcesSet)
               break
             case 'rewards':
               gameData.rewards = parseRewards(data)
-              gameData.rewards.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.rewards, sourcesSet)
               break
             case 'cultsBoons':
               gameData.cultsBoons = parseCultsBoons(data)
-              gameData.cultsBoons.forEach((item) => {
-                this.addItemSource(item, sourcesSet)
-              })
+              this.addItemSources(gameData.cultsBoons, sourcesSet)
               break
           }
         } catch (error) {
@@ -325,8 +286,8 @@ export class FiveEToolsDataLoader {
     gameData.lookups = buildGameDataLookups(gameData)
 
     if (import.meta.env.DEV) {
+      validateParsedSpellSlotProgressions(gameData.classes)
       validateArmorTypeCodes(gameData.lookups.itemTypeByAbbr)
-      validateSpellSlotFallbacks(gameData.classes)
       validateSpellSchoolCoverage(gameData.spells)
       validateDamageTypeCoverage([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])])
       validateRarityCoverage([...(gameData.items ?? []), ...(gameData.magicvariants ?? [])])
@@ -428,19 +389,12 @@ export class FiveEToolsDataLoader {
     classResults.forEach((result) => {
       allClasses.push(...result.classes)
       allClassFeatures.push(...result.features)
-      result.classes.forEach((item) => {
-        this.addItemSource(item, sourcesSet)
-      })
-      result.features.forEach((item) => {
-        this.addItemSource(item, sourcesSet)
-      })
+      this.addItemSources(result.classes, sourcesSet)
+      this.addItemSources(result.features, sourcesSet)
     })
 
     gameData.classes = allClasses
     gameData.classFeatures = allClassFeatures
-    if (import.meta.env.DEV) {
-      validateFallbackCasterProgression(gameData.classes)
-    }
   }
 
   private async loadSpellData(
@@ -476,9 +430,7 @@ export class FiveEToolsDataLoader {
 
     spellResults.forEach((parsedSpells) => {
       allSpells.push(...parsedSpells)
-      parsedSpells.forEach((item) => {
-        this.addItemSource(item, sourcesSet)
-      })
+      this.addItemSources(parsedSpells, sourcesSet)
     })
 
     gameData.spells = allSpells
@@ -568,6 +520,12 @@ export class FiveEToolsDataLoader {
       return `${this.baseUrl}${this.baseUrl.endsWith('/') ? '' : '/'}${filename}`
     }
     return `${this.baseUrl}${this.baseUrl.endsWith('/') ? '' : '/'}data/${filename}`
+  }
+
+  private addItemSources(items: readonly unknown[], sourcesSet: Set<string>): void {
+    for (const item of items) {
+      this.addItemSource(item, sourcesSet)
+    }
   }
 
   private addItemSource(item: unknown, sourcesSet: Set<string>) {

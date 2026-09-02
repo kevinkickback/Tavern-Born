@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import {
+  buildBackgroundLookup,
   buildGameDataLookups,
+  buildRaceLookup,
   buildSpellLookup,
   getEntityLookupKey,
   getSubclassLookupKey,
@@ -53,6 +55,8 @@ describe('5etools/lookups', () => {
     })
 
     expect(lookups.classesByKey[getEntityLookupKey('Wizard', 'PHB')]).toBeTruthy()
+    expect(lookups.racesByKey).toEqual({})
+    expect(lookups.backgroundsByKey).toEqual({})
     expect(lookups.classFeaturesByKey[getEntityLookupKey('Arcane Recovery', 'PHB')]).toBeTruthy()
     expect(lookups.spellsByKey[getEntityLookupKey('Magic Missile', 'PHB')]).toBeTruthy()
     expect(
@@ -62,6 +66,19 @@ describe('5etools/lookups', () => {
       lookups.subclassesByKey[getSubclassLookupKey('Wizard', 'PHB', 'Evocation', 'PHB')],
     ).toMatchObject({ name: 'School of Evocation' })
     expect(lookups.itemLookup).toBeInstanceOf(Map)
+  })
+})
+
+describe('race and background lookups', () => {
+  test('index entities by name|source while retaining the first duplicate', () => {
+    const firstRace = { name: 'Elf', source: 'PHB' }
+    const duplicateRace = { name: 'Elf', source: 'PHB', page: 99 }
+    const background = { name: 'Sage', source: 'PHB' }
+
+    expect(buildRaceLookup([firstRace, duplicateRace])[getEntityLookupKey('Elf', 'PHB')]).toBe(
+      firstRace,
+    )
+    expect(buildBackgroundLookup([background])[getEntityLookupKey('Sage', 'PHB')]).toBe(background)
   })
 })
 

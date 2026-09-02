@@ -42,11 +42,31 @@ export interface RecursiveLookup {
   languages: Map<string, TooltipEntityLike>
 }
 
+export interface RecursiveTooltipCollections {
+  spells?: readonly unknown[]
+  items?: readonly unknown[]
+  itemsBase?: readonly unknown[]
+  feats?: readonly unknown[]
+  races?: readonly unknown[]
+  classes?: readonly unknown[]
+  backgrounds?: readonly unknown[]
+  optionalfeatures?: readonly unknown[]
+  actions?: readonly unknown[]
+  conditions?: readonly unknown[]
+  deities?: readonly unknown[]
+  skills?: readonly unknown[]
+  senses?: readonly unknown[]
+  variantrules?: readonly unknown[]
+  languages?: readonly unknown[]
+}
+
 export function getEntityKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`.toLowerCase()
 }
 
-export function buildNameMap<T extends TooltipEntityLike>(items: T[] = []): Map<string, T> {
+export function buildNameMap<T extends TooltipEntityLike>(
+  items: readonly T[] = [],
+): Map<string, T> {
   const map = new Map<string, T>()
   for (const item of items) {
     const name = item?.name?.trim()
@@ -64,6 +84,34 @@ export function buildNameMap<T extends TooltipEntityLike>(items: T[] = []): Map<
     }
   }
   return map
+}
+
+function asTooltipEntities(collection: readonly unknown[] | undefined): TooltipEntityLike[] {
+  return (collection ?? []).filter(
+    (entity): entity is TooltipEntityLike => typeof entity === 'object' && entity !== null,
+  )
+}
+
+export function buildRecursiveLookup(collections: RecursiveTooltipCollections): RecursiveLookup {
+  return {
+    spells: buildNameMap(asTooltipEntities(collections.spells) as Spell5e[]),
+    items: buildNameMap([
+      ...asTooltipEntities(collections.items),
+      ...asTooltipEntities(collections.itemsBase),
+    ]),
+    feats: buildNameMap(asTooltipEntities(collections.feats)),
+    races: buildNameMap(asTooltipEntities(collections.races)),
+    classes: buildNameMap(asTooltipEntities(collections.classes)),
+    backgrounds: buildNameMap(asTooltipEntities(collections.backgrounds)),
+    optionalfeatures: buildNameMap(asTooltipEntities(collections.optionalfeatures)),
+    actions: buildNameMap(asTooltipEntities(collections.actions)),
+    conditions: buildNameMap(asTooltipEntities(collections.conditions)),
+    deities: buildNameMap(asTooltipEntities(collections.deities)),
+    skills: buildNameMap(asTooltipEntities(collections.skills)),
+    senses: buildNameMap(asTooltipEntities(collections.senses)),
+    variantrules: buildNameMap(asTooltipEntities(collections.variantrules)),
+    languages: buildNameMap(asTooltipEntities(collections.languages)),
+  }
 }
 
 export function parseRecursiveReference(
@@ -189,10 +237,7 @@ export function getRecursiveTooltipData(
 export function getRecursiveHintPosition(
   target: HTMLElement,
   hasBody: boolean,
-): {
-  x: number
-  y: number
-} {
+): { x: number; y: number } {
   const rect = target.getBoundingClientRect()
 
   let container = target.offsetParent as HTMLElement | null
@@ -200,12 +245,8 @@ export function getRecursiveHintPosition(
     container = container.offsetParent as HTMLElement | null
   }
 
-  if (!container) {
-    container = target.closest('[role="tooltip"]') as HTMLElement | null
-  }
-  if (!container) {
-    container = target.closest('div[class*="shadow-xl"]') as HTMLElement | null
-  }
+  if (!container) container = target.closest('[role="tooltip"]') as HTMLElement | null
+  if (!container) container = target.closest('div[class*="shadow-xl"]') as HTMLElement | null
 
   const containerRect = container?.getBoundingClientRect() || {
     left: 0,
@@ -213,14 +254,11 @@ export function getRecursiveHintPosition(
     right: window.innerWidth,
     bottom: window.innerHeight,
   }
-
   const elementRelX = rect.left - containerRect.left
   const elementRelY = rect.top - containerRect.top
-
   const tooltipWidthEstimate = 300
   const tooltipHeightEstimate = hasBody ? 220 : 88
   const gap = 8
-
   const containerWidth = containerRect.right - containerRect.left
   const rightCandidate = rect.right - containerRect.left + gap
   const leftCandidate = elementRelX - tooltipWidthEstimate - gap
@@ -236,7 +274,6 @@ export function getRecursiveHintPosition(
   const preferredDown = rect.bottom - containerRect.top + gap
   const preferredUp = elementRelY - tooltipHeightEstimate - gap
   const containerHeight = containerRect.bottom - containerRect.top
-
   const y = Math.max(
     0,
     Math.min(

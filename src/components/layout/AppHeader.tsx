@@ -1,42 +1,106 @@
-import { FloppyDisk, Heart, List, Shield, TrendUp } from '@phosphor-icons/react'
+import {
+  Backpack,
+  Barbell,
+  Book,
+  Books,
+  Certificate,
+  FilePdf,
+  FloppyDisk,
+  Gear,
+  Heart,
+  type Icon,
+  Image,
+  Lightning,
+  MagicWand,
+  PersonSimple,
+  Scroll,
+  Shield,
+  Sparkle,
+  Star,
+  Sword,
+  TrendUp,
+  Users,
+} from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
-import { useAppPreferencesStore } from '@/store/appPreferencesStore'
+import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { useCharacterStore } from '@/store/characterStore'
 
+const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
+  ['/build/ability-scores', 'Ability Scores', Barbell],
+  ['/build/proficiencies', 'Proficiencies', Certificate],
+  ['/build/background', 'Background', Scroll],
+  ['/build/class', 'Class', Sword],
+  ['/build/race', 'Race', PersonSimple],
+  ['/details/characteristics', 'Characteristics', Sparkle],
+  ['/details/conditions', 'Conditions', Lightning],
+  ['/details/portrait', 'Portrait', Image],
+  ['/character-sheet', 'Character Sheet', FilePdf],
+  ['/compendium', 'Compendium', Book],
+  ['/equipment', 'Equipment', Backpack],
+  ['/settings', 'Settings', Gear],
+  ['/sources', 'Sources', Books],
+  ['/spells', 'Spells', MagicWand],
+  ['/feats', 'Feats', Star],
+  ['/', 'Characters', Users],
+]
+
+function getPageDetails(pathname: string) {
+  return PAGE_DETAILS.find(([prefix]) =>
+    prefix === '/' ? pathname === '/' : pathname.startsWith(prefix),
+  )
+}
+
 export function AppHeader() {
+  const location = useLocation()
   const activeCharacter = useCharacterStore((state) => state.activeCharacter)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter)
-  const setSidebarOpen = useAppPreferencesStore((state) => state.setSidebarOpen)
-  const sidebarOpen = useAppPreferencesStore((state) => state.sidebarOpen)
   const [levelUpOpen, setLevelUpOpen] = useState(false)
   const { effectiveAC } = useArmorClass()
   const { effectiveMaxHP } = useHitPoints()
+  const pageDetails = getPageDetails(location.pathname)
+  const PageIcon = pageDetails?.[2]
+  const showLevelUp = ['/build', '/feats', '/spells', '/equipment', '/details', '/sources'].some(
+    (prefix) => location.pathname.startsWith(prefix),
+  )
 
-  const classSummary = useMemo(() => {
-    if (!activeCharacter) {
-      return ''
-    }
+  const characterSummary = useMemo(() => {
+    if (!activeCharacter) return { visible: '', classBreakdown: '', isCondensed: false }
 
     const progression = activeCharacter.classProgression ?? []
-
-    const classes =
+    const classNames =
       progression.length > 0
-        ? progression.map((entry) => `${entry.name} ${entry.levels}`).join(' - ')
-        : (activeCharacter.class ?? '')
+        ? progression.map((entry) => entry.name).filter(Boolean)
+        : [activeCharacter.class].filter((name): name is string => Boolean(name))
+    const totalLevel =
+      progression.length > 0
+        ? progression.reduce((sum, entry) => sum + entry.levels, 0)
+        : activeCharacter.level
+    const classBreakdown =
+      progression.length > 0
+        ? progression.map((entry) => `${entry.name} ${entry.levels}`).join(' · ')
+        : classNames.join(' · ')
+    const isCondensed = classNames.length > 2
+    const classLabel = isCondensed ? `${classNames.length} classes` : classNames.join(' / ')
 
-    return `${activeCharacter.race} - ${classes}`
+    return {
+      visible: [activeCharacter.race, `Level ${totalLevel}`, classLabel]
+        .filter(Boolean)
+        .join(' · '),
+      classBreakdown,
+      isCondensed,
+    }
   }, [activeCharacter])
 
   const handleSave = () => {
-    if (!activeCharacter) {
-      return
-    }
+    if (!activeCharacter) return
 
     if (!hasUnsavedChanges) {
       toast.info('No changes to save')
@@ -48,85 +112,132 @@ export function AppHeader() {
   }
 
   return (
-    <>
-      <nav className="grid grid-cols-3 items-center min-h-[4.5rem] bg-card/80 backdrop-blur-sm px-4 py-3 rounded-xl mx-3 mt-3 shadow-sm border border-border relative z-50 app-drag">
-        {/* Left slot: hamburger toggle (mobile only) */}
-        <div className="flex items-center">
-          <button
-            type="button"
-            aria-label="Open sidebar"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="xl:hidden rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
-          >
-            <List className="h-6 w-6" />
-          </button>
+    <TooltipProvider delayDuration={300}>
+      <header className="app-drag grid h-16 shrink-0 grid-cols-[minmax(12rem,1fr)_auto_minmax(12rem,1fr)] items-center bg-workspace-canvas px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          {PageIcon && <PageIcon className="size-7 shrink-0 text-primary" weight="fill" />}
+          <h1 className="truncate text-[length:var(--font-size-page-title)] font-semibold leading-[var(--line-height-page-title)] tracking-tight">
+            {pageDetails?.[1] ?? 'Tavern Born'}
+          </h1>
         </div>
 
-        {/* Character info — center slot */}
-        <div className="flex items-center justify-center gap-3">
+        <div className="app-no-drag flex min-w-0 items-center justify-center px-4">
           {activeCharacter ? (
-            <>
-              <div className="flex items-center gap-2">
-                <div className="relative h-10 w-10 text-accent" data-testid="header-ac-badge">
-                  <Shield weight="fill" className="h-10 w-10" />
-                  <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-card-foreground leading-none">
-                    {effectiveAC}
-                  </span>
-                </div>
-                <div className="relative h-10 w-10 text-red-500" data-testid="header-hp-badge">
-                  <Heart weight="fill" className="h-10 w-10" />
-                  <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-card-foreground leading-none">
-                    {effectiveMaxHP}
-                  </span>
-                </div>
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted text-base font-semibold text-muted-foreground">
+                {activeCharacter.portrait ? (
+                  <img
+                    src={resolvePortraitSrc(activeCharacter.portrait)}
+                    alt={`${activeCharacter.name || 'Character'} portrait`}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  activeCharacter.name?.trim().charAt(0).toUpperCase() || '?'
+                )}
               </div>
-              <div className="flex flex-col items-center text-center">
-                <h2 className="font-display text-lg font-bold leading-tight">
+              <div className="min-w-0 text-left">
+                <p className="max-w-80 truncate text-lg font-semibold leading-tight">
                   {activeCharacter.name}
-                </h2>
-                <p
-                  className="text-xs text-muted-foreground max-w-[24rem] truncate"
-                  title={classSummary}
-                >
-                  {classSummary}
                 </p>
+                {characterSummary.isCondensed ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="mt-1 max-w-80 truncate text-sm leading-tight text-muted-foreground">
+                        {characterSummary.visible}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent>Classes: {characterSummary.classBreakdown}</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <p className="mt-1 max-w-80 truncate text-sm leading-tight text-muted-foreground">
+                    {characterSummary.visible}
+                  </p>
+                )}
               </div>
-            </>
+              <div className="ml-1 hidden items-center gap-1.5 border-l border-border pl-4 xl:flex">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="relative flex size-10 items-center justify-center tabular-nums"
+                      data-testid="header-ac-badge"
+                    >
+                      <Shield className="absolute inset-0 size-10 text-primary" weight="fill" />
+                      <span className="relative z-10 mt-0.5 text-xs font-bold leading-none text-primary-foreground drop-shadow-sm">
+                        {effectiveAC}
+                      </span>
+                      <span className="sr-only">Armor Class {effectiveAC}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Armor Class: {effectiveAC}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="relative flex size-10 items-center justify-center tabular-nums"
+                      data-testid="header-hp-badge"
+                    >
+                      <Heart className="absolute inset-0 size-10 text-red-500" weight="fill" />
+                      <span className="relative z-10 -mt-0.5 text-xs font-bold leading-none text-white drop-shadow-sm">
+                        {effectiveMaxHP}
+                      </span>
+                      <span className="sr-only">Maximum Hit Points {effectiveMaxHP}</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Maximum Hit Points: {effectiveMaxHP}</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground">No Character Loaded</p>
+            <span className="text-xs text-muted-foreground">No character loaded</span>
           )}
         </div>
 
-        {/* Actions — right slot */}
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            data-level-up-button="true"
-            disabled={!activeCharacter}
-            onClick={() => setLevelUpOpen(true)}
-          >
-            <TrendUp />
-            Level Up
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            disabled={!activeCharacter || !hasUnsavedChanges}
-            className="relative gap-2 bg-accent hover:bg-accent/90"
-            onClick={handleSave}
-          >
-            {hasUnsavedChanges && (
-              <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse" />
-            )}
-            <FloppyDisk />
-            Save
-          </Button>
+        <div className="app-no-drag flex h-full min-w-0 items-center justify-end gap-2">
+          {showLevelUp && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 px-3"
+                  data-level-up-button="true"
+                  aria-label="Level up character"
+                  disabled={!activeCharacter}
+                  onClick={() => setLevelUpOpen(true)}
+                >
+                  <TrendUp />
+                  <span className="hidden 2xl:inline">Level Up</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Level up character</TooltipContent>
+            </Tooltip>
+          )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                className="h-9 gap-2 px-3"
+                aria-label="Save character"
+                disabled={!activeCharacter || !hasUnsavedChanges}
+                onClick={handleSave}
+              >
+                <FloppyDisk />
+                <span className="hidden xl:inline">Save changes</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {!activeCharacter
+                ? 'No character loaded'
+                : hasUnsavedChanges
+                  ? 'Save character (Ctrl+S)'
+                  : 'No changes to save'}
+            </TooltipContent>
+          </Tooltip>
         </div>
-      </nav>
+      </header>
 
       <LevelUpModal open={levelUpOpen} onOpenChange={setLevelUpOpen} />
-    </>
+    </TooltipProvider>
   )
 }

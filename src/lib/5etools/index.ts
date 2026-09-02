@@ -1,6 +1,7 @@
 export * from './classData'
 export * from './constants'
 export * from './dataLoader'
+export * from './entityResolvers'
 export * from './filters'
 export * from './lookups'
 export * from './parsers/index'

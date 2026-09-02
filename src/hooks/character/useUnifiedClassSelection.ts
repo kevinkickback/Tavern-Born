@@ -5,23 +5,17 @@
  */
 
 import { useCallback } from 'react'
+import { useItemLookup } from '@/hooks/data/useGameData'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
-import {
-  selectBaseClass,
-  selectSubclass as selectSubclassCommand,
-} from '@/lib/character/commands/classCommands'
-import { computeApplyClassSelectionUpdates } from '@/lib/character/commands/classSelectionOrchestrationCommand'
+import { applyClassSelectionCommand } from '@/lib/character/commands/classCommands'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
-import type { Class5e, Item5e } from '@/types/5etools'
+import type { Class5e } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
-
-const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 
 export function useUnifiedClassSelection() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
+  const itemLookup = useItemLookup()
 
   const selectClass = useCallback(
     (
@@ -39,27 +33,11 @@ export function useUnifiedClassSelection() {
       if (!cls) return
 
       const ledger = character.provenance ?? emptyProvenance()
-      const orchestrationUpdates = computeApplyClassSelectionUpdates(
-        character,
-        ledger,
-        cls,
-        undefined,
-        itemLookup,
-      )
-      const commandResult = selectBaseClass(character, ledger, className, cls, classSource)
+      const result = applyClassSelectionCommand(character, ledger, cls, undefined, itemLookup)
 
       updateCharacter(character.id, {
-        ...orchestrationUpdates,
-        class: commandResult.characterUpdate.class,
-        classSource: commandResult.characterUpdate.classSource,
-        subclass: commandResult.characterUpdate.subclass,
-        subclassSource: commandResult.characterUpdate.subclassSource,
-        classProgression: commandResult.characterUpdate.classProgression,
-        skills: commandResult.characterUpdate.skills,
-        proficiencies: {
-          ...(orchestrationUpdates.proficiencies ?? character.proficiencies),
-          skills: commandResult.characterUpdate.proficiencies?.skills ?? [],
-        },
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
       })
     },
     [character, updateCharacter, itemLookup],
@@ -80,19 +58,12 @@ export function useUnifiedClassSelection() {
       }
 
       const ledger = character.provenance ?? emptyProvenance()
-      const orchestrationUpdates = computeApplyClassSelectionUpdates(
+      const result = applyClassSelectionCommand(
         character,
         ledger,
         classEntity,
         { name: subclassName, source: subclassSource },
         itemLookup,
-      )
-      const result = selectSubclassCommand(
-        character,
-        ledger,
-        subclassName,
-        subclassSource,
-        undefined,
         {
           classProgression,
           viewingEntry,
@@ -100,8 +71,8 @@ export function useUnifiedClassSelection() {
       )
 
       updateCharacter(character.id, {
-        ...orchestrationUpdates,
-        ...result.characterUpdate,
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
       })
     },
     [character, updateCharacter, itemLookup],

@@ -1,4 +1,3 @@
-import type { GameData } from '@/types/5etools'
 import {
   wizardStep1Schema,
   wizardStep2Schema,
@@ -18,10 +17,16 @@ const STEP_SCHEMAS = {
   6: wizardStep6Schema,
 } as const
 
+interface WizardStepAvailability {
+  races: unknown[]
+  classes: unknown[]
+  backgrounds: unknown[]
+}
+
 export function validateStep(
   step: number,
   characterData: CharacterWizardData,
-  gameData: Pick<GameData, 'races' | 'classes' | 'backgrounds'> | null | undefined,
+  gameData: WizardStepAvailability | null | undefined,
 ): ValidationResult {
   if (step === 3 && (gameData?.races ?? []).length === 0) {
     return {

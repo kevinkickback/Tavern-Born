@@ -101,16 +101,18 @@ Production window hardening:
 ## 4) Provenance Application and Reconciliation
 
 Entry points:
+- src/lib/character/commands/*
 - src/lib/provenance/apply*.ts
 - src/lib/provenance/reconciliation.ts
 - src/lib/provenance/ledger.ts
 
 Flow:
-1. Selection changes (race/class/background/feat/optional feature) trigger grant application helpers.
-2. Race/background selection paths normalize selected content against `character.originSystem` before origin grants are applied.
-3. Helpers mutate both materialized character fields and provenance ledger tags.
-4. Reconciliation removes prior-source grants when a source entity is changed.
-5. Resulting character sheet stays aligned with source-attributed grants.
+1. Selection changes invoke a complete pure domain command.
+2. Race/background commands normalize selected content against `character.originSystem` before origin grants are applied.
+3. Commands reconcile the old source, update materialized fields, and produce the updated provenance ledger.
+4. Hook adapters apply `characterPatch` and `provenanceUpdate` atomically through the character store.
+5. Initial character creation composes the same race, class, and background commands through `buildInitialCharacter`.
+6. Manual equipment, class equipment choices, and optional-feature replacements follow the same command-result contract; callers never sequence materialized and provenance writes.
 
 Background equipment detail:
 - Background starting equipment is resolved from 5etools `startingEquipment` blocks using persisted per-block choice keys (`backgroundEquipmentChoices`, an array of lowercase keys like `['a', 'b']`).
@@ -133,14 +135,17 @@ Flow:
 Entry points:
 - src/components/character/wizard/steps/2-RulesStep.tsx
 - src/hooks/data/useFilteredGameData.ts
+- src/hooks/data/useWizardGameData.ts
 - src/lib/5etools/reprints.ts
 
 Flow:
 1. Wizard source presets apply a curated list of source abbreviations to `allowedSources`.
-2. `useFilteredGameData()` filters all entity collections by `allowedSources`.
-3. When `variantRules.preferNewerPrintings` is enabled, the hook builds a suppression set from 5etools `reprintedAs` metadata.
-4. DataFilter removes any entity whose `name|source` key is in the suppression set.
-5. Older printings remain available when newer reprints are not in the selected source list.
+2. `useWizardGameData()` calls `useFilteredGameDataParams()` with draft source/ruleset settings, normalizes nested subraces, and exposes filtered-primary/raw-fallback entity resolvers.
+3. Wizard steps receive filtered collections and resolved entities; they do not reproduce source/reprint filtering or read `gameDataStore`.
+4. `useFilteredGameData()` filters active-character collections by `allowedSources` for edit pages, including the Equipment add-item catalog.
+5. When `variantRules.preferNewerPrintings` is enabled, the shared hooks build a suppression set from 5etools `reprintedAs` metadata.
+6. DataFilter removes any entity whose `name|source` key is in the suppression set.
+7. Older printings remain available when newer reprints are not in the selected source list.
 
 Wizard defaults:
 - New-character setup defaults `allowedSources` to the `2014-recommended` source preset (filtered to currently loaded sources).

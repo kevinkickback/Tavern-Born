@@ -7,9 +7,9 @@ import {
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import { ChangelogModal } from '@/components/updates/ChangelogModal'
+import { Section } from '@/components/workspace'
 import { resetAllHints } from '@/lib/storage/hints'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
@@ -79,19 +79,13 @@ export function GeneralPanel() {
   }, [])
 
   return (
-    <div className="space-y-6">
-      {/* Updates */}
-      <Card className="w-full">
-        <CardHeader className="border-b border-border pb-4">
-          <div className="flex items-center gap-2">
-            <ArrowsClockwise className="h-4 w-4 text-primary" weight="duotone" />
-            <CardTitle className="text-base">App Updates</CardTitle>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Manage how and when the app checks for new releases.
-          </p>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-4">
+    <div>
+      <Section
+        title="App Updates"
+        description="Manage how and when the app checks for new releases."
+        className="pt-0"
+      >
+        <div className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-medium">Enable Auto Update</p>
@@ -158,35 +152,26 @@ export function GeneralPanel() {
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </Section>
 
-      {/* Hints */}
-      <Card className="w-full">
-        <CardHeader className="border-b border-border pb-4">
-          <div className="flex items-center gap-2">
-            <ArrowCounterClockwise className="h-4 w-4 text-primary" weight="duotone" />
-            <CardTitle className="text-base">One-Time Hints</CardTitle>
+      <Section
+        title="One-Time Hints"
+        description="Contextual tips and guidance shown once throughout the app."
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Reset dismissed hints</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              All banners and tips you've closed will reappear.
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Contextual tips and guidance shown once throughout the app.
-          </p>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium">Reset dismissed hints</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                All banners and tips you've closed will reappear.
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={handleResetHints} className="shrink-0">
-              <ArrowCounterClockwise weight="bold" />
-              Reset
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <Button variant="outline" size="sm" onClick={handleResetHints} className="shrink-0">
+            <ArrowCounterClockwise weight="bold" />
+            Reset
+          </Button>
+        </div>
+      </Section>
 
       <ChangelogModal
         open={currentChangelogOpen}

@@ -13,30 +13,39 @@ import {
   Sword,
   Target,
   Trash,
-  X,
 } from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
+import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  AnchoredHint,
+  WorkspaceBody,
+  WorkspaceDetailContent,
+  WorkspacePage,
+  WorkspacePaneHeader,
+} from '@/components/workspace'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
-import { useEquipmentProvenanceMutations } from '@/hooks/character/useEquipmentProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useItemLookup, useItemPropertyLookup } from '@/hooks/data/useGameData'
+import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { ARMOR_TYPE_MAP } from '@/lib/calculations/armorClass'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e } from '@/types/5etools'
 import type { Equipment } from '@/types/character'
 import { NoCharCard } from '../_shared'
@@ -117,8 +126,6 @@ function getDamageSummary(item: Equipment): string | null {
   return `${item.dmg1}${damageType}`
 }
 
-const EMPTY_RECORD: Record<string, string> = {}
-
 function resolvePropertyLabel(tag: string, propertyByAbbr: Record<string, string>): string {
   const key = tag.trim().split('|')[0].toUpperCase()
   return propertyByAbbr[key] ?? tag
@@ -134,6 +141,9 @@ function getPropertySummary(
 
 export function EquipmentPage() {
   const [addItemOpen, setAddItemOpen] = useState(false)
+  const [inventoryCollapsed, setInventoryCollapsed] = useState(false)
+  const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [showEquipHint, setShowEquipHint] = useState(
     () => !isHintDismissed(EQUIPMENT_EQUIP_HINT_ID),
   )
@@ -168,11 +178,10 @@ export function EquipmentPage() {
   const [itemTypeFilter, setItemTypeFilter] = useState<ItemCategory>('All')
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup)
-  const itemPropertyByAbbr =
-    useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr) ?? EMPTY_RECORD
-  const originSystem = character?.originSystem ?? '2024'
-  const preferNewerPrintings = character?.variantRules?.preferNewerPrintings ?? false
+  const itemLookup = useItemLookup()
+  const { items, itemsBase } = useFilteredGameData()
+  const itemPropertyByAbbr = useItemPropertyLookup()
+  const recursiveLookup = useRecursiveLookup()
 
   const ignoreEquipRestrictions = character?.variantRules?.ignoreEquipRestrictions ?? false
   const toggleIgnoreRestrictions = () => {
@@ -184,42 +193,20 @@ export function EquipmentPage() {
       },
     })
   }
-  const { applyManualEquipmentGrant, removeEquipmentProvenance } = useEquipmentProvenanceMutations()
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const { calculatedAC, overrideAC } = useArmorClass()
-  const equipmentItems = useMemo(() => {
-    if (!itemLookup) return []
-    // When preferNewerPrintings is off, show all versions unfiltered.
-    if (!preferNewerPrintings) return Array.from(itemLookup.values())
-    // Deduplicate reprinted items based on edition:
-    // - 2024 characters see the newer reprint (e.g. Drum|XPHB, Bag of Holding|XDMG)
-    // - 2014 characters see the original printing (e.g. Drum|PHB, Bag of Holding|DMG)
-    const suppressed = new Set<string>()
-    for (const item of itemLookup.values()) {
-      const reprints = Array.isArray((item as { reprintedAs?: unknown }).reprintedAs)
-        ? ((item as { reprintedAs?: unknown }).reprintedAs as string[])
-        : []
-      for (const reprint of reprints) {
-        if (typeof reprint !== 'string') continue
-        const [n, s] = reprint.split('|')
-        if (!n || !s) continue
-        const reprintKey = `${n.trim().toLowerCase()}|${s.trim().toLowerCase()}`
-        if (itemLookup.has(reprintKey)) {
-          if (originSystem === '2014') {
-            // Suppress the newer reprint, keep the original
-            suppressed.add(reprintKey)
-          } else {
-            // Suppress the older original, keep the newer reprint
-            suppressed.add(`${item.name.toLowerCase()}|${(item.source ?? 'phb').toLowerCase()}`)
-          }
-        }
-      }
-    }
-    return Array.from(itemLookup.values()).filter(
-      (item) =>
-        !suppressed.has(`${item.name.toLowerCase()}|${(item.source ?? 'phb').toLowerCase()}`),
-    )
-  }, [itemLookup, originSystem, preferNewerPrintings])
+  const equipmentItems = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          [...items, ...itemsBase].map((item) => [
+            getEntityLookupKey(item.name, item.source),
+            item,
+          ]),
+        ).values(),
+      ),
+    [items, itemsBase],
+  )
 
   const encumbrancePct = carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0
   const encumbranceTone =
@@ -239,15 +226,21 @@ export function EquipmentPage() {
       return true
     })
   }, [equipment, itemSearch, itemTypeFilter])
+  const selectedItem =
+    equipment.find((item) => item.id === selectedItemId) ?? filteredEquipment[0] ?? null
+  const selectedItemData = selectedItem
+    ? itemLookup.get(
+        `${selectedItem.name.trim().toLowerCase()}|${(selectedItem.source ?? 'phb').trim().toLowerCase()}`,
+      )
+    : undefined
+  const selectedItemEntries = selectedItemData?.entries ?? []
 
   const handleAddItem = (item: Item5e) => {
     addFromGameData(item)
-    applyManualEquipmentGrant(item.name)
   }
   const handleRemoveItem = (itemId: string) => {
-    const existing = equipment.find((item) => item.id === itemId)
     removeItem(itemId)
-    if (existing) removeEquipmentProvenance(existing.name)
+    if (selectedItemId === itemId) setSelectedItemId(null)
   }
 
   if (!character) {
@@ -255,443 +248,523 @@ export function EquipmentPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header band */}
-      <div className="px-6 py-2 lg:py-5 page-header-band mb-2 shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <Backpack className="h-6 w-6 text-primary" weight="duotone" />
-            <div>
-              <h1 className="text-2xl font-display font-bold">Equipment</h1>
-              <p className="text-sm text-muted-foreground">
-                Manage your inventory and carried equipment
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    <WorkspacePage className="p-3">
+      <AnchoredHint
+        position={showEquipHint ? hintPosition : null}
+        width={EQUIP_HINT_WIDTH}
+        onDismiss={handleDismissEquipHint}
+      >
+        Toggle <strong>Equip</strong> on armor, weapons, and worn magic items to mark them active
+        and applying their effect.
+      </AnchoredHint>
 
-      {showEquipHint && hintPosition ? (
-        <div
-          className="pointer-events-none fixed z-50 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-300"
-          style={{ top: hintPosition.top, left: hintPosition.left }}
-        >
-          <div className="pointer-events-auto animate-hint-bounce relative w-[300px] rounded-lg border border-accent/50 bg-accent px-3 py-2 text-sm text-accent-foreground shadow-2xl ring-1 ring-accent/20">
-            <div
-              className="absolute -top-[7px] h-3.5 w-3.5 rotate-45 border-l border-t border-accent/50 bg-accent"
-              style={{ left: hintPosition.arrowLeft - 7 }}
-            />
-            <button
-              type="button"
-              className="absolute top-1.5 right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/35 bg-black/25 text-accent-foreground shadow-sm transition-colors hover:bg-black/40 hover:text-white"
-              onClick={handleDismissEquipHint}
-              aria-label="Dismiss hint"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-            <p className="leading-snug text-accent-foreground/95 pr-8">
-              Toggle <strong>Equip</strong> on armor, weapons, and worn magic items to mark them
-              active and applying their effect.
-            </p>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Stat tiles */}
-      <div className="px-6 mb-2 lg:mb-6 shrink-0">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
-          {/* Weight tile */}
-          <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center justify-between p-2 lg:p-4">
-              <div className="h-8 w-8 lg:h-11 lg:w-11 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
-                <Scales className="h-4 w-4 lg:h-5 lg:w-5 text-primary-foreground" weight="bold" />
-              </div>
-              <div className="text-right">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Weight
-                </p>
-                <p
-                  className={cn(
-                    'text-sm font-bold font-mono',
-                    isEncumbered ? 'text-destructive' : 'text-foreground',
-                  )}
-                >
-                  {totalWeight.toFixed(1)} / {carryCapacity} lb
-                </p>
-              </div>
-            </div>
-            <div className="px-2 lg:px-4 pb-2 lg:pb-3">
-              <div className="bg-muted relative h-1.5 w-full overflow-hidden rounded-full">
-                <div
-                  className={cn('h-full transition-all rounded-full', encumbranceTone)}
-                  style={{ width: `${encumbrancePct}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground font-mono mt-1 text-right">
-                {isEncumbered ? 'Encumbered' : `${encumbrancePct.toFixed(0)}%`}
-              </p>
-            </div>
-          </div>
-
-          {/* Attunement tile */}
-          <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center justify-between p-2 lg:p-4">
-              <div className="h-8 w-8 lg:h-11 lg:w-11 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                <Diamond className="h-4 w-4 lg:h-5 lg:w-5 text-white" weight="bold" />
-              </div>
-              <div className="text-right">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Attunement
-                </p>
-                <p
-                  className={cn(
-                    'text-sm font-bold font-mono',
-                    attunedCount >= MAX_ATTUNEMENT_SLOTS ? 'text-destructive' : 'text-foreground',
-                  )}
-                >
-                  {attunedCount} / {MAX_ATTUNEMENT_SLOTS}
-                </p>
-              </div>
-            </div>
-            <div className="px-2 lg:px-4 pb-2 lg:pb-3">
-              <div className="flex gap-1.5">
-                {(['first', 'second', 'third'] as const)
-                  .slice(0, MAX_ATTUNEMENT_SLOTS)
-                  .map((label, i) => (
-                    <div
-                      key={label}
-                      className={cn(
-                        'flex-1 h-1.5 rounded-full transition-colors',
-                        i < attunedCount
-                          ? attunedCount >= MAX_ATTUNEMENT_SLOTS
-                            ? 'bg-destructive'
-                            : 'bg-violet-500'
-                          : 'bg-muted',
-                      )}
-                    />
-                  ))}
-              </div>
-              <p className="text-xs text-muted-foreground font-mono mt-1 text-right">
-                {MAX_ATTUNEMENT_SLOTS - attunedCount} slot
-                {MAX_ATTUNEMENT_SLOTS - attunedCount !== 1 ? 's' : ''} free
-              </p>
-            </div>
-          </div>
-
-          {/* Armor Class tile */}
-          <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center justify-between p-2 lg:p-4">
-              <div className="h-8 w-8 lg:h-11 lg:w-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                <Shield className="h-4 w-4 lg:h-5 lg:w-5 text-white" weight="bold" />
-              </div>
-              <div className="text-right">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Armor Class
-                </p>
-                <p className="text-2xl font-bold font-mono text-foreground">{calculatedAC}</p>
-              </div>
-            </div>
-            <div className="px-2 lg:px-4 pb-2 lg:pb-3">
-              <p className="text-xs text-muted-foreground text-right">
-                {overrideAC !== undefined ? 'override active' : 'from equipped armor'}
-              </p>
-            </div>
-          </div>
-
-          {/* Currency tile */}
-          <div className="border border-border rounded-xl shadow-sm bg-card overflow-hidden">
-            <div className="flex items-center justify-between p-2 lg:p-4">
-              <div className="h-8 w-8 lg:h-11 lg:w-11 rounded-xl bg-gradient-to-br from-yellow-500 to-yellow-600/60 flex items-center justify-center shrink-0 shadow-sm">
-                <Coins className="h-4 w-4 lg:h-5 lg:w-5 text-white" weight="bold" />
-              </div>
-              <div className="text-right">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Currency
-                </p>
-                <p className="text-sm font-bold font-mono text-foreground">
-                  {(totalCurrencyCopper / 100).toFixed(2)} gp
-                </p>
-              </div>
-            </div>
-            <div className="px-1.5 lg:px-3 pb-2 lg:pb-3">
-              <div className="grid grid-cols-5 gap-0.5 lg:gap-1 pt-1 lg:pt-2">
-                {(
-                  [
-                    ['cp', 'CP'],
-                    ['sp', 'SP'],
-                    ['ep', 'EP'],
-                    ['gp', 'GP'],
-                    ['pp', 'PP'],
-                  ] as const
-                ).map(([key, label]) => (
-                  <div key={key} className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-muted-foreground font-semibold tracking-wide text-center">
-                      {label}
-                    </span>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={currency[key]}
-                      onChange={(event) => {
-                        const raw = Number.parseInt(event.target.value, 10)
-                        updateCurrency(key, Number.isNaN(raw) ? 0 : raw)
-                      }}
-                      className="h-6 px-1 text-[10px] font-mono text-center"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Inventory card */}
-      <div className="px-6 pb-3 lg:pb-6 flex-1 min-h-0">
-        <div className="max-w-7xl mx-auto h-full">
-          <Card className="w-full h-full flex flex-col overflow-hidden">
-            {/* Gradient header band */}
-            <div className="h-10 bg-gradient-to-r from-accent/20 via-accent/10 to-transparent flex items-center gap-3 px-4 shrink-0">
-              <Backpack className="h-4 w-4 text-primary/80" weight="duotone" />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Inventory
-              </span>
-              <Badge variant="outline" className="text-xs h-5 px-1.5">
-                {equipment.length}
-              </Badge>
-              <div className="ml-auto flex items-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={toggleIgnoreRestrictions}
-                      className={cn(
-                        'flex items-center justify-center h-7 w-7 rounded-md transition-colors',
-                        ignoreEquipRestrictions
-                          ? 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                      )}
-                    >
-                      <ShieldWarning
-                        className="h-4 w-4"
-                        weight={ignoreEquipRestrictions ? 'fill' : 'regular'}
-                      />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    {ignoreEquipRestrictions
-                      ? 'Restrictions ignored — click to enforce armor slots & proficiency'
-                      : 'Enforce armor slots & proficiency (click to ignore)'}
-                  </TooltipContent>
-                </Tooltip>
-                <Button
-                  onClick={() => setAddItemOpen(true)}
-                  size="sm"
-                  className="h-7 bg-accent text-accent-foreground hover:bg-accent/90"
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Add Item
-                </Button>
-              </div>
-            </div>
-
-            {/* Search + filter row */}
-            <div className="px-4 py-2.5 border-b border-border flex items-center gap-3 shrink-0">
-              <div className="relative flex-1">
-                <MagnifyingGlass className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                <Input
-                  placeholder="Search inventory…"
-                  value={itemSearch}
-                  onChange={(e) => setItemSearch(e.target.value)}
-                  className="pl-8 h-8 text-xs"
-                />
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {FILTER_CHIPS.map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => setItemTypeFilter(chip)}
-                    className={cn(
-                      'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                      itemTypeFilter === chip
-                        ? 'bg-accent text-accent-foreground'
-                        : 'text-muted-foreground hover:bg-muted',
-                    )}
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Item list */}
-            <ScrollArea className="flex-1 overflow-hidden">
-              <div className="p-4 grid grid-cols-1 lg:grid-cols-2 gap-2">
-                {filteredEquipment.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-12">
-                    {equipment.length === 0
-                      ? 'No items yet. Use Add Item to browse and add to inventory.'
-                      : 'No items match your search or filter.'}
-                  </p>
-                ) : (
-                  filteredEquipment.map((item) => {
-                    const category = getItemCategory(item)
-                    const ItemIcon =
-                      category === 'Weapons'
-                        ? Sword
-                        : category === 'Armor'
-                          ? Shield
-                          : category === 'Ammunition'
-                            ? Target
-                            : category === 'Potions'
-                              ? Flask
-                              : category === 'Scrolls'
-                                ? Scroll
-                                : Package
-                    const dmg = getDamageSummary(item)
-                    const props = getPropertySummary(item, itemPropertyByAbbr)
-                    return (
-                      <div
-                        key={item.id}
+      <WorkspaceBody className="flex overflow-hidden">
+        <SplitPane
+          className={cn(
+            'my-0 h-full overflow-visible',
+            !inventoryCollapsed && !detailCollapsed && 'gap-3',
+          )}
+          leftClassName={cn(
+            'rounded-lg bg-workspace-pane',
+            inventoryCollapsed ? 'border-0' : 'border border-border',
+          )}
+          rightClassName={cn(
+            'rounded-lg bg-workspace-detail',
+            detailCollapsed ? 'border-0' : 'border border-border',
+          )}
+          leftCollapsed={inventoryCollapsed}
+          rightCollapsed={detailCollapsed}
+          onLeftCollapsedChange={setInventoryCollapsed}
+          onRightCollapsedChange={setDetailCollapsed}
+          rightFixedWidth="var(--workspace-master-width)"
+          left={
+            <>
+              <WorkspacePaneHeader title="Inventory" className={cn(detailCollapsed && 'pr-20')}>
+                <Badge variant="outline" className="h-5 px-2 text-xs">
+                  {equipment.length}
+                </Badge>
+                <div className="ml-auto flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Toggle equipment restrictions"
+                        onClick={toggleIgnoreRestrictions}
                         className={cn(
-                          'flex items-center gap-3 px-3 py-2 rounded-lg border-l-4 border border-border/25 transition-colors',
-                          item.equipped
-                            ? 'border-l-accent bg-accent/5'
-                            : 'border-l-transparent hover:bg-muted/40',
+                          'flex size-8 cursor-pointer items-center justify-center rounded-md border transition-colors',
+                          ignoreEquipRestrictions
+                            ? 'border-warning/50 bg-warning/10 text-warning hover:bg-warning/15'
+                            : 'border-border text-muted-foreground hover:bg-secondary hover:text-foreground',
                         )}
                       >
-                        {/* Type icon */}
-                        <ItemIcon
-                          className={cn(
-                            'h-4 w-4 shrink-0',
-                            item.equipped ? 'text-primary' : 'text-muted-foreground',
-                          )}
-                          weight={item.equipped ? 'fill' : 'regular'}
+                        <ShieldWarning
+                          className="size-4"
+                          weight={ignoreEquipRestrictions ? 'fill' : 'regular'}
                         />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {ignoreEquipRestrictions
+                        ? 'Restrictions ignored — click to enforce armor slots and proficiency'
+                        : 'Enforce armor slots and proficiency — click to ignore'}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Button onClick={() => setAddItemOpen(true)} size="sm" className="h-8 gap-1.5">
+                    <Plus className="size-4" />
+                    Add Item
+                  </Button>
+                </div>
+              </WorkspacePaneHeader>
 
-                        {/* Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-medium text-sm">{item.name}</span>
-                            {item.rarity && item.rarity !== 'none' && (
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'text-[10px] px-1.5 py-0 capitalize h-4',
-                                  getRarityClass(item.rarity),
-                                )}
-                              >
-                                {item.rarity}
-                              </Badge>
+              <div className="shrink-0 overflow-x-auto border-b border-border bg-surface-raised/45">
+                <div className="grid min-w-[820px] grid-cols-[1fr_0.8fr_0.7fr_1.8fr] divide-x divide-border">
+                  <div className="px-4 py-3">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Scales className="size-5 text-primary" weight="fill" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wide">
+                        Weight
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-baseline justify-between gap-3">
+                      <span
+                        className={cn(
+                          'font-mono text-sm font-semibold',
+                          isEncumbered && 'text-destructive',
+                        )}
+                      >
+                        {totalWeight.toFixed(1)} / {carryCapacity} lb
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {isEncumbered ? 'Encumbered' : `${encumbrancePct.toFixed(0)}%`}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn('h-full rounded-full transition-all', encumbranceTone)}
+                        style={{ width: `${encumbrancePct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="px-4 py-3">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Diamond className="size-5 text-violet-400" weight="fill" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wide">
+                        Attunement
+                      </span>
+                    </div>
+                    <p
+                      className={cn(
+                        'mt-2 font-mono text-base font-semibold',
+                        attunedCount >= MAX_ATTUNEMENT_SLOTS && 'text-destructive',
+                      )}
+                    >
+                      {attunedCount} / {MAX_ATTUNEMENT_SLOTS}
+                    </p>
+                    <div className="mt-2 flex gap-1.5">
+                      {(['first', 'second', 'third'] as const)
+                        .slice(0, MAX_ATTUNEMENT_SLOTS)
+                        .map((slot, index) => (
+                          <span
+                            key={slot}
+                            className={cn(
+                              'h-1.5 flex-1 rounded-full',
+                              index < attunedCount
+                                ? attunedCount >= MAX_ATTUNEMENT_SLOTS
+                                  ? 'bg-destructive'
+                                  : 'bg-violet-500'
+                                : 'bg-muted',
                             )}
-                            {item.armorType && (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] px-1.5 py-0 capitalize h-4"
-                              >
-                                {item.armorType}
-                              </Badge>
-                            )}
-                            {item.weaponCategory && (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] px-1.5 py-0 capitalize h-4"
-                              >
-                                {item.weaponCategory}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                            {item.weight !== undefined && <span>{item.weight} lb</span>}
-                            {item.ac !== undefined && <span>AC {item.ac}</span>}
-                            {dmg && <span>{dmg}</span>}
-                            {item.range && <span>Range {item.range}</span>}
-                            {props && <span className="truncate">{props}</span>}
-                          </div>
-                        </div>
+                          />
+                        ))}
+                    </div>
+                  </div>
 
-                        {/* Controls */}
-                        <div className="flex items-center gap-3 shrink-0">
-                          {/* Qty stepper */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updateItem(item.id, {
-                                  quantity: Math.max(1, item.quantity - 1),
-                                })
-                              }
-                              className="h-5 w-5 rounded border border-border text-xs leading-none flex items-center justify-center hover:bg-muted disabled:opacity-40"
-                              disabled={item.quantity <= 1}
-                            >
-                              −
-                            </button>
-                            <span className="font-mono text-xs w-5 text-center">
-                              {item.quantity}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => updateItem(item.id, { quantity: item.quantity + 1 })}
-                              className="h-5 w-5 rounded border border-border text-xs leading-none flex items-center justify-center hover:bg-muted"
-                            >
-                              +
-                            </button>
-                          </div>
+                  <div className="px-4 py-3">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Shield className="size-5 text-warning" weight="fill" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wide">
+                        Armor Class
+                      </span>
+                    </div>
+                    <p className="mt-1 font-mono text-xl font-semibold">{calculatedAC}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {overrideAC !== undefined ? 'Override active' : 'Equipped armor'}
+                    </p>
+                  </div>
 
-                          {/* Equip */}
-                          {(isEquippable(item) || item.equipped) && (
-                            <div className="flex items-center gap-1" data-equip-ac-toggle="true">
-                              <Switch
-                                checked={item.equipped}
-                                onCheckedChange={() => toggleEquip(item.id)}
-                                className="scale-[0.75]"
-                              />
-                              <span className="text-xs text-muted-foreground">Equip</span>
-                            </div>
-                          )}
-
-                          {/* Attune */}
-                          {item.reqAttune && (
-                            <div className="flex items-center gap-1">
-                              <Switch
-                                checked={item.attuned ?? false}
-                                onCheckedChange={() => toggleAttune(item.id)}
-                                disabled={!item.attuned && attunedCount >= MAX_ATTUNEMENT_SLOTS}
-                                className="scale-[0.75]"
-                              />
-                              <span className="text-xs text-muted-foreground">Attune</span>
-                            </div>
-                          )}
-
-                          {/* Delete */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleRemoveItem(item.id)}
-                          >
-                            <Trash className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
+                  <div className="px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Coins className="size-5 text-yellow-500" weight="fill" />
+                        <span className="text-[11px] font-semibold uppercase tracking-wide">
+                          Currency
+                        </span>
                       </div>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {(totalCurrencyCopper / 100).toFixed(2)} gp
+                      </span>
+                    </div>
+                    <div className="mt-2 grid grid-cols-5 gap-1.5">
+                      {(
+                        [
+                          ['cp', 'CP'],
+                          ['sp', 'SP'],
+                          ['ep', 'EP'],
+                          ['gp', 'GP'],
+                          ['pp', 'PP'],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <div key={key} className="min-w-0">
+                          <Input
+                            type="number"
+                            min={0}
+                            aria-label={label}
+                            value={currency[key]}
+                            onChange={(event) => {
+                              const raw = Number.parseInt(event.target.value, 10)
+                              updateCurrency(key, Number.isNaN(raw) ? 0 : raw)
+                            }}
+                            className="h-7 min-w-0 px-1 text-center font-mono text-xs"
+                          />
+                          <span className="mt-0.5 block text-center text-[10px] font-semibold text-muted-foreground">
+                            {label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2.5">
+                <div className="relative min-w-56 flex-1">
+                  <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search inventory…"
+                    value={itemSearch}
+                    onChange={(event) => setItemSearch(event.target.value)}
+                    className="h-8 pl-8 text-sm"
+                  />
+                </div>
+                <div
+                  className="flex shrink-0 items-stretch gap-4 overflow-x-auto self-stretch"
+                  role="tablist"
+                  aria-label="Inventory category"
+                >
+                  {FILTER_CHIPS.map((chip) => {
+                    const active = itemTypeFilter === chip
+                    return (
+                      <button
+                        key={chip}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setItemTypeFilter(chip)}
+                        className={cn(
+                          'relative cursor-pointer border-b-2 px-0.5 text-xs font-semibold transition-colors',
+                          active
+                            ? 'border-primary text-foreground'
+                            : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+                        )}
+                      >
+                        {chip}
+                      </button>
                     )
-                  })
+                  })}
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-x-auto p-4">
+                {filteredEquipment.length === 0 ? (
+                  <div className="flex min-h-52 flex-col items-center justify-center text-center">
+                    <Backpack className="mb-3 size-9 text-muted-foreground/35" />
+                    <h3 className="text-sm font-semibold">
+                      {equipment.length === 0 ? 'No equipment yet' : 'No matching equipment'}
+                    </h3>
+                    <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                      {equipment.length === 0
+                        ? 'Add an item to begin building this character’s inventory.'
+                        : 'Adjust the search or category filter to see more items.'}
+                    </p>
+                    {equipment.length === 0 && (
+                      <Button
+                        size="sm"
+                        className="mt-4 gap-1.5"
+                        onClick={() => setAddItemOpen(true)}
+                      >
+                        <Plus className="size-4" />
+                        Add Item
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex h-full min-w-[760px] flex-col overflow-hidden rounded-md border border-border bg-background">
+                    <div className="grid shrink-0 grid-cols-[minmax(16rem,1fr)_7rem_8rem_8rem_2.5rem] items-center border-b border-border bg-surface-raised px-3 py-2 text-[length:var(--font-size-caption)] font-semibold uppercase leading-[var(--line-height-caption)] tracking-[0.08em] text-muted-foreground">
+                      <span>Item</span>
+                      <span className="text-center">Quantity</span>
+                      <span className="text-center">Equipped</span>
+                      <span className="text-center">Attuned</span>
+                      <span className="sr-only">Actions</span>
+                    </div>
+                    <ScrollArea className="min-h-0 flex-1 overflow-hidden">
+                      <div className="divide-y divide-border">
+                        {filteredEquipment.map((item) => {
+                          const category = getItemCategory(item)
+                          const ItemIcon =
+                            category === 'Weapons'
+                              ? Sword
+                              : category === 'Armor'
+                                ? Shield
+                                : category === 'Ammunition'
+                                  ? Target
+                                  : category === 'Potions'
+                                    ? Flask
+                                    : category === 'Scrolls'
+                                      ? Scroll
+                                      : Package
+                          const dmg = getDamageSummary(item)
+                          const props = getPropertySummary(item, itemPropertyByAbbr)
+                          const selected = selectedItem?.id === item.id
+
+                          return (
+                            <div
+                              key={item.id}
+                              className={cn(
+                                'grid min-h-14 grid-cols-[minmax(16rem,1fr)_7rem_8rem_8rem_2.5rem] items-center px-3 text-sm transition-colors',
+                                selected
+                                  ? 'bg-surface-selected'
+                                  : 'bg-workspace-pane hover:bg-surface-hover',
+                              )}
+                            >
+                              <button
+                                type="button"
+                                aria-pressed={selected}
+                                aria-label={`Inspect ${item.name}`}
+                                onClick={() => {
+                                  setSelectedItemId(item.id)
+                                  setDetailCollapsed(false)
+                                }}
+                                className="flex min-w-0 cursor-default items-center gap-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                              >
+                                <ItemIcon
+                                  className={cn(
+                                    'size-5 shrink-0',
+                                    item.equipped ? 'text-primary' : 'text-muted-foreground',
+                                  )}
+                                  weight={item.equipped ? 'fill' : 'regular'}
+                                />
+                                <div className="min-w-0">
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <span className="truncate font-medium">{item.name}</span>
+                                    {item.rarity && item.rarity !== 'none' && (
+                                      <Badge
+                                        variant="outline"
+                                        className={cn(
+                                          'h-5 shrink-0 px-1.5 text-[10px] capitalize',
+                                          getRarityClass(item.rarity),
+                                        )}
+                                      >
+                                        {item.rarity}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                    {[category, item.source, dmg, props]
+                                      .filter(Boolean)
+                                      .join(' · ')}
+                                  </p>
+                                </div>
+                              </button>
+
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  type="button"
+                                  aria-label={`Decrease ${item.name} quantity`}
+                                  onClick={() =>
+                                    updateItem(item.id, {
+                                      quantity: Math.max(1, item.quantity - 1),
+                                    })
+                                  }
+                                  className="flex size-7 cursor-pointer items-center justify-center rounded border border-border text-sm hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
+                                  disabled={item.quantity <= 1}
+                                >
+                                  −
+                                </button>
+                                <span className="w-7 text-center font-mono text-xs">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  type="button"
+                                  aria-label={`Increase ${item.name} quantity`}
+                                  onClick={() =>
+                                    updateItem(item.id, { quantity: item.quantity + 1 })
+                                  }
+                                  className="flex size-7 cursor-pointer items-center justify-center rounded border border-border text-sm hover:bg-secondary"
+                                >
+                                  +
+                                </button>
+                              </div>
+
+                              <div className="flex items-center justify-center">
+                                {isEquippable(item) || item.equipped ? (
+                                  <Switch
+                                    aria-label={`Equip ${item.name}`}
+                                    checked={item.equipped}
+                                    onCheckedChange={() => toggleEquip(item.id)}
+                                    data-equip-ac-toggle="true"
+                                  />
+                                ) : (
+                                  <span className="text-xs text-muted-foreground/60">—</span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-center">
+                                {item.reqAttune ? (
+                                  <Switch
+                                    aria-label={`Attune ${item.name}`}
+                                    checked={item.attuned ?? false}
+                                    onCheckedChange={() => toggleAttune(item.id)}
+                                    disabled={!item.attuned && attunedCount >= MAX_ATTUNEMENT_SLOTS}
+                                  />
+                                ) : (
+                                  <span className="text-xs text-muted-foreground/60">—</span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="size-9 cursor-pointer p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                  aria-label={`Remove ${item.name}`}
+                                  onClick={() => handleRemoveItem(item.id)}
+                                >
+                                  <Trash className="size-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </ScrollArea>
+                  </div>
                 )}
               </div>
-            </ScrollArea>
 
-            {/* Sources accordion footer */}
-            <div className="px-4 pb-4 border-t border-border shrink-0">
-              <SourcesAccordion
-                sectionId="equipment"
-                rows={getSourcesRowsBySection('equipment')}
-                emptyText="Add equipment to see source attribution."
-              />
-            </div>
-          </Card>
-        </div>
-      </div>
+              <div className="shrink-0 border-t border-border px-4 pb-4">
+                <SourcesAccordion
+                  sectionId="equipment"
+                  title="Sources"
+                  rows={getSourcesRowsBySection('equipment')}
+                  emptyText="Add equipment to see source attribution."
+                />
+              </div>
+            </>
+          }
+          right={
+            <>
+              <WorkspacePaneHeader title="Item details" className="pr-20" />
+              <ScrollArea className="flex-1 overflow-hidden">
+                <WorkspaceDetailContent className="space-y-5">
+                  {selectedItem ? (
+                    <>
+                      <div>
+                        <div className="flex items-start gap-3">
+                          <Package className="mt-0.5 size-7 shrink-0 text-primary" weight="fill" />
+                          <div className="min-w-0">
+                            <h2 className="text-xl font-semibold">{selectedItem.name}</h2>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {[getItemCategory(selectedItem), selectedItem.source]
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {selectedItem.rarity && selectedItem.rarity !== 'none' && (
+                            <Badge
+                              variant="outline"
+                              className={cn('capitalize', getRarityClass(selectedItem.rarity))}
+                            >
+                              {selectedItem.rarity}
+                            </Badge>
+                          )}
+                          {selectedItem.equipped && <Badge variant="secondary">Equipped</Badge>}
+                          {selectedItem.attuned && <Badge variant="secondary">Attuned</Badge>}
+                          {selectedItem.reqAttune && !selectedItem.attuned && (
+                            <Badge variant="outline">Requires attunement</Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background">
+                        {[
+                          ['Quantity', selectedItem.quantity],
+                          [
+                            'Weight',
+                            selectedItem.weight !== undefined
+                              ? `${selectedItem.weight} lb each`
+                              : '—',
+                          ],
+                          ['Armor Class', selectedItem.ac ?? '—'],
+                          ['Damage', getDamageSummary(selectedItem) ?? '—'],
+                          ['Range', selectedItem.range ?? '—'],
+                          [
+                            'Properties',
+                            getPropertySummary(selectedItem, itemPropertyByAbbr) ?? '—',
+                          ],
+                        ].map(([label, value]) => (
+                          <div
+                            key={String(label)}
+                            className="min-w-0 border border-border/60 px-3 py-2.5"
+                          >
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {label}
+                            </p>
+                            <p className="mt-1 break-words text-sm font-medium">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {selectedItemEntries.length > 0 ? (
+                        <section className="border-t border-border pt-4">
+                          <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                            Description
+                          </h3>
+                          <div className="prose prose-sm mt-3 max-w-none text-foreground dark:prose-invert">
+                            <RenderedEntryWithTooltip
+                              entry={selectedItemEntries}
+                              recursiveLookup={recursiveLookup}
+                            />
+                          </div>
+                        </section>
+                      ) : selectedItem.description ? (
+                        <section className="border-t border-border pt-4">
+                          <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                            Description
+                          </h3>
+                          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">
+                            {selectedItem.description}
+                          </p>
+                        </section>
+                      ) : (
+                        <p className="border-t border-border pt-4 text-sm italic text-muted-foreground">
+                          No description is available for this item.
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex min-h-40 items-center justify-center text-center text-sm text-muted-foreground">
+                      Select an inventory item to inspect its details.
+                    </div>
+                  )}
+                </WorkspaceDetailContent>
+              </ScrollArea>
+            </>
+          }
+        />
+      </WorkspaceBody>
 
       <ItemSelectionModal
         open={addItemOpen}
@@ -703,6 +776,6 @@ export function EquipmentPage() {
           }
         }}
       />
-    </div>
+    </WorkspacePage>
   )
 }

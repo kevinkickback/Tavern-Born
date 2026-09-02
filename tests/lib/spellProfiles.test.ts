@@ -75,7 +75,7 @@ describe('spellProfiles', () => {
     expect(profiles[2].label).toBe(SPECIAL_SPELL_PROFILE_LABEL)
   })
 
-  test('ensureSpellProfiles adds subclass always-prepared and known spells', () => {
+  test('ensureSpellProfiles merges subclass grants into the parent class profile', () => {
     const character = makeCharacterFixture({
       class: 'Fighter',
       classSource: 'PHB',
@@ -98,6 +98,14 @@ describe('spellProfiles', () => {
     })
 
     const classesById = new Map([
+      [
+        'class:Wizard|PHB',
+        makeClassFixture({
+          name: 'Wizard',
+          source: 'PHB',
+          casterProgression: 'full',
+        }),
+      ],
       [
         'class:Fighter|PHB',
         makeClassFixture({
@@ -127,13 +135,65 @@ describe('spellProfiles', () => {
 
     const profiles = ensureSpellProfiles(character, classesById)
     const classProfile = profiles.find((profile) => profile.id === 'class:Fighter|PHB')
-    const subclassProfile = profiles.find((profile) =>
-      profile.id.includes('Eldritch Knight|PHB:prepared'),
-    )
 
-    expect(classProfile?.spellsKnown).toContain('mage armor')
-    expect(subclassProfile?.alwaysPrepared).toBe(true)
-    expect(subclassProfile?.spellsKnown).toContain('shield')
+    expect(profiles.some((profile) => profile.id.startsWith('subclass:'))).toBe(false)
+    expect(classProfile?.spellsKnown).toEqual(expect.arrayContaining(['mage armor', 'shield']))
+    expect(classProfile?.fixedSpells).toEqual(expect.arrayContaining(['mage armor', 'shield']))
+    expect(classProfile?.alwaysPreparedSpells).toEqual(['shield'])
+
+    const known = collectKnownSpells(profiles)
+    expect(known.preparedSpells).toContain('shield')
+    expect(known.preparedSpells).not.toContain('mage armor')
+  })
+
+  test('ensureSpellProfiles models Battle Smith spells as locked, always-prepared Artificer spells', () => {
+    const character = makeCharacterFixture({
+      class: 'Artificer',
+      classSource: 'PHB',
+      subclass: 'Battle Smith',
+      subclassSource: 'PHB',
+      level: 3,
+      classProgression: [
+        {
+          name: 'Artificer',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Battle Smith',
+          subclassSource: 'PHB',
+        },
+      ],
+      spells: {
+        spellProfiles: [],
+        spellSlots: makeCharacterFixture().spells.spellSlots,
+      },
+    })
+    const classesById = new Map([
+      [
+        'class:Artificer|PHB',
+        makeClassFixture({
+          name: 'Artificer',
+          source: 'PHB',
+          casterProgression: '1/2',
+          subclasses: [
+            {
+              name: 'Battle Smith',
+              shortName: 'Battle Smith',
+              source: 'PHB',
+              className: 'Artificer',
+              classSource: 'PHB',
+              additionalSpells: [{ prepared: { '3': ['heroism', 'shield'] } }],
+            },
+          ],
+        }),
+      ],
+    ])
+
+    const profiles = ensureSpellProfiles(character, classesById)
+    const artificer = profiles.find((profile) => profile.id === 'class:Artificer|PHB')
+
+    expect(artificer?.spellsKnown).toEqual(expect.arrayContaining(['heroism', 'shield']))
+    expect(artificer?.fixedSpells).toEqual(expect.arrayContaining(['heroism', 'shield']))
+    expect(artificer?.alwaysPreparedSpells).toEqual(expect.arrayContaining(['heroism', 'shield']))
   })
 
   test('buildClassSpellLevelKey includes class source to avoid multiclass collisions', () => {
@@ -267,6 +327,50 @@ describe('spellProfiles', () => {
     expect(slots.pact[1]?.max).toBe(2)
   })
 
+  test('calculateCharacterSpellSlots prefers 2024 progression for mixed-edition classes', () => {
+    const phbRows = Array.from({ length: 20 }, () => [2])
+    const xphbRows = Array.from({ length: 20 }, () => [2])
+    phbRows[16] = [4, 3, 3, 3, 3, 1, 1, 1, 1]
+    xphbRows[16] = [4, 3, 3, 3, 2, 1, 1, 1, 1]
+    const classesById = new Map([
+      [
+        'class:Wizard|PHB',
+        makeClassFixture({
+          name: 'Wizard',
+          source: 'PHB',
+          edition: 'classic',
+          classTableGroups: [{ rowsSpellProgression: phbRows }],
+        }),
+      ],
+      [
+        'class:Wizard|XPHB',
+        makeClassFixture({
+          name: 'Wizard',
+          source: 'XPHB',
+          edition: 'one',
+          classTableGroups: [{ rowsSpellProgression: xphbRows }],
+        }),
+      ],
+      ['class:Cleric|PHB', makeClassFixture({ name: 'Cleric', source: 'PHB', edition: 'classic' })],
+      ['class:Cleric|XPHB', makeClassFixture({ name: 'Cleric', source: 'XPHB', edition: 'one' })],
+    ])
+    const classicCharacter = makeCharacterFixture({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 9 },
+        { name: 'Cleric', source: 'PHB', levels: 8 },
+      ],
+    })
+    const mixedCharacter = makeCharacterFixture({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 9 },
+        { name: 'Cleric', source: 'XPHB', levels: 8 },
+      ],
+    })
+
+    expect(calculateCharacterSpellSlots(classicCharacter, classesById).shared[5]?.max).toBe(3)
+    expect(calculateCharacterSpellSlots(mixedCharacter, classesById).shared[5]?.max).toBe(2)
+  })
+
   test('calculateCharacterSpellSlots uses subclass caster progression for non-caster classes', () => {
     const character = makeCharacterFixture({
       class: 'Fighter',
@@ -290,6 +394,14 @@ describe('spellProfiles', () => {
     })
 
     const classesById = new Map([
+      [
+        'class:Wizard|PHB',
+        makeClassFixture({
+          name: 'Wizard',
+          source: 'PHB',
+          casterProgression: 'full',
+        }),
+      ],
       [
         'class:Fighter|PHB',
         makeClassFixture({

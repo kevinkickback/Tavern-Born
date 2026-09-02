@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 import type { GameData } from '@/types/5etools'
 
-const MINIMAL_GAME_DATA: GameData = {
+export const MINIMAL_GAME_DATA: GameData = {
   races: [],
   classes: [],
   backgrounds: [],
@@ -94,7 +94,12 @@ export async function ensureStartupPromptResolved(
     .getByRole('heading', { name: /Welcome to Tavern Born|Data Source Setup/i })
     .first()
 
-  if (await startupHeading.isVisible().catch(() => false)) {
+  const startupVisible = await startupHeading
+    .waitFor({ state: 'visible', timeout: 2000 })
+    .then(() => true)
+    .catch(() => false)
+
+  if (startupVisible) {
     await seedStartupDataSource(page, sourcePath, gameData)
     await page.reload()
   }
@@ -109,6 +114,7 @@ export async function selectCharacterFromHome(page: Page, name: string) {
   await expect(cardTitle).toBeVisible()
   await cardTitle.click()
 
-  // App header reflects active character when load has completed.
-  await expect(page.getByRole('heading', { level: 2, name })).toBeVisible()
+  await expect(page.getByRole('banner').getByText(name, { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Builder' }).click()
+  await expect(page.getByRole('complementary', { name: 'Builder navigation' })).toBeVisible()
 }

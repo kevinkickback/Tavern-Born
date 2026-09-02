@@ -1,13 +1,53 @@
 import { describe, expect, test } from 'vitest'
 import {
+  buildPrerequisiteSnapshot,
   checkAllPrerequisites,
   checkPrerequisite,
   prereqPactToFull,
   prereqSpellToFull,
 } from '@/lib/calculations/prerequisites'
-import { makePrereqCharacterSnapshotFixture } from '../fixtures/characterFixtures'
+import {
+  makeCharacterFixture,
+  makePrereqCharacterSnapshotFixture,
+} from '../fixtures/characterFixtures'
 
 describe('prerequisites', () => {
+  test('builds a progression-aware snapshot from canonical spell profiles', () => {
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 3 },
+        { name: 'Fighter', source: 'PHB', levels: 2 },
+      ],
+      spells: {
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: ['Fire Bolt'],
+            spellsKnown: ['Shield'],
+            preparedSpells: ['Magic Missile'],
+          },
+        ],
+        spellSlots: {},
+      },
+    })
+
+    const snapshot = buildPrerequisiteSnapshot({ character, viewingClass: 'Fighter' })
+
+    expect(snapshot.level).toBe(5)
+    expect(snapshot.class).toBe('Fighter')
+    expect(snapshot.progression?.classes).toEqual(character.classProgression)
+    expect(snapshot.spells).toEqual({
+      cantrips: ['Fire Bolt'],
+      spellsKnown: ['Shield'],
+      preparedSpells: [],
+    })
+  })
+
   test('checks class-specific level when className option is provided', () => {
     const character = makePrereqCharacterSnapshotFixture({
       level: 8,

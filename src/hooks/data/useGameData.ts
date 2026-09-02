@@ -23,6 +23,11 @@ import type {
   Subclass5e,
 } from '@/types/5etools'
 
+const EMPTY_ENTITY_LOOKUP = {}
+const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
+const EMPTY_STRING_LOOKUP: Readonly<Record<string, string>> = {}
+const EMPTY_STRING_LIST: readonly string[] = []
+
 /**
  * Raw unfiltered race list from the game data store. Does NOT apply the active character's
  * `allowedSources` or `preferNewerPrintings` suppression.
@@ -206,6 +211,36 @@ export function useClassLookup() {
   return useMemo(() => gameData?.lookups?.classesByKey ?? {}, [gameData?.lookups?.classesByKey])
 }
 
+export function useRaceLookup() {
+  return useGameDataStore((state) => state.gameData?.lookups?.racesByKey) ?? EMPTY_ENTITY_LOOKUP
+}
+
+export function useBackgroundLookup() {
+  return (
+    useGameDataStore((state) => state.gameData?.lookups?.backgroundsByKey) ?? EMPTY_ENTITY_LOOKUP
+  )
+}
+
+export function useItemLookup() {
+  return useGameDataStore((state) => state.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
+}
+
+export function useItemPropertyLookup(): Readonly<Record<string, string>> {
+  return (
+    useGameDataStore((state) => state.gameData?.lookups?.itemPropertyByAbbr) ?? EMPTY_STRING_LOOKUP
+  )
+}
+
+export function useItemTypeLookup(): Readonly<Record<string, string>> {
+  return useGameDataStore((state) => state.gameData?.lookups?.itemTypeByAbbr) ?? EMPTY_STRING_LOOKUP
+}
+
+export function useSkillToAbilityMap(): Readonly<Record<string, string>> {
+  return (
+    useGameDataStore((state) => state.gameData?.lookups?.skillToAbilityMap) ?? EMPTY_STRING_LOOKUP
+  )
+}
+
 export function useSpellLookup() {
   const gameData = useGameDataStore((state) => state.gameData)
 
@@ -336,7 +371,7 @@ export function useItem(name: string, source?: string): Item5e | undefined {
  */
 export function useConditionNames(): readonly string[] {
   const conditionNames = useGameDataStore((state) => state.gameData?.lookups?.conditionNames)
-  return useMemo(() => conditionNames ?? [], [conditionNames])
+  return conditionNames ?? EMPTY_STRING_LIST
 }
 
 /**
@@ -345,7 +380,7 @@ export function useConditionNames(): readonly string[] {
  */
 export function useSkillList(): readonly string[] {
   const skillList = useGameDataStore((state) => state.gameData?.lookups?.skillList)
-  return useMemo(() => skillList ?? [], [skillList])
+  return skillList ?? EMPTY_STRING_LIST
 }
 
 export function useGameDataStatus() {

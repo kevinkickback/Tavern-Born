@@ -106,13 +106,8 @@ describe('RaceStep', () => {
     expect(getByText('Versatile')).toBeTruthy()
   })
 
-  test('suppresses older race reprints when preferNewerPrintings is enabled', () => {
+  test('renders the filtered race collection supplied by the wizard controller', () => {
     const races: Race5e[] = [
-      {
-        name: 'Aasimar',
-        source: 'MPMM',
-        reprintedAs: ['Aasimar|XPHB'],
-      } as Race5e,
       {
         name: 'Aasimar',
         source: 'XPHB',
@@ -125,11 +120,6 @@ describe('RaceStep', () => {
           ...INITIAL_CHARACTER_DATA,
           race: 'Aasimar',
           raceSource: 'XPHB',
-          allowedSources: ['XPHB', 'MPMM'],
-          variantRules: {
-            ...INITIAL_CHARACTER_DATA.variantRules,
-            preferNewerPrintings: true,
-          },
         }}
         onChange={vi.fn()}
         races={races}

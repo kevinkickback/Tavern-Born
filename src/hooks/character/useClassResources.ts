@@ -1,6 +1,9 @@
 import { useCallback, useMemo } from 'react'
-import { useClasses } from '@/hooks/data/useGameData'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useClassLookup } from '@/hooks/data/useGameData'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
+import { resolveClassReference } from '@/lib/5etools/entityResolvers'
+import { buildClassLookup } from '@/lib/5etools/lookups'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
 
@@ -21,7 +24,9 @@ export function useClassResources(): {
 } {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const classes = useClasses()
+  const { classes } = useFilteredGameData()
+  const rawClassLookup = useClassLookup()
+  const filteredClassLookup = useMemo(() => buildClassLookup(classes), [classes])
 
   const resources = useMemo((): ComputedClassResource[] => {
     if (!character) return []
@@ -31,9 +36,11 @@ export function useClassResources(): {
     const chaMod = Math.max(1, Math.floor((chaScore - 10) / 2))
 
     return progression.flatMap((entry) => {
-      const classData =
-        classes.find((c) => c.name === entry.name && c.source === entry.source) ??
-        classes.find((c) => c.name === entry.name)
+      const classData = resolveClassReference(
+        entry,
+        { classesByKey: filteredClassLookup },
+        { classesByKey: rawClassLookup },
+      )
       const defs = getClassResourceDefs(classData, entry.levels ?? 1)
       const levelIdx = Math.max(0, Math.min(19, (entry.levels ?? 1) - 1))
       return defs.map((def) => {
@@ -49,7 +56,7 @@ export function useClassResources(): {
         }
       })
     })
-  }, [character, classes])
+  }, [character, filteredClassLookup, rawClassLookup])
 
   const updateCurrent = useCallback(
     (id: string, value: number) => {

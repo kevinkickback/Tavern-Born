@@ -41,7 +41,15 @@ describe('useAnchoredHintPosition', () => {
       }),
     )
 
-    await waitFor(() => expect(result.current).toEqual({ top: 152, left: 16, arrowLeft: 124 }))
+    await waitFor(() =>
+      expect(result.current).toEqual({
+        top: 152,
+        left: 16,
+        arrowLeft: 124,
+        anchorTop: 100,
+        gap: 12,
+      }),
+    )
 
     covered = true
     act(() => window.dispatchEvent(new Event('scroll')))
@@ -49,7 +57,15 @@ describe('useAnchoredHintPosition', () => {
 
     covered = false
     act(() => window.dispatchEvent(new Event('scroll')))
-    await waitFor(() => expect(result.current).toEqual({ top: 152, left: 16, arrowLeft: 124 }))
+    await waitFor(() =>
+      expect(result.current).toEqual({
+        top: 152,
+        left: 16,
+        arrowLeft: 124,
+        anchorTop: 100,
+        gap: 12,
+      }),
+    )
   })
 
   test('rejects CSS-hidden and clipped anchors', () => {

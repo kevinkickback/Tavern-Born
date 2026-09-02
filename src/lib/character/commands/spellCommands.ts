@@ -7,11 +7,21 @@
 
 import { addSpellGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
-import type { Character } from '@/types/character'
+import type { Character, SpellProfile } from '@/types/character'
+import type { CharacterCommandResult } from './commandResult'
 
-export interface SpellCommandResult {
-  profileUpdate: Partial<Character['spells']>
-  provenanceUpdate: ProvenanceLedger
+export interface SpellCommandResult extends CharacterCommandResult {}
+
+function createSpellProfilePatch(
+  character: Character,
+  spellProfiles: SpellProfile[],
+): Partial<Character> {
+  return {
+    spells: {
+      ...character.spells,
+      spellProfiles,
+    },
+  }
 }
 
 /**
@@ -23,7 +33,7 @@ export interface SpellCommandResult {
  * @param spellKind - Type: 'cantrip' or 'spell'
  * @param profileId - Target spell profile ID
  * @param options - Additional options (source, grantedAtLevel, attribution mode)
- * @returns { profileUpdate, provenanceUpdate } - Apply both atomically
+ * @returns { characterPatch, provenanceUpdate } - Apply both atomically
  */
 export function addSpellToCharacter(
   character: Character,
@@ -71,9 +81,7 @@ export function addSpellToCharacter(
   const updatedLedger = addSpellGrant(ledger, spellName, sourceTag)
 
   return {
-    profileUpdate: {
-      spellProfiles: updatedProfiles,
-    },
+    characterPatch: createSpellProfilePatch(character, updatedProfiles),
     provenanceUpdate: updatedLedger,
   }
 }
@@ -85,7 +93,7 @@ export function addSpellToCharacter(
  * @param ledger - Current provenance ledger
  * @param spellName - Name of spell to remove
  * @param options - Additional options (kind, profileId for targeted removal)
- * @returns { profileUpdate, provenanceUpdate } - Apply both atomically
+ * @returns { characterPatch, provenanceUpdate } - Apply both atomically
  */
 export function removeSpellFromCharacter(
   character: Character,
@@ -128,9 +136,7 @@ export function removeSpellFromCharacter(
   const updatedLedger = { ...ledger, spells: newSpells }
 
   return {
-    profileUpdate: {
-      spellProfiles: updatedProfiles,
-    },
+    characterPatch: createSpellProfilePatch(character, updatedProfiles),
     provenanceUpdate: updatedLedger,
   }
 }
@@ -143,7 +149,7 @@ export function removeSpellFromCharacter(
  * @param removedSpellName - Spell being replaced
  * @param addedSpellName - New spell
  * @param profileId - Target spell profile
- * @returns { profileUpdate, provenanceUpdate } - Apply both atomically
+ * @returns { characterPatch, provenanceUpdate } - Apply both atomically
  */
 export function swapSpellOnCharacter(
   character: Character,
@@ -170,7 +176,7 @@ export function swapSpellOnCharacter(
   const afterAdd = addSpellToCharacter(
     {
       ...character,
-      spells: { ...character.spells, ...afterRemove.profileUpdate } as Character['spells'],
+      spells: afterRemove.characterPatch.spells ?? character.spells,
     },
     afterRemove.provenanceUpdate,
     addedSpellName,
@@ -193,7 +199,7 @@ export function swapSpellOnCharacter(
  * @param profileId - Target spell profile
  * @param cantrips - New cantrip list
  * @param spellsKnown - New spells known list
- * @returns { profileUpdate, provenanceUpdate } - Apply both atomically
+ * @returns { characterPatch, provenanceUpdate } - Apply both atomically
  */
 export function setProfileSpells(
   character: Character,
@@ -216,9 +222,7 @@ export function setProfileSpells(
   })
 
   return {
-    profileUpdate: {
-      spellProfiles: updatedProfiles,
-    },
+    characterPatch: createSpellProfilePatch(character, updatedProfiles),
     provenanceUpdate: ledger,
   }
 }
@@ -230,7 +234,7 @@ export function setProfileSpells(
  * @param ledger - Current provenance ledger (unchanged)
  * @param profileId - Target spell profile
  * @param spellName - Spell to toggle
- * @returns { profileUpdate, provenanceUpdate } - Apply both atomically
+ * @returns { characterPatch, provenanceUpdate } - Apply both atomically
  */
 export function toggleSpellPrepared(
   character: Character,
@@ -267,9 +271,7 @@ export function toggleSpellPrepared(
   })
 
   return {
-    profileUpdate: {
-      spellProfiles: updatedProfiles,
-    },
+    characterPatch: createSpellProfilePatch(character, updatedProfiles),
     provenanceUpdate: ledger,
   }
 }
@@ -282,7 +284,7 @@ export function toggleSpellPrepared(
  * @param profileId - Target spell profile (usually 'special')
  * @param choiceId - Racial spellcasting choice identifier
  * @param spellName - Selected spell name
- * @returns { profileUpdate, provenanceUpdate } - Apply both atomically
+ * @returns { characterPatch, provenanceUpdate } - Apply both atomically
  */
 export function selectRacialSpell(
   character: Character,
@@ -293,14 +295,28 @@ export function selectRacialSpell(
 ): SpellCommandResult {
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (profile.id !== profileId) return profile
-
-    if (profile.cantrips.includes(spellName)) {
-      return profile
-    }
-
+    const choice =
+      profile.type === 'racial'
+        ? profile.choices?.find((entry) => entry.id === choiceId)
+        : undefined
+    const isCantrip = choice?.isCantrip ?? true
+    const choices = profile.choices?.map((entry) => {
+      if (
+        entry.id !== choiceId ||
+        entry.selected.includes(spellName) ||
+        entry.selected.length >= entry.count
+      ) {
+        return entry
+      }
+      return { ...entry, selected: [...entry.selected, spellName] }
+    })
     return {
       ...profile,
-      cantrips: [...profile.cantrips, spellName],
+      ...(choices ? { choices } : {}),
+      cantrips: isCantrip ? [...new Set([...profile.cantrips, spellName])] : profile.cantrips,
+      spellsKnown: isCantrip
+        ? profile.spellsKnown
+        : [...new Set([...profile.spellsKnown, spellName])],
     }
   })
 
@@ -309,9 +325,7 @@ export function selectRacialSpell(
   const updatedLedger = addSpellGrant(ledger, spellName, sourceTag)
 
   return {
-    profileUpdate: {
-      spellProfiles: updatedProfiles,
-    },
+    characterPatch: createSpellProfilePatch(character, updatedProfiles),
     provenanceUpdate: updatedLedger,
   }
 }
@@ -324,7 +338,7 @@ export function selectRacialSpell(
  * @param profileId - Target spell profile
  * @param choiceId - Racial spellcasting choice identifier
  * @param spellName - Selected spell name
- * @returns { profileUpdate, provenanceUpdate } - Apply both atomically
+ * @returns { characterPatch, provenanceUpdate } - Apply both atomically
  */
 export function removeRacialSpell(
   character: Character,
@@ -338,7 +352,13 @@ export function removeRacialSpell(
 
     return {
       ...profile,
+      choices: profile.choices?.map((choice) =>
+        choice.id === choiceId
+          ? { ...choice, selected: choice.selected.filter((name) => name !== spellName) }
+          : choice,
+      ),
       cantrips: profile.cantrips.filter((s) => s !== spellName),
+      spellsKnown: profile.spellsKnown.filter((s) => s !== spellName),
       preparedSpells: profile.preparedSpells.filter((s) => s !== spellName),
     }
   })
@@ -356,9 +376,35 @@ export function removeRacialSpell(
   const updatedLedger = { ...ledger, spells: newSpells }
 
   return {
-    profileUpdate: {
-      spellProfiles: updatedProfiles,
-    },
+    characterPatch: createSpellProfilePatch(character, updatedProfiles),
     provenanceUpdate: updatedLedger,
+  }
+}
+
+export function syncSpellProfiles(
+  character: Character,
+  ledger: ProvenanceLedger,
+  spellProfiles: SpellProfile[],
+): SpellCommandResult {
+  return {
+    characterPatch: createSpellProfilePatch(character, spellProfiles),
+    provenanceUpdate: ledger,
+  }
+}
+
+export function setRacialCastingAbility(
+  character: Character,
+  ledger: ProvenanceLedger,
+  profileId: string,
+  ability: string,
+): SpellCommandResult {
+  const spellProfiles = character.spells.spellProfiles.map((profile) =>
+    profile.id === profileId && profile.type === 'racial'
+      ? { ...profile, castingAbility: ability }
+      : profile,
+  )
+  return {
+    characterPatch: createSpellProfilePatch(character, spellProfiles),
+    provenanceUpdate: ledger,
   }
 }

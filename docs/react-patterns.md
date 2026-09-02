@@ -101,3 +101,16 @@ Settings, Compendium, and all Details sub-nav pages use a centered max-width con
 ```
 
 Exceptions: character cards, sidebar (full-bleed by design).
+
+---
+
+## Feature Controller Hooks
+
+When a route coordinates multiple independently changing domains, extract one controller hook per
+domain. A controller owns its picker/modal state, derives its view model through pure `src/lib/`
+functions, and exposes command-backed actions. Keep the route responsible for section arrangement,
+pane state, and cross-domain presentation only.
+
+`BuildClassPage` is the reference: subclass, spell, ASI/feat, and optional-feature controllers live
+under `src/pages/build/class/hooks/`. Do not move canonical rules into a controller; rules remain
+pure calculations or commands.

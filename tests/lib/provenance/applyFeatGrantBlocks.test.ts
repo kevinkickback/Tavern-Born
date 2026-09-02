@@ -13,7 +13,9 @@ describe('parseFeatGrantBlocks', () => {
 
   test('parses fixed feat grant: { "feat name|source": true }', () => {
     const result = parseFeatGrantBlocks([{ 'magic initiate; cleric|xphb': true }])
-    expect(result).toEqual([{ type: 'fixed', name: 'magic initiate; cleric', source: 'xphb' }])
+    expect(result).toEqual([
+      { type: 'fixed', name: 'magic initiate', source: 'xphb', variant: 'cleric' },
+    ])
   })
 
   test('parses fixed feat grant without source', () => {
@@ -51,12 +53,13 @@ describe('applyFeatGrantBlocks', () => {
       'XPHB',
     )
 
-    expect(ledger.feats['magic initiate; cleric']).toBeDefined()
-    expect(ledger.feats['magic initiate; cleric'][0]).toMatchObject({
+    expect(ledger.feats['magic initiate']).toBeDefined()
+    expect(ledger.feats['magic initiate'][0]).toMatchObject({
       sourceType: 'background',
       sourceName: 'Acolyte',
       grantType: 'fixed',
       sourceRef: 'xphb',
+      grantVariant: 'cleric',
     })
   })
 
@@ -168,11 +171,12 @@ describe('applyBackgroundGrants feat integration', () => {
       emptyProvenance(),
     )
 
-    expect(ledger.feats['magic initiate; cleric']).toBeDefined()
-    expect(ledger.feats['magic initiate; cleric'][0]).toMatchObject({
+    expect(ledger.feats['magic initiate']).toBeDefined()
+    expect(ledger.feats['magic initiate'][0]).toMatchObject({
       sourceType: 'background',
       sourceName: 'Acolyte',
       grantType: 'fixed',
+      grantVariant: 'cleric',
     })
   })
 
