@@ -109,6 +109,11 @@ Class equipment choice behavior:
 - `applyClassSelection(cls, subclass)` now resolves starting equipment using the player's persisted class choice (`character.classEquipmentChoices["class|source"]`) and defaults to `A` when unset.
 - `applyClassEquipmentChoice(cls, choice)` updates both the inventory items and provenance equipment grants for the selected class source.
 - Class equipment provenance is replaced per class source to avoid stale grants when switching between `A` and `B` equipment packages.
+- Equipment that still has a grant from another source remains materialized when a class package is replaced; only the matching class source tag is removed.
+
+Feat replacement behavior:
+- Regular selected feats use normalized `name|source` identity. Replacing a feat with a same-name entity from another source retracts the old source's option effects and does not copy its stored options.
+- Feat ledger entries remain grouped by normalized name, so replacement removes only the matching manual-choice tag and preserves tags for fixed or same-name grants from other sources.
 
 Manual equipment behavior:
 - `equipmentCommands.ts` materializes inventory and manual ledger tags together for add/remove actions.

@@ -22,7 +22,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectFolder: () => ipcRenderer.invoke('dialog:selectFolder'),
   readLocalJson: (filePath: string) => ipcRenderer.invoke('fs:readJson', filePath),
   setUnsavedChanges: (value: boolean) => ipcRenderer.send('state:setUnsavedChanges', value),
-  setLocalDataPath: (folderPath: string) => ipcRenderer.send('config:setLocalDataPath', folderPath),
   onConfirmClose: (callback: () => void) => {
     ipcRenderer.on('app:confirmClose', callback)
   },
@@ -78,7 +77,6 @@ declare global {
       selectFolder: () => Promise<string | null>
       readLocalJson: (filePath: string) => Promise<unknown>
       setUnsavedChanges?: (value: boolean) => void
-      setLocalDataPath: (folderPath: string) => void
       onConfirmClose: (callback: () => void) => void
       removeConfirmCloseListener: (callback: () => void) => void
       forceClose: () => void

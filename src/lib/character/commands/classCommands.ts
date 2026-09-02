@@ -178,7 +178,7 @@ export function applyClassEquipmentChoiceCommand(
 ): CharacterCommandResult {
   const equipmentToRemove = Object.entries(ledger.equipment)
     .filter(([, tags]) =>
-      tags.some(
+      tags.every(
         (tag) =>
           tag.sourceType === 'class' &&
           tag.sourceName === cls.name &&

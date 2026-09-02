@@ -242,4 +242,48 @@ describe('Class Commands', () => {
     expect(result.provenanceUpdate.equipment.dagger).toBeUndefined()
     expect(result.provenanceUpdate.equipment.shortbow).toEqual([classTag])
   })
+
+  test('preserves equipment that remains granted by another source', () => {
+    const dagger = { name: 'Dagger', source: 'PHB', type: 'M' } as Item5e
+    const shortbow = { name: 'Shortbow', source: 'PHB', type: 'R' } as Item5e
+    const character = makeCharacterFixture({
+      classEquipmentChoices: { 'Rogue|PHB': ['a'] },
+      equipment: [
+        {
+          id: 'shared-dagger',
+          name: 'Dagger',
+          source: 'PHB',
+          type: 'M',
+          quantity: 1,
+          equipped: false,
+        },
+      ],
+    })
+    const classTag = makeSourceTag('class', 'Rogue', 'fixed', 'PHB')
+    const manualTag = makeSourceTag('manual', 'User Choice', 'choice')
+    const ledger = {
+      ...(character.provenance ?? emptyProvenance()),
+      equipment: { dagger: [classTag, manualTag] },
+    }
+
+    const result = applyClassEquipmentChoiceCommand(
+      character,
+      ledger,
+      {
+        name: 'Rogue',
+        source: 'PHB',
+        startingEquipment: { defaultData: [{ A: ['dagger|PHB'], B: ['shortbow|PHB'] }] },
+      },
+      0,
+      'B',
+      buildItemLookup([dagger, shortbow]),
+    )
+
+    expect(result.characterPatch.equipment?.map((entry) => entry.name)).toEqual([
+      'Dagger',
+      'Shortbow',
+    ])
+    expect(result.provenanceUpdate.equipment.dagger).toEqual([manualTag])
+    expect(result.provenanceUpdate.equipment.shortbow).toEqual([classTag])
+  })
 })

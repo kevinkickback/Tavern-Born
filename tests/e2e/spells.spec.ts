@@ -1,15 +1,9 @@
 import { expect, test } from '@playwright/test'
-
-async function closeStartupModalIfOpen(page: import('@playwright/test').Page) {
-  const closeButton = page.getByRole('button', { name: 'Close' })
-  if ((await closeButton.count()) > 0) {
-    await closeButton.first().click()
-  }
-}
+import { ensureStartupPromptResolved } from './helpers/startup'
 
 test('spells page redirects home without an active character', async ({ page }) => {
   await page.goto('/#/spells')
-  await closeStartupModalIfOpen(page)
+  await ensureStartupPromptResolved(page)
 
   await expect(page).toHaveURL(/\/#\/$/)
   await expect(page.locator('main')).toContainText('No Characters Yet')
@@ -18,7 +12,7 @@ test('spells page redirects home without an active character', async ({ page }) 
 test.describe('spells route guard without an active character', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/#/spells')
-    await closeStartupModalIfOpen(page)
+    await ensureStartupPromptResolved(page)
   })
 
   test('redirects to the character library', async ({ page }) => {

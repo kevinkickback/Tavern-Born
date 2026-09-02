@@ -3,9 +3,11 @@ import {
   applyOptionalFeatureSelectionCommand,
   commitFeatOptionsCommand,
   editFeatOptionsCommand,
+  replaceFeatSelectionsCommand,
   replaceOptionalFeatureSelectionsCommand,
   retractFeatOptionsCommand,
 } from '@/lib/character/commands/featCommands'
+import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -120,5 +122,79 @@ describe('feat commands', () => {
     expect(edited.characterPatch.proficiencies?.skills).toEqual(['history'])
     expect(edited.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
     expect(edited.provenanceUpdate.proficiencies.skills.history).toHaveLength(1)
+  })
+
+  test('committing options preserves same-name choice records from another source', () => {
+    const phbChoice = {
+      id: 'magic-initiate-phb-options',
+      domain: 'featOptions' as const,
+      sourceTag: makeSourceTag('feat', 'Magic Initiate', 'choice', 'PHB'),
+      chooseCount: 1,
+      optionPool: ['Wizard'],
+      selected: ['Wizard'],
+      status: 'resolved' as const,
+    }
+    const xphbChoice = {
+      ...phbChoice,
+      id: 'magic-initiate-xphb-options',
+      sourceTag: makeSourceTag('feat', 'Magic Initiate', 'choice', 'XPHB'),
+    }
+    const ledger = { ...emptyProvenance(), choices: [phbChoice, xphbChoice] }
+
+    const result = commitFeatOptionsCommand(
+      makeCharacterFixture(),
+      ledger,
+      { name: 'Magic Initiate', source: 'PHB' },
+      {},
+    )
+
+    expect(result.provenanceUpdate.choices).toEqual([xphbChoice])
+  })
+
+  test('replaces same-name feats by source without retaining stale options', () => {
+    const oldFeat = {
+      id: 'magic-initiate-phb',
+      name: 'Magic Initiate',
+      source: 'PHB',
+      description: 'Legacy version',
+      options: { skills: ['Arcana'] },
+    }
+    const character = makeCharacterFixture({
+      feats: [oldFeat],
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        skills: ['arcana'],
+        languages: [],
+        savingThrows: [],
+      },
+      skills: { arcana: { proficient: true, expertise: false, bonus: 0 } },
+    })
+    const oldFeatTag = makeSourceTag('manual', 'User Choice', 'choice', 'PHB')
+    const fixedFeatTag = makeSourceTag('background', 'Sage', 'fixed', 'XPHB')
+    const optionTag = makeSourceTag('feat', 'Magic Initiate', 'choice', 'PHB')
+    let ledger = addGrant(emptyProvenance(), 'feats', oldFeat.name, oldFeatTag)
+    ledger = addGrant(ledger, 'feats', oldFeat.name, fixedFeatTag)
+    ledger = addGrant(ledger, 'skills', 'Arcana', optionTag)
+
+    const result = replaceFeatSelectionsCommand(character, ledger, [
+      { name: 'Magic Initiate', source: 'XPHB' },
+    ])
+
+    expect(result.characterPatch.feats).toEqual([
+      expect.objectContaining({
+        name: 'Magic Initiate',
+        source: 'XPHB',
+        description: '',
+        options: undefined,
+      }),
+    ])
+    expect(result.characterPatch.proficiencies?.skills).toEqual([])
+    expect(result.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
+    expect(result.provenanceUpdate.feats['magic initiate']).toEqual([
+      fixedFeatTag,
+      makeSourceTag('manual', 'User Choice', 'choice', 'XPHB'),
+    ])
   })
 })
