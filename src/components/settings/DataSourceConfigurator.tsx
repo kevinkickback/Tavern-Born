@@ -236,9 +236,15 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
     if (!dataSourceConfig) return
     const previousChangedAt = lastDataChangedAt
     try {
-      await loadGameData(dataSourceConfig, true)
+      const contentChanged = await loadGameData(dataSourceConfig, true)
+      const { error: loadError } = useGameDataStore.getState()
+      if (loadError) {
+        toast.error('Failed to check for updates', { description: loadError })
+        return
+      }
+
       const newChangedAt = useGameDataStore.getState().lastDataChangedAt
-      if (newChangedAt !== previousChangedAt) {
+      if (contentChanged || newChangedAt !== previousChangedAt) {
         toast.success('Game data updated successfully!')
       } else {
         toast.info('Data is already up to date')
@@ -248,14 +254,20 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
     }
   }
 
-  const handleClear = () => {
+  const handleClear = async () => {
     autoOpenedSelectorRef.current = true
-    clearGameData()
     setIsSelectingDataSource(true)
     setSourcePath('')
     setValidationStatus('idle')
     setValidationResult(null)
-    toast.info('Game data cleared')
+    try {
+      await clearGameData()
+      toast.info('Game data cleared')
+    } catch (clearError) {
+      toast.error('Failed to clear cached game data', {
+        description: clearError instanceof Error ? clearError.message : 'Unknown error',
+      })
+    }
   }
 
   const getProgressPercent = () => {

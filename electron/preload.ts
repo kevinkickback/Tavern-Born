@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   checkForUpdate: () => ipcRenderer.invoke('update:check'),
   downloadUpdate: () => ipcRenderer.invoke('update:download'),
+  openPortableUpdatePage: () => ipcRenderer.invoke('update:open-portable-page'),
   cancelUpdate: () => ipcRenderer.invoke('update:cancel'),
   installUpdate: () => ipcRenderer.invoke('update:install'),
   getUpdateStatus: () => ipcRenderer.invoke('update:status'),
@@ -84,6 +85,11 @@ declare global {
       // Update methods
       checkForUpdate: () => Promise<{ success: boolean; data: unknown; error: string | null }>
       downloadUpdate: () => Promise<{ success: boolean; data: null; error: string | null }>
+      openPortableUpdatePage: () => Promise<{
+        success: boolean
+        data: null
+        error: string | null
+      }>
       cancelUpdate: () => Promise<{ success: boolean; data: null; error: string | null }>
       installUpdate: () => Promise<void>
       getUpdateStatus: () => Promise<unknown>

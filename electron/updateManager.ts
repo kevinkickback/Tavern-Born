@@ -344,14 +344,23 @@ export async function downloadUpdate(): Promise<void> {
   }
 
   if (isPortableMode) {
-    const version = currentStatus.version ?? ''
-    const tag = version ? `tag/v${version}` : 'latest'
-    await shell.openExternal(`${GITHUB_RELEASES_BASE}/${tag}`)
-    return
+    throw new Error('Automatic updates are unavailable in portable builds')
   }
 
   cancellationToken = new CancellationToken()
   await autoUpdater.downloadUpdate(cancellationToken)
+}
+
+export async function openPortableUpdatePage(): Promise<void> {
+  if (!isPortableMode) {
+    throw new Error('The portable download page is only available in portable builds')
+  }
+  if (currentStatus.status !== 'available' || !currentStatus.version) {
+    throw new Error('No portable update is currently available')
+  }
+
+  const releaseTag = encodeURIComponent(`v${currentStatus.version}`)
+  await shell.openExternal(`${GITHUB_RELEASES_BASE}/tag/${releaseTag}`)
 }
 
 export function cancelDownload(): boolean {
@@ -373,7 +382,7 @@ export function cancelDownload(): boolean {
 }
 
 export function installUpdate(): void {
-  if (!app.isPackaged) {
+  if (!app.isPackaged || isPortableMode) {
     return
   }
   autoUpdater.quitAndInstall(true, true)

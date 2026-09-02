@@ -269,7 +269,7 @@ describe('gameDataStore', () => {
     expect(setHasHydrated).toHaveBeenCalledWith(true)
   })
 
-  test('clearGameData resets store and clears cache', () => {
+  test('clearGameData resets store and clears cache', async () => {
     useGameDataStore.setState({
       gameData: makeGameDataFixture(),
       dataSourceConfig: config,
@@ -277,7 +277,7 @@ describe('gameDataStore', () => {
       isLoading: true,
     })
 
-    useGameDataStore.getState().clearGameData()
+    await useGameDataStore.getState().clearGameData()
 
     const state = useGameDataStore.getState()
     expect(clearGameDataCacheMock).toHaveBeenCalledTimes(1)
@@ -285,5 +285,39 @@ describe('gameDataStore', () => {
     expect(state.dataSourceConfig).toBeNull()
     expect(state.cacheStatus).toBe('unconfigured')
     expect(state.isLoading).toBe(false)
+  })
+
+  test('clearGameData wins over a cache write already in flight', async () => {
+    const data = makeGameDataFixture()
+    let resolveCacheWrite!: (value: {
+      lastDataChangedAt: string
+      contentFingerprint: string
+    }) => void
+
+    loadDataFromSourceMock.mockResolvedValue(data)
+    writeGameDataCacheMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveCacheWrite = resolve
+        }),
+    )
+
+    const loadPromise = useGameDataStore.getState().loadGameData(config)
+    await vi.waitFor(() => expect(writeGameDataCacheMock).toHaveBeenCalledTimes(1))
+
+    const clearPromise = useGameDataStore.getState().clearGameData()
+    expect(clearGameDataCacheMock).not.toHaveBeenCalled()
+
+    resolveCacheWrite({
+      lastDataChangedAt: '2026-01-01T00:00:00.000Z',
+      contentFingerprint: 'abc123ef',
+    })
+    await Promise.all([loadPromise, clearPromise])
+
+    const state = useGameDataStore.getState()
+    expect(clearGameDataCacheMock).toHaveBeenCalledTimes(1)
+    expect(state.gameData).toBeNull()
+    expect(state.dataSourceConfig).toBeNull()
+    expect(state.cacheStatus).toBe('unconfigured')
   })
 })
