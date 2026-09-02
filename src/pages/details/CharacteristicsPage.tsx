@@ -37,6 +37,7 @@ import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
 import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
+import type { Character } from '@/types/character'
 import { NoCharCard } from '../_shared'
 
 const EMPTY_ORGANIZATIONS: [] = []
@@ -53,6 +54,78 @@ const CUSTOM_GRADIENT_PRESETS = [
 ] as const
 
 const DEFAULT_CUSTOM_GRADIENT = CUSTOM_GRADIENT_PRESETS[0].key
+
+interface CharacteristicsDraft {
+  playerName: string
+  gender: string
+  faith: string
+  alignment: string
+  lifestyle: string
+  age: string
+  height: string
+  weight: string
+  eyes: string
+  hair: string
+  skin: string
+  personalityTraits: string
+  ideals: string
+  bonds: string
+  flaws: string
+  goals: string
+  fears: string
+  backstory: string
+  appearance: string
+  organizationSelectionKey: string
+  organizationCustomName: string
+  organizationCustomDescription: string
+  organizationCustomImage: string
+  organizationCustomGradient: string
+}
+
+function createCharacteristicsDraft(character?: Character | null): CharacteristicsDraft {
+  const details = character?.details
+  const hasOrganizationState = Boolean(
+    details?.organizationSelectionKey ||
+      details?.organizationCustomName ||
+      details?.organizationCustomDescription ||
+      details?.organizationCustomImage,
+  )
+
+  return {
+    playerName: details?.playerName || '',
+    gender: details?.gender || '',
+    faith: details?.faith || '',
+    alignment: details?.alignment || '',
+    lifestyle: details?.lifestyle || '',
+    age: details?.age?.toString() || '',
+    height: details?.height || '',
+    weight: details?.weight || '',
+    eyes: details?.eyes || '',
+    hair: details?.hair || '',
+    skin: details?.skin || '',
+    personalityTraits: details?.personalityTraits || '',
+    ideals: details?.ideals || '',
+    bonds: details?.bonds || '',
+    flaws: details?.flaws || '',
+    goals: details?.goals || '',
+    fears: details?.fears || '',
+    backstory: details?.backstory || '',
+    appearance: details?.appearance || '',
+    organizationSelectionKey: hasOrganizationState
+      ? details?.organizationSelectionKey || ''
+      : details?.alliesAndOrganizations
+        ? CUSTOM_ORGANIZATION_KEY
+        : '',
+    organizationCustomName: hasOrganizationState ? details?.organizationCustomName || '' : '',
+    organizationCustomDescription: hasOrganizationState
+      ? details?.organizationCustomDescription || ''
+      : details?.alliesAndOrganizations || '',
+    organizationCustomImage: hasOrganizationState ? details?.organizationCustomImage || '' : '',
+    organizationCustomGradient: hasOrganizationState
+      ? details?.organizationCustomGradient || DEFAULT_CUSTOM_GRADIENT
+      : DEFAULT_CUSTOM_GRADIENT,
+  }
+}
 
 const ORGANIZATION_IMAGE_STYLES = [
   'from-cyan-500/80 to-cyan-700/80',
@@ -124,55 +197,41 @@ export function CharacteristicsPage() {
   )
   const gameData = useFilteredGameData()
 
-  // Identity
   const [charName, setCharName] = useState(activeCharacter?.name || '')
-  const [playerName, setPlayerName] = useState(activeCharacter?.details?.playerName || '')
-  const [gender, setGender] = useState(activeCharacter?.details?.gender || '')
-  const [faith, setFaith] = useState(activeCharacter?.details?.faith || '')
-  const [alignment, setAlignment] = useState(activeCharacter?.details?.alignment || '')
   const [xp, setXp] = useState(activeCharacter?.experiencePoints ?? 0)
-  const [lifestyle, setLifestyle] = useState(activeCharacter?.details?.lifestyle || '')
-
-  // Physical traits
-  const [age, setAge] = useState(activeCharacter?.details?.age?.toString() || '')
-  const [height, setHeight] = useState(activeCharacter?.details?.height || '')
-  const [weight, setWeight] = useState(activeCharacter?.details?.weight || '')
-  const [eyes, setEyes] = useState(activeCharacter?.details?.eyes || '')
-  const [hair, setHair] = useState(activeCharacter?.details?.hair || '')
-  const [skin, setSkin] = useState(activeCharacter?.details?.skin || '')
-
-  // Personality
-  const [personalityTraits, setPersonalityTraits] = useState(
-    activeCharacter?.details?.personalityTraits || '',
-  )
-  const [ideals, setIdeals] = useState(activeCharacter?.details?.ideals || '')
-  const [bonds, setBonds] = useState(activeCharacter?.details?.bonds || '')
-  const [flaws, setFlaws] = useState(activeCharacter?.details?.flaws || '')
-  const [goals, setGoals] = useState(activeCharacter?.details?.goals || '')
-  const [fears, setFears] = useState(activeCharacter?.details?.fears || '')
-
-  // Story
-  const [backstory, setBackstory] = useState(activeCharacter?.details?.backstory || '')
-  const [appearance, setAppearance] = useState(activeCharacter?.details?.appearance || '')
-  const [organizationSelectionKey, setOrganizationSelectionKey] = useState(
-    activeCharacter?.details?.organizationSelectionKey || '',
-  )
-  const [organizationCustomName, setOrganizationCustomName] = useState(
-    activeCharacter?.details?.organizationCustomName || '',
-  )
-  const [organizationCustomDescription, setOrganizationCustomDescription] = useState(
-    activeCharacter?.details?.organizationCustomDescription ||
-      activeCharacter?.details?.alliesAndOrganizations ||
-      '',
-  )
-  const [organizationCustomImage, setOrganizationCustomImage] = useState(
-    activeCharacter?.details?.organizationCustomImage || '',
-  )
-  const [organizationCustomGradient, setOrganizationCustomGradient] = useState(
-    activeCharacter?.details?.organizationCustomGradient || DEFAULT_CUSTOM_GRADIENT,
-  )
+  const [draft, setDraft] = useState(() => createCharacteristicsDraft(activeCharacter))
+  const {
+    playerName,
+    gender,
+    faith,
+    alignment,
+    lifestyle,
+    age,
+    height,
+    weight,
+    eyes,
+    hair,
+    skin,
+    personalityTraits,
+    ideals,
+    bonds,
+    flaws,
+    goals,
+    fears,
+    backstory,
+    appearance,
+    organizationSelectionKey,
+    organizationCustomName,
+    organizationCustomDescription,
+    organizationCustomImage,
+    organizationCustomGradient,
+  } = draft
   const [failedOrganizationPreviewImagePath, setFailedOrganizationPreviewImagePath] = useState('')
   const customImageInputRef = useRef<HTMLInputElement>(null)
+
+  const setDraftField = (field: keyof CharacteristicsDraft, value: string) => {
+    setDraft((current) => ({ ...current, [field]: value }))
+  }
 
   // IDs
   const charNameId = useId()
@@ -226,52 +285,11 @@ export function CharacteristicsPage() {
   useEffect(() => {
     setCharName(activeCharacter?.name || '')
     setXp(activeCharacter?.experiencePoints ?? 0)
-    if (activeCharacter?.details) {
-      const d = activeCharacter.details
-      setPlayerName(d.playerName || '')
-      setGender(d.gender || '')
-      setFaith(d.faith || '')
-      setAlignment(d.alignment || '')
-      setLifestyle(d.lifestyle || '')
-      setAge(d.age?.toString() || '')
-      setHeight(d.height || '')
-      setWeight(d.weight || '')
-      setEyes(d.eyes || '')
-      setHair(d.hair || '')
-      setSkin(d.skin || '')
-      setPersonalityTraits(d.personalityTraits || '')
-      setIdeals(d.ideals || '')
-      setBonds(d.bonds || '')
-      setFlaws(d.flaws || '')
-      setGoals(d.goals || '')
-      setFears(d.fears || '')
-      setBackstory(d.backstory || '')
-      setAppearance(d.appearance || '')
-
-      const hasOrganizationState =
-        !!d.organizationSelectionKey ||
-        !!d.organizationCustomName ||
-        !!d.organizationCustomDescription ||
-        !!d.organizationCustomImage
-
-      if (hasOrganizationState) {
-        setOrganizationSelectionKey(d.organizationSelectionKey || '')
-        setOrganizationCustomName(d.organizationCustomName || '')
-        setOrganizationCustomDescription(d.organizationCustomDescription || '')
-        setOrganizationCustomImage(d.organizationCustomImage || '')
-        setOrganizationCustomGradient(d.organizationCustomGradient || DEFAULT_CUSTOM_GRADIENT)
-      } else {
-        setOrganizationSelectionKey(d.alliesAndOrganizations ? CUSTOM_ORGANIZATION_KEY : '')
-        setOrganizationCustomName('')
-        setOrganizationCustomDescription(d.alliesAndOrganizations || '')
-        setOrganizationCustomImage('')
-        setOrganizationCustomGradient(DEFAULT_CUSTOM_GRADIENT)
-      }
-    }
+    setDraft(createCharacteristicsDraft(activeCharacter))
   }, [activeCharacter])
 
   const handleOrganizationSelect = (value: string) => {
-    setOrganizationSelectionKey(value)
+    setDraftField('organizationSelectionKey', value)
 
     if (value === CUSTOM_ORGANIZATION_KEY) {
       updateActiveCharacterDetails({
@@ -284,10 +302,14 @@ export function CharacteristicsPage() {
     const nextOrganization = organizationOptions.find(
       (option) => option.key === value,
     )?.organization
-    setOrganizationCustomName('')
-    setOrganizationCustomDescription('')
-    setOrganizationCustomImage('')
-    setOrganizationCustomGradient(DEFAULT_CUSTOM_GRADIENT)
+    setDraft((current) => ({
+      ...current,
+      organizationSelectionKey: value,
+      organizationCustomName: '',
+      organizationCustomDescription: '',
+      organizationCustomImage: '',
+      organizationCustomGradient: DEFAULT_CUSTOM_GRADIENT,
+    }))
     updateActiveCharacterDetails({
       organizationSelectionKey: value,
       organizationCustomName: '',
@@ -315,7 +337,7 @@ export function CharacteristicsPage() {
     const reader = new FileReader()
     reader.onloadend = () => {
       const result = typeof reader.result === 'string' ? reader.result : ''
-      setOrganizationCustomImage(result)
+      setDraftField('organizationCustomImage', result)
       updateActiveCharacterDetails({ organizationCustomImage: result })
       if (customImageInputRef.current) {
         customImageInputRef.current.value = ''
@@ -325,7 +347,7 @@ export function CharacteristicsPage() {
   }
 
   const handleClearCustomImage = () => {
-    setOrganizationCustomImage('')
+    setDraftField('organizationCustomImage', '')
     updateActiveCharacterDetails({ organizationCustomImage: '' })
     if (customImageInputRef.current) {
       customImageInputRef.current.value = ''
@@ -443,7 +465,7 @@ export function CharacteristicsPage() {
                       id={playerNameId}
                       value={playerName}
                       onChange={(e) => {
-                        setPlayerName(e.target.value)
+                        setDraftField('playerName', e.target.value)
                         updateActiveCharacterDetails({ playerName: e.target.value })
                       }}
                       placeholder="Player name"
@@ -515,7 +537,7 @@ export function CharacteristicsPage() {
                       <Select
                         value={gender}
                         onValueChange={(value) => {
-                          setGender(value)
+                          setDraftField('gender', value)
                           updateActiveCharacterDetails({ gender: value })
                         }}
                       >
@@ -535,7 +557,7 @@ export function CharacteristicsPage() {
                       <Select
                         value={alignment}
                         onValueChange={(value) => {
-                          setAlignment(value)
+                          setDraftField('alignment', value)
                           updateActiveCharacterDetails({ alignment: value })
                         }}
                       >
@@ -556,7 +578,7 @@ export function CharacteristicsPage() {
                       <Select
                         value={lifestyle}
                         onValueChange={(value) => {
-                          setLifestyle(value)
+                          setDraftField('lifestyle', value)
                           updateActiveCharacterDetails({ lifestyle: value })
                         }}
                       >
@@ -579,7 +601,7 @@ export function CharacteristicsPage() {
                         list={deityListId}
                         value={faith}
                         onChange={(e) => {
-                          setFaith(e.target.value)
+                          setDraftField('faith', e.target.value)
                           updateActiveCharacterDetails({ faith: e.target.value })
                         }}
                         placeholder="Enter or select deity"
@@ -601,7 +623,7 @@ export function CharacteristicsPage() {
                         min={0}
                         value={age}
                         onChange={(e) => {
-                          setAge(e.target.value)
+                          setDraftField('age', e.target.value)
                           updateActiveCharacterDetails({
                             age: e.target.value ? Number.parseInt(e.target.value, 10) : undefined,
                           })
@@ -614,7 +636,7 @@ export function CharacteristicsPage() {
                         id={heightId}
                         value={height}
                         onChange={(e) => {
-                          setHeight(e.target.value)
+                          setDraftField('height', e.target.value)
                           updateActiveCharacterDetails({ height: e.target.value })
                         }}
                         placeholder={`5'10"`}
@@ -625,7 +647,7 @@ export function CharacteristicsPage() {
                         id={weightId}
                         value={weight}
                         onChange={(e) => {
-                          setWeight(e.target.value)
+                          setDraftField('weight', e.target.value)
                           updateActiveCharacterDetails({ weight: e.target.value })
                         }}
                         placeholder="180 lbs"
@@ -636,7 +658,7 @@ export function CharacteristicsPage() {
                         id={eyesId}
                         value={eyes}
                         onChange={(e) => {
-                          setEyes(e.target.value)
+                          setDraftField('eyes', e.target.value)
                           updateActiveCharacterDetails({ eyes: e.target.value })
                         }}
                         placeholder="Blue"
@@ -647,7 +669,7 @@ export function CharacteristicsPage() {
                         id={hairId}
                         value={hair}
                         onChange={(e) => {
-                          setHair(e.target.value)
+                          setDraftField('hair', e.target.value)
                           updateActiveCharacterDetails({ hair: e.target.value })
                         }}
                         placeholder="Black"
@@ -658,7 +680,7 @@ export function CharacteristicsPage() {
                         id={skinId}
                         value={skin}
                         onChange={(e) => {
-                          setSkin(e.target.value)
+                          setDraftField('skin', e.target.value)
                           updateActiveCharacterDetails({ skin: e.target.value })
                         }}
                         placeholder="Tan"
@@ -670,7 +692,7 @@ export function CharacteristicsPage() {
                     label="Appearance"
                     value={appearance}
                     onChange={(value) => {
-                      setAppearance(value)
+                      setDraftField('appearance', value)
                       updateActiveCharacterDetails({ appearance: value })
                     }}
                     placeholder="Add details not captured above — unique scars, tattoos, distinctive features, build, posture, or anything else that defines how your character looks."
@@ -699,7 +721,7 @@ export function CharacteristicsPage() {
                       label="Personality Traits"
                       value={personalityTraits}
                       onChange={(value) => {
-                        setPersonalityTraits(value)
+                        setDraftField('personalityTraits', value)
                         updateActiveCharacterDetails({ personalityTraits: value })
                       }}
                       placeholder="Describe your character's personality traits."
@@ -710,7 +732,7 @@ export function CharacteristicsPage() {
                       label="Ideals"
                       value={ideals}
                       onChange={(value) => {
-                        setIdeals(value)
+                        setDraftField('ideals', value)
                         updateActiveCharacterDetails({ ideals: value })
                       }}
                       placeholder="What does your character believe in?"
@@ -721,7 +743,7 @@ export function CharacteristicsPage() {
                       label="Bonds"
                       value={bonds}
                       onChange={(value) => {
-                        setBonds(value)
+                        setDraftField('bonds', value)
                         updateActiveCharacterDetails({ bonds: value })
                       }}
                       placeholder="What ties bind your character to the world?"
@@ -732,7 +754,7 @@ export function CharacteristicsPage() {
                       label="Flaws"
                       value={flaws}
                       onChange={(value) => {
-                        setFlaws(value)
+                        setDraftField('flaws', value)
                         updateActiveCharacterDetails({ flaws: value })
                       }}
                       placeholder="What weaknesses does your character have?"
@@ -746,7 +768,7 @@ export function CharacteristicsPage() {
                       label="Goals"
                       value={goals}
                       onChange={(value) => {
-                        setGoals(value)
+                        setDraftField('goals', value)
                         updateActiveCharacterDetails({ goals: value })
                       }}
                       placeholder="What does your character strive toward?"
@@ -757,7 +779,7 @@ export function CharacteristicsPage() {
                       label="Fears"
                       value={fears}
                       onChange={(value) => {
-                        setFears(value)
+                        setDraftField('fears', value)
                         updateActiveCharacterDetails({ fears: value })
                       }}
                       placeholder="What does your character dread?"
@@ -786,7 +808,7 @@ export function CharacteristicsPage() {
                     label="Backstory"
                     value={backstory}
                     onChange={(value) => {
-                      setBackstory(value)
+                      setDraftField('backstory', value)
                       updateActiveCharacterDetails({ backstory: value })
                     }}
                     placeholder="Your character's history, background, and how they came to be where they are."
@@ -839,7 +861,7 @@ export function CharacteristicsPage() {
                             value={organizationCustomName}
                             onChange={(event) => {
                               const value = event.target.value
-                              setOrganizationCustomName(value)
+                              setDraftField('organizationCustomName', value)
                               updateActiveCharacterDetails({ organizationCustomName: value })
                             }}
                             placeholder="Organization name"
@@ -887,7 +909,7 @@ export function CharacteristicsPage() {
                               key={preset.key}
                               type="button"
                               onClick={() => {
-                                setOrganizationCustomGradient(preset.key)
+                                setDraftField('organizationCustomGradient', preset.key)
                                 updateActiveCharacterDetails({
                                   organizationCustomGradient: preset.key,
                                 })
@@ -922,7 +944,7 @@ export function CharacteristicsPage() {
                         value={organizationCustomDescription}
                         onChange={(event) => {
                           const value = event.target.value
-                          setOrganizationCustomDescription(value)
+                          setDraftField('organizationCustomDescription', value)
                           updateActiveCharacterDetails({
                             organizationCustomDescription: value,
                             alliesAndOrganizations: value,

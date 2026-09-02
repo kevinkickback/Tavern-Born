@@ -124,19 +124,16 @@ export function OptionalFeatureSelectionModal({
     })
   }, [initialSelectedNames, dedupedFeatures])
 
-  const prereqMap = useMemo(() => {
+  const { prereqMap, hasUnmetPrerequisites } = useMemo(() => {
     const map = new Map<string, { met: boolean; reasons: string[] }>()
+    let hasUnmet = false
     for (const f of dedupedFeatures) {
       const result = checkAllPrerequisites(f, characterSnapshot, { className })
       map.set(featureKey(f), { met: result.met, reasons: result.failures })
+      if (!result.met) hasUnmet = true
     }
-    return map
+    return { prereqMap: map, hasUnmetPrerequisites: hasUnmet }
   }, [dedupedFeatures, characterSnapshot, className])
-
-  const hasUnmetPrerequisites = useMemo(
-    () => [...prereqMap.values()].some((p) => !p.met),
-    [prereqMap],
-  )
 
   const categories: CategoryLimit<OptionalFeatureOption>[] = useMemo(
     () => [{ key: 'all', label: 'selections', max: maxSelections, test: () => true }],

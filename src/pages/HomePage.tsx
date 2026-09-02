@@ -46,7 +46,7 @@ import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
-import { useCharacterStore } from '@/store/characterStore'
+import { useCharacterStore, validateCharacterData } from '@/store/characterStore'
 import type { Character } from '@/types/character'
 
 type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'level-desc' | 'level-asc'
@@ -307,7 +307,6 @@ export function HomePage() {
       if (!file) return
       try {
         const character = JSON.parse(await file.text())
-        const { validateCharacterData } = await import('@/store/characterStore')
         const validationError = validateCharacterData(character)
         if (validationError) {
           toast.error(`Invalid character: ${validationError}`)

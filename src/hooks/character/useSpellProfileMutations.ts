@@ -10,10 +10,7 @@
 
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
-import {
-  SPECIAL_SPELL_PROFILE_ID,
-  type SpellcastingClassDetail,
-} from '@/lib/calculations/spellProfiles'
+import type { SpellcastingClassDetail } from '@/lib/calculations/spellProfiles'
 import type { SpellCommandResult } from '@/lib/character/commands/spellCommands'
 import {
   addSpellToCharacter,
@@ -28,11 +25,6 @@ import {
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { SpellProfile } from '@/types/character'
-
-function getDefaultProfileId(profiles: SpellProfile[]): string {
-  const firstClass = profiles.find((profile) => profile.type === 'class')
-  return firstClass?.id ?? SPECIAL_SPELL_PROFILE_ID
-}
 
 function getSpellSourceMeta(profile: SpellProfile): {
   sourceType: 'class' | 'subclass' | 'feat' | 'manual'
@@ -128,50 +120,6 @@ export function useSpellProfileMutations(
       applySpellCommand(result)
     },
     [character, commandCharacter, currentLedger, spellProfiles, applySpellCommand],
-  )
-
-  /**
-   * @deprecated Use addSpellToProfile(profileId, name, 'cantrip') directly.
-   */
-  const addCantrip = useCallback(
-    (name: string, profileId?: string) => {
-      const targetId = profileId ?? getDefaultProfileId(spellProfiles)
-      addSpellToProfile(targetId, name, 'cantrip')
-    },
-    [addSpellToProfile, spellProfiles],
-  )
-
-  /**
-   * @deprecated Use removeSpellFromProfile(profileId, name, 'cantrip') directly.
-   */
-  const removeCantrip = useCallback(
-    (name: string, profileId?: string) => {
-      const targetId = profileId ?? getDefaultProfileId(spellProfiles)
-      removeSpellFromProfile(targetId, name, 'cantrip')
-    },
-    [removeSpellFromProfile, spellProfiles],
-  )
-
-  /**
-   * @deprecated Use addSpellToProfile(profileId, name, 'spell') directly.
-   */
-  const addSpellKnown = useCallback(
-    (name: string, profileId?: string) => {
-      const targetId = profileId ?? getDefaultProfileId(spellProfiles)
-      addSpellToProfile(targetId, name, 'spell')
-    },
-    [addSpellToProfile, spellProfiles],
-  )
-
-  /**
-   * @deprecated Use removeSpellFromProfile(profileId, name, 'spell') directly.
-   */
-  const removeSpellKnown = useCallback(
-    (name: string, profileId?: string) => {
-      const targetId = profileId ?? getDefaultProfileId(spellProfiles)
-      removeSpellFromProfile(targetId, name, 'spell')
-    },
-    [removeSpellFromProfile, spellProfiles],
   )
 
   const togglePrepared = useCallback(
@@ -282,10 +230,6 @@ export function useSpellProfileMutations(
 
   return {
     syncProfiles,
-    addCantrip,
-    removeCantrip,
-    addSpellKnown,
-    removeSpellKnown,
     addSpellToProfile,
     setProfileSpells,
     removeSpellFromProfile,

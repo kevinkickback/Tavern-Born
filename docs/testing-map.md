@@ -47,6 +47,8 @@ Key scripts in package.json:
 - Shared prerequisite snapshot and feat option-pool coverage, including multiclass progression and source collisions
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, level-up modal (tests/integration/*)
+- Characteristics page draft synchronization, immediate detail persistence, and legacy/custom/preset
+	organization transitions in tests/integration/characteristicsPage.test.tsx
 - Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
 - Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
 - Spell hook behavior coverage in tests/hooks/useSpellSlots.test.tsx (add/remove spells, profile management, prepared toggles)

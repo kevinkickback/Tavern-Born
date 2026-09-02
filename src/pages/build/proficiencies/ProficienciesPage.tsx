@@ -50,26 +50,21 @@ export function BuildProficienciesPage() {
   const [focused, setFocused] = useState<ProfFocus | null>(null)
   const [activeTab, setActiveTab] = useState<ProficiencyTabValue>('skills')
 
-  const itemsByName = useMemo(() => {
-    const map = new Map<string, (typeof itemsBase)[0]>()
-    for (const item of [...itemsBase, ...items]) {
-      if (item.name) map.set(item.name.toLowerCase(), item)
-    }
-    return map
-  }, [itemsBase, items])
-
-  const weaponInfoMap = useMemo(() => {
-    const map = new Map<string, { category?: string; ranged?: boolean }>()
+  const { itemsByName, weaponInfoMap } = useMemo(() => {
+    const byName = new Map<string, (typeof itemsBase)[0]>()
+    const weaponInfo = new Map<string, { category?: string; ranged?: boolean }>()
     for (const item of [...itemsBase, ...items]) {
       if (!item.name) continue
+      const normalizedName = item.name.toLowerCase()
+      byName.set(normalizedName, item)
       const category = item.weaponCategory
       const typeCode = item.type?.split('|')[0]
       const ranged = typeCode === 'R' ? true : typeCode === 'M' ? false : undefined
       if (category || ranged !== undefined) {
-        map.set(item.name.toLowerCase(), { category, ranged })
+        weaponInfo.set(normalizedName, { category, ranged })
       }
     }
-    return map
+    return { itemsByName: byName, weaponInfoMap: weaponInfo }
   }, [itemsBase, items])
 
   const languagesByName = useMemo(() => {

@@ -127,22 +127,19 @@ export function FeatSelectionModal({
       .sort((a, b) => a.label.localeCompare(b.label))
   }, [feats])
 
-  const prereqMap = useMemo(() => {
+  const { prereqMap, hasUnmetPrerequisites } = useMemo(() => {
     const map = new Map<string, { met: boolean; reasons: string[] }>()
+    let hasUnmet = false
     for (const f of feats) {
       const result = checkAllPrerequisites(f, characterSnapshot)
       map.set(`${f.name}|${f.source ?? ''}`, {
         met: result.met,
         reasons: result.failures,
       })
+      if (!result.met) hasUnmet = true
     }
-    return map
+    return { prereqMap: map, hasUnmetPrerequisites: hasUnmet }
   }, [feats, characterSnapshot])
-
-  const hasUnmetPrerequisites = useMemo(
-    () => [...prereqMap.values()].some((p) => !p.met),
-    [prereqMap],
-  )
 
   const ignoreLimitRef = useRef(false)
   const specialIdsRef = useRef(new Set(initialSpecialIds))
