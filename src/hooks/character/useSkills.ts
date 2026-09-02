@@ -29,9 +29,13 @@ export interface SkillsState {
 export function useSkills(): SkillsState {
   const activeCharacter = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const skillToAbilityMap = useSkillToAbilityMap()
-  const parsedSkillList = useSkillList()
+  const rawSkillToAbilityMap = useSkillToAbilityMap()
+  const rawSkillList = useSkillList()
   const classesByKey = useClassLookup()
+
+  const skillToAbilityMap =
+    Object.keys(rawSkillToAbilityMap).length > 0 ? rawSkillToAbilityMap : undefined
+  const parsedSkillList = rawSkillList.length > 0 ? rawSkillList : undefined
 
   const resolvedSkillList = parsedSkillList ?? ALL_SKILLS
 
