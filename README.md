@@ -83,7 +83,7 @@ data source when the app first starts.
 
 ### Option 2: Build from Source
 
-**Prerequisites:** [Node.js](https://nodejs.org/) 20.19 or newer and npm. CI uses Node 20.19.0.
+**Prerequisites:** [Node.js](https://nodejs.org/) 22.12 or newer and npm. CI uses the latest Node 22 release.
 
 ```bash
 git clone https://github.com/kevinkickback/Tavern-Born.git
