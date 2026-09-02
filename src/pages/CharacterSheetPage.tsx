@@ -12,9 +12,10 @@ import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
-import { useBackgrounds, useClasses, useRaces } from '@/hooks/data/useGameData'
+import { useBackgroundLookup, useClassLookup, useRaceLookup } from '@/hooks/data/useGameData'
 import {
   type CharacterSheetTemplateId,
+  createCharacterSheetViewModel,
   generateFilledCharacterSheetPdf,
   getCharacterSheetTemplate,
 } from '@/lib/pdf/characterSheetPdf'
@@ -31,15 +32,26 @@ interface CharacterSheetPageProps {
 
 export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const character = useCharacterStore((state) => state.activeCharacter)
-  const classes = useClasses()
-  const races = useRaces()
-  const backgrounds = useBackgrounds()
+  const classesByKey = useClassLookup()
+  const racesByKey = useRaceLookup()
+  const backgroundsByKey = useBackgroundLookup()
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [zoom, setZoom] = useState(100)
   const cancelRef = useRef<{ canceled: boolean } | null>(null)
   const selectedTemplate = useMemo(() => getCharacterSheetTemplate(templateId), [templateId])
+  const viewModel = useMemo(
+    () =>
+      character
+        ? createCharacterSheetViewModel(character, {
+            classesByKey,
+            racesByKey,
+            backgroundsByKey,
+          })
+        : null,
+    [backgroundsByKey, character, classesByKey, racesByKey],
+  )
 
   useEffect(() => {
     return () => {
@@ -54,7 +66,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   )
 
   const handleGenerate = useCallback(async () => {
-    if (!character) return
+    if (!character || !viewModel) return
 
     if (cancelRef.current) cancelRef.current.canceled = true
     const handle = { canceled: false }
@@ -71,12 +83,9 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
 
       const templateBytes = new Uint8Array(await response.arrayBuffer())
       const filledBytes = await generateFilledCharacterSheetPdf(
-        character,
+        viewModel,
         templateBytes,
         templateId,
-        classes,
-        races,
-        backgrounds,
       )
 
       if (!handle.canceled) setPdfBytes(filledBytes)
@@ -91,7 +100,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
     } finally {
       if (!handle.canceled) setIsGenerating(false)
     }
-  }, [backgrounds, character, classes, races, selectedTemplate, templateId])
+  }, [character, selectedTemplate, templateId, viewModel])
 
   const handleDownload = () => {
     if (!pdfBytes) {

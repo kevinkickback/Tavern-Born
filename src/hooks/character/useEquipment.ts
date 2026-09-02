@@ -1,10 +1,14 @@
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
-import { resolveArmorType } from '@/lib/calculations/armorClass'
 import { getCarryCapacity, MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { hasArmorProficiency } from '@/lib/calculations/itemEquippable'
+import {
+  addManualEquipmentCommand,
+  addManualEquipmentEntryCommand,
+  removeManualEquipmentCommand,
+} from '@/lib/character/commands/equipmentCommands'
 import { generateEquipmentId } from '@/lib/character/ids'
-import { useCharacterStore } from '@/store/characterStore'
+import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
 import type { Currency, Equipment } from '@/types/character'
 
@@ -76,50 +80,49 @@ export function useEquipment(): EquipmentState {
         attuned: false,
         ...item,
       }
-      patchEquipment([...equipment, newItem])
+      const result = addManualEquipmentEntryCommand(
+        character,
+        character.provenance ?? emptyProvenance(),
+        newItem,
+      )
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
     },
-    [character, equipment, patchEquipment],
+    [character, updateCharacter],
   )
 
   const addFromGameData = useCallback(
     (item5e: Item5e) => {
       if (!character) return
-      const armorType = resolveArmorType(item5e.type ?? '')
-      const newItem: Equipment = {
-        id: generateEquipmentId(),
-        name: item5e.name,
-        type: item5e.type ?? 'G',
-        quantity: 1,
-        equipped: false,
-        attuned: false,
-        description: '',
-        weight: item5e.weight,
-        rarity: item5e.rarity,
-        reqAttune: Boolean(item5e.reqAttune),
-        ac: item5e.ac,
-        armorType: armorType === 'none' ? undefined : armorType,
-        weaponCategory: item5e.weaponCategory,
-        dmg1: item5e.dmg1,
-        dmg2: item5e.dmg2,
-        dmgType: item5e.dmgType,
-        properties: item5e.property,
-        range: item5e.range,
-        source: item5e.source,
-        wondrous: item5e.wondrous,
-        tattoo: item5e.tattoo,
-        focus: item5e.focus,
-      }
-      patchEquipment([...equipment, newItem])
+      const result = addManualEquipmentCommand(
+        character,
+        character.provenance ?? emptyProvenance(),
+        item5e,
+      )
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
     },
-    [character, equipment, patchEquipment],
+    [character, updateCharacter],
   )
 
   const removeItem = useCallback(
     (id: string) => {
       if (!character) return
-      patchEquipment(equipment.filter((e) => e.id !== id))
+      const result = removeManualEquipmentCommand(
+        character,
+        character.provenance ?? emptyProvenance(),
+        id,
+      )
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
     },
-    [character, equipment, patchEquipment],
+    [character, updateCharacter],
   )
 
   const updateItem = useCallback(

@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
@@ -33,8 +34,11 @@ import {
   usesRaceOriginBenefits,
 } from '@/lib/calculations/originSystem'
 import { cn } from '@/lib/utils'
-import { useGameDataStore } from '@/store/gameDataStore'
 import type { StepProps } from '../types'
+
+interface AbilityScoresStepProps extends StepProps {
+  raceResolution: ResolvedRaceReference
+}
 
 const DEFAULT_STANDARD_SCORES: Partial<Record<AbilityName, number>> = ABILITY_NAMES.reduce(
   (acc, ab, idx) => {
@@ -386,8 +390,7 @@ function CustomPanel({
   )
 }
 
-export function AbilityScoresStep({ data, onChange }: StepProps) {
-  const gameData = useGameDataStore((s) => s.gameData)
+export function AbilityScoresStep({ data, onChange, raceResolution }: AbilityScoresStepProps) {
   const method = (data.abilityScoreMethod ?? 'point-buy') as string
   const showRaceOriginBonuses = usesRaceOriginBenefits(
     (data.originSystem || '2014') as '2014' | '2024',
@@ -400,10 +403,8 @@ export function AbilityScoresStep({ data, onChange }: StepProps) {
         : DEFAULT_POINT_BUY_SCORES
   const scores = (data.abilityScores ?? fallbackScores) as Record<AbilityName, number>
 
-  const raceObj = (gameData?.races ?? []).find(
-    (r) => r.name === data.race && (!data.raceSource || r.source === data.raceSource),
-  )
-  const subraceObj = raceObj?.subraces?.find((sr) => sr.name === data.subrace)
+  const raceObj = raceResolution.parentRace
+  const subraceObj = raceResolution.subraceData
   const normalizedSelection = normalizeRaceSelectionForOriginSystem(
     raceObj,
     subraceObj,

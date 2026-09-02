@@ -199,7 +199,7 @@ describe('FeatsPage bonus feat configuration', () => {
 
     expect(
       useCharacterStore.getState().activeCharacter?.fixedFeatOptions?.[
-      'magic initiate|xphb|cleric'
+        'magic initiate|xphb|cleric'
       ],
     ).toEqual({ spellcastingClass: 'Cleric Spells' })
   })

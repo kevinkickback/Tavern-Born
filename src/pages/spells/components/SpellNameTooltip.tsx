@@ -9,8 +9,6 @@ import {
   formatSpellLevel,
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
-import { cn } from '@/lib/utils'
-import type { Spell5e } from '@/types/5etools'
 import {
   getEntryWithHoverTitles,
   getRecursiveHintPosition,
@@ -18,7 +16,9 @@ import {
   parseRecursiveReference,
   type RecursiveHintState,
   type RecursiveLookup,
-} from './spellTooltipUtils'
+} from '@/lib/renderer/recursiveTooltip'
+import { cn } from '@/lib/utils'
+import type { Spell5e } from '@/types/5etools'
 
 interface SpellNameTooltipProps {
   name: string

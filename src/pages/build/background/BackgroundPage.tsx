@@ -2,7 +2,6 @@ import { Scroll, Star } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
-import type { ActiveFilters } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SplitPane } from '@/components/ui/SplitPane'
@@ -24,7 +23,10 @@ import { useBackgroundProvenanceMutations } from '@/hooks/character/useBackgroun
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useBackgroundLookup, useItemLookup } from '@/hooks/data/useGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
+import { resolveBackgroundReference } from '@/lib/5etools/entityResolvers'
+import { buildBackgroundLookup } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
   formatEquipmentOptionEntries,
@@ -35,10 +37,9 @@ import {
   type AbilityName,
   getBackgroundAbilityData,
 } from '@/lib/calculations/abilityScores'
+import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
-import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
-import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
-import { getTotalCharacterLevel, matchesGameDataEntry } from '@/lib/characterUtils'
+import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
 import { getFixedFeatOptionKey, resolveFixedFeatGrant } from '@/lib/featGrants'
 import { parseFeatGrantBlocks } from '@/lib/provenance/applyFeatAndOptionalFeatureGrants'
 import { cn } from '@/lib/utils'
@@ -50,10 +51,8 @@ import {
   getBackgroundToolNames,
 } from '@/pages/build/background/model/data'
 import { useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
-import type { Background5e, Feat5e, Item5e, Spell5e } from '@/types/5etools'
+import type { Feat5e, Spell5e } from '@/types/5etools'
 
-const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 type FeatOptionsTarget = Feat5e & {
   grantVariant?: string
   fixedSpellcastingClass?: string
@@ -61,10 +60,11 @@ type FeatOptionsTarget = Feat5e & {
 
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const reconcileCharacter = useCharacterStore((s) => s.reconcileCharacter)
   const { backgrounds, feats, spells } = useFilteredGameData()
-  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
+  const itemLookup = useItemLookup()
+  const rawBackgroundLookup = useBackgroundLookup()
+  const filteredBackgroundLookup = useMemo(() => buildBackgroundLookup(backgrounds), [backgrounds])
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [bgSearch, setBgSearch] = useState('')
@@ -103,9 +103,11 @@ export function BuildBackgroundPage() {
   }, [bgSearch])
 
   const selectedBg = character
-    ? (backgrounds.find((b) =>
-      matchesGameDataEntry(character.background, character.backgroundSource, b),
-    ) as Background5e | undefined)
+    ? resolveBackgroundReference(
+        { name: character.background, source: character.backgroundSource },
+        { backgroundsByKey: filteredBackgroundLookup },
+        { backgroundsByKey: rawBackgroundLookup },
+      )
     : undefined
   const normalizedSelectedBg = normalizeBackgroundForOriginSystem(
     selectedBg,
@@ -160,51 +162,11 @@ export function BuildBackgroundPage() {
     [originFeatChoices, activeFeatChoiceId],
   )
 
-  const featModalFeats = useMemo(() => {
-    if (!activeFeatChoice) return []
-    const pool = activeFeatChoice.optionPool
-    if (pool.length === 0) return feats as Feat5e[]
-    const categoryPrefixes = pool.filter((p) => p.startsWith('category:'))
-    if (categoryPrefixes.length > 0) {
-      const allowedCategories = new Set(categoryPrefixes.map((p) => p.replace('category:', '')))
-      return (feats as Feat5e[]).filter((f) => f.category && allowedCategories.has(f.category))
-    }
-    const poolLower = new Set(pool.map((p) => p.toLowerCase()))
-    return (feats as Feat5e[]).filter((f) => poolLower.has(f.name.toLowerCase()))
+  const { eligibleFeats: featModalFeats, initialFilters: featModalInitialFilters } = useMemo(() => {
+    if (!activeFeatChoice) return { eligibleFeats: [], initialFilters: undefined }
+    return resolveFeatChoicePool(feats as Feat5e[], activeFeatChoice.optionPool)
   }, [activeFeatChoice, feats])
-
-  const featModalInitialFilters = useMemo<ActiveFilters | undefined>(() => {
-    if (!activeFeatChoice) return undefined
-    const cats = activeFeatChoice.optionPool
-      .filter((p) => p.startsWith('category:'))
-      .map((p) => p.replace('category:', ''))
-    if (cats.length > 0) return { featCategory: new Set(cats) }
-    return undefined
-  }, [activeFeatChoice])
-
-  const profileSpells = character
-    ? collectKnownSpells(ensureSpellProfiles(character))
-    : { cantrips: [], spellsKnown: [], preparedSpells: [] }
-
-  const characterSnapshot: PrereqCharacterSnapshot = {
-    level: getTotalCharacterLevel(character),
-    class: character?.class ?? '',
-    race: character?.race ?? '',
-    abilityScores: character?.abilityScores ?? {
-      strength: 10,
-      dexterity: 10,
-      constitution: 10,
-      intelligence: 10,
-      wisdom: 10,
-      charisma: 10,
-    },
-    features: character?.features ?? [],
-    spells: {
-      cantrips: profileSpells.cantrips,
-      spellsKnown: profileSpells.spellsKnown,
-      preparedSpells: profileSpells.preparedSpells,
-    },
-  }
+  const characterSnapshot = buildPrerequisiteSnapshot({ character })
 
   const handleOpenFeatModal = useCallback((choiceId: string) => {
     setActiveFeatChoiceId(choiceId)
@@ -254,16 +216,13 @@ export function BuildBackgroundPage() {
   }
 
   const handleBackground = (name: string, bgSource?: string) => {
-    const bg = backgrounds.find((b) => matchesGameDataEntry(name, bgSource, b)) as
-      | Background5e
-      | undefined
+    const bg = resolveBackgroundReference(
+      { name, source: bgSource },
+      { backgroundsByKey: filteredBackgroundLookup },
+      { backgroundsByKey: rawBackgroundLookup },
+    )
     if (!bg) return
     applyBackgroundSelection(bg)
-    updateCharacter(character.id, {
-      background: name,
-      backgroundSource: bgSource ?? undefined,
-      backgroundEquipmentChoices: [],
-    })
     const normalizedBackground = normalizeBackgroundForOriginSystem(bg, character.originSystem)
     const fixedGrant = parseFeatGrantBlocks(
       normalizedBackground?.feats as unknown[] | undefined,
@@ -333,8 +292,8 @@ export function BuildBackgroundPage() {
                       const block1 = bgAsiData.blocks[1]
                       const autoChoices =
                         selectedBg?.source === 'XPHB' &&
-                          block1 &&
-                          block1.from.length === block1.weights.length
+                        block1 &&
+                        block1.from.length === block1.weights.length
                           ? [...block1.from]
                           : []
                       applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
@@ -432,8 +391,8 @@ export function BuildBackgroundPage() {
                   .join(', ')
                 const resolvedFeat = isResolved
                   ? (feats as Feat5e[]).find(
-                    (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
-                  )
+                      (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                    )
                   : undefined
                 return (
                   <div key={choice.id}>
@@ -617,9 +576,6 @@ export function BuildBackgroundPage() {
                                     while (next.length <= block.index) next.push('a')
                                     next[block.index] = value
                                     applyBackgroundSelection(selectedBg, next)
-                                    updateCharacter(character.id, {
-                                      backgroundEquipmentChoices: next,
-                                    })
                                   }}
                                 >
                                   <SelectTrigger

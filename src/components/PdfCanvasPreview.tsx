@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
-const BASE_RENDER_SCALE = 1.5
+const PREVIEW_WIDTH_AT_100_PERCENT = 900
 
 interface PdfCanvasPreviewProps {
   pdfBytes: Uint8Array
@@ -34,17 +34,27 @@ export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps
           if (canceled) return
 
           const page = await pdf.getPage(i)
-          const viewport = page.getViewport({ scale: BASE_RENDER_SCALE * (zoom / 100) })
+          const unscaledViewport = page.getViewport({ scale: 1 })
+          const displayScale =
+            (PREVIEW_WIDTH_AT_100_PERCENT / unscaledViewport.width) * (zoom / 100)
+          const viewport = page.getViewport({ scale: displayScale })
+          const outputScale = window.devicePixelRatio || 1
 
           const canvas = document.createElement('canvas')
-          canvas.width = viewport.width
-          canvas.height = viewport.height
+          canvas.width = Math.floor(viewport.width * outputScale)
+          canvas.height = Math.floor(viewport.height * outputScale)
+          canvas.style.width = `${viewport.width}px`
+          canvas.style.height = `${viewport.height}px`
           canvas.className = 'mx-auto block max-w-none rounded-sm bg-white shadow-md'
 
           const ctx = canvas.getContext('2d')
           if (!ctx) continue
 
-          await page.render({ canvasContext: ctx, viewport }).promise
+          await page.render({
+            canvasContext: ctx,
+            transform: outputScale === 1 ? undefined : [outputScale, 0, 0, outputScale, 0, 0],
+            viewport,
+          }).promise
 
           if (canceled) return
           container.appendChild(canvas)

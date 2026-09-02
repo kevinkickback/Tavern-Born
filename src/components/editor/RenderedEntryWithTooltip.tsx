@@ -10,7 +10,6 @@ import {
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
 import { renderEntryCached } from '@/lib/entryRenderCache'
-import { cn } from '@/lib/utils'
 import {
   getEntityKey,
   getEntryWithHoverTitles,
@@ -18,7 +17,8 @@ import {
   normalizeKind,
   parseRecursiveReference,
   type RecursiveLookup,
-} from '@/pages/spells/components/spellTooltipUtils'
+} from '@/lib/renderer/recursiveTooltip'
+import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 
 const TOOLTIP_WIDTH = 320
@@ -204,99 +204,99 @@ export function RenderedEntryWithTooltip({
       </div>
       {hint
         ? createPortal(
-          <div
-            ref={setTooltipRef}
-            role="tooltip"
-            className="fixed z-[9999] w-[320px] max-w-[calc(100vw-1rem)] rounded border border-border bg-card text-card-foreground shadow-xl"
-            style={{ left: hint.left, ...hint.pos }}
-          >
-            {hint.kind === 'spell' ? (
-              <>
-                <div className="px-3 py-2 border-b border-border relative">
-                  <div className="pr-16">
-                    <div className="font-semibold text-xl leading-tight">{hint.spell.name}</div>
-                    <div className="text-sm text-muted-foreground mt-0.5">
-                      {formatSpellLevel(hint.spell.level)} {getSchoolName(hint.spell.school)}
+            <div
+              ref={setTooltipRef}
+              role="tooltip"
+              className="fixed z-[9999] w-[320px] max-w-[calc(100vw-1rem)] rounded border border-border bg-card text-card-foreground shadow-xl"
+              style={{ left: hint.left, ...hint.pos }}
+            >
+              {hint.kind === 'spell' ? (
+                <>
+                  <div className="px-3 py-2 border-b border-border relative">
+                    <div className="pr-16">
+                      <div className="font-semibold text-xl leading-tight">{hint.spell.name}</div>
+                      <div className="text-sm text-muted-foreground mt-0.5">
+                        {formatSpellLevel(hint.spell.level)} {getSchoolName(hint.spell.school)}
+                      </div>
+                    </div>
+                    {sharedButtons}
+                  </div>
+
+                  <div className="px-3 py-2">
+                    <div className="rounded border border-border bg-muted/15 p-2 text-sm space-y-1">
+                      <div className="flex items-start gap-2">
+                        <span className="font-semibold min-w-[82px]">Casting Time:</span>
+                        <span>{formatCastingTime(hint.spell.time)}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="font-semibold min-w-[82px]">Range:</span>
+                        <span>{formatRange(hint.spell.range)}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="font-semibold min-w-[82px]">Components:</span>
+                        <span>{formatComponents(hint.spell.components)}</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="font-semibold min-w-[82px]">Duration:</span>
+                        <span>{formatDuration(hint.spell.duration)}</span>
+                      </div>
                     </div>
                   </div>
-                  {sharedButtons}
-                </div>
 
-                <div className="px-3 py-2">
-                  <div className="rounded border border-border bg-muted/15 p-2 text-sm space-y-1">
-                    <div className="flex items-start gap-2">
-                      <span className="font-semibold min-w-[82px]">Casting Time:</span>
-                      <span>{formatCastingTime(hint.spell.time)}</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="font-semibold min-w-[82px]">Range:</span>
-                      <span>{formatRange(hint.spell.range)}</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="font-semibold min-w-[82px]">Components:</span>
-                      <span>{formatComponents(hint.spell.components)}</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="font-semibold min-w-[82px]">Duration:</span>
-                      <span>{formatDuration(hint.spell.duration)}</span>
+                  <div className="px-3 pb-3 text-sm leading-relaxed space-y-1.5 max-h-[220px] overflow-y-auto [&_p]:my-0.5 [&_p+_p]:mt-1 [&_ul]:my-1 [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-0.5 [&_ol]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-border [&_th]:bg-muted/20 [&_th]:px-1.5 [&_th]:py-1 [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-1 [&_.cursor-help]:underline [&_.cursor-help]:decoration-dotted [&_.cursor-help]:underline-offset-2">
+                    {[...(hint.spell.entries ?? []), ...(hint.spell.entriesHigherLevel ?? [])].map(
+                      (e) => {
+                        const entryHtml = renderEntryCached(e)
+                        return (
+                          <div
+                            // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
+                            key={`${hint.spell.name}|${entryHtml.slice(0, 48)}`}
+                            dangerouslySetInnerHTML={{ __html: entryHtml }}
+                          />
+                        )
+                      },
+                    )}
+                  </div>
+
+                  <div className="px-3 py-1.5 border-t border-border text-xs text-muted-foreground">
+                    <div className="flex items-start justify-between gap-3">
+                      <div />
+                      <div className="italic text-right">
+                        {hint.spell.source}
+                        {hint.spell.page ? ` p. ${hint.spell.page}` : ''}
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="px-3 pb-3 text-sm leading-relaxed space-y-1.5 max-h-[220px] overflow-y-auto [&_p]:my-0.5 [&_p+_p]:mt-1 [&_ul]:my-1 [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-0.5 [&_ol]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-border [&_th]:bg-muted/20 [&_th]:px-1.5 [&_th]:py-1 [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-1 [&_.cursor-help]:underline [&_.cursor-help]:decoration-dotted [&_.cursor-help]:underline-offset-2">
-                  {[...(hint.spell.entries ?? []), ...(hint.spell.entriesHigherLevel ?? [])].map(
-                    (e) => {
-                      const entryHtml = renderEntryCached(e)
-                      return (
-                        <div
-                          // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
-                          key={`${hint.spell.name}|${entryHtml.slice(0, 48)}`}
-                          dangerouslySetInnerHTML={{ __html: entryHtml }}
-                        />
-                      )
-                    },
-                  )}
-                </div>
-
-                <div className="px-3 py-1.5 border-t border-border text-xs text-muted-foreground">
-                  <div className="flex items-start justify-between gap-3">
-                    <div />
-                    <div className="italic text-right">
-                      {hint.spell.source}
-                      {hint.spell.page ? ` p. ${hint.spell.page}` : ''}
+                </>
+              ) : (
+                <>
+                  <div className="px-3 py-2 border-b border-border relative">
+                    <div className="pr-16">
+                      <div className="font-semibold text-base leading-tight">{hint.title}</div>
+                      {hint.subtitle ? (
+                        <div className="text-sm text-muted-foreground mt-0.5">{hint.subtitle}</div>
+                      ) : null}
                     </div>
+                    {sharedButtons}
                   </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="px-3 py-2 border-b border-border relative">
-                  <div className="pr-16">
-                    <div className="font-semibold text-base leading-tight">{hint.title}</div>
-                    {hint.subtitle ? (
-                      <div className="text-sm text-muted-foreground mt-0.5">{hint.subtitle}</div>
-                    ) : null}
-                  </div>
-                  {sharedButtons}
-                </div>
 
-                <div className="px-3 pb-3 pt-2 text-sm leading-relaxed max-h-[220px] overflow-y-auto [&_p]:my-0.5 [&_p+_p]:mt-1 [&_ul]:my-1 [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-0.5 [&_ol]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-border [&_th]:bg-muted/20 [&_th]:px-1.5 [&_th]:py-1 [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-1 [&_.cursor-help]:underline [&_.cursor-help]:decoration-dotted [&_.cursor-help]:underline-offset-2">
-                  {hint.html ? (
-                    <div
-                      // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
-                      dangerouslySetInnerHTML={{ __html: hint.html }}
-                    />
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">
-                      No description available.
-                    </p>
-                  )}
-                </div>
-              </>
-            )}
-          </div>,
-          document.body,
-        )
+                  <div className="px-3 pb-3 pt-2 text-sm leading-relaxed max-h-[220px] overflow-y-auto [&_p]:my-0.5 [&_p+_p]:mt-1 [&_ul]:my-1 [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-0.5 [&_ol]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-border [&_th]:bg-muted/20 [&_th]:px-1.5 [&_th]:py-1 [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-1 [&_.cursor-help]:underline [&_.cursor-help]:decoration-dotted [&_.cursor-help]:underline-offset-2">
+                    {hint.html ? (
+                      <div
+                        // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
+                        dangerouslySetInnerHTML={{ __html: hint.html }}
+                      />
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        No description available.
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>,
+            document.body,
+          )
         : null}
     </>
   )

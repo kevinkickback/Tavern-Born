@@ -92,6 +92,12 @@ describe('wizard 2024 origin-system ability display', () => {
           },
         }}
         onChange={() => undefined}
+        raceResolution={{
+          parentRace: { name: 'Elf', source: 'PHB', ability: [{ dexterity: 2 }] },
+          subraceData: undefined,
+          mergedRace: undefined,
+          subraceIsNested: false,
+        }}
       />,
     )
 
@@ -119,6 +125,13 @@ describe('wizard 2024 origin-system ability display', () => {
             charisma: 10,
           },
         }}
+        raceResolution={{
+          parentRace: { name: 'Elf', source: 'PHB', ability: [{ dexterity: 2 }] },
+          subraceData: undefined,
+          mergedRace: undefined,
+          subraceIsNested: false,
+        }}
+        sources={[]}
       />,
     )
 

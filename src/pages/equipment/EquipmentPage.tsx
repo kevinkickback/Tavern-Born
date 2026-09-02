@@ -34,17 +34,18 @@ import {
 } from '@/components/workspace'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
-import { useEquipmentProvenanceMutations } from '@/hooks/character/useEquipmentProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
+import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useItemLookup, useItemPropertyLookup } from '@/hooks/data/useGameData'
 import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { ARMOR_TYPE_MAP } from '@/lib/calculations/armorClass'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { isEquippable } from '@/lib/calculations/itemEquippable'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e } from '@/types/5etools'
 import type { Equipment } from '@/types/character'
 import { NoCharCard } from '../_shared'
@@ -125,8 +126,6 @@ function getDamageSummary(item: Equipment): string | null {
   return `${item.dmg1}${damageType}`
 }
 
-const EMPTY_RECORD: Record<string, string> = {}
-
 function resolvePropertyLabel(tag: string, propertyByAbbr: Record<string, string>): string {
   const key = tag.trim().split('|')[0].toUpperCase()
   return propertyByAbbr[key] ?? tag
@@ -179,12 +178,10 @@ export function EquipmentPage() {
   const [itemTypeFilter, setItemTypeFilter] = useState<ItemCategory>('All')
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const itemLookup = useGameDataStore((s) => s.gameData?.lookups?.itemLookup)
-  const itemPropertyByAbbr =
-    useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr) ?? EMPTY_RECORD
+  const itemLookup = useItemLookup()
+  const { items, itemsBase } = useFilteredGameData()
+  const itemPropertyByAbbr = useItemPropertyLookup()
   const recursiveLookup = useRecursiveLookup()
-  const originSystem = character?.originSystem ?? '2024'
-  const preferNewerPrintings = character?.variantRules?.preferNewerPrintings ?? false
 
   const ignoreEquipRestrictions = character?.variantRules?.ignoreEquipRestrictions ?? false
   const toggleIgnoreRestrictions = () => {
@@ -196,42 +193,20 @@ export function EquipmentPage() {
       },
     })
   }
-  const { applyManualEquipmentGrant, removeEquipmentProvenance } = useEquipmentProvenanceMutations()
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const { calculatedAC, overrideAC } = useArmorClass()
-  const equipmentItems = useMemo(() => {
-    if (!itemLookup) return []
-    // When preferNewerPrintings is off, show all versions unfiltered.
-    if (!preferNewerPrintings) return Array.from(itemLookup.values())
-    // Deduplicate reprinted items based on edition:
-    // - 2024 characters see the newer reprint (e.g. Drum|XPHB, Bag of Holding|XDMG)
-    // - 2014 characters see the original printing (e.g. Drum|PHB, Bag of Holding|DMG)
-    const suppressed = new Set<string>()
-    for (const item of itemLookup.values()) {
-      const reprints = Array.isArray((item as { reprintedAs?: unknown }).reprintedAs)
-        ? ((item as { reprintedAs?: unknown }).reprintedAs as string[])
-        : []
-      for (const reprint of reprints) {
-        if (typeof reprint !== 'string') continue
-        const [n, s] = reprint.split('|')
-        if (!n || !s) continue
-        const reprintKey = `${n.trim().toLowerCase()}|${s.trim().toLowerCase()}`
-        if (itemLookup.has(reprintKey)) {
-          if (originSystem === '2014') {
-            // Suppress the newer reprint, keep the original
-            suppressed.add(reprintKey)
-          } else {
-            // Suppress the older original, keep the newer reprint
-            suppressed.add(`${item.name.toLowerCase()}|${(item.source ?? 'phb').toLowerCase()}`)
-          }
-        }
-      }
-    }
-    return Array.from(itemLookup.values()).filter(
-      (item) =>
-        !suppressed.has(`${item.name.toLowerCase()}|${(item.source ?? 'phb').toLowerCase()}`),
-    )
-  }, [itemLookup, originSystem, preferNewerPrintings])
+  const equipmentItems = useMemo(
+    () =>
+      Array.from(
+        new Map(
+          [...items, ...itemsBase].map((item) => [
+            getEntityLookupKey(item.name, item.source),
+            item,
+          ]),
+        ).values(),
+      ),
+    [items, itemsBase],
+  )
 
   const encumbrancePct = carryCapacity > 0 ? Math.min(100, (totalWeight / carryCapacity) * 100) : 0
   const encumbranceTone =
@@ -254,21 +229,18 @@ export function EquipmentPage() {
   const selectedItem =
     equipment.find((item) => item.id === selectedItemId) ?? filteredEquipment[0] ?? null
   const selectedItemData = selectedItem
-    ? itemLookup?.get(
-      `${selectedItem.name.trim().toLowerCase()}|${(selectedItem.source ?? 'phb').trim().toLowerCase()}`,
-    )
+    ? itemLookup.get(
+        `${selectedItem.name.trim().toLowerCase()}|${(selectedItem.source ?? 'phb').trim().toLowerCase()}`,
+      )
     : undefined
   const selectedItemEntries = selectedItemData?.entries ?? []
 
   const handleAddItem = (item: Item5e) => {
     addFromGameData(item)
-    applyManualEquipmentGrant(item.name)
   }
   const handleRemoveItem = (itemId: string) => {
-    const existing = equipment.find((item) => item.id === itemId)
     removeItem(itemId)
     if (selectedItemId === itemId) setSelectedItemId(null)
-    if (existing) removeEquipmentProvenance(existing.name)
   }
 
   if (!character) {

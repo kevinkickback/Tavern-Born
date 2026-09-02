@@ -12,6 +12,7 @@ Core modules:
 - src/lib/5etools/validator.ts
 - src/lib/5etools/schemas.ts
 - src/lib/5etools/lookups.ts
+- src/lib/5etools/entityResolvers.ts
 - src/lib/5etools/filters.ts
 - src/lib/5etools/urlUtils.ts
 - src/lib/5etools/sourceFallbacks.ts
@@ -53,10 +54,15 @@ Core modules:
   feat name.
 
 4. Lookup construction
-- lookups creates composite-key maps (name|source) for fast, collision-safe access.
+- lookups creates composite-key maps (name|source) for fast, collision-safe class, race, background, spell, feature, subclass, and item access.
 - Source metadata is sorted by a total, deterministic order so parallel resource completion cannot cause cache fingerprint churn.
 
-5. Caching and freshness
+5. Entity resolution
+- `entityResolvers.ts` is the canonical class, background, and race/subrace reference API.
+- Callers may supply a filtered primary lookup and a raw fallback lookup. Resolution prefers an exact `name|source` primary match, then the exact raw match so an existing selection remains resolvable after filters change.
+- Name-only fallback is allowed only when the persisted reference has no source. It prefers primary data and uses source/name ordering for deterministic collision handling.
+
+6. Caching and freshness
 - Parsed data plus source snapshot are cached in IndexedDB.
 - Cache freshness is evaluated on startup; stale cache triggers background refresh.
 
@@ -71,6 +77,7 @@ Core modules:
 - data/class/index.json keys are class slugs, not source identifiers.
 - data/spells/index.json still behaves as source-grouped index data.
 - Downstream UI should prefer lookups over repeated array scans when exact entity references are required.
+- Shared lookup consumers should use named hooks from `src/hooks/data/useGameData.ts`; direct nested lookup selectors are not a UI API.
 
 ### Grouped Tool Choice Nuance
 

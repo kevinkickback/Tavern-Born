@@ -26,15 +26,15 @@ Without provenance, changing race/class/background can leave stale proficiencies
 
 ## Hook Entry Points
 
-**For production pages:** use the self-contained `use*ProvenanceMutations` hooks directly — `useRaceProvenanceMutations`, `useClassProvenanceMutations`, `useBackgroundProvenanceMutations`, `useSpellProvenanceMutations`, `useFeatProvenanceMutations`, `useEquipmentProvenanceMutations`. Each reads character/store state itself and owns the full mutation logic for its domain.
+**For production pages:** use the self-contained `use*ProvenanceMutations` hooks directly — `useRaceProvenanceMutations`, `useClassProvenanceMutations`, `useBackgroundProvenanceMutations`, `useSpellProvenanceMutations`, `useFeatProvenanceMutations`, `useEquipmentProvenanceMutations`. Each reads character/store state and lookup dependencies, delegates canonical transition logic to pure commands, and applies one atomic patch.
 
 **For reading provenance rows:** use `useProvenanceLedger` (src/hooks/character/useProvenanceLedger.ts) in pages that only need to display provenance state. It normalizes the ledger via `resolveRaceAsiChoicesInLedger` before deriving rows, so all row functions receive a fully-resolved ledger.
 
 **For tests:** `useProvenance` (src/hooks/character/useProvenance.ts) is the integration test harness. It composes all six domains via `useProvenanceMutations` (src/hooks/character/useProvenanceMutations.ts, the aggregator) and exposes mutations + provenance rows from a single hook. Use it in tests that need cross-domain provenance interactions. Do not call it from production pages.
 
-**Adding new mutations:** add the callback directly to the relevant `use*ProvenanceMutations` hook (e.g. `useRaceProvenanceMutations.ts`). It will automatically be available through the test harness aggregator as well. Do not add logic to the aggregator.
+**Adding new mutations:** add the pure transition to the relevant module under `src/lib/character/commands/`, then expose it through the relevant `use*ProvenanceMutations` adapter. It will automatically be available through the test harness aggregator as well. Do not add canonical logic to the hook or aggregator.
 
-Class-selection orchestration is delegated to `src/lib/character/commands/classSelectionOrchestrationCommand.ts` — the hook layer calls this command and applies the resulting patch via `updateCharacter`.
+All character-domain commands return `characterPatch` plus `provenanceUpdate`; hook adapters apply both in one `updateCharacter` call. Race, class, background, feat-option, optional-feature, spell-profile, and manual-equipment transitions use this contract.
 
 ## Ledger Model
 
@@ -109,6 +109,15 @@ Class equipment choice behavior:
 - `applyClassSelection(cls, subclass)` now resolves starting equipment using the player's persisted class choice (`character.classEquipmentChoices["class|source"]`) and defaults to `A` when unset.
 - `applyClassEquipmentChoice(cls, choice)` updates both the inventory items and provenance equipment grants for the selected class source.
 - Class equipment provenance is replaced per class source to avoid stale grants when switching between `A` and `B` equipment packages.
+
+Manual equipment behavior:
+- `equipmentCommands.ts` materializes inventory and manual ledger tags together for add/remove actions.
+- Removing one duplicate inventory row retains the manual tag while another same-name row remains.
+- Manual proficiency transitions update the persisted proficiency list and ledger together; skills also synchronize `character.skills` through `mergeSkillState`.
+
+Optional-feature behavior:
+- Class optional-feature replacement is a batch command. It removes only scoped prior choice tags,
+  preserves unrelated features/grants, accumulates every selected feature, and applies one patch.
 
 Race trait application behavior:
 - `applyRaceSelection(race, subrace)` and `applySubraceChange(race, subrace)` apply and reconcile `darkvision`, `resist`, `immune`, and `conditionImmune`.

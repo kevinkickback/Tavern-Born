@@ -10,7 +10,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
-import type { ActiveFilters } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { SplitPane } from '@/components/ui/SplitPane'
@@ -35,8 +34,9 @@ import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceM
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
-import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
+import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
 import {
   getAsiDisplay,
   getAvailableSubraces,
@@ -47,8 +47,7 @@ import {
   getSpeedDisplay,
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
-import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
-import { getTotalCharacterLevel, matchesGameDataEntry } from '@/lib/characterUtils'
+import { matchesGameDataEntry } from '@/lib/characterUtils'
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
@@ -57,8 +56,6 @@ import type { Feat5e, Race5e, Spell5e } from '@/types/5etools'
 
 export function BuildRacePage() {
   const character = useCharacterStore((s) => s.activeCharacter)
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const reconcileCharacter = useCharacterStore((s) => s.reconcileCharacter)
   const { races, feats, spells } = useFilteredGameData()
   const { applyRaceSelection, applySubraceChange } = useRaceProvenanceMutations()
   const { resolveFeatChoiceSelection, commitFeatWithOptions } = useFeatProvenanceMutations()
@@ -125,7 +122,6 @@ export function BuildRacePage() {
 
     if (currentSubraces.length === 0) {
       if (char.subrace || char.subraceSource) {
-        reconcileCharacter(char.id, { subrace: undefined, subraceSource: undefined })
         applySubraceChange(race, undefined)
       }
       return
@@ -136,12 +132,8 @@ export function BuildRacePage() {
     const firstSubrace = currentSubraces[0]
     if (!firstSubrace) return
 
-    reconcileCharacter(char.id, {
-      subrace: firstSubrace.name,
-      subraceSource: firstSubrace.source ?? undefined,
-    })
     applySubraceChange(race, firstSubrace)
-  }, [selectedRaceKey, applySubraceChange, reconcileCharacter])
+  }, [selectedRaceKey, applySubraceChange])
 
   // Racial feat choices from provenance
   const racialFeatChoices = useMemo(
@@ -159,51 +151,11 @@ export function BuildRacePage() {
     [racialFeatChoices, activeFeatChoiceId],
   )
 
-  const featModalFeats = useMemo(() => {
-    if (!activeFeatChoice) return []
-    const pool = activeFeatChoice.optionPool
-    if (pool.length === 0) return feats as Feat5e[]
-    const categoryPrefixes = pool.filter((p) => p.startsWith('category:'))
-    if (categoryPrefixes.length > 0) {
-      const allowedCategories = new Set(categoryPrefixes.map((p) => p.replace('category:', '')))
-      return (feats as Feat5e[]).filter((f) => f.category && allowedCategories.has(f.category))
-    }
-    const poolLower = new Set(pool.map((p) => p.toLowerCase()))
-    return (feats as Feat5e[]).filter((f) => poolLower.has(f.name.toLowerCase()))
+  const { eligibleFeats: featModalFeats, initialFilters: featModalInitialFilters } = useMemo(() => {
+    if (!activeFeatChoice) return { eligibleFeats: [], initialFilters: undefined }
+    return resolveFeatChoicePool(feats as Feat5e[], activeFeatChoice.optionPool)
   }, [activeFeatChoice, feats])
-
-  const featModalInitialFilters = useMemo<ActiveFilters | undefined>(() => {
-    if (!activeFeatChoice) return undefined
-    const cats = activeFeatChoice.optionPool
-      .filter((p) => p.startsWith('category:'))
-      .map((p) => p.replace('category:', ''))
-    if (cats.length > 0) return { featCategory: new Set(cats) }
-    return undefined
-  }, [activeFeatChoice])
-
-  const profileSpells = character
-    ? collectKnownSpells(ensureSpellProfiles(character))
-    : { cantrips: [], spellsKnown: [], preparedSpells: [] }
-
-  const characterSnapshot: PrereqCharacterSnapshot = {
-    level: getTotalCharacterLevel(character),
-    class: character?.class ?? '',
-    race: character?.race ?? '',
-    abilityScores: character?.abilityScores ?? {
-      strength: 10,
-      dexterity: 10,
-      constitution: 10,
-      intelligence: 10,
-      wisdom: 10,
-      charisma: 10,
-    },
-    features: character?.features ?? [],
-    spells: {
-      cantrips: profileSpells.cantrips,
-      spellsKnown: profileSpells.spellsKnown,
-      preparedSpells: profileSpells.preparedSpells,
-    },
-  }
+  const characterSnapshot = buildPrerequisiteSnapshot({ character })
 
   const handleOpenFeatModal = useCallback((choiceId: string) => {
     setActiveFeatChoiceId(choiceId)
@@ -295,14 +247,6 @@ export function BuildRacePage() {
                           type="button"
                           onClick={() => {
                             const firstSubrace = namedSubraces[0]
-                            updateCharacter(character.id, {
-                              race: race.name,
-                              raceSource: race.source ?? undefined,
-                              subrace: firstSubrace?.name,
-                              subraceSource: firstSubrace?.source ?? undefined,
-                              raceAsiChoices: [],
-                              raceAsiBlockIndex: 0,
-                            })
                             applyRaceSelection(race, firstSubrace, 0)
                           }}
                           className="flex items-center gap-3 min-w-0 flex-1 text-left"
@@ -383,11 +327,6 @@ export function BuildRacePage() {
                                   candidate.name === subraceName &&
                                   (candidate.source ?? '') === (subraceSource ?? ''),
                               )
-                              updateCharacter(character.id, {
-                                subrace: subraceName,
-                                subraceSource,
-                                raceAsiChoices: [],
-                              })
                               applySubraceChange(selectedRace, nextSubrace)
                             }}
                           >

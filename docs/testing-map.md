@@ -19,13 +19,16 @@ Key scripts in package.json:
 - Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
+- Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions, deterministic source-less fallback, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
 - Renderer output in src/lib/renderer.ts
+- Recursive tooltip builder and hook coverage for explicit collection sets, stable source/name keys, and `itemsBase`
 - Provenance ledger/reconciliation modules
 - Provenance section row routing helper in src/lib/provenance/sectionRows.ts
 - Provenance composed hooks in src/hooks/character/useProvenance*.ts
 - Zustand stores in src/store/*
 - Character persistence schema validation in tests/lib/characterSchema.test.ts
+- Named game-data lookup hook coverage for stable empty defaults and ingestion-built race/background/item/metadata/skill lookups
 - Character payload validation and rehydrate safety in tests/store/characterStore.test.ts
 - Build flow extracted helpers:
 	- src/pages/build/ability-scores/model/data.ts
@@ -39,6 +42,10 @@ Key scripts in package.json:
 	- `formatWeaponCategoryLabel` weapon category key → display label
 - Compendium entry shaping and filtering in src/lib/compendiumEntries.ts, including 5e / 5.5e / Both edition classification and composition with type, source, and text filters
 - Equipment page detail rendering, recursive link tooltips, and persistent inventory headers in tests/integration/equipmentPage.test.tsx; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
+- Atomic equipment command coverage for add/remove/manual proficiency alignment, duplicate names, and retained source tags
+- Wizard data-controller coverage for draft source filtering, implicit ruleset sources, reprint suppression, and raw fallback resolution
+- Shared prerequisite snapshot and feat option-pool coverage, including multiclass progression and source collisions
+- Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, level-up modal (tests/integration/*)
 - Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
 - Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
@@ -69,6 +76,7 @@ Key scripts in package.json:
 - Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 - Electron updater offline safeguards in tests/lib/updateManager.test.ts (offline short-circuit and startup schedule skip)
 - Store-level empty background refresh guard in tests/store/gameDataStore.test.ts (prevents clobbering existing cache/state)
+- Character sheet PDF boundary coverage for pure view-model entity projection, pure 2014/2024 mapping, form filling, and 2014 MPMB cleanup
 
 ## High-Priority Gaps
 

@@ -28,6 +28,11 @@ import {
 import { getCharacterClassEntries, getTotalLevel } from '@/lib/characterUtils'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SourceRow } from '@/lib/provenance/types'
+import {
+  buildRecursiveLookup,
+  getEntityKey,
+  type RecursiveLookup,
+} from '@/lib/renderer/recursiveTooltip'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
@@ -37,12 +42,6 @@ import {
   type SpellListItem,
   SpellProfileManager,
 } from '@/pages/spells/components/SpellProfileManager'
-import {
-  buildNameMap,
-  getEntityKey,
-  type RecursiveLookup,
-  type TooltipEntityLike,
-} from '@/pages/spells/components/spellTooltipUtils'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Class5e, Spell5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
@@ -58,6 +57,7 @@ export function SpellsPage() {
   const {
     spells,
     items,
+    itemsBase,
     feats,
     races,
     classes,
@@ -105,35 +105,25 @@ export function SpellsPage() {
   } | null>(null)
 
   const allSpells = spells as Spell5e[]
-  const spellByName = useMemo(() => {
-    const map = new Map<string, Spell5e>()
-    for (const spell of allSpells) {
-      map.set(getEntityKey(spell.name, spell.source), spell)
-      const withoutSource = getEntityKey(spell.name)
-      if (!map.has(withoutSource)) {
-        map.set(withoutSource, spell)
-      }
-    }
-    return map
-  }, [allSpells])
-
   const recursiveLookup = useMemo<RecursiveLookup>(
-    () => ({
-      spells: spellByName,
-      items: buildNameMap(items as TooltipEntityLike[]),
-      feats: buildNameMap(feats as TooltipEntityLike[]),
-      races: buildNameMap(races as TooltipEntityLike[]),
-      classes: buildNameMap(classes as TooltipEntityLike[]),
-      backgrounds: buildNameMap(backgrounds as TooltipEntityLike[]),
-      optionalfeatures: buildNameMap(optionalfeatures as TooltipEntityLike[]),
-      actions: buildNameMap(actions as TooltipEntityLike[]),
-      conditions: buildNameMap(conditions as TooltipEntityLike[]),
-      deities: buildNameMap(deities as TooltipEntityLike[]),
-      skills: buildNameMap(skills as TooltipEntityLike[]),
-      senses: buildNameMap(senses as TooltipEntityLike[]),
-      variantrules: buildNameMap(variantrules as TooltipEntityLike[]),
-      languages: buildNameMap(languages as TooltipEntityLike[]),
-    }),
+    () =>
+      buildRecursiveLookup({
+        spells: allSpells,
+        items,
+        itemsBase,
+        feats,
+        races,
+        classes,
+        backgrounds,
+        optionalfeatures,
+        actions,
+        conditions,
+        deities,
+        skills,
+        senses,
+        variantrules,
+        languages,
+      }),
     [
       backgrounds,
       classes,
@@ -146,11 +136,13 @@ export function SpellsPage() {
       skills,
       variantrules,
       items,
+      itemsBase,
       optionalfeatures,
       races,
-      spellByName,
+      allSpells,
     ],
   )
+  const spellByName = recursiveLookup.spells
 
   const detailsByProfileId = useMemo(
     () => new Map(spellcastingDetails.map((detail) => [detail.profileId, detail] as const)),

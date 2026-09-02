@@ -15,8 +15,8 @@ import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
+import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
-import type { RecursiveLookup } from '@/pages/spells/components/spellTooltipUtils'
 import type { Feat5e } from '@/types/5etools'
 
 interface FeatCardProps {

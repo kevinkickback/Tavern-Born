@@ -42,11 +42,11 @@ import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
+  buildPrerequisiteSnapshot,
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
-import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
-import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntryCached } from '@/lib/entryRenderCache'
 import {
   getFixedFeatOptionKey,
@@ -418,35 +418,9 @@ export function FeatsPage() {
   const usedASI = character?.feats?.length ?? 0
   const remainingASI = totalFeatSlots - usedASI
 
-  const profileSpells = useMemo(
-    () =>
-      character
-        ? collectKnownSpells(ensureSpellProfiles(character))
-        : { cantrips: [], spellsKnown: [], preparedSpells: [] },
-    [character],
-  )
-
   const characterSnapshot = useMemo<PrereqCharacterSnapshot>(
-    () => ({
-      level: getTotalCharacterLevel(character),
-      class: character?.class ?? '',
-      race: character?.race ?? '',
-      abilityScores: character?.abilityScores ?? {
-        strength: 10,
-        dexterity: 10,
-        constitution: 10,
-        intelligence: 10,
-        wisdom: 10,
-        charisma: 10,
-      },
-      features: character?.features ?? [],
-      spells: {
-        cantrips: profileSpells.cantrips,
-        spellsKnown: profileSpells.spellsKnown,
-        preparedSpells: profileSpells.preparedSpells,
-      },
-    }),
-    [character, profileSpells],
+    () => buildPrerequisiteSnapshot({ character, classProgression }),
+    [character, classProgression],
   )
 
   // Feat choices from provenance and partitioned by source type and selection status
@@ -936,20 +910,20 @@ export function FeatsPage() {
                                   !!granted.featData &&
                                   hasFeatOptions(granted.featData) &&
                                   !character.fixedFeatOptions?.[
-                                  getFixedFeatOptionKey(
-                                    granted.name,
-                                    granted.source,
-                                    granted.grantVariant,
-                                  )
+                                    getFixedFeatOptionKey(
+                                      granted.name,
+                                      granted.source,
+                                      granted.grantVariant,
+                                    )
                                   ]
                                 }
                                 optionsConfigured={
                                   !!character.fixedFeatOptions?.[
-                                  getFixedFeatOptionKey(
-                                    granted.name,
-                                    granted.source,
-                                    granted.grantVariant,
-                                  )
+                                    getFixedFeatOptionKey(
+                                      granted.name,
+                                      granted.source,
+                                      granted.grantVariant,
+                                    )
                                   ]
                                 }
                                 onCompleteSetup={handleCompleteSetup}
@@ -1000,20 +974,20 @@ export function FeatsPage() {
                                   !!granted.featData &&
                                   hasFeatOptions(granted.featData) &&
                                   !character.fixedFeatOptions?.[
-                                  getFixedFeatOptionKey(
-                                    granted.name,
-                                    granted.source,
-                                    granted.grantVariant,
-                                  )
+                                    getFixedFeatOptionKey(
+                                      granted.name,
+                                      granted.source,
+                                      granted.grantVariant,
+                                    )
                                   ]
                                 }
                                 optionsConfigured={
                                   !!character.fixedFeatOptions?.[
-                                  getFixedFeatOptionKey(
-                                    granted.name,
-                                    granted.source,
-                                    granted.grantVariant,
-                                  )
+                                    getFixedFeatOptionKey(
+                                      granted.name,
+                                      granted.source,
+                                      granted.grantVariant,
+                                    )
                                   ]
                                 }
                                 onCompleteSetup={handleCompleteSetup}

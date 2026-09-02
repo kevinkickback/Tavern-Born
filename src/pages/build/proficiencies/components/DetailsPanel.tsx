@@ -2,12 +2,12 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
+import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { formatWeaponCategoryLabel } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
-import { useGameDataStore } from '@/store/gameDataStore'
 import type { Item5e, Language5e } from '@/types/5etools'
 
 /**
@@ -154,7 +154,7 @@ function DetailMetric({ label, children }: { label: string; children: React.Reac
 // ── Category detail panels ────────────────────────────────────────────────────
 
 function ArmorDetails({ item }: { item: Item5e }) {
-  const itemTypeByAbbr = useGameDataStore((s) => s.gameData?.lookups?.itemTypeByAbbr)
+  const itemTypeByAbbr = useItemTypeLookup()
   const armorType = formatArmorType(item.type, itemTypeByAbbr)
   const edition = formatEdition(item.edition as string | undefined)
   const mastery = formatMasteryList(item.mastery)
@@ -181,7 +181,7 @@ function ArmorDetails({ item }: { item: Item5e }) {
 }
 
 function WeaponDetails({ item }: { item: Item5e }) {
-  const itemPropertyByAbbr = useGameDataStore((s) => s.gameData?.lookups?.itemPropertyByAbbr)
+  const itemPropertyByAbbr = useItemPropertyLookup()
   const weaponType = item.weaponCategory
     ? `${item.weaponCategory.charAt(0).toUpperCase()}${item.weaponCategory.slice(1)} ${
         item.type?.split('|')[0] === 'R' ? 'Ranged' : 'Melee'
@@ -224,7 +224,7 @@ function WeaponDetails({ item }: { item: Item5e }) {
 }
 
 function ToolDetails({ item }: { item: Item5e }) {
-  const itemTypeByAbbr = useGameDataStore((s) => s.gameData?.lookups?.itemTypeByAbbr)
+  const itemTypeByAbbr = useItemTypeLookup()
   const toolType = formatToolType(item.type, itemTypeByAbbr)
   const edition = formatEdition(item.edition as string | undefined)
 

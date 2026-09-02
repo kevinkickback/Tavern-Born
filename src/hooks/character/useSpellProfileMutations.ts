@@ -14,12 +14,15 @@ import {
   SPECIAL_SPELL_PROFILE_ID,
   type SpellcastingClassDetail,
 } from '@/lib/calculations/spellProfiles'
+import type { SpellCommandResult } from '@/lib/character/commands/spellCommands'
 import {
   addSpellToCharacter,
   removeRacialSpell as removeRacialSpellCommand,
   removeSpellFromCharacter,
   selectRacialSpell as selectRacialSpellCommand,
   setProfileSpells as setProfileSpellsCommand,
+  setRacialCastingAbility as setRacialCastingAbilityCommand,
+  syncSpellProfiles,
   toggleSpellPrepared,
 } from '@/lib/character/commands/spellCommands'
 import { normalizeKey } from '@/lib/provenance/normalization'
@@ -61,37 +64,21 @@ export function useSpellProfileMutations(
     }
   }, [character, spellProfiles])
 
-  const patchSpells = useCallback(
-    (patch: Partial<NonNullable<typeof character>['spells']>) => {
+  const applySpellCommand = useCallback(
+    (result: SpellCommandResult) => {
       if (!character) return
       updateCharacter(character.id, {
-        spells: { ...character.spells, ...patch },
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
       })
     },
     [character, updateCharacter],
   )
 
-  const applySpellCommand = useCallback(
-    (result: {
-      profileUpdate: Partial<NonNullable<typeof character>['spells']>
-      provenanceUpdate: NonNullable<typeof character>['provenance']
-    }) => {
-      if (!character) return
-      updateCharacter(character.id, {
-        spells: {
-          ...(commandCharacter?.spells ?? character.spells),
-          ...result.profileUpdate,
-        },
-        provenance: result.provenanceUpdate,
-      })
-    },
-    [character, commandCharacter, updateCharacter],
-  )
-
   const syncProfiles = useCallback(() => {
-    if (!character) return
-    patchSpells({ spellProfiles })
-  }, [character, patchSpells, spellProfiles])
+    if (!character || !commandCharacter) return
+    applySpellCommand(syncSpellProfiles(commandCharacter, currentLedger, spellProfiles))
+  }, [character, commandCharacter, currentLedger, spellProfiles, applySpellCommand])
 
   const addSpellToProfile = useCallback(
     (profileId: string, name: string, kind: 'cantrip' | 'spell') => {
@@ -256,13 +243,6 @@ export function useSpellProfileMutations(
   const selectRacialSpell = useCallback(
     (profileId: string, choiceId: string, spellName: string) => {
       if (!character || !commandCharacter) return
-
-      const profile = spellProfiles.find((p) => p.id === profileId)
-      const isCantrip = !!(
-        profile?.type === 'racial' &&
-        profile.choices?.find((choice) => choice.id === choiceId)?.isCantrip
-      )
-
       const result = selectRacialSpellCommand(
         commandCharacter,
         currentLedger,
@@ -270,49 +250,9 @@ export function useSpellProfileMutations(
         choiceId,
         spellName,
       )
-
-      const mergedProfiles = spellProfiles.map((profileEntry) => {
-        if (
-          profileEntry.id !== profileId ||
-          profileEntry.type !== 'racial' ||
-          !profileEntry.choices
-        ) {
-          return profileEntry
-        }
-        const nextChoices = profileEntry.choices.map((choice) => {
-          if (choice.id !== choiceId) return choice
-          if (choice.selected.includes(spellName)) return choice
-          if (choice.selected.length >= choice.count) return choice
-          return { ...choice, selected: [...choice.selected, spellName] }
-        })
-        return {
-          ...profileEntry,
-          choices: nextChoices,
-          cantrips: isCantrip
-            ? [
-                ...new Set([
-                  ...(result.profileUpdate.spellProfiles?.find((p) => p.id === profileId)
-                    ?.cantrips ?? profileEntry.cantrips),
-                ]),
-              ]
-            : profileEntry.cantrips,
-          spellsKnown: isCantrip
-            ? profileEntry.spellsKnown
-            : [
-                ...new Set([
-                  ...(result.profileUpdate.spellProfiles?.find((p) => p.id === profileId)
-                    ?.spellsKnown ?? profileEntry.spellsKnown),
-                ]),
-              ],
-        }
-      })
-
-      updateCharacter(character.id, {
-        spells: { ...character.spells, spellProfiles: mergedProfiles },
-        provenance: result.provenanceUpdate,
-      })
+      applySpellCommand(result)
     },
-    [character, commandCharacter, currentLedger, spellProfiles, updateCharacter],
+    [character, commandCharacter, currentLedger, applySpellCommand],
   )
 
   const removeRacialSpell = useCallback(
@@ -325,42 +265,19 @@ export function useSpellProfileMutations(
         choiceId,
         spellName,
       )
-      const nextProfiles = spellProfiles.map((profile) => {
-        if (profile.id !== profileId || profile.type !== 'racial' || !profile.choices) {
-          return profile
-        }
-        const nextChoices = profile.choices.map((choice) => {
-          if (choice.id !== choiceId) return choice
-          return { ...choice, selected: choice.selected.filter((s) => s !== spellName) }
-        })
-        return {
-          ...profile,
-          choices: nextChoices,
-          cantrips: profile.cantrips.filter((s) => s !== spellName),
-          spellsKnown: profile.spellsKnown.filter((s) => s !== spellName),
-        }
-      })
-      updateCharacter(character.id, {
-        spells: {
-          ...character.spells,
-          spellProfiles: nextProfiles,
-        },
-        provenance: result.provenanceUpdate,
-      })
+      applySpellCommand(result)
     },
-    [character, commandCharacter, currentLedger, spellProfiles, updateCharacter],
+    [character, commandCharacter, currentLedger, applySpellCommand],
   )
 
   const setRacialCastingAbility = useCallback(
     (profileId: string, ability: string) => {
-      if (!character) return
-      const nextProfiles = spellProfiles.map((profile) => {
-        if (profile.id !== profileId || profile.type !== 'racial') return profile
-        return { ...profile, castingAbility: ability }
-      })
-      patchSpells({ spellProfiles: nextProfiles })
+      if (!character || !commandCharacter) return
+      applySpellCommand(
+        setRacialCastingAbilityCommand(commandCharacter, currentLedger, profileId, ability),
+      )
     },
-    [character, patchSpells, spellProfiles],
+    [character, commandCharacter, currentLedger, applySpellCommand],
   )
 
   return {

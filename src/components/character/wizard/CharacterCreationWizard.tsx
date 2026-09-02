@@ -3,29 +3,13 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import {
-  resolveBackgroundStartingEquipment,
-  resolveClassStartingEquipment,
-} from '@/lib/5etools/startingEquipment'
+import { useWizardGameData } from '@/hooks/data/useWizardGameData'
 import { ABILITY_SCORE_MIN, POINT_BUY_MIN, STANDARD_ARRAY } from '@/lib/calculations/gameRules'
-import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
-import {
-  ensureOriginSystemInvariants,
-  normalizeBackgroundForOriginSystem,
-  normalizeRaceSelectionForOriginSystem,
-} from '@/lib/calculations/originSystem'
-import { buildInitialCharacterProficiencies } from '@/lib/character/commands/classSelectionOrchestrationCommand'
-import { generateEquipmentId } from '@/lib/character/ids'
-import {
-  applyBackgroundGrants,
-  applyClassGrants,
-  applyRaceGrants,
-  resolveRaceGrantFilterOptions,
-} from '@/lib/provenance'
+import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
+import { resolveRaceGrantFilterOptions } from '@/lib/provenance'
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
-import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-import { useGameDataStore } from '@/store/gameDataStore'
-import type { Background5e, Class5e, Item5e, Race5e } from '@/types/5etools'
+import { cn } from '@/lib/utils'
+import { useCharacterStore } from '@/store/characterStore'
 import type { AbilityScores } from '@/types/character'
 import { INITIAL_CHARACTER_DATA, WIZARD_STEPS } from './constants'
 import {
@@ -58,9 +42,9 @@ const ABILITY_ORDER = [
 
 function buildUniformAbilityScores(value: number): Record<string, number> {
   return ABILITY_ORDER.reduce(
-    (acc, ability) => {
-      acc[ability] = value
-      return acc
+    (scores, ability) => {
+      scores[ability] = value
+      return scores
     },
     {} as Record<string, number>,
   )
@@ -69,68 +53,44 @@ function buildUniformAbilityScores(value: number): Record<string, number> {
 function getDefaultAbilityScoresForMethod(method: string): Record<string, number> {
   if (method === 'standard-array') {
     return ABILITY_ORDER.reduce(
-      (acc, ability, index) => {
-        acc[ability] = STANDARD_ARRAY[index] ?? POINT_BUY_MIN
-        return acc
+      (scores, ability, index) => {
+        scores[ability] = STANDARD_ARRAY[index] ?? POINT_BUY_MIN
+        return scores
       },
       {} as Record<string, number>,
     )
   }
-
-  if (method === 'custom') {
-    return buildUniformAbilityScores(ABILITY_SCORE_MIN)
-  }
-
+  if (method === 'custom') return buildUniformAbilityScores(ABILITY_SCORE_MIN)
   return buildUniformAbilityScores(POINT_BUY_MIN)
 }
 
-const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
-
 export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreationWizardProps) {
-  const createNewCharacter = useCharacterStore((state) => state.createNewCharacter)
+  const addCharacter = useCharacterStore((state) => state.addCharacter)
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
-  const gameData = useGameDataStore((state) => state.gameData)
-  const itemLookup =
-    useGameDataStore((state) => state.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
-
   const [currentStep, setCurrentStep] = useState(1)
   const [characterData, setCharacterData] = useState<CharacterWizardData>(INITIAL_CHARACTER_DATA)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
+  const wizardData = useWizardGameData({
+    allowedSources: characterData.allowedSources,
+    originSystem: characterData.originSystem,
+    preferNewerPrintings: characterData.variantRules?.preferNewerPrintings,
+  })
 
   useEffect(() => {
-    if (!open) {
-      return
-    }
-
-    setCharacterData((prev) => {
-      if ((prev.allowedSources?.length ?? 0) > 0) {
-        return prev
-      }
-
+    if (!open) return
+    setCharacterData((previous) => {
+      if ((previous.allowedSources?.length ?? 0) > 0) return previous
       const recommended = SOURCE_PRESETS.find((preset) => preset.id === 'recommended')
-      if (!recommended) {
-        return prev
-      }
-
-      const availableSourceSet = new Set(
-        (gameData?.sources ?? []).map((source) => source.abbreviation),
-      )
+      if (!recommended) return previous
+      const availableSources = new Set(wizardData.sources.map((source) => source.abbreviation))
       const allowedSources =
-        availableSourceSet.size > 0
-          ? recommended.abbreviations.filter((abbr) => availableSourceSet.has(abbr))
+        availableSources.size > 0
+          ? recommended.abbreviations.filter((source) => availableSources.has(source))
           : recommended.abbreviations
-
-      if (allowedSources.length === 0) {
-        return prev
-      }
-
-      return {
-        ...prev,
-        allowedSources,
-      }
+      return allowedSources.length > 0 ? { ...previous, allowedSources } : previous
     })
-  }, [open, gameData?.sources])
+  }, [open, wizardData.sources])
 
   const handleClose = () => {
     setCurrentStep(1)
@@ -140,144 +100,80 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     onOpenChange(false)
   }
 
-  const handleNext = () => {
-    const validation = validateStep(currentStep, characterData, gameData)
+  const handleFinish = () => {
+    const raceResolution = wizardData.resolveRace({
+      name: characterData.race,
+      source: characterData.raceSource,
+      subraceName: characterData.subrace,
+      subraceSource: characterData.subraceSource,
+    })
+    const classEntity = wizardData.resolveClass({
+      name: characterData.class,
+      source: characterData.classSource,
+    })
+    const background = wizardData.resolveBackground({
+      name: characterData.background,
+      source: characterData.backgroundSource,
+    })
+    const character = buildInitialCharacter(
+      {
+        initial: {
+          name: characterData.name,
+          originSystem: characterData.originSystem as '2014' | '2024',
+          portrait: characterData.portrait,
+          portraitTransform: characterData.portraitTransform,
+          allowedSources: characterData.allowedSources,
+          abilityScores: characterData.abilityScores as unknown as AbilityScores,
+          variantRules: {
+            ...characterData.variantRules,
+            abilityScoreMethod:
+              (characterData.abilityScoreMethod as 'point-buy' | 'standard-array' | 'custom') ||
+              'standard-array',
+          },
+          details: {
+            playerName: characterData.playerName,
+            age: characterData.age ?? undefined,
+            gender: characterData.gender,
+          },
+        },
+        race: raceResolution.parentRace,
+        subrace: raceResolution.subraceData,
+        classEntity,
+        background,
+        raceAsiChoices: characterData.raceAsiChoices,
+        raceAsiBlockIndex: characterData.raceAsiBlockIndex,
+      },
+      wizardData.itemLookup,
+      (domain, fromFilter) =>
+        resolveRaceGrantFilterOptions(domain, fromFilter, {
+          items: wizardData.items,
+          itemsBase: wizardData.itemsBase,
+          allowedSources: characterData.allowedSources,
+        }),
+    )
+    addCharacter(character)
+    setActiveCharacter(character.id)
+    handleClose()
+    toast.success('Character created successfully')
+  }
 
+  const handleNext = () => {
+    const validation = validateStep(currentStep, characterData, wizardData)
     if (!validation.valid) {
       setValidationError(validation.error || 'Please complete this step')
-      if (validation.fields) {
-        setInvalidFields(new Set(validation.fields))
-      }
+      if (validation.fields) setInvalidFields(new Set(validation.fields))
       return
     }
-
     setValidationError(null)
     setInvalidFields(new Set())
-
-    if (currentStep < WIZARD_STEPS.length) {
-      setCurrentStep(currentStep + 1)
-    } else {
-      handleFinish()
-    }
+    if (currentStep < WIZARD_STEPS.length) setCurrentStep(currentStep + 1)
+    else handleFinish()
   }
 
   const handleBack = () => {
     setValidationError(null)
     setInvalidFields(new Set())
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
-
-  const handleFinish = () => {
-    const raceObj = (gameData?.races ?? []).find(
-      (r: Race5e) =>
-        r.name === characterData.race &&
-        (!characterData.raceSource || r.source === characterData.raceSource),
-    )
-    const subraceObj = raceObj?.subraces?.find(
-      (sr: Race5e) =>
-        sr.name === characterData.subrace &&
-        (sr.source ?? '') === (characterData.subraceSource ?? ''),
-    )
-    const classObj = (gameData?.classes ?? []).find(
-      (c: Class5e) =>
-        c.name === characterData.class &&
-        (!characterData.classSource || c.source === characterData.classSource),
-    )
-    const bgObj = (gameData?.backgrounds ?? []).find(
-      (b: Background5e) =>
-        b.name === characterData.background &&
-        (!characterData.backgroundSource || b.source === characterData.backgroundSource),
-    )
-    const originSystem = characterData.originSystem as '2014' | '2024'
-    const normalizedRaceSelection = normalizeRaceSelectionForOriginSystem(
-      raceObj,
-      subraceObj,
-      originSystem,
-    )
-    const normalizedBackground = normalizeBackgroundForOriginSystem(bgObj, originSystem)
-
-    let provenance = emptyProvenance()
-    if (normalizedRaceSelection.race) {
-      provenance = applyRaceGrants(
-        normalizedRaceSelection.race,
-        normalizedRaceSelection.subrace,
-        provenance,
-        (domain, fromFilter) =>
-          resolveRaceGrantFilterOptions(domain, fromFilter, {
-            items: gameData?.items ?? [],
-            itemsBase: gameData?.itemsBase ?? [],
-            allowedSources: characterData.allowedSources,
-          }),
-        characterData.raceAsiBlockIndex,
-        1,
-        { suppressLanguageGrants: originSystem === '2024' },
-      )
-    }
-    if (classObj) {
-      provenance = applyClassGrants(classObj, undefined, provenance, { itemLookup })
-    }
-    if (normalizedBackground) {
-      provenance = applyBackgroundGrants(normalizedBackground, provenance, {
-        itemLookup,
-        suppressLanguageGrants: originSystem === '2024',
-      })
-    }
-    provenance = ensureOriginLanguageBaseline(provenance, originSystem)
-    ensureOriginSystemInvariants(provenance, originSystem)
-
-    const { proficiencies, skills: initialSkills } = buildInitialCharacterProficiencies(
-      classObj,
-      normalizedBackground,
-    )
-    const startingEquipment = [
-      ...resolveClassStartingEquipment(classObj?.startingEquipment, itemLookup),
-      ...resolveBackgroundStartingEquipment(bgObj?.startingEquipment, itemLookup),
-    ]
-
-    const character = createNewCharacter({
-      name: characterData.name,
-      originSystem,
-      race: characterData.race,
-      raceSource: characterData.raceSource || undefined,
-      subrace: characterData.subrace,
-      subraceSource: characterData.subraceSource || undefined,
-      class: characterData.class,
-      classSource: characterData.classSource || undefined,
-      background: characterData.background,
-      backgroundSource: characterData.backgroundSource || undefined,
-      portrait: characterData.portrait,
-      portraitTransform: characterData.portraitTransform,
-      allowedSources: characterData.allowedSources,
-      abilityScores: characterData.abilityScores as unknown as AbilityScores,
-      variantRules: {
-        ...characterData.variantRules,
-        abilityScoreMethod:
-          (characterData.abilityScoreMethod as 'point-buy' | 'standard-array' | 'custom') ||
-          'standard-array',
-      },
-      details: {
-        playerName: characterData.playerName,
-        age: characterData.age ?? undefined,
-        gender: characterData.gender,
-      },
-      provenance,
-      proficiencies,
-      skills: initialSkills,
-      equipment: startingEquipment.map((item) => ({
-        id: generateEquipmentId(),
-        equipped: false,
-        attuned: false,
-        ...item,
-      })),
-      raceAsiChoices: characterData.raceAsiChoices,
-      raceAsiBlockIndex: characterData.raceAsiBlockIndex,
-    })
-
-    setActiveCharacter(character.id)
-    handleClose()
-    toast.success('Character created successfully')
+    if (currentStep > 1) setCurrentStep(currentStep - 1)
   }
 
   const updateCharacterData = (updates: Partial<CharacterWizardData>) => {
@@ -290,19 +186,21 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         normalizedUpdates.abilityScoreMethod,
       )
     }
-
-    setCharacterData((prev) => ({ ...prev, ...normalizedUpdates }))
+    setCharacterData((previous) => ({ ...previous, ...normalizedUpdates }))
     setValidationError(null)
-    const newInvalidFields = new Set(invalidFields)
+    const nextInvalidFields = new Set(invalidFields)
     Object.keys(normalizedUpdates).forEach((key) => {
-      newInvalidFields.delete(key)
+      nextInvalidFields.delete(key)
     })
-    setInvalidFields(newInvalidFields)
+    setInvalidFields(nextInvalidFields)
   }
 
-  const races = gameData?.races || []
-  const classes = gameData?.classes || []
-  const backgrounds = gameData?.backgrounds || []
+  const raceResolution = wizardData.resolveRace({
+    name: characterData.race,
+    source: characterData.raceSource,
+    subraceName: characterData.subrace,
+    subraceSource: characterData.subraceSource,
+  })
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -311,18 +209,21 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
         <DialogDescription className="sr-only">
           Step through the wizard to configure your new character.
         </DialogDescription>
-
         <div className="flex min-h-0 flex-1">
           <WizardNavigation steps={WIZARD_STEPS} currentStep={currentStep} />
           <div className="flex min-w-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto py-6 pl-8 pr-14">
+            <div
+              className={cn(
+                'min-h-0 flex-1 py-6 pl-8 pr-14',
+                currentStep === 2 ? 'overflow-hidden' : 'overflow-y-auto',
+              )}
+            >
               {validationError && invalidFields.size === 0 && (
                 <Alert variant="destructive" className="mb-4">
                   <Warning className="size-4" />
                   <AlertDescription>{validationError}</AlertDescription>
                 </Alert>
               )}
-
               {currentStep === 1 && (
                 <BasicsStep
                   data={characterData}
@@ -334,29 +235,46 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
                 <RulesStep
                   data={characterData}
                   onChange={updateCharacterData}
-                  gameData={gameData ?? undefined}
+                  sources={wizardData.sources}
                   invalidFields={invalidFields}
                 />
               )}
               {currentStep === 3 && (
-                <RaceStep data={characterData} onChange={updateCharacterData} races={races} />
+                <RaceStep
+                  data={characterData}
+                  onChange={updateCharacterData}
+                  races={wizardData.races}
+                />
               )}
               {currentStep === 4 && (
-                <ClassStep data={characterData} onChange={updateCharacterData} classes={classes} />
+                <ClassStep
+                  data={characterData}
+                  onChange={updateCharacterData}
+                  classes={wizardData.classes}
+                />
               )}
               {currentStep === 5 && (
                 <BackgroundStep
                   data={characterData}
                   onChange={updateCharacterData}
-                  backgrounds={backgrounds}
+                  backgrounds={wizardData.backgrounds}
                 />
               )}
               {currentStep === 6 && (
-                <AbilityScoresStep data={characterData} onChange={updateCharacterData} />
+                <AbilityScoresStep
+                  data={characterData}
+                  onChange={updateCharacterData}
+                  raceResolution={raceResolution}
+                />
               )}
-              {currentStep === 7 && <ReviewStep data={characterData} />}
+              {currentStep === 7 && (
+                <ReviewStep
+                  data={characterData}
+                  raceResolution={raceResolution}
+                  sources={wizardData.sources}
+                />
+              )}
             </div>
-
             <WizardFooter
               currentStep={currentStep}
               totalSteps={WIZARD_STEPS.length}

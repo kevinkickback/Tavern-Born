@@ -9,19 +9,16 @@ import type { SourceBook } from '@/types/5etools'
 import type { StepProps } from '../types'
 
 interface RulesStepProps extends StepProps {
-  gameData?: {
-    sources?: SourceBook[]
-  }
+  sources?: SourceBook[]
 }
 
-export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStepProps) {
+export function RulesStep({ data, onChange, sources = [], invalidFields }: RulesStepProps) {
   const optionalClassFeaturesId = useId()
   const averageHitPointsId = useId()
   const bladesingerAnyRaceId = useId()
   const battleragerAnyRaceId = useId()
 
   const preferNewerPrintingsId = useId()
-  const sources = gameData?.sources || []
   const allowedSources = data.allowedSources || []
   const availableSourceSet = new Set(sources.map((source) => source.abbreviation))
 
@@ -144,7 +141,7 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
 
   return (
     <TooltipProvider>
-      <div className="flex min-h-full flex-col overflow-hidden rounded-lg border border-border bg-workspace-pane">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-workspace-pane">
         <section className="shrink-0 space-y-3 border-b border-border p-4">
           <div className="flex items-center gap-2">
             <Sparkle className="h-4 w-4 text-primary" weight="fill" />
@@ -368,7 +365,10 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
             </div>
           ) : (
             <div className="flex-1 min-h-0 flex flex-col gap-2">
-              <div className="flex-1 overflow-y-auto pr-1 space-y-4">
+              <section
+                aria-label="Allowed sources"
+                className="flex-1 overflow-y-auto pr-1 space-y-4"
+              >
                 {groupOrder.map((group) => {
                   const groupSources = sourcesByGroup[group]?.filter(
                     (s) => !IMPLICIT_SOURCES.has(s.abbreviation),
@@ -414,39 +414,41 @@ export function RulesStep({ data, onChange, gameData, invalidFields }: RulesStep
                     </div>
                   )
                 })}
+              </section>
+
+              <div aria-live="polite" className="contents">
+                {hasNonPresetSourcesSelected && (
+                  <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
+                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                    <span>
+                      Non-recommended sources often contain DM-only or outdated content. These may
+                      clutter your options with material not intended for players.
+                    </span>
+                  </div>
+                )}
+
+                {data.originSystem === '2024' && (
+                  <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
+                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                    <span>
+                      {preferNewerPrintingsEnabled
+                        ? 'Older options are hidden when newer versions exist. Disable "Prefer Newer Printings" to see all options (will show duplicate entries).'
+                        : 'Some content exists in both Legacy (2014) and Revised (2024) editions. Enable "Prefer Newer Printings" to only see the most recent version.'}
+                    </span>
+                  </div>
+                )}
+
+                {data.originSystem === '2014' && (
+                  <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
+                    <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
+                    <span>
+                      {preferNewerPrintingsEnabled
+                        ? 'Older printings are hidden where a newer version exists in your selected sources. Disable "Prefer Newer Printings" to see all options.'
+                        : 'Some races and features appear in multiple printings across your selected sources (e.g., ERLW content updated in MPMM). Enable "Prefer Newer Printings" to automatically hide older versions.'}
+                    </span>
+                  </div>
+                )}
               </div>
-
-              {hasNonPresetSourcesSelected && (
-                <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-                  <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
-                  <span>
-                    Non-recommended sources often contain DM-only or outdated content. These may
-                    clutter your options with material not intended for players.
-                  </span>
-                </div>
-              )}
-
-              {data.originSystem === '2024' && (
-                <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-                  <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
-                  <span>
-                    {preferNewerPrintingsEnabled
-                      ? 'Older options are hidden when newer versions exist. Disable "Prefer Newer Printings" to see all options (will show duplicate entries).'
-                      : 'Some content exists in both Legacy (2014) and Revised (2024) editions. Enable "Prefer Newer Printings" to only see the most recent version.'}
-                  </span>
-                </div>
-              )}
-
-              {data.originSystem === '2014' && (
-                <div className="text-xs text-amber-200 flex items-center gap-1.5 flex-shrink-0 bg-amber-500/10 border border-amber-500/30 p-3 rounded-md">
-                  <Warning className="h-3.5 w-3.5 flex-shrink-0 text-amber-400" />
-                  <span>
-                    {preferNewerPrintingsEnabled
-                      ? 'Older printings are hidden where a newer version exists in your selected sources. Disable "Prefer Newer Printings" to see all options.'
-                      : 'Some races and features appear in multiple printings across your selected sources (e.g., ERLW content updated in MPMM). Enable "Prefer Newer Printings" to automatically hide older versions.'}
-                  </span>
-                </div>
-              )}
             </div>
           )}
         </section>

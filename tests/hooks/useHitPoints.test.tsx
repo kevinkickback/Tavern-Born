@@ -10,10 +10,10 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 }))
 
 vi.mock('@/hooks/data/useGameData', () => ({
-  useClasses: () => [
-    { name: 'Rogue', source: 'PHB', hd: { faces: 8 } },
-    { name: 'Wizard', source: 'PHB', hd: { faces: 6 } },
-  ],
+  useClassLookup: () => ({
+    'Rogue|PHB': { name: 'Rogue', source: 'PHB', hd: { faces: 8 } },
+    'Wizard|PHB': { name: 'Wizard', source: 'PHB', hd: { faces: 6 } },
+  }),
 }))
 
 import { useHitPoints } from '@/hooks/character/useHitPoints'

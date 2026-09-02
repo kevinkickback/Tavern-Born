@@ -99,7 +99,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     )
 
     updateCharacter(char.id, {
-      ...result.characterUpdate,
+      ...result.characterPatch,
       provenance: result.provenanceUpdate,
     })
   }
@@ -157,15 +157,15 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       : null
 
     const nextProficiencies =
-      multiclassResult?.characterUpdate.proficiencies ?? character.proficiencies
+      multiclassResult?.characterPatch.proficiencies ?? character.proficiencies
     const nextProvenance =
       multiclassResult?.provenanceUpdate ?? character.provenance ?? emptyProvenance()
     const progressionResult = applyClassProgressionUpdate(character, nextProvenance, newProgression)
 
     updateCharacter(character.id, {
-      ...progressionResult.characterUpdate,
+      ...progressionResult.characterPatch,
       proficiencies: nextProficiencies,
-      skills: multiclassResult?.characterUpdate.skills ?? character.skills,
+      skills: multiclassResult?.characterPatch.skills ?? character.skills,
       provenance: progressionResult.provenanceUpdate,
     })
 
@@ -204,7 +204,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
         const result = removeSpellFromCharacter(updatedChar, updatedLedger, spellName)
         updatedChar = {
           ...updatedChar,
-          spells: { ...updatedChar.spells, ...result.profileUpdate },
+          ...result.characterPatch,
         } as typeof character
         updatedLedger = result.provenanceUpdate
       }
@@ -220,7 +220,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
     const progressionResult = applyClassProgressionUpdate(character, updatedLedger, newProgression)
     updateCharacter(character.id, {
-      ...progressionResult.characterUpdate,
+      ...progressionResult.characterPatch,
       provenance: progressionResult.provenanceUpdate,
       ...spellProfileUpdate,
     })

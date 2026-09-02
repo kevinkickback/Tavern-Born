@@ -777,6 +777,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                                 <Button
                                                   variant="ghost"
                                                   size="sm"
+                                                  aria-label={`Remove ${item.name}`}
                                                   className="size-9 cursor-pointer p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                                   onClick={(event) => {
                                                     event.stopPropagation()

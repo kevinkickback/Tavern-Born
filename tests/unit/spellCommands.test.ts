@@ -55,7 +55,7 @@ describe('Spell Commands', () => {
       )
 
       // Profile should be updated with new cantrip
-      const updatedProfile = result.profileUpdate.spellProfiles?.[0]
+      const updatedProfile = result.characterPatch.spells?.spellProfiles[0]
       expect(updatedProfile?.cantrips).toContain('Fire Bolt')
 
       // Provenance should record the grant
@@ -102,7 +102,7 @@ describe('Spell Commands', () => {
       )
 
       // Profile should include new spell known
-      const updatedProfile = result.profileUpdate.spellProfiles?.[0]
+      const updatedProfile = result.characterPatch.spells?.spellProfiles[0]
       expect(updatedProfile?.spellsKnown).toContain('Faerie Fire')
     })
   })
@@ -137,7 +137,7 @@ describe('Spell Commands', () => {
       })
 
       // Profile should no longer have removed cantrip
-      const updatedProfile = result.profileUpdate.spellProfiles?.[0]
+      const updatedProfile = result.characterPatch.spells?.spellProfiles[0]
       expect(updatedProfile?.cantrips).not.toContain('Fire Bolt')
       expect(updatedProfile?.cantrips).toContain('Mage Hand')
 
@@ -187,7 +187,9 @@ describe('Spell Commands', () => {
         profileId,
       )
 
-      const updatedProfile = result.profileUpdate.spellProfiles?.find((p) => p.id === profileId)
+      const updatedProfile = result.characterPatch.spells?.spellProfiles.find(
+        (profile) => profile.id === profileId,
+      )
 
       // Removed spell must be gone from the profile
       expect(updatedProfile?.spellsKnown).not.toContain('Faerie Fire')

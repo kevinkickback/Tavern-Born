@@ -30,8 +30,6 @@ describe('Windows title-bar overlay', () => {
   test('uses the shell color and scales the native caption-control height', async () => {
     render(<AppTitleBar />)
 
-    await waitFor(() =>
-      expect(setTitleBarOverlay).toHaveBeenCalledWith('#111113', '#fafafa', 38),
-    )
+    await waitFor(() => expect(setTitleBarOverlay).toHaveBeenCalledWith('#111113', '#fafafa', 38))
   })
 })

@@ -7,6 +7,8 @@
 * New app icon
 * Updates now install automatically after download
 * Added zoom controls to PDF character sheet previews
+* Fixed 2024 PDF previews rendering much larger than the selected zoom level
+* Kept Rules warnings visible while scrolling allowed sources during character creation
 * Fixed multiclass ASIs and feats overlapping across classes
 * Fixed several issues affecting subclass-granted spells
 

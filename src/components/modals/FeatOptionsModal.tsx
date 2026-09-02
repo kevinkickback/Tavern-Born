@@ -423,13 +423,13 @@ function initWizardState(
   const validatedFixedClass = validateFixedSpellcastingClass(feat, fixedSpellcastingClass)
   const seededSelections = validatedFixedClass
     ? {
-      ...initialSelections,
-      spellcastingClass: validatedFixedClass,
-      spells:
-        initialSelections?.spellcastingClass === validatedFixedClass
-          ? initialSelections.spells
-          : undefined,
-    }
+        ...initialSelections,
+        spellcastingClass: validatedFixedClass,
+        spells:
+          initialSelections?.spellcastingClass === validatedFixedClass
+            ? initialSelections.spells
+            : undefined,
+      }
     : initialSelections
 
   if (seededSelections?.spellcastingClass) {
@@ -445,15 +445,15 @@ function initWizardState(
       )
       steps = validatedFixedClass
         ? [
-          ...steps.slice(0, classIdx),
-          ...spellSteps,
-          ...steps.slice(classIdx + 1).filter((s) => s.kind !== 'spells'),
-        ]
+            ...steps.slice(0, classIdx),
+            ...spellSteps,
+            ...steps.slice(classIdx + 1).filter((s) => s.kind !== 'spells'),
+          ]
         : [
-          ...steps.slice(0, classIdx + 1),
-          ...spellSteps,
-          ...steps.slice(classIdx + 1).filter((s) => s.kind !== 'spells'),
-        ]
+            ...steps.slice(0, classIdx + 1),
+            ...spellSteps,
+            ...steps.slice(classIdx + 1).filter((s) => s.kind !== 'spells'),
+          ]
     }
   }
 

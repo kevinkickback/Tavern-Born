@@ -1,10 +1,56 @@
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
+import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
 import {
-  buildCharacterSheetFieldMap,
-  generateFilledCharacterSheetPdf,
+  type CharacterSheetTemplateId,
+  createCharacterSheetViewModel,
+  generateFilledCharacterSheetPdf as fillCharacterSheetViewModel,
+  buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
+import type { Background5e, Class5e, Race5e } from '@/types/5etools'
+import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
+
+function prepareViewModel(
+  character: Character,
+  classesData: Class5e[] = [],
+  racesData: Race5e[] = [],
+  backgroundsData: Background5e[] = [],
+) {
+  return createCharacterSheetViewModel(character, {
+    classesByKey: buildClassLookup(classesData),
+    racesByKey: buildRaceLookup(racesData),
+    backgroundsByKey: buildBackgroundLookup(backgroundsData),
+  })
+}
+
+function buildCharacterSheetFieldMap(
+  character: Character,
+  templateId: CharacterSheetTemplateId = '2024',
+  classesData: Class5e[] = [],
+  racesData: Race5e[] = [],
+  backgroundsData: Background5e[] = [],
+) {
+  return mapCharacterSheetViewModel(
+    prepareViewModel(character, classesData, racesData, backgroundsData),
+    templateId,
+  )
+}
+
+function generateFilledCharacterSheetPdf(
+  character: Character,
+  templateBytes: ArrayBuffer | Uint8Array,
+  templateId: CharacterSheetTemplateId = '2024',
+  classesData: Class5e[] = [],
+  racesData: Race5e[] = [],
+  backgroundsData: Background5e[] = [],
+) {
+  return fillCharacterSheetViewModel(
+    prepareViewModel(character, classesData, racesData, backgroundsData),
+    templateBytes,
+    templateId,
+  )
+}
 
 describe('characterSheetPdf', () => {
   test('should map key identity and stat fields for 2024 template', () => {
