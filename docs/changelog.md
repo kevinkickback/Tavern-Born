@@ -1,5 +1,5 @@
 <details>
-<summary><strong>v0.1.7</strong></summary>
+<summary><strong>v0.2.0</strong></summary>
 
 ## ✨ Changes
 

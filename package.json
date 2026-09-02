@@ -2,7 +2,7 @@
   "name": "tavern-born",
   "description": "A desktop Dungeons & Dragons 5th Edition character creator.",
   "private": true,
-  "version": "0.1.6",
+  "version": "0.2.0",
   "author": "Tavern-Born contributors",
   "license": "GPL-3.0-only",
   "repository": {
