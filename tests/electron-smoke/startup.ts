@@ -21,12 +21,14 @@ test('starts the compiled desktop shell with a sandboxed renderer and working br
     const runtime = await page.evaluate(async () => ({
       platform: window.electronAPI.platform,
       version: await window.electronAPI.getAppVersion(),
+      portableDownloadPageBridgeType: typeof window.electronAPI.openPortableUpdatePage,
       rendererProcessType: typeof globalThis.process,
       rendererRequireType: typeof globalThis.require,
     }))
 
     expect(runtime.platform).toBeTruthy()
     expect(runtime.version).toMatch(/^\d+\.\d+\.\d+/)
+    expect(runtime.portableDownloadPageBridgeType).toBe('function')
     expect(runtime.rendererProcessType).toBe('undefined')
     expect(runtime.rendererRequireType).toBe('undefined')
 

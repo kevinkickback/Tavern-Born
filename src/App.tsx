@@ -230,11 +230,35 @@ function App() {
             onOpenChange={setChangelogOpen}
             version={updateData.version}
             changelog={updateData.changelog}
-            onInstall={() => {
-              setChangelogOpen(false)
-              setProgressOpen(true)
-              void window.electronAPI?.downloadUpdate()
-            }}
+            updateAvailable
+            onInstall={
+              updateData.isPortable
+                ? undefined
+                : () => {
+                    setChangelogOpen(false)
+                    setProgressOpen(true)
+                  }
+            }
+            onOpenDownloadPage={
+              updateData.isPortable
+                ? async () => {
+                    try {
+                      const result = await window.electronAPI.openPortableUpdatePage()
+                      if (!result.success) {
+                        toast.error('Could not open the download page', {
+                          description: result.error ?? undefined,
+                        })
+                        return
+                      }
+                      setChangelogOpen(false)
+                    } catch (error) {
+                      toast.error('Could not open the download page', {
+                        description: error instanceof Error ? error.message : 'Unknown error',
+                      })
+                    }
+                  }
+                : undefined
+            }
           />
         )}
         <UpdateProgressModal

@@ -64,6 +64,20 @@ function resolveActiveCharacter(
   return found ? normalizeCharacterProvenance(found) : null
 }
 
+function ensureUniqueCharacterId(character: Character, existingIds: Set<string>): Character {
+  let id = character.id
+  while (existingIds.has(id)) {
+    id = crypto.randomUUID()
+  }
+  existingIds.add(id)
+  return id === character.id ? character : { ...character, id }
+}
+
+function ensureUniqueCharacterIds(characters: Character[]): Character[] {
+  const existingIds = new Set<string>()
+  return characters.map((character) => ensureUniqueCharacterId(character, existingIds))
+}
+
 /**
  * Two-source-of-truth design (intentional):
  *
@@ -86,7 +100,7 @@ interface CharacterState {
   hasUnsavedChanges: () => boolean
 
   setCharacters: (characters: Character[]) => void
-  addCharacter: (character: Character) => void
+  addCharacter: (character: Character) => Character
   updateCharacter: (id: string, updates: Partial<Character>) => void
   /** Silent system correction: writes updates to both activeCharacter and characters[i]
    * atomically so hasUnsavedChanges() stays false. Use only for auto-corrections that
@@ -281,10 +295,12 @@ export const useCharacterStore = create<CharacterState>()(
 
       setCharacters: (characters) =>
         set((state) => {
-          const validated = characters
-            .map((character) => parseCharacterData(character))
-            .filter((result) => result.data)
-            .map((result) => result.data as Character)
+          const validated = ensureUniqueCharacterIds(
+            characters
+              .map((character) => parseCharacterData(character))
+              .filter((result) => result.data)
+              .map((result) => result.data as Character),
+          )
           const activeCharacter = resolveActiveCharacter(validated, state.activeCharacterId)
           return {
             characters: validated,
@@ -292,16 +308,28 @@ export const useCharacterStore = create<CharacterState>()(
           }
         }),
 
-      addCharacter: (character) =>
+      addCharacter: (character) => {
+        let addedCharacter: Character | null = null
         set((state) => {
           const parsed = parseCharacterData(character)
           if (!parsed.data) {
             throw new Error(parsed.error ?? formatValidationErrors(character))
           }
+
+          const existingIds = new Set(state.characters.map((existing) => existing.id))
+          const uniqueCharacter = ensureUniqueCharacterId(parsed.data, existingIds)
+          addedCharacter = uniqueCharacter
+
           return {
-            characters: [...state.characters, parsed.data],
+            characters: [...state.characters, uniqueCharacter],
           }
-        }),
+        })
+
+        if (!addedCharacter) {
+          throw new Error('Character could not be added')
+        }
+        return addedCharacter
+      },
 
       updateCharacter: (id, updates) =>
         set((state) => {
@@ -424,8 +452,7 @@ export const useCharacterStore = create<CharacterState>()(
 
       createNewCharacter: (initial) => {
         const character = createEmptyCharacter(initial)
-        get().addCharacter(character)
-        return character
+        return get().addCharacter(character)
       },
 
       saveActiveCharacter: () =>
@@ -477,10 +504,12 @@ export const useCharacterStore = create<CharacterState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          const validatedCharacters = state.characters
-            .map((character) => parseCharacterData(character))
-            .filter((result) => result.data)
-            .map((result) => result.data as Character)
+          const validatedCharacters = ensureUniqueCharacterIds(
+            state.characters
+              .map((character) => parseCharacterData(character))
+              .filter((result) => result.data)
+              .map((result) => result.data as Character),
+          )
 
           // Persist passes a mutable state snapshot into this callback.
           // Direct assignment here is intentional and scoped to hydration only.

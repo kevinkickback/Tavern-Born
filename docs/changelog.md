@@ -10,7 +10,7 @@
 * Various security and stability improvements
 * Fixed several issues affecting subclass-granted spells
 * Fixed ASIs, feats, and subclasses from overlapping when multiclassing
-
+* Imported or persisted characters with duplicate IDs receive new UUIDs
 
 ## ⚠️ Known Issues
 

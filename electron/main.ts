@@ -21,6 +21,7 @@ import {
   getUpdateStatus,
   initAutoUpdater,
   installUpdate,
+  openPortableUpdatePage,
   startAutoCheckSchedule,
   stopAutoCheckSchedule,
 } from './updateManager'
@@ -307,6 +308,16 @@ app.on('ready', async () => {
     assertTrustedIpcSender(event)
     try {
       await downloadUpdate()
+      return { success: true, data: null, error: null }
+    } catch (err) {
+      return { success: false, data: null, error: (err as Error).message }
+    }
+  })
+
+  ipcMain.handle('update:open-portable-page', async (event) => {
+    assertTrustedIpcSender(event)
+    try {
+      await openPortableUpdatePage()
       return { success: true, data: null, error: null }
     } catch (err) {
       return { success: false, data: null, error: (err as Error).message }
