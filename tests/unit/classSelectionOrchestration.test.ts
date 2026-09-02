@@ -158,6 +158,36 @@ describe('applyClassSelectionCommand', () => {
     expect(result.characterPatch.proficiencies?.savingThrows).toContain('constitution')
   })
 
+  test('ignores non-string armor/weapons entries (e.g. Artificer firearms variant object)', () => {
+    const character = makeCharacterFixture({
+      class: '',
+      classSource: '',
+      classProgression: [],
+    })
+    const ledger = emptyProvenance()
+
+    const cls = {
+      name: 'Artificer',
+      source: 'UAArtificer',
+      proficiency: [] as string[],
+      startingProficiencies: {
+        armor: ['light', 'medium', 'shield'],
+        weapons: ['simple', { proficiency: 'firearms', optional: true }],
+        tools: [],
+      },
+    }
+
+    const result = applyClassSelectionCommand(
+      character,
+      ledger,
+      cls as never,
+      undefined,
+      EMPTY_LOOKUP,
+    )
+    expect(result.characterPatch.proficiencies?.weapons).toContain('simple')
+    expect(result.characterPatch.proficiencies?.weapons).toHaveLength(1)
+  })
+
   test('removes old class proficiencies when switching class', () => {
     const character = makeCharacterFixture({
       class: 'Fighter',

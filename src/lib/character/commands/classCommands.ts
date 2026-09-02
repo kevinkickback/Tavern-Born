@@ -277,13 +277,17 @@ function computeClassSelectionEffects(
     armor: [
       ...new Set([
         ...proficiencies.armor,
-        ...(startingProficiencies.armor ?? []).map(stripItemTag),
+        ...(startingProficiencies.armor ?? [])
+          .filter((armor): armor is string => typeof armor === 'string')
+          .map(stripItemTag),
       ]),
     ],
     weapons: [
       ...new Set([
         ...proficiencies.weapons,
-        ...(startingProficiencies.weapons ?? []).map(stripItemTag),
+        ...(startingProficiencies.weapons ?? [])
+          .filter((weapon): weapon is string => typeof weapon === 'string')
+          .map(stripItemTag),
       ]),
     ],
     tools: [...new Set([...proficiencies.tools, ...toolsFromArray, ...toolsFromBlocks])],

@@ -1,4 +1,4 @@
-# Claude Instructions
+# Repository Instructions
 
 These rules take precedence over convenience or creativity.
 
@@ -37,11 +37,10 @@ Names are not unique across sources. Rendered list items backed by 5etools entit
 ```
 Purely synthetic (non-entity) UI arrays may use stable non-entity keys.
 
-### 4. No game data access in components
-All data access goes through hooks — never import JSON directly in a component:
-- `useFilteredGameData()` — filtered lists (races, classes, backgrounds, spells, feats, items)
-- `useGameDataStore()` — raw store
-- Named hooks: `useHitPoints`, `useSkills`, `useSpellSlots`, `useEquipment`, etc.
+### 4. No direct game-data access in components
+Never import JSON in a component. Use `useFilteredGameData()` for character-scoped collections and
+the named hooks in `src/hooks/data/useGameData.ts` for lookups. Direct `useGameDataStore()` selectors
+are reserved for lifecycle state or callers that explicitly own raw collection sets.
 
 ### 5. Business logic belongs in `src/lib/` — search before writing
 All business logic (modifiers, costs, slots, bonuses, prereq checks, AC, HP) goes in `src/lib/` as pure functions with no React/Zustand imports. The function may already exist — check `docs/codebase-tour.md` for where to look before writing anything new.
@@ -69,8 +68,10 @@ All writes go through `updateCharacter(id, patch)` from `useCharacterStore`. Nev
 - **Content pages**: centered `max-w-7xl` container — see `docs/react-patterns.md`.
 - **5etools content**: never render raw JSON — always use `renderEntry()` from `src/lib/renderer.ts` or `FormattedTextRenderer`.
 
-### 10. Lint, type-check, and test after every change
-Hooks (Biome) run automatically. Do not bypass them. Run the fix/check/type sequence after each edit and stay clean before moving to the next step. Stop after 3 failed attempts on the same file and report the blocker.
+### 10. Validate changes
+Run checks in proportion to the change. Before handoff, run the relevant tests plus the non-mutating
+CI checks (`npx biome ci .` and `npx tsc -b`). Use `npm run lint` only when intentional auto-format
+and auto-fix changes are acceptable; that script writes files. Never bypass failing checks.
 
 ### 11. Comments, docs, and tests
 - **Inline comments**: only when the code is not self-documenting.

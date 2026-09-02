@@ -6,25 +6,23 @@ This folder contains architecture and implementation docs intended to keep devel
 
 If you are new to the repository, read these in order:
 
-1. contributor-start-here.md
-2. architecture-map.md
-3. data-flow.md
-4. state-management.md
-5. data-ingestion.md
+1. [Contributor Start Here](contributor-start-here.md)
+2. [Architecture Map](architecture-map.md)
+3. [Data Flow](data-flow.md)
+4. [State Management](state-management.md)
+5. [Data Ingestion](data-ingestion.md)
 
 ## Documents
 
-- architecture-map.md: Layered system map, ownership boundaries, and where to put code.
-- data-flow.md: End-to-end runtime flows from startup to save/persist.
-- data-ingestion.md: 5etools loading/parsing/validation/caching pipeline.
-- state-management.md: Character and game-data store contracts, mutation rules, and derived data policy.
-- provenance.md: Grant tracking, reconciliation behavior, and key invariants.
-- react-patterns.md: React hook and rendering conventions (stable refs, key-prop reset, lazy initializers, empty-array fallbacks).
-- testing-map.md: Current coverage, gaps, and recommended test additions.
-- codebase-tour.md: Concern-to-file routing table for fast navigation.
-- contributor-start-here.md: Practical onboarding sequence and first-change checklist.
-- desktop-ui-redesign.md: Desktop-oriented UI redesign direction, Vortex pattern review, and phased implementation plan.
-- review/structural-consistency-report.md: Structural consistency audit findings and prioritized resolution directions.
+- [Architecture Map](architecture-map.md): system layers, ownership boundaries, and code placement.
+- [Data Flow](data-flow.md): startup, ingestion, editing, persistence, and update flows.
+- [Data Ingestion](data-ingestion.md): 5etools loading, parsing, validation, and caching.
+- [State Management](state-management.md): store contracts, mutations, persistence, and derived data.
+- [Provenance](provenance.md): grant tracking, reconciliation, and invariants.
+- [React Patterns](react-patterns.md): repository-specific hook and rendering conventions.
+- [Testing Map](testing-map.md): test layers, commands, coverage thresholds, and expectations.
+- [Codebase Tour](codebase-tour.md): concern-to-file routing for fast navigation.
+- [Changelog](changelog.md): released changes plus the next planned release.
 
 ## Update Policy
 
@@ -34,6 +32,6 @@ Update docs in this folder whenever one of these changes:
 - Data loading/parsing/caching behavior
 - Character state shape or mutation lifecycle
 - Provenance behavior (new grant/reconciliation rules)
-- Build or test conventions
+- Build, CI, or test conventions
 
 When in doubt, update docs in the same pull request as the behavior change.

@@ -4,34 +4,34 @@ This guide is the fastest path to make safe changes in Tavern-Born.
 
 ## Read First
 
-1. .github/copilot-instructions.md
-2. docs/architecture-map.md
-3. docs/data-flow.md
-4. docs/state-management.md
-5. docs/data-ingestion.md
+1. [.github/copilot-instructions.md](../.github/copilot-instructions.md)
+2. [architecture-map.md](architecture-map.md)
+3. [data-flow.md](data-flow.md)
+4. [state-management.md](state-management.md)
+5. [data-ingestion.md](data-ingestion.md)
 
-## First 20 Files to Learn
+## Core Files to Learn
 
 1. src/main.tsx
 2. src/App.tsx
 3. electron/main.ts
 4. src/store/characterStore.ts
 5. src/store/gameDataStore.ts
-6. src/lib/storage/dataCache.ts
-7. src/hooks/data/useDataInit.ts
-8. src/lib/5etools/dataLoader.ts
-9. src/lib/5etools/parsers/index.ts
-10. src/lib/5etools/validator.ts
-11. src/types/5etools.ts
-12. src/types/character.ts
-13. src/lib/characterUtils.ts
-14. src/lib/calculations/gameRules.ts
-15. src/lib/provenance/types.ts
-16. src/lib/provenance/ledger.ts
-17. src/lib/provenance/applyRaceGrants.ts
-18. src/hooks/character/useAbilityScores.ts
-19. src/pages/build/race/RacePage.tsx
-20. .github/copilot-instructions.md
+6. src/store/appPreferencesStore.ts
+7. src/lib/storage/dataCache.ts
+8. src/hooks/data/useDataInit.ts
+9. src/lib/5etools/dataLoader.ts
+10. src/lib/5etools/parsers/index.ts
+11. src/lib/5etools/validator.ts
+12. src/types/5etools.ts
+13. src/types/character.ts
+14. src/lib/character/createCharacter.ts
+15. src/lib/character/commands/*
+16. src/lib/calculations/gameRules.ts
+17. src/lib/provenance/types.ts
+18. src/lib/provenance/ledger.ts
+19. src/hooks/character/useProvenanceLedger.ts
+20. src/pages/build/race/RacePage.tsx
 
 ## First-Change Checklist
 
@@ -41,27 +41,31 @@ This guide is the fastest path to make safe changes in Tavern-Born.
 - Use source-aware keys for 5etools entities.
 - Route all character writes through the character store mutation API.
 - Add or update tests.
-- Run `npm run lint`, `npm run test:coverage`, `npm run test:e2e`, and `npm run build`.
-- If architecture or flow changed, update docs in docs/ in the same change.
+- Run checks in proportion to the change. The full CI-equivalent sequence is:
+  `npx biome ci .`, `npx tsc -b`, `npm run test:coverage`, `npm run test:e2e`, `npm run build`,
+  then `npm run test:electron` against the build output.
+- Note that `npm run lint` auto-formats and auto-fixes files; use `npx biome ci .` for a read-only check.
+- If architecture or flow changed, update `docs/` in the same change.
 
 ## Schema Migrations
 
 When making **breaking changes** to the character data format:
 
 1. **Understand the migration system**: See `src/lib/schema/migrations.ts` and `docs/data-flow.md`.
-2. **Increment `CURRENT_SCHEMA_VERSION`** in migrations.ts (currently v4).
-3. **Implement migration handler**:
+2. **Increment `CURRENT_SCHEMA_VERSION`** by one in `migrations.ts`.
+3. **Register both directions** from the previous version to the new version:
    ```typescript
    registerMigration({
-     fromVersion: 4,
-     toVersion: 5,
-     up: (character) => { /* transform v4 → v5 */ },
-     down: (character) => { /* transform v5 → v4 for downgrade */ },
+     fromVersion: previousVersion,
+     toVersion: nextVersion,
+     up: (character) => { /* transform and stamp the next version */ },
+     down: (character) => { /* reverse the transform and restore the previous version */ },
      description: 'Brief explanation of what changed',
    });
    ```
 4. **Test migration**: Add to `tests/lib/migrations.test.ts`.
-5. **Document**: Update characters saved in older versions will auto-migrate on load.
+5. **Verify both entry points**: imported and IndexedDB-rehydrated characters pass through the
+   character store's migration and validation pipeline.
 
 ### Example: Adding a Required Field
 
