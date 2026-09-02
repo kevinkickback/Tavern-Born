@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { ResolvedRaceReference } from '@/lib/5etools/entityResolvers'
 import {
   ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
@@ -33,8 +34,11 @@ import {
   usesRaceOriginBenefits,
 } from '@/lib/calculations/originSystem'
 import { cn } from '@/lib/utils'
-import { useGameDataStore } from '@/store/gameDataStore'
 import type { StepProps } from '../types'
+
+interface AbilityScoresStepProps extends StepProps {
+  raceResolution: ResolvedRaceReference
+}
 
 const DEFAULT_STANDARD_SCORES: Partial<Record<AbilityName, number>> = ABILITY_NAMES.reduce(
   (acc, ab, idx) => {
@@ -102,9 +106,12 @@ function RaceAsiBonuses({
   }
 
   return (
-    <div className="shrink-0 mt-3 p-3 rounded-lg bg-muted/20 border border-border flex flex-col items-center gap-2">
-      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Racial Bonuses
+    <section className="mx-auto mt-5 flex w-full max-w-3xl shrink-0 flex-col gap-3 rounded-lg border border-border bg-surface-raised/45 p-4">
+      <div>
+        <h3 className="text-sm font-semibold">Racial Bonuses</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Apply the bonuses granted by your selected race.
+        </p>
       </div>
       {isLineageRaceAsiFallback && (
         <Tabs
@@ -127,7 +134,7 @@ function RaceAsiBonuses({
           </TabsList>
         </Tabs>
       )}
-      <div className="flex flex-wrap justify-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {fixed.map((fb) => (
           <span
             key={`${fb.ability}|${fb.value}`}
@@ -176,7 +183,7 @@ function RaceAsiBonuses({
           })
         })}
       </div>
-    </div>
+    </section>
   )
 }
 
@@ -212,19 +219,16 @@ function PointBuyPanel({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="shrink-0 p-3 rounded-lg bg-accent/10 border border-accent/30">
-        <div className="flex justify-between text-sm font-semibold mb-1.5">
-          <span>Points Used</span>
+      <div className="shrink-0 rounded-lg border border-border bg-surface-raised/45 px-4 py-3">
+        <div className="mb-2 flex justify-between text-sm font-semibold">
+          <span className="uppercase tracking-wider text-muted-foreground">Ability Points</span>
           <span className={cn(remaining < 0 && 'text-destructive font-bold')}>
             {pointsUsed} / {POINT_BUY_BUDGET}
-            <span className="text-muted-foreground font-normal ml-2">
-              ({remaining >= 0 ? `${remaining} remaining` : `${-remaining} over budget`})
-            </span>
           </span>
         </div>
-        <Progress value={budgetPct} className="h-2" />
+        <Progress value={budgetPct} className="h-2.5" />
       </div>
-      <div className="grid grid-cols-3 grid-rows-2 gap-3 max-h-[340px]">
+      <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {ABILITY_NAMES.map((ability) => {
           const score = scores[ability] ?? POINT_BUY_MIN
           const costNow = POINT_BUY_COSTS[score] ?? 0
@@ -237,6 +241,7 @@ function PointBuyPanel({
               ability={ability}
               score={score}
               bonus={racialBonuses[ability]}
+              variant="console"
             >
               <div className="flex items-center justify-center gap-2">
                 <Button
@@ -310,7 +315,7 @@ function StandardArrayPanel({
   }
 
   return (
-    <div className="grid grid-cols-3 grid-rows-2 gap-3 max-h-[340px]">
+    <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 xl:grid-cols-6">
       {ABILITY_NAMES.map((ability) => {
         const base = assignments[ability]
         return (
@@ -319,6 +324,7 @@ function StandardArrayPanel({
             ability={ability}
             score={base ?? 8}
             bonus={racialBonuses[ability]}
+            variant="console"
           >
             <div className="flex justify-center">
               <Select
@@ -354,7 +360,7 @@ function CustomPanel({
   setScore: (a: AbilityName, v: number) => void
 }) {
   return (
-    <div className="grid grid-cols-3 grid-rows-2 gap-3 max-h-[340px]">
+    <div className="grid grid-cols-2 justify-items-center gap-3 sm:grid-cols-3 xl:grid-cols-6">
       {ABILITY_NAMES.map((ability) => {
         const val = scores[ability] ?? ABILITY_SCORE_MIN
         return (
@@ -363,6 +369,7 @@ function CustomPanel({
             ability={ability}
             score={val}
             bonus={racialBonuses[ability]}
+            variant="console"
           >
             <div className="flex justify-center">
               <Input
@@ -383,8 +390,7 @@ function CustomPanel({
   )
 }
 
-export function AbilityScoresStep({ data, onChange }: StepProps) {
-  const gameData = useGameDataStore((s) => s.gameData)
+export function AbilityScoresStep({ data, onChange, raceResolution }: AbilityScoresStepProps) {
   const method = (data.abilityScoreMethod ?? 'point-buy') as string
   const showRaceOriginBonuses = usesRaceOriginBenefits(
     (data.originSystem || '2014') as '2014' | '2024',
@@ -397,10 +403,8 @@ export function AbilityScoresStep({ data, onChange }: StepProps) {
         : DEFAULT_POINT_BUY_SCORES
   const scores = (data.abilityScores ?? fallbackScores) as Record<AbilityName, number>
 
-  const raceObj = (gameData?.races ?? []).find(
-    (r) => r.name === data.race && (!data.raceSource || r.source === data.raceSource),
-  )
-  const subraceObj = raceObj?.subraces?.find((sr) => sr.name === data.subrace)
+  const raceObj = raceResolution.parentRace
+  const subraceObj = raceResolution.subraceData
   const normalizedSelection = normalizeRaceSelectionForOriginSystem(
     raceObj,
     subraceObj,
@@ -426,19 +430,51 @@ export function AbilityScoresStep({ data, onChange }: StepProps) {
   }
 
   return (
-    <div className="flex flex-col max-w-2xl mx-auto w-full">
-      <Tabs value={method} className="gap-0">
-        <TabsContent value="point-buy" className="min-h-0 flex flex-col">
+    <div className="mx-auto flex w-full max-w-6xl flex-col">
+      <Tabs
+        value={method}
+        onValueChange={(value) => onChange({ abilityScoreMethod: value })}
+        className="gap-0"
+      >
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border">
+          <div>
+            <h3 className="text-sm font-semibold">Ability score method</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Choose how the six base scores are assigned.
+            </p>
+          </div>
+          <TabsList className="h-10 self-end rounded-none border-0 bg-transparent p-0">
+            <TabsTrigger
+              value="point-buy"
+              className="h-10 rounded-none border-0 border-b-2 border-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+            >
+              Point Buy
+            </TabsTrigger>
+            <TabsTrigger
+              value="standard-array"
+              className="h-10 rounded-none border-0 border-b-2 border-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+            >
+              Standard Array
+            </TabsTrigger>
+            <TabsTrigger
+              value="custom"
+              className="h-10 rounded-none border-0 border-b-2 border-transparent px-4 data-[state=active]:border-primary data-[state=active]:bg-transparent"
+            >
+              Custom
+            </TabsTrigger>
+          </TabsList>
+        </div>
+        <TabsContent value="point-buy" className="flex min-h-0 flex-col">
           <PointBuyPanel scores={scores} racialBonuses={racialBonuses} setScore={setScore} />
         </TabsContent>
-        <TabsContent value="standard-array" className="min-h-0 flex flex-col">
+        <TabsContent value="standard-array" className="flex min-h-0 flex-col">
           <StandardArrayPanel
             scores={scores}
             racialBonuses={racialBonuses}
             setAllScores={setAllScores}
           />
         </TabsContent>
-        <TabsContent value="custom" className="min-h-0 flex flex-col">
+        <TabsContent value="custom" className="flex min-h-0 flex-col">
           <CustomPanel scores={scores} racialBonuses={racialBonuses} setScore={setScore} />
         </TabsContent>
       </Tabs>

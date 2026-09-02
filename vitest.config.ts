@@ -22,6 +22,12 @@ export default defineConfig({
       reporter: ['text', 'html', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.d.ts', 'src/main.tsx', 'src/App.tsx', 'src/**/*.stories.{ts,tsx}'],
+      thresholds: {
+        statements: 53,
+        branches: 43,
+        functions: 49,
+        lines: 56,
+      },
     },
     alias: {
       '@': resolve(projectRoot, 'src'),

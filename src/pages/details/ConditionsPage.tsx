@@ -2,7 +2,6 @@ import {
   Flame,
   Heart,
   HeartBreak,
-  Lightning,
   Minus,
   Plus,
   SmileyXEyes,
@@ -12,7 +11,7 @@ import {
 import { useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { WorkspaceBody, WorkspacePage } from '@/components/workspace'
 import { useClassResources } from '@/hooks/character/useClassResources'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useRitualCasting } from '@/hooks/character/useRitualCasting'
@@ -69,7 +68,7 @@ export function getActiveExhaustionEffects(level: number) {
 
 function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <div className="bg-gradient-to-r from-accent/20 via-accent/10 to-transparent px-4 py-3 flex items-center gap-2">
+    <div className="flex h-[var(--workspace-pane-header-height)] items-center gap-2 border-b border-border bg-surface-raised px-4">
       <span className="h-4 w-4 text-primary [&>svg]:h-full [&>svg]:w-full">{icon}</span>
       <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
         {title}
@@ -81,18 +80,22 @@ function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }
 function SavePip({
   filled,
   variant,
+  label,
   onClick,
 }: {
   filled: boolean
   variant: 'success' | 'failure'
+  label: string
   onClick: () => void
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-label={label}
+      aria-pressed={filled}
       className={cn(
-        'h-7 w-7 rounded-full border-2 transition-all flex items-center justify-center',
+        'flex size-7 cursor-pointer items-center justify-center rounded-full border-2 transition-colors',
         variant === 'success'
           ? filled
             ? 'bg-success border-success text-success-foreground'
@@ -160,23 +163,11 @@ export function ConditionsPage() {
   }
 
   return (
-    <div>
-      <div className="px-6 py-5 page-header-band">
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
-          <Lightning className="h-6 w-6 text-primary" weight="duotone" />
-          <div>
-            <h1 className="text-2xl font-display font-bold">Conditions</h1>
-            <p className="text-sm text-muted-foreground">
-              Track active conditions and session state
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-6 pb-6">
-        <div className="max-w-7xl mx-auto w-full space-y-4">
+    <WorkspacePage>
+      <WorkspaceBody className="overflow-auto bg-workspace-pane">
+        <div className="mx-auto min-h-full w-full max-w-[var(--workspace-form-max-width)]">
           {/* ── Combat State ───────────────────────────────────────── */}
-          <Card className="w-full overflow-hidden">
+          <section className="border-b border-border">
             <SectionHeader icon={<Heart weight="duotone" />} title="Combat State" />
             <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-6">
               {/* Inspiration */}
@@ -187,8 +178,9 @@ export function ConditionsPage() {
                 <button
                   type="button"
                   onClick={() => update('inspiration', !inspiration)}
+                  aria-pressed={inspiration}
                   className={cn(
-                    'h-12 w-full rounded-lg border-2 flex items-center justify-center gap-2 transition-all text-sm font-semibold',
+                    'flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md border text-sm font-semibold transition-colors',
                     inspiration
                       ? 'bg-accent border-accent text-accent-foreground'
                       : 'border-border hover:border-accent/50 text-muted-foreground',
@@ -213,6 +205,7 @@ export function ConditionsPage() {
                           key={i}
                           filled={deathSaves.successes > i}
                           variant="success"
+                          label={`Death save success ${i + 1}`}
                           onClick={() => setDeathSave('successes', i)}
                         />
                       ))}
@@ -226,6 +219,7 @@ export function ConditionsPage() {
                           key={i}
                           filled={deathSaves.failures > i}
                           variant="failure"
+                          label={`Death save failure ${i + 1}`}
                           onClick={() => setDeathSave('failures', i)}
                         />
                       ))}
@@ -275,10 +269,10 @@ export function ConditionsPage() {
                 </Button>
               </div>
             </div>
-          </Card>
+          </section>
 
           {/* ── Exhaustion ─────────────────────────────────────────── */}
-          <Card className="w-full overflow-hidden">
+          <section className="border-b border-border">
             <SectionHeader icon={<Wind weight="duotone" />} title="Exhaustion" />
             <div className="p-4 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -287,8 +281,10 @@ export function ConditionsPage() {
                     key={level}
                     type="button"
                     onClick={() => setExhaustion(level === exhaustion ? level - 1 : level)}
+                    aria-label={`Set exhaustion level ${level}`}
+                    aria-pressed={exhaustion === level}
                     className={cn(
-                      'h-9 w-9 rounded-lg border-2 text-sm font-bold transition-all flex items-center justify-center',
+                      'flex size-9 cursor-pointer items-center justify-center rounded-md border text-sm font-bold transition-colors',
                       exhaustion >= level && level > 0
                         ? level >= 6
                           ? 'bg-destructive border-destructive text-destructive-foreground'
@@ -324,10 +320,10 @@ export function ConditionsPage() {
                 <p className="text-xs text-muted-foreground">{EXHAUSTION_LABELS[0]}</p>
               )}
             </div>
-          </Card>
+          </section>
 
           {/* ── Active Conditions ──────────────────────────────────── */}
-          <Card className="w-full overflow-hidden">
+          <section className="border-b border-border">
             <SectionHeader icon={<HeartBreak weight="duotone" />} title="Active Conditions" />
             <div className="p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
@@ -338,8 +334,9 @@ export function ConditionsPage() {
                       key={name}
                       type="button"
                       onClick={() => toggleCondition(name)}
+                      aria-pressed={active}
                       className={cn(
-                        'h-9 px-3 rounded-lg border-2 text-xs font-semibold transition-all text-left',
+                        'h-9 cursor-pointer rounded-md border px-3 text-left text-xs font-semibold transition-colors',
                         active
                           ? 'bg-destructive/10 border-destructive text-destructive'
                           : 'border-border text-muted-foreground hover:border-accent/50 hover:text-foreground',
@@ -365,11 +362,11 @@ export function ConditionsPage() {
                 </div>
               )}
             </div>
-          </Card>
+          </section>
 
           {/* ── Class Resources ────────────────────────────────────── */}
-          <Card className="w-full overflow-hidden">
-            <div className="bg-gradient-to-r from-accent/20 via-accent/10 to-transparent px-4 py-3 flex items-center gap-2">
+          <section>
+            <div className="flex h-[var(--workspace-pane-header-height)] items-center gap-2 border-b border-border bg-surface-raised px-4">
               <Flame className="h-4 w-4 text-primary" weight="duotone" />
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                 Class Resources
@@ -448,9 +445,9 @@ export function ConditionsPage() {
                 </div>
               ))}
             </div>
-          </Card>
+          </section>
         </div>
-      </div>
-    </div>
+      </WorkspaceBody>
+    </WorkspacePage>
   )
 }

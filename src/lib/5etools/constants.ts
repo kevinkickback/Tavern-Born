@@ -69,8 +69,8 @@ export const DAMAGE_TYPE_LABELS: Readonly<Record<string, string>> = {
   L: 'Lightning',
   T: 'Thunder',
   A: 'Acid',
-  Po: 'Poison',
-  Ps: 'Psychic',
+  I: 'Poison',
+  Y: 'Psychic',
   R: 'Radiant',
   O: 'Force',
 }
@@ -130,6 +130,8 @@ export const RARITY_ORDER = [
   'very rare',
   'legendary',
   'artifact',
+  'varies',
+  'unknown (magic)',
   'unknown',
 ] as const
 
@@ -149,6 +151,9 @@ export const RARITY_COLORS: Record<string, string> = {
   legendary:
     'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400',
   artifact: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-400',
+  varies: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400',
+  'unknown (magic)':
+    'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400',
   unknown: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-400',
 }
 

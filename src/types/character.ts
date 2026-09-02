@@ -111,6 +111,9 @@ export interface Character {
    *  are never removed by normal feat-slot management (e.g. level-down, class change). */
   specialFeats?: Feat[]
 
+  /** Follow-up selections for fixed provenance feat grants, keyed by name|source|variant. */
+  fixedFeatOptions?: Record<string, FeatOptionSelections>
+
   /** Provenance ledger tracking the origin of every granted option. */
   provenance?: ProvenanceLedger
 
@@ -197,6 +200,10 @@ export interface Feat {
   prerequisites?: string
   /** Follow-up selections made after this feat was chosen. */
   options?: FeatOptionSelections
+  /** Class ASI/feat slot that supplied this feat, when applicable. */
+  className?: string
+  classSource?: string
+  classLevel?: number
 }
 
 export interface AsiChoice {
@@ -205,6 +212,7 @@ export interface AsiChoice {
   level: number
   /** Class name this ASI belongs to (for multiclass support). */
   className: string
+  classSource?: string
   /** Ability key → bonus applied (e.g. { strength: 2 } or { strength: 1, dexterity: 1 }). */
   abilityChanges: Record<string, 1 | 2>
 }
@@ -238,6 +246,8 @@ export interface SpellProfile {
   castingAbilityOptions?: string[]
   choices?: RaceSpellChoice[]
   fixedSpells?: string[]
+  /** Per-spell always-prepared grants, such as subclass spell lists. */
+  alwaysPreparedSpells?: string[]
   cantrips: string[]
   spellsKnown: string[]
   preparedSpells: string[]

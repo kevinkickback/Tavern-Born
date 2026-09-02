@@ -32,9 +32,12 @@ lerna-debug.log*
 # Tooling/CI artifacts
 **/agent-eval-report*
 docs/cicd-workflow.md
+docs/desktop-ui-redesign.md
 docs/review/
 
 # Temp folders
 /temp/
 /.tmp/
 /test-results
+/coverage
+/playwright-report

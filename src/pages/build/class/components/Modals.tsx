@@ -22,19 +22,8 @@ import {
 import { formatSpellLevel, getOrdinalForm } from '@/lib/calculations/spellUtils'
 import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog'
 import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelectionDialog'
-import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
+import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Character } from '@/types/character'
-
-interface SubclassOption {
-  name: string
-  source?: string
-  shortName?: string
-  entries?: unknown[]
-  levelFeatures?: {
-    level: number
-    features: { name: string; source?: string; entries?: unknown[] }[]
-  }[]
-}
 
 interface OptPickerState {
   progName: string
@@ -101,9 +90,9 @@ interface BuildClassModalsProps {
   subclassPickerOpen: boolean
   onSubclassPickerOpenChange: (open: boolean) => void
   subclassTitle: string
-  subclasses: SubclassOption[]
+  subclasses: Subclass5e[]
   viewingSubclass?: string
-  onSubclassConfirm: (subclass: SubclassOption) => void
+  onSubclassConfirm: (subclass: Subclass5e) => void
 
   optPickerState: OptPickerState | null
   onOptPickerStateChange: (state: OptPickerState | null) => void
@@ -119,8 +108,7 @@ interface BuildClassModalsProps {
   featPickerOpen: boolean
   onFeatPickerOpenChange: (open: boolean) => void
   featModalFeats: Feat5e[]
-  totalFeatSlots: number
-  usedASI: number
+  featPickerInitialSelectedIds: string[]
   onFeatConfirm: (selectedFeats: Feat5e[]) => void
 
   classFeatPickerState: ClassFeatPickerState | null
@@ -170,8 +158,7 @@ export function BuildClassModals({
   featPickerOpen,
   onFeatPickerOpenChange,
   featModalFeats,
-  totalFeatSlots,
-  usedASI,
+  featPickerInitialSelectedIds,
   onFeatConfirm,
   classFeatPickerState,
   onClassFeatPickerStateChange,
@@ -444,10 +431,8 @@ export function BuildClassModals({
         open={featPickerOpen}
         onOpenChange={onFeatPickerOpenChange}
         feats={featModalFeats}
-        maxSelections={Math.max(totalFeatSlots, usedASI)}
-        initialSelectedIds={(character.feats ?? []).map(
-          (feat) => `${feat.name}|${feat.source ?? ''}`,
-        )}
+        maxSelections={1}
+        initialSelectedIds={featPickerInitialSelectedIds}
         characterSnapshot={characterSnapshot}
         allowIgnoreLimit={false}
         onConfirm={onFeatConfirm}

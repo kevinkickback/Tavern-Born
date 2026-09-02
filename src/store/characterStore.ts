@@ -1,10 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { MAX_CHARACTER_SIZE, MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
-import { SPECIAL_SPELL_PROFILE_LABEL } from '@/lib/calculations/spellProfiles'
+import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCharacter'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
 import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
-import type { ProvenanceLedger } from '@/lib/provenance/types'
 import {
   CURRENT_SCHEMA_VERSION,
   migrateCharacter,
@@ -13,6 +12,8 @@ import {
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema, spellSelectionSchema } from '@/types/characterSchema'
+
+export { emptyProvenance } from '@/lib/character/createCharacter'
 
 /**
  * Validate spell data structure and return error message if invalid.
@@ -48,28 +49,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
 
-const generateId = () => crypto.randomUUID()
-
-export function emptyProvenance(): ProvenanceLedger {
-  const emptyMap = () => ({}) as Record<string, import('@/lib/provenance/types').SourceTag[]>
-  return {
-    proficiencies: {
-      armor: emptyMap(),
-      weapons: emptyMap(),
-      tools: emptyMap(),
-      languages: emptyMap(),
-      skills: emptyMap(),
-      savingThrows: emptyMap(),
-    },
-    abilityBonuses: [],
-    features: emptyMap(),
-    feats: emptyMap(),
-    spells: emptyMap(),
-    equipment: emptyMap(),
-    choices: [],
-  }
-}
-
 /** Ensure a persisted character has the provenance ledger, migrating gracefully. */
 export function normalizeCharacterProvenance(character: Character): Character {
   if (character.provenance) return character
@@ -83,6 +62,20 @@ function resolveActiveCharacter(
   if (!activeCharacterId) return null
   const found = characters.find((character) => character.id === activeCharacterId)
   return found ? normalizeCharacterProvenance(found) : null
+}
+
+function ensureUniqueCharacterId(character: Character, existingIds: Set<string>): Character {
+  let id = character.id
+  while (existingIds.has(id)) {
+    id = crypto.randomUUID()
+  }
+  existingIds.add(id)
+  return id === character.id ? character : { ...character, id }
+}
+
+function ensureUniqueCharacterIds(characters: Character[]): Character[] {
+  const existingIds = new Set<string>()
+  return characters.map((character) => ensureUniqueCharacterId(character, existingIds))
 }
 
 /**
@@ -107,7 +100,7 @@ interface CharacterState {
   hasUnsavedChanges: () => boolean
 
   setCharacters: (characters: Character[]) => void
-  addCharacter: (character: Character) => void
+  addCharacter: (character: Character) => Character
   updateCharacter: (id: string, updates: Partial<Character>) => void
   /** Silent system correction: writes updates to both activeCharacter and characters[i]
    * atomically so hasUnsavedChanges() stays false. Use only for auto-corrections that
@@ -119,94 +112,6 @@ interface CharacterState {
   setActiveCharacter: (id: string | null) => void
   createNewCharacter: (initial: Partial<Character>) => Character
   saveActiveCharacter: () => void
-}
-
-const createEmptyCharacter = (initial: Partial<Character> = {}): Character => {
-  const now = new Date().toISOString()
-
-  return {
-    id: generateId(),
-    version: '3.0.0',
-    name: '',
-    originSystem: '2014',
-    race: '',
-    class: '',
-    background: '',
-    currency: {
-      cp: 0,
-      sp: 0,
-      ep: 0,
-      gp: 0,
-      pp: 0,
-    },
-    level: 1,
-    experiencePoints: 0,
-    abilityScores: {
-      strength: 10,
-      dexterity: 10,
-      constitution: 10,
-      intelligence: 10,
-      wisdom: 10,
-      charisma: 10,
-    },
-    proficiencies: {
-      armor: [],
-      weapons: [],
-      tools: [],
-      skills: [],
-      languages: [],
-      savingThrows: [],
-    },
-    features: [],
-    feats: [],
-    spells: {
-      spellProfiles: [
-        {
-          id: 'special:unrestricted',
-          type: 'special',
-          label: SPECIAL_SPELL_PROFILE_LABEL,
-          cantrips: [],
-          spellsKnown: [],
-          preparedSpells: [],
-          alwaysPrepared: true,
-        },
-      ],
-      spellSlots: {
-        1: { max: 0, used: 0 },
-        2: { max: 0, used: 0 },
-        3: { max: 0, used: 0 },
-        4: { max: 0, used: 0 },
-        5: { max: 0, used: 0 },
-        6: { max: 0, used: 0 },
-        7: { max: 0, used: 0 },
-        8: { max: 0, used: 0 },
-        9: { max: 0, used: 0 },
-      },
-    },
-    equipment: [],
-    hitPoints: {
-      max: 0,
-      current: 0,
-      temporary: 0,
-    },
-    initiative: 0,
-    speed: 30,
-    savingThrows: {
-      strength: { proficient: false, bonus: 0 },
-      dexterity: { proficient: false, bonus: 0 },
-      constitution: { proficient: false, bonus: 0 },
-      intelligence: { proficient: false, bonus: 0 },
-      wisdom: { proficient: false, bonus: 0 },
-      charisma: { proficient: false, bonus: 0 },
-    },
-    skills: {},
-    details: {},
-    portraitTransform: { ...DEFAULT_PORTRAIT_TRANSFORM },
-    createdAt: now,
-    lastModified: now,
-    provenance: emptyProvenance(),
-    ...initial,
-  }
 }
 
 function coerceCharacterShape(character: unknown): Character | null {
@@ -390,10 +295,12 @@ export const useCharacterStore = create<CharacterState>()(
 
       setCharacters: (characters) =>
         set((state) => {
-          const validated = characters
-            .map((character) => parseCharacterData(character))
-            .filter((result) => result.data)
-            .map((result) => result.data as Character)
+          const validated = ensureUniqueCharacterIds(
+            characters
+              .map((character) => parseCharacterData(character))
+              .filter((result) => result.data)
+              .map((result) => result.data as Character),
+          )
           const activeCharacter = resolveActiveCharacter(validated, state.activeCharacterId)
           return {
             characters: validated,
@@ -401,16 +308,28 @@ export const useCharacterStore = create<CharacterState>()(
           }
         }),
 
-      addCharacter: (character) =>
+      addCharacter: (character) => {
+        let addedCharacter: Character | null = null
         set((state) => {
           const parsed = parseCharacterData(character)
           if (!parsed.data) {
             throw new Error(parsed.error ?? formatValidationErrors(character))
           }
+
+          const existingIds = new Set(state.characters.map((existing) => existing.id))
+          const uniqueCharacter = ensureUniqueCharacterId(parsed.data, existingIds)
+          addedCharacter = uniqueCharacter
+
           return {
-            characters: [...state.characters, parsed.data],
+            characters: [...state.characters, uniqueCharacter],
           }
-        }),
+        })
+
+        if (!addedCharacter) {
+          throw new Error('Character could not be added')
+        }
+        return addedCharacter
+      },
 
       updateCharacter: (id, updates) =>
         set((state) => {
@@ -533,8 +452,7 @@ export const useCharacterStore = create<CharacterState>()(
 
       createNewCharacter: (initial) => {
         const character = createEmptyCharacter(initial)
-        get().addCharacter(character)
-        return character
+        return get().addCharacter(character)
       },
 
       saveActiveCharacter: () =>
@@ -586,10 +504,12 @@ export const useCharacterStore = create<CharacterState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          const validatedCharacters = state.characters
-            .map((character) => parseCharacterData(character))
-            .filter((result) => result.data)
-            .map((result) => result.data as Character)
+          const validatedCharacters = ensureUniqueCharacterIds(
+            state.characters
+              .map((character) => parseCharacterData(character))
+              .filter((result) => result.data)
+              .map((result) => result.data as Character),
+          )
 
           // Persist passes a mutable state snapshot into this callback.
           // Direct assignment here is intentional and scoped to hydration only.

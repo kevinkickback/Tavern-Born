@@ -24,7 +24,7 @@ function useSpellActions() {
 
 describe('Spell Operations', () => {
   describe('Adding spells (profile + provenance)', () => {
-    test('addCantrip adds to profile and applySpellSelection updates provenance', () => {
+    test('addSpellToProfile adds cantrip and applySpellSelection updates provenance', () => {
       const character = makeCharacterFixture({
         class: 'Wizard',
         classSource: 'PHB',
@@ -57,9 +57,8 @@ describe('Spell Operations', () => {
       const { result: spellSlotsResult } = renderHook(() => useSpellActions())
       const { result: provenanceResult } = renderHook(() => useProvenance())
 
-      // Add cantrip via profile mutation
       act(() => {
-        spellSlotsResult.current.addCantrip('Fire Bolt', 'class:Wizard|PHB')
+        spellSlotsResult.current.addSpellToProfile('class:Wizard|PHB', 'Fire Bolt', 'cantrip')
       })
 
       // Verify profile state updated
@@ -80,7 +79,7 @@ describe('Spell Operations', () => {
       })
     })
 
-    test('addSpellKnown adds to profile (currently requires manual provenance)', () => {
+    test('addSpellToProfile adds a known spell', () => {
       const character = makeCharacterFixture({
         class: 'Bard',
         classSource: 'PHB',
@@ -111,9 +110,8 @@ describe('Spell Operations', () => {
       })
       const { result } = renderHook(() => useSpellActions())
 
-      // Add spell known via profile mutation
       act(() => {
-        result.current.addSpellKnown('Healing Word', 'class:Bard|PHB')
+        result.current.addSpellToProfile('class:Bard|PHB', 'Healing Word', 'spell')
       })
 
       const updatedChar = useCharacterStore.getState().activeCharacter
@@ -167,7 +165,7 @@ describe('Spell Operations', () => {
   })
 
   describe('Removing spells (profile + provenance)', () => {
-    test('removeCantrip removes from profile; removeSpellProvenance removes from attribution', () => {
+    test('removeSpellFromProfile removes cantrip and provenance removal clears attribution', () => {
       const character = makeCharacterFixture({
         class: 'Wizard',
         classSource: 'PHB',
@@ -207,9 +205,8 @@ describe('Spell Operations', () => {
       const { result: spellSlotsResult } = renderHook(() => useSpellActions())
       const { result: provenanceResult } = renderHook(() => useProvenance())
 
-      // Remove from profile
       act(() => {
-        spellSlotsResult.current.removeCantrip('Fire Bolt', 'class:Wizard|PHB')
+        spellSlotsResult.current.removeSpellFromProfile('class:Wizard|PHB', 'Fire Bolt', 'cantrip')
       })
 
       const updatedChar = useCharacterStore.getState().activeCharacter
@@ -224,7 +221,7 @@ describe('Spell Operations', () => {
       expect(ledger?.spells['fire bolt']).toBeUndefined()
     })
 
-    test('removeSpellKnown cleans up prepared spells list', () => {
+    test('removeSpellFromProfile cleans up prepared spells list', () => {
       const character = makeCharacterFixture({
         class: 'Druid',
         classSource: 'PHB',
@@ -256,7 +253,7 @@ describe('Spell Operations', () => {
       const { result } = renderHook(() => useSpellActions())
 
       act(() => {
-        result.current.removeSpellKnown('Entangle', 'class:Druid|PHB')
+        result.current.removeSpellFromProfile('class:Druid|PHB', 'Entangle', 'spell')
       })
 
       const updatedChar = useCharacterStore.getState().activeCharacter

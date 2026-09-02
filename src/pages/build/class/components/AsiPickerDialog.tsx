@@ -7,8 +7,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ABILITY_ABBREVIATIONS, ABILITY_NAMES } from '@/lib/calculations/abilityScores'
-import { ABILITY_SCORE_MAX } from '@/lib/calculations/gameRules'
+import {
+  ABILITY_ABBREVIATIONS,
+  ABILITY_NAMES,
+  formatModifier,
+} from '@/lib/calculations/abilityScores'
+import { ABILITY_SCORE_MAX, getAbilityModifier } from '@/lib/calculations/gameRules'
 import { cn } from '@/lib/utils'
 import type { AbilityName, AbilityScores } from '@/types/character'
 
@@ -22,11 +26,6 @@ export interface AsiPickerDialogProps {
 }
 
 type Mode = 'single' | 'split'
-
-function abilityModifier(score: number): string {
-  const mod = Math.floor((score - 10) / 2)
-  return mod >= 0 ? `+${mod}` : String(mod)
-}
 
 export function AsiPickerDialog({
   open,
@@ -171,7 +170,9 @@ export function AsiPickerDialog({
                     {base} +{bonus} → {newScore}
                   </div>
                 ) : (
-                  <div className="text-xs text-muted-foreground">{abilityModifier(newScore)}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatModifier(getAbilityModifier(newScore))}
+                  </div>
                 )}
               </button>
             )

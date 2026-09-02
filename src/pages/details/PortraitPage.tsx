@@ -1,5 +1,6 @@
 import { Image } from '@phosphor-icons/react'
 import { PortraitPicker } from '@/components/character/PortraitPicker'
+import { WorkspaceBody, WorkspacePage } from '@/components/workspace'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
 import { NoCharCard } from '@/pages/_shared'
@@ -14,34 +15,20 @@ export function PortraitPage() {
   }
 
   return (
-    <div>
-      <div className="px-6 py-5 page-header-band">
-        <div className="max-w-7xl mx-auto flex items-center gap-3">
-          <Image className="h-6 w-6 text-primary" weight="duotone" />
-          <div>
-            <h1 className="text-2xl font-display font-bold">Portrait</h1>
-            <p className="text-sm text-muted-foreground">
-              Set and customize your character's portrait
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-6 pb-6">
-        <div className="max-w-7xl mx-auto w-full">
-          <PortraitPicker
-            portrait={activeCharacter.portrait ?? null}
-            transform={activeCharacter.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
-            name={activeCharacter.name}
-            level={getTotalCharacterLevel(activeCharacter)}
-            race={activeCharacter.race}
-            characterClass={activeCharacter.class}
-            lastModified={activeCharacter.lastModified}
-            onPortraitChange={(p) => updateActiveCharacter({ portrait: p ?? undefined })}
-            onTransformChange={(t) => updateActiveCharacter({ portraitTransform: t })}
-          />
-        </div>
-      </div>
-    </div>
+    <WorkspacePage className="p-3">
+      <WorkspaceBody className="overflow-hidden">
+        <PortraitPicker
+          portrait={activeCharacter.portrait ?? null}
+          transform={activeCharacter.portraitTransform ?? DEFAULT_PORTRAIT_TRANSFORM}
+          name={activeCharacter.name}
+          level={getTotalCharacterLevel(activeCharacter)}
+          race={activeCharacter.race}
+          characterClass={activeCharacter.class}
+          lastModified={activeCharacter.lastModified}
+          onPortraitChange={(p) => updateActiveCharacter({ portrait: p ?? undefined })}
+          onTransformChange={(t) => updateActiveCharacter({ portraitTransform: t })}
+        />
+      </WorkspaceBody>
+    </WorkspacePage>
   )
 }

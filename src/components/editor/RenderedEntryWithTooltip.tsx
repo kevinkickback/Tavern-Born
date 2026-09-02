@@ -10,7 +10,6 @@ import {
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
 import { renderEntryCached } from '@/lib/entryRenderCache'
-import { cn } from '@/lib/utils'
 import {
   getEntityKey,
   getEntryWithHoverTitles,
@@ -18,7 +17,8 @@ import {
   normalizeKind,
   parseRecursiveReference,
   type RecursiveLookup,
-} from '@/pages/spells/components/spellTooltipUtils'
+} from '@/lib/renderer/recursiveTooltip'
+import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 
 const TOOLTIP_WIDTH = 320
@@ -59,7 +59,13 @@ export function RenderedEntryWithTooltip({
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
 
-  const html = useMemo(() => getEntryWithHoverTitles(entry), [entry])
+  const html = useMemo(
+    () =>
+      Array.isArray(entry)
+        ? entry.map((item) => getEntryWithHoverTitles(item)).join('')
+        : getEntryWithHoverTitles(entry),
+    [entry],
+  )
 
   const clearHide = useCallback(() => {
     if (hideTimer.current !== null) {

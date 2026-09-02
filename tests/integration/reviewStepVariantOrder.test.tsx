@@ -18,6 +18,13 @@ describe('ReviewStep variant rule ordering', () => {
           class: 'Wizard',
           background: 'Sage',
         }}
+        raceResolution={{
+          parentRace: undefined,
+          subraceData: undefined,
+          mergedRace: undefined,
+          subraceIsNested: false,
+        }}
+        sources={[]}
       />,
     )
 

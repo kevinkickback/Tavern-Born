@@ -10,14 +10,12 @@ import {
 } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { Input } from '@/components/ui/input'
-import { buildSuppressedKeys } from '@/lib/5etools/reprints'
 import {
   formatProficiencyList,
   getSavingThrowsDisplay,
   getSpellcastingStatDisplay,
 } from '@/lib/calculations/classUtils'
 import { getClassSummary } from '@/lib/calculations/entrySummary'
-import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 import { DetailHtmlSection, DetailSection } from '../../DetailCards'
@@ -30,26 +28,7 @@ interface ClassStepProps extends StepProps {
 
 export function ClassStep({ data, onChange, classes }: ClassStepProps) {
   const [search, setSearch] = useState('')
-  const allowedSources = useMemo(() => {
-    const base = data.allowedSources ?? []
-    const implicit = getImplicitSource((data.originSystem || '2014') as '2014' | '2024')
-    return base.includes(implicit) ? base : [...base, implicit]
-  }, [data.allowedSources, data.originSystem])
-  const allowedClassSourcesUpper = useMemo(
-    () => new Set(allowedSources.map((s) => s.toUpperCase())),
-    [allowedSources],
-  )
-  const sourceFilteredClasses =
-    allowedSources.length > 0
-      ? classes.filter((cls) => allowedClassSourcesUpper.has(cls.source.toUpperCase()))
-      : classes
-  const suppressedClassKeys =
-    data.variantRules?.preferNewerPrintings && allowedSources.length > 0
-      ? buildSuppressedKeys(sourceFilteredClasses, new Set(allowedSources))
-      : undefined
-  const filteredClasses = sourceFilteredClasses.filter(
-    (cls) => !cls.isSidekick && !suppressedClassKeys?.has(`${cls.name}|${cls.source}`),
-  )
+  const filteredClasses = classes
   const searchFilteredClasses = useMemo(() => {
     const query = search.trim().toLowerCase()
     if (!query) return filteredClasses
@@ -129,11 +108,7 @@ export function ClassStep({ data, onChange, classes }: ClassStepProps) {
 
         <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
           {searchFilteredClasses.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              {allowedSources.length > 0
-                ? 'No classes found in selected sources.'
-                : 'No classes found.'}
-            </div>
+            <div className="text-center py-8 text-muted-foreground text-sm">No classes found.</div>
           ) : (
             searchFilteredClasses.map((cls) => {
               const isSelected =

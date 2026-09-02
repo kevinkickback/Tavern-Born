@@ -218,6 +218,8 @@ export interface ItemType5e {
 
 export interface GameDataLookups {
   classesByKey: Record<string, Class5e>
+  racesByKey: Record<string, Race5e>
+  backgroundsByKey: Record<string, Background5e>
   classFeaturesByKey: Record<string, ClassFeature>
   spellsByKey: Record<string, Spell5e>
   optionalFeaturesByKey: Record<string, unknown>

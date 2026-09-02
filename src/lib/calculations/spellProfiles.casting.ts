@@ -7,9 +7,8 @@ import {
   getCasterLevelContribution,
   getEffectiveCasterProgression,
   getEffectiveSpellcastingAbility,
-  getPactMagicSlots,
   getSpellSlotsFromClassData,
-  getStandardSpellSlots,
+  getStandardSpellSlotsFromClassData,
 } from '@/lib/calculations/spellSlots'
 import { getCharacterClassEntries, getTotalLevel } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
@@ -198,6 +197,7 @@ export function getClassMaxSpellLevel(
   classData: Class5e | undefined,
   classLevel: number,
   casterProgressionOverride?: CasterProgression,
+  standardProgressionClasses: Iterable<Class5e> = [],
 ): number {
   if (!classData) return 0
   const progression = casterProgressionOverride ?? normalizeProgression(classData.casterProgression)
@@ -210,16 +210,17 @@ export function getClassMaxSpellLevel(
       .reduce((max, k) => Math.max(max, k), 0)
   }
 
-  if (progression === 'pact') {
-    const pactSlots = getPactMagicSlots(classLevel)
-    return Object.keys(pactSlots)
-      .map((k) => Number.parseInt(k, 10))
-      .filter((k) => Number.isFinite(k))
-      .reduce((max, k) => Math.max(max, k), 0)
-  }
+  if (progression === 'pact' || progression === 'none') return 0
 
-  const fallback = getStandardSpellSlots(getCasterLevelContribution(progression, classLevel))
-  return Object.keys(fallback)
+  const ruleset = classData.edition === 'one' || classData.source === 'XPHB' ? '2024' : '2014'
+  const standardSlots = getStandardSpellSlotsFromClassData(
+    standardProgressionClasses,
+    getCasterLevelContribution(progression, classLevel),
+    ruleset,
+  )
+  if (!standardSlots) return 0
+
+  return Object.keys(standardSlots)
     .map((k) => Number.parseInt(k, 10))
     .filter((k) => Number.isFinite(k))
     .reduce((max, k) => Math.max(max, k), 0)
@@ -279,6 +280,7 @@ export function buildSpellcastingClassDetails(
           classData,
           entry.levels,
           normalizeProgression(effectiveProgression),
+          classesById.values(),
         ),
         preparedSpellLimit: levelOnlyPrepared ? null : preparedSpellLimit,
         knownSpellLimit,

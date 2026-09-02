@@ -1,12 +1,14 @@
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { ABILITY_ABBREV_TO_FULL } from '@/lib/calculations/abilityNames'
 import type {
+  Background5e,
   Class5e,
   ClassFeature,
   GameData,
   GameDataLookups,
   ItemProperty5e,
   ItemType5e,
+  Race5e,
   Spell5e,
   Subclass5e,
 } from '@/types/5etools'
@@ -48,6 +50,26 @@ export function buildClassLookup(classes: Class5e[]): Record<string, Class5e> {
     const key = getEntityLookupKey(cls.name, cls.source)
     if (key !== '|' && !lookup[key]) {
       lookup[key] = cls
+    }
+    return lookup
+  }, {})
+}
+
+export function buildRaceLookup(races: Race5e[]): Record<string, Race5e> {
+  return buildEntityLookup(races)
+}
+
+export function buildBackgroundLookup(backgrounds: Background5e[]): Record<string, Background5e> {
+  return buildEntityLookup(backgrounds)
+}
+
+function buildEntityLookup<T extends { name: string; source: string }>(
+  entities: T[],
+): Record<string, T> {
+  return entities.reduce<Record<string, T>>((lookup, entity) => {
+    const key = getEntityLookupKey(entity.name, entity.source)
+    if (key !== '|' && !lookup[key]) {
+      lookup[key] = entity
     }
     return lookup
   }, {})
@@ -102,6 +124,8 @@ export function buildSubclassLookup(classes: Class5e[]): Record<string, Subclass
 export function buildGameDataLookups(gameData: GameData): GameDataLookups {
   return {
     classesByKey: buildClassLookup(gameData.classes),
+    racesByKey: buildRaceLookup(gameData.races),
+    backgroundsByKey: buildBackgroundLookup(gameData.backgrounds),
     classFeaturesByKey: buildClassFeatureLookup(gameData.classFeatures),
     spellsByKey: buildSpellLookup(gameData.spells),
     optionalFeaturesByKey: buildOptionalFeatureLookup(gameData.optionalfeatures),

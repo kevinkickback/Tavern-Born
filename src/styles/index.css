@@ -28,15 +28,7 @@
 
   body {
     font-family: "Inter", sans-serif;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: "Cinzel", serif;
+    overflow: hidden;
   }
 
   .font-display {
@@ -110,10 +102,10 @@
 
 @layer components {
   .character-wizard-modal {
-    max-width: 1280px !important;
+    max-width: 80rem !important;
     width: 95vw !important;
     height: 92vh !important;
-    max-height: 980px !important;
+    max-height: 61.25rem !important;
   }
 
   .page-header-band {
@@ -131,6 +123,10 @@
   .app-drag [role="button"],
   .app-drag input,
   .app-drag select {
+    -webkit-app-region: no-drag;
+  }
+
+  .app-no-drag {
     -webkit-app-region: no-drag;
   }
 

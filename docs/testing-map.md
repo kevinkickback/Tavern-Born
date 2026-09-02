@@ -7,11 +7,18 @@ This document maps current test coverage and practical priorities for expansion.
 - Unit and integration: Vitest
 - E2E: Playwright
 - Lint: Biome
+- Coverage: V8 via Vitest, with baseline regression thresholds enforced in CI
 
 Key scripts in package.json:
 - npm run lint
 - npm run test
+- npm run test:coverage
 - npm run test:e2e
+- npm run test:electron (run after `npm run build`)
+
+The current global coverage floor is 53% statements, 43% branches, 49% functions, and 56% lines.
+These values are an honest ratchet based on the measured suite, not the long-term target; raise them as
+new tests land and do not lower them to merge a change.
 
 ## Current Coverage Areas
 
@@ -19,13 +26,16 @@ Key scripts in package.json:
 - Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
+- Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions, deterministic source-less fallback, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
 - Renderer output in src/lib/renderer.ts
+- Recursive tooltip builder and hook coverage for explicit collection sets, stable source/name keys, and `itemsBase`
 - Provenance ledger/reconciliation modules
 - Provenance section row routing helper in src/lib/provenance/sectionRows.ts
 - Provenance composed hooks in src/hooks/character/useProvenance*.ts
 - Zustand stores in src/store/*
 - Character persistence schema validation in tests/lib/characterSchema.test.ts
+- Named game-data lookup hook coverage for stable empty defaults and ingestion-built race/background/item/metadata/skill lookups
 - Character payload validation and rehydrate safety in tests/store/characterStore.test.ts
 - Build flow extracted helpers:
 	- src/pages/build/ability-scores/model/data.ts
@@ -37,8 +47,15 @@ Key scripts in package.json:
 	- src/pages/build/class/model/levelsUtils.ts
 	- Grouped tool-choice expansion coverage (gaming set/musical instrument/artisan's tools/any-tool)
 	- `formatWeaponCategoryLabel` weapon category key → display label
-- Compendium entry shaping and filtering in src/lib/compendiumEntries.ts
+- Compendium entry shaping and filtering in src/lib/compendiumEntries.ts, including 5e / 5.5e / Both edition classification and composition with type, source, and text filters
+- Equipment page detail rendering, recursive link tooltips, and persistent inventory headers in tests/integration/equipmentPage.test.tsx; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
+- Atomic equipment command coverage for add/remove/manual proficiency alignment, duplicate names, and retained source tags
+- Wizard data-controller coverage for draft source filtering, implicit ruleset sources, reprint suppression, and raw fallback resolution
+- Shared prerequisite snapshot and feat option-pool coverage, including multiclass progression and source collisions
+- Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, level-up modal (tests/integration/*)
+- Characteristics page draft synchronization, immediate detail persistence, and legacy/custom/preset
+	organization transitions in tests/integration/characteristicsPage.test.tsx
 - Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
 - Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
 - Spell hook behavior coverage in tests/hooks/useSpellSlots.test.tsx (add/remove spells, profile management, prepared toggles)
@@ -60,16 +77,23 @@ Key scripts in package.json:
 - Ingestion null entity array resilience in tests/lib/5etools/dataLoader.test.ts (class files with null entity arrays handled gracefully)
 - Ingestion offline fail-fast coverage in tests/lib/5etools/dataLoader.test.ts (throws when zero top-level remote resources are reachable)
 - Feat options parser coverage in tests/lib/5etools/featOptions.test.ts (parseFeatSpellFilter, deriveFeatOptionSteps all step kinds, hasFeatOptions, deriveSpellStepsForClass)
+- Bonus feat option workflow coverage in tests/hooks/useFeatProvenanceMutations.test.tsx and tests/integration/featsPage.test.tsx (automatic configuration after selection, setup persistence, and grant cleanup on removal)
+- Parameterized fixed feat coverage in tests/lib/featGrants.test.ts, tests/lib/provenance/applyFeatGrantBlocks.test.ts, tests/lib/migrations.test.ts, tests/integration/featOptionsModal.test.tsx, and tests/integration/featsPage.test.tsx (canonical lookup, variant migration, fixed-step skipping, fixed spell-list setup, and option persistence)
+- Feats page Edit Setup hint coverage in tests/integration/featsPage.test.tsx (configured character and bonus feat anchors)
+- Compendium edition selector coverage in tests/integration/compendiumPage.test.tsx (Both default, rendered filtering, and isolation from active-character ruleset/source restrictions)
 - SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
 - Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 - Electron updater offline safeguards in tests/lib/updateManager.test.ts (offline short-circuit and startup schedule skip)
+- Electron security boundary coverage in tests/electron/security.test.ts (renderer origins and canonical local-root containment)
+- Compiled Electron smoke coverage in tests/electron-smoke/startup.ts (sandbox isolation, preload bridge, trusted IPC)
 - Store-level empty background refresh guard in tests/store/gameDataStore.test.ts (prevents clobbering existing cache/state)
+- Character sheet PDF boundary coverage for pure view-model entity projection, pure 2014/2024 mapping, form filling, and 2014 MPMB cleanup
 
 ## High-Priority Gaps
 
 1. **Corrupted character recovery**: Import of invalid/schema-mismatched characters beyond the valid+invalid payload cases already covered.
 2. **SpellProfileManager decomposition**: Large component (~783 lines); defer until next feature touch.
-3. **FeatOptionsModal**: Multi-step feat-options wizard (~682 lines) has no dedicated test coverage. Add unit tests for step generation and selection persistence when next touched.
+3. **FeatOptionsModal**: Fixed-step skipping and unrestricted spellcasting-list initialization are covered; broader multi-step navigation and every option kind still need dedicated component coverage.
 4. **Auto-update lifecycle**: `electron/updateManager.ts` has partial unit tests (semver comparator in `tests/lib/updateManager.test.ts`) but key lifecycle logic remains untested: portable detection, event forwarding, cancel-in-flight guard.
 
 ## Test Coverage by Layer

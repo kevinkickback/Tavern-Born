@@ -12,6 +12,7 @@ Core modules:
 - src/lib/5etools/validator.ts
 - src/lib/5etools/schemas.ts
 - src/lib/5etools/lookups.ts
+- src/lib/5etools/entityResolvers.ts
 - src/lib/5etools/filters.ts
 - src/lib/5etools/urlUtils.ts
 - src/lib/5etools/sourceFallbacks.ts
@@ -20,7 +21,11 @@ Core modules:
 
 ## Source Types
 
-- Local folder: loaded through Electron IPC (window.electronAPI.readLocalJson).
+- Local folder: loaded through Electron IPC (`window.electronAPI.readLocalJson`). The main process
+  authorizes only a directory chosen with the native folder picker, persists that authorization in
+  the Electron user-data directory, resolves symlinks before containment checks, and accepts only
+  JSON files up to 50 MB below that canonical root.
+- Remote repository: production accepts HTTPS only, matching the renderer content-security policy.
 - Remote source: loaded through fetch from normalized URL path.
 
 ## Pipeline Stages
@@ -36,6 +41,7 @@ Core modules:
 3. Parsing and normalization
 - parsers extract arrays and normalize structure differences.
 - Class and subclass feature references are normalized for downstream consumption.
+- Class spell-slot progression is read from `classTableGroups[].rowsSpellProgression` and retained on parsed class records. Shared multiclass slots resolve against the loaded PHB or XPHB full-caster table; static slot tables are not used as a fallback.
 - Class loading also reads matching `fluff-class-*.json` resources and attaches both a short class summary and full fluff content to parsed class records.
 - The summary is taken from the last direct paragraph in the first class fluff section and is used by compact UI surfaces such as the character-creation wizard.
 - Full fluff sections are attached on `classFluffSections` and image metadata on `classFluffImages`, enabling richer class-details rendering without reparsing raw fluff payloads.
@@ -46,12 +52,21 @@ Core modules:
   - **Simple versions** (e.g., XPHB Elf's Drow/High Elf/Wood Elf lineages): direct objects with `name`, `_mod`, and properties like `additionalSpells`, `darkvision`, `speed`.
   - **Template versions** (e.g., XPHB Dragonborn colors): an `_abstract` template with `{{variable}}` placeholders expanded per `_implementations` entry.
 - Version entries apply `_mod` operations (`replaceArr`, `removeArr`) to parent entries at parse time, producing fully resolved `entries` on each synthetic subrace. These subraces carry an `_isVersion: true` flag so that `mergeRaceWithSubrace` uses the resolved entries directly instead of concatenating.
+- Fixed feat references may encode a grant parameter after a semicolon, such as
+  `magic initiate; cleric|xphb`. Provenance parsing stores `Magic Initiate` as the canonical entity
+  identity and retains `cleric` as grant metadata; consumers must not treat the full reference as a
+  feat name.
 
 4. Lookup construction
-- lookups creates composite-key maps (name|source) for fast, collision-safe access.
+- lookups creates composite-key maps (name|source) for fast, collision-safe class, race, background, spell, feature, subclass, and item access.
 - Source metadata is sorted by a total, deterministic order so parallel resource completion cannot cause cache fingerprint churn.
 
-5. Caching and freshness
+5. Entity resolution
+- `entityResolvers.ts` is the canonical class, background, and race/subrace reference API.
+- Callers may supply a filtered primary lookup and a raw fallback lookup. Resolution prefers an exact `name|source` primary match, then the exact raw match so an existing selection remains resolvable after filters change.
+- Name-only fallback is allowed only when the persisted reference has no source. It prefers primary data and uses source/name ordering for deterministic collision handling.
+
+6. Caching and freshness
 - Parsed data plus source snapshot are cached in IndexedDB.
 - Cache freshness is evaluated on startup; stale cache triggers background refresh.
 
@@ -66,6 +81,7 @@ Core modules:
 - data/class/index.json keys are class slugs, not source identifiers.
 - data/spells/index.json still behaves as source-grouped index data.
 - Downstream UI should prefer lookups over repeated array scans when exact entity references are required.
+- Shared lookup consumers should use named hooks from `src/hooks/data/useGameData.ts`; direct nested lookup selectors are not a UI API.
 
 ### Grouped Tool Choice Nuance
 
@@ -148,6 +164,7 @@ When a user selects spells for a multiclass character:
 
 - Missing resource file: loader warning, empty collection, degraded feature surface.
 - Schema mismatch: validator should surface explicit shape errors.
+- Missing PHB/XPHB full-caster or pact progression rows: development validation reports the source-qualified class data gap; spell calculations return no invented slots.
 - Source URL issues: inspect URL normalization and remote base path.
 - Local path issues: verify absolute folder and IPC file read behavior.
 

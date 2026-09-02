@@ -18,7 +18,9 @@ interface ChangelogModalProps {
   version: string
   changelog: string | null
   loading?: boolean
+  updateAvailable?: boolean
   onInstall?: () => void
+  onOpenDownloadPage?: () => void | Promise<void>
 }
 
 export function ChangelogModal({
@@ -27,18 +29,22 @@ export function ChangelogModal({
   version,
   changelog,
   loading = false,
+  updateAvailable = false,
   onInstall,
+  onOpenDownloadPage,
 }: ChangelogModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-xs sm:max-w-md p-3 sm:p-6">
         <DialogHeader>
           <DialogTitle>
-            {onInstall ? `Update Available — v${version}` : `Changelog — v${version}`}
+            {updateAvailable ? `Update Available — v${version}` : `Changelog — v${version}`}
           </DialogTitle>
           <DialogDescription>
-            {onInstall
-              ? 'A new version is ready to install. Review the changes below.'
+            {updateAvailable
+              ? onInstall
+                ? 'A new version is ready to install. Review the changes below.'
+                : 'A new version is available. Portable builds do not update in place.'
               : 'Changes included in this version.'}
           </DialogDescription>
         </DialogHeader>
@@ -68,12 +74,21 @@ export function ChangelogModal({
         </ScrollArea>
 
         <DialogFooter>
-          {onInstall ? (
+          {updateAvailable && onInstall ? (
             <>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Skip
               </Button>
               <Button onClick={onInstall}>Install Now</Button>
+            </>
+          ) : updateAvailable && onOpenDownloadPage ? (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Not Now
+              </Button>
+              <Button onClick={onOpenDownloadPage}>
+                Open Download Page <ArrowSquareOut size={14} />
+              </Button>
             </>
           ) : (
             <Button variant="outline" onClick={() => onOpenChange(false)}>

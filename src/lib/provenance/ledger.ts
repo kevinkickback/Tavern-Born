@@ -87,7 +87,8 @@ function tagPresent(list: readonly SourceTag[], tag: SourceTag): boolean {
       t.sourceType === tag.sourceType &&
       t.sourceName === tag.sourceName &&
       t.grantType === tag.grantType &&
-      t.sourceRef === tag.sourceRef,
+      t.sourceRef === tag.sourceRef &&
+      t.grantVariant === tag.grantVariant,
   )
 }
 
@@ -167,6 +168,36 @@ export function removeGrantsBySource(
     ),
   }
   return result
+}
+
+/** Remove grants attributed to one exact source entity across every domain. */
+export function removeGrantsBySourceRef(
+  ledger: ProvenanceLedger,
+  sourceType: string,
+  sourceName: string,
+  sourceRef: string | undefined,
+): ProvenanceLedger {
+  const matchesSource = (tag: SourceTag) =>
+    tag.sourceType === sourceType &&
+    tag.sourceName === sourceName &&
+    (tag.sourceRef ?? '') === (sourceRef ?? '')
+  let result = ledger
+
+  for (const domain of ALL_MAP_DOMAINS) {
+    const map = getMap(result, domain)
+    const updated: Record<string, SourceTag[]> = {}
+    for (const [key, tags] of Object.entries(map)) {
+      const retained = tags.filter((tag) => !matchesSource(tag))
+      if (retained.length > 0) updated[key] = retained
+    }
+    result = setMap(result, domain, updated)
+  }
+
+  return {
+    ...result,
+    abilityBonuses: result.abilityBonuses.filter((record) => !matchesSource(record.sourceTag)),
+    choices: result.choices.filter((choice) => !matchesSource(choice.sourceTag)),
+  }
 }
 
 /** Replace all grants from a source with a new set (remove then re-apply). */

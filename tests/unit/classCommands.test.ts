@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
+import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import {
   addMulticlass,
+  applyClassEquipmentChoiceCommand,
   applyClassProgressionUpdate,
   removeMulticlass,
   selectBaseClass,
@@ -9,6 +11,7 @@ import {
 } from '@/lib/character/commands/classCommands'
 import { makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
+import type { Item5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('Class Commands', () => {
@@ -46,8 +49,8 @@ describe('Class Commands', () => {
       'PHB',
     )
 
-    expect(result.characterUpdate.class).toBe('Wizard')
-    expect(result.characterUpdate.classProgression?.[0]?.name).toBe('Wizard')
+    expect(result.characterPatch.class).toBe('Wizard')
+    expect(result.characterPatch.classProgression?.[0]?.name).toBe('Wizard')
   })
 
   test('selectSubclass updates subclass fields', () => {
@@ -60,8 +63,8 @@ describe('Class Commands', () => {
     const ledger = character.provenance ?? emptyProvenance()
 
     const result = selectSubclass(character, ledger, 'Evocation', 'PHB')
-    expect(result.characterUpdate.subclass).toBe('Evocation')
-    expect(result.characterUpdate.subclassSource).toBe('PHB')
+    expect(result.characterPatch.subclass).toBe('Evocation')
+    expect(result.characterPatch.subclassSource).toBe('PHB')
   })
 
   test('selectSubclass updates viewing class entry in progression without overriding top-level subclass for other classes', () => {
@@ -83,10 +86,10 @@ describe('Class Commands', () => {
       viewingEntry,
     })
 
-    expect(result.characterUpdate.classProgression?.[1]?.subclass).toBe('Battle Master')
-    expect(result.characterUpdate.classProgression?.[1]?.subclassSource).toBe('PHB')
-    expect(result.characterUpdate.subclass).toBeUndefined()
-    expect(result.characterUpdate.subclassSource).toBeUndefined()
+    expect(result.characterPatch.classProgression?.[1]?.subclass).toBe('Battle Master')
+    expect(result.characterPatch.classProgression?.[1]?.subclassSource).toBe('PHB')
+    expect(result.characterPatch.subclass).toBeUndefined()
+    expect(result.characterPatch.subclassSource).toBeUndefined()
   })
 
   test('updateCharacterLevel updates primary class level', () => {
@@ -98,8 +101,8 @@ describe('Class Commands', () => {
     const ledger = character.provenance ?? emptyProvenance()
     const result = updateCharacterLevel(character, ledger, 4)
 
-    expect(result.characterUpdate.level).toBe(4)
-    expect(result.characterUpdate.classProgression?.[0]?.levels).toBe(4)
+    expect(result.characterPatch.level).toBe(4)
+    expect(result.characterPatch.classProgression?.[0]?.levels).toBe(4)
   })
 
   test('addMulticlass adds a second class entry', () => {
@@ -135,8 +138,8 @@ describe('Class Commands', () => {
       1,
     )
 
-    expect(result.characterUpdate.classProgression).toHaveLength(2)
-    expect(result.characterUpdate.classProgression?.[1]?.name).toBe('Fighter')
+    expect(result.characterPatch.classProgression).toHaveLength(2)
+    expect(result.characterPatch.classProgression?.[1]?.name).toBe('Fighter')
   })
 
   test('removeMulticlass removes secondary class entry', () => {
@@ -150,8 +153,8 @@ describe('Class Commands', () => {
     const ledger = character.provenance ?? emptyProvenance()
     const result = removeMulticlass(character, ledger, 'Fighter')
 
-    expect(result.characterUpdate.classProgression).toHaveLength(1)
-    expect(result.characterUpdate.classProgression?.[0]?.name).toBe('Wizard')
+    expect(result.characterPatch.classProgression).toHaveLength(1)
+    expect(result.characterPatch.classProgression?.[0]?.name).toBe('Wizard')
   })
 
   test('applyClassProgressionUpdate syncs total level and top-level class fields', () => {
@@ -168,10 +171,10 @@ describe('Class Commands', () => {
       { name: 'Fighter', source: 'PHB', levels: 1 },
     ])
 
-    expect(result.characterUpdate.level).toBe(4)
-    expect(result.characterUpdate.class).toBe('Wizard')
-    expect(result.characterUpdate.classSource).toBe('PHB')
-    expect(result.characterUpdate.classProgression).toHaveLength(2)
+    expect(result.characterPatch.level).toBe(4)
+    expect(result.characterPatch.class).toBe('Wizard')
+    expect(result.characterPatch.classSource).toBe('PHB')
+    expect(result.characterPatch.classProgression).toHaveLength(2)
   })
 
   test('applyClassProgressionUpdate reconciles provenance for removed class entries', () => {
@@ -197,5 +200,90 @@ describe('Class Commands', () => {
     ])
 
     expect(result.provenanceUpdate.proficiencies.armor.shield).toBeUndefined()
+  })
+
+  test('applies a class equipment choice as one character and provenance result', () => {
+    const dagger = { name: 'Dagger', source: 'PHB', type: 'M' } as Item5e
+    const shortbow = { name: 'Shortbow', source: 'PHB', type: 'R' } as Item5e
+    const character = makeCharacterFixture({
+      classEquipmentChoices: { 'Rogue|PHB': ['a'] },
+      equipment: [
+        {
+          id: 'old-dagger',
+          name: 'Dagger',
+          source: 'PHB',
+          type: 'M',
+          quantity: 1,
+          equipped: false,
+        },
+      ],
+    })
+    const classTag = makeSourceTag('class', 'Rogue', 'fixed', 'PHB')
+    const ledger = {
+      ...(character.provenance ?? emptyProvenance()),
+      equipment: { dagger: [classTag] },
+    }
+
+    const result = applyClassEquipmentChoiceCommand(
+      character,
+      ledger,
+      {
+        name: 'Rogue',
+        source: 'PHB',
+        startingEquipment: { defaultData: [{ A: ['dagger|PHB'], B: ['shortbow|PHB'] }] },
+      },
+      0,
+      'B',
+      buildItemLookup([dagger, shortbow]),
+    )
+
+    expect(result.characterPatch.classEquipmentChoices?.['Rogue|PHB']).toEqual(['b'])
+    expect(result.characterPatch.equipment?.map((entry) => entry.name)).toEqual(['Shortbow'])
+    expect(result.provenanceUpdate.equipment.dagger).toBeUndefined()
+    expect(result.provenanceUpdate.equipment.shortbow).toEqual([classTag])
+  })
+
+  test('preserves equipment that remains granted by another source', () => {
+    const dagger = { name: 'Dagger', source: 'PHB', type: 'M' } as Item5e
+    const shortbow = { name: 'Shortbow', source: 'PHB', type: 'R' } as Item5e
+    const character = makeCharacterFixture({
+      classEquipmentChoices: { 'Rogue|PHB': ['a'] },
+      equipment: [
+        {
+          id: 'shared-dagger',
+          name: 'Dagger',
+          source: 'PHB',
+          type: 'M',
+          quantity: 1,
+          equipped: false,
+        },
+      ],
+    })
+    const classTag = makeSourceTag('class', 'Rogue', 'fixed', 'PHB')
+    const manualTag = makeSourceTag('manual', 'User Choice', 'choice')
+    const ledger = {
+      ...(character.provenance ?? emptyProvenance()),
+      equipment: { dagger: [classTag, manualTag] },
+    }
+
+    const result = applyClassEquipmentChoiceCommand(
+      character,
+      ledger,
+      {
+        name: 'Rogue',
+        source: 'PHB',
+        startingEquipment: { defaultData: [{ A: ['dagger|PHB'], B: ['shortbow|PHB'] }] },
+      },
+      0,
+      'B',
+      buildItemLookup([dagger, shortbow]),
+    )
+
+    expect(result.characterPatch.equipment?.map((entry) => entry.name)).toEqual([
+      'Dagger',
+      'Shortbow',
+    ])
+    expect(result.provenanceUpdate.equipment.dagger).toEqual([manualTag])
+    expect(result.provenanceUpdate.equipment.shortbow).toEqual([classTag])
   })
 })

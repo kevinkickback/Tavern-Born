@@ -1,19 +1,29 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-const { appState, netState, checkForUpdatesMock, downloadUpdateMock, quitAndInstallMock, onMock } =
-  vi.hoisted(() => ({
-    appState: {
-      isPackaged: false,
-      version: '1.0.0',
-    },
-    netState: {
-      online: true,
-    },
-    checkForUpdatesMock: vi.fn(),
-    downloadUpdateMock: vi.fn(),
-    quitAndInstallMock: vi.fn(),
-    onMock: vi.fn(),
-  }))
+const {
+  appState,
+  netState,
+  netFetchMock,
+  shellOpenExternalMock,
+  checkForUpdatesMock,
+  downloadUpdateMock,
+  quitAndInstallMock,
+  onMock,
+} = vi.hoisted(() => ({
+  appState: {
+    isPackaged: false,
+    version: '1.0.0',
+  },
+  netState: {
+    online: true,
+  },
+  netFetchMock: vi.fn(),
+  shellOpenExternalMock: vi.fn(),
+  checkForUpdatesMock: vi.fn(),
+  downloadUpdateMock: vi.fn(),
+  quitAndInstallMock: vi.fn(),
+  onMock: vi.fn(),
+}))
 
 vi.mock('electron', () => ({
   app: {
@@ -26,11 +36,11 @@ vi.mock('electron', () => ({
     getAllWindows: () => [],
   },
   net: {
-    fetch: vi.fn(),
+    fetch: netFetchMock,
     isOnline: () => netState.online,
   },
   shell: {
-    openExternal: vi.fn(),
+    openExternal: shellOpenExternalMock,
   },
 }))
 
@@ -51,8 +61,11 @@ vi.mock('electron-updater', () => ({
 import {
   checkForUpdate,
   compareSemver,
+  downloadUpdate,
   getUpdateStatus,
   initAutoUpdater,
+  installUpdate,
+  openPortableUpdatePage,
   startAutoCheckSchedule,
   stopAutoCheckSchedule,
 } from '../../electron/updateManager'
@@ -89,6 +102,22 @@ describe('compareSemver', () => {
 
   test('later pre-release tag is greater than earlier one', () => {
     expect(compareSemver('1.0.0-beta', '1.0.0-alpha')).toBe(1)
+  })
+
+  test('compares numeric pre-release identifiers numerically', () => {
+    expect(compareSemver('1.0.0-beta.10', '1.0.0-beta.2')).toBe(1)
+  })
+
+  test('numeric pre-release identifiers sort before non-numeric identifiers', () => {
+    expect(compareSemver('1.0.0-1', '1.0.0-alpha')).toBe(-1)
+  })
+
+  test('a longer matching pre-release sequence has higher precedence', () => {
+    expect(compareSemver('1.0.0-alpha.1', '1.0.0-alpha')).toBe(1)
+  })
+
+  test('ignores build metadata and accepts a v prefix', () => {
+    expect(compareSemver('v1.0.0+build.2', '1.0.0+build.1')).toBe(0)
   })
 
   test('handles missing patch component', () => {
@@ -135,5 +164,78 @@ describe('updateManager offline safeguards', () => {
 
     expect(checkForUpdatesMock).not.toHaveBeenCalled()
     expect(getUpdateStatus().status).toBe('not-available')
+  })
+})
+
+describe('installUpdate', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    delete process.env.PORTABLE_EXECUTABLE_DIR
+    initAutoUpdater()
+  })
+
+  test('installs silently and relaunches the packaged app', () => {
+    appState.isPackaged = true
+
+    installUpdate()
+
+    expect(quitAndInstallMock).toHaveBeenCalledWith(true, true)
+  })
+
+  test('does not invoke the installer during development', () => {
+    appState.isPackaged = false
+
+    installUpdate()
+
+    expect(quitAndInstallMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('portable update safeguards', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    appState.isPackaged = true
+    netState.online = true
+    process.env.PORTABLE_EXECUTABLE_DIR = 'C:/Portable/Tavern-Born'
+    initAutoUpdater()
+  })
+
+  afterEach(() => {
+    delete process.env.PORTABLE_EXECUTABLE_DIR
+    initAutoUpdater()
+  })
+
+  test('does not download or install updates in portable mode', async () => {
+    await expect(downloadUpdate()).rejects.toThrow(
+      'Automatic updates are unavailable in portable builds',
+    )
+    installUpdate()
+
+    expect(downloadUpdateMock).not.toHaveBeenCalled()
+    expect(quitAndInstallMock).not.toHaveBeenCalled()
+  })
+
+  test('opens the exact GitHub release page after an update is found', async () => {
+    netFetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ tag_name: 'v2.0.0', body: 'Release notes' }),
+    })
+    await checkForUpdate()
+
+    await openPortableUpdatePage()
+
+    expect(shellOpenExternalMock).toHaveBeenCalledWith(
+      'https://github.com/kevinkickback/Tavern-Born/releases/tag/v2.0.0',
+    )
+  })
+
+  test('refuses to open a download page before an update is available', async () => {
+    netFetchMock.mockResolvedValueOnce({ ok: false })
+    await checkForUpdate()
+
+    await expect(openPortableUpdatePage()).rejects.toThrow(
+      'No portable update is currently available',
+    )
+    expect(shellOpenExternalMock).not.toHaveBeenCalled()
   })
 })

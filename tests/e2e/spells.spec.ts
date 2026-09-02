@@ -1,36 +1,28 @@
 import { expect, test } from '@playwright/test'
+import { ensureStartupPromptResolved } from './helpers/startup'
 
-async function closeStartupModalIfOpen(page: import('@playwright/test').Page) {
-  const closeButton = page.getByRole('button', { name: 'Close' })
-  if ((await closeButton.count()) > 0) {
-    await closeButton.first().click()
-  }
-}
-
-test('spells page shows no-character state and returns home', async ({ page }) => {
+test('spells page redirects home without an active character', async ({ page }) => {
   await page.goto('/#/spells')
-  await closeStartupModalIfOpen(page)
+  await ensureStartupPromptResolved(page)
 
-  await expect(page.locator('main')).toContainText('No Character Selected')
-  await expect(page.getByText('Please select or create a character to manage spells.')).toHaveCount(
-    1,
-  )
+  await expect(page).toHaveURL(/\/#\/$/)
+  await expect(page.locator('main')).toContainText('No Characters Yet')
 })
 
-test.describe('spells page no-character coverage', () => {
+test.describe('spells route guard without an active character', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/#/spells')
-    await closeStartupModalIfOpen(page)
+    await ensureStartupPromptResolved(page)
   })
 
-  test('shows no-character heading', async ({ page }) => {
-    await expect(page.locator('main')).toContainText('No Character Selected')
+  test('redirects to the character library', async ({ page }) => {
+    await expect(page).toHaveURL(/\/#\/$/)
+    await expect(page.locator('main')).toContainText('No Characters Yet')
   })
 
-  test('shows no-character body text', async ({ page }) => {
-    await expect(
-      page.getByText('Please select or create a character to manage spells.'),
-    ).toHaveCount(1)
+  test('shows character creation actions', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'New Character' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Import' })).toBeVisible()
   })
 
   test('main spell sections are hidden without an active character', async ({ page }) => {
@@ -38,20 +30,21 @@ test.describe('spells page no-character coverage', () => {
     await expect(page.getByText('Spell Slots')).toHaveCount(0)
   })
 
-  test('renders a single no-character card container', async ({ page }) => {
-    await expect(page.locator('h2:has-text("No Character Selected")')).toHaveCount(1)
+  test('renders the empty character library', async ({ page }) => {
+    await expect(page.getByText('No Characters Yet')).toHaveCount(1)
   })
 
-  test('spells route stays stable on reload without a character', async ({ page }) => {
+  test('home redirect stays stable on reload', async ({ page }) => {
     await page.reload()
-    await expect(page).toHaveURL(/\/spells$/)
-    await expect(page.locator('main')).toContainText('No Character Selected')
+    await expect(page).toHaveURL(/\/#\/$/)
+    await expect(page.locator('main')).toContainText('No Characters Yet')
   })
 
-  test('no-character card remains visible after hard navigation from home', async ({ page }) => {
+  test('hard navigation to spells redirects home', async ({ page }) => {
     await page.goto('/')
     await page.goto('/#/spells')
-    await expect(page.locator('main')).toContainText('No Character Selected')
+    await expect(page).toHaveURL(/\/#\/$/)
+    await expect(page.locator('main')).toContainText('No Characters Yet')
   })
 
   test('does not show spell profile labels without active character', async ({ page }) => {

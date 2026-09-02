@@ -38,7 +38,7 @@ export function applyOptionalFeatureGrant(
 
 /** A single parsed entry from a 5etools `feats` block. */
 export type FeatGrantEntry =
-  | { type: 'fixed'; name: string; source: string }
+  | { type: 'fixed'; name: string; source: string; variant?: string }
   | { type: 'chooseAny'; count: number }
   | { type: 'chooseFromCategory'; categories: string[]; count: number }
 
@@ -80,9 +80,17 @@ export function parseFeatGrantBlocks(blocks: unknown[] | undefined): FeatGrantEn
     for (const key of Object.keys(obj)) {
       if (obj[key] !== true) continue
       const pipeIndex = key.indexOf('|')
-      const name = pipeIndex >= 0 ? key.slice(0, pipeIndex) : key
+      const reference = pipeIndex >= 0 ? key.slice(0, pipeIndex) : key
       const source = pipeIndex >= 0 ? key.slice(pipeIndex + 1) : ''
-      entries.push({ type: 'fixed', name, source })
+      const semicolonIndex = reference.indexOf(';')
+      const name = (semicolonIndex >= 0 ? reference.slice(0, semicolonIndex) : reference).trim()
+      const variant = semicolonIndex >= 0 ? reference.slice(semicolonIndex + 1).trim() : undefined
+      entries.push({
+        type: 'fixed',
+        name,
+        source,
+        ...(variant ? { variant } : {}),
+      })
     }
   }
   return entries
@@ -112,6 +120,7 @@ export function applyFeatGrantBlocks(
         result = addGrant(result, 'feats', entry.name, {
           ...tag,
           sourceRef: entry.source || sourceRef,
+          grantVariant: entry.variant,
         })
         break
       }
