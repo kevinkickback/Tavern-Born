@@ -2,31 +2,160 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v[0-9]*'
+    branches: [main]
 
 permissions:
   contents: write
+  pull-requests: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 jobs:
+  release-source:
+    name: Prepare release from merged PR
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a merged dev to main PR
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          matching_prs="$(
+            gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+              --jq '[.[] | select(.merged_at != null and .base.ref == "main" and .head.ref == "dev")] | length'
+          )"
+
+          if [[ "$matching_prs" -lt 1 ]]; then
+            echo "Commit $GITHUB_SHA did not come from a merged dev -> main PR." >&2
+            exit 1
+          fi
+      - name: Validate release version and changelog
+        id: release
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v$version"
+
+          if ! grep -Fxq "<summary><strong>$tag</strong></summary>" docs/changelog.md; then
+            echo "No changelog section found for $tag." >&2
+            exit 1
+          fi
+
+          if existing_sha="$(git rev-list -n 1 "$tag" 2>/dev/null)"; then
+            if [[ "$existing_sha" != "$GITHUB_SHA" ]]; then
+              echo "Tag $tag already points to $existing_sha instead of $GITHUB_SHA." >&2
+              exit 1
+            fi
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
   validate:
     name: Validate release source
+    needs: release-source
     uses: ./.github/workflows/ci.yml
 
   create-release:
     name: Create draft release
-    needs: validate
+    needs: [release-source, validate]
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ needs.release-source.outputs.tag }}
+      RELEASE_VERSION: ${{ needs.release-source.outputs.version }}
+      IS_PRERELEASE: ${{ needs.release-source.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
-      - name: Create GitHub release draft
-        run: gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --verify-tag
+        with:
+          fetch-depth: 0
+      - name: Create version tag
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if existing_sha="$(git rev-list -n 1 "$RELEASE_TAG" 2>/dev/null)"; then
+            if [[ "$existing_sha" != "$GITHUB_SHA" ]]; then
+              echo "Tag $RELEASE_TAG already points to $existing_sha instead of $GITHUB_SHA." >&2
+              exit 1
+            fi
+            echo "Reusing existing tag $RELEASE_TAG."
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/tags/$RELEASE_TAG" \
+              -f sha="$GITHUB_SHA"
+          fi
+      - name: Extract release notes from changelog
+        shell: bash
+        run: |
+          if ! awk -v tag="$RELEASE_TAG" '
+            BEGIN {
+              heading = "<summary><strong>" tag "</strong></summary>"
+            }
+            $0 == heading {
+              found = 1
+              next
+            }
+            found && $0 == "</details>" {
+              closed = 1
+              exit
+            }
+            found {
+              print
+            }
+            END {
+              if (!found || !closed) {
+                exit 1
+              }
+            }
+          ' docs/changelog.md > release-notes.md; then
+            echo "No complete release-notes section found for $RELEASE_TAG in docs/changelog.md." >&2
+            exit 1
+          fi
+
+          if [[ ! -s release-notes.md ]]; then
+            echo "No release notes found for $RELEASE_TAG in docs/changelog.md." >&2
+            exit 1
+          fi
+      - name: Create GitHub release draft
+        shell: bash
+        run: |
+          if is_draft="$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
+            if [[ "$is_draft" != "true" ]]; then
+              echo "A published release already exists for $RELEASE_TAG; refusing to replace it." >&2
+              exit 1
+            fi
+            echo "Reusing existing draft release $RELEASE_TAG."
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file release-notes.md
+          else
+            release_flags=(--draft --title "$RELEASE_TAG" --notes-file release-notes.md --verify-tag)
+            if [[ "$IS_PRERELEASE" == "true" ]]; then
+              release_flags+=(--prerelease)
+            fi
+            gh release create "$RELEASE_TAG" "${release_flags[@]}"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
 
   build:
     name: Build (${{ matrix.os }})
-    needs: create-release
+    needs: [release-source, create-release]
     strategy:
       fail-fast: false
       matrix:
@@ -36,24 +165,38 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.19.0
+          node-version: 22
           cache: npm
       - run: npm ci
       - name: Build and publish artifacts
         run: npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EP_DRAFT: true
 
-  publish-release:
-    name: Publish release
-    needs: build
+  verify-release:
+    name: Verify draft release artifacts
+    needs: [release-source, build]
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ needs.release-source.outputs.tag }}
+      RELEASE_VERSION: ${{ needs.release-source.outputs.version }}
     steps:
-      - name: Verify artifacts and publish
+      - name: Verify draft and artifacts
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          asset_count="$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets | length')"
-          test "$asset_count" -ge 3
-          gh release edit "$GITHUB_REF_NAME" --draft=false
+          is_draft="$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft')"
+          assets="$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')"
+
+          [[ "$is_draft" == "true" ]]
+          grep -Fxq "Tavern-Born Setup $RELEASE_VERSION.exe" <<<"$assets"
+          grep -Fxq "Tavern-Born-$RELEASE_VERSION-portable.exe" <<<"$assets"
+          grep -F "Tavern-Born-$RELEASE_VERSION" <<<"$assets" | grep -Eq '\.dmg$'
+          grep -Fxq "Tavern-Born-$RELEASE_VERSION.AppImage" <<<"$assets"
+          grep -Fxq "tavern-born_${RELEASE_VERSION}_amd64.deb" <<<"$assets"
+          grep -Fxq 'latest.yml' <<<"$assets"
+          grep -Fxq 'latest-mac.yml' <<<"$assets"
+          grep -Fxq 'latest-linux.yml' <<<"$assets"
