@@ -78,12 +78,11 @@
 ### Option 1: Download a Release (Recommended)
 
 Download the latest installer or portable build for your platform from the
-[Releases](../../releases) page. Published builds do not bundle game data; configure a compatible
-data source when the app first starts.
+[Releases](../../releases) page.
 
 ### Option 2: Build from Source
 
-**Prerequisites:** [Node.js](https://nodejs.org/) 22.12 or newer and npm. CI uses the latest Node 22 release.
+**Prerequisites:** [Node.js](https://nodejs.org/) 22.12 or newer and npm.
 
 ```bash
 git clone https://github.com/kevinkickback/Tavern-Born.git
@@ -92,29 +91,12 @@ npm ci
 npm run dev
 ```
 
-Useful validation commands:
-
-```bash
-npx biome ci .
-npx tsc -b
-npm test
-npm run build
-```
-
 ## 📊 Game Data
 
 > **⚠️ Important:** Tavern-Born does **NOT** include Dungeons & Dragons game data.
 
-You must provide your own compatible 5etools JSON data, either from a local folder or an HTTPS
-source. See [Data Ingestion](docs/data-ingestion.md) for the supported source model and loading
-pipeline. The [5etools Wiki](https://wiki.tercept.net/en/home) may help you obtain the source data.
-
-## Contributing
-
-Start with the [documentation hub](docs/README.md) and
-[contributor guide](docs/contributor-start-here.md). Keep game data outside source control and do
-not edit `data/`; parser fixups belong under `src/lib/5etools/`.
-
+You must provide your own compatible 5etools JSON files using either a local folder or remote URL (HTTPS only).
+The [5etools Wiki](https://wiki.tercept.net/en/home) may be helpful in getting started (SEE: Download the Source Code).
 
 ## 📄 License
 

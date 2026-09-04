@@ -13,8 +13,39 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  detect-version-change:
+    name: Detect package version change
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.version.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compare package versions
+        id: version
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          current_version="$(node -p "require('./package.json').version")"
+          previous_version="$(
+            git show "$BEFORE_SHA:package.json" |
+              node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk).on("end", () => console.log(JSON.parse(input).version))'
+          )"
+
+          if [[ "$current_version" == "$previous_version" ]]; then
+            echo "Package version remains $current_version; skipping release."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Package version changed from $previous_version to $current_version."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
   release-source:
     name: Prepare release from merged PR
+    needs: detect-version-change
+    if: needs.detect-version-change.outputs.changed == 'true'
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.release.outputs.tag }}
@@ -191,12 +222,35 @@ jobs:
           is_draft="$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft')"
           assets="$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')"
 
-          [[ "$is_draft" == "true" ]]
-          grep -Fxq "Tavern-Born Setup $RELEASE_VERSION.exe" <<<"$assets"
-          grep -Fxq "Tavern-Born-$RELEASE_VERSION-portable.exe" <<<"$assets"
-          grep -F "Tavern-Born-$RELEASE_VERSION" <<<"$assets" | grep -Eq '\.dmg$'
-          grep -Fxq "Tavern-Born-$RELEASE_VERSION.AppImage" <<<"$assets"
-          grep -Fxq "tavern-born_${RELEASE_VERSION}_amd64.deb" <<<"$assets"
-          grep -Fxq 'latest.yml' <<<"$assets"
-          grep -Fxq 'latest-mac.yml' <<<"$assets"
-          grep -Fxq 'latest-linux.yml' <<<"$assets"
+          if [[ "$is_draft" != "true" ]]; then
+            echo "::error::Release $RELEASE_TAG is not a draft."
+            exit 1
+          fi
+
+          missing=0
+          require_asset() {
+            local expected="$1"
+            if ! grep -Fxq "$expected" <<<"$assets"; then
+              echo "::error::Missing release asset: $expected"
+              missing=1
+            fi
+          }
+
+          require_asset "Tavern-Born-Setup-$RELEASE_VERSION.exe"
+          require_asset "Tavern-Born-$RELEASE_VERSION-portable.exe"
+          require_asset "Tavern-Born-$RELEASE_VERSION.AppImage"
+          require_asset "tavern-born_${RELEASE_VERSION}_amd64.deb"
+          require_asset 'latest.yml'
+          require_asset 'latest-mac.yml'
+          require_asset 'latest-linux.yml'
+
+          if ! grep -F "Tavern-Born-$RELEASE_VERSION" <<<"$assets" | grep -Eq '\.dmg$'; then
+            echo "::error::Missing macOS DMG for Tavern-Born $RELEASE_VERSION."
+            missing=1
+          fi
+
+          if [[ "$missing" -ne 0 ]]; then
+            echo "Uploaded assets:"
+            echo "$assets"
+            exit 1
+          fi
