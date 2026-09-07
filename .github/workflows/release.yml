@@ -1,8 +1,12 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
+  workflow_call:
+    inputs:
+      source-sha:
+        description: Squash merge commit that passed PR checks
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,6 +15,9 @@ permissions:
 concurrency:
   group: release-main
   cancel-in-progress: false
+
+env:
+  SOURCE_SHA: ${{ inputs.source-sha }}
 
 jobs:
   detect-version-change:
@@ -21,12 +28,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.source-sha }}
           fetch-depth: 0
       - name: Compare package versions
         id: version
         shell: bash
         env:
-          BEFORE_SHA: ${{ github.event.before }}
+          BEFORE_SHA: ${{ inputs.source-sha }}^
         run: |
           current_version="$(node -p "require('./package.json').version")"
           previous_version="$(
@@ -50,10 +58,10 @@ jobs:
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
-      prerelease: ${{ steps.release.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.source-sha }}
           fetch-depth: 0
       - name: Require a merged dev to main PR
         shell: bash
@@ -62,57 +70,43 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           matching_prs="$(
-            gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
-              --jq '[.[] | select(.merged_at != null and .base.ref == "main" and .head.ref == "dev")] | length'
+            gh api "repos/$GITHUB_REPOSITORY/commits/$SOURCE_SHA/pulls" \
+              --jq "[.[] | select(.merged_at != null and .merge_commit_sha == \"$SOURCE_SHA\" and .base.ref == \"main\" and .head.ref == \"dev\" and .head.repo.full_name == \"$GITHUB_REPOSITORY\")] | length"
           )"
 
           if [[ "$matching_prs" -lt 1 ]]; then
-            echo "Commit $GITHUB_SHA did not come from a merged dev -> main PR." >&2
+            echo "Commit $SOURCE_SHA did not come from a merged dev -> main PR." >&2
             exit 1
           fi
       - name: Validate release version and changelog
         id: release
         shell: bash
         run: |
+          node .github/check-package-version.mjs
           version="$(node -p "require('./package.json').version")"
           tag="v$version"
 
-          if ! grep -Fxq "<summary><strong>$tag</strong></summary>" docs/changelog.md; then
-            echo "No changelog section found for $tag." >&2
-            exit 1
-          fi
-
           if existing_sha="$(git rev-list -n 1 "$tag" 2>/dev/null)"; then
-            if [[ "$existing_sha" != "$GITHUB_SHA" ]]; then
-              echo "Tag $tag already points to $existing_sha instead of $GITHUB_SHA." >&2
+            if [[ "$existing_sha" != "$SOURCE_SHA" ]]; then
+              echo "Tag $tag already points to $existing_sha instead of $SOURCE_SHA." >&2
               exit 1
             fi
           fi
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [[ "$version" == *-* ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  validate:
-    name: Validate release source
-    needs: release-source
-    uses: ./.github/workflows/ci.yml
 
   create-release:
     name: Create draft release
-    needs: [release-source, validate]
+    needs: release-source
     runs-on: ubuntu-latest
     env:
       RELEASE_TAG: ${{ needs.release-source.outputs.tag }}
       RELEASE_VERSION: ${{ needs.release-source.outputs.version }}
-      IS_PRERELEASE: ${{ needs.release-source.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.source-sha }}
           fetch-depth: 0
       - name: Create version tag
         shell: bash
@@ -121,15 +115,15 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           if existing_sha="$(git rev-list -n 1 "$RELEASE_TAG" 2>/dev/null)"; then
-            if [[ "$existing_sha" != "$GITHUB_SHA" ]]; then
-              echo "Tag $RELEASE_TAG already points to $existing_sha instead of $GITHUB_SHA." >&2
+            if [[ "$existing_sha" != "$SOURCE_SHA" ]]; then
+              echo "Tag $RELEASE_TAG already points to $existing_sha instead of $SOURCE_SHA." >&2
               exit 1
             fi
             echo "Reusing existing tag $RELEASE_TAG."
           else
             gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref="refs/tags/$RELEASE_TAG" \
-              -f sha="$GITHUB_SHA"
+              -f sha="$SOURCE_SHA"
           fi
       - name: Extract release notes from changelog
         shell: bash
@@ -175,9 +169,6 @@ jobs:
             gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file release-notes.md
           else
             release_flags=(--draft --title "$RELEASE_TAG" --notes-file release-notes.md --verify-tag)
-            if [[ "$IS_PRERELEASE" == "true" ]]; then
-              release_flags+=(--prerelease)
-            fi
             gh release create "$RELEASE_TAG" "${release_flags[@]}"
           fi
         env:
@@ -194,6 +185,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source-sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -204,6 +197,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EP_DRAFT: true
+          # The caller retains PR context, but source validation requires a merged commit.
+          PUBLISH_FOR_PULL_REQUEST: 'true'
 
   verify-release:
     name: Verify draft release artifacts
