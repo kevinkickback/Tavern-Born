@@ -1,5 +1,6 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { ChangelogModal } from '@/components/updates/ChangelogModal'
 import { UpdateProgressModal } from '@/components/updates/UpdateProgressModal'
@@ -66,5 +67,41 @@ describe('update modals', () => {
     await waitFor(() => expect(screen.getByText('Update Failed')).toBeTruthy())
     expect(screen.getByText('Download service unavailable')).toBeTruthy()
     expect(callOrder.indexOf('subscribe')).toBeLessThan(callOrder.indexOf('download'))
+  })
+
+  test.each([
+    'throw',
+    'reject',
+  ] as const)('reports a download-page callback failure (%s) and allows retry', async (failure) => {
+    const user = userEvent.setup()
+    const reportError = vi.spyOn(toast, 'error').mockReturnValue('error-toast')
+    const onOpenChange = vi.fn()
+    const onOpenDownloadPage = vi.fn<() => void | Promise<void>>()
+    onOpenDownloadPage.mockImplementationOnce(() => {
+      const error = new Error('Browser unavailable')
+      if (failure === 'throw') throw error
+      return Promise.reject(error)
+    })
+    render(
+      <ChangelogModal
+        open
+        onOpenChange={onOpenChange}
+        version="2.0.0"
+        changelog="Release notes"
+        updateAvailable
+        onOpenDownloadPage={onOpenDownloadPage}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Open Download Page' }))
+    await waitFor(() =>
+      expect(reportError).toHaveBeenCalledWith('Could not open the download page', {
+        description: 'Browser unavailable',
+      }),
+    )
+    expect(onOpenChange).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Open Download Page' }))
+    expect(onOpenDownloadPage).toHaveBeenCalledTimes(2)
+    expect(reportError).toHaveBeenCalledTimes(1)
   })
 })

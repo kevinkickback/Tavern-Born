@@ -505,7 +505,7 @@ export function BuildRacePage() {
                             </h4>
                             <div className="border-t border-border">
                               {getRaceTraits(displayRace).map((trait) => (
-                                <div key={trait.name} className="border-b border-border py-3">
+                                <div key={trait.key} className="border-b border-border py-3">
                                   <div className="mb-1.5 text-sm font-semibold">{trait.name}</div>
                                   <div
                                     className="text-sm leading-relaxed text-muted-foreground [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"

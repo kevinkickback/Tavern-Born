@@ -4,13 +4,22 @@ on:
   workflow_call:
     inputs:
       source-sha:
-        description: Squash merge commit that passed PR checks
+        description: Squash merge commit that passed the dev to main PR checks
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      source-sha:
+        description: Existing release commit to rebuild and verify
         required: true
         type: string
 
 permissions:
   contents: write
   pull-requests: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 concurrency:
   group: release-main
@@ -26,19 +35,18 @@ jobs:
     outputs:
       changed: ${{ steps.version.outputs.changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.source-sha }}
           fetch-depth: 0
+          persist-credentials: false
       - name: Compare package versions
         id: version
         shell: bash
-        env:
-          BEFORE_SHA: ${{ inputs.source-sha }}^
         run: |
           current_version="$(node -p "require('./package.json').version")"
           previous_version="$(
-            git show "$BEFORE_SHA:package.json" |
+            git show "$SOURCE_SHA^:package.json" |
               node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk).on("end", () => console.log(JSON.parse(input).version))'
           )"
 
@@ -59,10 +67,11 @@ jobs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.source-sha }}
           fetch-depth: 0
+          persist-credentials: false
       - name: Require a merged dev to main PR
         shell: bash
         env:
@@ -82,8 +91,12 @@ jobs:
         id: release
         shell: bash
         run: |
-          node .github/check-package-version.mjs
           version="$(node -p "require('./package.json').version")"
+          previous_version="$(
+            git show "$SOURCE_SHA^:package.json" |
+              node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk).on("end", () => console.log(JSON.parse(input).version))'
+          )"
+          node scripts/check-release.mjs --previous-version "$previous_version"
           tag="v$version"
 
           if existing_sha="$(git rev-list -n 1 "$tag" 2>/dev/null)"; then
@@ -104,10 +117,11 @@ jobs:
       RELEASE_TAG: ${{ needs.release-source.outputs.tag }}
       RELEASE_VERSION: ${{ needs.release-source.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.source-sha }}
           fetch-depth: 0
+          persist-credentials: false
       - name: Create version tag
         shell: bash
         env:
@@ -126,37 +140,7 @@ jobs:
               -f sha="$SOURCE_SHA"
           fi
       - name: Extract release notes from changelog
-        shell: bash
-        run: |
-          if ! awk -v tag="$RELEASE_TAG" '
-            BEGIN {
-              heading = "<summary><strong>" tag "</strong></summary>"
-            }
-            $0 == heading {
-              found = 1
-              next
-            }
-            found && $0 == "</details>" {
-              closed = 1
-              exit
-            }
-            found {
-              print
-            }
-            END {
-              if (!found || !closed) {
-                exit 1
-              }
-            }
-          ' docs/changelog.md > release-notes.md; then
-            echo "No complete release-notes section found for $RELEASE_TAG in docs/changelog.md." >&2
-            exit 1
-          fi
-
-          if [[ ! -s release-notes.md ]]; then
-            echo "No release notes found for $RELEASE_TAG in docs/changelog.md." >&2
-            exit 1
-          fi
+        run: node scripts/check-release.mjs --notes-file release-notes.md
       - name: Create GitHub release draft
         shell: bash
         run: |
@@ -184,10 +168,11 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.source-sha }}
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -199,6 +184,16 @@ jobs:
           EP_DRAFT: true
           # The caller retains PR context, but source validation requires a merged commit.
           PUBLISH_FOR_PULL_REQUEST: 'true'
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            release/*.exe
+            release/*.dmg
+            release/*.AppImage
+            release/*.deb
+            release/*.blockmap
+            release/latest*.yml
 
   verify-release:
     name: Verify draft release artifacts

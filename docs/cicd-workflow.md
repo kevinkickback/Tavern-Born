@@ -19,6 +19,11 @@ other branch protection rules still apply; the workflow does not bypass them. Au
 merging is restricted to non-draft PRs from this repository's `dev` branch into `main`.
 Other PRs are not automatically merged.
 
+If automatic Copilot review is enabled, the merge job gives a review of the exact checked revision
+time to finish. It waits one minute for review activity to appear and up to ten minutes when a
+review is active. Copilot remains advisory: unavailable review capacity or a timeout does not block
+the release, while unresolved conversations can still be enforced by the repository ruleset.
+
 ---
 
 ## Day-to-day development
@@ -89,6 +94,8 @@ gh pr create --base main --head dev --title "Release v1.0.0" --body "Release not
 
 The workflow automatically squash merges the PR after both CI jobs pass and GitHub's merge
 requirements are satisfied. No manual merge command is needed.
+If the ready `dev` to `main` PR is already open, pushing the version-bump commit updates that PR
+and starts this sequence automatically; otherwise, opening the PR starts it.
 
 **PR checks → automatic squash merge → version/tag and source validation → draft creation →
 Electron builds → asset upload and verification**
@@ -100,12 +107,13 @@ The release workflow:
 1. Compares the package version at the squash commit with its parent. If unchanged, all remaining
    release stages are skipped. The PR still merges; its title alone does not request a release.
 2. Confirms the exact squash commit came from a merged same-repository `dev` to `main` PR.
-3. Runs `.github/check-package-version.mjs` to require a stable version, matching versions in
-   `package.json` and both root version fields in `package-lock.json`, and a complete, nonempty
-   changelog section. Ensures any existing version tag points to the squash commit.
+3. Runs `scripts/check-release.mjs` to require an increased stable version, matching versions in
+   `package.json` and both root version fields in `package-lock.json`, and exactly one complete,
+   nonempty changelog section. Ensures any existing version tag points to the squash commit.
 4. Creates the `v<version>` tag and draft release, using the version's changelog section as notes.
 5. Builds Windows, macOS, and Linux packages in parallel from the exact squash commit and uploads
-   them to the draft. Compilation for packaging is required; lint and tests are not rerun.
+   them to the draft. Each build records provenance attestations for its installers, updater
+   manifests, and blockmaps. Compilation for packaging is required; lint and tests are not rerun.
 6. Verifies every expected artifact exists and the release is still a draft.
 
 Electron Builder receives `PUBLISH_FOR_PULL_REQUEST=true` only in the release build step because
@@ -175,7 +183,7 @@ The release metadata check runs after version-change detection and before tag or
 It does not install dependencies or rerun lint or tests. To check release metadata locally, run:
 
 ```bash
-node .github/check-package-version.mjs
+npm run check:release
 ```
 
 ---
@@ -195,10 +203,14 @@ For a transient runner or network failure, rerun the failed jobs; the existing t
 reused safely. Use **Re-run failed jobs** (or `gh run rerun <RUN_ID> --failed`) to avoid repeating
 successful PR checks. Release jobs appear inside the calling **CI** run.
 
-If a code or configuration change is required, fix it on `dev` and use a new version and changelog
-section for the next PR. The failed version is already present on `main`, so reusing it would skip
-release stages even if its tag were deleted. Open a new PR and let passing checks trigger the
-automatic squash merge.
+If only the release workflow needs correction, fix it through the normal `dev` to `main` process,
+then run the **Release** workflow manually from `main`. Supply the original version-bump squash
+commit as `source-sha`; the current workflow will rebuild and verify that already-validated source.
+Do not supply the later workflow-fix commit, because its package version did not change.
+
+If application source or packaging configuration needs correction, use a new version and changelog
+section in the next `dev` to `main` PR. A manual recovery deliberately checks out the original
+release source, so it cannot incorporate later product changes.
 
 If needed, remove the failed draft and its tag separately (only for an unpublished failed release):
 ```bash
