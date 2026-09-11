@@ -129,7 +129,7 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
     optionalClassFeatures:
       "Unlocks Tasha's optional class features for your class, such as additional spells, feature replacements, and expanded options from TCE.",
     averageHitPoints:
-      'When leveling up, you gain the average hit die value (rounded up) instead of rolling. Provides predictable HP growth.',
+      'Choose whether later levels use the fixed average automatically or ask you to roll or enter the hit-die result.',
     bladesingerAnyRace:
       'By default Bladesinger (Wizard) is restricted to elves. Enable this to allow any race to take the Bladesinger subclass.',
     battleragerAnyRace:

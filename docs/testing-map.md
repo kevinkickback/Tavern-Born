@@ -25,6 +25,8 @@ new tests land and do not lower them to merge a change.
 - Core calculations in src/lib/calculations/* (including spellUtils)
 - Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
+- HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution recalculation, lasting flat/per-level adjustments, exact overrides, legacy initialization, and current/temp HP saves
+- AC calculation and state coverage for equipment/Dexterity derivation, positive and negative lasting adjustments, exact overrides, and canonical effective reads
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
 - Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions, deterministic source-less fallback, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
@@ -53,7 +55,11 @@ new tests land and do not lower them to merge a change.
 - Wizard data-controller coverage for draft source filtering, implicit ruleset sources, reprint suppression, and raw fallback resolution
 - Shared prerequisite snapshot and feat option-pool coverage, including multiclass progression and source collisions
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
-- Integration workflows: home page, startup modals, level-up modal (tests/integration/*)
+- Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
+- Header HP/AC launch controls and one-time anchored hint coverage in tests/integration/appHeader.test.tsx
+- HP and AC management modal coverage in tests/integration/hitPointsModal.test.tsx and tests/integration/armorClassModal.test.tsx
+- Rules and Sources page behavior/layout coverage in tests/integration/rulesPage.test.tsx and tests/integration/sourcesPageLayout.test.tsx
+- Conditions tab, data-driven rule text/tooltip, whole-card toggle, and exhaustion-state coverage in tests/integration/conditionsPage.test.tsx
 - Characteristics page draft synchronization, immediate detail persistence, and legacy/custom/preset
 	organization transitions in tests/integration/characteristicsPage.test.tsx
 - Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
@@ -102,7 +108,7 @@ new tests land and do not lower them to merge a change.
 |-------|--------|--------------|-------|
 | Calculations (lib) | ✅ Excellent | ✅ Complete | 34+ unit tests, all passing |
 | Stores | ✅ Good | ✅ Good | Validation, rehydrate safety tested |
-| Hooks (char) | ✅ Good | ⚠️ Growing | Spell hooks + startup data-init branch coverage; UI-dependent hooks still limited |
+| Hooks (char) | ✅ Good | ⚠️ Growing | Spell, HP, and startup data-init branch coverage; other UI-dependent hooks remain limited |
 | Spell workflows | ✅ Good | ✅ Good | Unit/integration + active-character E2E coverage now in place |
 | Provenance | ✅ Good | ✅ Good | Core logic + multiclass/mix-source edge cases tested |
 | Pages/Components | ⚠️ Minimal | ⚠️ Minimal | Mostly snapshot/smoke tested; full interaction E2E planned |

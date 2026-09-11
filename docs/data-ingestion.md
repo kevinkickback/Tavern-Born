@@ -40,6 +40,7 @@ Core modules:
 
 3. Parsing and normalization
 - parsers extract arrays and normalize structure differences.
+- Condition ingestion reads both `.condition[]` and `.disease[]` from `conditionsdiseases.json`, preserves their structured `entries`, and tags each record with its source type. `useConditions()` exposes valid condition records while excluding diseases; this lets the Conditions page render names, descriptions, inline tags, and PHB/XPHB exhaustion rules from data instead of local constants.
 - Class and subclass feature references are normalized for downstream consumption.
 - Class spell-slot progression is read from `classTableGroups[].rowsSpellProgression` and retained on parsed class records. Shared multiclass slots resolve against the loaded PHB or XPHB full-caster table; static slot tables are not used as a fallback.
 - Class loading also reads matching `fluff-class-*.json` resources and attaches both a short class summary and full fluff content to parsed class records.

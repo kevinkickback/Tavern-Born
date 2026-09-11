@@ -1,4 +1,21 @@
 <details>
+<summary><strong>v0.3.0</strong></summary>
+
+## ✨ Changes
+
+* Characters can now use fixed average HP, roll their hit die, or enter a roll manually when leveling up
+* Click the heart in the character header to manage current, temporary, and maximum HP, including permanent bonuses and penalties
+* Click the shield in the character header to manage Armor Class bonuses, penalties, and custom values
+* Character rules can now be reviewed and changed after creation from the new Rules page
+* The Conditions page now provides focused trackers, condition reminders, and ruleset-specific exhaustion guidance
+
+## ⚠️ Known Issues
+
+* PDF generation for the 2014 and 2024 character sheets is working but incomplete. Still under active development
+
+</details>
+
+<details>
 <summary><strong>v0.2.0</strong></summary>
 
 ## ✨ Changes

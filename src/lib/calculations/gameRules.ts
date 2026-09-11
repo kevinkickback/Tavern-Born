@@ -62,6 +62,18 @@ export function getHitDiceFromClass(cls: Class5e | undefined | null): number {
   return cls?.hd?.faces ?? 8
 }
 
+/** Roll one die. The random source is injectable for deterministic tests. */
+export function rollDie(faces: number, random: () => number = Math.random): number {
+  if (!Number.isInteger(faces) || faces < 1) {
+    throw new RangeError('Die faces must be a positive integer.')
+  }
+  const sample = random()
+  if (!Number.isFinite(sample) || sample < 0 || sample >= 1) {
+    throw new RangeError('Random source must return a value from 0 (inclusive) to 1 (exclusive).')
+  }
+  return Math.floor(sample * faces) + 1
+}
+
 /**
  * Read ASI levels from parsed class feature references.
  * Falls back to the standard [4,8,12,16,19] if parsed refs are unavailable.

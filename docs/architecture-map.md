@@ -39,6 +39,8 @@ This document describes the current Tavern-Born runtime architecture and where r
 - Purpose: thin wrappers from store state to UI-facing derived values.
 - Key files: src/hooks/character/*, src/hooks/data/*.
 - Shared lookup consumption uses the stable named hooks in src/hooks/data/useGameData.ts. Direct gameDataStore selectors are reserved for lifecycle state or callers that explicitly own raw collection sets.
+- Combat-stat ownership is exposed through `src/hooks/character/useHitPoints.ts` and `src/hooks/character/useArmorClass.ts`. These hooks combine persisted player state with live class, ability, and equipment derivations and provide the modal-facing atomic save operations.
+- Condition rule records are exposed by `useConditions()` in `src/hooks/data/useGameData.ts`; pages should not reconstruct condition names or rules text locally.
 
 Spellcasting note:
 - `src/hooks/character/useSpellSlots.ts` is a **read-only** derivation hook: exposes spell slots, profiles, and spellcasting detail per profile. It does not include mutations.
@@ -46,7 +48,7 @@ Spellcasting note:
 
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.
-- Key files: src/pages/*, src/components/*, src/pages/build/ability-scores/model/data.ts, src/pages/build/class/model/pageUtils.ts, src/pages/build/class/model/asi.ts, src/pages/build/class/model/levelsUtils.ts, src/lib/character/commands/classCommands.ts, src/lib/character/commands/raceCommands.ts, src/lib/character/commands/backgroundCommands.ts, src/lib/character/commands/featCommands.ts, src/lib/character/commands/spellCommands.ts, src/lib/character/commands/originSelectionCommand.ts, src/hooks/character/useUnifiedClassSelection.ts, src/pages/build/proficiencies/model/data.ts, src/pages/build/proficiencies/model/types.ts, src/pages/build/background/model/data.ts, src/pages/build/ability-scores/components/MethodPanels.tsx, src/pages/build/ability-scores/components/DetailsPanel.tsx, src/pages/build/ability-scores/components/RacialBonusesPanel.tsx, src/pages/build/class/components/AsiSection.tsx, src/pages/build/class/components/SpellSection.tsx, src/pages/build/class/components/SubclassSection.tsx, src/pages/build/class/components/PassiveFeatureList.tsx, src/pages/build/class/components/ProgressionChoiceCard.tsx, src/pages/build/proficiencies/components/DetailsPanel.tsx, src/pages/build/proficiencies/components/TabsPanel.tsx, src/pages/build/background/components/DetailsPanel.tsx, src/pages/compendium/CompendiumPage.tsx, src/pages/compendium/CompendiumEntryDetails.tsx, src/lib/compendiumEntries.ts, src/components/modals/FeatOptionsModal.tsx, src/components/updates/ChangelogModal.tsx, src/components/updates/UpdateProgressModal.tsx.
+- Key files: src/pages/*, src/components/*, src/pages/rules/RulesPage.tsx, src/pages/sources/SourcesPage.tsx, src/pages/details/ConditionsPage.tsx, src/components/modals/LevelUpModal.tsx, src/components/modals/HitPointsModal.tsx, src/components/modals/ArmorClassModal.tsx, src/pages/build/ability-scores/model/data.ts, src/pages/build/class/model/pageUtils.ts, src/pages/build/class/model/asi.ts, src/pages/build/class/model/levelsUtils.ts, src/lib/character/commands/classCommands.ts, src/lib/character/commands/raceCommands.ts, src/lib/character/commands/backgroundCommands.ts, src/lib/character/commands/featCommands.ts, src/lib/character/commands/spellCommands.ts, src/lib/character/commands/originSelectionCommand.ts, src/hooks/character/useUnifiedClassSelection.ts, src/pages/build/proficiencies/model/data.ts, src/pages/build/proficiencies/model/types.ts, src/pages/build/background/model/data.ts, src/pages/build/ability-scores/components/MethodPanels.tsx, src/pages/build/ability-scores/components/DetailsPanel.tsx, src/pages/build/ability-scores/components/RacialBonusesPanel.tsx, src/pages/build/class/components/AsiSection.tsx, src/pages/build/class/components/SpellSection.tsx, src/pages/build/class/components/SubclassSection.tsx, src/pages/build/class/components/PassiveFeatureList.tsx, src/pages/build/class/components/ProgressionChoiceCard.tsx, src/pages/build/proficiencies/components/DetailsPanel.tsx, src/pages/build/proficiencies/components/TabsPanel.tsx, src/pages/build/background/components/DetailsPanel.tsx, src/pages/compendium/CompendiumPage.tsx, src/pages/compendium/CompendiumEntryDetails.tsx, src/lib/compendiumEntries.ts, src/components/modals/FeatOptionsModal.tsx, src/components/updates/ChangelogModal.tsx, src/components/updates/UpdateProgressModal.tsx.
 - Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through `RenderedEntryWithTooltip`; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items.
 - Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Name-only fallback is used only when the reference has no source and is deterministic.
 - Character creation uses src/hooks/data/useWizardGameData.ts as its draft-scoped data boundary. Wizard steps receive filtered collections or resolved entities and never read the raw game-data store directly.
@@ -56,7 +58,12 @@ Current implementation notes:
 - Race, class, background, feat, and spell mutations use complete pure commands returning `characterPatch` plus `provenanceUpdate`.
 - BuildClassPage arranges sections and modals; subclass, spell, ASI/feat, and optional-feature decisions live in focused hooks under src/pages/build/class/hooks. Subclass eligibility is a pure parsed-first calculation with isolated legacy fallbacks.
 - Character creation composes the same origin commands through `buildInitialCharacter`; pages and hooks do not reconstruct grant pipelines.
-- AC reads across UI and PDF surfaces are aligned on effective AC resolution.
+- Level-up HP choices are committed with class progression through `applyLevelUp`; the stored gain is the raw hit-die result so Constitution changes remain live.
+- HP reads resolve class/Constitution HP, per-level gain records, lasting adjustments, and an optional exact override in that order. Current and temporary HP remain mutable session values.
+- AC reads across UI and PDF surfaces resolve equipped armor and Dexterity, then lasting adjustments, then an optional exact override. The legacy `character.armorClass` field is not a display source.
+- The header heart and shield open the HP and AC management modals. A one-time anchored hint advertises these controls from the first Builder page.
+- Per-character Rules and Sources live in the Builder workspace's Options group. Rules are tabbed by Ruleset, Advancement, and Character Options; the selected ruleset itself remains fixed after creation.
+- Conditions is tabbed by Combat State, Exhaustion, Conditions, and Class Resources. Condition names and descriptions, including exhaustion rules, come from the loaded PHB/XPHB condition records selected for the character ruleset.
 
 Auto-update note:
 - `electron/updateManager.ts` manages the full electron-updater lifecycle (check, download, install, cancel).
@@ -103,6 +110,7 @@ Character sheet PDF note:
 - /build/*: Race, Class, Background, Proficiencies, Ability Scores
 - /feats, /spells, /equipment
 - /details/*: Portrait, Characteristics, Conditions
+- /rules, /sources
 - /character-sheet, /compendium, /settings
 
 Primary definition: src/App.tsx.

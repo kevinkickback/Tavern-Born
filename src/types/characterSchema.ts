@@ -182,6 +182,40 @@ export const characterClassEntrySchema = z.object({
   subclassSource: z.string().optional(),
 })
 
+export const hitPointGainSchema = z
+  .object({
+    className: z.string().min(1),
+    classSource: z.string().optional(),
+    classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+    characterLevel: z.number().int().min(2).max(MAX_CHARACTER_LEVEL),
+    hitDie: z.number().int().positive(),
+    dieResult: z.number().int().positive(),
+    method: z.enum(['average', 'rolled', 'manual']),
+  })
+  .refine((gain) => gain.dieResult <= gain.hitDie, {
+    message: 'Hit-point die result cannot exceed the hit die.',
+    path: ['dieResult'],
+  })
+
+export const hitPointAdjustmentSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  amount: z.number().int(),
+  mode: z.enum(['flat', 'per-level']),
+  sourceType: z.enum(['manual', 'item', 'feat', 'other']),
+  sourceRef: z.string().optional(),
+  createdAt: z.string(),
+})
+
+export const armorClassAdjustmentSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  amount: z.number().int(),
+  sourceType: z.enum(['manual', 'item', 'feat', 'other']),
+  sourceRef: z.string().optional(),
+  createdAt: z.string(),
+})
+
 export const featureSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -570,7 +604,7 @@ export const asiChoiceSchema = z.object({
 export const characterSchema = z
   .object({
     id: z.string().min(1),
-    version: z.string().default('2.0.0'),
+    version: z.string().default('6.0.0'),
     name: z
       .string()
       .min(1)
@@ -617,8 +651,13 @@ export const characterSchema = z
       )
       .optional(),
     hitPoints: hitPointsSchema,
+    hitPointsInitialized: z.boolean().optional(),
+    hitPointGains: z.array(hitPointGainSchema).optional(),
+    hitPointAdjustments: z.array(hitPointAdjustmentSchema).optional(),
+    maxHitPointsOverride: z.number().int().min(1).optional(),
     armorClass: z.number().int().min(0).optional(),
     armorClassOverride: z.number().int().min(0).optional(),
+    armorClassAdjustments: z.array(armorClassAdjustmentSchema).optional(),
     initiative: z.number().int(),
     speed: z.number().int(),
     damageResistances: z.array(z.string()).optional(),

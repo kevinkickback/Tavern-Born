@@ -1,5 +1,10 @@
 import type { Class5e } from '@/types/5etools'
-import type { Character, CharacterClassEntry } from '@/types/character'
+import type {
+  Character,
+  CharacterClassEntry,
+  HitPointAdjustment,
+  HitPointGain,
+} from '@/types/character'
 import type { AbilityBonuses, AbilityScores } from './calculations/abilityScores'
 import {
   getAbilityModifier,
@@ -20,6 +25,12 @@ export interface ClassEntry {
 
 export interface Progression {
   classes: ClassEntry[]
+}
+
+export interface HitPointCalculationOptions {
+  averageHp?: boolean
+  classesData?: Class5e[]
+  hitPointGains?: HitPointGain[]
 }
 
 export function getCharacterClassEntries(
@@ -123,8 +134,10 @@ export function countAvailableASIs(
  * Per-level HP breakdown for a character.
  *
  * Index 0 is always 0 (unused sentinel). Index n contains the HP gained at level n.
- * Rules: full hit die at level 1 of the primary class, average (or max when
- * `averageHp` is false) at every subsequent level; minimum 1 per level.
+ * Rules: full hit die at level 1 of the primary class, then a recorded result
+ * or the fixed average at subsequent levels; minimum 1 per level. Characters
+ * saved before roll tracking use the former max-die fallback when average HP
+ * is disabled and no recorded result exists.
  *
  * Pass `classesData` for accurate per-class hit dice; without it, falls back to
  * `entry.hitDice` string or d8.
@@ -132,9 +145,9 @@ export function countAvailableASIs(
 export function calculateHPBreakdown(
   progression: Progression | undefined | null,
   conModifier: number,
-  options?: { averageHp?: boolean; classesData?: Class5e[] },
+  options?: HitPointCalculationOptions,
 ): number[] {
-  const { averageHp = true, classesData } = options ?? {}
+  const { averageHp = true, classesData, hitPointGains } = options ?? {}
   const breakdown: number[] = [0]
   const classes = progression?.classes ?? []
   let firstLevel = true
@@ -156,7 +169,14 @@ export function calculateHPBreakdown(
         breakdown.push(Math.max(1, die + conModifier))
         firstLevel = false
       } else {
-        breakdown.push(Math.max(1, (averageHp ? avgRoll : die) + conModifier))
+        const recordedGain = hitPointGains?.find(
+          (gain) =>
+            gain.className === entry.name &&
+            gain.classLevel === lv &&
+            (entry.source == null || gain.classSource == null || gain.classSource === entry.source),
+        )
+        const dieResult = recordedGain?.dieResult ?? (averageHp ? avgRoll : die)
+        breakdown.push(Math.max(1, dieResult + conModifier))
       }
     }
   }
@@ -176,11 +196,33 @@ export function calculateHPBreakdown(
 export function calculateMaxHP(
   progression: Progression | undefined | null,
   conModifier: number,
-  options?: { averageHp?: boolean; classesData?: Class5e[] },
+  options?: HitPointCalculationOptions,
 ): number {
   const breakdown = calculateHPBreakdown(progression, conModifier, options)
   const total = breakdown.reduce((sum, v) => sum + v, 0)
   return Math.max(1, total)
+}
+
+export function calculateHitPointAdjustmentTotal(
+  adjustments: HitPointAdjustment[] | undefined,
+  characterLevel: number,
+): number {
+  return (adjustments ?? []).reduce(
+    (total, adjustment) =>
+      total +
+      (adjustment.mode === 'per-level'
+        ? adjustment.amount * Math.max(1, characterLevel)
+        : adjustment.amount),
+    0,
+  )
+}
+
+/** Read the explicit override, with a fallback for pre-v6 character objects. */
+export function getMaxHitPointsOverride(character: Character): number | undefined {
+  if (typeof character.maxHitPointsOverride === 'number' && character.maxHitPointsOverride > 0) {
+    return character.maxHitPointsOverride
+  }
+  return character.hitPoints.max > 0 ? character.hitPoints.max : undefined
 }
 
 /**
@@ -190,18 +232,30 @@ export function calculateMaxHP(
  * it the calculation falls back to d8 per level.
  */
 export function getEffectiveMaxHP(character: Character, classesData?: Class5e[]): number {
-  if (character.hitPoints.max > 0) return character.hitPoints.max
   const progression = { classes: getCharacterClassEntries(character) }
   const conMod = getAbilityModifier(character.abilityScores.constitution)
   const averageHp = character.variantRules?.averageHitPoints !== false
-  return calculateMaxHP(progression, conMod, { averageHp, classesData })
+  const calculatedMaxHP = calculateMaxHP(progression, conMod, {
+    averageHp,
+    classesData,
+    hitPointGains: character.hitPointGains,
+  })
+  const adjustedMaxHP = Math.max(
+    1,
+    calculatedMaxHP +
+      calculateHitPointAdjustmentTotal(
+        character.hitPointAdjustments,
+        getTotalCharacterLevel(character),
+      ),
+  )
+  return getMaxHitPointsOverride(character) ?? adjustedMaxHP
 }
 
 export function calculateMaxHPFromScores(
   progression: Progression | undefined | null,
   scores: AbilityScores,
   bonuses: AbilityBonuses,
-  options?: { averageHp?: boolean; classesData?: Class5e[] },
+  options?: HitPointCalculationOptions,
 ): number {
   const conTotal =
     scores.constitution + (bonuses.constitution ?? []).reduce((s, b) => s + b.value, 0)

@@ -428,6 +428,15 @@ export interface Organization5e {
   imagePath?: string
 }
 
+export interface Condition5e {
+  name: string
+  source: string
+  page?: number
+  entries?: unknown[]
+  _sourceType?: 'condition' | 'disease'
+  [key: string]: unknown
+}
+
 export interface DataSourceConfig {
   type: 'local' | 'remote'
   path: string

@@ -16,6 +16,7 @@ import { useGameDataStore } from '@/store/gameDataStore'
 import type {
   Background5e,
   Class5e,
+  Condition5e,
   Feat5e,
   Item5e,
   Race5e,
@@ -28,6 +29,7 @@ const EMPTY_BACKGROUND_LOOKUP: Readonly<Record<string, Background5e>> = {}
 const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 const EMPTY_STRING_LOOKUP: Readonly<Record<string, string>> = {}
 const EMPTY_STRING_LIST: readonly string[] = []
+const EMPTY_CONDITION_LIST: readonly Condition5e[] = []
 
 /**
  * Raw unfiltered race list from the game data store. Does NOT apply the active character's
@@ -374,6 +376,24 @@ export function useItem(name: string, source?: string): Item5e | undefined {
 export function useConditionNames(): readonly string[] {
   const conditionNames = useGameDataStore((state) => state.gameData?.lookups?.conditionNames)
   return conditionNames ?? EMPTY_STRING_LIST
+}
+
+/** Returns parsed condition rule records, excluding disease records and malformed entries. */
+export function useConditions(): readonly Condition5e[] {
+  const conditions = useGameDataStore((state) => state.gameData?.conditions)
+
+  return useMemo(() => {
+    if (!conditions) return EMPTY_CONDITION_LIST
+    return conditions.filter((entry): entry is Condition5e => {
+      if (!entry || typeof entry !== 'object') return false
+      const condition = entry as Record<string, unknown>
+      return (
+        condition._sourceType !== 'disease' &&
+        typeof condition.name === 'string' &&
+        typeof condition.source === 'string'
+      )
+    })
+  }, [conditions])
 }
 
 /**

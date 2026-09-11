@@ -11,7 +11,7 @@ import type { Character } from '@/types/character'
  * Current character schema version.
  * Increment when making breaking changes to the character format.
  */
-export const CURRENT_SCHEMA_VERSION = 4
+export const CURRENT_SCHEMA_VERSION = 6
 
 /**
  * Migration handler: transform character from version N to N+1.
@@ -186,6 +186,25 @@ registerMigration({
 })
 
 registerMigration({
+  fromVersion: 4,
+  toVersion: 5,
+  description: 'Add durable per-level hit-point gain records.',
+  up: (character) => {
+    const c = character as Record<string, unknown>
+    return {
+      ...c,
+      hitPointGains: Array.isArray(c.hitPointGains) ? c.hitPointGains : [],
+      version: '5.0.0',
+    } as Character
+  },
+  down: (character) => {
+    const c = character as unknown as Record<string, unknown>
+    const { hitPointGains: _hitPointGains, ...rest } = c
+    return { ...rest, version: '4.0.0' }
+  },
+})
+
+registerMigration({
   fromVersion: 1,
   toVersion: 2,
   description: 'Add required originSystem field and infer a safe default from origin provenance.',
@@ -317,6 +336,62 @@ registerMigration({
         ? { provenance: { ...provenance, feats: downgradeParameterizedFeatGrants(feats) } }
         : {}),
       version: '3.0.0',
+    }
+  },
+})
+
+registerMigration({
+  fromVersion: 5,
+  toVersion: 6,
+  description: 'Add durable HP and Armor Class management settings.',
+  up: (character) => {
+    const c = character as Record<string, unknown>
+    const hitPoints =
+      c.hitPoints && typeof c.hitPoints === 'object'
+        ? (c.hitPoints as Record<string, unknown>)
+        : undefined
+    const legacyMaximum =
+      typeof hitPoints?.max === 'number' && hitPoints.max > 0 ? hitPoints.max : 0
+    const existingOverride =
+      typeof c.maxHitPointsOverride === 'number' && c.maxHitPointsOverride > 0
+        ? c.maxHitPointsOverride
+        : undefined
+
+    return {
+      ...c,
+      ...(hitPoints ? { hitPoints: { ...hitPoints, max: 0 } } : {}),
+      hitPointsInitialized:
+        typeof c.hitPointsInitialized === 'boolean'
+          ? c.hitPointsInitialized
+          : typeof hitPoints?.current === 'number' && hitPoints.current > 0,
+      hitPointAdjustments: Array.isArray(c.hitPointAdjustments) ? c.hitPointAdjustments : [],
+      armorClassAdjustments: Array.isArray(c.armorClassAdjustments) ? c.armorClassAdjustments : [],
+      maxHitPointsOverride: existingOverride ?? (legacyMaximum > 0 ? legacyMaximum : undefined),
+      version: '6.0.0',
+    } as Character
+  },
+  down: (character) => {
+    const c = character as unknown as Record<string, unknown>
+    const hitPoints = c.hitPoints as Record<string, unknown> | undefined
+    const override = c.maxHitPointsOverride
+    const {
+      armorClassAdjustments: _armorClassAdjustments,
+      hitPointAdjustments: _adjustments,
+      hitPointsInitialized: _hitPointsInitialized,
+      maxHitPointsOverride: _override,
+      ...rest
+    } = c
+    return {
+      ...rest,
+      ...(hitPoints
+        ? {
+            hitPoints: {
+              ...hitPoints,
+              max: typeof override === 'number' && override > 0 ? override : (hitPoints.max ?? 0),
+            },
+          }
+        : {}),
+      version: '5.0.0',
     }
   },
 })
