@@ -31,32 +31,13 @@ async function getExactReview({ github, owner, repo, pullNumber, expectedHead })
     per_page: 100,
   })
   return reviews
-    .filter((review) => review.commit_id === expectedHead && isCopilot(review.user))
+    .filter(
+      (review) =>
+        review.commit_id === expectedHead &&
+        review.state !== 'PENDING' &&
+        isCopilot(review.user),
+    )
     .sort((left, right) => Date.parse(right.submitted_at) - Date.parse(left.submitted_at))[0]
-}
-
-async function requestReviewIfNeeded({ github, core, owner, repo, pullNumber, expectedHead }) {
-  if (await getExactReview({ github, owner, repo, pullNumber, expectedHead })) return
-
-  const { data } = await github.rest.pulls.listRequestedReviewers({
-    owner,
-    repo,
-    pull_number: pullNumber,
-  })
-  if (data.users.some(isCopilot)) return
-
-  try {
-    await github.rest.pulls.requestReviewers({
-      owner,
-      repo,
-      pull_number: pullNumber,
-      reviewers: [COPILOT_REVIEWER],
-    })
-    core.info(`Requested Copilot review of ${expectedHead}.`)
-  } catch (error) {
-    if (error.status !== 422) throw error
-    core.info('Copilot review was already requested or started; waiting for completion.')
-  }
 }
 
 async function requireCopilotReview({
@@ -66,14 +47,9 @@ async function requireCopilotReview({
   repo,
   pullNumber,
   expectedHead,
-  requestReview = false,
   timeoutMs = 0,
   pollMs = 10_000,
 }) {
-  if (requestReview) {
-    await requestReviewIfNeeded({ github, core, owner, repo, pullNumber, expectedHead })
-  }
-
   const deadline = Date.now() + timeoutMs
   do {
     const review = await getExactReview({ github, owner, repo, pullNumber, expectedHead })

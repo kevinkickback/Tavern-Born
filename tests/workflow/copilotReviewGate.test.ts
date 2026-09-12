@@ -19,12 +19,10 @@ const gate = require('../../.github/scripts/copilot-review-gate.cjs') as {
 function createGithubApi({
   reviews = [],
   comments = [],
-  requestedReviewers = [],
   reviewError,
 }: {
   reviews?: Array<Review & { user: { login: string; type?: string } }>
   comments?: Array<{ pull_request_review_id: number }>
-  requestedReviewers?: Array<{ login: string; type?: string }>
   reviewError?: Error
 } = {}) {
   const listReviews = vi.fn()
@@ -42,8 +40,6 @@ function createGithubApi({
       pulls: {
         listReviews,
         listReviewComments,
-        listRequestedReviewers: vi.fn(async () => ({ data: { users: requestedReviewers } })),
-        requestReviewers: vi.fn(async () => ({ data: {} })),
       },
     },
   }
@@ -136,6 +132,24 @@ describe('Copilot review gate', () => {
     )
   })
 
+  test('keeps polling past an in-progress exact-head review', async () => {
+    const github = createGithubApi({
+      reviews: [
+        {
+          id: 2,
+          state: 'PENDING',
+          commit_id: 'head-sha',
+          submitted_at: '2026-09-12T00:01:00Z',
+          user: { login: 'Copilot', type: 'Bot' },
+        },
+      ],
+    })
+
+    await expect(gate.requireCopilotReview(gateOptions(github))).rejects.toThrow(
+      'did not complete a review',
+    )
+  })
+
   test('fails closed after polling reaches its timeout', async () => {
     vi.useFakeTimers()
     const github = createGithubApi()
@@ -151,16 +165,5 @@ describe('Copilot review gate', () => {
     const github = createGithubApi({ reviewError: new Error('API unavailable') })
 
     await expect(gate.requireCopilotReview(gateOptions(github))).rejects.toThrow('API unavailable')
-  })
-
-  test('requests a review before failing closed when none has completed', async () => {
-    const github = createGithubApi()
-
-    await expect(
-      gate.requireCopilotReview(gateOptions(github, { requestReview: true })),
-    ).rejects.toThrow('did not complete a review')
-    expect(github.rest.pulls.requestReviewers).toHaveBeenCalledWith(
-      expect.objectContaining({ reviewers: ['copilot-pull-request-reviewer[bot]'] }),
-    )
   })
 })

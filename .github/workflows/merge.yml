@@ -4,8 +4,6 @@ on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-    # For pull_request CI runs, workflow_run.branches filters the PR base branch.
-    branches: [main]
 
 permissions:
   contents: read
@@ -65,7 +63,6 @@ jobs:
               repo,
               pullNumber,
               expectedHead: testedHead,
-              requestReview: true,
               timeoutMs: 15 * 60 * 1000,
             });
 

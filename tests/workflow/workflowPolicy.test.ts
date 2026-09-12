@@ -10,7 +10,7 @@ describe('trusted workflow policy', () => {
     const workflow = await readWorkflow('merge.yml')
 
     expect(workflow).toContain(`ref: \${{ github.workflow_sha }}`)
-    expect(workflow).toContain('branches: [main]')
+    expect(workflow).not.toContain('branches: [')
     expect(workflow).not.toContain('job.workflow_sha')
     expect(workflow).toContain('reviewedPr.base.sha !== testedPull.base.sha')
     expect(workflow).toContain('currentBase.commit.sha !== testedPull.base.sha')

@@ -23,16 +23,17 @@ merging is restricted to non-draft PRs from this repository's `dev` branch into 
 Other PRs are not automatically merged.
 
 After CI completes, `merge.yml` runs from the protected default-branch revision. Its write-capable
-job never checks out or executes pull-request code. It explicitly requests Copilot review of the
-exact tested revision and waits up to fifteen minutes for completion. A missing review, incomplete
-or dismissed review, timeout, API failure, "Changes recommended" assessment, suppressed finding,
-or inline finding fails the merge. The merge also requires `main` to still match the base commit
-recorded by that exact CI run. Push a corrective revision and obtain a clean re-review before
-retrying. The release workflow repeats this check and runs its release metadata validator from code
-pinned to the protected workflow revision, treating the candidate package files and changelog only
-as input data. It does this before creating or updating any tag or draft. Release lookups fail closed: only
-a confirmed missing release is treated as absent; permission, rate-limit, and network failures stop
-the workflow before it moves a tag or replaces a draft.
+job never checks out or executes pull-request code. It relies on the configured automatic Copilot
+review and waits up to fifteen minutes for a completed review of the exact tested revision. A
+missing review, incomplete or dismissed review, timeout, API failure, "Changes recommended"
+assessment, suppressed finding, or inline finding fails the merge. The merge also requires `main`
+to still match the base commit recorded by that exact CI run. Push a corrective revision and obtain
+a clean re-review before retrying. The release workflow repeats this check and runs its release
+metadata validator from code pinned to the protected workflow revision, treating the candidate
+package files and changelog only as input data. It does this before creating or updating any tag or
+draft. Release lookups fail closed: only a confirmed missing release is treated as absent;
+permission, rate-limit, and network failures stop the workflow before it moves a tag or replaces a
+draft.
 
 ---
 
