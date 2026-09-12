@@ -1,11 +1,13 @@
 import { PushPin, X } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { RecursiveTooltipChain } from '@/components/editor/RecursiveTooltipChain'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   formatCastingTime,
   formatComponents,
   formatDuration,
   formatRange,
+  formatSpellDisplayName,
   formatSpellLevel,
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
@@ -27,6 +29,8 @@ interface SpellNameTooltipProps {
   sourceContext?: string
 }
 
+const HIDE_DELAY_MS = 200
+
 export function SpellNameTooltip({
   name,
   spell,
@@ -35,7 +39,27 @@ export function SpellNameTooltip({
 }: SpellNameTooltipProps) {
   const [open, setOpen] = useState(false)
   const [pinned, setPinned] = useState(false)
-  const [recursiveHint, setRecursiveHint] = useState<RecursiveHintState | null>(null)
+  const [recursiveHints, setRecursiveHints] = useState<RecursiveHintState[]>([])
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const displayName = formatSpellDisplayName(name, spell?.name)
+
+  const clearHide = useCallback(() => {
+    if (hideTimer.current !== null) {
+      clearTimeout(hideTimer.current)
+      hideTimer.current = null
+    }
+  }, [])
+
+  const scheduleHide = useCallback(() => {
+    if (pinned) return
+    clearHide()
+    hideTimer.current = setTimeout(() => {
+      setOpen(false)
+      setRecursiveHints([])
+    }, HIDE_DELAY_MS)
+  }, [clearHide, pinned])
+
+  useEffect(() => clearHide, [clearHide])
 
   const renderedEntries = useMemo(() => {
     if (!spell) return []
@@ -56,16 +80,12 @@ export function SpellNameTooltip({
   const handleRecursiveHover = (event: React.MouseEvent<HTMLDivElement>) => {
     const target = event.target as HTMLElement
     const withTitle = target.closest('[data-recursive-title]') as HTMLElement | null
-    if (!withTitle) {
-      setRecursiveHint(null)
-      return
-    }
+    const tooltip = target.closest('[data-recursive-tooltip-depth]') as HTMLElement | null
+    const depth = Number(tooltip?.dataset.recursiveTooltipDepth ?? 0)
+    if (!withTitle) return
 
     const text = withTitle.getAttribute('data-recursive-title')
-    if (!text) {
-      setRecursiveHint(null)
-      return
-    }
+    if (!text) return
 
     const hoverType = withTitle.getAttribute('data-hover-type') ?? undefined
     const hoverName = withTitle.getAttribute('data-hover-name') ?? undefined
@@ -81,40 +101,68 @@ export function SpellNameTooltip({
     )
     const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html)
 
-    setRecursiveHint({
-      ...resolved,
-      x,
-      y,
-    })
+    setRecursiveHints((current) => [
+      ...current.slice(0, depth),
+      {
+        ...resolved,
+        x,
+        y,
+        triggerElement: withTitle,
+      },
+    ])
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (pinned && !nextOpen) return
-    setOpen(nextOpen)
-    if (!nextOpen) {
-      setRecursiveHint(null)
+    if (nextOpen) {
+      clearHide()
+      setOpen(true)
+      return
     }
+    if (recursiveHints.length > 0) {
+      scheduleHide()
+      return
+    }
+    setOpen(nextOpen)
+    setRecursiveHints([])
   }
 
   return (
     <Tooltip open={pinned || open} onOpenChange={handleOpenChange}>
       <TooltipTrigger asChild>
-        <span className="text-sm truncate cursor-help border-b border-dotted border-muted-foreground/60 hover:border-accent">
-          {name}
+        <span
+          data-recursive-preview-active={pinned || open ? 'true' : undefined}
+          className="text-sm truncate cursor-help border-b border-dotted border-muted-foreground/60 hover:border-accent"
+        >
+          {displayName}
         </span>
       </TooltipTrigger>
       <TooltipContent
+        data-recursive-tooltip-depth={0}
         side="top"
         align="start"
         onMouseMove={handleRecursiveHover}
-        onMouseLeave={() => setRecursiveHint(null)}
-        className="w-[320px] max-w-[calc(100vw-2rem)] p-0 !bg-card !text-card-foreground border border-border shadow-xl"
+        onMouseEnter={clearHide}
+        onMouseLeave={scheduleHide}
+        className={cn(
+          'w-[320px] max-w-[calc(100vw-2rem)] p-0 !bg-card !text-card-foreground border transition-[box-shadow,border-color] duration-100',
+          recursiveHints.length === 0
+            ? 'border-accent/80 ring-2 ring-accent/60 shadow-2xl'
+            : 'border-border/80 shadow-md',
+        )}
       >
         {spell ? (
           <>
             <div className="px-3 py-2 border-b border-border relative">
               <div className="pr-16">
-                <div className="font-semibold text-xl leading-tight">{spell.name}</div>
+                <div className="flex items-start gap-2">
+                  <div className="font-semibold text-xl leading-tight">{spell.name}</div>
+                  {recursiveHints.length >= 2 ? (
+                    <span className="mt-1 shrink-0 rounded-full border border-border bg-muted/30 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                      1 of {recursiveHints.length + 1}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="text-sm text-muted-foreground mt-0.5">
                   {formatSpellLevel(spell.level)} {getSchoolName(spell.school)}
                 </div>
@@ -124,6 +172,7 @@ export function SpellNameTooltip({
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation()
+                    clearHide()
                     setPinned((value) => !value)
                     setOpen(true)
                   }}
@@ -139,9 +188,10 @@ export function SpellNameTooltip({
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation()
+                    clearHide()
                     setPinned(false)
                     setOpen(false)
-                    setRecursiveHint(null)
+                    setRecursiveHints([])
                   }}
                   className="h-7 w-7 rounded border border-border bg-card hover:bg-muted/40 text-muted-foreground flex items-center justify-center"
                   title="Close tooltip"
@@ -196,30 +246,7 @@ export function SpellNameTooltip({
               </div>
             </div>
 
-            {recursiveHint ? (
-              <div
-                className="absolute z-[90] pointer-events-none rounded border border-border bg-popover p-2 text-xs text-popover-foreground shadow-lg w-[300px]"
-                style={{
-                  left: `${recursiveHint.x}px`,
-                  top: `${recursiveHint.y}px`,
-                }}
-              >
-                <div className="font-semibold text-sm leading-tight">{recursiveHint.title}</div>
-                {recursiveHint.subtitle ? (
-                  <div className="text-xs text-muted-foreground mt-0.5 mb-1">
-                    {recursiveHint.subtitle}
-                  </div>
-                ) : null}
-                {recursiveHint.html ? (
-                  <div
-                    // renderEntry returns safe HTML from structured 5etools content.
-                    // eslint-disable-next-line react/no-danger
-                    dangerouslySetInnerHTML={{ __html: recursiveHint.html }}
-                    className="[&_p]:my-0.5 [&_p+_p]:mt-1 [&_ul]:my-1 [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-0.5 [&_ol]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_.cursor-help]:underline [&_.cursor-help]:decoration-dotted [&_.cursor-help]:underline-offset-2"
-                  />
-                ) : null}
-              </div>
-            ) : null}
+            <RecursiveTooltipChain hints={recursiveHints} />
           </>
         ) : (
           <div className="px-3 py-2 text-xs text-muted-foreground">Details unavailable.</div>

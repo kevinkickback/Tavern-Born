@@ -1,6 +1,7 @@
 import { Books, Code, GithubLogo, Globe, Heart } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { Section } from '@/components/workspace'
+import { getBundledFileUrl } from '@/lib/assetUrls'
 
 const TECH_STACK = [
   { icon: Code, label: 'Electron + React 19' },
@@ -29,7 +30,7 @@ export function AboutPanel() {
         <div className="flex items-center gap-4">
           <div className="flex size-16 shrink-0 items-center justify-center rounded-lg border border-border bg-sidebar">
             <img
-              src={`${import.meta.env.BASE_URL}assets/images/ui/logo.png`}
+              src={getBundledFileUrl('assets/images/ui/logo.png')}
               alt="Tavern Born"
               className="size-14 object-contain"
             />

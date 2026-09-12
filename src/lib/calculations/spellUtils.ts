@@ -3,6 +3,19 @@ import type { CastingTime, SpellComponents, SpellDuration, SpellRange } from '@/
 
 export const SPELL_SCHOOL_NAMES: Readonly<Record<string, string>> = SP_SCHOOL_ABV_TO_FULL
 
+/** Uses the parsed spell entity's canonical casing, with title case for unresolved references. */
+export function formatSpellDisplayName(storedName: string, canonicalName?: string): string {
+  const canonical = canonicalName?.trim()
+  if (canonical) return canonical
+
+  return storedName
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/(^|[\s-])([a-z])/g, (_match, prefix: string, letter: string) => {
+      return `${prefix}${letter.toLocaleUpperCase()}`
+    })
+}
+
 export function getSchoolName(abbreviation: string | undefined): string {
   if (!abbreviation) return 'Unknown'
   return SPELL_SCHOOL_NAMES[abbreviation.toUpperCase()] ?? abbreviation

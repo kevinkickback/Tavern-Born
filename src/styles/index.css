@@ -262,3 +262,16 @@
   --radius-2xl: calc(var(--radius) * 3);
   --radius-full: 9999px;
 }
+
+[data-recursive-preview-active="true"] {
+  color: var(--accent-foreground);
+  background-color: color-mix(in oklab, var(--accent) 28%, transparent);
+  border-radius: var(--radius-sm);
+  outline: 1px solid color-mix(in oklab, var(--accent) 72%, transparent);
+  outline-offset: 1px;
+  box-decoration-break: clone;
+  transition:
+    color 100ms ease,
+    background-color 100ms ease,
+    outline-color 100ms ease;
+}

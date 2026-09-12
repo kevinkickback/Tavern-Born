@@ -144,6 +144,41 @@ describe('useEquipment hook', () => {
     )
   })
 
+  test('enforces restrictions for legacy armor records that only have a type code', () => {
+    const character = makeCharacterFixture({
+      id: 'equip-hook-legacy-armor',
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        skills: [],
+        languages: [],
+        savingThrows: [],
+      },
+      equipment: [
+        {
+          id: 'legacy-armor',
+          name: 'Chain Shirt',
+          type: 'MA|PHB',
+          quantity: 1,
+          equipped: false,
+          ac: 13,
+        },
+      ],
+    })
+
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    const { result } = renderHook(() => useEquipment())
+    act(() => result.current.toggleEquip('legacy-armor'))
+
+    expect(useCharacterStore.getState().activeCharacter?.equipment[0]?.equipped).toBe(false)
+  })
+
   test('updateCurrency should persist denomination counters', () => {
     const character = makeCharacterFixture({
       id: 'equip-hook-currency',

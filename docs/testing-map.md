@@ -31,7 +31,7 @@ new tests land and do not lower them to merge a change.
 - Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions, deterministic source-less fallback, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
 - Renderer output in src/lib/renderer.ts
-- Recursive tooltip builder and hook coverage for explicit collection sets, stable source/name keys, and `itemsBase`
+- Recursive tooltip builder, hook, and nested interaction coverage for explicit collection sets, stable source/name keys, `itemsBase`, multi-level tooltip chains, constrained-position staggering, and active-depth styling
 - Provenance ledger/reconciliation modules
 - Provenance section row routing helper in src/lib/provenance/sectionRows.ts
 - Provenance composed hooks in src/hooks/character/useProvenance*.ts
@@ -52,6 +52,8 @@ new tests land and do not lower them to merge a change.
 - Compendium entry shaping and filtering in src/lib/compendiumEntries.ts, including 5e / 5.5e / Both edition classification and composition with type, source, and text filters
 - Equipment page detail rendering, recursive link tooltips, and persistent inventory headers in tests/integration/equipmentPage.test.tsx; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
 - Atomic equipment command coverage for add/remove/manual proficiency alignment, duplicate names, and retained source tags
+- Armor-restriction reconciliation coverage for nonproficient armor, duplicate body/shield slots,
+	legacy type-only armor records, and preservation of other equipped gear
 - Wizard data-controller coverage for draft source filtering, implicit ruleset sources, reprint suppression, and raw fallback resolution
 - Shared prerequisite snapshot and feat option-pool coverage, including multiclass progression and source collisions
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
@@ -88,12 +90,16 @@ new tests land and do not lower them to merge a change.
 - Feats page Edit Setup hint coverage in tests/integration/featsPage.test.tsx (configured character and bonus feat anchors)
 - Compendium edition selector coverage in tests/integration/compendiumPage.test.tsx (Both default, rendered filtering, and isolation from active-character ruleset/source restrictions)
 - SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
+- Spell display-name coverage verifies lowercase 5etools grant tokens render with canonical parsed casing
 - Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 - Electron updater offline safeguards in tests/lib/updateManager.test.ts (offline short-circuit and startup schedule skip)
 - Electron security boundary coverage in tests/electron/security.test.ts (renderer origins and canonical local-root containment)
 - Compiled Electron smoke coverage in tests/electron-smoke/startup.ts (sandbox isolation, preload bridge, trusted IPC)
+- Bundled asset URL coverage in tests/lib/assetUrls.test.ts and the compiled Electron smoke test,
+	including class icons, legacy portrait paths, hosted base paths, and real packaged SVG loading
 - Store-level empty background refresh guard in tests/store/gameDataStore.test.ts (prevents clobbering existing cache/state)
-- Character sheet PDF boundary coverage for pure view-model entity projection, pure 2014/2024 mapping, form filling, and 2014 MPMB cleanup
+- Character sheet PDF boundary coverage for lookup-enriched view-model projection, semantic 2014/2024 mapping, field-capacity limits, real shipped-template field-name contracts, form filling, and 2014 MPMB cleanup, plus saved-file compatibility coverage for resistance, armor, language, tool, and checkbox appearances and flat workspace-shell/preview-canvas presentation coverage
+- Importable PDF kitchen-sink character coverage in tests/fixtures/pdf-kitchen-sink.tbc and tests/lib/pdfKitchenSinkFixture.test.ts (multiclass/subclass, spell profiles, full skills/saves, attacks, magic items, 90-row inventory, narrative/runtime state, schema validation, and both template capacity boundaries)
 
 ## High-Priority Gaps
 

@@ -1,17 +1,17 @@
-const BASE = import.meta.env.BASE_URL
+import { getBundledFileUrl, resolveBundledAssetSrc } from './assetUrls'
 
 export const PLACEHOLDER_PORTRAITS = [
-  `${BASE}assets/images/characters/placeholder_char_card.jpg`,
-  `${BASE}assets/images/characters/placeholder_char_card2.jpg`,
-  `${BASE}assets/images/characters/placeholder_char_card3.jpg`,
-  `${BASE}assets/images/characters/placeholder_char_card4.jpg`,
-  `${BASE}assets/images/characters/placeholder_char_card5.jpg`,
-  `${BASE}assets/images/characters/placeholder_char_card6.jpg`,
-  `${BASE}assets/images/characters/placeholder_char_card7.jpg`,
-  `${BASE}assets/images/characters/placeholder_char_card8.jpg`,
-  `${BASE}assets/images/characters/placeholder_char_card9.jpg`,
-  `${BASE}assets/images/characters/placeholder_char_card10.jpg`,
-  `${BASE}assets/images/characters/placeholder_char_card11.jpg`,
+  getBundledFileUrl('assets/images/characters/placeholder_char_card.jpg'),
+  getBundledFileUrl('assets/images/characters/placeholder_char_card2.jpg'),
+  getBundledFileUrl('assets/images/characters/placeholder_char_card3.jpg'),
+  getBundledFileUrl('assets/images/characters/placeholder_char_card4.jpg'),
+  getBundledFileUrl('assets/images/characters/placeholder_char_card5.jpg'),
+  getBundledFileUrl('assets/images/characters/placeholder_char_card6.jpg'),
+  getBundledFileUrl('assets/images/characters/placeholder_char_card7.jpg'),
+  getBundledFileUrl('assets/images/characters/placeholder_char_card8.jpg'),
+  getBundledFileUrl('assets/images/characters/placeholder_char_card9.jpg'),
+  getBundledFileUrl('assets/images/characters/placeholder_char_card10.jpg'),
+  getBundledFileUrl('assets/images/characters/placeholder_char_card11.jpg'),
 ]
 
 /**
@@ -23,11 +23,8 @@ export const PLACEHOLDER_PORTRAITS = [
  * the app bundle. This function converts those absolute paths to
  * BASE_URL-relative equivalents so they resolve correctly in all contexts.
  */
-export function resolvePortraitSrc(src: string): string {
-  if (src.startsWith('/assets/')) {
-    return `${BASE}${src.slice(1)}`
-  }
-  return src
+export function resolvePortraitSrc(src: string, baseUrl?: string): string {
+  return resolveBundledAssetSrc(src, baseUrl)
 }
 
 export const DEFAULT_PORTRAIT_TRANSFORM = {

@@ -1,0 +1,4044 @@
+{
+  "id": "pdf-kitchen-sink-character",
+  "version": "6.0.0",
+  "name": "Seraphina Manypaths",
+  "originSystem": "2014",
+  "race": "Elf",
+  "raceSource": "PHB",
+  "subrace": "High",
+  "subraceSource": "PHB",
+  "class": "Wizard",
+  "classSource": "PHB",
+  "subclass": "School of Evocation",
+  "subclassSource": "PHB",
+  "background": "Sage",
+  "backgroundSource": "PHB",
+  "currency": {
+    "cp": 137,
+    "sp": 88,
+    "ep": 23,
+    "gp": 12450,
+    "pp": 417
+  },
+  "level": 20,
+  "experiencePoints": 355000,
+  "classProgression": [
+    {
+      "name": "Wizard",
+      "source": "PHB",
+      "levels": 10,
+      "subclass": "School of Evocation",
+      "subclassSource": "PHB"
+    },
+    {
+      "name": "Fighter",
+      "source": "PHB",
+      "levels": 5,
+      "subclass": "Battle Master",
+      "subclassSource": "PHB"
+    },
+    {
+      "name": "Cleric",
+      "source": "PHB",
+      "levels": 5,
+      "subclass": "Life Domain",
+      "subclassSource": "PHB"
+    }
+  ],
+  "abilityScores": {
+    "strength": 13,
+    "dexterity": 18,
+    "constitution": 14,
+    "intelligence": 20,
+    "wisdom": 16,
+    "charisma": 12
+  },
+  "proficiencies": {
+    "armor": [
+      "Light Armor",
+      "Medium Armor",
+      "Heavy Armor",
+      "Shields"
+    ],
+    "weapons": [
+      "Simple Weapons",
+      "Martial Weapons",
+      "Longsword",
+      "Longbow",
+      "Dagger",
+      "Light Crossbow"
+    ],
+    "tools": [
+      "Calligrapher's Supplies",
+      "Herbalism Kit",
+      "Thieves' Tools",
+      "Navigator's Tools",
+      "Disguise Kit",
+      "Dice Set"
+    ],
+    "skills": [
+      "acrobatics",
+      "animal handling",
+      "arcana",
+      "athletics",
+      "deception",
+      "history",
+      "insight",
+      "intimidation",
+      "investigation",
+      "medicine",
+      "nature",
+      "perception",
+      "performance",
+      "persuasion",
+      "religion",
+      "sleight of hand",
+      "stealth",
+      "survival"
+    ],
+    "languages": [
+      "Common",
+      "Elvish",
+      "Draconic",
+      "Dwarvish",
+      "Celestial",
+      "Infernal"
+    ],
+    "savingThrows": [
+      "strength",
+      "dexterity",
+      "constitution",
+      "intelligence",
+      "wisdom",
+      "charisma"
+    ]
+  },
+  "features": [
+    {
+      "id": "feature-darkvision",
+      "name": "Darkvision",
+      "source": "PHB",
+      "description": "Accustomed to twilight forests and the night sky, you can see in dim light within 60 feet as though it were bright light.",
+      "level": 1
+    },
+    {
+      "id": "feature-fey-ancestry",
+      "name": "Fey Ancestry",
+      "source": "PHB",
+      "description": "You have advantage on saving throws against being charmed, and magic cannot put you to sleep.",
+      "level": 2
+    },
+    {
+      "id": "feature-trance",
+      "name": "Trance",
+      "source": "PHB",
+      "description": "Elves meditate deeply for four hours instead of sleeping.",
+      "level": 3
+    },
+    {
+      "id": "feature-elf-weapon-training",
+      "name": "Elf Weapon Training",
+      "source": "PHB",
+      "description": "You have proficiency with longswords, shortswords, shortbows, and longbows.",
+      "level": 4
+    },
+    {
+      "id": "feature-researcher",
+      "name": "Researcher",
+      "source": "PHB",
+      "description": "When you do not know a piece of lore, you often know where and from whom you can obtain it.",
+      "level": 5
+    },
+    {
+      "id": "feature-wizard-spellcasting",
+      "name": "Wizard Spellcasting",
+      "source": "PHB",
+      "description": "You prepare wizard spells from a spellbook using Intelligence.",
+      "level": 6
+    },
+    {
+      "id": "feature-arcane-recovery",
+      "name": "Arcane Recovery",
+      "source": "PHB",
+      "description": "Once per day after a short rest, recover expended spell slots based on wizard level.",
+      "level": 7
+    },
+    {
+      "id": "feature-sculpt-spells",
+      "name": "Sculpt Spells",
+      "source": "PHB",
+      "description": "Create pockets of relative safety within evocation spells that affect other creatures.",
+      "level": 8
+    },
+    {
+      "id": "feature-empowered-evocation",
+      "name": "Empowered Evocation",
+      "source": "PHB",
+      "description": "Add your Intelligence modifier to one damage roll of a wizard evocation spell.",
+      "level": 9
+    },
+    {
+      "id": "feature-second-wind",
+      "name": "Second Wind",
+      "source": "PHB",
+      "description": "Use a bonus action to regain hit points once per short or long rest.",
+      "level": 10
+    },
+    {
+      "id": "feature-action-surge",
+      "name": "Action Surge",
+      "source": "PHB",
+      "description": "Take one additional action on your turn once per short or long rest.",
+      "level": 1
+    },
+    {
+      "id": "feature-combat-superiority",
+      "name": "Combat Superiority",
+      "source": "PHB",
+      "description": "Use superiority dice to fuel maneuvers such as Precision Attack and Riposte.",
+      "level": 2
+    },
+    {
+      "id": "feature-extra-attack",
+      "name": "Extra Attack",
+      "source": "PHB",
+      "description": "Attack twice whenever you take the Attack action.",
+      "level": 3
+    },
+    {
+      "id": "feature-cleric-spellcasting",
+      "name": "Cleric Spellcasting",
+      "source": "PHB",
+      "description": "Prepare cleric spells using Wisdom and cast rituals when appropriate.",
+      "level": 4
+    },
+    {
+      "id": "feature-channel-divinity",
+      "name": "Channel Divinity",
+      "source": "PHB",
+      "description": "Channel divine energy to Turn Undead or use a domain option.",
+      "level": 5
+    },
+    {
+      "id": "feature-disciple-life",
+      "name": "Disciple of Life",
+      "source": "PHB",
+      "description": "Healing spells restore additional hit points.",
+      "level": 6
+    },
+    {
+      "id": "feature-destroy-undead",
+      "name": "Destroy Undead",
+      "source": "PHB",
+      "description": "Undead that fail against Turn Undead may be instantly destroyed.",
+      "level": 7
+    }
+  ],
+  "feats": [
+    {
+      "id": "feat-alert",
+      "name": "Alert",
+      "source": "PHB",
+      "description": "Always on the lookout for danger; initiative and surprise test coverage.",
+      "prerequisites": "",
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 4
+    },
+    {
+      "id": "feat-war-caster",
+      "name": "War Caster",
+      "source": "PHB",
+      "description": "Advantage on concentration saves and spellcasting during opportunity attacks.",
+      "prerequisites": "The ability to cast at least one spell",
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 8
+    },
+    {
+      "id": "feat-resilient",
+      "name": "Resilient",
+      "source": "PHB",
+      "description": "Increase Constitution and gain proficiency in Constitution saving throws.",
+      "prerequisites": "",
+      "options": {
+        "abilityScore": "constitution"
+      },
+      "className": "Fighter",
+      "classSource": "PHB",
+      "classLevel": 4
+    },
+    {
+      "id": "feat-skilled",
+      "name": "Skilled",
+      "source": "PHB",
+      "description": "Gain proficiency in three selected skills or tools.",
+      "prerequisites": "",
+      "options": {
+        "skills": [
+          "performance",
+          "survival"
+        ],
+        "tools": [
+          "Herbalism Kit"
+        ]
+      },
+      "className": "Cleric",
+      "classSource": "PHB",
+      "classLevel": 4
+    }
+  ],
+  "spells": {
+    "spellProfiles": [
+      {
+        "id": "class:Wizard|PHB",
+        "type": "class",
+        "label": "Wizard (Lv 10)",
+        "className": "Wizard",
+        "classSource": "PHB",
+        "castingAbility": "int",
+        "cantrips": [
+          "Fire Bolt|PHB",
+          "Mage Hand|PHB",
+          "Minor Illusion|PHB",
+          "Prestidigitation|PHB"
+        ],
+        "spellsKnown": [],
+        "preparedSpells": [
+          "Magic Missile|PHB",
+          "Shield|PHB",
+          "Detect Magic|PHB",
+          "Misty Step|PHB",
+          "Mirror Image|PHB",
+          "Scorching Ray|PHB",
+          "Counterspell|PHB",
+          "Fireball|PHB",
+          "Fly|PHB",
+          "Dimension Door|PHB",
+          "Greater Invisibility|PHB",
+          "Wall of Force|PHB"
+        ],
+        "alwaysPreparedSpells": [
+          "Detect Magic|PHB"
+        ],
+        "alwaysPrepared": false,
+        "spellSwaps": {
+          "2": {
+            "removed": "Burning Hands|PHB",
+            "added": "Shield|PHB"
+          }
+        }
+      },
+      {
+        "id": "class:Cleric|PHB",
+        "type": "class",
+        "label": "Cleric (Lv 5)",
+        "className": "Cleric",
+        "classSource": "PHB",
+        "castingAbility": "wis",
+        "cantrips": [
+          "Guidance|PHB",
+          "Sacred Flame|PHB",
+          "Thaumaturgy|PHB"
+        ],
+        "spellsKnown": [],
+        "preparedSpells": [
+          "Bless|PHB",
+          "Cure Wounds|PHB",
+          "Healing Word|PHB",
+          "Spiritual Weapon|PHB",
+          "Aid|PHB",
+          "Revivify|PHB",
+          "Spirit Guardians|PHB",
+          "Dispel Magic|PHB"
+        ],
+        "alwaysPreparedSpells": [
+          "Bless|PHB",
+          "Cure Wounds|PHB"
+        ],
+        "alwaysPrepared": false
+      },
+      {
+        "id": "racial:Elf|PHB",
+        "type": "racial",
+        "label": "High Elf Racial Magic",
+        "raceName": "Elf",
+        "raceSource": "PHB",
+        "castingAbility": "int",
+        "choices": [
+          {
+            "id": "high-elf-cantrip",
+            "count": 1,
+            "isCantrip": true,
+            "filter": {
+              "level": 0,
+              "classes": [
+                "Wizard"
+              ]
+            },
+            "pool": [
+              "Dancing Lights|PHB",
+              "Light|PHB",
+              "Ray of Frost|PHB"
+            ],
+            "selected": [
+              "Dancing Lights|PHB"
+            ]
+          }
+        ],
+        "fixedSpells": [
+          "Dancing Lights|PHB",
+          "Darkness|PHB",
+          "Faerie Fire|PHB"
+        ],
+        "cantrips": [
+          "Dancing Lights|PHB"
+        ],
+        "spellsKnown": [],
+        "preparedSpells": [],
+        "alwaysPrepared": true
+      },
+      {
+        "id": "special:unrestricted",
+        "type": "special",
+        "label": "Special / Unrestricted",
+        "castingAbility": "cha",
+        "castingAbilityOptions": [
+          "int",
+          "wis",
+          "cha"
+        ],
+        "fixedSpells": [
+          "Wish|PHB"
+        ],
+        "cantrips": [],
+        "spellsKnown": [],
+        "preparedSpells": [
+          "Wish|PHB"
+        ],
+        "alwaysPrepared": true
+      }
+    ],
+    "spellSlots": {
+      "1": {
+        "max": 4,
+        "used": 3
+      },
+      "2": {
+        "max": 3,
+        "used": 2
+      },
+      "3": {
+        "max": 3,
+        "used": 1
+      },
+      "4": {
+        "max": 3,
+        "used": 2
+      },
+      "5": {
+        "max": 2,
+        "used": 1
+      },
+      "6": {
+        "max": 1,
+        "used": 1
+      },
+      "7": {
+        "max": 1,
+        "used": 0
+      },
+      "8": {
+        "max": 1,
+        "used": 1
+      },
+      "9": {
+        "max": 0,
+        "used": 0
+      }
+    }
+  },
+  "equipment": [
+    {
+      "id": "weapon-longsword",
+      "name": "Longsword",
+      "type": "M",
+      "quantity": 1,
+      "equipped": true,
+      "description": "Versatile steel blade used as the primary melee weapon.",
+      "weight": 3,
+      "value": 1500,
+      "source": "PHB",
+      "weaponCategory": "martial",
+      "dmg1": "1d8",
+      "dmg2": "1d10",
+      "dmgType": "S",
+      "properties": [
+        "V"
+      ]
+    },
+    {
+      "id": "weapon-longbow",
+      "name": "Longbow",
+      "type": "R",
+      "quantity": 1,
+      "equipped": true,
+      "description": "Primary ranged weapon with a full quiver.",
+      "weight": 2,
+      "value": 5000,
+      "source": "PHB",
+      "weaponCategory": "martial",
+      "dmg1": "1d8",
+      "dmgType": "P",
+      "properties": [
+        "A",
+        "H",
+        "2H"
+      ],
+      "range": "150/600 ft."
+    },
+    {
+      "id": "weapon-dagger",
+      "name": "Dagger",
+      "type": "M",
+      "quantity": 2,
+      "equipped": true,
+      "description": "Finesse and thrown backup blades.",
+      "weight": 1,
+      "value": 200,
+      "source": "PHB",
+      "weaponCategory": "simple",
+      "dmg1": "1d4",
+      "dmgType": "P",
+      "properties": [
+        "F",
+        "L",
+        "T"
+      ],
+      "range": "20/60 ft."
+    },
+    {
+      "id": "weapon-light-crossbow",
+      "name": "Light Crossbow",
+      "type": "R",
+      "quantity": 1,
+      "equipped": false,
+      "description": "Ammunition, loading, and two-handed.",
+      "weight": 5,
+      "value": 2500,
+      "source": "PHB",
+      "weaponCategory": "simple",
+      "dmg1": "1d8",
+      "dmgType": "P",
+      "properties": [
+        "A",
+        "L",
+        "2H"
+      ],
+      "range": "80/320 ft."
+    },
+    {
+      "id": "weapon-quarterstaff",
+      "name": "Quarterstaff",
+      "type": "M",
+      "quantity": 1,
+      "equipped": false,
+      "description": "Arcane focus and versatile walking staff.",
+      "weight": 4,
+      "value": 20,
+      "source": "PHB",
+      "weaponCategory": "simple",
+      "dmg1": "1d6",
+      "dmg2": "1d8",
+      "dmgType": "B",
+      "properties": [
+        "V"
+      ],
+      "focus": [
+        "Wizard"
+      ]
+    },
+    {
+      "id": "weapon-battleaxe",
+      "name": "Battleaxe",
+      "type": "M",
+      "quantity": 1,
+      "equipped": false,
+      "description": "Martial versatile weapon.",
+      "weight": 4,
+      "value": 1000,
+      "source": "PHB",
+      "weaponCategory": "martial",
+      "dmg1": "1d8",
+      "dmg2": "1d10",
+      "dmgType": "S",
+      "properties": [
+        "V"
+      ]
+    },
+    {
+      "id": "armor-half-plate",
+      "name": "Half Plate Armor",
+      "type": "MA",
+      "quantity": 1,
+      "equipped": true,
+      "description": "Medium armor used to exercise Dexterity caps.",
+      "weight": 40,
+      "value": 75000,
+      "source": "PHB",
+      "ac": 15,
+      "armorType": "medium"
+    },
+    {
+      "id": "armor-shield",
+      "name": "Shield",
+      "type": "S",
+      "quantity": 1,
+      "equipped": true,
+      "description": "Equipped shield.",
+      "weight": 6,
+      "value": 1000,
+      "source": "PHB",
+      "ac": 2,
+      "armorType": "shield"
+    },
+    {
+      "id": "magic-staff-power",
+      "name": "Staff of Power",
+      "type": "ST",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": true,
+      "description": "A powerful attuned staff with charges and defensive magic.",
+      "weight": 4,
+      "value": 0,
+      "rarity": "Very Rare",
+      "source": "DMG",
+      "reqAttune": true,
+      "wondrous": true,
+      "focus": [
+        "Wizard"
+      ]
+    },
+    {
+      "id": "magic-cloak-protection",
+      "name": "Cloak of Protection",
+      "type": "W",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": true,
+      "description": "Provides a protective magical bonus.",
+      "weight": 1,
+      "value": 0,
+      "rarity": "Uncommon",
+      "source": "DMG",
+      "reqAttune": true,
+      "wondrous": true
+    },
+    {
+      "id": "magic-ring-spell-storing",
+      "name": "Ring of Spell Storing",
+      "type": "RG",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": true,
+      "description": "Stores spells for later use.",
+      "weight": 0,
+      "value": 0,
+      "rarity": "Rare",
+      "source": "DMG",
+      "reqAttune": true,
+      "wondrous": true
+    },
+    {
+      "id": "magic-bag-holding",
+      "name": "Bag of Holding",
+      "type": "W",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "Extra-dimensional storage for other holdings.",
+      "weight": 15,
+      "value": 0,
+      "rarity": "Uncommon",
+      "source": "DMG",
+      "wondrous": true
+    },
+    {
+      "id": "magic-boots-elvenkind",
+      "name": "Boots of Elvenkind",
+      "type": "W",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "Quiet boots that aid stealth.",
+      "weight": 1,
+      "value": 0,
+      "rarity": "Uncommon",
+      "source": "DMG",
+      "wondrous": true
+    },
+    {
+      "id": "gear-01",
+      "name": "Backpack - Test 01",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 1.",
+      "weight": 0.5,
+      "value": 25,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-02",
+      "name": "Bedroll - Test 02",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 2.",
+      "weight": 1,
+      "value": 50,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-03",
+      "name": "Blanket - Test 03",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 3.",
+      "weight": 1.5,
+      "value": 75,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-04",
+      "name": "Candle - Test 04",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 4.",
+      "weight": 2,
+      "value": 100,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-05",
+      "name": "Chalk - Test 05",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 5.",
+      "weight": 2.5,
+      "value": 125,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-06",
+      "name": "Crowbar - Test 06",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 6.",
+      "weight": 3,
+      "value": 150,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-07",
+      "name": "Flask - Test 07",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 7.",
+      "weight": 3.5,
+      "value": 175,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-08",
+      "name": "Grappling Hook - Test 08",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 8.",
+      "weight": 4,
+      "value": 200,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-09",
+      "name": "Hammer - Test 09",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 9.",
+      "weight": 4.5,
+      "value": 225,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-10",
+      "name": "Healer's Kit - Test 10",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 10.",
+      "weight": 0.5,
+      "value": 250,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-11",
+      "name": "Hooded Lantern - Test 11",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 11.",
+      "weight": 1,
+      "value": 275,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-12",
+      "name": "Ink Bottle - Test 12",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 12.",
+      "weight": 1.5,
+      "value": 300,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-13",
+      "name": "Ink Pen - Test 13",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 13.",
+      "weight": 2,
+      "value": 325,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-14",
+      "name": "Iron Pot - Test 14",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 14.",
+      "weight": 2.5,
+      "value": 350,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-15",
+      "name": "Mess Kit - Test 15",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 15.",
+      "weight": 3,
+      "value": 375,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-16",
+      "name": "Oil Flask - Test 16",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 16.",
+      "weight": 3.5,
+      "value": 400,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-17",
+      "name": "Parchment - Test 17",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 17.",
+      "weight": 4,
+      "value": 425,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-18",
+      "name": "Piton - Test 18",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 18.",
+      "weight": 4.5,
+      "value": 450,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-19",
+      "name": "Rations - Test 19",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 19.",
+      "weight": 0.5,
+      "value": 475,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-20",
+      "name": "Hempen Rope - Test 20",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 20.",
+      "weight": 1,
+      "value": 500,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-21",
+      "name": "Silk Rope - Test 21",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 21.",
+      "weight": 1.5,
+      "value": 525,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-22",
+      "name": "Shovel - Test 22",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 22.",
+      "weight": 2,
+      "value": 550,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-23",
+      "name": "Signal Whistle - Test 23",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 23.",
+      "weight": 2.5,
+      "value": 575,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-24",
+      "name": "Spell Component Pouch - Test 24",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 24.",
+      "weight": 3,
+      "value": 600,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-25",
+      "name": "Tent - Test 25",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 25.",
+      "weight": 3.5,
+      "value": 625,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-26",
+      "name": "Tinderbox - Test 26",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 26.",
+      "weight": 4,
+      "value": 650,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-27",
+      "name": "Torch - Test 27",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 27.",
+      "weight": 4.5,
+      "value": 675,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-28",
+      "name": "Waterskin - Test 28",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 28.",
+      "weight": 0.5,
+      "value": 700,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-29",
+      "name": "Map Case - Test 29",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 29.",
+      "weight": 1,
+      "value": 725,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-30",
+      "name": "Scroll Case - Test 30",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 30.",
+      "weight": 1.5,
+      "value": 750,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-31",
+      "name": "Holy Symbol - Test 31",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 31.",
+      "weight": 2,
+      "value": 775,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-32",
+      "name": "Arcane Focus - Test 32",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 32.",
+      "weight": 2.5,
+      "value": 800,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-33",
+      "name": "Thieves' Tools - Test 33",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 33.",
+      "weight": 3,
+      "value": 825,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-34",
+      "name": "Herbalism Kit - Test 34",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 34.",
+      "weight": 3.5,
+      "value": 850,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-35",
+      "name": "Navigator's Tools - Test 35",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 35.",
+      "weight": 4,
+      "value": 875,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-36",
+      "name": "Disguise Kit - Test 36",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 36.",
+      "weight": 4.5,
+      "value": 900,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-37",
+      "name": "Forgery Kit - Test 37",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 37.",
+      "weight": 0.5,
+      "value": 925,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-38",
+      "name": "Playing Card Set - Test 38",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 38.",
+      "weight": 1,
+      "value": 950,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-39",
+      "name": "Dice Set - Test 39",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 39.",
+      "weight": 1.5,
+      "value": 975,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-40",
+      "name": "Climber's Kit - Test 40",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 40.",
+      "weight": 2,
+      "value": 1000,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-41",
+      "name": "Backpack - Test 41",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 41.",
+      "weight": 2.5,
+      "value": 1025,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-42",
+      "name": "Bedroll - Test 42",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 42.",
+      "weight": 3,
+      "value": 1050,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-43",
+      "name": "Blanket - Test 43",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 43.",
+      "weight": 3.5,
+      "value": 1075,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-44",
+      "name": "Candle - Test 44",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 44.",
+      "weight": 4,
+      "value": 1100,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-45",
+      "name": "Chalk - Test 45",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 45.",
+      "weight": 4.5,
+      "value": 1125,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-46",
+      "name": "Crowbar - Test 46",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 46.",
+      "weight": 0.5,
+      "value": 1150,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-47",
+      "name": "Flask - Test 47",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 47.",
+      "weight": 1,
+      "value": 1175,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-48",
+      "name": "Grappling Hook - Test 48",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 48.",
+      "weight": 1.5,
+      "value": 1200,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-49",
+      "name": "Hammer - Test 49",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 49.",
+      "weight": 2,
+      "value": 1225,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-50",
+      "name": "Healer's Kit - Test 50",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 50.",
+      "weight": 2.5,
+      "value": 1250,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-51",
+      "name": "Hooded Lantern - Test 51",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 51.",
+      "weight": 3,
+      "value": 1275,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-52",
+      "name": "Ink Bottle - Test 52",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 52.",
+      "weight": 3.5,
+      "value": 1300,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-53",
+      "name": "Ink Pen - Test 53",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 53.",
+      "weight": 4,
+      "value": 1325,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-54",
+      "name": "Iron Pot - Test 54",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 54.",
+      "weight": 4.5,
+      "value": 1350,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-55",
+      "name": "Mess Kit - Test 55",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 55.",
+      "weight": 0.5,
+      "value": 1375,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-56",
+      "name": "Oil Flask - Test 56",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 56.",
+      "weight": 1,
+      "value": 1400,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-57",
+      "name": "Parchment - Test 57",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 57.",
+      "weight": 1.5,
+      "value": 1425,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-58",
+      "name": "Piton - Test 58",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 58.",
+      "weight": 2,
+      "value": 1450,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-59",
+      "name": "Rations - Test 59",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 59.",
+      "weight": 2.5,
+      "value": 1475,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-60",
+      "name": "Hempen Rope - Test 60",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 60.",
+      "weight": 3,
+      "value": 1500,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-61",
+      "name": "Silk Rope - Test 61",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 61.",
+      "weight": 3.5,
+      "value": 1525,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-62",
+      "name": "Shovel - Test 62",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 62.",
+      "weight": 4,
+      "value": 1550,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-63",
+      "name": "Signal Whistle - Test 63",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 63.",
+      "weight": 4.5,
+      "value": 1575,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-64",
+      "name": "Spell Component Pouch - Test 64",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 64.",
+      "weight": 0.5,
+      "value": 1600,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-65",
+      "name": "Tent - Test 65",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 65.",
+      "weight": 1,
+      "value": 1625,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-66",
+      "name": "Tinderbox - Test 66",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 66.",
+      "weight": 1.5,
+      "value": 1650,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-67",
+      "name": "Torch - Test 67",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 67.",
+      "weight": 2,
+      "value": 1675,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-68",
+      "name": "Waterskin - Test 68",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 68.",
+      "weight": 2.5,
+      "value": 1700,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-69",
+      "name": "Map Case - Test 69",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 69.",
+      "weight": 3,
+      "value": 1725,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-70",
+      "name": "Scroll Case - Test 70",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 70.",
+      "weight": 3.5,
+      "value": 1750,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-71",
+      "name": "Holy Symbol - Test 71",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 71.",
+      "weight": 4,
+      "value": 1775,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-72",
+      "name": "Arcane Focus - Test 72",
+      "type": "G",
+      "quantity": 6,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 72.",
+      "weight": 4.5,
+      "value": 1800,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-73",
+      "name": "Thieves' Tools - Test 73",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 73.",
+      "weight": 0.5,
+      "value": 1825,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-74",
+      "name": "Herbalism Kit - Test 74",
+      "type": "G",
+      "quantity": 2,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 74.",
+      "weight": 1,
+      "value": 1850,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-75",
+      "name": "Navigator's Tools - Test 75",
+      "type": "G",
+      "quantity": 3,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 75.",
+      "weight": 1.5,
+      "value": 1875,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-76",
+      "name": "Disguise Kit - Test 76",
+      "type": "G",
+      "quantity": 4,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 76.",
+      "weight": 2,
+      "value": 1900,
+      "source": "PHB"
+    },
+    {
+      "id": "gear-77",
+      "name": "Forgery Kit - Test 77",
+      "type": "G",
+      "quantity": 5,
+      "equipped": false,
+      "description": "PDF overflow inventory test entry 77.",
+      "weight": 2.5,
+      "value": 1925,
+      "source": "PHB"
+    }
+  ],
+  "visions": [
+    {
+      "type": "Darkvision",
+      "range": 60
+    },
+    {
+      "type": "Blindsight",
+      "range": 10
+    },
+    {
+      "type": "Truesight",
+      "range": 30
+    }
+  ],
+  "hitPoints": {
+    "max": 0,
+    "current": 121,
+    "temporary": 17
+  },
+  "hitPointsInitialized": true,
+  "hitPointGains": [
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 2,
+      "characterLevel": 2,
+      "hitDie": 6,
+      "dieResult": 4,
+      "method": "rolled"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 3,
+      "characterLevel": 3,
+      "hitDie": 6,
+      "dieResult": 5,
+      "method": "average"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 4,
+      "characterLevel": 4,
+      "hitDie": 6,
+      "dieResult": 3,
+      "method": "manual"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 5,
+      "characterLevel": 5,
+      "hitDie": 6,
+      "dieResult": 6,
+      "method": "rolled"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 6,
+      "characterLevel": 6,
+      "hitDie": 6,
+      "dieResult": 4,
+      "method": "average"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 7,
+      "characterLevel": 7,
+      "hitDie": 6,
+      "dieResult": 2,
+      "method": "manual"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 8,
+      "characterLevel": 8,
+      "hitDie": 6,
+      "dieResult": 5,
+      "method": "rolled"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 9,
+      "characterLevel": 9,
+      "hitDie": 6,
+      "dieResult": 4,
+      "method": "average"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "PHB",
+      "classLevel": 10,
+      "characterLevel": 10,
+      "hitDie": 6,
+      "dieResult": 6,
+      "method": "manual"
+    },
+    {
+      "className": "Fighter",
+      "classSource": "PHB",
+      "classLevel": 1,
+      "characterLevel": 11,
+      "hitDie": 10,
+      "dieResult": 8,
+      "method": "rolled"
+    },
+    {
+      "className": "Fighter",
+      "classSource": "PHB",
+      "classLevel": 2,
+      "characterLevel": 12,
+      "hitDie": 10,
+      "dieResult": 6,
+      "method": "average"
+    },
+    {
+      "className": "Fighter",
+      "classSource": "PHB",
+      "classLevel": 3,
+      "characterLevel": 13,
+      "hitDie": 10,
+      "dieResult": 10,
+      "method": "rolled"
+    },
+    {
+      "className": "Fighter",
+      "classSource": "PHB",
+      "classLevel": 4,
+      "characterLevel": 14,
+      "hitDie": 10,
+      "dieResult": 7,
+      "method": "average"
+    },
+    {
+      "className": "Fighter",
+      "classSource": "PHB",
+      "classLevel": 5,
+      "characterLevel": 15,
+      "hitDie": 10,
+      "dieResult": 5,
+      "method": "rolled"
+    },
+    {
+      "className": "Cleric",
+      "classSource": "PHB",
+      "classLevel": 1,
+      "characterLevel": 16,
+      "hitDie": 8,
+      "dieResult": 6,
+      "method": "manual"
+    },
+    {
+      "className": "Cleric",
+      "classSource": "PHB",
+      "classLevel": 2,
+      "characterLevel": 17,
+      "hitDie": 8,
+      "dieResult": 5,
+      "method": "average"
+    },
+    {
+      "className": "Cleric",
+      "classSource": "PHB",
+      "classLevel": 3,
+      "characterLevel": 18,
+      "hitDie": 8,
+      "dieResult": 8,
+      "method": "manual"
+    },
+    {
+      "className": "Cleric",
+      "classSource": "PHB",
+      "classLevel": 4,
+      "characterLevel": 19,
+      "hitDie": 8,
+      "dieResult": 4,
+      "method": "average"
+    },
+    {
+      "className": "Cleric",
+      "classSource": "PHB",
+      "classLevel": 5,
+      "characterLevel": 20,
+      "hitDie": 8,
+      "dieResult": 7,
+      "method": "manual"
+    }
+  ],
+  "hitPointAdjustments": [
+    {
+      "id": "hp-adjust-tough",
+      "label": "Tough feat test bonus",
+      "amount": 2,
+      "mode": "per-level",
+      "sourceType": "feat",
+      "sourceRef": "Tough|PHB",
+      "createdAt": "2026-09-11T12:00:00.000Z"
+    },
+    {
+      "id": "hp-adjust-blessing",
+      "label": "Temple blessing",
+      "amount": 5,
+      "mode": "flat",
+      "sourceType": "other",
+      "createdAt": "2026-09-11T12:00:00.000Z"
+    }
+  ],
+  "maxHitPointsOverride": 168,
+  "armorClass": 10,
+  "armorClassAdjustments": [
+    {
+      "id": "ac-adjust-cloak",
+      "label": "Cloak of Protection",
+      "amount": 1,
+      "sourceType": "item",
+      "sourceRef": "Cloak of Protection|DMG",
+      "createdAt": "2026-09-11T12:00:00.000Z"
+    },
+    {
+      "id": "ac-adjust-defense",
+      "label": "Defense fighting style",
+      "amount": 1,
+      "sourceType": "other",
+      "createdAt": "2026-09-11T12:00:00.000Z"
+    }
+  ],
+  "initiative": 4,
+  "speed": 35,
+  "damageResistances": [
+    "Fire",
+    "Cold",
+    "Lightning",
+    "Necrotic",
+    "Radiant",
+    "Psychic"
+  ],
+  "damageImmunities": [
+    "Poison",
+    "Acid",
+    "Thunder"
+  ],
+  "conditionImmunities": [
+    "Charmed",
+    "Frightened",
+    "Poisoned",
+    "Paralyzed"
+  ],
+  "savingThrows": {
+    "strength": {
+      "proficient": true,
+      "bonus": 1
+    },
+    "dexterity": {
+      "proficient": true,
+      "bonus": 0
+    },
+    "constitution": {
+      "proficient": true,
+      "bonus": 2
+    },
+    "intelligence": {
+      "proficient": true,
+      "bonus": 0
+    },
+    "wisdom": {
+      "proficient": true,
+      "bonus": 1
+    },
+    "charisma": {
+      "proficient": true,
+      "bonus": -1
+    }
+  },
+  "skills": {
+    "acrobatics": {
+      "proficient": true,
+      "expertise": true,
+      "bonus": -1
+    },
+    "animal handling": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": 0
+    },
+    "arcana": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": 1
+    },
+    "athletics": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": -1
+    },
+    "deception": {
+      "proficient": true,
+      "expertise": true,
+      "bonus": 0
+    },
+    "history": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": 1
+    },
+    "insight": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": -1
+    },
+    "intimidation": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": 0
+    },
+    "investigation": {
+      "proficient": true,
+      "expertise": true,
+      "bonus": 1
+    },
+    "medicine": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": -1
+    },
+    "nature": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": 0
+    },
+    "perception": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": 1
+    },
+    "performance": {
+      "proficient": true,
+      "expertise": true,
+      "bonus": -1
+    },
+    "persuasion": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": 0
+    },
+    "religion": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": 1
+    },
+    "sleight of hand": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": -1
+    },
+    "stealth": {
+      "proficient": true,
+      "expertise": true,
+      "bonus": 0
+    },
+    "survival": {
+      "proficient": true,
+      "expertise": false,
+      "bonus": 1
+    }
+  },
+  "details": {
+    "playerName": "PDF Regression Tester",
+    "gender": "Woman",
+    "alignment": "Neutral Good",
+    "faith": "Mystra",
+    "lifestyle": "Aristocratic",
+    "personalityTraits": "I collect obscure facts and answer every question with another question.",
+    "personality": "Curious, patient, and unnervingly prepared.",
+    "ideals": "Knowledge must be preserved and shared responsibly.",
+    "bonds": "My missing mentor left a cipher only I can solve.",
+    "flaws": "I cannot resist a sealed archive or forbidden library.",
+    "goals": "Decode the Astral Index and reconcile three rival magical traditions.",
+    "fears": "Forgetting the names of those who made the journey possible.",
+    "age": 142,
+    "height": "5 ft. 8 in.",
+    "weight": "125 lb.",
+    "eyes": "Violet",
+    "skin": "Bronze",
+    "hair": "Black with a silver streak",
+    "distinguishingMarks": "A constellation-shaped scar across the left palm.",
+    "physicalDescription": "A poised high elf scholar carrying too many annotated books.",
+    "appearance": "Ink-stained fingers, violet eyes, travel-worn half plate, and midnight-blue robes.",
+    "clothingStyle": "Layered scholar's robes worn over practical armor.",
+    "mannerisms": "Counts doorways and taps a quill against her thumb while thinking.",
+    "faction": "The Harpers",
+    "rank": "Watcher",
+    "factionNotes": "Maintains a covert archive and exchanges coded reports at each new moon.",
+    "patron": "Archmage Ilyra Voss",
+    "patronDetails": "A vanished mentor whose astral correspondence continues to arrive.",
+    "nemesis": "Magister Corven Ash, curator of the sealed stacks.",
+    "allies": [
+      {
+        "id": "ally-ilyra",
+        "name": "Ilyra Voss",
+        "relationship": "Missing mentor",
+        "description": "An archmage who communicates through impossible star maps."
+      },
+      {
+        "id": "ally-brom",
+        "name": "Brom Ironleaf",
+        "relationship": "Former adventuring companion",
+        "description": "A dwarven cartographer with contacts in every major port."
+      },
+      {
+        "id": "ally-mara",
+        "name": "Sister Mara",
+        "relationship": "Temple ally",
+        "description": "A healer who safeguards Seraphina's research copies."
+      }
+    ],
+    "origin": "Raised in a remote elven observatory above the Moonsea.",
+    "family": "The Manypaths are mapmakers, translators, and keepers of disputed histories.",
+    "definingMoment": "Survived the collapse of the Glass Library and recovered its living index.",
+    "lifeEvents": "Apprenticed as a wizard, served with a mercenary company, then took vows at a temple of knowledge.",
+    "backstory": "Seraphina followed a map written in starlight through ruined academies, border wars, and divine archives. Each class represents a distinct chapter of that journey.",
+    "organizationSelectionKey": "__custom__",
+    "organizationCustomName": "The Lantern Archive",
+    "organizationCustomDescription": "A hidden network of scholars, scouts, and temple record-keepers who preserve dangerous knowledge without hoarding it.",
+    "organizationCustomImage": "/assets/images/factions/harpers-5e.png",
+    "organizationCustomGradient": "linear-gradient(135deg, #312e81, #0f766e)",
+    "alliesAndOrganizations": "The Lantern Archive; the Harpers; the House of Restored Names."
+  },
+  "portrait": "/assets/images/characters/placeholder_char_card9.jpg",
+  "portraitTransform": {
+    "zoom": 1.35,
+    "panX": 8,
+    "panY": -6,
+    "rotation": 2
+  },
+  "allowedSources": [
+    "PHB",
+    "DMG",
+    "XGE",
+    "TCE"
+  ],
+  "variantRules": {
+    "optionalClassFeatures": true,
+    "averageHitPoints": false,
+    "abilityScoreMethod": "custom",
+    "bladesingerAnyRace": true,
+    "battleragerAnyRace": true,
+    "preferNewerPrintings": false,
+    "ignoreEquipRestrictions": true
+  },
+  "raceAsiChoices": [
+    [
+      "dexterity"
+    ],
+    [
+      "intelligence"
+    ]
+  ],
+  "raceAsiBlockIndex": 0,
+  "backgroundAsiBlockIndex": 1,
+  "backgroundEquipmentChoices": [
+    "scholar-pack",
+    "gold-option"
+  ],
+  "backgroundAsiChoices": [
+    "intelligence",
+    "wisdom",
+    "charisma"
+  ],
+  "backgroundCurrencyGrant": {
+    "cp": 5,
+    "sp": 10,
+    "ep": 0,
+    "gp": 50,
+    "pp": 1
+  },
+  "classEquipmentChoices": {
+    "Wizard|PHB": [
+      "quarterstaff",
+      "component-pouch"
+    ],
+    "Fighter|PHB": [
+      "martial-weapon-and-shield",
+      "light-crossbow"
+    ],
+    "Cleric|PHB": [
+      "medium-armor",
+      "holy-symbol"
+    ]
+  },
+  "asiChoices": [
+    {
+      "id": "asi-wizard-4",
+      "level": 4,
+      "className": "Wizard",
+      "classSource": "PHB",
+      "abilityChanges": {
+        "intelligence": 2
+      }
+    },
+    {
+      "id": "asi-wizard-8",
+      "level": 8,
+      "className": "Wizard",
+      "classSource": "PHB",
+      "abilityChanges": {
+        "dexterity": 1,
+        "wisdom": 1
+      }
+    },
+    {
+      "id": "asi-fighter-4",
+      "level": 4,
+      "className": "Fighter",
+      "classSource": "PHB",
+      "abilityChanges": {
+        "constitution": 2
+      }
+    },
+    {
+      "id": "asi-cleric-4",
+      "level": 4,
+      "className": "Cleric",
+      "classSource": "PHB",
+      "abilityChanges": {
+        "wisdom": 2
+      }
+    }
+  ],
+  "specialFeats": [
+    {
+      "id": "special-magic-initiate",
+      "name": "Magic Initiate",
+      "source": "PHB",
+      "description": "Provides an unrestricted spell profile for overflow testing.",
+      "options": {
+        "spellcastingClass": "Wizard",
+        "spells": [
+          "Wish|PHB"
+        ]
+      }
+    },
+    {
+      "id": "special-tough",
+      "name": "Tough",
+      "source": "PHB",
+      "description": "Exercises a per-level maximum hit-point adjustment."
+    }
+  ],
+  "fixedFeatOptions": {
+    "Resilient|PHB|constitution": {
+      "abilityScore": "constitution"
+    },
+    "Skilled|PHB|test": {
+      "skills": [
+        "performance",
+        "survival"
+      ],
+      "tools": [
+        "Herbalism Kit"
+      ]
+    },
+    "Magic Initiate|PHB|wizard": {
+      "spellcastingClass": "Wizard",
+      "spells": [
+        "Wish|PHB"
+      ],
+      "languages": [
+        "Primordial"
+      ]
+    }
+  },
+  "inspiration": true,
+  "deathSaves": {
+    "successes": 2,
+    "failures": 1
+  },
+  "conditions": [
+    "Blinded",
+    "Grappled",
+    "Poisoned",
+    "Prone",
+    "Restrained"
+  ],
+  "exhaustion": 3,
+  "hitDiceUsed": 9,
+  "ritualCasting": true,
+  "classResources": {
+    "wizard-arcane-recovery": 0,
+    "fighter-second-wind": 0,
+    "fighter-action-surge": 1,
+    "cleric-channel-divinity": 0
+  },
+  "createdAt": "2026-09-11T12:00:00.000Z",
+  "lastModified": "2026-09-11T12:00:00.000Z",
+  "provenance": {
+    "proficiencies": {
+      "armor": {
+        "Light Armor": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Medium Armor": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Heavy Armor": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Shields": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ]
+      },
+      "weapons": {
+        "Simple Weapons": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Martial Weapons": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Longsword": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Longbow": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Dagger": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Light Crossbow": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ]
+      },
+      "tools": {
+        "Calligrapher's Supplies": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Herbalism Kit": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Thieves' Tools": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Navigator's Tools": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Disguise Kit": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Dice Set": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ]
+      },
+      "languages": {
+        "Common": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Elvish": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Draconic": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Dwarvish": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Celestial": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "Infernal": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ]
+      },
+      "skills": {
+        "acrobatics": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "animal handling": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "arcana": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "athletics": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "deception": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "history": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "insight": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "intimidation": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "investigation": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "medicine": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "nature": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "perception": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "performance": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "persuasion": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "religion": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "sleight of hand": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "stealth": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "survival": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ]
+      },
+      "savingThrows": {
+        "strength": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "dexterity": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "constitution": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "intelligence": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "wisdom": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ],
+        "charisma": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Kitchen Sink Tester",
+            "sourceRef": "PHB",
+            "grantType": "fixed",
+            "label": "PDF Test Selection"
+          }
+        ]
+      }
+    },
+    "abilityBonuses": [
+      {
+        "ability": "intelligence",
+        "value": 2,
+        "sourceTag": {
+          "sourceType": "subrace",
+          "sourceName": "High Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "High Elf"
+        }
+      },
+      {
+        "ability": "dexterity",
+        "value": 2,
+        "sourceTag": {
+          "sourceType": "race",
+          "sourceName": "Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Elf"
+        }
+      },
+      {
+        "ability": "wisdom",
+        "value": 1,
+        "sourceTag": {
+          "sourceType": "ASI",
+          "sourceName": "Wizard level 8",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Ability Score Improvement"
+        }
+      }
+    ],
+    "features": {
+      "Darkvision": [
+        {
+          "sourceType": "race",
+          "sourceName": "Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Elf"
+        }
+      ],
+      "Fey Ancestry": [
+        {
+          "sourceType": "race",
+          "sourceName": "Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Elf"
+        }
+      ],
+      "Trance": [
+        {
+          "sourceType": "race",
+          "sourceName": "Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Elf"
+        }
+      ],
+      "Elf Weapon Training": [
+        {
+          "sourceType": "subrace",
+          "sourceName": "High Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "High Elf"
+        }
+      ],
+      "Researcher": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        }
+      ],
+      "Wizard Spellcasting": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        }
+      ],
+      "Arcane Recovery": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        }
+      ],
+      "Sculpt Spells": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "School of Evocation",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "School of Evocation"
+        }
+      ],
+      "Empowered Evocation": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "School of Evocation",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "School of Evocation"
+        }
+      ],
+      "Second Wind": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Fighter"
+        }
+      ],
+      "Action Surge": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Fighter"
+        }
+      ],
+      "Combat Superiority": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Battle Master",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Battle Master"
+        }
+      ],
+      "Extra Attack": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Fighter"
+        }
+      ],
+      "Cleric Spellcasting": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric"
+        }
+      ],
+      "Channel Divinity": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric"
+        }
+      ],
+      "Disciple of Life": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Life Domain"
+        }
+      ],
+      "Destroy Undead": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric"
+        }
+      ]
+    },
+    "feats": {
+      "Alert": [
+        {
+          "sourceType": "ASI",
+          "sourceName": "Wizard level 4",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Feat Selection"
+        }
+      ],
+      "War Caster": [
+        {
+          "sourceType": "ASI",
+          "sourceName": "Wizard level 8",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Feat Selection"
+        }
+      ],
+      "Resilient": [
+        {
+          "sourceType": "ASI",
+          "sourceName": "Fighter level 4",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Feat Selection"
+        }
+      ],
+      "Skilled": [
+        {
+          "sourceType": "ASI",
+          "sourceName": "Cleric level 4",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Feat Selection"
+        }
+      ]
+    },
+    "spells": {
+      "Fire Bolt|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Mage Hand|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Minor Illusion|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Prestidigitation|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Magic Missile|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Shield|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Detect Magic|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Misty Step|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Mirror Image|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Scorching Ray|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Counterspell|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Fireball|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Fly|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Dimension Door|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Greater Invisibility|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Wall of Force|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Guidance|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Sacred Flame|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Thaumaturgy|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Bless|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Cure Wounds|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Healing Word|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Spiritual Weapon|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Aid|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Revivify|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Spirit Guardians|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Dispel Magic|PHB": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 16,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Dancing Lights|PHB": [
+        {
+          "sourceType": "subrace",
+          "sourceName": "High Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "High Elf",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Darkness|PHB": [
+        {
+          "sourceType": "subrace",
+          "sourceName": "High Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "High Elf",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Faerie Fire|PHB": [
+        {
+          "sourceType": "subrace",
+          "sourceName": "High Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "High Elf",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "Wish|PHB": [
+        {
+          "sourceType": "feat",
+          "sourceName": "Magic Initiate",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Magic Initiate",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ]
+    },
+    "equipment": {
+      "Longsword": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Longbow": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Dagger": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Light Crossbow": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Quarterstaff": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Battleaxe": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Half Plate Armor": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Shield": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Staff of Power": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "DMG",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Cloak of Protection": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "DMG",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Ring of Spell Storing": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "DMG",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Bag of Holding": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "DMG",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Boots of Elvenkind": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "DMG",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Backpack - Test 01": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Bedroll - Test 02": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Blanket - Test 03": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Candle - Test 04": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Chalk - Test 05": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Crowbar - Test 06": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Flask - Test 07": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Grappling Hook - Test 08": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Hammer - Test 09": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Healer's Kit - Test 10": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Hooded Lantern - Test 11": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Ink Bottle - Test 12": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Ink Pen - Test 13": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Iron Pot - Test 14": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Mess Kit - Test 15": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Oil Flask - Test 16": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Parchment - Test 17": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Piton - Test 18": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Rations - Test 19": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Hempen Rope - Test 20": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Silk Rope - Test 21": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Shovel - Test 22": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Signal Whistle - Test 23": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Spell Component Pouch - Test 24": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Tent - Test 25": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Tinderbox - Test 26": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Torch - Test 27": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Waterskin - Test 28": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Map Case - Test 29": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Scroll Case - Test 30": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Holy Symbol - Test 31": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Arcane Focus - Test 32": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Thieves' Tools - Test 33": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Herbalism Kit - Test 34": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Navigator's Tools - Test 35": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Disguise Kit - Test 36": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Forgery Kit - Test 37": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Playing Card Set - Test 38": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Dice Set - Test 39": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Climber's Kit - Test 40": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Backpack - Test 41": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Bedroll - Test 42": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Blanket - Test 43": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Candle - Test 44": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Chalk - Test 45": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Crowbar - Test 46": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Flask - Test 47": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Grappling Hook - Test 48": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Hammer - Test 49": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Healer's Kit - Test 50": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Hooded Lantern - Test 51": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Ink Bottle - Test 52": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Ink Pen - Test 53": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Iron Pot - Test 54": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Mess Kit - Test 55": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Oil Flask - Test 56": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Parchment - Test 57": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Piton - Test 58": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Rations - Test 59": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Hempen Rope - Test 60": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Silk Rope - Test 61": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Shovel - Test 62": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Signal Whistle - Test 63": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Spell Component Pouch - Test 64": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Tent - Test 65": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Tinderbox - Test 66": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Torch - Test 67": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Waterskin - Test 68": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Map Case - Test 69": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Scroll Case - Test 70": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Holy Symbol - Test 71": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Arcane Focus - Test 72": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Thieves' Tools - Test 73": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Herbalism Kit - Test 74": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Navigator's Tools - Test 75": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Disguise Kit - Test 76": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ],
+      "Forgery Kit - Test 77": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Kitchen Sink Tester",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "PDF Inventory Test"
+        }
+      ]
+    },
+    "choices": [
+      {
+        "id": "choice-race-cantrip",
+        "domain": "spells",
+        "sourceTag": {
+          "sourceType": "subrace",
+          "sourceName": "High Elf",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "High Elf"
+        },
+        "chooseCount": 1,
+        "optionPool": [
+          "Dancing Lights|PHB",
+          "Light|PHB",
+          "Ray of Frost|PHB"
+        ],
+        "selected": [
+          "Dancing Lights|PHB"
+        ],
+        "status": "resolved"
+      },
+      {
+        "id": "choice-skilled",
+        "domain": "skills",
+        "sourceTag": {
+          "sourceType": "feat",
+          "sourceName": "Skilled",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Skilled"
+        },
+        "chooseCount": 2,
+        "optionPool": [
+          "acrobatics",
+          "animal handling",
+          "arcana",
+          "athletics",
+          "deception",
+          "history",
+          "insight",
+          "intimidation",
+          "investigation",
+          "medicine",
+          "nature",
+          "perception",
+          "performance",
+          "persuasion",
+          "religion",
+          "sleight of hand",
+          "stealth",
+          "survival"
+        ],
+        "selected": [
+          "performance",
+          "survival"
+        ],
+        "status": "resolved"
+      },
+      {
+        "id": "choice-background-languages",
+        "domain": "languages",
+        "sourceTag": {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Sage"
+        },
+        "chooseCount": 2,
+        "optionPool": [
+          "Draconic",
+          "Dwarvish",
+          "Celestial",
+          "Infernal"
+        ],
+        "selected": [
+          "Draconic",
+          "Celestial"
+        ],
+        "status": "resolved"
+      },
+      {
+        "id": "choice-class-tools",
+        "domain": "tools",
+        "sourceTag": {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "PHB",
+          "grantType": "fixed",
+          "label": "Fighter"
+        },
+        "chooseCount": 1,
+        "optionPool": [
+          "Dice Set",
+          "Playing Card Set"
+        ],
+        "selected": [
+          "Dice Set"
+        ],
+        "status": "resolved"
+      }
+    ]
+  }
+}

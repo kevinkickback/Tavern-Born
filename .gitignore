@@ -33,6 +33,7 @@ lerna-debug.log*
 **/agent-eval-report*
 docs/desktop-ui-redesign.md
 docs/review/
+AGENTS.md
 
 # Temp folders
 /temp/

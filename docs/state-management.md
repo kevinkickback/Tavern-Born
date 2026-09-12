@@ -70,6 +70,8 @@ Derived examples (do not store as canonical):
 - passive values
 - calculated and effective maximum HP
 - calculated and effective AC
+- spell display casing, which resolves from canonical parsed spell entities while stored reference
+  tokens remain stable for provenance and profile matching
 
 ## Proficiency State Model
 
@@ -267,6 +269,11 @@ addSpellToProfile(profileId, name, 'spell')
 ```
 
 **Schema/Persistence:** Spell profiles and provenance are still stored separately on the character, but normal mutation flows now update them together.
+
+Spell profile arrays may contain lowercase 5etools reference tokens from race or subclass grants.
+Spell-page presentation resolves those tokens against parsed spell data and displays the canonical
+entity name; unresolved references receive a consistent title-case fallback without rewriting
+persisted identity.
 
 ### Hit Point Ownership Model
 

@@ -188,7 +188,7 @@ Flow:
 
 Tooltip note:
 - `useRecursiveLookup()` supplies source-aware entity resolution for inline references.
-- Rich text inside an open tooltip may display further reference tags, but those tags do not open another tooltip. Interactive nested tooltips are intentionally deferred.
+- Rich text inside an open tooltip can open another tooltip. Each nested reference keeps its parent visible, shares the parent card styling, and uses the same source-aware lookup, allowing the interaction to continue recursively. Dismissal includes a short grace period so the pointer can cross the gap between parent and child previews. The newest card receives the strongest border and elevation, older cards remain fully opaque, active triggers stay highlighted, and constrained placement staggers overlapping cards to preserve visible context.
 
 ## 5a) Source Preset and Reprint Filtering
 

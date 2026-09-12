@@ -23,6 +23,7 @@ export interface RecursiveTooltipData {
 export interface RecursiveHintState extends RecursiveTooltipData {
   x: number
   y: number
+  triggerElement: HTMLElement
 }
 
 export interface RecursiveLookup {
@@ -239,14 +240,7 @@ export function getRecursiveHintPosition(
   hasBody: boolean,
 ): { x: number; y: number } {
   const rect = target.getBoundingClientRect()
-
-  let container = target.offsetParent as HTMLElement | null
-  while (container && !container.classList.contains('[&_p]:my-0.5')) {
-    container = container.offsetParent as HTMLElement | null
-  }
-
-  if (!container) container = target.closest('[role="tooltip"]') as HTMLElement | null
-  if (!container) container = target.closest('div[class*="shadow-xl"]') as HTMLElement | null
+  const container = target.closest('[data-recursive-tooltip-depth]') as HTMLElement | null
 
   const containerRect = container?.getBoundingClientRect() || {
     left: 0,
@@ -254,39 +248,42 @@ export function getRecursiveHintPosition(
     right: window.innerWidth,
     bottom: window.innerHeight,
   }
-  const elementRelX = rect.left - containerRect.left
-  const elementRelY = rect.top - containerRect.top
-  const tooltipWidthEstimate = 300
+  const tooltipWidthEstimate = 320
   const tooltipHeightEstimate = hasBody ? 220 : 88
   const gap = 8
-  const containerWidth = containerRect.right - containerRect.left
-  const rightCandidate = rect.right - containerRect.left + gap
-  const leftCandidate = elementRelX - tooltipWidthEstimate - gap
+  const margin = 8
+  const overlapStagger = 24
+  const rightFits = containerRect.right + gap + tooltipWidthEstimate <= window.innerWidth - margin
+  const leftFits = containerRect.left - gap - tooltipWidthEstimate >= margin
+  const viewportX = rightFits
+    ? containerRect.right + gap
+    : leftFits
+      ? containerRect.left - gap - tooltipWidthEstimate
+      : Math.max(
+          margin,
+          Math.min(
+            containerRect.left + overlapStagger,
+            window.innerWidth - tooltipWidthEstimate - margin,
+          ),
+        )
+  const x = viewportX - containerRect.left
 
-  let x = rightCandidate
-  if (rightCandidate + tooltipWidthEstimate > containerWidth && leftCandidate >= 0) {
-    x = leftCandidate
-  } else if (rightCandidate + tooltipWidthEstimate > containerWidth) {
-    x = Math.max(0, containerWidth - tooltipWidthEstimate - 4)
-  }
-
-  const centeredY = elementRelY + rect.height / 2 - tooltipHeightEstimate / 2
-  const preferredDown = rect.bottom - containerRect.top + gap
-  const preferredUp = elementRelY - tooltipHeightEstimate - gap
-  const containerHeight = containerRect.bottom - containerRect.top
-  const y = Math.max(
-    0,
-    Math.min(
-      centeredY,
-      preferredDown + tooltipHeightEstimate <= containerHeight ? preferredDown : preferredUp,
-    ),
+  const overlapsParent =
+    viewportX < containerRect.right && viewportX + tooltipWidthEstimate > containerRect.left
+  const centeredViewportY = rect.top + rect.height / 2 - tooltipHeightEstimate / 2
+  const staggeredViewportY = overlapsParent
+    ? Math.max(centeredViewportY, containerRect.top + overlapStagger)
+    : centeredViewportY
+  const viewportY = Math.max(
+    margin,
+    Math.min(staggeredViewportY, window.innerHeight - tooltipHeightEstimate - margin),
   )
+  const y = viewportY - containerRect.top
 
   return { x, y }
 }
 
-export function getEntryWithHoverTitles(entry: unknown): string {
-  const html = renderEntry(entry) ?? ''
+export function markRecursiveTooltipReferences(html: string): string {
   return html
     .replace(
       /\stitle="([^"]+)"((?:\sdata-hover-type="[^"]*")?)(?:\sdata-hover-name="([^"]*)")?((?:\sdata-hover-source="[^"]*")?)/g,
@@ -294,4 +291,8 @@ export function getEntryWithHoverTitles(entry: unknown): string {
         ` title="${title}" data-recursive-title="${title}"${maybeType}${hoverName ? ` data-hover-name="${hoverName}"` : ''}${maybeSource}`,
     )
     .replace(/\scursor-help/g, ' cursor-help underline decoration-dotted underline-offset-2')
+}
+
+export function getEntryWithHoverTitles(entry: unknown): string {
+  return markRecursiveTooltipReferences(renderEntry(entry) ?? '')
 }

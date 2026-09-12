@@ -1,5 +1,22 @@
 import { describe, expect, test } from 'vitest'
-import { formatSpellLevel, getOrdinalForm, ordinalSuffix } from '@/lib/calculations/spellUtils'
+import {
+  formatSpellDisplayName,
+  formatSpellLevel,
+  getOrdinalForm,
+  ordinalSuffix,
+} from '@/lib/calculations/spellUtils'
+
+describe('formatSpellDisplayName', () => {
+  test('prefers canonical parsed casing', () => {
+    expect(formatSpellDisplayName("melf's acid arrow", "Melf's Acid Arrow")).toBe(
+      "Melf's Acid Arrow",
+    )
+  })
+
+  test('title-cases unresolved lowercase references', () => {
+    expect(formatSpellDisplayName('custom shadow-bolt')).toBe('Custom Shadow-Bolt')
+  })
+})
 
 describe('ordinalSuffix', () => {
   test('returns correct suffix for 1st/2nd/3rd', () => {

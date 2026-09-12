@@ -25,6 +25,7 @@ import {
   SPECIAL_SPELL_PROFILE_ID,
   toClassProfileId,
 } from '@/lib/calculations/spellProfiles.constants'
+import { formatSpellDisplayName } from '@/lib/calculations/spellUtils'
 import { getCharacterClassEntries, getTotalLevel } from '@/lib/characterUtils'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SourceRow } from '@/lib/provenance/types'
@@ -172,8 +173,9 @@ export function SpellsPage() {
       for (const grant of grants) {
         const attribution = `Subclass: ${entry.subclass}`
         sourceMap.set(`${profileId}|${grant.spellName}`, attribution)
+        const spell = spellByName.get(getEntityKey(grant.spellName))
         rows.push({
-          itemName: grant.spellName,
+          itemName: formatSpellDisplayName(grant.spellName, spell?.name),
           category: 'Spells',
           attribution,
           sourceTypes: ['subclass'],
@@ -183,7 +185,7 @@ export function SpellsPage() {
     }
 
     return { sourceMap, rows }
-  }, [character, classes])
+  }, [character, classes, spellByName])
 
   const preparedCasterItemsByProfile = useMemo(() => {
     const map = new Map<string, PreparedCasterSpellItem[]>()
@@ -347,13 +349,14 @@ export function SpellsPage() {
   const spellSourceRows = useMemo(() => {
     const rows = [...getSourcesRowsBySection('spells'), ...subclassSpellSources.rows]
     const seen = new Set<string>()
-    return rows.filter((row) => {
+    return rows.flatMap((row) => {
       const key = `${normalizeKey(row.itemName)}|${row.attribution}|${row.category}`
-      if (seen.has(key)) return false
+      if (seen.has(key)) return []
       seen.add(key)
-      return true
+      const spell = spellByName.get(getEntityKey(row.itemName))
+      return [{ ...row, itemName: formatSpellDisplayName(row.itemName, spell?.name) }]
     })
-  }, [getSourcesRowsBySection, subclassSpellSources])
+  }, [getSourcesRowsBySection, spellByName, subclassSpellSources])
 
   const hasWarlockClass = useMemo(
     () => spellcastingDetails.some((detail) => detail.className.toLowerCase() === 'warlock'),

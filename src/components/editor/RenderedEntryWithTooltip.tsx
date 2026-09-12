@@ -1,6 +1,7 @@
 import { PushPin, X } from '@phosphor-icons/react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { RecursiveTooltipChain } from '@/components/editor/RecursiveTooltipChain'
 import {
   formatCastingTime,
   formatComponents,
@@ -13,9 +14,12 @@ import { renderEntryCached } from '@/lib/entryRenderCache'
 import {
   getEntityKey,
   getEntryWithHoverTitles,
+  getRecursiveHintPosition,
   getRecursiveTooltipData,
+  markRecursiveTooltipReferences,
   normalizeKind,
   parseRecursiveReference,
+  type RecursiveHintState,
   type RecursiveLookup,
 } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
@@ -30,8 +34,16 @@ const EST_HEIGHT = 240
 type HintPos = { top: number; bottom?: never } | { bottom: number; top?: never }
 
 type HintState =
-  | { kind: 'spell'; spell: Spell5e; left: number; pos: HintPos }
-  | { kind: 'generic'; title: string; subtitle?: string; html?: string; left: number; pos: HintPos }
+  | { kind: 'spell'; spell: Spell5e; left: number; pos: HintPos; triggerElement: HTMLElement }
+  | {
+      kind: 'generic'
+      title: string
+      subtitle?: string
+      html?: string
+      left: number
+      pos: HintPos
+      triggerElement: HTMLElement
+    }
 
 interface RenderedEntryWithTooltipProps {
   entry: unknown
@@ -54,10 +66,18 @@ export function RenderedEntryWithTooltip({
   recursiveLookup,
 }: RenderedEntryWithTooltipProps) {
   const [hint, setHint] = useState<HintState | null>(null)
+  const [recursiveHints, setRecursiveHints] = useState<RecursiveHintState[]>([])
   const [pinned, setPinned] = useState(false)
   const pinnedRef = useRef(false)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const trigger = hint?.triggerElement
+    if (!trigger) return
+    trigger.setAttribute('data-recursive-preview-active', 'true')
+    return () => trigger.removeAttribute('data-recursive-preview-active')
+  }, [hint?.triggerElement])
 
   const html = useMemo(
     () =>
@@ -78,7 +98,10 @@ export function RenderedEntryWithTooltip({
     if (pinnedRef.current) return
     clearHide()
     hideTimer.current = setTimeout(() => {
-      if (!pinnedRef.current && !tooltipRef.current?.matches(':hover')) setHint(null)
+      if (!pinnedRef.current && !tooltipRef.current?.matches(':hover')) {
+        setHint(null)
+        setRecursiveHints([])
+      }
     }, HIDE_DELAY_MS)
   }, [clearHide])
 
@@ -120,13 +143,14 @@ export function RenderedEntryWithTooltip({
 
       const reference = parseRecursiveReference(text, fallback, hoverType, hoverName, hoverSource)
       const { left, pos } = positionNearElement(el.getBoundingClientRect())
+      setRecursiveHints([])
 
       if (normalizeKind(reference.kind) === 'spell') {
         const spell =
           recursiveLookup.spells.get(getEntityKey(reference.name, reference.source)) ??
           recursiveLookup.spells.get(getEntityKey(reference.name))
         if (spell) {
-          setHint({ kind: 'spell', spell, left, pos })
+          setHint({ kind: 'spell', spell, left, pos, triggerElement: el })
           return
         }
       }
@@ -138,9 +162,47 @@ export function RenderedEntryWithTooltip({
         formatSpellLevel,
         getSchoolName,
       )
-      setHint({ kind: 'generic', ...resolved, left, pos })
+      setHint({ kind: 'generic', ...resolved, left, pos, triggerElement: el })
     },
     [recursiveLookup, clearHide],
+  )
+
+  const handleRecursiveMouseMove = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      clearHide()
+
+      const target = event.target as HTMLElement
+      const withTitle = target.closest('[data-recursive-title]') as HTMLElement | null
+      const tooltip = target.closest('[data-recursive-tooltip-depth]') as HTMLElement | null
+      const depth = Number(tooltip?.dataset.recursiveTooltipDepth ?? 0)
+
+      if (!withTitle) return
+
+      const text = withTitle.getAttribute('data-recursive-title')
+      if (!text) return
+
+      const reference = parseRecursiveReference(
+        text,
+        withTitle.textContent?.trim() ?? '',
+        withTitle.getAttribute('data-hover-type') ?? undefined,
+        withTitle.getAttribute('data-hover-name') ?? undefined,
+        withTitle.getAttribute('data-hover-source') ?? undefined,
+      )
+      const resolved = getRecursiveTooltipData(
+        reference,
+        recursiveLookup,
+        text,
+        formatSpellLevel,
+        getSchoolName,
+      )
+      const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html)
+
+      setRecursiveHints((current) => [
+        ...current.slice(0, depth),
+        { ...resolved, x, y, triggerElement: withTitle },
+      ])
+    },
+    [clearHide, recursiveLookup],
   )
 
   const handleWrapperMouseLeave = useCallback(
@@ -164,10 +226,12 @@ export function RenderedEntryWithTooltip({
     pinnedRef.current = false
     setPinned(false)
     setHint(null)
+    setRecursiveHints([])
   }, [clearHide])
 
   if (!html) return null
 
+  const totalCards = recursiveHints.length + 1
   const sharedButtons = (
     <div className="absolute top-2 right-2 flex items-center gap-1">
       <button
@@ -207,14 +271,28 @@ export function RenderedEntryWithTooltip({
             <div
               ref={setTooltipRef}
               role="tooltip"
-              className="fixed z-[9999] w-[320px] max-w-[calc(100vw-1rem)] rounded border border-border bg-card text-card-foreground shadow-xl"
+              data-recursive-tooltip-depth={0}
+              onMouseMove={handleRecursiveMouseMove}
+              className={cn(
+                'fixed z-[9999] w-[320px] max-w-[calc(100vw-1rem)] rounded border bg-card text-card-foreground transition-[box-shadow,border-color] duration-100',
+                recursiveHints.length === 0
+                  ? 'border-accent/80 ring-2 ring-accent/60 shadow-2xl'
+                  : 'border-border/80 shadow-md',
+              )}
               style={{ left: hint.left, ...hint.pos }}
             >
               {hint.kind === 'spell' ? (
                 <>
                   <div className="px-3 py-2 border-b border-border relative">
                     <div className="pr-16">
-                      <div className="font-semibold text-xl leading-tight">{hint.spell.name}</div>
+                      <div className="flex items-start gap-2">
+                        <div className="font-semibold text-xl leading-tight">{hint.spell.name}</div>
+                        {totalCards >= 3 ? (
+                          <span className="mt-1 shrink-0 rounded-full border border-border bg-muted/30 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                            1 of {totalCards}
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="text-sm text-muted-foreground mt-0.5">
                         {formatSpellLevel(hint.spell.level)} {getSchoolName(hint.spell.school)}
                       </div>
@@ -246,7 +324,7 @@ export function RenderedEntryWithTooltip({
                   <div className="px-3 pb-3 text-sm leading-relaxed space-y-1.5 max-h-[220px] overflow-y-auto [&_p]:my-0.5 [&_p+_p]:mt-1 [&_ul]:my-1 [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-0.5 [&_ol]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-border [&_th]:bg-muted/20 [&_th]:px-1.5 [&_th]:py-1 [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-1 [&_.cursor-help]:underline [&_.cursor-help]:decoration-dotted [&_.cursor-help]:underline-offset-2">
                     {[...(hint.spell.entries ?? []), ...(hint.spell.entriesHigherLevel ?? [])].map(
                       (e) => {
-                        const entryHtml = renderEntryCached(e)
+                        const entryHtml = markRecursiveTooltipReferences(renderEntryCached(e))
                         return (
                           <div
                             // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
@@ -272,7 +350,14 @@ export function RenderedEntryWithTooltip({
                 <>
                   <div className="px-3 py-2 border-b border-border relative">
                     <div className="pr-16">
-                      <div className="font-semibold text-base leading-tight">{hint.title}</div>
+                      <div className="flex items-start gap-2">
+                        <div className="font-semibold text-base leading-tight">{hint.title}</div>
+                        {totalCards >= 3 ? (
+                          <span className="shrink-0 rounded-full border border-border bg-muted/30 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                            1 of {totalCards}
+                          </span>
+                        ) : null}
+                      </div>
                       {hint.subtitle ? (
                         <div className="text-sm text-muted-foreground mt-0.5">{hint.subtitle}</div>
                       ) : null}
@@ -294,6 +379,7 @@ export function RenderedEntryWithTooltip({
                   </div>
                 </>
               )}
+              <RecursiveTooltipChain hints={recursiveHints} />
             </div>,
             document.body,
           )
