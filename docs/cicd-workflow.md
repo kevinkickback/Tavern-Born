@@ -17,7 +17,8 @@ Protect `main` with the repository's **Main Protection** ruleset:
 - Allow workflow `contents: write` and `pull-requests: write` permissions.
 - Enable automatic Copilot review, including review of new pushes.
 - Do not require review-conversation resolution. Copilot runs in the background and its findings are
-  reviewed by the maintainer before the draft release is published.
+  reviewed by the maintainer before the draft release is published. Its completion timing never
+  controls CI or merging.
 
 `merge.yml` runs from protected `main` after CI. It verifies both required jobs passed for the exact
 pull-request revision and automatically squash-merges a ready same-repository `dev` to `main` PR.
@@ -50,10 +51,12 @@ and the Electron smoke test.
 
 For an ordinary ready `dev` to `main` PR:
 
-**deterministic CI → background Copilot review → automatic squash merge**
+**deterministic CI → automatic squash merge**
 
 The merge is bound to the exact tested head and base revisions. If `main` or the PR changes after
-CI, the new revision must pass CI before merging.
+CI, the new revision must pass CI before merging. Copilot review runs independently in the
+background and may finish before or after the merge; it is advisory input to the final manual
+release review.
 
 ---
 
@@ -98,8 +101,11 @@ If the PR is already open, pushing updates it and restarts CI.
 
 The complete flow is:
 
-**PR → deterministic CI → background Copilot review → automatic squash merge → secure builds →
-draft release → manual publish**
+**PR → deterministic CI → automatic squash merge → secure builds → draft release → manual review
+→ manual publish**
+
+Copilot review runs in the background without gating that sequence. Its findings are considered in
+the manual review together with the release notes, artifacts, and Windows portable build.
 
 Automated merges send a protected repository event because GitHub does not emit a new push workflow
 for a merge performed with `GITHUB_TOKEN`. A manual infrastructure merge emits a normal `main` push.
@@ -112,7 +118,8 @@ The release workflow:
 3. Validates the stable version, synchronized package metadata, and matching changelog section.
 4. Builds Windows, macOS, and Linux packages in parallel without repository write credentials.
 5. Validates the exact package bundle and updater manifests before granting publishing credentials.
-6. Records build provenance, creates or refreshes the draft release, and verifies its assets.
+6. Records build provenance, replaces any matching unpublished drafts with one clean draft, and
+   verifies its tag and assets.
 
 The workflow never publishes the release. Review the draft, including any Copilot findings that
 arrived after the merge, then publish it manually when satisfied.
@@ -122,8 +129,8 @@ arrived after the merge, then publish it manually when satisfied.
 Normal retries are idempotent:
 
 - A published release always stops the workflow.
-- A draft and tag already targeting the exact source are refreshed with the newly validated notes
-  and artifacts.
+- Matching drafts are removed only after the complete replacement bundle validates, then one clean
+  draft is created with the new notes and artifacts.
 - A matching tag without a release is reused to finish interrupted draft creation.
 - A draft or tag targeting another source requires explicit rebuild mode.
 
@@ -137,10 +144,11 @@ gh api --method POST repos/kevinkickback/Tavern-Born/dispatches \
 ```
 
 Rebuild mode requires an unchanged package version. It builds and validates the entire replacement
-bundle first, rechecks that any existing release is still a draft, then replaces the old draft and
-tag. If an earlier replacement stopped after cleanup, rerunning resumes draft creation. Do not
-publish the draft while a rebuild run is active. If it is published before replacement starts, the
-workflow stops without modifying it.
+bundle first, enumerates every release using that tag, refuses to modify any published release, then
+replaces all matching drafts and the tag. This also repairs duplicate drafts left by an interrupted
+run. If an earlier replacement stopped after cleanup, rerunning resumes draft creation. Do not
+publish a matching draft while a rebuild run is active. If one is published before its replacement
+starts, the workflow stops without modifying it.
 
 ### Release artifacts
 
@@ -193,8 +201,8 @@ gh run view <RUN_ID> --repo kevinkickback/Tavern-Born
 ```
 
 - For a transient build failure, rerun the failed jobs.
-- For an interrupted first release attempt, rerun the workflow; the exact-source tag or draft is
-  resumed safely.
+- For an interrupted first release attempt, rerun the workflow; after validating a complete
+  replacement bundle, it repairs the exact-source tag and leaves one clean draft.
 - For a corrected source using the same unpublished version, leave the old draft in place and use
   the explicit rebuild event above.
 - If the version has already been published, make corrections in a new version.
