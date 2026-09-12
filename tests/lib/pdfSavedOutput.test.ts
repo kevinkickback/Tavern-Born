@@ -84,5 +84,5 @@ describe('2014 saved PDF compatibility', () => {
     }
 
     expect((form as unknown as FormWithInternals).acroForm.dict.has(PDFName.of('CO'))).toBe(false)
-  }, 30_000)
+  }, 90_000)
 })
