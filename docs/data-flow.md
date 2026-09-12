@@ -179,7 +179,8 @@ Background equipment detail:
 
 Entry points:
 - src/lib/renderer.ts
-- src/components/editor/FormattedTextRenderer.tsx
+- src/lib/entryRenderCache.ts
+- src/components/editor/RenderedEntryWithTooltip.tsx
 
 Flow:
 1. UI passes 5etools entries into renderEntry.
@@ -226,7 +227,7 @@ Entry points:
 - src/lib/5etools/parsers/basic.ts (`parseConditions`)
 - src/hooks/data/useGameData.ts (`useConditions`)
 - src/pages/details/ConditionsPage.tsx
-- src/components/editor/FormattedTextRenderer.tsx
+- src/components/editor/RenderedEntryWithTooltip.tsx
 
 Flow:
 1. Ingestion preserves condition records and their structured entries while tagging condition versus disease records.

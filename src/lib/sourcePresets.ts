@@ -20,8 +20,6 @@ export const SOURCE_PRESETS: SourcePreset[] = [
   },
 ]
 
-export const LARGE_SOURCE_WARNING_THRESHOLD = 15
-
 export const IMPLICIT_SOURCES = new Set(['PHB', 'XPHB'])
 
 export function getImplicitSource(originSystem: '2014' | '2024'): string {

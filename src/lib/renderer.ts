@@ -445,11 +445,3 @@ export function renderTags(text: string): string {
 export function getEntryWithHoverTitles(entry: unknown): string {
   return renderTags(renderEntry(entry))
 }
-
-export function extractPlainText(entry: unknown): string {
-  const html = renderEntry(entry)
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}

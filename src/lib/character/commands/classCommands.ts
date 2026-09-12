@@ -154,7 +154,7 @@ function getClassChoiceKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`
 }
 
-export function replaceClassEquipmentGrants(
+function replaceClassEquipmentGrants(
   ledger: ProvenanceLedger,
   className: string,
   classSource: string | undefined,

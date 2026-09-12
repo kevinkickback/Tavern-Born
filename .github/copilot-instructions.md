@@ -66,7 +66,9 @@ All writes go through `updateCharacter(id, patch)` from `useCharacterStore`. Nev
 - **Notifications**: `toast()` from Sonner — no `alert()` or custom toasts
 - **Styles**: Tailwind first; `cn()` for conditional classes. Inline `style` only for dynamic runtime values (CSS variables, transform values, dynamic dimensions/images). Never for static presentation.
 - **Content pages**: centered `max-w-7xl` container — see `docs/react-patterns.md`.
-- **5etools content**: never render raw JSON — always use `renderEntry()` from `src/lib/renderer.ts` or `FormattedTextRenderer`.
+- **5etools content**: never render raw JSON — use `renderEntry()` from `src/lib/renderer.ts`,
+  `renderEntryCached()` for repeated object entries, or `RenderedEntryWithTooltip` when recursive
+  references are needed.
 
 ### 10. Validate changes
 Run checks in proportion to the change. Before handoff, run the relevant tests plus the non-mutating

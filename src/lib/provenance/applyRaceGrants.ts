@@ -110,7 +110,7 @@ function getLineageLanguageBlocks(
   return []
 }
 
-export function applyRaceSpellGrants(
+function applyRaceSpellGrants(
   race: {
     additionalSpells?: import('@/types/5etools').RaceAdditionalSpells[]
   },

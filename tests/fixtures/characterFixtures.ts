@@ -1,13 +1,5 @@
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
-import type { Progression } from '@/lib/characterUtils'
 import type { Character } from '@/types/character'
-
-export function makeProgressionFixture(overrides: Partial<Progression> = {}): Progression {
-  return {
-    classes: [{ name: 'Fighter', levels: 1, source: 'PHB' }],
-    ...overrides,
-  }
-}
 
 export function makePrereqCharacterSnapshotFixture(
   overrides: Partial<PrereqCharacterSnapshot> = {},
@@ -30,9 +22,7 @@ export function makePrereqCharacterSnapshotFixture(
       spellsKnown: [],
       preparedSpells: [],
     },
-    progression: {
-      classes: [{ name: 'Fighter', levels: 1, source: 'PHB' }],
-    },
+    progression: [{ name: 'Fighter', levels: 1, source: 'PHB' }],
     ...overrides,
   }
 }

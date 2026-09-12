@@ -63,29 +63,6 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
     onChange({ allowedSources: [] })
   }
 
-  const _selectGroupSources = (group: string) => {
-    const currentSources = data.allowedSources || []
-    const groupSources = sourcesByGroup[group]?.map((s) => s.abbreviation) || []
-    const allSelected = groupSources.every((abbr: string) => currentSources.includes(abbr))
-
-    if (allSelected) {
-      onChange({
-        allowedSources: currentSources.filter((s: string) => !groupSources.includes(s)),
-      })
-    } else {
-      const newSources = [...new Set([...currentSources, ...groupSources])]
-      onChange({ allowedSources: newSources })
-    }
-  }
-
-  const _isGroupSelected = (group: string) => {
-    const currentSources = data.allowedSources || []
-    const groupSources = sourcesByGroup[group]?.map((s) => s.abbreviation) || []
-    return (
-      groupSources.length > 0 && groupSources.every((abbr: string) => currentSources.includes(abbr))
-    )
-  }
-
   const isPresetActive = (preset: SourcePreset) => {
     const presetSources = preset.abbreviations.filter((abbreviation) =>
       availableSourceSet.has(abbreviation),

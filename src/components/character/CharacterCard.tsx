@@ -37,7 +37,6 @@ export const CharacterCard = memo(function CharacterCard({
 
   const rightPanelWidth = isSmall ? 'w-[69%]' : isMedium ? 'w-[63%]' : 'w-[56%]'
   const shellPadding = isSmall ? 'p-2.5' : isMedium ? 'p-3.5' : 'p-4'
-  const _titleGap = isSmall ? 'gap-1.5' : 'gap-2'
   const titleClass = isSmall ? 'text-[0.95rem]' : isMedium ? 'text-[1.15rem]' : 'text-[1.45rem]'
   const detailsGap = isSmall ? 'gap-1' : isMedium ? 'gap-1.5' : 'gap-2'
   const detailText = isSmall ? 'text-[0.9rem]' : isMedium ? 'text-[0.95rem]' : 'text-[1.02rem]'

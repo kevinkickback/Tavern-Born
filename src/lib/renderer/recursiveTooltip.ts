@@ -65,9 +65,7 @@ export function getEntityKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`.toLowerCase()
 }
 
-export function buildNameMap<T extends TooltipEntityLike>(
-  items: readonly T[] = [],
-): Map<string, T> {
+function buildNameMap<T extends TooltipEntityLike>(items: readonly T[] = []): Map<string, T> {
   const map = new Map<string, T>()
   for (const item of items) {
     const name = item?.name?.trim()
@@ -166,7 +164,7 @@ export function normalizeKind(kind: string): string {
   return aliases[normalized] ?? normalized
 }
 
-export function getPreviewHtml(
+function getPreviewHtml(
   entries: unknown[] | undefined,
   formatSpellInfo?: (entry: unknown) => string,
 ): string | undefined {

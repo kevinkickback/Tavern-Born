@@ -16,10 +16,6 @@ const CLASS_ICON_PATHS: Record<string, string> = {
   wizard: 'assets/images/ui/icons/wizard.svg',
 }
 
-export const CLASS_ICON_MAP: Record<string, string> = Object.fromEntries(
-  Object.entries(CLASS_ICON_PATHS).map(([className, path]) => [className, getBundledFileUrl(path)]),
-)
-
 export function getClassIconUrl(className: string, baseUrl?: string): string | null {
   const path = CLASS_ICON_PATHS[className.toLowerCase().trim()]
   return path ? getBundledFileUrl(path, baseUrl) : null

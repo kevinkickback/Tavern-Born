@@ -82,7 +82,7 @@ export function useHitPoints(): HitPointsState {
       )
       return resolved ? [resolved] : []
     })
-    const breakdown = calculateHPBreakdown({ classes: resolvedProgression }, conMod, {
+    const breakdown = calculateHPBreakdown(resolvedProgression, conMod, {
       averageHp: useAverage,
       classesData: resolvedClasses,
       hitPointGains: character?.hitPointGains,

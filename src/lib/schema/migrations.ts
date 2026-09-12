@@ -32,7 +32,7 @@ const migrationMap = new Map<string, Migration>()
 /**
  * Register a new migration handler.
  */
-export function registerMigration(migration: Migration): void {
+function registerMigration(migration: Migration): void {
   const key = `${migration.fromVersion}->${migration.toVersion}`
   if (migrationMap.has(key)) {
     console.warn(`Migration ${key} already registered, overwriting`)

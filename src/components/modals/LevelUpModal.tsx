@@ -335,7 +335,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     parsedHpDieResult <= pendingLevelUp.hitDie
   const conModifier = getAbilityModifier(character.abilityScores.constitution)
   const hpIncrease = validHpDieResult ? Math.max(1, parsedHpDieResult + conModifier) : null
-  const calculatedMaxHp = calculateMaxHP({ classes: classProgression }, conModifier, {
+  const calculatedMaxHp = calculateMaxHP(classProgression, conModifier, {
     averageHp: character.variantRules?.averageHitPoints !== false,
     classesData: classes,
     hitPointGains: character.hitPointGains,

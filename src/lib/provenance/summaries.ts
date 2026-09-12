@@ -51,15 +51,6 @@ function rowsFromMap(map: Record<string, SourceTag[]>, category: string): Source
   }))
 }
 
-/** Derive all proficiency source rows for a single category. */
-export function getProficiencySourceRows(
-  ledger: ProvenanceLedger,
-  category: keyof ProficiencyProvenance,
-): SourceRow[] {
-  const title = category === 'savingThrows' ? 'Saving Throws' : toDisplayName(category)
-  return rowsFromMap(ledger.proficiencies[category], title)
-}
-
 /** Derive source rows for all proficiency categories merged with pending choice rows. */
 export function getAllProficiencyRows(ledger: ProvenanceLedger): {
   skills: SourceRow[]
@@ -216,31 +207,4 @@ export function getSpellRows(ledger: ProvenanceLedger): SourceRow[] {
 /** Derive equipment source rows. */
 export function getEquipmentRows(ledger: ProvenanceLedger): SourceRow[] {
   return rowsFromMap(ledger.equipment, 'Equipment')
-}
-
-/** Flatten all source rows across all domains for a generic sources panel. */
-export function getAllSourceRows(ledger: ProvenanceLedger): SourceRow[] {
-  return [
-    ...getAbilityBonusRows(ledger),
-    ...rowsFromMap(ledger.proficiencies.skills, 'Skills'),
-    ...rowsFromMap(ledger.proficiencies.savingThrows, 'Saving Throws'),
-    ...rowsFromMap(ledger.proficiencies.armor, 'Armor'),
-    ...rowsFromMap(ledger.proficiencies.weapons, 'Weapons'),
-    ...rowsFromMap(ledger.proficiencies.tools, 'Tools'),
-    ...rowsFromMap(ledger.proficiencies.languages, 'Languages'),
-    ...rowsFromMap(ledger.features, 'Features'),
-    ...rowsFromMap(ledger.feats, 'Feats'),
-    ...rowsFromMap(ledger.spells, 'Spells'),
-    ...rowsFromMap(ledger.equipment, 'Equipment'),
-    // Pending choices last
-    ...ledger.choices
-      .filter((c) => c.status !== 'resolved')
-      .map((c) => ({
-        itemName: `choose ${c.chooseCount} ${c.domain}`,
-        category: toDisplayName(c.domain),
-        attribution: formatSourceType(c.sourceTag.sourceType),
-        sourceTypes: [c.sourceTag.sourceType],
-        isPending: true,
-      })),
-  ]
 }
