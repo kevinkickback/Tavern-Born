@@ -7,9 +7,12 @@
 | `dev` | All active development happens here |
 | `main` | Stable branch — only updated via PR from `dev` |
 
-Protect `main` in GitHub so direct pushes are disabled and required CI checks must pass.
-Enable squash merging and allow the workflow's `contents: write` and `pull-requests: write`
-permissions. Select the two CI jobs as required checks:
+Protect `main` with the repository's **Main Protection** ruleset so direct pushes are disabled,
+review conversations must be resolved, and required CI checks must pass. Require branches to be
+up to date before merging (strict required checks); this makes GitHub reject a merge atomically if
+`main` advances after CI. Enable automatic Copilot review for every new PR revision. Enable squash
+merging and allow the workflow's `contents: write` and `pull-requests: write` permissions. Select
+the two CI jobs as required checks:
 
 - **Lint, type-check, coverage, and build**
 - **Browser end-to-end tests**
@@ -19,10 +22,17 @@ other branch protection rules still apply; the workflow does not bypass them. Au
 merging is restricted to non-draft PRs from this repository's `dev` branch into `main`.
 Other PRs are not automatically merged.
 
-If automatic Copilot review is enabled, the merge job gives a review of the exact checked revision
-time to finish. It waits one minute for review activity to appear and up to ten minutes when a
-review is active. Copilot remains advisory: unavailable review capacity or a timeout does not block
-the release, while unresolved conversations can still be enforced by the repository ruleset.
+After CI completes, `merge.yml` runs from the protected default-branch revision. Its write-capable
+job never checks out or executes pull-request code. It explicitly requests Copilot review of the
+exact tested revision and waits up to fifteen minutes for completion. A missing review, incomplete
+or dismissed review, timeout, API failure, "Changes recommended" assessment, suppressed finding,
+or inline finding fails the merge. The merge also requires `main` to still match the base commit
+recorded by that exact CI run. Push a corrective revision and obtain a clean re-review before
+retrying. The release workflow repeats this check and runs its release metadata validator from code
+pinned to the protected workflow revision, treating the candidate package files and changelog only
+as input data. It does this before creating or updating any tag or draft. Release lookups fail closed: only
+a confirmed missing release is treated as absent; permission, rate-limit, and network failures stop
+the workflow before it moves a tag or replaces a draft.
 
 ---
 
@@ -42,8 +52,8 @@ Lint, type checking, coverage tests, production builds, browser end-to-end tests
 smoke test run before merging. Each new PR revision needs passing checks; lint and tests are not
 repeated after the squash merge.
 
-Both CI jobs must pass before the automatic merge job runs. It merges only the checked PR head.
-If `main` changed during checks, update the PR to include the latest base before retrying.
+Both CI jobs must pass before the separate trusted merge workflow runs. It merges only the tested
+PR head. If `main` changed during checks, update the PR to include the latest base before retrying.
 
 ---
 
@@ -100,9 +110,11 @@ and starts this sequence automatically; otherwise, opening the PR starts it.
 **PR checks → automatic squash merge → version/tag and source validation → draft creation →
 Electron builds → asset upload and verification**
 
-After merging, `ci.yml` calls the reusable `release.yml` directly. This avoids relying on a
-push event, which a merge performed with `GITHUB_TOKEN` does not trigger for other workflows.
-The release workflow:
+After merging, `merge.yml` calls the reusable `release.yml` from the same trusted workflow
+revision. This avoids relying on a push event, which a merge performed with `GITHUB_TOKEN` does not
+trigger for other workflows.
+The merge workflow passes the exact reviewed pre-merge commit to the release workflow rather than
+re-reading the mutable `dev` branch head. The release workflow:
 
 1. Compares the package version at the squash commit with its parent. If unchanged, all remaining
    release stages are skipped. The PR still merges; its title alone does not request a release.
@@ -115,6 +127,25 @@ The release workflow:
    them to the draft. Each build records provenance attestations for its installers, updater
    manifests, and blockmaps. Compilation for packaging is required; lint and tests are not rerun.
 6. Verifies every expected artifact exists and the release is still a draft.
+
+### Rebuilding an unpublished draft without changing the version
+
+Use this only to replace an existing draft after corrective code is merged while the version is
+still unpublished. The repository event always loads the release workflow from protected `main`;
+it cannot run a writable recovery workflow from a caller-selected branch. It refuses to replace a
+published release, requires the source commit to be a merged `dev` to `main` PR with a clean Copilot
+review, validates the existing changelog section, removes the old draft assets, moves the version
+tag, and rebuilds every platform:
+
+```bash
+gh api --method POST repos/kevinkickback/Tavern-Born/dispatches \
+  -f event_type=rebuild-release \
+  -f 'client_payload[source_sha]=<corrected-main-sha>' \
+  -f 'client_payload[reviewed_head_sha]=<reviewed-pr-head-sha>'
+```
+
+Normal releases must continue to increase the package version. Draft rebuild mode rejects a commit
+that also changes the version.
 
 Electron Builder receives `PUBLISH_FOR_PULL_REQUEST=true` only in the release build step because
 reusable workflows retain the caller's PR context. Source validation first requires a merged commit;
@@ -201,16 +232,12 @@ gh run view --repo kevinkickback/Tavern-Born --job <JOB_ID> --log
 
 For a transient runner or network failure, rerun the failed jobs; the existing tag and draft are
 reused safely. Use **Re-run failed jobs** (or `gh run rerun <RUN_ID> --failed`) to avoid repeating
-successful PR checks. Release jobs appear inside the calling **CI** run.
+successful PR checks. Release jobs appear inside the calling **Merge reviewed dev changes** run.
 
-If only the release workflow needs correction, fix it through the normal `dev` to `main` process,
-then run the **Release** workflow manually from `main`. Supply the original version-bump squash
-commit as `source-sha`; the current workflow will rebuild and verify that already-validated source.
-Do not supply the later workflow-fix commit, because its package version did not change.
-
-If application source or packaging configuration needs correction, use a new version and changelog
-section in the next `dev` to `main` PR. A manual recovery deliberately checks out the original
-release source, so it cannot incorporate later product changes.
+If an unpublished draft needs corrected workflow, application, or packaging source, fix it through
+the normal `dev` to `main` process, then use the documented unpublished-draft rebuild mode with the
+corrective squash commit. It replaces only the existing draft for the unchanged package version;
+published releases remain immutable through this recovery path.
 
 If needed, remove the failed draft and its tag separately (only for an unpublished failed release):
 ```bash

@@ -1,6 +1,32 @@
 import { readFile, writeFile } from 'node:fs/promises'
+import { resolve, sep } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
-const root = new URL('../', import.meta.url)
+let notesFile
+let previousVersion
+let sourceRoot
+const arguments_ = process.argv.slice(2)
+for (let index = 0; index < arguments_.length; index += 1) {
+  const argument = arguments_[index]
+  const value = arguments_[index + 1]
+  if (
+    argument === '--notes-file' ||
+    argument === '--previous-version' ||
+    argument === '--source-root'
+  ) {
+    if (!value || value.startsWith('--')) throw new Error(`${argument} requires a value.`)
+    if (argument === '--notes-file') notesFile = value
+    else if (argument === '--previous-version') previousVersion = value
+    else sourceRoot = value
+    index += 1
+  } else {
+    throw new Error(`Unknown argument: ${argument}`)
+  }
+}
+
+const root = sourceRoot
+  ? pathToFileURL(`${resolve(sourceRoot)}${sep}`)
+  : new URL('../', import.meta.url)
 const readJson = async (path) => JSON.parse(await readFile(new URL(path, root), 'utf8'))
 
 const packageJson = await readJson('package.json')
@@ -22,22 +48,6 @@ const mismatches = [...metadataVersions].filter(([, value]) => value !== version
 if (mismatches.length > 0) {
   const details = mismatches.map(([source, value]) => `${source}: ${value ?? 'missing'}`).join('\n')
   throw new Error(`Version metadata does not match package.json (${version}):\n${details}`)
-}
-
-let notesFile
-let previousVersion
-const arguments_ = process.argv.slice(2)
-for (let index = 0; index < arguments_.length; index += 1) {
-  const argument = arguments_[index]
-  const value = arguments_[index + 1]
-  if (argument === '--notes-file' || argument === '--previous-version') {
-    if (!value || value.startsWith('--')) throw new Error(`${argument} requires a value.`)
-    if (argument === '--notes-file') notesFile = value
-    else previousVersion = value
-    index += 1
-  } else {
-    throw new Error(`Unknown argument: ${argument}`)
-  }
 }
 
 if (previousVersion !== undefined) {
