@@ -23,6 +23,7 @@ import {
   diffProficiencyGrants,
   makeSourceTag,
   reconcileClassChange,
+  removeGrantsBySourceRef,
   stripItemTag,
 } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
@@ -358,12 +359,20 @@ export function applyClassProgressionUpdate(
 ): ClassCommandResult {
   const previousProgression = character.classProgression ?? []
   const removedEntries = previousProgression.filter(
-    (old) => !nextProgression.some((entry) => entry.name === old.name),
+    (old) =>
+      !nextProgression.some(
+        (entry) => entry.name === old.name && (entry.source ?? '') === (old.source ?? ''),
+      ),
   )
 
   let provenanceUpdate = ledger
   for (const removed of removedEntries) {
-    provenanceUpdate = reconcileClassChange(provenanceUpdate, removed.name, undefined)
+    provenanceUpdate = removeGrantsBySourceRef(
+      provenanceUpdate,
+      'class',
+      removed.name,
+      removed.source,
+    )
   }
 
   const newTotalLevel = nextProgression.reduce((sum, entry) => sum + entry.levels, 0)
@@ -689,17 +698,22 @@ export function addMulticlass(
   classSource?: string,
   startAtLevel: number = 1,
 ): ClassCommandResult {
+  const resolvedClassSource = classSource || classEntity.source || undefined
   const existingClassIndex =
-    character.classProgression?.findIndex((c) => c.name === className) ?? -1
+    character.classProgression?.findIndex(
+      (entry) => entry.name === className && (entry.source ?? '') === (resolvedClassSource ?? ''),
+    ) ?? -1
   if (existingClassIndex >= 0) {
-    throw new Error(`Character already has class ${className}. Cannot add duplicate class.`)
+    throw new Error(
+      `Character already has class ${className}|${resolvedClassSource ?? ''}. Cannot add duplicate class.`,
+    )
   }
 
   const updatedProgression = [
     ...(character.classProgression ?? []),
     {
       name: className,
-      source: classSource ?? classEntity.source ?? undefined,
+      source: resolvedClassSource,
       levels: startAtLevel,
     },
   ]
@@ -767,27 +781,37 @@ export function addMulticlass(
  * @param character - Active character
  * @param ledger - Current provenance ledger
  * @param className - Name of class to remove
+ * @param classSource - Source of the exact class printing to remove
  * @returns { characterPatch, provenanceUpdate } - Apply both atomically
  */
 export function removeMulticlass(
   character: Character,
   ledger: ProvenanceLedger,
   className: string,
+  classSource?: string,
 ): ClassCommandResult {
+  const matchesClass = (entry: CharacterClassEntry) =>
+    entry.name === className &&
+    (classSource == null || (entry.source ?? '') === (classSource ?? ''))
   if (
-    character.classProgression?.[0]?.name === className &&
+    character.classProgression?.[0] &&
+    matchesClass(character.classProgression[0]) &&
     character.classProgression.length === 1
   ) {
     throw new Error('Cannot remove the primary class. Character must have at least one class.')
   }
 
-  const updatedProgression = character.classProgression?.filter((c) => c.name !== className) ?? []
+  const updatedProgression =
+    character.classProgression?.filter((entry) => !matchesClass(entry)) ?? []
 
   const characterPatch: Partial<Character> = {
     classProgression: updatedProgression,
   }
 
-  const provenanceUpdate = reconcileClassChange(ledger, className, undefined)
+  const provenanceUpdate =
+    classSource == null
+      ? reconcileClassChange(ledger, className, undefined)
+      : removeGrantsBySourceRef(ledger, 'class', className, classSource)
 
   return {
     characterPatch,

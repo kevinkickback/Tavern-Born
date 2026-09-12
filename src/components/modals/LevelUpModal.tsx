@@ -54,7 +54,12 @@ import {
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
 import { getClassIconUrl } from '@/lib/classIcons'
-import { getSpellsGrantedAtLevel, removeSpellChoicesAtLevel } from '@/lib/provenance'
+import {
+  getSpellsGrantedAtLevel,
+  normalizeKey,
+  removeSpellChoicesAtLevel,
+  removeSpellGrantsAtLevel,
+} from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -311,12 +316,29 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     }
 
     const ledger = character.provenance ?? emptyProvenance()
-    const affectedSpells = getSpellsGrantedAtLevel(ledger, targetClassName, targetClassLevel)
-    let updatedLedger = removeSpellChoicesAtLevel(ledger, targetClassName, targetClassLevel)
+    const affectedSpells = getSpellsGrantedAtLevel(
+      ledger,
+      targetClassName,
+      targetClassLevel,
+      targetClassSource,
+    )
+    let updatedLedger = removeSpellChoicesAtLevel(
+      ledger,
+      targetClassName,
+      targetClassLevel,
+      targetClassSource,
+    )
+    updatedLedger = removeSpellGrantsAtLevel(
+      updatedLedger,
+      targetClassName,
+      targetClassLevel,
+      targetClassSource,
+    )
     let spellProfileUpdate: Parameters<typeof updateCharacter>[1] = {}
     if (affectedSpells.length > 0) {
       let updatedChar = character
       for (const spellName of affectedSpells) {
+        if ((updatedLedger.spells[normalizeKey(spellName)] ?? []).length > 0) continue
         const result = removeSpellFromCharacter(updatedChar, updatedLedger, spellName)
         updatedChar = {
           ...updatedChar,

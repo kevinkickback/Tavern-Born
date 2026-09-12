@@ -88,6 +88,12 @@ test('accepts synchronized release metadata and an increased version', async () 
   expect(state.writes).toEqual([])
 })
 
+test('accepts candidate data through an explicit source root', async () => {
+  process.argv.push('--source-root', 'candidate')
+
+  await expect(run()).resolves.toBeDefined()
+})
+
 test('extracts only the current release section for draft notes', async () => {
   process.argv.push('--notes-file', 'release-notes.md')
 

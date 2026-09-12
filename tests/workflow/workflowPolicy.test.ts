@@ -18,9 +18,11 @@ describe('trusted workflow policy', () => {
   test('release lookups distinguish a confirmed 404 from operational failures', async () => {
     const workflow = await readWorkflow('release.yml')
 
-    expect(workflow).toContain(`ref: \${{ github.workflow_sha }}`)
+    expect(workflow).toContain(`ref: \${{ github.workflow_sha || github.sha }}`)
     expect(workflow).not.toContain('job.workflow_sha')
     expect(workflow).toContain('if [[ "$output" == *"HTTP 404"* ]]')
+    expect(workflow).toContain('node ../trusted/scripts/check-release.mjs --source-root .')
+    expect(workflow).not.toContain('node scripts/check-release.mjs')
     expect(workflow).not.toContain(
       'gh release view "$RELEASE_TAG" --json isDraft --jq \'isDraft\' 2>/dev/null',
     )

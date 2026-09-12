@@ -38,6 +38,8 @@ jobs:
   detect-version-change:
     name: Detect package version change
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       changed: ${{ steps.version.outputs.changed }}
     steps:
@@ -77,6 +79,9 @@ jobs:
     needs: detect-version-change
     if: needs.detect-version-change.outputs.changed == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
@@ -91,7 +96,7 @@ jobs:
         with:
           # The validation code comes from the workflow's protected revision,
           # never from the candidate release source.
-          ref: ${{ github.workflow_sha }}
+          ref: ${{ github.workflow_sha || github.sha }}
           persist-credentials: false
           path: trusted
       - name: Require merged PR and clean Copilot review
@@ -146,9 +151,9 @@ jobs:
               node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk).on("end", () => console.log(JSON.parse(input).version))'
           )"
           if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            node scripts/check-release.mjs
+            node ../trusted/scripts/check-release.mjs --source-root .
           else
-            node scripts/check-release.mjs --previous-version "$previous_version"
+            node ../trusted/scripts/check-release.mjs --source-root . --previous-version "$previous_version"
           fi
           tag="v$version"
 
@@ -189,6 +194,8 @@ jobs:
     name: Create draft release
     needs: release-source
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       RELEASE_TAG: ${{ needs.release-source.outputs.tag }}
       RELEASE_VERSION: ${{ needs.release-source.outputs.version }}
@@ -198,8 +205,15 @@ jobs:
           ref: ${{ inputs.source-sha }}
           fetch-depth: 0
           persist-credentials: false
+          path: source
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.workflow_sha || github.sha }}
+          persist-credentials: false
+          path: trusted
       - name: Create version tag
         shell: bash
+        working-directory: source
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -247,9 +261,11 @@ jobs:
               -f sha="$SOURCE_SHA"
           fi
       - name: Extract release notes from changelog
-        run: node scripts/check-release.mjs --notes-file release-notes.md
+        working-directory: source
+        run: node ../trusted/scripts/check-release.mjs --source-root . --notes-file release-notes.md
       - name: Create GitHub release draft
         shell: bash
+        working-directory: source
         run: |
           lookup_release_draft() {
             local output
