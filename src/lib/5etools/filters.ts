@@ -187,7 +187,65 @@ export class DataFilter {
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
-      filtered = filtered.filter((c) => !isSuppressed(c.name, c.source, filters.suppressedKeys))
+      filtered = filtered
+        .filter((c) => !isSuppressed(c.name, c.source, filters.suppressedKeys))
+        .map((cls) => ({
+          ...cls,
+          classFeatures: cls.classFeatures?.filter((feature) => {
+            const [name, source] =
+              typeof feature === 'string'
+                ? [feature.split('|')[0], feature.split('|')[4] || feature.split('|')[2]]
+                : [feature.name, feature.source]
+            return !isSuppressed(name, source || cls.source, filters.suppressedKeys)
+          }) as typeof cls.classFeatures,
+          classFeatureRefs: cls.classFeatureRefs?.filter(
+            (reference) =>
+              !isSuppressed(
+                reference.name,
+                reference.source || reference.feature?.source || cls.source,
+                filters.suppressedKeys,
+              ),
+          ),
+          subclasses: cls.subclasses
+            ?.filter(
+              (subclass) => !isSuppressed(subclass.name, subclass.source, filters.suppressedKeys),
+            )
+            .map((subclass) => {
+              const subclassFeatures = subclass.subclassFeatures?.filter((feature) => {
+                const [name, source] =
+                  typeof feature === 'string'
+                    ? [feature.split('|')[0], feature.split('|')[6]]
+                    : [feature.name, feature.source]
+                return !isSuppressed(name, source || subclass.source, filters.suppressedKeys)
+              }) as typeof subclass.subclassFeatures
+              const levelFeatures = subclass.levelFeatures
+                ?.map((group) => ({
+                  ...group,
+                  features: group.features.filter(
+                    (feature) =>
+                      !isSuppressed(
+                        feature.name,
+                        feature.source || subclass.source,
+                        filters.suppressedKeys,
+                      ),
+                  ),
+                }))
+                .filter((group) => group.features.length > 0)
+              return {
+                ...subclass,
+                subclassFeatures,
+                subclassFeatureRefs: subclass.subclassFeatureRefs?.filter(
+                  (reference) =>
+                    !isSuppressed(
+                      reference.name,
+                      reference.source || reference.feature?.source || subclass.source,
+                      filters.suppressedKeys,
+                    ),
+                ),
+                levelFeatures,
+              }
+            }),
+        }))
     }
 
     if (filters.hasProficiency && filters.hasProficiency.length > 0) {

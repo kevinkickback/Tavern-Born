@@ -236,19 +236,20 @@ jobs:
             return 1
           }
 
-          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            if is_draft="$(lookup_release_draft "$RELEASE_TAG")"; then
-              if [[ "$is_draft" != "true" ]]; then
-                echo "Release $RELEASE_TAG is not an unpublished draft; refusing to replace it." >&2
-                exit 1
-              fi
-            else
-              lookup_status=$?
-              if [[ "$lookup_status" -ne 4 ]]; then
-                echo "Could not verify the state of release $RELEASE_TAG; refusing to replace it." >&2
-                exit 1
-              fi
+          if is_draft="$(lookup_release_draft "$RELEASE_TAG")"; then
+            if [[ "$is_draft" != "true" ]]; then
+              echo "A published release already exists for $RELEASE_TAG; refusing to change its tag." >&2
+              exit 1
             fi
+          else
+            lookup_status=$?
+            if [[ "$lookup_status" -ne 4 ]]; then
+              echo "Could not verify the state of release $RELEASE_TAG; refusing to change its tag." >&2
+              exit 1
+            fi
+          fi
+
+          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
             gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG" \
               -f sha="$SOURCE_SHA" -F force=true
             echo "Moved $RELEASE_TAG to $SOURCE_SHA; the draft will be replaced immediately before builds start."

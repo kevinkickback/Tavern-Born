@@ -24,6 +24,7 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain(`ref: \${{ github.workflow_sha || github.sha }}`)
     expect(workflow).toContain('repository_dispatch:')
     expect(workflow).not.toContain('workflow_dispatch:')
+    expect(workflow).toContain('refusing to change its tag')
     expect(workflow).not.toContain('job.workflow_sha')
     expect(workflow).toContain('if [[ "$output" == *"HTTP 404"* ]]')
     expect(workflow).toContain('node ../trusted/scripts/check-release.mjs --source-root .')

@@ -76,6 +76,39 @@ describe('5etools/filters', () => {
     expect(filtered.map((c) => `${c.name}|${c.source}`)).toEqual(['Wizard|XPHB'])
   })
 
+  test('filterClasses suppresses reprinted nested class content', () => {
+    const wizard = makeClassFixture({
+      classFeatures: [
+        { name: 'Legacy Training', source: 'PHB' },
+        { name: 'Current Training', source: 'XPHB' },
+      ],
+      subclasses: [
+        {
+          name: 'Legacy School',
+          shortName: 'Legacy',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+        {
+          name: 'Current School',
+          shortName: 'Current',
+          source: 'XPHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+      ],
+    })
+
+    const [filtered] = DataFilter.filterClasses([wizard], {
+      sources: ['PHB', 'XPHB'],
+      suppressedKeys: new Set(['Legacy Training|PHB', 'Legacy School|PHB']),
+    })
+
+    expect(filtered.classFeatures).toEqual([{ name: 'Current Training', source: 'XPHB' }])
+    expect(filtered.subclasses?.map((subclass) => subclass.shortName)).toEqual(['Current'])
+  })
+
   test('filterClasses removes nested subclasses and features from disabled sources', () => {
     const wizard = makeClassFixture({
       name: 'Wizard',

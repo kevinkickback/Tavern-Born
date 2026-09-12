@@ -4,6 +4,9 @@ const state = vi.hoisted(() => ({
   packageVersion: '2.0.0',
   lockVersion: '2.0.0',
   rootLockVersion: '2.0.0',
+  candidatePackageVersion: '3.0.0',
+  candidateLockVersion: '3.0.0',
+  candidateRootLockVersion: '3.0.0',
   changelog: [
     '<details>',
     '<summary><strong>v2.0.0</strong></summary>',
@@ -19,6 +22,15 @@ const state = vi.hoisted(() => ({
     '',
     '</details>',
   ].join('\n'),
+  candidateChangelog: [
+    '<details>',
+    '<summary><strong>v3.0.0</strong></summary>',
+    '',
+    '- Candidate release',
+    '',
+    '</details>',
+  ].join('\n'),
+  reads: [] as string[],
   writes: [] as Array<{ path: string; contents: string }>,
 }))
 
@@ -26,16 +38,26 @@ vi.mock('node:fs/promises', () => {
   const mock = {
     readFile: (url: URL) => {
       const path = url.pathname.replace(/\\/g, '/')
+      const candidate = path.includes('/candidate/')
+      state.reads.push(path)
       if (path.endsWith('/package.json')) {
-        return JSON.stringify({ version: state.packageVersion })
+        return JSON.stringify({
+          version: candidate ? state.candidatePackageVersion : state.packageVersion,
+        })
       }
       if (path.endsWith('/package-lock.json')) {
         return JSON.stringify({
-          version: state.lockVersion,
-          packages: { '': { version: state.rootLockVersion } },
+          version: candidate ? state.candidateLockVersion : state.lockVersion,
+          packages: {
+            '': {
+              version: candidate ? state.candidateRootLockVersion : state.rootLockVersion,
+            },
+          },
         })
       }
-      if (path.endsWith('/docs/changelog.md')) return state.changelog
+      if (path.endsWith('/docs/changelog.md')) {
+        return candidate ? state.candidateChangelog : state.changelog
+      }
       throw new Error(`Missing mocked file: ${path}`)
     },
     writeFile: (path: string, contents: string) => {
@@ -53,6 +75,9 @@ beforeEach(() => {
     packageVersion: '2.0.0',
     lockVersion: '2.0.0',
     rootLockVersion: '2.0.0',
+    candidatePackageVersion: '3.0.0',
+    candidateLockVersion: '3.0.0',
+    candidateRootLockVersion: '3.0.0',
     changelog: [
       '<details>',
       '<summary><strong>v2.0.0</strong></summary>',
@@ -68,6 +93,15 @@ beforeEach(() => {
       '',
       '</details>',
     ].join('\n'),
+    candidateChangelog: [
+      '<details>',
+      '<summary><strong>v3.0.0</strong></summary>',
+      '',
+      '- Candidate release',
+      '',
+      '</details>',
+    ].join('\n'),
+    reads: [],
     writes: [],
   })
   process.argv = ['node', 'scripts/check-release.mjs']
@@ -92,6 +126,8 @@ test('accepts candidate data through an explicit source root', async () => {
   process.argv.push('--source-root', 'candidate')
 
   await expect(run()).resolves.toBeDefined()
+  expect(state.reads).toHaveLength(3)
+  expect(state.reads.every((path) => path.includes('/candidate/'))).toBe(true)
 })
 
 test('extracts only the current release section for draft notes', async () => {
