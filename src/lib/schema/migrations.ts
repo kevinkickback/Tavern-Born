@@ -363,7 +363,7 @@ registerMigration({
       hitPointsInitialized:
         typeof c.hitPointsInitialized === 'boolean'
           ? c.hitPointsInitialized
-          : typeof hitPoints?.current === 'number' && hitPoints.current > 0,
+          : (typeof hitPoints?.current === 'number' && hitPoints.current > 0) || legacyMaximum > 0,
       hitPointAdjustments: Array.isArray(c.hitPointAdjustments) ? c.hitPointAdjustments : [],
       armorClassAdjustments: Array.isArray(c.armorClassAdjustments) ? c.armorClassAdjustments : [],
       maxHitPointsOverride: existingOverride ?? (legacyMaximum > 0 ? legacyMaximum : undefined),
@@ -374,6 +374,17 @@ registerMigration({
     const c = character as unknown as Record<string, unknown>
     const hitPoints = c.hitPoints as Record<string, unknown> | undefined
     const override = c.maxHitPointsOverride
+    const legacyMaximum =
+      typeof override === 'number' && override > 0
+        ? override
+        : typeof hitPoints?.max === 'number' && hitPoints.max > 0
+          ? hitPoints.max
+          : undefined
+    if (hitPoints && legacyMaximum === undefined) {
+      throw new Error(
+        'Cannot downgrade hit points without a stored maximum-HP value. Set an exact maximum before exporting to schema v5.',
+      )
+    }
     const {
       armorClassAdjustments: _armorClassAdjustments,
       hitPointAdjustments: _adjustments,
@@ -387,7 +398,7 @@ registerMigration({
         ? {
             hitPoints: {
               ...hitPoints,
-              max: typeof override === 'number' && override > 0 ? override : (hitPoints.max ?? 0),
+              max: legacyMaximum,
             },
           }
         : {}),

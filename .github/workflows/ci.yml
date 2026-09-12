@@ -85,67 +85,27 @@ jobs:
     outputs:
       sha: ${{ steps.merge.outputs.sha }}
     steps:
-      - name: Wait for optional Copilot review
-        continue-on-error: true
-        timeout-minutes: 11
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Require Copilot review of checked revision
+        timeout-minutes: 16
         uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo } = context.repo;
-            const pull_number = context.payload.pull_request.number;
-            const expectedHead = context.payload.pull_request.head.sha;
-            const copilotLogins = new Set([
-              'copilot',
-              'copilot-pull-request-reviewer',
-              'copilot-pull-request-reviewer[bot]',
-            ]);
-            const isCopilot = (user) => {
-              const login = (user?.login ?? '').toLowerCase();
-              return copilotLogins.has(login) || (user?.type === 'Bot' && login.includes('copilot'));
-            };
-            const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-            const startedAt = Date.now();
-            const activityGraceDeadline = startedAt + 60_000;
-            const hardDeadline = startedAt + 600_000;
-            let activeReviewSeen = false;
-
-            while (Date.now() < hardDeadline) {
-              const reviews = await github.paginate(github.rest.pulls.listReviews, {
-                owner, repo, pull_number, per_page: 100,
-              });
-              const reviewedHead = reviews.some((review) =>
-                review.commit_id === expectedHead && isCopilot(review.user),
-              );
-              if (reviewedHead) {
-                core.info(`Copilot reviewed ${expectedHead}; continuing to repository merge checks.`);
-                return;
-              }
-
-              const { data: actionRuns } = await github.rest.actions.listWorkflowRunsForRepo({
-                owner, repo, head_sha: expectedHead, per_page: 100,
-              });
-              const reviewIsActive = actionRuns.workflow_runs.some((run) =>
-                run.event === 'dynamic' &&
-                (run.path === 'dynamic/agents/copilot-pull-request-reviewer' ||
-                  run.name === 'Running Copilot Code Review'),
-              );
-
-              if (reviewIsActive && !activeReviewSeen) {
-                activeReviewSeen = true;
-                core.info('Copilot review run detected; waiting for its review of the checked revision.');
-              }
-
-              if (!activeReviewSeen && Date.now() >= activityGraceDeadline) {
-                core.notice('No active Copilot review was detected within one minute; continuing without it.');
-                return;
-              }
-
-              const remaining = hardDeadline - Date.now();
-              if (remaining <= 0) break;
-              await sleep(Math.min(10_000, remaining));
-            }
-
-            core.notice('An active Copilot review did not finish within ten minutes; continuing without it.');
+            const { requireCopilotReview } = require('./.github/scripts/copilot-review-gate.cjs');
+            await requireCopilotReview({
+              github,
+              core,
+              owner,
+              repo,
+              pullNumber: context.payload.pull_request.number,
+              expectedHead: context.payload.pull_request.head.sha,
+              requestReview: true,
+              timeoutMs: 15 * 60 * 1000,
+            });
 
       - name: Merge the checked PR revision
         id: merge

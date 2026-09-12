@@ -101,6 +101,14 @@ describe('5etools/filters', () => {
     expect(filtered.map((s) => s.name)).toEqual(['Fly'])
   })
 
+  test('filterSpells reads the canonical ritual metadata', () => {
+    const ritual = makeSpellFixture({ name: 'Identify', meta: { ritual: true } })
+    const ordinary = makeSpellFixture({ name: 'Magic Missile', meta: { ritual: false } })
+
+    expect(DataFilter.filterSpells([ritual, ordinary], { ritual: true })).toEqual([ritual])
+    expect(DataFilter.filterSpells([ritual, ordinary], { ritual: false })).toEqual([ordinary])
+  })
+
   test('search and sort helpers are case-insensitive and stable by name', () => {
     const entries = [{ name: 'Zed' }, { name: 'alpha' }, { name: 'Beta' }]
     expect(searchByName(entries, 'AL')).toEqual([{ name: 'alpha' }])

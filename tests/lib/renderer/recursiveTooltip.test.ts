@@ -89,6 +89,7 @@ describe('buildRecursiveLookup', () => {
               name: 'School of Abjuration',
               shortName: 'Abjuration',
               source: 'PHB',
+              entries: ['Abjuration subclass details.'],
               levelFeatures: [{ features: [arcaneWard] }],
             },
           ],
@@ -96,6 +97,19 @@ describe('buildRecursiveLookup', () => {
       ],
     })
 
+    expect(
+      getRecursiveTooltipData(
+        {
+          kind: 'subclass',
+          name: 'Abjuration',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+        lookup,
+        'Subclass: Abjuration',
+      ).html,
+    ).toContain('Abjuration subclass details.')
     expect(
       getRecursiveTooltipData(
         {
@@ -124,6 +138,50 @@ describe('buildRecursiveLookup', () => {
         'Subclass Feature: Arcane Ward',
       ).html,
     ).toContain('Ward details.')
+  })
+
+  test('does not cross sources when a source-qualified recursive reference is unavailable', () => {
+    const lookup = buildRecursiveLookup({
+      spells: [{ name: 'Light', source: 'PHB', level: 0, school: 'E' } as Spell5e],
+      feats: [{ name: 'Alert', source: 'PHB', entries: ['PHB feat details.'] }],
+      classFeatures: [
+        {
+          name: 'Extra Attack',
+          source: 'PHB',
+          className: 'Fighter',
+          classSource: 'PHB',
+          entries: ['PHB class details.'],
+        },
+      ],
+    })
+
+    expect(
+      getRecursiveTooltipData(
+        { kind: 'spell', name: 'Light', source: 'XPHB' },
+        lookup,
+        'Spell: Light',
+      ).html,
+    ).toBeUndefined()
+    expect(
+      getRecursiveTooltipData(
+        { kind: 'feat', name: 'Alert', source: 'XPHB' },
+        lookup,
+        'Feat: Alert',
+      ).html,
+    ).toBeUndefined()
+    expect(
+      getRecursiveTooltipData(
+        {
+          kind: 'classFeature',
+          name: 'Extra Attack',
+          source: 'XPHB',
+          className: 'Fighter',
+          classSource: 'PHB',
+        },
+        lookup,
+        'Class Feature: Extra Attack',
+      ).html,
+    ).toBeUndefined()
   })
 
   test('makes entity references keyboard reachable without changing title-only annotations', () => {

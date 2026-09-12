@@ -296,7 +296,11 @@ export function AppHeader() {
         </div>
       </header>
 
-      <LevelUpModal open={levelUpOpen} onOpenChange={setLevelUpOpen} />
+      <LevelUpModal
+        key={activeCharacter?.id ?? 'no-character'}
+        open={levelUpOpen}
+        onOpenChange={setLevelUpOpen}
+      />
       <ArmorClassModal open={armorClassOpen} onOpenChange={setArmorClassOpen} />
       <HitPointsModal open={hitPointsOpen} onOpenChange={setHitPointsOpen} />
     </TooltipProvider>

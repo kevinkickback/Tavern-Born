@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -109,6 +109,19 @@ describe('level up modal multiclass requirement text', () => {
     render(<LevelUpModal open={true} onOpenChange={() => {}} />)
 
     expect(screen.getByText(/\(Dexterity 13; Wisdom 13; Strength 13\)/)).toBeTruthy()
+  })
+
+  test('keeps class printings distinct by source', () => {
+    mockClasses = [
+      ...mockClasses,
+      makeClassFixture({ name: 'Wizard', source: 'PHB' }),
+      makeClassFixture({ name: 'Wizard', source: 'XPHB' }),
+    ]
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+
+    expect(screen.getAllByText('Wizard')).toHaveLength(2)
+    expect(screen.getByText('(XPHB)')).toBeTruthy()
   })
 })
 
@@ -236,5 +249,62 @@ describe('level up hit-point choices', () => {
 
     expect(useCharacterStore.getState().activeCharacter?.level).toBe(1)
     expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([])
+  })
+
+  test('clears level history when the active character changes', async () => {
+    const user = userEvent.setup()
+    const fighter = makeCharacterFixture({
+      id: 'fighter-id',
+      name: 'Fighter Hero',
+      class: 'Fighter',
+      classSource: 'PHB',
+      level: 1,
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+      variantRules: { averageHitPoints: true },
+      hitPointGains: [],
+    })
+    const wizard = makeCharacterFixture({
+      id: 'wizard-id',
+      name: 'Wizard Hero',
+      class: 'Wizard',
+      classSource: 'PHB',
+      level: 3,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
+      variantRules: { averageHitPoints: true },
+      hitPointGains: [],
+    })
+    mockClasses = [
+      makeClassFixture({ name: 'Fighter', source: 'PHB' }),
+      makeClassFixture({ name: 'Wizard', source: 'PHB' }),
+    ]
+    resetCharacterStoreWith(fighter)
+    function CharacterScopedLevelUpModal() {
+      const activeCharacterId = useCharacterStore((state) => state.activeCharacter?.id)
+      return (
+        <LevelUpModal
+          key={activeCharacterId ?? 'no-character'}
+          open={true}
+          onOpenChange={() => {}}
+        />
+      )
+    }
+
+    render(<CharacterScopedLevelUpModal />)
+
+    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+    const updatedFighter = useCharacterStore.getState().activeCharacter
+    act(() => {
+      useCharacterStore.setState({
+        characters: [updatedFighter!, wizard],
+        activeCharacterId: wizard.id,
+        activeCharacter: wizard,
+      })
+    })
+    await user.click(screen.getByText('Remove last level'))
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+    expect(useCharacterStore.getState().activeCharacter?.classProgression).toEqual([
+      { name: 'Wizard', source: 'PHB', levels: 2 },
+    ])
   })
 })

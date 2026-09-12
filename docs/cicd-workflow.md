@@ -7,9 +7,10 @@
 | `dev` | All active development happens here |
 | `main` | Stable branch — only updated via PR from `dev` |
 
-Protect `main` in GitHub so direct pushes are disabled and required CI checks must pass.
-Enable squash merging and allow the workflow's `contents: write` and `pull-requests: write`
-permissions. Select the two CI jobs as required checks:
+Protect `main` with the repository's **Main Protection** ruleset so direct pushes are disabled,
+review conversations must be resolved, and required CI checks must pass. Enable automatic Copilot
+review for every new PR revision. Enable squash merging and allow the workflow's `contents: write`
+and `pull-requests: write` permissions. Select the two CI jobs as required checks:
 
 - **Lint, type-check, coverage, and build**
 - **Browser end-to-end tests**
@@ -19,10 +20,11 @@ other branch protection rules still apply; the workflow does not bypass them. Au
 merging is restricted to non-draft PRs from this repository's `dev` branch into `main`.
 Other PRs are not automatically merged.
 
-If automatic Copilot review is enabled, the merge job gives a review of the exact checked revision
-time to finish. It waits one minute for review activity to appear and up to ten minutes when a
-review is active. Copilot remains advisory: unavailable review capacity or a timeout does not block
-the release, while unresolved conversations can still be enforced by the repository ruleset.
+The merge job explicitly requests Copilot review of the exact checked revision and waits up to
+fifteen minutes for completion. A missing review, timeout, API failure, "Changes recommended"
+assessment, suppressed finding, or inline finding fails the merge job. Push a corrective revision
+and obtain a clean re-review before retrying. The release workflow repeats this check against the
+merged PR before it creates or updates any tag or draft.
 
 ---
 
@@ -115,6 +117,22 @@ The release workflow:
    them to the draft. Each build records provenance attestations for its installers, updater
    manifests, and blockmaps. Compilation for packaging is required; lint and tests are not rerun.
 6. Verifies every expected artifact exists and the release is still a draft.
+
+### Rebuilding an unpublished draft without changing the version
+
+Use this only to replace an existing draft after corrective code is merged while the version is
+still unpublished. The manual workflow refuses to replace a published release, requires the source
+commit to be a merged `dev` to `main` PR with a clean Copilot review, validates the existing
+changelog section, removes the old draft assets, moves the version tag, and rebuilds every platform:
+
+```bash
+gh workflow run release.yml --ref main \
+  -f source-sha=<corrected-main-sha> \
+  -f rebuild-existing-draft=true
+```
+
+Normal releases must continue to increase the package version. Draft rebuild mode rejects a commit
+that also changes the version.
 
 Electron Builder receives `PUBLISH_FOR_PULL_REQUEST=true` only in the release build step because
 reusable workflows retain the caller's PR context. Source validation first requires a merged commit;

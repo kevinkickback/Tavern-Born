@@ -1,3 +1,4 @@
+import { isRitualSpell } from '@/lib/calculations/spellUtils'
 import type {
   Background5e,
   Class5e,
@@ -208,7 +209,7 @@ export class DataFilter {
 
     if (filters.ritual !== undefined) {
       filtered = filtered.filter((s) => {
-        const isRitual = (s as { ritual?: unknown }).ritual === true
+        const isRitual = isRitualSpell(s)
         return filters.ritual ? isRitual : !isRitual
       })
     }

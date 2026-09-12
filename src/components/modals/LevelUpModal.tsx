@@ -73,6 +73,9 @@ interface PendingLevelUp {
   hitDie: number
 }
 
+const getClassOptionKey = (cls: Pick<Class5e, 'name' | 'source'>) =>
+  `${cls.name}|${cls.source ?? ''}`
+
 export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
@@ -85,7 +88,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const [hpEntryMethod, setHpEntryMethod] = useState<'rolled' | 'manual'>('rolled')
   const [hpDieResult, setHpDieResult] = useState('')
   const [levelHistory, setLevelHistory] = useState<
-    Array<{ className: string; classLevel: number }>
+    Array<{ className: string; classSource?: string; classLevel: number }>
   >([])
   const ignoreRestrictionsId = useId()
   const manualHpRollId = useId()
@@ -97,12 +100,13 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const totalLevel = getTotalCharacterLevel(character)
   const isAtCap = totalLevel >= MAX_CHARACTER_LEVEL
 
-  const seenClassNames = new Set<string>()
+  const seenClassKeys = new Set<string>()
   const multiclassOptions = (classes as Class5e[])
     .filter((cls) => {
       if (cls.isSidekick) return false
-      if (seenClassNames.has(cls.name)) return false
-      seenClassNames.add(cls.name)
+      const key = getClassOptionKey(cls)
+      if (seenClassKeys.has(key)) return false
+      seenClassKeys.add(key)
       return true
     })
     .map((cls) => {
@@ -117,13 +121,14 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
         already: classProgression.some((e) => e.name === cls.name),
       }
     })
-  const multiclassOptionByName = new Map(
-    multiclassOptions.map((option) => [option.cls.name, option.cls]),
+  const multiclassOptionByKey = new Map(
+    multiclassOptions.map((option) => [getClassOptionKey(option.cls), option.cls]),
   )
 
   const findClass = (name: string, source?: string) =>
-    classes.find((cls) => cls.name === name && (source == null || cls.source === source)) ??
-    classes.find((cls) => cls.name === name)
+    source == null
+      ? classes.find((cls) => cls.name === name)
+      : classes.find((cls) => cls.name === name && cls.source === source)
 
   const commitLevelUp = (pending: PendingLevelUp, hpChoice: LevelUpHitPointChoice) => {
     if (pending.kind === 'existing') {
@@ -150,7 +155,11 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       })
       setLevelHistory((previous) => [
         ...previous,
-        { className: pending.className, classLevel: pending.classLevel },
+        {
+          className: pending.className,
+          classSource: pending.classSource,
+          classLevel: pending.classLevel,
+        },
       ])
       toast.success(`${pending.className} is now level ${pending.classLevel}.`)
       return
@@ -187,7 +196,10 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     })
     toast.success(`Added ${pending.className} (level 1).`)
     setMulticlassSelection('')
-    setLevelHistory((previous) => [...previous, { className: pending.className, classLevel: 1 }])
+    setLevelHistory((previous) => [
+      ...previous,
+      { className: pending.className, classSource: pending.classSource, classLevel: 1 },
+    ])
   }
 
   const beginLevelUp = (pending: PendingLevelUp) => {
@@ -235,19 +247,23 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       toast.warning(`Character is already level ${MAX_CHARACTER_LEVEL}.`)
       return
     }
-    const selectedClass = multiclassOptionByName.get(multiclassSelection)
+    const selectedClass = multiclassOptionByKey.get(multiclassSelection)
+    if (!selectedClass) {
+      toast.error('Could not find the selected class.')
+      return
+    }
     const { meetsRequirements } = checkMulticlassRequirements(
-      selectedClass ?? { name: multiclassSelection, source: '' },
+      selectedClass,
       character.abilityScores,
     )
     if (!ignoreRestrictions && !meetsRequirements) {
-      toast.warning(`You don't meet the ability score requirements for ${multiclassSelection}.`)
+      toast.warning(`You don't meet the ability score requirements for ${selectedClass.name}.`)
       return
     }
     beginLevelUp({
       kind: 'multiclass',
-      className: multiclassSelection,
-      classSource: selectedClass?.source,
+      className: selectedClass.name,
+      classSource: selectedClass.source,
       classLevel: 1,
       hitDie: getHitDiceFromClass(selectedClass),
     })
@@ -266,10 +282,16 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     const lastHistoryEntry = levelHistory[levelHistory.length - 1] ?? lastRecordedGain
     const targetClassName =
       lastHistoryEntry?.className ?? classProgression[classProgression.length - 1].name
+    const targetClassSource =
+      lastHistoryEntry?.classSource ?? classProgression[classProgression.length - 1].source
     const targetClassLevel =
       lastHistoryEntry?.classLevel ?? classProgression[classProgression.length - 1].levels
 
-    const targetIdx = classProgression.findIndex((e) => e.name === targetClassName)
+    const targetIdx = classProgression.findIndex(
+      (entry) =>
+        entry.name === targetClassName &&
+        (targetClassSource == null || entry.source === targetClassSource),
+    )
     if (targetIdx === -1) {
       toast.error('Could not find the target class to remove a level from.')
       setConfirmRemoveOpen(false)
@@ -509,13 +531,16 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
                               return (
                                 <SelectItem
                                   key={`${cls.name}|${cls.source ?? ''}`}
-                                  value={cls.name}
+                                  value={getClassOptionKey(cls)}
                                   disabled={disabled}
                                   className={cn(
                                     !meetsRequirements && !ignoreRestrictions ? 'opacity-50' : '',
                                   )}
                                 >
                                   <span>{cls.name}</span>
+                                  <span className="ml-1 text-muted-foreground text-xs">
+                                    ({cls.source || 'Unknown source'})
+                                  </span>
                                   {already && (
                                     <span className="ml-1 text-muted-foreground text-xs">
                                       (already taken)
