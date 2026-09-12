@@ -22,6 +22,14 @@ other branch protection rules still apply; the workflow does not bypass them. Au
 merging is restricted to non-draft PRs from this repository's `dev` branch into `main`.
 Other PRs are not automatically merged.
 
+### One-time workflow bootstrap
+
+Because GitHub loads `workflow_run` definitions from the default branch, the PR that first adds
+`merge.yml` cannot merge itself. That bootstrap PR must be squash-merged manually through the
+protected branch only after both required CI checks pass, Copilot finishes a clean review of the
+exact PR head, and every review thread is resolved. After that one-time installation, `merge.yml`
+handles eligible `dev` to `main` PRs.
+
 After CI completes, `merge.yml` runs from the protected default-branch revision and independently
 repeats the complete quality, browser, and desktop test suites in read-only jobs. Its write-capable
 job never checks out or executes pull-request code. It relies on the configured automatic Copilot
@@ -52,7 +60,8 @@ git push
 for review. Draft PRs wait until they are marked ready. There is no push-triggered CI run.
 Lint, type checking, coverage tests, production builds, browser end-to-end tests, and the Electron
 smoke test run before merging. Each new PR revision needs passing checks; lint and tests are not
-repeated after the squash merge.
+repeated after the squash merge. For eligible `dev` to `main` PRs, the protected merge workflow
+also repeats those checks independently after the original CI run and before the squash merge.
 
 Both CI jobs must pass before the separate trusted merge workflow runs. It merges only the tested
 PR head. If `main` changed during checks, update the PR to include the latest base before retrying.

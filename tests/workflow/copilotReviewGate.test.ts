@@ -18,19 +18,27 @@ const gate = require('../../.github/scripts/copilot-review-gate.cjs') as {
 
 function createGithubApi({
   reviews = [],
+  reviewBatches,
   comments = [],
   reviewError,
 }: {
   reviews?: Array<Review & { user: { login: string; type?: string } }>
+  reviewBatches?: Array<Array<Review & { user: { login: string; type?: string } }>>
   comments?: Array<{ pull_request_review_id: number }>
   reviewError?: Error
 } = {}) {
   const listReviews = vi.fn()
   const listReviewComments = vi.fn()
+  let reviewBatchIndex = 0
   const github = {
     paginate: vi.fn((endpoint: unknown) => {
       if (endpoint === listReviews) {
         if (reviewError) throw reviewError
+        if (reviewBatches) {
+          const batch = reviewBatches[Math.min(reviewBatchIndex, reviewBatches.length - 1)] ?? []
+          reviewBatchIndex += 1
+          return batch
+        }
         return reviews
       }
       if (endpoint === listReviewComments) return comments
@@ -69,6 +77,7 @@ describe('Copilot review gate', () => {
   test.each([
     [{ state: 'CHANGES_REQUESTED' }, [], 'requested changes'],
     [{ state: 'DISMISSED' }, [], 'not complete'],
+    [{ state: 'COMMENTED', body: '' }, [], 'no completion signal'],
     [{ state: 'COMMENTED', body: 'Review incomplete.' }, [], 'review is incomplete'],
     [{ state: 'COMMENTED', body: '### 🟡 Changes recommended' }, [], 'recommends changes'],
     [{ state: 'COMMENTED', body: '### Suppressed comments (2)' }, [], 'suppressed findings'],
@@ -94,6 +103,7 @@ describe('Copilot review gate', () => {
         {
           id: 2,
           state: 'COMMENTED',
+          body: 'Review complete.',
           commit_id: 'head-sha',
           submitted_at: '2026-09-12T00:01:00Z',
           user: { login: 'Copilot', type: 'Bot' },
@@ -133,24 +143,43 @@ describe('Copilot review gate', () => {
   })
 
   test('keeps polling past an in-progress exact-head review', async () => {
+    vi.useFakeTimers()
     const github = createGithubApi({
-      reviews: [
-        {
-          id: 2,
-          state: 'PENDING',
-          commit_id: 'head-sha',
-          submitted_at: '2026-09-12T00:01:00Z',
-          user: { login: 'Copilot', type: 'Bot' },
-        },
+      reviewBatches: [
+        [
+          {
+            id: 2,
+            state: 'PENDING',
+            commit_id: 'head-sha',
+            submitted_at: '2026-09-12T00:01:00Z',
+            user: { login: 'Copilot', type: 'Bot' },
+          },
+        ],
+        [
+          {
+            id: 2,
+            state: 'COMMENTED',
+            body: 'Review complete.',
+            commit_id: 'head-sha',
+            submitted_at: '2026-09-12T00:02:00Z',
+            user: { login: 'Copilot', type: 'Bot' },
+          },
+        ],
       ],
     })
+    const expectation = expect(
+      gate.requireCopilotReview(gateOptions(github, { timeoutMs: 10, pollMs: 5 })),
+    ).resolves.toMatchObject({ id: 2, state: 'COMMENTED' })
 
-    await expect(gate.requireCopilotReview(gateOptions(github))).rejects.toThrow(
-      'did not complete a review',
-    )
+    await vi.advanceTimersByTimeAsync(5)
+    await expectation
+    expect(
+      github.paginate.mock.calls.filter(([endpoint]) => endpoint === github.rest.pulls.listReviews),
+    ).toHaveLength(2)
   })
 
   test('does not accept an older clean review while a newer review is pending', async () => {
+    vi.useFakeTimers()
     const github = createGithubApi({
       reviews: [
         {
@@ -170,9 +199,16 @@ describe('Copilot review gate', () => {
       ],
     })
 
-    await expect(gate.requireCopilotReview(gateOptions(github))).rejects.toThrow(
-      'did not complete a review',
-    )
+    const expectation = expect(
+      gate.requireCopilotReview(gateOptions(github, { timeoutMs: 10, pollMs: 5 })),
+    ).rejects.toThrow('did not complete a review')
+
+    await vi.advanceTimersByTimeAsync(10)
+    await expectation
+    expect(
+      github.paginate.mock.calls.filter(([endpoint]) => endpoint === github.rest.pulls.listReviews)
+        .length,
+    ).toBeGreaterThan(1)
   })
 
   test('fails closed after polling reaches its timeout', async () => {

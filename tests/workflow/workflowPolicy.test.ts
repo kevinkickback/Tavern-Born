@@ -36,6 +36,8 @@ describe('trusted workflow policy', () => {
     expect(workflow).not.toContain('workflow_dispatch:')
     expect(workflow).toContain('refusing to change its tag')
     expect(workflow).not.toContain('gh release delete')
+    expect(workflow).toContain('releases/assets/$asset_id')
+    expect(workflow).toContain('was published during rebuild; refusing to remove assets')
     expect(workflow).not.toContain('job.workflow_sha')
     expect(workflow).toContain('if [[ "$output" == *"HTTP 404"* ]]')
     expect(workflow).toContain('node ../trusted/scripts/check-release.mjs --source-root .')

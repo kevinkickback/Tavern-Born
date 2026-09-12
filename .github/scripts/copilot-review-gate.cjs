@@ -12,6 +12,10 @@ function getBlockingReason(review, comments) {
   if (!['APPROVED', 'COMMENTED'].includes(review.state)) {
     return `Copilot review is not complete (state: ${review.state || 'unknown'}).`
   }
+  if (comments.length > 0) return `Copilot left ${comments.length} review finding(s).`
+  if (review.state === 'COMMENTED' && body.trim() === '') {
+    return 'Copilot review has no completion signal.'
+  }
   if (/\b(review (?:is |was )?incomplete|incomplete review|could not complete (?:the )?review)\b/i.test(body)) {
     return 'Copilot review is incomplete.'
   }
@@ -19,7 +23,6 @@ function getBlockingReason(review, comments) {
   if (/suppressed comments\s*\([1-9]\d*\)/i.test(body)) {
     return 'Copilot reported suppressed findings.'
   }
-  if (comments.length > 0) return `Copilot left ${comments.length} review finding(s).`
   return null
 }
 
