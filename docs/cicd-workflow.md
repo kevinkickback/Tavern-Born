@@ -1,58 +1,65 @@
 # CI/CD Workflow
 
-## Branches
+## Branches and repository settings
 
 | Branch | Purpose |
 |--------|---------|
-| `dev` | All active development happens here |
-| `main` | Stable branch — only updated via PR from `dev` |
+| `dev` | Active development |
+| `main` | Stable releases; updated only by pull request from `dev` |
 
-Protect `main` in GitHub so direct pushes are disabled and required CI checks must pass.
-Enable squash merging and allow the workflow's `contents: write` and `pull-requests: write`
-permissions. Select the two CI jobs as required checks:
+Protect `main` with the repository's **Main Protection** ruleset:
 
-- **Lint, type-check, coverage, and build**
-- **Browser end-to-end tests**
+- Disable direct pushes and require the branch to be up to date before merging.
+- Allow squash merging only.
+- Require these two CI checks:
+  - **Lint, type-check, coverage, and build**
+  - **Browser end-to-end tests**
+- Allow workflow `contents: write` and `pull-requests: write` permissions.
+- Enable automatic Copilot review, including review of new pushes.
+- Do not require review-conversation resolution. Copilot runs in the background and its findings are
+  reviewed by the maintainer before the draft release is published.
 
-Do not require the downstream merge or release jobs as pre-merge checks. Required reviews and
-other branch protection rules still apply; the workflow does not bypass them. Automatic squash
-merging is restricted to non-draft PRs from this repository's `dev` branch into `main`.
-Other PRs are not automatically merged.
+`merge.yml` runs from protected `main` after CI. It verifies both required jobs passed for the exact
+pull-request revision and automatically squash-merges a ready same-repository `dev` to `main` PR.
+It does not rerun tests or wait for Copilot.
 
-If automatic Copilot review is enabled, the merge job gives a review of the exact checked revision
-time to finish. It waits one minute for review activity to appear and up to ten minutes when a
-review is active. Copilot remains advisory: unavailable review capacity or a timeout does not block
-the release, while unresolved conversations can still be enforced by the repository ruleset.
+Changes to the following release-infrastructure paths are deliberately excluded from automatic
+merging and require an explicit maintainer merge after CI:
+
+- `.github/workflows/**`
+- `.github/scripts/**`
+- `scripts/check-release.mjs`
+
+This exception ensures a pull request cannot redefine the checks or privileged release logic that
+will approve that same pull request. Ordinary application and release-version changes remain fully
+automatic.
+
+### One-time workflow bootstrap
+
+GitHub loads a `workflow_run` workflow from the default branch, so the pull request that initially
+adds or changes this automation must be squash-merged manually after both CI checks pass. Later
+release-infrastructure changes use the same manual exception.
 
 ---
 
 ## Day-to-day development
 
-Work on `dev` and push your changes:
+Work on `dev`, commit, and push normally. `ci.yml` runs on non-draft PRs targeting `dev` or `main`.
+It performs linting, type checking, coverage tests, a production build, browser end-to-end tests,
+and the Electron smoke test.
 
-```bash
-git add .
-git commit -m "your message"
-git push
-```
+For an ordinary ready `dev` to `main` PR:
 
-`ci.yml` runs on PRs targeting `dev` or `main` when opened, updated, reopened, or marked ready
-for review. Draft PRs wait until they are marked ready. There is no push-triggered CI run.
-Lint, type checking, coverage tests, production builds, browser end-to-end tests, and the Electron
-smoke test run before merging. Each new PR revision needs passing checks; lint and tests are not
-repeated after the squash merge.
+**deterministic CI → background Copilot review → automatic squash merge**
 
-Both CI jobs must pass before the automatic merge job runs. It merges only the checked PR head.
-If `main` changed during checks, update the PR to include the latest base before retrying.
+The merge is bound to the exact tested head and base revisions. If `main` or the PR changes after
+CI, the new revision must pass CI before merging.
 
 ---
 
 ## Releasing a new version
 
-Follow these steps **in order**. Skipping or reordering steps can prevent artifact uploads (see
-[Critical gotcha](#critical-gotcha--do-not-pre-create-the-tag-or-release) below).
-
-### Step 1 — Bump the version and update the changelog
+### 1. Bump the version and update the changelog
 
 Update `package.json` and `package-lock.json` together, for example:
 
@@ -60,7 +67,7 @@ Update `package.json` and `package-lock.json` together, for example:
 npm version 1.0.0 --no-git-tag-version
 ```
 
-Add a matching section to `docs/changelog.md`. The summary line must exactly match the generated tag:
+Add a matching section to `docs/changelog.md`. Its summary must exactly match the generated tag:
 
 ```html
 <details>
@@ -73,148 +80,121 @@ Add a matching section to `docs/changelog.md`. The summary line must exactly mat
 </details>
 ```
 
-The workflow extracts only the content inside that version's `<details>` block and uses it as the
-draft release notes. A missing, empty, or incomplete matching section stops the release.
+The workflow extracts this section as the draft release notes. A missing, duplicate, empty, or
+incomplete matching section stops the release.
 
-### Step 2 — Commit and push to `dev`
+### 2. Push to `dev` and open or update the release PR
 
 ```bash
 git add package.json package-lock.json docs/changelog.md
 git commit -m "chore: bump version to 1.0.0"
 git push
-```
-
-### Step 3 — Open a PR from `dev` to `main`
-
-Using the GitHub CLI:
-
-```bash
 gh pr create --base main --head dev --title "Release v1.0.0" --body "Release notes here"
 ```
 
-The workflow automatically squash merges the PR after both CI jobs pass and GitHub's merge
-requirements are satisfied. No manual merge command is needed.
-If the ready `dev` to `main` PR is already open, pushing the version-bump commit updates that PR
-and starts this sequence automatically; otherwise, opening the PR starts it.
+If the PR is already open, pushing updates it and restarts CI.
 
-**PR checks → automatic squash merge → version/tag and source validation → draft creation →
-Electron builds → asset upload and verification**
+### 3. Automated draft creation
 
-After merging, `ci.yml` calls the reusable `release.yml` directly. This avoids relying on a
-push event, which a merge performed with `GITHUB_TOKEN` does not trigger for other workflows.
+The complete flow is:
+
+**PR → deterministic CI → background Copilot review → automatic squash merge → secure builds →
+draft release → manual publish**
+
+Automated merges send a protected repository event because GitHub does not emit a new push workflow
+for a merge performed with `GITHUB_TOKEN`. A manual infrastructure merge emits a normal `main` push.
+Both paths load `release.yml` from protected `main`.
+
 The release workflow:
 
-1. Compares the package version at the squash commit with its parent. If unchanged, all remaining
-   release stages are skipped. The PR still merges; its title alone does not request a release.
-2. Confirms the exact squash commit came from a merged same-repository `dev` to `main` PR.
-3. Runs `scripts/check-release.mjs` to require an increased stable version, matching versions in
-   `package.json` and both root version fields in `package-lock.json`, and exactly one complete,
-   nonempty changelog section. Ensures any existing version tag points to the squash commit.
-4. Creates the `v<version>` tag and draft release, using the version's changelog section as notes.
-5. Builds Windows, macOS, and Linux packages in parallel from the exact squash commit and uploads
-   them to the draft. Each build records provenance attestations for its installers, updater
-   manifests, and blockmaps. Compilation for packaging is required; lint and tests are not rerun.
-6. Verifies every expected artifact exists and the release is still a draft.
+1. Skips the release when the package version did not change, except in explicit draft-rebuild mode.
+2. Confirms the source is a squash commit from a merged same-repository `dev` to `main` PR.
+3. Validates the stable version, synchronized package metadata, and matching changelog section.
+4. Builds Windows, macOS, and Linux packages in parallel without repository write credentials.
+5. Validates the exact package bundle and updater manifests before granting publishing credentials.
+6. Records build provenance, creates or refreshes the draft release, and verifies its assets.
 
-Electron Builder receives `PUBLISH_FOR_PULL_REQUEST=true` only in the release build step because
-reusable workflows retain the caller's PR context. Source validation first requires a merged commit;
-unmerged PRs do not reach this publishing step.
+The workflow never publishes the release. Review the draft, including any Copilot findings that
+arrived after the merge, then publish it manually when satisfied.
 
-The workflow never publishes the release. Review the notes and attached artifacts, then publish the
-draft manually when it is ready.
+### Existing-draft behavior
 
-> **Signing status:** Windows and macOS artifacts are currently unsigned so releases do not depend
-> on paid or identity-verified signing accounts. Windows may display a SmartScreen warning, and
-> macOS users may need to approve the application in System Settings → Privacy & Security. Restore
-> certificate-backed signing and Apple notarization before representing a future release as signed.
+Normal retries are idempotent:
 
-The release will contain:
+- A published release always stops the workflow.
+- A draft and tag already targeting the exact source are refreshed with the newly validated notes
+  and artifacts.
+- A matching tag without a release is reused to finish interrupted draft creation.
+- A draft or tag targeting another source requires explicit rebuild mode.
+
+To rebuild an unpublished version after corrective code is merged without another version bump,
+leave the old draft and tag in place and dispatch:
+
+```bash
+gh api --method POST repos/kevinkickback/Tavern-Born/dispatches \
+  -f event_type=rebuild-release \
+  -f 'client_payload[source_sha]=<corrected-main-sha>'
+```
+
+Rebuild mode requires an unchanged package version. It builds and validates the entire replacement
+bundle first, rechecks that any existing release is still a draft, then replaces the old draft and
+tag. If an earlier replacement stopped after cleanup, rerunning resumes draft creation. Do not
+publish the draft while a rebuild run is active. If it is published before replacement starts, the
+workflow stops without modifying it.
+
+### Release artifacts
 
 | File | Platform |
 |------|----------|
 | `Tavern-Born-Setup-<version>.exe` + `.exe.blockmap` | Windows installer |
 | `Tavern-Born-<version>-portable.exe` | Windows portable |
 | `Tavern-Born-<version>-arm64.dmg` + `.dmg.blockmap` | macOS (Apple Silicon) |
-| `Tavern-Born-<version>.AppImage` | Linux (portable) |
-| `tavern-born_<version>_amd64.deb` | Linux (Debian/Ubuntu) |
+| `Tavern-Born-<version>.AppImage` | Linux portable |
+| `tavern-born_<version>_amd64.deb` | Debian/Ubuntu |
 | `latest.yml`, `latest-mac.yml`, `latest-linux.yml` | Auto-update manifests |
 
----
-
-## Critical gotcha — do not pre-create the tag or release
-
-electron-builder (`--publish always`) uploads artifacts into the **draft** GitHub Release created by
-the workflow. If a published (non-draft) release already exists for the tag, electron-builder logs:
-
-```
-GitHub release not created  reason=existing type not compatible with publishing type
-existingType=release publishingType=draft
-skipped publishing  file=... reason=existing type not compatible...
-```
-
-...and skips uploads from that build job. The workflow refuses to reuse an already published
-release before building; final verification also rejects missing assets or a non-draft release.
-
-**Rules:**
-
-- Do not create or push the version tag manually; the workflow creates it after validation succeeds.
-- Do not create the GitHub Release manually; the workflow creates and populates the draft.
-- If a draft already exists for the workflow-created tag, a rerun safely refreshes its notes and artifacts.
-- If you accidentally published the release before a rerun, convert it back to a draft first:
-  ```bash
-  gh release edit v1.0.0 --draft=true --repo kevinkickback/Tavern-Born
-  gh run rerun <RUN_ID> --failed --repo kevinkickback/Tavern-Born
-  ```
-- After the workflow completes, inspect the draft and publish it manually when approved:
-  ```bash
-  gh release view v1.0.0 --repo kevinkickback/Tavern-Born --json isDraft,assets | ConvertFrom-Json
-  gh release edit v1.0.0 --draft=false --repo kevinkickback/Tavern-Born
-  ```
+Windows and macOS artifacts are currently unsigned. Windows may display a SmartScreen warning,
+and macOS users may need to approve the application under Privacy & Security.
 
 ---
 
-## Version and tag format
+## Operational rules
 
-Use a stable `X.Y.Z` version in `package.json`, such as `1.0.0` or `1.2.3`. The workflow
-automatically creates the corresponding `v1.0.0` or `v1.2.3` tag. Prerelease versions and build
-suffixes are rejected because release verification uses the stable `latest*.yml` update manifests.
+- Do not create the version tag or release manually before the first successful run.
+- Never convert a published release back to a draft for replacement.
+- Do not publish a draft while its release or rebuild workflow is active.
+- Publish only after checking release notes, all ten assets, the Windows portable binary, and any
+  background Copilot findings.
+- Stable releases use `X.Y.Z` in package metadata and `vX.Y.Z` tags. Prerelease/build suffixes are
+  rejected.
 
-The release metadata check runs after version-change detection and before tag or draft creation.
-It does not install dependencies or rerun lint or tests. To check release metadata locally, run:
+Validate release metadata locally with:
 
 ```bash
 npm run check:release
 ```
 
+Publish an approved draft with:
+
+```bash
+gh release edit v1.0.0 --draft=false --repo kevinkickback/Tavern-Born
+```
+
 ---
 
-## If a release build fails
+## Recovering from failures
 
-Go to the **Actions** tab on GitHub, open the failed run, and check which platform failed. Each platform builds independently — a failure on one does not cancel the others.
+Inspect the separate merge and release runs:
 
-To inspect logs via CLI:
 ```bash
-gh run list --repo kevinkickback/Tavern-Born --workflow ci.yml --limit 5
+gh run list --repo kevinkickback/Tavern-Born --workflow merge.yml --limit 5
+gh run list --repo kevinkickback/Tavern-Born --workflow release.yml --limit 5
 gh run view <RUN_ID> --repo kevinkickback/Tavern-Born
-gh run view --repo kevinkickback/Tavern-Born --job <JOB_ID> --log
 ```
 
-For a transient runner or network failure, rerun the failed jobs; the existing tag and draft are
-reused safely. Use **Re-run failed jobs** (or `gh run rerun <RUN_ID> --failed`) to avoid repeating
-successful PR checks. Release jobs appear inside the calling **CI** run.
-
-If only the release workflow needs correction, fix it through the normal `dev` to `main` process,
-then run the **Release** workflow manually from `main`. Supply the original version-bump squash
-commit as `source-sha`; the current workflow will rebuild and verify that already-validated source.
-Do not supply the later workflow-fix commit, because its package version did not change.
-
-If application source or packaging configuration needs correction, use a new version and changelog
-section in the next `dev` to `main` PR. A manual recovery deliberately checks out the original
-release source, so it cannot incorporate later product changes.
-
-If needed, remove the failed draft and its tag separately (only for an unpublished failed release):
-```bash
-gh release delete v1.0.0 --repo kevinkickback/Tavern-Born --yes
-git push origin --delete v1.0.0
-git tag -d v1.0.0
-```
+- For a transient build failure, rerun the failed jobs.
+- For an interrupted first release attempt, rerun the workflow; the exact-source tag or draft is
+  resumed safely.
+- For a corrected source using the same unpublished version, leave the old draft in place and use
+  the explicit rebuild event above.
+- If the version has already been published, make corrections in a new version.
