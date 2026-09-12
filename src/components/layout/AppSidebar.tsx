@@ -12,6 +12,7 @@ import {
   MagicWand,
   PersonSimple,
   Scroll,
+  SlidersHorizontal,
   Sparkle,
   Star,
   Sword,
@@ -79,12 +80,12 @@ const workspaces: Workspace[] = [
     icon: Wrench,
     requiresCharacter: true,
     matches: (pathname) =>
-      ['/build', '/feats', '/spells', '/equipment', '/details', '/sources'].some((prefix) =>
-        pathname.startsWith(prefix),
+      ['/build', '/feats', '/spells', '/equipment', '/details', '/rules', '/sources'].some(
+        (prefix) => pathname.startsWith(prefix),
       ),
     groups: [
       {
-        label: 'Character Core',
+        label: 'Core',
         items: [
           { label: 'Race', path: '/build/race', icon: PersonSimple },
           { label: 'Class', path: '/build/class', icon: Sword },
@@ -97,11 +98,17 @@ const workspaces: Workspace[] = [
         ],
       },
       {
-        label: 'Character Details',
+        label: 'Details',
         items: [
           { label: 'Portrait', path: '/details/portrait', icon: Image },
           { label: 'Characteristics', path: '/details/characteristics', icon: Sparkle },
           { label: 'Conditions', path: '/details/conditions', icon: Lightning },
+        ],
+      },
+      {
+        label: 'Options',
+        items: [
+          { label: 'Rules', path: '/rules', icon: SlidersHorizontal },
           { label: 'Sources', path: '/sources', icon: Books },
         ],
       },

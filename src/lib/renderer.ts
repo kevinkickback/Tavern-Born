@@ -60,6 +60,10 @@ function sanitizeRenderedHtml(html: string): string {
     ALLOWED_ATTR: [
       'class',
       'data-hover-name',
+      'data-hover-class-name',
+      'data-hover-class-source',
+      'data-hover-subclass-name',
+      'data-hover-subclass-source',
       'data-hover-source',
       'data-hover-type',
       'href',
@@ -318,6 +322,45 @@ export function renderTags(text: string): string {
     ),
   ]
 
+  const renderClassFeatureTags = (input: string) =>
+    input.replace(/\{@classFeature ([^}]+)}/g, (_match, content: string) => {
+      const [name = '', className = '', classSource = 'PHB', , featureSource, display] =
+        content.split('|')
+      const resolvedClassSource = classSource || 'PHB'
+      const resolvedFeatureSource = featureSource || resolvedClassSource
+      const safeName = toAttr(name)
+      return `<span class="text-accent font-medium italic cursor-help" title="Class Feature: ${safeName}" data-hover-type="classFeature" data-hover-name="${safeName}" data-hover-source="${toAttr(resolvedFeatureSource)}" data-hover-class-name="${toAttr(className)}" data-hover-class-source="${toAttr(resolvedClassSource)}">${pickDisplay(name, display)}</span>`
+    })
+
+  const renderSubclassFeatureTags = (input: string) =>
+    input.replace(/\{@subclassFeature ([^}]+)}/g, (_match, content: string) => {
+      const [
+        name = '',
+        className = '',
+        classSource = 'PHB',
+        subclassName = '',
+        subclassSource = 'PHB',
+        ,
+        featureSource,
+        display,
+      ] = content.split('|')
+      const resolvedClassSource = classSource || 'PHB'
+      const resolvedSubclassSource = subclassSource || 'PHB'
+      const resolvedFeatureSource = featureSource || resolvedSubclassSource
+      const safeName = toAttr(name)
+      return `<span class="text-accent font-medium italic cursor-help" title="Subclass Feature: ${safeName}" data-hover-type="subclassFeature" data-hover-name="${safeName}" data-hover-source="${toAttr(resolvedFeatureSource)}" data-hover-class-name="${toAttr(className)}" data-hover-class-source="${toAttr(resolvedClassSource)}" data-hover-subclass-name="${toAttr(subclassName)}" data-hover-subclass-source="${toAttr(resolvedSubclassSource)}">${pickDisplay(name, display)}</span>`
+    })
+
+  const renderSubclassTags = (input: string) =>
+    input.replace(/\{@subclass ([^}]+)}/g, (_match, content: string) => {
+      const [name = '', className = '', classSource = 'PHB', subclassSource, display] =
+        content.split('|')
+      const resolvedClassSource = classSource || 'PHB'
+      const resolvedSubclassSource = subclassSource || resolvedClassSource
+      const safeName = toAttr(name)
+      return `<span class="text-secondary font-medium italic cursor-help" title="Subclass: ${safeName}" data-hover-type="subclass" data-hover-name="${safeName}" data-hover-source="${toAttr(resolvedSubclassSource)}" data-hover-class-name="${toAttr(className)}" data-hover-class-source="${toAttr(resolvedClassSource)}">${pickDisplay(name, display)}</span>`
+    })
+
   result = result.replace(
     /{@dice ([^}]+)}/g,
     '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono bg-accent/20 text-accent-foreground">$1</span>',
@@ -337,6 +380,9 @@ export function renderTags(text: string): string {
   for (const replaceTag of entityTagRenderers) {
     result = replaceTag(result)
   }
+  result = renderClassFeatureTags(result)
+  result = renderSubclassFeatureTags(result)
+  result = renderSubclassTags(result)
 
   result = result.replace(
     /{@atk ([^}]+)}/g,
@@ -444,12 +490,4 @@ export function renderTags(text: string): string {
 
 export function getEntryWithHoverTitles(entry: unknown): string {
   return renderTags(renderEntry(entry))
-}
-
-export function extractPlainText(entry: unknown): string {
-  const html = renderEntry(entry)
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
 }

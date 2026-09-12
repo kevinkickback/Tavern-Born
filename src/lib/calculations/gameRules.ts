@@ -31,9 +31,7 @@ export const ABILITY_SCORE_ABSOLUTE_MAX = 30
 
 export const MAX_CHARACTER_LEVEL = 20
 export const MAX_ATTUNEMENT_SLOTS = 3
-export const CARRY_CAPACITY_MULTIPLIER = 15
-export const LIGHT_ENCUMBRANCE_MULTIPLIER = 5
-export const HEAVY_ENCUMBRANCE_MULTIPLIER = 10
+const CARRY_CAPACITY_MULTIPLIER = 15
 
 export const MAX_CHARACTER_SIZE = 10 * 1024 * 1024
 export const MAX_PORTRAIT_SIZE = 5 * 1024 * 1024
@@ -60,6 +58,18 @@ export function parseHitDice(hitDice: string | undefined | null): number {
 
 export function getHitDiceFromClass(cls: Class5e | undefined | null): number {
   return cls?.hd?.faces ?? 8
+}
+
+/** Roll one die. The random source is injectable for deterministic tests. */
+export function rollDie(faces: number, random: () => number = Math.random): number {
+  if (!Number.isInteger(faces) || faces < 1) {
+    throw new RangeError('Die faces must be a positive integer.')
+  }
+  const sample = random()
+  if (!Number.isFinite(sample) || sample < 0 || sample >= 1) {
+    throw new RangeError('Random source must return a value from 0 (inclusive) to 1 (exclusive).')
+  }
+  return Math.floor(sample * faces) + 1
 }
 
 /**

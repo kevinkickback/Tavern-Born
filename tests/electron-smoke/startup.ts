@@ -32,6 +32,18 @@ test('starts the compiled desktop shell with a sandboxed renderer and working br
     expect(runtime.rendererProcessType).toBe('undefined')
     expect(runtime.rendererRequireType).toBe('undefined')
 
+    const bundledClassIcon = await page.evaluate(async () => {
+      const image = new Image()
+      const loaded = new Promise<boolean>((resolve) => {
+        image.addEventListener('load', () => resolve(true), { once: true })
+        image.addEventListener('error', () => resolve(false), { once: true })
+      })
+      image.src = './assets/images/ui/icons/wizard.svg'
+      return { loaded: await loaded, src: image.src }
+    })
+    expect(bundledClassIcon.loaded).toBe(true)
+    expect(bundledClassIcon.src).toMatch(/^file:.*\/assets\/images\/ui\/icons\/wizard\.svg$/i)
+
     const rejectedPathMessage = await page.evaluate(async () => {
       try {
         await window.electronAPI.readLocalJson('relative.json')

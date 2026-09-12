@@ -23,8 +23,7 @@ This document defines state ownership, mutation rules, and persistence behavior.
 
 ## Persistence
 
-- Both stores persist with zustand/persist using IndexedDB adapter in src/lib/storage/idb-storage.ts.
-- The app preferences store also persists with zustand/persist using the same IndexedDB adapter.
+- All three Zustand stores persist with zustand/persist using the IndexedDB adapter in src/lib/storage/idb-storage.ts.
 - Character store persistence includes `characters` only; startup always begins with no active character selected.
 - gameData payload itself is cached separately in src/lib/storage/dataCache.ts.
 - gameDataStore persist payload intentionally keeps config/timestamps lightweight.
@@ -51,6 +50,9 @@ Rules that apply to all three paths:
 
 Stored examples (mutable runtime):
 - current HP, temporary HP
+- raw per-level hit-die results (`hitPointGains`)
+- lasting HP and AC adjustments, including negative values
+- optional exact HP/AC overrides
 - spell slot usage
 - spell profile selections (class profiles + special unrestricted profile)
 - selected origin system (`2014` or `2024`)
@@ -66,7 +68,10 @@ Derived examples (do not store as canonical):
 - proficiency bonus
 - ability modifiers
 - passive values
-- computed AC when not explicitly overridden
+- calculated and effective maximum HP
+- calculated and effective AC
+- spell display casing, which resolves from canonical parsed spell entities while stored reference
+  tokens remain stable for provenance and profile matching
 
 ## Proficiency State Model
 
@@ -138,11 +143,16 @@ When adding new character state:
 Origin system note:
 - `character.originSystem` is a required persisted field that controls whether origin ASIs and starting origin feats come from race (`2014`) or background (`2024`).
 - New characters must choose it in the wizard rules step.
+- Existing characters can review their ruleset and edit supported variant rules from `/rules`; changing the 2014/2024 ruleset itself is intentionally unsupported because it would require rebuilding origin and progression choices.
 - Race/background provenance application must normalize selected content against `originSystem` before grants are applied.
 
 ## Character Schema Versioning and Migrations
 
 **File:** `src/lib/schema/migrations.ts`
+
+The current schema version is 6. Version 5 introduced durable per-level hit-point gain records;
+version 6 moved legacy stored maximum HP into the explicit override model and initialized lasting
+HP/AC adjustment collections.
 
 The migration system allows character data to be evolved safely across app versions while maintaining backwards compatibility.
 
@@ -207,7 +217,7 @@ Increment `CURRENT_SCHEMA_VERSION` and create a new migration when:
    - Character import flow: `src/pages/HomePage.tsx:206`
    - Hydration from IndexedDB: automatic via `characterPersistenceSchema`
 
-5. **Add tests** — see `tests/lib/schema/` for examples
+5. **Add tests** — see `tests/lib/migrations.test.ts` and `tests/lib/characterSchema.test.ts` for examples
 
 ### Migration Invariants
 
@@ -248,7 +258,7 @@ factory in `src/lib/character/createCharacter.ts`.
 
 **Current Workflow:**
 - Domain commands in `src/lib/character/commands/spellCommands.ts` coordinate profile updates and provenance ledger changes together.
-- `useSpellSlots()` is the primary UI-facing hook and applies spell command results atomically to `character.spells` and `character.provenance`.
+- `useSpellSlots()` is read-only and derives slots, profiles, and spellcasting detail.
 - `useSpellProfileMutations()` provides all spell mutation callbacks (add/remove/prepare/racial spells) for components that need spell writes outside the spell slot derivation hook.
 
 **Caller Impact:** Controllers should route spell changes through the command-backed hooks rather than sequencing profile and provenance updates manually.
@@ -260,22 +270,48 @@ addSpellToProfile(profileId, name, 'spell')
 
 **Schema/Persistence:** Spell profiles and provenance are still stored separately on the character, but normal mutation flows now update them together.
 
+Spell profile arrays may contain lowercase 5etools reference tokens from race or subclass grants.
+Spell-page presentation resolves those tokens against parsed spell data and displays the canonical
+entity name; unresolved references receive a consistent title-case fallback without rewriting
+persisted identity.
+
+### Hit Point Ownership Model
+
+**Persisted state:**
+- `character.hitPoints.current` and `character.hitPoints.temporary` are mutable play state. `hitPoints.max` is retained as a zeroed legacy container field.
+- `character.hitPointGains[]` stores the raw hit-die result and method for each character level after level 1. Constitution is applied when HP is calculated, not frozen into the record.
+- `character.hitPointAdjustments[]` stores labeled, lasting flat or per-character-level bonuses and penalties.
+- `character.maxHitPointsOverride` optionally replaces the calculated maximum exactly.
+- `character.hitPointsInitialized` distinguishes a deliberate current HP value of 0 from an old character whose current HP was never initialized.
+
+**Resolution order:**
+1. Calculate class HP from the full first-level hit die and each later average or recorded die result, adding the current Constitution modifier per level and enforcing a minimum gain of 1 per level.
+2. Apply lasting flat and per-level adjustments; clamp the adjusted maximum to at least 1.
+3. Use `maxHitPointsOverride` when present.
+
+`useHitPoints()` is the UI boundary for these views and for current/temp HP mutations. `HitPointsModal` saves current HP, temporary HP, adjustments, and an optional override atomically. When the maximum changes and the player has not manually edited Current HP in the open modal, the preview moves Current HP by the same delta before saving.
+
+`applyLevelUp()` in `classCommands.ts` commits progression and the raw hit-die choice together. Removing levels prunes gain records that no longer belong to the retained progression. `averageHitPoints !== false` records the fixed average automatically; when false, `LevelUpModal` requires either a die roll or a valid manual die result.
+
+Consumers should read maximum HP through `getEffectiveMaxHP()` or `useHitPoints()` rather than `hitPoints.max`.
+
 ### Armor Class Ownership Model
 
 **Current State:**
-- `character.armorClass` — persisted synchronized AC value.
-- `character.armorClassOverride` — optional manual override.
-- Derived AC — calculated from equipment, armor type, dex cap, and ability scores when needed.
-- `useArmorClass()` exposes calculated, stored, override, and effective AC views.
+- `character.armorClass` — legacy migration compatibility only; it is not read for display or written by current flows.
+- `character.armorClassAdjustments[]` — labeled, lasting bonuses or penalties applied after equipment/Dexterity calculation.
+- `character.armorClassOverride` — optional exact manual value.
+- `useArmorClass()` exposes calculated, adjustment, adjusted, override, and effective AC views.
 
 **Current Rules:**
-1. Effective AC prefers manual override when present.
-2. Equipment mutations synchronize `character.armorClass`.
-3. Consumers should read AC through `computeEffectiveCharacterArmorClass()` or `useArmorClass()`.
+1. Calculate AC live from equipped armor/shields and Dexterity.
+2. Apply all lasting adjustments and clamp the result to at least 0.
+3. Prefer the exact override when present.
+4. Consumers should read AC through `computeEffectiveCharacterArmorClass()` or `useArmorClass()`.
 
-**Current Behavior:** Equipment changes update stored AC, and UI/PDF consumers read the effective AC path instead of reading `character.armorClass` directly.
+**Current Behavior:** Equipment and Dexterity changes flow through automatically. `ArmorClassModal` saves adjustments and the optional override atomically; both adjustment amounts and labels remain editable/removable without discarding the calculated base.
 
-**Schema:** AC is a top-level field on character. No validation locks AC to a particular model.
+**Schema:** Adjustment amounts may be negative. Exact AC overrides must be whole numbers at least 0.
 
 ### Class Progression State
 

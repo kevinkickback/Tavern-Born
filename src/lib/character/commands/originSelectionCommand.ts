@@ -1,3 +1,4 @@
+import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
 import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCharacter'
 import type { Background5e, Class5e, Item5e, Race5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -75,6 +76,16 @@ export function buildInitialCharacter(
     )
     character = applyPatch(character, result.characterPatch)
     ledger = result.provenanceUpdate
+
+    const startingMaxHP = Math.max(
+      1,
+      getHitDiceFromClass(selections.classEntity) +
+        getAbilityModifier(character.abilityScores.constitution),
+    )
+    character = applyPatch(character, {
+      hitPoints: { ...character.hitPoints, current: startingMaxHP },
+      hitPointsInitialized: true,
+    })
   }
 
   return {

@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
+import { getArmorCategory } from '@/lib/calculations/armorClass'
 import { getCarryCapacity, MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { hasArmorProficiency } from '@/lib/calculations/itemEquippable'
 import {
@@ -140,16 +141,15 @@ export function useEquipment(): EquipmentState {
       if (!item) return
 
       if (!item.equipped && !(character.variantRules?.ignoreEquipRestrictions ?? false)) {
-        const armorType = item.armorType
-        if (armorType) {
+        const armorType = getArmorCategory(item)
+        if (armorType !== 'none') {
           const isShield = armorType === 'shield'
-          const conflict = equipment.find(
-            (e) =>
-              e.id !== id &&
-              e.equipped &&
-              e.armorType &&
-              (isShield ? e.armorType === 'shield' : e.armorType !== 'shield'),
-          )
+          const conflict = equipment.find((other) => {
+            if (other.id === id || !other.equipped) return false
+            const otherArmorType = getArmorCategory(other)
+            if (otherArmorType === 'none') return false
+            return isShield ? otherArmorType === 'shield' : otherArmorType !== 'shield'
+          })
           if (conflict) {
             toast.warning(`${conflict.name} is already equipped. Unequip it first.`)
             return

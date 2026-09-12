@@ -10,7 +10,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
-import { formatSpellLevel, getSchoolName } from '@/lib/calculations/spellUtils'
+import {
+  formatSpellDisplayName,
+  formatSpellLevel,
+  getSchoolName,
+} from '@/lib/calculations/spellUtils'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
@@ -138,7 +142,9 @@ const CantripGroup = memo(function CantripGroup({
                         </span>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="text-xs">
-                        Swapped from {swap.removed} at level {swap.level}
+                        Swapped from{' '}
+                        {formatSpellDisplayName(swap.removed, getSpellByName(swap.removed)?.name)}{' '}
+                        at level {swap.level}
                       </TooltipContent>
                     </Tooltip>
                   )
@@ -742,8 +748,12 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                                       </span>
                                                     </TooltipTrigger>
                                                     <TooltipContent side="top" className="text-xs">
-                                                      Swapped from {swap.removed} at level{' '}
-                                                      {swap.level}
+                                                      Swapped from{' '}
+                                                      {formatSpellDisplayName(
+                                                        swap.removed,
+                                                        getSpellByName(swap.removed)?.name,
+                                                      )}{' '}
+                                                      at level {swap.level}
                                                     </TooltipContent>
                                                   </Tooltip>
                                                 )

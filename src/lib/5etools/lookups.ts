@@ -33,9 +33,7 @@ export function getSubclassLookupKey(
   ].join('|')
 }
 
-export function buildClassFeatureLookup(
-  classFeatures: ClassFeature[],
-): Record<string, ClassFeature> {
+function buildClassFeatureLookup(classFeatures: ClassFeature[]): Record<string, ClassFeature> {
   return classFeatures.reduce<Record<string, ClassFeature>>((lookup, feature) => {
     const key = getEntityLookupKey(feature.name, feature.source)
     if (key !== '|' && !lookup[key]) {
@@ -85,7 +83,7 @@ export function buildSpellLookup(spells: Spell5e[]): Record<string, Spell5e> {
   }, {})
 }
 
-export function buildOptionalFeatureLookup(optionalFeatures: unknown[]): Record<string, unknown> {
+function buildOptionalFeatureLookup(optionalFeatures: unknown[]): Record<string, unknown> {
   return optionalFeatures.reduce<Record<string, unknown>>((lookup, feature) => {
     if (typeof feature !== 'object' || feature === null) return lookup
     const key = getEntityLookupKey(
@@ -99,7 +97,7 @@ export function buildOptionalFeatureLookup(optionalFeatures: unknown[]): Record<
   }, {})
 }
 
-export function buildSubclassLookup(classes: Class5e[]): Record<string, Subclass5e> {
+function buildSubclassLookup(classes: Class5e[]): Record<string, Subclass5e> {
   return classes.reduce<Record<string, Subclass5e>>((lookup, cls) => {
     for (const subclass of cls.subclasses ?? []) {
       const key = getSubclassLookupKey(cls.name, cls.source, subclass.name, subclass.source)
@@ -140,7 +138,7 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
 }
 
 /** Build an abbreviation → display name map from parsed itemProperty records. */
-export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
+function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Record<string, string> {
   const result: Record<string, string> = {}
   for (const prop of itemProperties) {
     if (!prop.abbreviation || result[prop.abbreviation]) continue
@@ -152,7 +150,7 @@ export function buildItemPropertyLookup(itemProperties: ItemProperty5e[]): Recor
 }
 
 /** Build an abbreviation → display name map from parsed itemType records. */
-export function buildItemTypeLookup(itemTypes: ItemType5e[]): Record<string, string> {
+function buildItemTypeLookup(itemTypes: ItemType5e[]): Record<string, string> {
   const result: Record<string, string> = {}
   for (const t of itemTypes) {
     if (!t.abbreviation || result[t.abbreviation]) continue
@@ -165,7 +163,7 @@ export function buildItemTypeLookup(itemTypes: ItemType5e[]): Record<string, str
  * Build a lowercase skill name → full ability name map from parsed skills records.
  * Deduplicates PHB/XPHB reprints by keeping the first occurrence per skill name.
  */
-export function buildSkillToAbilityMap(skills: unknown[]): Record<string, string> {
+function buildSkillToAbilityMap(skills: unknown[]): Record<string, string> {
   const result: Record<string, string> = {}
   const seen = new Set<string>()
   for (const skill of skills) {
@@ -185,7 +183,7 @@ export function buildSkillToAbilityMap(skills: unknown[]): Record<string, string
  * Build the ordered list of lowercase skill names from parsed skills records.
  * Deduplicates PHB/XPHB reprints; order reflects JSON declaration order.
  */
-export function buildSkillList(skills: unknown[]): readonly string[] {
+function buildSkillList(skills: unknown[]): readonly string[] {
   const seen = new Set<string>()
   const result: string[] = []
   for (const skill of skills) {
@@ -203,7 +201,7 @@ export function buildSkillList(skills: unknown[]): readonly string[] {
  * Extract sorted condition names from parsed conditionsdiseases records.
  * Includes only entries tagged as 'condition' by parseConditions (excludes diseases).
  */
-export function buildConditionNames(conditions: unknown[]): readonly string[] {
+function buildConditionNames(conditions: unknown[]): readonly string[] {
   const seen = new Set<string>()
   for (const c of conditions) {
     if (!c || typeof c !== 'object') continue

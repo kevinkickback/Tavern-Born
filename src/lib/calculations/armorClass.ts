@@ -1,4 +1,4 @@
-import type { Equipment } from '@/types/character'
+import type { ArmorClassAdjustment, Equipment } from '@/types/character'
 import { getAbilityModifier } from './gameRules'
 
 export type ArmorCategory = 'light' | 'medium' | 'heavy' | 'shield' | 'none'
@@ -126,11 +126,18 @@ export function calculateAC(
   return computeArmorClass(character.equipment ?? [], dexModifier)
 }
 
+export function calculateArmorClassAdjustmentTotal(
+  adjustments: readonly ArmorClassAdjustment[] | undefined,
+): number {
+  return (adjustments ?? []).reduce((total, adjustment) => total + adjustment.amount, 0)
+}
+
 /**
  * Canonical AC read for character consumers.
  *
- * Uses explicit override when present, otherwise derives AC live from equipped
- * items and ability scores. The stored `character.armorClass` field is intentionally
+ * Uses an explicit override when present. Otherwise, derives AC live from equipped
+ * items and ability scores, then applies lasting adjustments. The stored
+ * `character.armorClass` field is intentionally
  * ignored — it exists only for migration compatibility and is never written to.
  */
 export function computeEffectiveCharacterArmorClass(character: {
@@ -138,6 +145,7 @@ export function computeEffectiveCharacterArmorClass(character: {
   abilityScores?: { dexterity?: number; dex?: number }
   armorClass?: number
   armorClassOverride?: number
+  armorClassAdjustments?: ArmorClassAdjustment[]
 }): number {
   if (typeof character.armorClassOverride === 'number') {
     return Math.max(0, Math.trunc(character.armorClassOverride))
@@ -145,5 +153,9 @@ export function computeEffectiveCharacterArmorClass(character: {
 
   const dexScore = character.abilityScores?.dexterity ?? character.abilityScores?.dex ?? 10
   const dexModifier = getAbilityModifier(dexScore)
-  return computeArmorClass(character.equipment ?? [], dexModifier)
+  return Math.max(
+    0,
+    computeArmorClass(character.equipment ?? [], dexModifier) +
+      calculateArmorClassAdjustmentTotal(character.armorClassAdjustments),
+  )
 }

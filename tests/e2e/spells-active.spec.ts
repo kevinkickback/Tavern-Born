@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { ensureStartupPromptResolved, selectCharacterFromHome } from './helpers/startup'
+import {
+  ensureStartupPromptResolved,
+  seedAppState,
+  selectCharacterFromHome,
+} from './helpers/startup'
 
 test('active-character spell workflow: profile switch, add/remove, prepared toggle', async ({
   page,
@@ -175,59 +179,12 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-spell-seed', gameData)
 
-  await page.evaluate(
-    async ({ characterSeed, cacheSeed, configSeed }) => {
-      await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('keyval-store')
-        request.onerror = () => reject(request.error)
-        request.onupgradeneeded = () => {
-          const db = request.result
-          if (!db.objectStoreNames.contains('keyval')) {
-            db.createObjectStore('keyval')
-          }
-        }
-        request.onsuccess = () => {
-          const db = request.result
-          const tx = db.transaction('keyval', 'readwrite')
-          const store = tx.objectStore('keyval')
-          store.put(characterSeed, 'character-storage')
-          store.put(cacheSeed, 'tb:game-data-cache')
-          store.put(configSeed, 'game-data-storage')
-          tx.oncomplete = () => {
-            db.close()
-            resolve()
-          }
-          tx.onerror = () => reject(tx.error)
-        }
-      })
-    },
-    {
-      characterSeed: {
-        state: {
-          characters: [character],
-          activeCharacterId: character.id,
-        },
-        version: 0,
-      },
-      cacheSeed: {
-        data: gameData,
-        cachedAt: new Date().toISOString(),
-        sourceSnapshot: { type: 'remote', path: 'e2e-spell-seed' },
-      },
-      configSeed: {
-        state: {
-          dataSourceConfig: {
-            type: 'remote',
-            path: 'e2e-spell-seed',
-            isValid: true,
-            lastLoaded: new Date().toISOString(),
-          },
-          lastLoadedAt: new Date().toISOString(),
-        },
-        version: 0,
-      },
-    },
-  )
+  await seedAppState(page, {
+    sourcePath: 'e2e-spell-seed',
+    gameData,
+    characters: [character],
+    activeCharacterId: character.id,
+  })
 
   await page.reload()
   await ensureStartupPromptResolved(page, 'e2e-spell-seed', gameData)
@@ -304,11 +261,11 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
   const mainContent = page.locator('main')
   await expect(mainContent.getByText('Magic Missile').first()).toBeVisible()
 
-  const notPreparedToggle = page.locator('button[title="Not prepared"]').first()
-  if (await notPreparedToggle.isVisible().catch(() => false)) {
-    await notPreparedToggle.click()
-    await expect(page.locator('button[title="Prepared"]').first()).toBeVisible()
-  }
+  const wizardSpells = page.getByRole('region', { name: /Wizard/ })
+  const notPreparedToggle = wizardSpells.getByTitle('Not prepared — click to prepare')
+  await expect(notPreparedToggle).toBeVisible()
+  await notPreparedToggle.click()
+  await expect(wizardSpells.getByTitle('Prepared — click to unprepare')).toBeVisible()
 
   const bonusSpellsContent = page.getByRole('region', { name: /Bonus Spells/ })
   await bonusSpellsContent.getByRole('button', { name: 'Remove Magic Missile' }).click()

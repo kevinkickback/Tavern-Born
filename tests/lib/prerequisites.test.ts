@@ -40,7 +40,7 @@ describe('prerequisites', () => {
 
     expect(snapshot.level).toBe(5)
     expect(snapshot.class).toBe('Fighter')
-    expect(snapshot.progression?.classes).toEqual(character.classProgression)
+    expect(snapshot.progression).toEqual(character.classProgression)
     expect(snapshot.spells).toEqual({
       cantrips: ['Fire Bolt'],
       spellsKnown: ['Shield'],
@@ -51,12 +51,10 @@ describe('prerequisites', () => {
   test('checks class-specific level when className option is provided', () => {
     const character = makePrereqCharacterSnapshotFixture({
       level: 8,
-      progression: {
-        classes: [
-          { name: 'Fighter', levels: 5 },
-          { name: 'Wizard', levels: 3 },
-        ],
-      },
+      progression: [
+        { name: 'Fighter', levels: 5 },
+        { name: 'Wizard', levels: 3 },
+      ],
     })
 
     expect(checkPrerequisite({ level: 3 }, character, { className: 'Wizard' })).toEqual({
@@ -124,12 +122,10 @@ describe('prerequisites', () => {
 
   test('checks class prerequisite from primary class', () => {
     const character = makePrereqCharacterSnapshotFixture({
-      progression: {
-        classes: [
-          { name: 'Cleric', levels: 1 },
-          { name: 'Rogue', levels: 2 },
-        ],
-      },
+      progression: [
+        { name: 'Cleric', levels: 1 },
+        { name: 'Rogue', levels: 2 },
+      ],
     })
 
     expect(
@@ -153,12 +149,10 @@ describe('prerequisites', () => {
 
   test('checks spellcasting with spellcasting class set', () => {
     const character = makePrereqCharacterSnapshotFixture({
-      progression: {
-        classes: [
-          { name: 'Fighter', levels: 1 },
-          { name: 'Wizard', levels: 1 },
-        ],
-      },
+      progression: [
+        { name: 'Fighter', levels: 1 },
+        { name: 'Wizard', levels: 1 },
+      ],
       class: 'Fighter',
     })
 

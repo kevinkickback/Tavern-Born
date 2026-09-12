@@ -66,7 +66,11 @@ All writes go through `updateCharacter(id, patch)` from `useCharacterStore`. Nev
 - **Notifications**: `toast()` from Sonner — no `alert()` or custom toasts
 - **Styles**: Tailwind first; `cn()` for conditional classes. Inline `style` only for dynamic runtime values (CSS variables, transform values, dynamic dimensions/images). Never for static presentation.
 - **Content pages**: centered `max-w-7xl` container — see `docs/react-patterns.md`.
-- **5etools content**: never render raw JSON — always use `renderEntry()` from `src/lib/renderer.ts` or `FormattedTextRenderer`.
+- **5etools content**: never render raw JSON. Use `GameContent` for user-facing rules text so inline
+  references consistently support source-aware previews. Use `renderEntry()` from
+  `src/lib/renderer.ts` or `renderEntryCached()` only for explicitly static contexts such as PDFs,
+  plain-text projections, and compact non-interactive summaries. `RenderedEntryWithTooltip` is the
+  lower-level interactive component for callers that already own an explicit recursive lookup.
 
 ### 10. Validate changes
 Run checks in proportion to the change. Before handoff, run the relevant tests plus the non-mutating

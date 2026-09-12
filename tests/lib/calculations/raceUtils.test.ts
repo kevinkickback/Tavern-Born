@@ -181,6 +181,22 @@ describe('getAsiDisplay', () => {
 })
 
 describe('getRaceTraits', () => {
+  test('keeps duplicate traits with unique, repeatable keys that follow distinct content', () => {
+    const first = { type: 'entries', name: 'Keen Senses', entries: ['First benefit.'] }
+    const second = { type: 'entries', name: 'Keen Senses', entries: ['Second benefit.'] }
+    const race = makeRace({ entries: [first, second, first] })
+    const traits = getRaceTraits(race)
+    expect(traits).toHaveLength(3)
+    expect(new Set(traits.map((trait) => trait.key)).size).toBe(3)
+    expect(getRaceTraits(race)).toEqual(traits)
+    const reordered = getRaceTraits(makeRace({ entries: [second, first, first] }))
+    expect(reordered.map((trait) => trait.key)).toEqual([
+      traits[1].key,
+      traits[0].key,
+      traits[2].key,
+    ])
+  })
+
   test('returns empty array for undefined race', () => {
     expect(getRaceTraits(undefined)).toEqual([])
   })

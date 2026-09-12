@@ -21,6 +21,7 @@ If you are new to the repository, read these in order:
 - [Provenance](provenance.md): grant tracking, reconciliation, and invariants.
 - [React Patterns](react-patterns.md): repository-specific hook and rendering conventions.
 - [Testing Map](testing-map.md): test layers, commands, coverage thresholds, and expectations.
+- [PDF Generation](pdf-generation.md): template contracts, mapped fields, audit findings, and fixed-form limits.
 - [Codebase Tour](codebase-tour.md): concern-to-file routing for fast navigation.
 - [Changelog](changelog.md): released changes plus the next planned release.
 

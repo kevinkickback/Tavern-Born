@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { GameContent } from '@/components/editor/GameContent'
 import {
   type ActiveFilters,
   type CategoryLimit,
@@ -14,9 +15,9 @@ import {
   formatRange,
   formatSpellLevel,
   getSchoolName,
+  isRitualSpell,
   SPELL_SCHOOL_NAMES,
 } from '@/lib/calculations/spellUtils'
-import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 
@@ -105,14 +106,6 @@ function buildVisibilityFilter(
   return { key: 'visibility', label: 'Visibility', type: 'switches', columns: 1, options }
 }
 
-function isRitualSpell(spell: Spell5e): boolean {
-  const meta = spell.meta
-  if (!meta || typeof meta !== 'object') {
-    return false
-  }
-  return !!(meta as { ritual?: unknown }).ritual
-}
-
 function matchSpell(
   spell: Spell5e,
   search: string,
@@ -175,7 +168,6 @@ const SpellCard = memo(function SpellCard({
   const isRitual = isRitualSpell(spell)
   const isConcentration = spell.duration.some((d) => d.concentration)
   const firstEntry = spell.entries?.[0]
-  const descHtml = renderEntryCached(firstEntry)
 
   return (
     <div className="p-3.5">
@@ -234,11 +226,10 @@ const SpellCard = memo(function SpellCard({
           </div>
         ))}
       </div>
-      {descHtml && (
-        <div
+      {firstEntry != null && (
+        <GameContent
+          entry={firstEntry}
           className="text-sm text-muted-foreground line-clamp-3 leading-snug"
-          // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
-          dangerouslySetInnerHTML={{ __html: descHtml }}
         />
       )}
     </div>

@@ -1,11 +1,11 @@
 import { Check, Package } from '@phosphor-icons/react'
 import { Fragment, useMemo } from 'react'
+import { GameContent } from '@/components/editor/GameContent'
 import { useItemLookup } from '@/hooks/data/useGameData'
 import {
   formatEquipmentOptionEntries,
   resolveClassEquipmentBlocks,
 } from '@/lib/5etools/startingEquipment'
-import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 import type { SelectedFeatureState } from './DetailsPanel'
@@ -70,9 +70,9 @@ export function BuildClassEquipmentSection({
               <div key={block.index} className="px-3 py-2 flex items-start gap-2">
                 <span className="text-xs text-muted-foreground mt-0.5 shrink-0">•</span>
                 {block.displayText ? (
-                  <span
+                  <GameContent
+                    entry={block.displayText}
                     className="text-xs text-foreground equipment-entry"
-                    dangerouslySetInnerHTML={{ __html: renderEntry(block.displayText) ?? '' }}
                   />
                 ) : (
                   <span className="text-xs text-foreground">

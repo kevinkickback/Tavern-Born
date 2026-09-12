@@ -40,6 +40,18 @@ describe('renderEntry', () => {
     expect(result).toBe('<p>Inset text.</p>')
   })
 
+  test('preserves scoped class and subclass feature references for previews', () => {
+    const result = renderEntry(
+      'Use {@classFeature Extra Attack|Fighter|PHB|5|PHB} with {@subclassFeature Arcane Ward|Wizard|PHB|Abjuration|PHB|2|PHB|the ward}.',
+    )
+
+    expect(result).toContain('data-hover-type="classFeature"')
+    expect(result).toContain('data-hover-class-name="Fighter"')
+    expect(result).toContain('data-hover-type="subclassFeature"')
+    expect(result).toContain('data-hover-subclass-name="Abjuration"')
+    expect(result).toContain('>the ward</span>')
+  })
+
   test('handles refSubclassFeature with a subclassFeature string — renders feature name as fallback', () => {
     const result = renderEntry({
       type: 'refSubclassFeature',

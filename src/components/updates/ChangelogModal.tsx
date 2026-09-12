@@ -1,6 +1,7 @@
 import { ArrowSquareOut, CircleNotch } from '@phosphor-icons/react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -33,6 +34,16 @@ export function ChangelogModal({
   onInstall,
   onOpenDownloadPage,
 }: ChangelogModalProps) {
+  const handleOpenDownloadPage = async () => {
+    try {
+      await onOpenDownloadPage?.()
+    } catch (error) {
+      toast.error('Could not open the download page', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-xs sm:max-w-md p-3 sm:p-6">
@@ -86,7 +97,7 @@ export function ChangelogModal({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Not Now
               </Button>
-              <Button onClick={onOpenDownloadPage}>
+              <Button onClick={handleOpenDownloadPage}>
                 Open Download Page <ArrowSquareOut size={14} />
               </Button>
             </>

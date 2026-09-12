@@ -1,5 +1,35 @@
 import { describe, expect, test } from 'vitest'
-import { formatSpellLevel, getOrdinalForm, ordinalSuffix } from '@/lib/calculations/spellUtils'
+import {
+  formatSpellDisplayName,
+  formatSpellLevel,
+  getOrdinalForm,
+  isRitualSpell,
+  ordinalSuffix,
+} from '@/lib/calculations/spellUtils'
+
+describe('isRitualSpell', () => {
+  test('reads the canonical 5etools meta.ritual flag', () => {
+    expect(isRitualSpell({ meta: { ritual: true } })).toBe(true)
+  })
+
+  test('returns false when the ritual flag is absent or not true', () => {
+    expect(isRitualSpell(undefined)).toBe(false)
+    expect(isRitualSpell({ meta: {} })).toBe(false)
+    expect(isRitualSpell({ meta: { ritual: false } })).toBe(false)
+  })
+})
+
+describe('formatSpellDisplayName', () => {
+  test('prefers canonical parsed casing', () => {
+    expect(formatSpellDisplayName("melf's acid arrow", "Melf's Acid Arrow")).toBe(
+      "Melf's Acid Arrow",
+    )
+  })
+
+  test('title-cases unresolved lowercase references', () => {
+    expect(formatSpellDisplayName('custom shadow-bolt')).toBe('Custom Shadow-Bolt')
+  })
+})
 
 describe('ordinalSuffix', () => {
   test('returns correct suffix for 1st/2nd/3rd', () => {

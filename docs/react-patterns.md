@@ -92,15 +92,11 @@ Only suppress the Biome exhaustive-deps rule when the pattern is intentional and
 
 ## Content Page Layout
 
-Settings, Compendium, and all Details sub-nav pages use a centered max-width container:
+Workbench-style pages use `WorkspacePage` as the flat parent surface. If a page has functional tabs or controls, place them in a full-width `WorkspacePaneHeader`, then put the scrolling content in `WorkspaceBody` with a centered max-width inner container.
 
-```tsx
-<div className="max-w-7xl mx-auto w-full">
-  <Card className="w-full">...</Card>
-</div>
-```
+Rules and Conditions are the reference tabbed pages. Their parent remains flat while each meaningful section may use its own bordered card. Sources is the reference for a flat configuration page with controls placed directly inside its constrained content area. Avoid wrapping the entire content area in a second card unless the page intentionally uses the dual-pane/workbench pattern.
 
-Exceptions: character cards, sidebar (full-bleed by design).
+Settings and Compendium retain their established route-specific containers. Character cards and the sidebar remain full-bleed by design.
 
 ---
 

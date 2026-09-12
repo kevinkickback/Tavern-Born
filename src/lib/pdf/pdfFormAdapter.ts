@@ -1,8 +1,9 @@
-import { PDFDocument, PDFName, PDFNumber } from '@cantoo/pdf-lib'
+import { PDFDocument, PDFHexString, PDFName, PDFNumber } from '@cantoo/pdf-lib'
 import {
   type AcroWidget,
   asFieldWithInternals,
   type FieldWithInternals,
+  type FormWithInternals,
 } from '@/lib/pdf/pdfFieldInternals'
 import { embedPortraitImage } from '@/lib/pdf/pdfImageAdapter'
 import type { CharacterSheetFieldMap, CharacterSheetTemplateId } from '@/lib/pdf/types'
@@ -38,6 +39,7 @@ export async function fillCharacterSheetPdf(
       const choices = dropdown.getOptions()
       if (value && !choices.includes(value)) dropdown.addOptions([value])
       if (value) dropdown.select(value)
+      else dropdown.clear()
     } catch {
       // Missing fields are allowed across template revisions.
     }
@@ -48,15 +50,17 @@ export async function fillCharacterSheetPdf(
       const checkbox = form.getCheckBox(fieldName)
       if (checked) checkbox.check()
       else checkbox.uncheck()
+      if (options.templateId === '2014') checkbox.defaultUpdateAppearances()
     } catch {
       // Missing fields are allowed across template revisions.
     }
   }
 
   if (options.templateId === '2014') {
+    setMappedTextDefaults(form, fields.textFields)
     hideUnwantedFields(form)
     clearAttackModDropdowns(form)
-    stripCalculationActions(form)
+    stripFormActions(form, fields)
     makeCalculatedFieldsEditable(form)
   }
   form.updateFieldAppearances()
@@ -113,12 +117,40 @@ function clearAttackModDropdowns(form: ReturnType<PDFDocument['getForm']>) {
   }
 }
 
-function stripCalculationActions(form: ReturnType<PDFDocument['getForm']>) {
+function setMappedTextDefaults(
+  form: ReturnType<PDFDocument['getForm']>,
+  textFields: Record<string, string>,
+) {
+  const defaultValueKey = PDFName.of('DV')
+  for (const [fieldName, value] of Object.entries(textFields)) {
+    const internals = asFieldWithInternals(form.getFieldMaybe(fieldName))
+    if (!internals) continue
+    internals.acroField.dict.set(defaultValueKey, PDFHexString.fromText(value))
+  }
+}
+
+function stripFormActions(
+  form: ReturnType<PDFDocument['getForm']>,
+  fields: CharacterSheetFieldMap,
+) {
+  const actionKey = PDFName.of('A')
   const actionsKey = PDFName.of('AA')
+  const mappedFieldNames = new Set([
+    ...Object.keys(fields.textFields),
+    ...Object.keys(fields.checkboxFields),
+  ])
   for (const field of form.getFields()) {
     const internals = asFieldWithInternals(field)
-    if (internals?.acroField.dict.has(actionsKey)) internals.acroField.dict.delete(actionsKey)
+    if (!internals) continue
+    const isMappedField = mappedFieldNames.has(field.getName())
+    if (isMappedField) internals.acroField.dict.delete(actionKey)
+    internals.acroField.dict.delete(actionsKey)
+    for (const widget of internals.acroField.getWidgets() as AcroWidget[]) {
+      if (isMappedField) widget.dict.delete(actionKey)
+      widget.dict.delete(actionsKey)
+    }
   }
+  ;(form as unknown as FormWithInternals).acroForm.dict.delete(PDFName.of('CO'))
 }
 
 function makeCalculatedFieldsEditable(form: ReturnType<PDFDocument['getForm']>) {

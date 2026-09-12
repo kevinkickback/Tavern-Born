@@ -63,29 +63,6 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
     onChange({ allowedSources: [] })
   }
 
-  const _selectGroupSources = (group: string) => {
-    const currentSources = data.allowedSources || []
-    const groupSources = sourcesByGroup[group]?.map((s) => s.abbreviation) || []
-    const allSelected = groupSources.every((abbr: string) => currentSources.includes(abbr))
-
-    if (allSelected) {
-      onChange({
-        allowedSources: currentSources.filter((s: string) => !groupSources.includes(s)),
-      })
-    } else {
-      const newSources = [...new Set([...currentSources, ...groupSources])]
-      onChange({ allowedSources: newSources })
-    }
-  }
-
-  const _isGroupSelected = (group: string) => {
-    const currentSources = data.allowedSources || []
-    const groupSources = sourcesByGroup[group]?.map((s) => s.abbreviation) || []
-    return (
-      groupSources.length > 0 && groupSources.every((abbr: string) => currentSources.includes(abbr))
-    )
-  }
-
   const isPresetActive = (preset: SourcePreset) => {
     const presetSources = preset.abbreviations.filter((abbreviation) =>
       availableSourceSet.has(abbreviation),
@@ -129,7 +106,7 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
     optionalClassFeatures:
       "Unlocks Tasha's optional class features for your class, such as additional spells, feature replacements, and expanded options from TCE.",
     averageHitPoints:
-      'When leveling up, you gain the average hit die value (rounded up) instead of rolling. Provides predictable HP growth.',
+      'Choose whether later levels use the fixed average automatically or ask you to roll or enter the hit-die result.',
     bladesingerAnyRace:
       'By default Bladesinger (Wizard) is restricted to elves. Enable this to allow any race to take the Bladesinger subclass.',
     battleragerAnyRace:

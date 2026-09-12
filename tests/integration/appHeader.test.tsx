@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppHeader } from '@/components/layout/AppHeader'
+import { setHintDismissed } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -16,6 +17,16 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 
 vi.mock('@/components/modals/LevelUpModal', () => ({
   LevelUpModal: () => null,
+}))
+
+vi.mock('@/components/modals/ArmorClassModal', () => ({
+  ArmorClassModal: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="armor-class-modal-mock" /> : null,
+}))
+
+vi.mock('@/components/modals/HitPointsModal', () => ({
+  HitPointsModal: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="hit-points-modal-mock" /> : null,
 }))
 
 vi.mock('@/hooks/character/useArmorClass', () => ({
@@ -41,8 +52,14 @@ vi.mock('@/hooks/character/useHitPoints', () => ({
   }),
 }))
 
+vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
+  useAnchoredHintPosition: ({ enabled }: { enabled: boolean }) =>
+    enabled ? { top: 40, left: 40, arrowLeft: 20, anchorTop: 20, gap: 12 } : null,
+}))
+
 describe('app header character summary', () => {
   beforeEach(() => {
+    setHintDismissed('header-stat-management-menus', false)
     const character = makeCharacterFixture({
       name: 'Aelar',
       race: 'Elf',
@@ -124,6 +141,47 @@ describe('app header character summary', () => {
     expect(screen.getByText('42')).toBeTruthy()
   })
 
+  test('opens hit-point management from the heart badge', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Manage hit points. Maximum 42' }))
+    expect(screen.getByTestId('hit-points-modal-mock')).toBeTruthy()
+  })
+
+  test('opens Armor Class management from the shield badge', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Manage Armor Class. Current 18' }))
+    expect(screen.getByTestId('armor-class-modal-mock')).toBeTruthy()
+  })
+
+  test('introduces the shield and heart menus once on the Race page', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/build/race']}>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('status').textContent).toContain(
+      'Click the shield or heart to manage Armor Class and Hit Points',
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Dismiss Armor Class and Hit Points hint' }),
+    )
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
   test('keeps level up contextual while leaving save persistently visible', () => {
     render(
       <MemoryRouter initialEntries={['/compendium']}>
@@ -161,6 +219,17 @@ describe('app header character summary', () => {
 
     expect(screen.getByRole('button', { name: 'Level up character' })).toBeTruthy()
     expect(screen.getByText('Portrait')).toBeTruthy()
+  })
+
+  test('treats Character Rules as part of the Builder workspace', () => {
+    render(
+      <MemoryRouter initialEntries={['/rules']}>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('button', { name: 'Level up character' })).toBeTruthy()
+    expect(screen.getByText('Character Rules')).toBeTruthy()
   })
 
   test('omits level up from the separate Character Sheet workspace', () => {

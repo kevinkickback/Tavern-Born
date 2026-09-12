@@ -1,15 +1,10 @@
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { parseRaceSpellBlocks } from '@/lib/5etools/raceSpells'
 import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
-import { getCharacterClassEntries, getTotalLevel } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Class5e, RaceAdditionalSpells } from '@/types/5etools'
-import type {
-  Character,
-  CharacterClassEntry,
-  RaceSpellChoice,
-  SpellProfile,
-} from '@/types/character'
+import type { Character, RaceSpellChoice, SpellProfile } from '@/types/character'
 import {
   buildClassProfileLabel,
   RACIAL_SPELL_PROFILE_LABEL,
@@ -47,21 +42,6 @@ function mergeSpellNames(existing: string[], additions: string[]): string[] {
     byKey.set(key, name)
   }
   return [...byKey.values()]
-}
-
-export function getSubclassExpandedSpellNames(
-  entry: CharacterClassEntry,
-  classData: Class5e | undefined,
-): Set<string> {
-  const subclassData = getSelectedSubclassData(classData, entry)
-  if (!subclassData) return new Set<string>()
-  const grants = parseSubclassSpells(subclassData.additionalSpells, entry.levels)
-  const names = new Set<string>()
-  for (const grant of grants) {
-    if (grant.mode !== 'expanded') continue
-    names.add(normalizeKey(grant.spellName))
-  }
-  return names
 }
 
 /**
@@ -265,7 +245,7 @@ export function ensureSpellProfiles(
   if (raceData?.additionalSpells && raceData.additionalSpells.length > 0) {
     const racialId = toRacialProfileId(raceData.name, raceData.source)
     const existingRacial = byId.get(racialId)
-    const totalLevel = getTotalLevel({ classes: getCharacterClassEntries(character) })
+    const totalLevel = getTotalClassLevels(getCharacterClassEntries(character))
     next.push(
       buildRacialSpellProfile({
         raceName: raceData.name,

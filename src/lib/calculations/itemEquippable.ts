@@ -1,4 +1,5 @@
 import type { Equipment } from '@/types/character'
+import { getArmorCategory } from './armorClass'
 
 /** 5etools type codes for items that are worn or held and can be toggled equipped. */
 const EQUIPPABLE_TYPE_CODES = new Set([
@@ -24,6 +25,43 @@ export function hasArmorProficiency(
 ): boolean {
   const keyword = armorType === 'shield' ? 'shield' : armorType
   return proficiencies.some((p) => p.toLowerCase().includes(keyword))
+}
+
+export interface EnforcedArmorEquipment {
+  equipment: Equipment[]
+  unequippedIds: string[]
+}
+
+/** Unequips armor that violates proficiency or the single body-armor/shield slots. */
+export function enforceArmorEquipmentRestrictions(
+  equipment: Equipment[],
+  armorProficiencies: string[],
+): EnforcedArmorEquipment {
+  let bodyArmorSlotFilled = false
+  let shieldSlotFilled = false
+  const unequippedIds: string[] = []
+
+  const nextEquipment = equipment.map((item) => {
+    if (!item.equipped) return item
+
+    const armorType = getArmorCategory(item)
+    if (armorType === 'none') return item
+
+    const isShield = armorType === 'shield'
+    const slotIsFilled = isShield ? shieldSlotFilled : bodyArmorSlotFilled
+    const isProficient = hasArmorProficiency(armorProficiencies, armorType)
+
+    if (!isProficient || slotIsFilled) {
+      unequippedIds.push(item.id)
+      return { ...item, equipped: false }
+    }
+
+    if (isShield) shieldSlotFilled = true
+    else bodyArmorSlotFilled = true
+    return item
+  })
+
+  return { equipment: nextEquipment, unequippedIds }
 }
 
 /**

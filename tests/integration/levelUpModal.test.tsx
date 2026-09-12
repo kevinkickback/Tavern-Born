@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
@@ -108,5 +109,132 @@ describe('level up modal multiclass requirement text', () => {
     render(<LevelUpModal open={true} onOpenChange={() => {}} />)
 
     expect(screen.getByText(/\(Dexterity 13; Wisdom 13; Strength 13\)/)).toBeTruthy()
+  })
+})
+
+describe('level up hit-point choices', () => {
+  beforeEach(() => {
+    mockClasses = [
+      makeClassFixture({ name: 'Fighter', source: 'PHB', hd: { faces: 10, number: 1 } }),
+    ]
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+  })
+
+  test('asks for and persists a manual roll when fixed average is disabled', async () => {
+    const user = userEvent.setup()
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        class: 'Fighter',
+        classSource: 'PHB',
+        level: 1,
+        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+        abilityScores: {
+          strength: 10,
+          dexterity: 10,
+          constitution: 14,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
+        },
+        variantRules: { averageHitPoints: false },
+        hitPoints: { max: 0, current: 0, temporary: 0 },
+        hitPointGains: [],
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+
+    expect(screen.getByRole('heading', { name: 'Hit Point Increase' })).toBeTruthy()
+    await user.type(screen.getByLabelText('Enter a roll'), '7')
+    expect(screen.getByText('+9 HP')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Confirm Level Up' }))
+
+    const updated = useCharacterStore.getState().activeCharacter
+    expect(updated?.level).toBe(2)
+    expect(updated?.classProgression?.[0]?.levels).toBe(2)
+    expect(updated?.hitPointGains).toEqual([
+      expect.objectContaining({
+        className: 'Fighter',
+        classLevel: 2,
+        characterLevel: 2,
+        hitDie: 10,
+        dieResult: 7,
+        method: 'manual',
+      }),
+    ])
+  })
+
+  test('records the fixed average without opening the roll dialog', async () => {
+    const user = userEvent.setup()
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        class: 'Fighter',
+        classSource: 'PHB',
+        level: 1,
+        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+        variantRules: { averageHitPoints: true },
+        hitPoints: { max: 0, current: 0, temporary: 0 },
+        hitPointGains: [],
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+
+    expect(screen.queryByRole('heading', { name: 'Hit Point Increase' })).toBeNull()
+    expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([
+      expect.objectContaining({ dieResult: 6, method: 'average' }),
+    ])
+  })
+
+  test('can roll the class hit die and persist the generated result', async () => {
+    const user = userEvent.setup()
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        class: 'Fighter',
+        classSource: 'PHB',
+        level: 1,
+        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+        variantRules: { averageHitPoints: false },
+        hitPoints: { max: 0, current: 0, temporary: 0 },
+        hitPointGains: [],
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+    await user.click(screen.getByRole('button', { name: 'Roll d10' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm Level Up' }))
+
+    const gain = useCharacterStore.getState().activeCharacter?.hitPointGains?.[0]
+    expect(gain?.method).toBe('rolled')
+    expect(gain?.dieResult).toBeGreaterThanOrEqual(1)
+    expect(gain?.dieResult).toBeLessThanOrEqual(10)
+  })
+
+  test('cancelling the hit-point dialog does not add the level', async () => {
+    const user = userEvent.setup()
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        class: 'Fighter',
+        classSource: 'PHB',
+        level: 1,
+        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+        variantRules: { averageHitPoints: false },
+        hitPointGains: [],
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(useCharacterStore.getState().activeCharacter?.level).toBe(1)
+    expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([])
   })
 })

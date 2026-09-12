@@ -38,7 +38,6 @@ function renderPanel(languageChoice: ChoiceRecord) {
         choices: [languageChoice],
         proficiencies: emptyProficiencies,
       }}
-      choiceCounts={{ skills: 0, armor: 0, weapons: 0, tools: 0, languages: 2 }}
       dropdownToolSlots={[]}
       artisanToolSlots={[]}
       visibleToolCandidates={[]}
@@ -46,14 +45,12 @@ function renderPanel(languageChoice: ChoiceRecord) {
       languageTypes={new Map()}
       toolTypeMap={new Map()}
       weaponInfoMap={new Map()}
-      focused={null}
       onFocusChange={() => undefined}
       onExpandDetails={() => undefined}
       onResolveChoiceSelection={() => undefined}
       onToggleExpertise={() => undefined}
       availableExpertiseSlots={0}
       usedExpertiseSlots={0}
-      expertiseChoiceCount={0}
       defaultTab="languages"
     />,
   )
