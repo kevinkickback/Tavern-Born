@@ -6,12 +6,9 @@ const readWorkflow = (name: string) =>
   readFile(resolve(process.cwd(), '.github', 'workflows', name), 'utf8')
 
 describe('trusted workflow policy', () => {
-  test('validates the original CI result and merges only the tested base', async () => {
+  test('auto-merges only tested application changes from dev to main', async () => {
     const workflow = await readWorkflow('merge.yml')
 
-    expect(workflow).toContain(`ref: \${{ github.workflow_sha }}`)
-    expect(workflow).not.toContain('branches: [')
-    expect(workflow).not.toContain('job.workflow_sha')
     expect(workflow).toContain('github.rest.actions.listJobsForWorkflowRun')
     expect(workflow).toContain("'Lint, type-check, coverage, and build'")
     expect(workflow).toContain("'Browser end-to-end tests'")
@@ -19,63 +16,52 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain("pr.base.ref !== 'main'")
     expect(workflow).toContain("pr.head.ref !== 'dev'")
     expect(workflow).toContain('pr.draft')
+    expect(workflow).toContain('github.rest.pulls.listFiles')
+    expect(workflow).toContain("path.startsWith('.github/workflows/')")
+    expect(workflow).toContain("path.startsWith('.github/scripts/')")
+    expect(workflow).toContain("path === 'scripts/check-release.mjs'")
+    expect(workflow).toContain('Release infrastructure changes require a manual merge')
+
+    expect(workflow).not.toContain('copilot-review-gate')
+    expect(workflow).not.toContain('requireCopilotReview')
+    expect(workflow).not.toContain('actions/checkout')
     expect(workflow).not.toContain('actions/setup-node')
     expect(workflow).not.toContain('npm ci')
     expect(workflow).not.toContain('npm run test:coverage')
     expect(workflow).not.toContain('npm run test:e2e')
     expect(workflow).not.toContain('npm run test:electron')
-    expect(workflow).toContain('reviewedPr.base.sha !== testedBase')
+
+    expect(workflow).toContain('pr.base.sha !== testedBase')
     expect(workflow).toContain('currentBase.commit.sha !== testedBase')
-    expect(workflow).toContain('const testedHead = process.env.TESTED_HEAD_SHA')
-    expect(workflow).toContain('const { data: reviewedPr }')
-    expect(workflow).toContain('reviewedPr.head.sha !== testedHead')
-    expect(workflow).toContain('if (reviewedPr.merged)')
     expect(workflow).toContain('sha: testedHead')
     expect(workflow).not.toContain('sha: run.head_sha')
     expect(workflow).toContain("event_type: 'release-merged'")
     expect(workflow).toContain('github.rest.repos.createDispatchEvent')
-    expect(workflow).toContain(
-      "join(process.env.GITHUB_WORKSPACE, '.github/scripts/copilot-review-gate.cjs')",
-    )
   })
 
-  test('release lookups distinguish a confirmed 404 from operational failures', async () => {
+  test('builds without write credentials and handles existing drafts explicitly', async () => {
     const workflow = await readWorkflow('release.yml')
 
-    expect(workflow).toContain(`ref: \${{ github.workflow_sha || github.sha }}`)
+    expect(workflow).toContain('push:')
+    expect(workflow).toContain('branches: [main]')
     expect(workflow).toContain('repository_dispatch:')
     expect(workflow).toContain('types: [release-merged, rebuild-release]')
     expect(workflow).not.toContain('workflow_call:')
     expect(workflow).not.toContain('workflow_dispatch:')
-    expect(workflow).not.toContain('gh release delete')
-    expect(workflow).not.toContain('/releases/assets/')
-    expect(workflow).toContain('refusing to replace or modify it')
+    expect(workflow).not.toContain('copilot-review-gate')
+    expect(workflow).not.toContain('requireCopilotReview')
+    expect(workflow).toContain(`ref: \${{ github.workflow_sha || github.sha }}`)
     expect(workflow).not.toContain('job.workflow_sha')
     expect(workflow).toContain('if [[ "$output" == *"HTTP 404"* ]]')
     expect(workflow).toContain(
       'node ../trusted/scripts/check-release.mjs --source-root . --notes-file ../release-metadata/release-notes.md',
     )
     expect(workflow).not.toContain('node scripts/check-release.mjs')
-    expect(workflow).toContain(
-      "join(process.env.GITHUB_WORKSPACE, 'trusted/.github/scripts/copilot-review-gate.cjs')",
-    )
-    expect(workflow).toContain('expectedHead: process.env.REVIEWED_HEAD_SHA')
-    expect(workflow).not.toContain('expectedHead: pull.head.sha')
-    expect(workflow).toContain('pullCommits.at(-1)?.sha !== process.env.REVIEWED_HEAD_SHA')
-    expect(workflow).not.toContain(
-      'gh release view "$RELEASE_TAG" --json isDraft --jq \'isDraft\' 2>/dev/null',
-    )
-    expect(workflow).not.toContain(
-      'gh release view "$tag" --json isDraft --jq \'isDraft\' 2>/dev/null',
-    )
     expect(workflow).toContain('Build artifacts and update manifests without publishing')
     expect(workflow).toContain('run: npm run dist -- --publish never')
     expect(workflow).not.toContain('run: npm run release')
-    expect(workflow).not.toContain('--method PATCH')
-    expect(workflow).not.toContain('force=true')
-    expect(workflow).not.toContain('--method DELETE')
     expect(workflow).toContain('needs: [release-source, build]')
-    expect(workflow).toContain('name: Create and populate draft release')
+    expect(workflow).toContain('name: Create or refresh draft from completed artifacts')
     expect(workflow).toContain('pattern: release-build-*')
     expect(workflow).toContain('path: release-metadata/release-notes.md')
     expect(workflow).not.toContain('path: source/release-notes.md')
@@ -86,7 +72,6 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain("require_manifest 'latest.yml'")
     expect(workflow).toContain("require_manifest 'latest-mac.yml'")
     expect(workflow).toContain("require_manifest 'latest-linux.yml'")
-    expect(workflow).toContain('if [[ "$tag_sha" != "$SOURCE_SHA" ]]')
 
     const buildJob = workflow.slice(
       workflow.indexOf('\n  build:'),
@@ -102,22 +87,25 @@ describe('trusted workflow policy', () => {
     )
     expect(publishJob).not.toContain('actions/checkout')
     expect(publishJob).toContain('contents: write')
-    expect(publishJob).toContain('gh release create')
+    expect(publishJob).toContain('assert_draft "$release_id"')
+    expect(publishJob).toContain('Release $RELEASE_TAG is published; refusing to modify it.')
+    expect(publishJob).toContain(
+      'gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"',
+    )
+    expect(publishJob).toContain(
+      'gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"',
+    )
+    expect(publishJob).toContain('gh release upload "$RELEASE_TAG" release-artifacts/* --clobber')
+    expect(publishJob).toContain('gh release create "$RELEASE_TAG" release-artifacts/*')
 
     const validateIndex = publishJob.indexOf('Validate completed artifact bundle')
     const attestIndex = publishJob.indexOf('Attest build provenance')
-    const createIndex = publishJob.indexOf('Create tag and draft from completed artifacts')
-    const releaseCheckIndex = publishJob.indexOf('if release_state="$(lookup_release)"')
-    const tagCheckIndex = publishJob.indexOf('if tag_sha="$(lookup_tag_sha)"')
-    const tagCreateIndex = publishJob.indexOf('gh api --method POST')
-    const draftCreateIndex = publishJob.indexOf('gh release create')
+    const mutateIndex = publishJob.indexOf('Create or refresh draft from completed artifacts')
+    const deleteIndex = publishJob.indexOf('gh api --method DELETE')
     expect(validateIndex).toBeGreaterThan(-1)
     expect(validateIndex).toBeLessThan(attestIndex)
-    expect(attestIndex).toBeLessThan(createIndex)
-    expect(releaseCheckIndex).toBeGreaterThan(-1)
-    expect(tagCheckIndex).toBeGreaterThan(releaseCheckIndex)
-    expect(tagCreateIndex).toBeGreaterThan(tagCheckIndex)
-    expect(draftCreateIndex).toBeGreaterThan(tagCreateIndex)
+    expect(attestIndex).toBeLessThan(mutateIndex)
+    expect(mutateIndex).toBeLessThan(deleteIndex)
   })
 
   test('uses upload-safe Windows installer names that match update metadata', async () => {

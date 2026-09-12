@@ -1,6 +1,10 @@
 name: Release
 
 on:
+  # Manual merges emit a normal push; automated GITHUB_TOKEN merges use the
+  # repository_dispatch path created by merge.yml.
+  push:
+    branches: [main]
   # repository_dispatch always loads this workflow from the protected default branch.
   repository_dispatch:
     types: [release-merged, rebuild-release]
@@ -14,8 +18,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SOURCE_SHA: ${{ github.event.client_payload.source_sha }}
-  REVIEWED_HEAD_SHA: ${{ github.event.client_payload.reviewed_head_sha }}
+  SOURCE_SHA: ${{ github.event.client_payload.source_sha || github.sha }}
   REBUILD_EXISTING_DRAFT: ${{ github.event.action == 'rebuild-release' }}
 
 jobs:
@@ -78,16 +81,15 @@ jobs:
           path: source
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          # The validation code comes from the workflow's protected revision,
-          # never from the candidate release source.
+          # Automated merges cannot modify release infrastructure. Changes to
+          # this protected validation code require an explicit maintainer merge.
           ref: ${{ github.workflow_sha || github.sha }}
           persist-credentials: false
           path: trusted
-      - name: Require merged PR and clean Copilot review
+      - name: Require a merged dev to main pull request
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           SOURCE_SHA: ${{ env.SOURCE_SHA }}
-          REVIEWED_HEAD_SHA: ${{ env.REVIEWED_HEAD_SHA }}
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -102,26 +104,6 @@ jobs:
               candidate.head.repo.full_name === `${owner}/${repo}`,
             );
             if (!pull) throw new Error(`Commit ${process.env.SOURCE_SHA} did not come from a merged dev -> main PR.`);
-
-            const pullCommits = await github.paginate(github.rest.pulls.listCommits, {
-              owner, repo, pull_number: pull.number, per_page: 100,
-            });
-            if (pullCommits.at(-1)?.sha !== process.env.REVIEWED_HEAD_SHA) {
-              throw new Error(`${process.env.REVIEWED_HEAD_SHA} was not the final pre-merge commit in PR #${pull.number}.`);
-            }
-
-            const { join } = require('node:path');
-            const { requireCopilotReview } = require(
-              join(process.env.GITHUB_WORKSPACE, 'trusted/.github/scripts/copilot-review-gate.cjs'),
-            );
-            await requireCopilotReview({
-              github,
-              core,
-              owner,
-              repo,
-              pullNumber: pull.number,
-              expectedHead: process.env.REVIEWED_HEAD_SHA,
-            });
       - name: Validate release version and changelog
         id: release
         shell: bash
@@ -167,12 +149,9 @@ jobs:
           fi
           tag="v$version"
 
+          tag_found=false
           if existing_sha="$(lookup_tag_sha "$tag")"; then
-            if [[ "$existing_sha" != "$SOURCE_SHA" ]]; then
-              echo "Tag $tag points to $existing_sha instead of $SOURCE_SHA; refusing to replace it." >&2
-              exit 1
-            fi
-            echo "Tag $tag already points to the exact release source; it can be reused after an interrupted attempt."
+            tag_found=true
           else
             tag_lookup_status=$?
             if [[ "$tag_lookup_status" -ne 4 ]]; then
@@ -181,18 +160,41 @@ jobs:
             fi
           fi
 
+          release_found=false
           if is_draft="$(lookup_release_draft "$tag")"; then
-            if [[ "$REBUILD_EXISTING_DRAFT" == "true" && "$is_draft" == "true" ]]; then
-              echo "Draft $tag still exists. Remove that unpublished draft before starting a rebuild." >&2
-            else
-              echo "Release $tag already exists; refusing to replace or modify it." >&2
-            fi
-            exit 1
+            release_found=true
           else
             lookup_status=$?
             if [[ "$lookup_status" -ne 4 ]]; then
               echo "Could not verify that release $tag is absent; refusing to continue." >&2
               exit 1
+            fi
+          fi
+
+          if [[ "$release_found" == "true" && "$is_draft" != "true" ]]; then
+            echo "Release $tag is published; refusing to modify it." >&2
+            exit 1
+          fi
+
+          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
+            if [[ "$release_found" == "true" ]]; then
+              echo "Draft $tag will be replaced only after all new packages finish building."
+            else
+              echo "No $tag release exists; the rebuild will resume draft creation after the builds finish."
+            fi
+          else
+            if [[ "$tag_found" == "true" && "$existing_sha" != "$SOURCE_SHA" ]]; then
+              echo "Tag $tag points to $existing_sha instead of $SOURCE_SHA; use explicit draft rebuild mode." >&2
+              exit 1
+            fi
+            if [[ "$release_found" == "true" ]]; then
+              if [[ "$tag_found" != "true" || "$existing_sha" != "$SOURCE_SHA" ]]; then
+                echo "Draft $tag is not attached to the exact release source; use explicit draft rebuild mode." >&2
+                exit 1
+              fi
+              echo "Draft $tag already targets the exact source and will be refreshed after the builds finish."
+            elif [[ "$tag_found" == "true" ]]; then
+              echo "Tag $tag already targets the exact source; draft creation can resume."
             fi
           fi
 
@@ -330,7 +332,7 @@ jobs:
             release-artifacts/*.deb
             release-artifacts/*.blockmap
             release-artifacts/latest*.yml
-      - name: Create tag and draft from completed artifacts
+      - name: Create or refresh draft from completed artifacts
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -338,7 +340,7 @@ jobs:
         run: |
           lookup_release() {
             local output
-            if output="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '.draft' 2>&1)"; then
+            if output="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '[.id, .draft] | @tsv' 2>&1)"; then
               printf '%s' "$output"
               return 0
             fi
@@ -347,6 +349,19 @@ jobs:
             fi
             echo "$output" >&2
             return 1
+          }
+
+          assert_draft() {
+            local release_id="$1"
+            local state
+            if ! state="$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id" --jq '.draft')"; then
+              echo "Could not re-check release $RELEASE_TAG; refusing to modify it." >&2
+              exit 1
+            fi
+            if [[ "$state" != "true" ]]; then
+              echo "Release $RELEASE_TAG was published while this run was active; refusing to modify it." >&2
+              exit 1
+            fi
           }
 
           lookup_tag_sha() {
@@ -362,9 +377,10 @@ jobs:
             return 1
           }
 
-          if release_state="$(lookup_release)"; then
-            echo "Release $RELEASE_TAG already exists; refusing to replace or modify it." >&2
-            exit 1
+          release_found=false
+          if release_info="$(lookup_release)"; then
+            release_found=true
+            IFS=$'\t' read -r release_id release_is_draft <<<"$release_info"
           else
             release_lookup_status=$?
             if [[ "$release_lookup_status" -ne 4 ]]; then
@@ -373,28 +389,70 @@ jobs:
             fi
           fi
 
+          tag_found=false
           if tag_sha="$(lookup_tag_sha)"; then
-            if [[ "$tag_sha" != "$SOURCE_SHA" ]]; then
-              echo "Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA; refusing to replace it." >&2
-              exit 1
-            fi
-            echo "Tag $RELEASE_TAG already points to the exact release source; resuming draft creation."
+            tag_found=true
           else
             tag_lookup_status=$?
             if [[ "$tag_lookup_status" -ne 4 ]]; then
               echo "Could not verify the state of tag $RELEASE_TAG; refusing to continue." >&2
               exit 1
             fi
-
-            # Creating a new ref is atomic: a concurrent tag or release wins and
-            # this request fails without moving any existing tag.
-            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
-              -f ref="refs/tags/$RELEASE_TAG" -f sha="$SOURCE_SHA"
           fi
 
-          gh release create "$RELEASE_TAG" release-artifacts/* \
-            --draft --title "$RELEASE_TAG" \
-            --notes-file release-metadata/release-notes.md --verify-tag
+          if [[ "$release_found" == "true" && "$release_is_draft" != "true" ]]; then
+            echo "Release $RELEASE_TAG is published; refusing to modify it." >&2
+            exit 1
+          fi
+
+          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
+            # Replacement is destructive only to an explicitly requested draft,
+            # and happens after every new artifact has passed validation.
+            if [[ "$release_found" == "true" ]]; then
+              assert_draft "$release_id"
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"
+            fi
+
+            if [[ "$tag_found" == "true" ]]; then
+              if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$tag_sha" ]]; then
+                echo "Tag $RELEASE_TAG changed during the rebuild; refusing to delete it." >&2
+                exit 1
+              fi
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"
+            fi
+
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/tags/$RELEASE_TAG" -f sha="$SOURCE_SHA"
+            gh release create "$RELEASE_TAG" release-artifacts/* \
+              --draft --title "$RELEASE_TAG" \
+              --notes-file release-metadata/release-notes.md --verify-tag
+          elif [[ "$release_found" == "true" ]]; then
+            if [[ "$tag_found" != "true" || "$tag_sha" != "$SOURCE_SHA" ]]; then
+              echo "Draft $RELEASE_TAG does not target $SOURCE_SHA; use explicit draft rebuild mode." >&2
+              exit 1
+            fi
+
+            assert_draft "$release_id"
+            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" \
+              --notes-file release-metadata/release-notes.md
+            assert_draft "$release_id"
+            gh release upload "$RELEASE_TAG" release-artifacts/* --clobber
+          else
+            if [[ "$tag_found" == "true" && "$tag_sha" != "$SOURCE_SHA" ]]; then
+              echo "Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA; refusing to replace it." >&2
+              exit 1
+            fi
+            if [[ "$tag_found" != "true" ]]; then
+              # Creating a new ref is atomic: a concurrent tag wins and this
+              # request fails without moving an existing tag.
+              gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+                -f ref="refs/tags/$RELEASE_TAG" -f sha="$SOURCE_SHA"
+            fi
+
+            gh release create "$RELEASE_TAG" release-artifacts/* \
+              --draft --title "$RELEASE_TAG" \
+              --notes-file release-metadata/release-notes.md --verify-tag
+          fi
 
   verify-release:
     name: Verify draft release artifacts

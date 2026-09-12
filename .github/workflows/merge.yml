@@ -1,4 +1,4 @@
-name: Merge reviewed dev changes
+name: Merge tested dev changes
 
 on:
   workflow_run:
@@ -75,13 +75,33 @@ jobs:
               }
             }
 
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+            const protectedFiles = files
+              .map((file) => file.filename)
+              .filter((path) =>
+                path.startsWith('.github/workflows/') ||
+                path.startsWith('.github/scripts/') ||
+                path === 'scripts/check-release.mjs',
+              );
+            if (protectedFiles.length > 0) {
+              core.warning(
+                `Release infrastructure changes require a manual merge: ${protectedFiles.join(', ')}`,
+              );
+              return;
+            }
+
             core.setOutput('eligible', 'true');
             core.setOutput('pull-number', String(pr.number));
             core.setOutput('head-sha', testedPull.head.sha);
             core.setOutput('base-sha', testedPull.base.sha);
 
   squash-merge:
-    name: Require review, squash merge, and request release
+    name: Squash merge and request release
     needs: eligibility
     if: needs.eligibility.outputs.eligible == 'true'
     runs-on: ubuntu-latest
@@ -89,14 +109,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      # workflow_run loads this workflow from the protected default branch. The
-      # write-capable job checks out only that protected revision, never PR code.
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          ref: ${{ github.workflow_sha }}
-          persist-credentials: false
-      - name: Require clean Copilot review and merge the checked revision
-        timeout-minutes: 16
+      - name: Merge the tested revision
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           PR_NUMBER: ${{ needs.eligibility.outputs.pull-number }}
@@ -118,55 +131,25 @@ jobs:
                 pr.head.repo.full_name !== `${owner}/${repo}`) {
               throw new Error('The PR is not an eligible dev to main merge.');
             }
-            if (!pr.merged && (pr.state !== 'open' || pr.draft)) {
-              throw new Error('The PR is neither open for merge nor already merged.');
-            }
-
-            const { join } = require('node:path');
-            const { requireCopilotReview } = require(
-              join(process.env.GITHUB_WORKSPACE, '.github/scripts/copilot-review-gate.cjs'),
-            );
-            await requireCopilotReview({
-              github,
-              core,
-              owner,
-              repo,
-              pullNumber,
-              expectedHead: testedHead,
-              timeoutMs: 15 * 60 * 1000,
-            });
-
-            const { data: reviewedPr } = await github.rest.pulls.get({
-              owner, repo, pull_number: pullNumber,
-            });
-            if (reviewedPr.head.sha !== testedHead) {
-              throw new Error('The PR changed during review; its latest CI run must pass before merging.');
-            }
-            if (reviewedPr.base.ref !== 'main' || reviewedPr.head.ref !== 'dev' ||
-                reviewedPr.head.repo.full_name !== `${owner}/${repo}`) {
-              throw new Error('The PR is no longer an eligible dev to main merge.');
-            }
 
             let mergeSha;
-            if (reviewedPr.merged) {
-              if (!reviewedPr.merge_commit_sha) {
+            if (pr.merged) {
+              if (!pr.merge_commit_sha) {
                 throw new Error('The merged PR has no squash commit to release.');
               }
-              mergeSha = reviewedPr.merge_commit_sha;
+              mergeSha = pr.merge_commit_sha;
               core.info(`PR #${pullNumber} is already merged at ${mergeSha}; resuming release.`);
             } else {
-              if (reviewedPr.state !== 'open' || reviewedPr.draft) {
+              if (pr.state !== 'open' || pr.draft) {
                 throw new Error('The PR is no longer open and ready to merge.');
               }
               const { data: currentBase } = await github.rest.repos.getBranch({
                 owner, repo, branch: 'main',
               });
-              if (reviewedPr.base.sha !== testedBase || currentBase.commit.sha !== testedBase) {
-                throw new Error('main changed during review; update the PR and rerun CI before merging.');
+              if (pr.base.sha !== testedBase || currentBase.commit.sha !== testedBase) {
+                throw new Error('main changed after CI; update the PR and rerun CI before merging.');
               }
 
-              // Main Protection uses strict required checks, so GitHub atomically
-              // rejects this merge if main advances after this comparison.
               const { data: result } = await github.rest.pulls.merge({
                 owner,
                 repo,
@@ -178,15 +161,11 @@ jobs:
               mergeSha = result.sha;
             }
 
-            // repository_dispatch is one of the events that GITHUB_TOKEN may
-            // trigger. GitHub loads release.yml from protected main, eliminating
-            // a caller-selected reusable workflow revision.
+            // Merges performed with GITHUB_TOKEN do not emit push workflows.
+            // This event loads release.yml from protected main instead.
             await github.rest.repos.createDispatchEvent({
               owner,
               repo,
               event_type: 'release-merged',
-              client_payload: {
-                source_sha: mergeSha,
-                reviewed_head_sha: testedHead,
-              },
+              client_payload: { source_sha: mergeSha },
             });
