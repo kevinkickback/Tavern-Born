@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
+import { GameContent } from '@/components/editor/GameContent'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { renderEntry } from '@/lib/renderer'
 
 interface TraitTooltipProps {
   name: string
@@ -14,36 +14,7 @@ export function TraitTooltip({ name, entries, children }: TraitTooltipProps) {
       return <div className="text-muted-foreground text-sm">No description available</div>
     }
 
-    const getEntryBaseKey = (entry: unknown): string => {
-      if (typeof entry === 'string') return entry
-      if (entry && typeof entry === 'object') {
-        const record = entry as { name?: unknown; source?: unknown; type?: unknown }
-        if (typeof record.name === 'string') {
-          return `${record.name}|${typeof record.source === 'string' ? record.source : ''}`
-        }
-        return `obj:${typeof record.type === 'string' ? record.type : 'entry'}`
-      }
-      return String(entry)
-    }
-
-    const collisionCounts = new Map<string, number>()
-    const content = entries.map((entry) => {
-      const rendered = renderEntry(entry)
-      const baseKey = getEntryBaseKey(entry)
-      const seen = collisionCounts.get(baseKey) ?? 0
-      collisionCounts.set(baseKey, seen + 1)
-      const key = seen === 0 ? baseKey : `${baseKey}#${seen}`
-
-      return (
-        <div
-          key={key}
-          className="text-sm leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: rendered }}
-        />
-      )
-    })
-
-    return <div className="space-y-2">{content}</div>
+    return <GameContent entry={entries} className="space-y-2 text-sm leading-relaxed" />
   }
 
   return (

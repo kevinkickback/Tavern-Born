@@ -11,6 +11,7 @@ import {
   getProficiencyBonus,
   getRemainingPointBuy,
   parseHitDice,
+  rollDie,
 } from '@/lib/calculations/gameRules'
 import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
@@ -24,6 +25,13 @@ describe('gameRules', () => {
   test('getHitDiceFromClass reads class hd and falls back to 8', () => {
     expect(getHitDiceFromClass(makeClassFixture({ hd: { faces: 10 } }))).toBe(10)
     expect(getHitDiceFromClass(null)).toBe(8)
+  })
+
+  test('rollDie uses an injectable random source and validates it', () => {
+    expect(rollDie(10, () => 0)).toBe(1)
+    expect(rollDie(10, () => 0.999)).toBe(10)
+    expect(() => rollDie(0, () => 0.5)).toThrow(RangeError)
+    expect(() => rollDie(10, () => 1)).toThrow(RangeError)
   })
 
   test('getASILevelsFromClass parses and sorts distinct ASI levels', () => {

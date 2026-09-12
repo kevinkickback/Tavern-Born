@@ -8,6 +8,7 @@ import {
   Star,
 } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { GameContent } from '@/components/editor/GameContent'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import { Badge } from '@/components/ui/badge'
@@ -48,7 +49,6 @@ import {
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
-import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -505,13 +505,11 @@ export function BuildRacePage() {
                             </h4>
                             <div className="border-t border-border">
                               {getRaceTraits(displayRace).map((trait) => (
-                                <div key={trait.name} className="border-b border-border py-3">
+                                <div key={trait.key} className="border-b border-border py-3">
                                   <div className="mb-1.5 text-sm font-semibold">{trait.name}</div>
-                                  <div
+                                  <GameContent
+                                    entry={trait.entries}
                                     className="text-sm leading-relaxed text-muted-foreground [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
-                                    dangerouslySetInnerHTML={{
-                                      __html: trait.entries.map((e) => renderEntry(e)).join(''),
-                                    }}
                                   />
                                 </div>
                               ))}
@@ -522,12 +520,10 @@ export function BuildRacePage() {
                         {(displayRace.entries ?? [])
                           .filter((entry) => typeof entry === 'string')
                           .map((entry) => (
-                            <div
+                            <GameContent
                               key={entry as string}
+                              entry={entry}
                               className="text-sm leading-relaxed [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-1"
-                              dangerouslySetInnerHTML={{
-                                __html: renderEntry(entry),
-                              }}
                             />
                           ))}
                       </div>

@@ -1,39 +1,41 @@
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react'
 import {
-  ArrowCounterClockwise,
   Brain,
-  Check,
   GlobeHemisphereWest,
-  LockSimple,
-  Plus,
   Shield,
   ShieldCheck,
   Sword,
   Wrench,
 } from '@phosphor-icons/react'
-import { type ReactNode, useState } from 'react'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { useState } from 'react'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { AnchoredHint } from '@/components/workspace'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { normalizeKey } from '@/lib/provenance'
-import type { ChoiceRecord, ProficiencyProvenance } from '@/lib/provenance/types'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
-import {
-  formatWeaponCategoryLabel,
-  hasProfInArray,
-  hasUnresolvedChoiceForKind,
-  normalizeGenericToolKind,
-  type ToolChoiceSlot,
-} from '@/pages/build/proficiencies/model/data'
+import { hasProfInArray, type ToolChoiceSlot } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
+import { ArmorPanel } from './tabs/ArmorPanel'
+import { LanguagesPanel } from './tabs/LanguagesPanel'
+import { SavingThrowsPanel } from './tabs/SavingThrowsPanel'
+import { SkillsPanel } from './tabs/SkillsPanel'
+import { ToolsPanel } from './tabs/ToolsPanel'
+import type {
+  ChoiceCounts,
+  CurrentProficiencies,
+  ItemGroup,
+  LanguageSort,
+  ProficiencyLedger,
+  ResolveChoiceSelection,
+  SavingThrowRow,
+  SkillGroup,
+  SkillRow,
+  SkillSort,
+  ToolSort,
+  WeaponSort,
+} from './tabs/types'
+import { WeaponsPanel } from './tabs/WeaponsPanel'
 
 const EXPERTISE_HINT_SELECTOR = '[data-expertise-hint="true"]'
 const EXPERTISE_HINT_WIDTH = 280
@@ -45,8 +47,6 @@ export type ProficiencyTabValue =
   | 'weapons'
   | 'tools'
   | 'languages'
-
-type ChoiceCounts = Record<'skills' | 'armor' | 'weapons' | 'tools' | 'languages', number>
 
 interface CategoryConfig {
   value: ProficiencyTabValue
@@ -157,45 +157,14 @@ export function BuildProficienciesCategorySwitcher({
   )
 }
 
-interface SkillRow {
-  name: string
-  ability: string
-  proficient: boolean
-  expertise: boolean
-  modifierString: string
-}
-
-type SkillSort = 'ability' | 'alpha' | 'proficient'
-type SkillGroup = { label: string | null; skills: SkillRow[] }
-
-type WeaponSort = 'alpha' | 'category' | 'melee-ranged' | 'proficient'
-type ToolSort = 'alpha' | 'type' | 'proficient'
-type LangSort = 'alpha' | 'type' | 'proficient'
-type ProficiencyRowState = 'chosen' | 'granted' | 'available' | 'unavailable'
-
-interface SavingThrowRow {
-  ability: string
-  proficient: boolean
-  modifierString: string
-}
-
 interface BuildProficienciesTabsPanelProps {
   skills: SkillRow[]
   savingThrows: SavingThrowRow[]
   availableArmor: string[]
   availableWeapons: string[]
   availableLanguages: string[]
-  currentProficiencies: {
-    armor: string[]
-    weapons: string[]
-    tools: string[]
-    languages: string[]
-  }
-  ledger: {
-    choices: ChoiceRecord[]
-    proficiencies: ProficiencyProvenance
-  }
-  choiceCounts: Record<'skills' | 'armor' | 'weapons' | 'tools' | 'languages', number>
+  currentProficiencies: CurrentProficiencies
+  ledger: ProficiencyLedger
   dropdownToolSlots: ToolChoiceSlot[]
   artisanToolSlots: ToolChoiceSlot[]
   /** Pre-computed list of tool names to render as selectable pills. */
@@ -204,19 +173,12 @@ interface BuildProficienciesTabsPanelProps {
   artisanChoiceByNorm: Map<string, string>
   onFocusChange: (focus: ProfFocus) => void
   onExpandDetails: () => void
-  onResolveChoiceSelection: (
-    domain: 'skills' | 'languages' | 'tools' | 'armor' | 'weapons',
-    itemName: string,
-    adding: boolean,
-    choiceId?: string,
-  ) => void
+  onResolveChoiceSelection: ResolveChoiceSelection
   onToggleExpertise: (skillName: string) => void
   /** Total expertise slots from class features (Rogue, Bard, etc.). */
   availableExpertiseSlots: number
   /** Number of skills currently marked with expertise. */
   usedExpertiseSlots: number
-  /** Unspent expertise slots — shown as a separate badge on the Skills card. */
-  expertiseChoiceCount: number
   activeTab?: ProficiencyTabValue
   onActiveTabChange?: (value: ProficiencyTabValue) => void
   defaultTab?: ProficiencyTabValue
@@ -226,74 +188,6 @@ interface BuildProficienciesTabsPanelProps {
   toolTypeMap: Map<string, string>
   /** Map from lowercased weapon name to its category ('simple'/'martial') and ranged flag. */
   weaponInfoMap: Map<string, { category?: string; ranged?: boolean }>
-  /** Retained for callers that coordinate the current inspector item. */
-  focused?: ProfFocus | null
-}
-
-function formatProfLabel(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(
-      /(^|[\s/-])([a-z])/g,
-      (_, sep: string, letter: string) => `${sep}${letter.toUpperCase()}`,
-    )
-}
-
-function ProficiencyStatus({ state }: { state: ProficiencyRowState }) {
-  const label =
-    state === 'chosen'
-      ? 'Chosen'
-      : state === 'granted'
-        ? 'Granted'
-        : state === 'available'
-          ? 'Available'
-          : 'Unavailable'
-  return (
-    <span
-      className={cn(
-        'inline-flex h-5 shrink-0 items-center rounded border px-1.5 text-[11px] font-semibold',
-        state === 'chosen' && 'border-primary/50 bg-primary/10 text-primary',
-        state === 'granted' && 'border-success/40 bg-success/10 text-success',
-        state === 'available' && 'border-primary/50 bg-primary/10 text-primary',
-        state === 'unavailable' && 'border-border bg-muted/20 text-muted-foreground',
-      )}
-    >
-      {label}
-    </span>
-  )
-}
-
-function ProficiencyStateIcon({
-  state,
-  fallback,
-  actionable = false,
-}: {
-  state: ProficiencyRowState
-  fallback: ReactNode
-  actionable?: boolean
-}) {
-  if (state === 'chosen') {
-    return (
-      <span className="relative size-3.5 shrink-0" aria-hidden="true">
-        <Check className="size-3.5 group-hover:hidden group-focus-visible:hidden" />
-        <ArrowCounterClockwise className="hidden size-3.5 group-hover:block group-focus-visible:block" />
-      </span>
-    )
-  }
-  if (state === 'granted') return <LockSimple className="size-3.5 shrink-0" aria-hidden="true" />
-  if (state === 'available' && actionable) {
-    return <Plus className="size-3.5 shrink-0" aria-hidden="true" />
-  }
-  return fallback
-}
-
-const SAVE_ABBREVIATIONS: Record<string, string> = {
-  strength: 'str',
-  dexterity: 'dex',
-  constitution: 'con',
-  intelligence: 'int',
-  wisdom: 'wis',
-  charisma: 'cha',
 }
 
 const SKILL_ABILITY_ORDER = [
@@ -341,7 +235,7 @@ export function BuildProficienciesTabsPanel({
   const [skillSort, setSkillSort] = useState<SkillSort>('alpha')
   const [weaponSort, setWeaponSort] = useState<WeaponSort>('alpha')
   const [toolSort, setToolSort] = useState<ToolSort>('alpha')
-  const [langSort, setLangSort] = useState<LangSort>('alpha')
+  const [langSort, setLangSort] = useState<LanguageSort>('alpha')
 
   const [showExpertiseHint, setShowExpertiseHint] = useState(
     () => availableExpertiseSlots > 0 && !isHintDismissed('skills-expertise'),
@@ -356,9 +250,6 @@ export function BuildProficienciesTabsPanel({
     setShowExpertiseHint(false)
     setHintDismissed('skills-expertise', true)
   }
-
-  const choiceSelectedClass = 'bg-primary/10 text-foreground hover:bg-primary/15'
-  const fixedSelectedClass = 'bg-success/10 text-foreground hover:bg-success/15'
 
   const skillGroups: SkillGroup[] = (() => {
     if (skillSort === 'alpha') {
@@ -382,7 +273,7 @@ export function BuildProficienciesTabsPanel({
     })
   })()
 
-  const weaponGroups: Array<{ label: string | null; items: string[] }> = (() => {
+  const weaponGroups: ItemGroup[] = (() => {
     if (weaponSort === 'proficient') {
       const isProf = (w: string) =>
         hasProfInArray(currentProficiencies.weapons, w) ||
@@ -436,7 +327,7 @@ export function BuildProficienciesTabsPanel({
     return [{ label: null as null, items: availableWeapons }]
   })()
 
-  const toolGroups: Array<{ label: string | null; items: string[] }> = (() => {
+  const toolGroups: ItemGroup[] = (() => {
     if (toolSort === 'proficient') {
       const isProf = (t: string) =>
         hasProfInArray(currentProficiencies.tools, t) ||
@@ -476,7 +367,7 @@ export function BuildProficienciesTabsPanel({
     return [{ label: null as null, items: visibleToolCandidates }]
   })()
 
-  const langGroups: Array<{ label: string | null; items: string[] }> = (() => {
+  const langGroups: ItemGroup[] = (() => {
     if (langSort === 'proficient') {
       const isProf = (l: string) =>
         hasProfInArray(currentProficiencies.languages, l) ||
@@ -528,756 +419,82 @@ export function BuildProficienciesTabsPanel({
         onValueChange={(value) => handleActiveTabChange(value as ProficiencyTabValue)}
       >
         <TabsContent value="skills">
-          <div className="space-y-4">
-            <div className="flex items-center justify-end gap-2">
-              <span className="text-xs text-muted-foreground">Sort:</span>
-              <Select value={skillSort} onValueChange={(v) => setSkillSort(v as SkillSort)}>
-                <SelectTrigger className="h-8 w-[150px] cursor-pointer text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="alpha" className="text-xs">
-                    Alphabetical
-                  </SelectItem>
-                  <SelectItem value="ability" className="text-xs">
-                    By type
-                  </SelectItem>
-                  <SelectItem value="proficient" className="text-xs">
-                    Proficient first
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {skillGroups.map(({ label, skills: groupSkills }) => (
-              <div key={label ?? 'all'}>
-                {label && (
-                  <div className="mb-3 flex items-center gap-2">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      {label}
-                    </span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                )}
-                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane 2xl:grid-cols-2">
-                  {groupSkills.map((skill) => {
-                    const normName = skill.name
-                    const sourceTags = ledger.proficiencies.skills[normName] ?? []
-                    const hasLedgerGrant = sourceTags.length > 0
-                    const isSelected = skill.proficient || hasLedgerGrant
-                    const isChoiceSelected = ledger.choices.some(
-                      (choice) =>
-                        choice.domain === 'skills' &&
-                        choice.selected.some((selected) => normalizeKey(selected) === normName),
-                    )
-                    const canSelect =
-                      !isSelected &&
-                      ledger.choices.some(
-                        (choice) =>
-                          choice.domain === 'skills' &&
-                          choice.selected.length < choice.chooseCount &&
-                          (choice.optionPool.length === 0 ||
-                            choice.optionPool.some(
-                              (poolEntry) => normalizeKey(poolEntry) === normName,
-                            )),
-                      )
-                    const canDeselect = isChoiceSelected
-                    const canAddExpertise =
-                      isSelected && !skill.expertise && usedExpertiseSlots < availableExpertiseSlots
-                    const canRemoveExpertise = isSelected && skill.expertise
-                    const canToggleExpertise = canAddExpertise || canRemoveExpertise
-                    const rowState: ProficiencyRowState = isChoiceSelected
-                      ? 'chosen'
-                      : isSelected
-                        ? 'granted'
-                        : canSelect
-                          ? 'available'
-                          : 'unavailable'
-                    const focusSkill = () => {
-                      onFocusChange({
-                        type: 'skill',
-                        name: skill.name,
-                        ability: skill.ability,
-                        proficient: isSelected,
-                        expertise: skill.expertise,
-                        modifierString: skill.modifierString,
-                      })
-                      onExpandDetails()
-                    }
-
-                    return (
-                      <fieldset
-                        key={skill.name}
-                        onMouseEnter={focusSkill}
-                        onFocusCapture={focusSkill}
-                        aria-label={`${formatProfLabel(skill.name)} proficiency`}
-                        className={cn(
-                          'inline-flex min-h-11 min-w-0 items-stretch overflow-hidden bg-surface-raised text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-within:z-10 focus-within:ring-2 focus-within:ring-primary focus-within:ring-inset',
-                          isChoiceSelected
-                            ? choiceSelectedClass
-                            : isSelected
-                              ? fixedSelectedClass
-                              : canSelect
-                                ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
-                                : 'bg-surface-raised text-foreground hover:bg-surface-hover',
-                        )}
-                      >
-                        <button
-                          type="button"
-                          tabIndex={canToggleExpertise ? 0 : -1}
-                          data-expertise-hint={canToggleExpertise ? 'true' : undefined}
-                          title={
-                            canRemoveExpertise
-                              ? `Remove expertise: ${formatProfLabel(skill.name)}`
-                              : canAddExpertise
-                                ? `Add expertise: ${formatProfLabel(skill.name)}`
-                                : undefined
-                          }
-                          onClick={() => {
-                            if (canToggleExpertise) onToggleExpertise(skill.name)
-                          }}
-                          className={cn(
-                            'px-2 self-stretch flex flex-col items-center justify-center gap-1 border-r border-current/20 shrink-0 focus-visible:outline-none',
-                            canToggleExpertise
-                              ? 'cursor-pointer hover:opacity-70'
-                              : 'cursor-default',
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              'w-1.5 h-1.5 rounded-full transition-colors pointer-events-none',
-                              isSelected ? 'bg-current' : 'bg-current/20',
-                            )}
-                          />
-                          <span
-                            className={cn(
-                              'w-1.5 h-1.5 rounded-full transition-colors pointer-events-none',
-                              skill.expertise ? 'bg-current' : 'bg-current/20',
-                            )}
-                          />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (canDeselect) onResolveChoiceSelection('skills', skill.name, false)
-                            else if (canSelect) onResolveChoiceSelection('skills', skill.name, true)
-                          }}
-                          title={
-                            canDeselect
-                              ? `Remove choice: ${formatProfLabel(skill.name)}`
-                              : isSelected
-                                ? `${formatProfLabel(skill.name)} is granted and cannot be removed`
-                                : canSelect
-                                  ? `Choose ${formatProfLabel(skill.name)}`
-                                  : undefined
-                          }
-                          className={cn(
-                            'group flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left focus-visible:outline-none',
-                            canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
-                          )}
-                        >
-                          <ProficiencyStateIcon
-                            state={rowState}
-                            actionable={canSelect || canDeselect}
-                            fallback={<Brain className="size-3.5 shrink-0" aria-hidden="true" />}
-                          />
-                          <span className="truncate">{formatProfLabel(skill.name)}</span>
-                          <span className="ml-auto flex shrink-0 items-center gap-2">
-                            <span className="text-xs font-normal text-muted-foreground">
-                              {skill.ability.toUpperCase()}
-                            </span>
-                            <ProficiencyStatus state={rowState} />
-                          </span>
-                        </button>
-                      </fieldset>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+          <SkillsPanel
+            groups={skillGroups}
+            ledger={ledger}
+            sort={skillSort}
+            onSortChange={setSkillSort}
+            onFocusChange={onFocusChange}
+            onExpandDetails={onExpandDetails}
+            onResolveChoiceSelection={onResolveChoiceSelection}
+            onToggleExpertise={onToggleExpertise}
+            availableExpertiseSlots={availableExpertiseSlots}
+            usedExpertiseSlots={usedExpertiseSlots}
+          />
         </TabsContent>
 
         <TabsContent value="saving-throws">
-          <div className="space-y-4">
-            <div className="h-8" aria-hidden="true" />
-            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane sm:grid-cols-2 2xl:grid-cols-3">
-              {savingThrows.map((save) => {
-                const normAbility = normalizeKey(save.ability)
-                const abbr = SAVE_ABBREVIATIONS[normAbility]
-                const sourceTags = [
-                  ...(ledger.proficiencies.savingThrows[normAbility] ?? []),
-                  ...(abbr ? (ledger.proficiencies.savingThrows[abbr] ?? []) : []),
-                ]
-                const hasLedgerGrant = sourceTags.length > 0
-                const isSelected = save.proficient || hasLedgerGrant
-                const rowState: ProficiencyRowState = isSelected ? 'granted' : 'unavailable'
-                const focusSave = () => {
-                  onFocusChange({
-                    type: 'save',
-                    ability: save.ability,
-                    proficient: isSelected,
-                    modifierString: save.modifierString,
-                  })
-                  onExpandDetails()
-                }
-
-                return (
-                  <button
-                    key={save.ability}
-                    type="button"
-                    onMouseEnter={focusSave}
-                    onFocus={focusSave}
-                    className={cn(
-                      'group inline-flex min-h-11 min-w-0 cursor-default items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                      isSelected
-                        ? fixedSelectedClass
-                        : 'bg-surface-raised text-foreground hover:bg-surface-hover',
-                    )}
-                  >
-                    <ProficiencyStateIcon
-                      state={rowState}
-                      fallback={<ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />}
-                    />
-                    <span>{formatProfLabel(save.ability)}</span>
-                    <span className="ml-auto flex shrink-0 items-center gap-2">
-                      <span className="text-xs font-normal text-muted-foreground">
-                        {save.modifierString}
-                      </span>
-                      <ProficiencyStatus state={rowState} />
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <SavingThrowsPanel
+            savingThrows={savingThrows}
+            ledger={ledger}
+            onFocusChange={onFocusChange}
+            onExpandDetails={onExpandDetails}
+          />
         </TabsContent>
 
         <TabsContent value="armor">
-          <div className="space-y-4">
-            <div className="h-8" aria-hidden="true" />
-            <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane sm:grid-cols-2">
-              {availableArmor.map((armorKey) => {
-                const normArmor = normalizeKey(armorKey)
-                const sourceTags = ledger.proficiencies.armor[normArmor] ?? []
-                const hasLedgerGrant = sourceTags.length > 0
-                const isSelected =
-                  hasProfInArray(currentProficiencies.armor, armorKey) || hasLedgerGrant
-                const isChoiceSelected = ledger.choices.some(
-                  (choice) =>
-                    choice.domain === 'armor' &&
-                    choice.selected.some((selected) => normalizeKey(selected) === normArmor),
-                )
-                const canSelect =
-                  !isSelected &&
-                  ledger.choices.some(
-                    (choice) =>
-                      choice.domain === 'armor' &&
-                      choice.selected.length < choice.chooseCount &&
-                      (choice.optionPool.length === 0 ||
-                        choice.optionPool.some(
-                          (poolEntry) => normalizeKey(poolEntry) === normArmor,
-                        )),
-                  )
-                const canDeselect = isChoiceSelected
-                const rowState: ProficiencyRowState = isChoiceSelected
-                  ? 'chosen'
-                  : isSelected
-                    ? 'granted'
-                    : canSelect
-                      ? 'available'
-                      : 'unavailable'
-                const focusArmor = () => {
-                  onFocusChange({
-                    type: 'item',
-                    category: 'armor',
-                    name: armorKey,
-                    isProficient: isSelected,
-                  })
-                  onExpandDetails()
-                }
-                return (
-                  <button
-                    key={armorKey}
-                    type="button"
-                    onClick={() => {
-                      if (canDeselect) onResolveChoiceSelection('armor', armorKey, false)
-                      else if (canSelect) onResolveChoiceSelection('armor', armorKey, true)
-                    }}
-                    onMouseEnter={focusArmor}
-                    onFocus={focusArmor}
-                    title={
-                      canDeselect
-                        ? `Remove choice: ${formatProfLabel(armorKey)}`
-                        : isSelected
-                          ? `${formatProfLabel(armorKey)} is granted and cannot be removed`
-                          : canSelect
-                            ? `Choose ${formatProfLabel(armorKey)}`
-                            : undefined
-                    }
-                    className={cn(
-                      'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                      canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
-                      isChoiceSelected
-                        ? choiceSelectedClass
-                        : isSelected
-                          ? fixedSelectedClass
-                          : canSelect
-                            ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
-                            : 'bg-surface-raised text-foreground hover:bg-surface-hover',
-                    )}
-                  >
-                    <ProficiencyStateIcon
-                      state={rowState}
-                      actionable={canSelect || canDeselect}
-                      fallback={<Shield className="size-3.5 shrink-0" aria-hidden="true" />}
-                    />
-                    <span>{formatProfLabel(armorKey)}</span>
-                    <span className="ml-auto flex shrink-0 items-center gap-2">
-                      <ProficiencyStatus state={rowState} />
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          <ArmorPanel
+            availableArmor={availableArmor}
+            currentArmor={currentProficiencies.armor}
+            ledger={ledger}
+            onFocusChange={onFocusChange}
+            onExpandDetails={onExpandDetails}
+            onResolveChoiceSelection={onResolveChoiceSelection}
+          />
         </TabsContent>
 
         <TabsContent value="weapons">
-          <div className="space-y-4">
-            <div className="flex items-center justify-end gap-2">
-              <span className="text-xs text-muted-foreground">Sort:</span>
-              <Select value={weaponSort} onValueChange={(v) => setWeaponSort(v as WeaponSort)}>
-                <SelectTrigger className="h-8 w-[150px] cursor-pointer text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="alpha" className="text-xs">
-                    Alphabetical
-                  </SelectItem>
-                  <SelectItem value="category" className="text-xs">
-                    By category
-                  </SelectItem>
-                  <SelectItem value="melee-ranged" className="text-xs">
-                    By type
-                  </SelectItem>
-                  <SelectItem value="proficient" className="text-xs">
-                    Proficient first
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {weaponGroups.map(({ label, items: groupWeapons }) => (
-              <div key={label ?? 'all'}>
-                {label && (
-                  <div className="mb-3 flex items-center gap-2">
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      {label}
-                    </span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                )}
-                <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane 2xl:grid-cols-2">
-                  {groupWeapons.map((weaponKey) => {
-                    const normWeapon = normalizeKey(weaponKey)
-                    const sourceTags = ledger.proficiencies.weapons[normWeapon] ?? []
-                    const hasLedgerGrant = sourceTags.length > 0
-                    const isSelected =
-                      hasProfInArray(currentProficiencies.weapons, weaponKey) || hasLedgerGrant
-                    const isChoiceSelected = ledger.choices.some(
-                      (choice) =>
-                        choice.domain === 'weapons' &&
-                        choice.selected.some((selected) => normalizeKey(selected) === normWeapon),
-                    )
-                    const canSelect =
-                      !isSelected &&
-                      ledger.choices.some(
-                        (choice) =>
-                          choice.domain === 'weapons' &&
-                          choice.selected.length < choice.chooseCount &&
-                          (choice.optionPool.length === 0 ||
-                            choice.optionPool.some(
-                              (poolEntry) => normalizeKey(poolEntry) === normWeapon,
-                            )),
-                      )
-                    const canDeselect = isChoiceSelected
-                    const rowState: ProficiencyRowState = isChoiceSelected
-                      ? 'chosen'
-                      : isSelected
-                        ? 'granted'
-                        : canSelect
-                          ? 'available'
-                          : 'unavailable'
-                    const focusWeapon = () => {
-                      onFocusChange({
-                        type: 'item',
-                        category: 'weapons',
-                        name: weaponKey,
-                        isProficient: isSelected,
-                      })
-                      onExpandDetails()
-                    }
-                    return (
-                      <button
-                        key={weaponKey}
-                        type="button"
-                        onClick={() => {
-                          if (canDeselect) onResolveChoiceSelection('weapons', weaponKey, false)
-                          else if (canSelect) onResolveChoiceSelection('weapons', weaponKey, true)
-                        }}
-                        onMouseEnter={focusWeapon}
-                        onFocus={focusWeapon}
-                        title={
-                          canDeselect
-                            ? `Remove choice: ${formatProfLabel(weaponKey)}`
-                            : isSelected
-                              ? `${formatProfLabel(weaponKey)} is granted and cannot be removed`
-                              : canSelect
-                                ? `Choose ${formatProfLabel(weaponKey)}`
-                                : undefined
-                        }
-                        className={cn(
-                          'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                          canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
-                          isChoiceSelected
-                            ? choiceSelectedClass
-                            : isSelected
-                              ? fixedSelectedClass
-                              : canSelect
-                                ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
-                                : 'bg-surface-raised text-foreground hover:bg-surface-hover',
-                        )}
-                      >
-                        <ProficiencyStateIcon
-                          state={rowState}
-                          actionable={canSelect || canDeselect}
-                          fallback={<Sword className="size-3.5 shrink-0" aria-hidden="true" />}
-                        />
-                        <span>
-                          {formatWeaponCategoryLabel(weaponKey) ?? formatProfLabel(weaponKey)}
-                        </span>
-                        <span className="ml-auto flex shrink-0 items-center gap-2">
-                          <ProficiencyStatus state={rowState} />
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+          <WeaponsPanel
+            groups={weaponGroups}
+            currentWeapons={currentProficiencies.weapons}
+            ledger={ledger}
+            sort={weaponSort}
+            onSortChange={setWeaponSort}
+            onFocusChange={onFocusChange}
+            onExpandDetails={onExpandDetails}
+            onResolveChoiceSelection={onResolveChoiceSelection}
+          />
         </TabsContent>
 
         <TabsContent value="tools">
-          <div className="space-y-4">
-            {dropdownToolSlots.length > 0 && (
-              <div className="w-full space-y-2">
-                {dropdownToolSlots.map((slot) => (
-                  <div
-                    key={slot.id}
-                    className="w-full max-w-lg border-l-2 border-primary/50 bg-secondary/20 px-3 py-2.5"
-                  >
-                    <p className="mb-2 text-sm text-muted-foreground">
-                      {slot.sourceName}: choose {formatProfLabel(slot.label)}
-                    </p>
-                    <Select
-                      onValueChange={(value) => {
-                        onResolveChoiceSelection('tools', value, true, slot.choiceId)
-                        onFocusChange({
-                          type: 'item',
-                          category: 'tools',
-                          name: value,
-                          isProficient: true,
-                        })
-                        onExpandDetails()
-                      }}
-                      disabled={slot.options.length === 0}
-                    >
-                      <SelectTrigger className="h-9 cursor-pointer border-dashed">
-                        <SelectValue placeholder={`${formatProfLabel(slot.label)} (choose type)`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {slot.options.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {formatProfLabel(option)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex items-center justify-end gap-2">
-              <span className="text-xs text-muted-foreground">Sort:</span>
-              <Select value={toolSort} onValueChange={(v) => setToolSort(v as ToolSort)}>
-                <SelectTrigger className="h-8 w-[150px] cursor-pointer text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="alpha" className="text-xs">
-                    Alphabetical
-                  </SelectItem>
-                  <SelectItem value="type" className="text-xs">
-                    By type
-                  </SelectItem>
-                  <SelectItem value="proficient" className="text-xs">
-                    Proficient first
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {visibleToolCandidates.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No tools available in game data</p>
-            ) : (
-              toolGroups.map(({ label, items: groupTools }) => (
-                <div key={label ?? 'all'}>
-                  {label && (
-                    <div className="mb-3 flex items-center gap-2">
-                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        {label}
-                      </span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-                  )}
-                  <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane 2xl:grid-cols-2">
-                    {groupTools.map((toolName) => {
-                      const normTool = normalizeKey(toolName)
-                      const genericKind = normalizeGenericToolKind(toolName)
-                      const isGenericKind = Boolean(genericKind)
-                      const hasOptionalChoiceForKind = genericKind
-                        ? hasUnresolvedChoiceForKind(ledger.choices, genericKind)
-                        : false
-                      const sourceTags = ledger.proficiencies.tools[normTool] ?? []
-                      const hasLedgerGrant = sourceTags.length > 0
-                      const isSelected =
-                        hasProfInArray(currentProficiencies.tools, toolName) || hasLedgerGrant
-                      const isChoiceSelected = ledger.choices.some(
-                        (choice) =>
-                          choice.domain === 'tools' &&
-                          choice.selected.some((selected) => normalizeKey(selected) === normTool),
-                      )
-                      const artisanChoiceId = artisanChoiceByNorm.get(normTool)
-                      const canSelect =
-                        !isSelected &&
-                        (ledger.choices.some(
-                          (choice) =>
-                            choice.domain === 'tools' &&
-                            choice.selected.length < choice.chooseCount &&
-                            (choice.optionPool.length === 0 ||
-                              choice.optionPool.some(
-                                (poolEntry) => normalizeKey(poolEntry) === normTool,
-                              )),
-                        ) ||
-                          artisanToolSlots.some((slot) =>
-                            slot.options.some((opt) => normalizeKey(opt) === normTool),
-                          ))
-                      const canDeselect = isChoiceSelected
-                      const rowState: ProficiencyRowState = isChoiceSelected
-                        ? 'chosen'
-                        : isSelected
-                          ? 'granted'
-                          : canSelect || (isGenericKind && hasOptionalChoiceForKind)
-                            ? 'available'
-                            : 'unavailable'
-                      const focusTool = () => {
-                        onFocusChange({
-                          type: 'item',
-                          category: 'tools',
-                          name: toolName,
-                          isProficient: isSelected,
-                        })
-                        onExpandDetails()
-                      }
-
-                      return (
-                        <button
-                          key={toolName}
-                          type="button"
-                          onClick={() => {
-                            if (isGenericKind) return
-                            if (canDeselect) onResolveChoiceSelection('tools', toolName, false)
-                            else if (canSelect)
-                              onResolveChoiceSelection('tools', toolName, true, artisanChoiceId)
-                          }}
-                          onMouseEnter={focusTool}
-                          onFocus={focusTool}
-                          title={
-                            canDeselect
-                              ? `Remove choice: ${formatProfLabel(toolName)}`
-                              : isSelected
-                                ? `${formatProfLabel(toolName)} is granted and cannot be removed`
-                                : canSelect
-                                  ? `Choose ${formatProfLabel(toolName)}`
-                                  : undefined
-                          }
-                          className={cn(
-                            'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                            !isGenericKind && (canSelect || canDeselect)
-                              ? 'cursor-pointer'
-                              : 'cursor-default',
-                            isGenericKind
-                              ? hasOptionalChoiceForKind
-                                ? 'bg-primary/5 text-foreground hover:bg-primary/10'
-                                : 'bg-surface-raised text-foreground hover:bg-surface-hover'
-                              : isChoiceSelected
-                                ? choiceSelectedClass
-                                : isSelected
-                                  ? fixedSelectedClass
-                                  : canSelect
-                                    ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
-                                    : 'bg-surface-raised text-foreground hover:bg-surface-hover',
-                          )}
-                        >
-                          <ProficiencyStateIcon
-                            state={rowState}
-                            actionable={!isGenericKind && (canSelect || canDeselect)}
-                            fallback={<Wrench className="size-3.5 shrink-0" aria-hidden="true" />}
-                          />
-                          <span className="truncate">{formatProfLabel(toolName)}</span>
-                          <span className="ml-auto flex shrink-0 items-center gap-2">
-                            <ProficiencyStatus state={rowState} />
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <ToolsPanel
+            groups={toolGroups}
+            visibleToolCandidates={visibleToolCandidates}
+            currentTools={currentProficiencies.tools}
+            ledger={ledger}
+            sort={toolSort}
+            onSortChange={setToolSort}
+            dropdownToolSlots={dropdownToolSlots}
+            artisanToolSlots={artisanToolSlots}
+            artisanChoiceByNorm={artisanChoiceByNorm}
+            onFocusChange={onFocusChange}
+            onExpandDetails={onExpandDetails}
+            onResolveChoiceSelection={onResolveChoiceSelection}
+          />
         </TabsContent>
 
         <TabsContent value="languages">
-          <div className="space-y-4">
-            <div className="flex items-center justify-end gap-2">
-              <span className="text-xs text-muted-foreground">Sort:</span>
-              <Select value={langSort} onValueChange={(v) => setLangSort(v as LangSort)}>
-                <SelectTrigger className="h-8 w-[150px] cursor-pointer text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="alpha" className="text-xs">
-                    Alphabetical
-                  </SelectItem>
-                  <SelectItem value="type" className="text-xs">
-                    By type
-                  </SelectItem>
-                  <SelectItem value="proficient" className="text-xs">
-                    Proficient first
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {availableLanguages.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No languages available in game data</p>
-            ) : (
-              langGroups.map(({ label, items: groupLangs }) => (
-                <div key={label ?? 'all'}>
-                  {label && (
-                    <div className="mb-3 flex items-center gap-2">
-                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        {label}
-                      </span>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-                  )}
-                  <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane 2xl:grid-cols-2">
-                    {groupLangs.map((languageName) => {
-                      const normLang = normalizeKey(languageName)
-                      const sourceTags = ledger.proficiencies.languages[normLang] ?? []
-                      const hasLedgerGrant = sourceTags.length > 0
-                      const isSelected =
-                        hasProfInArray(currentProficiencies.languages, languageName) ||
-                        hasLedgerGrant
-                      const isChoiceSelected = ledger.choices.some(
-                        (choice) =>
-                          choice.domain === 'languages' &&
-                          choice.selected.some((selected) => normalizeKey(selected) === normLang),
-                      )
-                      const canSelect =
-                        !isSelected &&
-                        ledger.choices.some(
-                          (choice) =>
-                            choice.domain === 'languages' &&
-                            choice.selected.length < choice.chooseCount &&
-                            (choice.optionPool.length === 0 ||
-                              choice.optionPool.some(
-                                (poolEntry) => normalizeKey(poolEntry) === normLang,
-                              )),
-                        )
-                      const canDeselect = isChoiceSelected
-                      const rowState: ProficiencyRowState = isChoiceSelected
-                        ? 'chosen'
-                        : isSelected
-                          ? 'granted'
-                          : canSelect
-                            ? 'available'
-                            : 'unavailable'
-                      const focusLanguage = () => {
-                        onFocusChange({
-                          type: 'item',
-                          category: 'languages',
-                          name: languageName,
-                          isProficient: isSelected,
-                        })
-                        onExpandDetails()
-                      }
-
-                      return (
-                        <button
-                          key={languageName}
-                          type="button"
-                          onClick={() => {
-                            if (canDeselect)
-                              onResolveChoiceSelection('languages', languageName, false)
-                            else if (canSelect)
-                              onResolveChoiceSelection('languages', languageName, true)
-                          }}
-                          onMouseEnter={focusLanguage}
-                          onFocus={focusLanguage}
-                          title={
-                            canDeselect
-                              ? `Remove choice: ${formatProfLabel(languageName)}`
-                              : isSelected
-                                ? `${formatProfLabel(languageName)} is granted and cannot be removed`
-                                : canSelect
-                                  ? `Choose ${formatProfLabel(languageName)}`
-                                  : undefined
-                          }
-                          className={cn(
-                            'group inline-flex min-h-11 min-w-0 items-center gap-2 bg-surface-raised px-3 py-2.5 text-left text-sm font-medium text-foreground ring-1 ring-border/75 ring-inset transition-colors focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                            canSelect || canDeselect ? 'cursor-pointer' : 'cursor-default',
-                            isChoiceSelected
-                              ? choiceSelectedClass
-                              : isSelected
-                                ? fixedSelectedClass
-                                : canSelect
-                                  ? 'bg-surface-raised text-foreground hover:bg-surface-hover'
-                                  : 'bg-surface-raised text-foreground hover:bg-surface-hover',
-                          )}
-                        >
-                          <ProficiencyStateIcon
-                            state={rowState}
-                            actionable={canSelect || canDeselect}
-                            fallback={
-                              <GlobeHemisphereWest
-                                className="size-3.5 shrink-0"
-                                aria-hidden="true"
-                              />
-                            }
-                          />
-                          <span className="truncate">{formatProfLabel(languageName)}</span>
-                          <span className="ml-auto flex shrink-0 items-center gap-2">
-                            <ProficiencyStatus state={rowState} />
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <LanguagesPanel
+            groups={langGroups}
+            availableLanguages={availableLanguages}
+            currentLanguages={currentProficiencies.languages}
+            ledger={ledger}
+            sort={langSort}
+            onSortChange={setLangSort}
+            onFocusChange={onFocusChange}
+            onExpandDetails={onExpandDetails}
+            onResolveChoiceSelection={onResolveChoiceSelection}
+          />
         </TabsContent>
       </Tabs>
     </>

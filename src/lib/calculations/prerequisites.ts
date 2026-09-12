@@ -1,6 +1,5 @@
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
-import type { Progression } from '@/lib/characterUtils'
-import { getCharacterClassEntries, getTotalLevel } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
 import type { Raw5ePrereq } from '@/types/5etools'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import type { AbilityName } from './abilityScores'
@@ -17,7 +16,7 @@ export interface PrereqCharacterSnapshot {
     preparedSpells?: string[]
   }
   /** Optional multi-class progression. When present, takes precedence over `level`/`class`. */
-  progression?: Progression
+  progression?: readonly CharacterClassEntry[]
 }
 
 interface BuildPrerequisiteSnapshotParams {
@@ -45,17 +44,7 @@ export function buildPrerequisiteSnapshot({
       spellsKnown: profileSpells?.spellsKnown ?? [],
       preparedSpells: profileSpells?.preparedSpells ?? [],
     },
-    ...(classProgression.length > 0
-      ? {
-          progression: {
-            classes: classProgression.map((entry) => ({
-              name: entry.name,
-              levels: entry.levels,
-              source: entry.source,
-            })),
-          },
-        }
-      : {}),
+    ...(classProgression.length > 0 ? { progression: classProgression } : {}),
   }
 }
 
@@ -145,14 +134,14 @@ export function checkPrerequisite(
   if (prereq.level !== undefined) {
     let charLevel: number
 
-    if (options.className && character.progression?.classes) {
-      const entry = character.progression.classes.find(
+    if (options.className && character.progression) {
+      const entry = character.progression.find(
         (c) => c.name.toLowerCase() === options.className?.toLowerCase(),
       )
       charLevel = entry?.levels ?? 0
     } else {
       charLevel = character.progression
-        ? getTotalLevel(character.progression)
+        ? getTotalClassLevels(character.progression)
         : (character.level ?? 0)
     }
 
@@ -200,7 +189,7 @@ export function checkPrerequisite(
   }
 
   if (Array.isArray(prereq.class)) {
-    const primaryClass = character.progression?.classes?.[0]?.name ?? character.class ?? ''
+    const primaryClass = character.progression?.[0]?.name ?? character.class ?? ''
     const charClass = primaryClass.toLowerCase()
     const meetsClass = prereq.class.some((req) => {
       const name = typeof req === 'string' ? req : req.name
@@ -214,8 +203,8 @@ export function checkPrerequisite(
     const casterClasses = options.spellcastingClasses
     let hasSpellcasting = false
 
-    if (casterClasses && character.progression?.classes) {
-      hasSpellcasting = character.progression.classes.some((cls) => casterClasses.has(cls.name))
+    if (casterClasses && character.progression) {
+      hasSpellcasting = character.progression.some((cls) => casterClasses.has(cls.name))
     } else if (casterClasses && character.class) {
       hasSpellcasting = casterClasses.has(character.class)
     } else {

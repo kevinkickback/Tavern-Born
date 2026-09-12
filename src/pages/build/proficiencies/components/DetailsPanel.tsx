@@ -1,10 +1,10 @@
+import { GameContent } from '@/components/editor/GameContent'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
-import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { formatWeaponCategoryLabel } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
@@ -102,12 +102,10 @@ function EntriesSection({ entries }: { entries?: unknown[] }) {
       </h4>
       <div className="space-y-1">
         {entries.map((e) => (
-          <div
+          <GameContent
             key={typeof e === 'string' ? e : JSON.stringify(e)}
+            entry={e}
             className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1"
-            // renderEntry sanitises HTML — using dangerouslySetInnerHTML is the
-            // established pattern across this codebase (see rule 9).
-            dangerouslySetInnerHTML={{ __html: renderEntry(e) }}
           />
         ))}
       </div>
@@ -583,12 +581,10 @@ export function BuildProficienciesDetailsPanel({
                     Description
                   </h4>
                   {skillDescriptions[focused.name.toLowerCase()].map((e) => (
-                    <div
+                    <GameContent
                       key={typeof e === 'string' ? e : JSON.stringify(e)}
+                      entry={e}
                       className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1"
-                      dangerouslySetInnerHTML={{
-                        __html: renderEntry(e),
-                      }}
                     />
                   ))}
                 </div>

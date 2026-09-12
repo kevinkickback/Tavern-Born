@@ -37,20 +37,8 @@ export function getOriginSystemLabel(originSystem: OriginSystem): string {
   return originSystem === '2024' ? '5.5e Revised (2024)' : '5e Legacy (2014)'
 }
 
-export function getOriginAsiSourceLabel(originSystem: OriginSystem): 'Race' | 'Background' {
-  return originSystem === '2024' ? 'Background' : 'Race'
-}
-
-export function getOriginFeatSourceLabel(originSystem: OriginSystem): 'Background' | 'None' {
-  return originSystem === '2024' ? 'Background' : 'None'
-}
-
 export function usesRaceOriginBenefits(originSystem: OriginSystem): boolean {
   return originSystem === '2014'
-}
-
-export function usesBackgroundOriginBenefits(originSystem: OriginSystem): boolean {
-  return originSystem === '2024'
 }
 
 function hasAbilityEntries(entity?: { ability?: unknown[] } | null): boolean {

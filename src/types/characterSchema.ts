@@ -3,8 +3,6 @@ import {
   ABILITY_SCORE_ABSOLUTE_MAX,
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
-  POINT_BUY_MAX,
-  POINT_BUY_MIN,
 } from '@/lib/calculations/gameRules'
 import { ALL_SKILLS } from '@/lib/calculations/skills'
 
@@ -13,65 +11,14 @@ export const sourceSchema = z
   .min(1)
   .transform((s) => s.toUpperCase())
 
-export const optionalSourceSchema = sourceSchema.default('PHB')
-
-export const nameSchema = z.string().min(1).max(200)
-
-export const levelSchema = z.number().int().min(1).max(MAX_CHARACTER_LEVEL)
-
-export const sourceArraySchema = z.array(sourceSchema).min(1)
+const levelSchema = z.number().int().min(1).max(MAX_CHARACTER_LEVEL)
 
 /** Any legal ability score, including magical boosted maximums. */
-export const abilityScoreSchema = z
-  .number()
-  .int()
-  .min(ABILITY_SCORE_MIN)
-  .max(ABILITY_SCORE_ABSOLUTE_MAX)
+const abilityScoreSchema = z.number().int().min(ABILITY_SCORE_MIN).max(ABILITY_SCORE_ABSOLUTE_MAX)
 
-/** Score within the legal point-buy range only. */
-export const pointBuyScoreSchema = z.number().int().min(POINT_BUY_MIN).max(POINT_BUY_MAX)
+const originSystemSchema = z.enum(['2014', '2024'])
 
-/** Full lowercase ability name. */
-export const abilityNameSchema = z.enum([
-  'strength',
-  'dexterity',
-  'constitution',
-  'intelligence',
-  'wisdom',
-  'charisma',
-])
-
-export const originSystemSchema = z.enum(['2014', '2024'])
-
-/** Accepts both abbreviations and full names, normalises to lowercase full name. */
-export const abilityNameLooseSchema = z
-  .enum([
-    'strength',
-    'dexterity',
-    'constitution',
-    'intelligence',
-    'wisdom',
-    'charisma',
-    'str',
-    'dex',
-    'con',
-    'int',
-    'wis',
-    'cha',
-  ])
-  .transform((v) => {
-    const map: Record<string, string> = {
-      str: 'strength',
-      dex: 'dexterity',
-      con: 'constitution',
-      int: 'intelligence',
-      wis: 'wisdom',
-      cha: 'charisma',
-    }
-    return (map[v] ?? v) as z.infer<typeof abilityNameSchema>
-  })
-
-export const abilityScoresSchema = z.object({
+const abilityScoresSchema = z.object({
   strength: abilityScoreSchema,
   dexterity: abilityScoreSchema,
   constitution: abilityScoreSchema,
@@ -80,22 +27,7 @@ export const abilityScoresSchema = z.object({
   charisma: abilityScoreSchema,
 })
 
-export const pointBuyScoresSchema = z.object({
-  strength: pointBuyScoreSchema,
-  dexterity: pointBuyScoreSchema,
-  constitution: pointBuyScoreSchema,
-  intelligence: pointBuyScoreSchema,
-  wisdom: pointBuyScoreSchema,
-  charisma: pointBuyScoreSchema,
-})
-
-export const abilityBonusSchema = z.object({
-  ability: abilityNameSchema,
-  value: z.number().int(),
-  source: z.string().min(1),
-})
-
-export const proficiencyTypeSchema = z.enum([
+const proficiencyTypeSchema = z.enum([
   'armor',
   'weapons',
   'tools',
@@ -104,66 +36,7 @@ export const proficiencyTypeSchema = z.enum([
   'savingThrows',
 ])
 
-export const raceIdentifierSchema = z.object({
-  name: nameSchema,
-  source: optionalSourceSchema,
-})
-
-export const subraceIdentifierSchema = z.object({
-  raceName: nameSchema,
-  subraceName: nameSchema,
-  source: optionalSourceSchema,
-  raceSource: optionalSourceSchema,
-})
-
-export const classIdentifierSchema = z.object({
-  name: nameSchema,
-  source: optionalSourceSchema,
-})
-
-export const subclassIdentifierSchema = z.object({
-  className: nameSchema,
-  subclassName: nameSchema,
-  classSource: optionalSourceSchema,
-  source: optionalSourceSchema,
-  subclassShortName: z.string().optional(),
-})
-
-export const backgroundIdentifierSchema = z.object({
-  name: nameSchema,
-  source: optionalSourceSchema,
-})
-
-export const featIdentifierSchema = z.object({
-  name: nameSchema,
-  source: optionalSourceSchema,
-})
-
-export const spellIdentifierSchema = z.object({
-  name: nameSchema,
-  source: optionalSourceSchema,
-})
-
-export const spellFilterSchema = z.object({
-  level: z.number().int().min(0).max(9).optional(),
-  school: z.string().optional(),
-  classes: z.array(z.string()).optional(),
-  source: sourceSchema.optional(),
-})
-
-export const itemIdentifierSchema = z.object({
-  name: nameSchema,
-  source: optionalSourceSchema,
-})
-
-export const itemFilterSchema = z.object({
-  type: z.string().optional(),
-  rarity: z.string().optional(),
-  source: sourceSchema.optional(),
-  attunement: z.boolean().optional(),
-})
-
-export const variantRulesSchema = z.object({
+const variantRulesSchema = z.object({
   optionalClassFeatures: z.boolean().default(false),
   averageHitPoints: z.boolean().default(true),
   abilityScoreMethod: z.enum(['point-buy', 'standard-array', 'custom']).optional(),
@@ -174,7 +47,7 @@ export const variantRulesSchema = z.object({
   ignoreEquipRestrictions: z.boolean().default(false),
 })
 
-export const characterClassEntrySchema = z.object({
+const characterClassEntrySchema = z.object({
   name: z.string().min(1),
   source: z.string().optional(),
   levels: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
@@ -182,7 +55,41 @@ export const characterClassEntrySchema = z.object({
   subclassSource: z.string().optional(),
 })
 
-export const featureSchema = z.object({
+const hitPointGainSchema = z
+  .object({
+    className: z.string().min(1),
+    classSource: z.string().optional(),
+    classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+    characterLevel: z.number().int().min(2).max(MAX_CHARACTER_LEVEL),
+    hitDie: z.number().int().positive(),
+    dieResult: z.number().int().positive(),
+    method: z.enum(['average', 'rolled', 'manual']),
+  })
+  .refine((gain) => gain.dieResult <= gain.hitDie, {
+    message: 'Hit-point die result cannot exceed the hit die.',
+    path: ['dieResult'],
+  })
+
+const hitPointAdjustmentSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  amount: z.number().int(),
+  mode: z.enum(['flat', 'per-level']),
+  sourceType: z.enum(['manual', 'item', 'feat', 'other']),
+  sourceRef: z.string().optional(),
+  createdAt: z.string(),
+})
+
+const armorClassAdjustmentSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  amount: z.number().int(),
+  sourceType: z.enum(['manual', 'item', 'feat', 'other']),
+  sourceRef: z.string().optional(),
+  createdAt: z.string(),
+})
+
+const featureSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   source: z.string().min(1),
@@ -201,7 +108,7 @@ const featOptionSelectionsSchema = z.object({
   expertiseSkill: z.string().optional(),
 })
 
-export const featSchema = z.object({
+const featSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   source: z.string().min(1),
@@ -213,7 +120,7 @@ export const featSchema = z.object({
   classLevel: z.number().int().min(1).optional(),
 })
 
-export const equipmentSchema = z.object({
+const equipmentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   type: z.string().min(1),
@@ -239,7 +146,7 @@ export const equipmentSchema = z.object({
   focus: z.array(z.string()).optional(),
 })
 
-export const currencySchema = z.object({
+const currencySchema = z.object({
   cp: z.number().int().nonnegative(),
   sp: z.number().int().nonnegative(),
   ep: z.number().int().nonnegative(),
@@ -247,7 +154,7 @@ export const currencySchema = z.object({
   pp: z.number().int().nonnegative(),
 })
 
-export const hitPointsSchema = z.object({
+const hitPointsSchema = z.object({
   max: z.number().int().min(0),
   current: z.number().int().min(0),
   temporary: z.number().int().min(0),
@@ -258,7 +165,7 @@ const savingThrowEntrySchema = z.object({
   bonus: z.number().int(),
 })
 
-export const savingThrowsSchema = z.object({
+const savingThrowsSchema = z.object({
   strength: savingThrowEntrySchema,
   dexterity: savingThrowEntrySchema,
   constitution: savingThrowEntrySchema,
@@ -273,26 +180,26 @@ const skillEntrySchema = z.object({
   bonus: z.number().int(),
 })
 
-export const skillsSchema = z.record(skillEntrySchema).transform((record) => {
+const skillsSchema = z.record(skillEntrySchema).transform((record) => {
   const validKeySet = new Set<string>(ALL_SKILLS)
   return Object.fromEntries(Object.entries(record).filter(([key]) => validKeySet.has(key)))
 })
 
-export const portraitTransformSchema = z.object({
+const portraitTransformSchema = z.object({
   zoom: z.number(),
   panX: z.number(),
   panY: z.number(),
   rotation: z.number(),
 })
 
-export const allySchema = z.object({
+const allySchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   relationship: z.string(),
   description: z.string(),
 })
 
-export const characterDetailsSchema = z.object({
+const characterDetailsSchema = z.object({
   playerName: z.string().max(100).optional(),
   gender: z.string().optional(),
   alignment: z.string().optional(),
@@ -336,7 +243,7 @@ export const characterDetailsSchema = z.object({
   alliesAndOrganizations: z.string().optional(),
 })
 
-export const proficienciesSchema = z.object({
+const proficienciesSchema = z.object({
   armor: z.array(z.string()),
   weapons: z.array(z.string()),
   tools: z.array(z.string()),
@@ -345,7 +252,7 @@ export const proficienciesSchema = z.object({
   savingThrows: z.array(z.string()),
 })
 
-export const sourceTypeSchema = z.enum([
+const sourceTypeSchema = z.enum([
   'race',
   'subrace',
   'class',
@@ -357,11 +264,11 @@ export const sourceTypeSchema = z.enum([
   'ASI',
 ])
 
-export const grantTypeSchema = z.enum(['fixed', 'choice', 'placeholder'])
+const grantTypeSchema = z.enum(['fixed', 'choice', 'placeholder'])
 
-export const choiceStatusSchema = z.enum(['pending', 'resolved', 'partially-resolved'])
+const choiceStatusSchema = z.enum(['pending', 'resolved', 'partially-resolved'])
 
-export const choiceDomainSchema = z.enum([
+const choiceDomainSchema = z.enum([
   'skills',
   'languages',
   'tools',
@@ -374,7 +281,7 @@ export const choiceDomainSchema = z.enum([
   'equipment',
 ])
 
-export const sourceTagSchema = z.object({
+const sourceTagSchema = z.object({
   sourceType: sourceTypeSchema,
   sourceName: z.string(),
   sourceRef: z.string().optional(),
@@ -383,18 +290,18 @@ export const sourceTagSchema = z.object({
   label: z.string(),
 })
 
-export const spellSourceTagSchema = sourceTagSchema.extend({
+const spellSourceTagSchema = sourceTagSchema.extend({
   spellGrantedAtLevel: z.number().int().min(1).optional(),
   spellAttributionMode: z.enum(['exact', 'inferred-lowest-eligible']).optional(),
 })
 
-export const abilityBonusProvenanceRecordSchema = z.object({
+const abilityBonusProvenanceRecordSchema = z.object({
   ability: z.string(),
   value: z.number().int(),
   sourceTag: sourceTagSchema,
 })
 
-export const choiceRecordSchema = z.object({
+const choiceRecordSchema = z.object({
   id: z.string(),
   domain: choiceDomainSchema,
   sourceTag: sourceTagSchema,
@@ -407,7 +314,7 @@ export const choiceRecordSchema = z.object({
 const sourceTagListMapSchema = z.record(z.array(sourceTagSchema))
 const spellSourceTagListMapSchema = z.record(z.array(spellSourceTagSchema))
 
-export const proficiencyProvenanceSchema = z.object({
+const proficiencyProvenanceSchema = z.object({
   armor: sourceTagListMapSchema,
   weapons: sourceTagListMapSchema,
   tools: sourceTagListMapSchema,
@@ -416,7 +323,7 @@ export const proficiencyProvenanceSchema = z.object({
   savingThrows: sourceTagListMapSchema,
 })
 
-export const provenanceLedgerSchema = z.object({
+const provenanceLedgerSchema = z.object({
   proficiencies: proficiencyProvenanceSchema,
   abilityBonuses: z.array(abilityBonusProvenanceRecordSchema),
   features: sourceTagListMapSchema,
@@ -426,7 +333,7 @@ export const provenanceLedgerSchema = z.object({
   choices: z.array(choiceRecordSchema),
 })
 
-export const abilityScoreMethodSchema = z
+const abilityScoreMethodSchema = z
   .enum(['point-buy', 'standard-array', 'custom', 'manual'])
   .transform((method) => (method === 'manual' ? 'custom' : method))
 
@@ -461,7 +368,7 @@ export const wizardStep6Schema = z.object({
   abilityScores: abilityScoresSchema.optional(),
 })
 
-export const spellSlotLevelSchema = z
+const spellSlotLevelSchema = z
   .object({
     max: z.number().int().min(0),
     used: z.number().int().min(0),
@@ -473,7 +380,7 @@ export const spellSlotLevelSchema = z
 
 const spellSlotLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
 
-export const spellSlotsSchema = z
+const spellSlotsSchema = z
   .record(z.coerce.number().int(), spellSlotLevelSchema)
   .transform((slots) => {
     const normalized: Record<number, z.infer<typeof spellSlotLevelSchema>> = {}
@@ -483,7 +390,7 @@ export const spellSlotsSchema = z
     return normalized
   })
 
-export const raceSpellChoiceSchema = z.object({
+const raceSpellChoiceSchema = z.object({
   id: z.string().min(1),
   count: z.number().int().min(1),
   isCantrip: z.boolean(),
@@ -497,7 +404,7 @@ export const raceSpellChoiceSchema = z.object({
   selected: z.array(z.string()).default([]),
 })
 
-export const spellProfileSchema = z
+const spellProfileSchema = z
   .object({
     id: z.string().min(1, 'Spell profile ID is required'),
     type: z.enum(['class', 'special', 'racial']),
@@ -532,7 +439,7 @@ export const spellProfileSchema = z
     },
   )
 
-export const spellSelectionSchema = z
+const spellSelectionSchema = z
   .object({
     spellProfiles: z.array(spellProfileSchema).min(1, 'At least one spell profile must exist'),
     spellSlots: spellSlotsSchema,
@@ -559,7 +466,7 @@ export const spellSelectionSchema = z
   )
 
 /** Full character schema for file import / data integrity checks. */
-export const asiChoiceSchema = z.object({
+const asiChoiceSchema = z.object({
   id: z.string(),
   level: z.number().int(),
   className: z.string(),
@@ -570,7 +477,7 @@ export const asiChoiceSchema = z.object({
 export const characterSchema = z
   .object({
     id: z.string().min(1),
-    version: z.string().default('2.0.0'),
+    version: z.string().default('6.0.0'),
     name: z
       .string()
       .min(1)
@@ -617,8 +524,13 @@ export const characterSchema = z
       )
       .optional(),
     hitPoints: hitPointsSchema,
+    hitPointsInitialized: z.boolean().optional(),
+    hitPointGains: z.array(hitPointGainSchema).optional(),
+    hitPointAdjustments: z.array(hitPointAdjustmentSchema).optional(),
+    maxHitPointsOverride: z.number().int().min(1).optional(),
     armorClass: z.number().int().min(0).optional(),
     armorClassOverride: z.number().int().min(0).optional(),
+    armorClassAdjustments: z.array(armorClassAdjustmentSchema).optional(),
     initiative: z.number().int(),
     speed: z.number().int(),
     damageResistances: z.array(z.string()).optional(),

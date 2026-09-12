@@ -62,6 +62,15 @@ describe('PDF canvas preview scaling', () => {
     expect(getViewport).toHaveBeenNthCalledWith(2, { scale: 900 / width })
   })
 
+  test('renders directly on the workspace canvas without a separate preview background', async () => {
+    mockPdfPage(595.274, 792.004)
+    const { container } = render(<PdfCanvasPreview pdfBytes={new Uint8Array([1])} />)
+
+    expect(container.firstElementChild?.className).not.toContain('bg-muted/20')
+    expect(container.firstElementChild?.className).not.toContain('bg-workspace-detail')
+    await waitFor(() => expect(container.querySelector('canvas')).not.toBeNull())
+  })
+
   test('applies zoom to display size and device pixel ratio to render resolution', async () => {
     Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 })
     const { renderPage } = mockPdfPage(1700, 2200)

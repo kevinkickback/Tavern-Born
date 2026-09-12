@@ -11,8 +11,15 @@ import { toast } from 'sonner'
 import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
-import { useBackgroundLookup, useClassLookup, useRaceLookup } from '@/hooks/data/useGameData'
+import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import {
+  useBackgroundLookup,
+  useClassLookup,
+  useItemPropertyLookup,
+  useRaceLookup,
+  useSpellLookup,
+} from '@/hooks/data/useGameData'
+import { getBundledFileUrl } from '@/lib/assetUrls'
 import {
   type CharacterSheetTemplateId,
   createCharacterSheetViewModel,
@@ -35,6 +42,8 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const classesByKey = useClassLookup()
   const racesByKey = useRaceLookup()
   const backgroundsByKey = useBackgroundLookup()
+  const spellsByKey = useSpellLookup()
+  const itemPropertyByAbbr = useItemPropertyLookup()
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -48,9 +57,11 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
             classesByKey,
             racesByKey,
             backgroundsByKey,
+            spellsByKey,
+            itemPropertyByAbbr,
           })
         : null,
-    [backgroundsByKey, character, classesByKey, racesByKey],
+    [backgroundsByKey, character, classesByKey, itemPropertyByAbbr, racesByKey, spellsByKey],
   )
 
   useEffect(() => {
@@ -76,7 +87,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       setIsGenerating(true)
       setErrorMessage(null)
 
-      const response = await fetch(import.meta.env.BASE_URL + selectedTemplate.assetPath)
+      const response = await fetch(getBundledFileUrl(selectedTemplate.assetPath))
       if (!response.ok) {
         throw new Error(`Unable to load PDF template (${response.status} ${response.statusText})`)
       }
@@ -129,81 +140,78 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const editionLabel = templateId === '2014' ? '5e · 2014 rules' : '5.5e · 2024 rules'
 
   return (
-    <WorkspacePage className="p-3">
-      <WorkspaceBody className="mx-auto flex w-full max-w-[var(--workspace-collection-max-width)] flex-col overflow-hidden rounded-lg border border-border bg-workspace-pane">
-        <WorkspaceToolbar className="overflow-x-auto px-4">
-          <FilePdf className="size-5 shrink-0 text-primary" weight="fill" />
-          <div className="min-w-0 shrink-0">
-            <p className="text-sm font-semibold leading-tight">{selectedTemplate.name}</p>
-            <p className="mt-0.5 text-xs leading-tight text-muted-foreground">{editionLabel}</p>
-          </div>
+    <WorkspacePage>
+      <WorkspacePaneHeader ariaLabel="Character sheet controls" className="overflow-x-auto">
+        <FilePdf className="size-5 shrink-0 text-primary" weight="fill" />
+        <p className="shrink-0 text-sm font-semibold">{editionLabel}</p>
 
-          {rulesetMismatch && (
-            <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning">
-              <Warning className="size-3.5" />
-              Different from character ruleset
-            </Badge>
-          )}
+        {rulesetMismatch && (
+          <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning">
+            <Warning className="size-3.5" />
+            Different from character ruleset
+          </Badge>
+        )}
 
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            <span className="mr-1 text-xs text-muted-foreground" aria-live="polite">
-              {isGenerating
-                ? 'Generating…'
-                : errorMessage
-                  ? 'Generation failed'
-                  : pdfBytes
-                    ? 'Preview ready'
-                    : 'Not generated'}
-            </span>
-            <div className="mr-1 flex h-8 items-center rounded-md border border-border bg-background">
-              <button
-                type="button"
-                aria-label="Zoom out"
-                disabled={zoom <= 75}
-                onClick={() => setZoom((current) => Math.max(75, current - 25))}
-                className="flex size-8 cursor-pointer items-center justify-center rounded-l-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Minus className="size-3.5" />
-              </button>
-              <span className="w-11 text-center text-xs font-medium tabular-nums">{zoom}%</span>
-              <button
-                type="button"
-                aria-label="Zoom in"
-                disabled={zoom >= 200}
-                onClick={() => setZoom((current) => Math.min(200, current + 25))}
-                className="flex size-8 cursor-pointer items-center justify-center rounded-r-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Plus className="size-3.5" />
-              </button>
-            </div>
-            <Button
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <span className="mr-1 text-xs text-muted-foreground" aria-live="polite">
+            {isGenerating
+              ? 'Generating…'
+              : errorMessage
+                ? 'Generation failed'
+                : pdfBytes
+                  ? 'Preview ready'
+                  : 'Not generated'}
+          </span>
+          <div className="mr-1 flex h-8 items-center rounded-md border border-border bg-background">
+            <button
               type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="h-8 gap-1.5"
+              aria-label="Zoom out"
+              disabled={zoom <= 75}
+              onClick={() => setZoom((current) => Math.max(75, current - 25))}
+              className="flex size-8 cursor-pointer items-center justify-center rounded-l-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <ArrowsClockwise
-                className={`size-4 ${isGenerating ? 'animate-spin' : ''}`}
-                weight="bold"
-              />
-              {pdfBytes || errorMessage ? 'Regenerate' : 'Generate'}
-            </Button>
-            <Button
+              <Minus className="size-3.5" />
+            </button>
+            <span className="w-11 text-center text-xs font-medium tabular-nums">{zoom}%</span>
+            <button
               type="button"
-              size="sm"
-              onClick={handleDownload}
-              disabled={isGenerating || !pdfBytes}
-              className="h-8 gap-1.5"
+              aria-label="Zoom in"
+              disabled={zoom >= 200}
+              onClick={() => setZoom((current) => Math.min(200, current + 25))}
+              className="flex size-8 cursor-pointer items-center justify-center rounded-r-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <DownloadSimple className="size-4" weight="bold" />
-              Download PDF
-            </Button>
+              <Plus className="size-3.5" />
+            </button>
           </div>
-        </WorkspaceToolbar>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleGenerate}
+            disabled={isGenerating || !pdfBytes}
+            className="h-8 gap-1.5"
+          >
+            <ArrowsClockwise
+              className={`size-4 ${isGenerating ? 'animate-spin' : ''}`}
+              weight="bold"
+            />
+            Regenerate
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleDownload}
+            disabled={isGenerating || !pdfBytes}
+            className="h-8 gap-1.5"
+          >
+            <DownloadSimple className="size-4" weight="bold" />
+            Download PDF
+          </Button>
+        </div>
+      </WorkspacePaneHeader>
 
-        <div className="min-h-0 flex-1 overflow-auto bg-workspace-detail">
+      <WorkspaceBody>
+        <div className="mx-auto min-h-full w-full max-w-[var(--workspace-collection-max-width)]">
           {isGenerating && (
             <div className="flex min-h-full items-center justify-center p-8">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

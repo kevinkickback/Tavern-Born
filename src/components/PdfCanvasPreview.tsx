@@ -84,9 +84,9 @@ export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps
   }
 
   return (
-    <div className="relative min-h-full bg-muted/20 p-4">
+    <div className="relative min-h-full p-4">
       {rendering && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-workspace-detail/90">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-workspace-canvas/90">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Sparkle className="h-4 w-4 animate-pulse" weight="duotone" />
             Rendering preview…

@@ -199,7 +199,9 @@ export function getDamageTraitDisplay(values?: unknown[]): string {
  * Filters out informational sections (Age, Alignment, etc.) and synthesizes
  * Darkvision and Tool Proficiency traits when present as tags.
  */
-export function getRaceTraits(race: Race5e | undefined): { name: string; entries: unknown[] }[] {
+export function getRaceTraits(
+  race: Race5e | undefined,
+): { key: string; name: string; entries: unknown[] }[] {
   if (!race) return []
   const skip = new Set(['Age', 'Alignment', 'Size', 'Speed', 'Languages', 'Names'])
 
@@ -239,5 +241,13 @@ export function getRaceTraits(race: Race5e | undefined): { name: string; entries
     }
   }
 
-  return traits
+  // Names can repeat. Content preserves identity across reordering; the occurrence
+  // distinguishes even identical entries without discarding any trait data.
+  const occurrences = new Map<string, number>()
+  return traits.map((trait) => {
+    const identity = JSON.stringify([race.name, race.source, trait.name, trait.entries])
+    const occurrence = occurrences.get(identity) ?? 0
+    occurrences.set(identity, occurrence + 1)
+    return { ...trait, key: JSON.stringify([identity, occurrence]) }
+  })
 }

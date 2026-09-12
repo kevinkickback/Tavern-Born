@@ -11,33 +11,9 @@ import {
 } from '@/lib/schema/migrations'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import type { Character } from '@/types/character'
-import { characterPersistenceSchema, spellSelectionSchema } from '@/types/characterSchema'
+import { characterPersistenceSchema } from '@/types/characterSchema'
 
 export { emptyProvenance } from '@/lib/character/createCharacter'
-
-/**
- * Validate spell data structure and return error message if invalid.
- * Returns null if valid, or error message string if invalid.
- */
-export function validateCharacterSpells(character: unknown): string | null {
-  if (!character || typeof character !== 'object') {
-    return 'Invalid character data'
-  }
-
-  const char = character as Record<string, unknown>
-  if (!char.spells) {
-    return 'Character missing spells field'
-  }
-
-  // Use Zod validation
-  const result = spellSelectionSchema.safeParse(char.spells)
-  if (!result.success) {
-    const errors = result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')
-    return `Invalid spell structure: ${errors}`
-  }
-
-  return null // Valid
-}
 
 function formatValidationErrors(character: unknown): string {
   const result = characterPersistenceSchema.safeParse(character)

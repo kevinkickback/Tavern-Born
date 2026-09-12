@@ -262,6 +262,10 @@ export interface Spell5e {
   range: SpellRange
   components?: SpellComponents
   duration: SpellDuration[]
+  meta?: {
+    ritual?: boolean
+    [key: string]: unknown
+  }
   entries?: unknown[]
   entriesHigherLevel?: unknown[]
   classes?: {
@@ -426,6 +430,15 @@ export interface Organization5e {
   source: string
   description: string
   imagePath?: string
+}
+
+export interface Condition5e {
+  name: string
+  source: string
+  page?: number
+  entries?: unknown[]
+  _sourceType?: 'condition' | 'disease'
+  [key: string]: unknown
 }
 
 export interface DataSourceConfig {

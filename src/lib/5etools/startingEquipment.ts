@@ -320,31 +320,6 @@ export function resolveClassStartingEquipment(
   return merged
 }
 
-/**
- * Resolve class starting equipment with optional choice preference.
- * If no choice is provided, defaults to 'a'.
- */
-export function resolveClassStartingEquipmentWithChoice(
-  startingEquipment: unknown,
-  itemLookup: Map<string, Item5e>,
-  choicePreference?: 'a' | 'b' | 'A' | 'B',
-): EquipmentLike[] {
-  const defaultData = getClassDefaultEquipmentBlocks(startingEquipment)
-  const items: EquipmentLike[] = []
-  const normalizedChoice = (choicePreference?.toLowerCase() as 'a' | 'b') || 'a'
-
-  for (const block of defaultData) {
-    const normalized = normalizeChoiceBlock(block)
-    if (!normalized) continue
-    const resolved = resolveEntries(collectChosenEntries(normalized, normalizedChoice), itemLookup)
-    items.push(...resolved.items)
-  }
-
-  const merged = mergeEquipment(items)
-  warnIfUnresolved(`class starting equipment (${normalizedChoice.toUpperCase()})`, merged)
-  return merged
-}
-
 export interface ClassStartingEquipmentOptions {
   A: BackgroundStartingPackage
   B: BackgroundStartingPackage
@@ -383,39 +358,6 @@ export function resolveClassStartingEquipmentOptions(
       currency: optionBCurrency,
     },
   }
-}
-
-function formatCurrencyDisplay(currency: CurrencyTotals): string | null {
-  const parts: string[] = []
-  if (currency.pp > 0) parts.push(`${currency.pp} pp`)
-  if (currency.gp > 0) parts.push(`${currency.gp} gp`)
-  if (currency.ep > 0) parts.push(`${currency.ep} ep`)
-  if (currency.sp > 0) parts.push(`${currency.sp} sp`)
-  if (currency.cp > 0) parts.push(`${currency.cp} cp`)
-  return parts.length > 0 ? parts.join(', ') : null
-}
-
-export function formatClassStartingEquipmentOptionEntries(
-  equipment: BackgroundStartingPackage,
-): unknown[] {
-  const itemLines = equipment.items.map((item) =>
-    item.quantity > 1 ? `${item.name} x${item.quantity}` : item.name,
-  )
-  const currencyLine = formatCurrencyDisplay(equipment.currency)
-  if (currencyLine) {
-    itemLines.push(`Currency: ${currencyLine}`)
-  }
-
-  if (itemLines.length === 0) {
-    return ['No starting equipment listed.']
-  }
-
-  return [
-    {
-      type: 'list',
-      items: itemLines,
-    },
-  ]
 }
 
 export function resolveBackgroundStartingEquipment(

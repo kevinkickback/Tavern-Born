@@ -13,6 +13,9 @@ This document describes the current Tavern-Born runtime architecture and where r
 2. Application shell and routing
 - Purpose: route composition, global providers, app-level overlays.
 - Key files: src/main.tsx, src/App.tsx, src/components/layout/AppLayout.tsx.
+- Bundled files from `public/` resolve through `src/lib/assetUrls.ts`; this preserves Vite dev-server
+  URLs while producing relative URLs for packaged Electron's `file://` renderer. Class icons,
+  placeholder portraits, organization artwork, the About logo, and PDF templates share this path.
 
 3. State and persistence
 - Purpose: app state ownership and IndexedDB persistence.
@@ -32,13 +35,15 @@ This document describes the current Tavern-Born runtime architecture and where r
 - Domain mutation hooks — **production UI entry points**: src/hooks/character/useRaceProvenanceMutations.ts, src/hooks/character/useClassProvenanceMutations.ts, src/hooks/character/useBackgroundProvenanceMutations.ts, src/hooks/character/useSpellProvenanceMutations.ts, src/hooks/character/useFeatProvenanceMutations.ts, src/hooks/character/useEquipmentProvenanceMutations.ts. Hooks read stores and lookup dependencies, invoke pure commands under src/lib/character/commands, and apply one atomic character patch. Canonical transition logic belongs in commands, not hooks.
 - Test aggregator (not for production use): src/hooks/character/useProvenanceMutations.ts calls all six `use*ProvenanceMutations` hooks and spreads their results; src/hooks/character/useProvenance.ts is the integration test harness that composes mutations + rows. Use these in tests that need cross-domain interactions (e.g. apply race + class + verify ledger). Do not call them from pages.
 - Read-only derivation hook: src/hooks/character/useProvenanceRows.ts.
-- Shared pure equipment helpers (canonical — used by both lib commands and hooks): src/lib/character/equipmentHelpers.ts. src/hooks/character/provenanceHelpers.ts re-exports from there for backward compatibility.
+- Shared pure equipment helpers (canonical — used by both lib commands and hooks): src/lib/character/equipmentHelpers.ts.
 - Manual equipment add/remove/proficiency transitions live in src/lib/character/commands/equipmentCommands.ts. Inventory and ledger changes are one command result and one store update.
 
 7. Hooks and view derivations
 - Purpose: thin wrappers from store state to UI-facing derived values.
 - Key files: src/hooks/character/*, src/hooks/data/*.
 - Shared lookup consumption uses the stable named hooks in src/hooks/data/useGameData.ts. Direct gameDataStore selectors are reserved for lifecycle state or callers that explicitly own raw collection sets.
+- Combat-stat ownership is exposed through `src/hooks/character/useHitPoints.ts` and `src/hooks/character/useArmorClass.ts`. These hooks combine persisted player state with live class, ability, and equipment derivations and provide the modal-facing atomic save operations.
+- Condition rule records are exposed by `useConditions()` in `src/hooks/data/useGameData.ts`; pages should not reconstruct condition names or rules text locally.
 
 Spellcasting note:
 - `src/hooks/character/useSpellSlots.ts` is a **read-only** derivation hook: exposes spell slots, profiles, and spellcasting detail per profile. It does not include mutations.
@@ -46,8 +51,12 @@ Spellcasting note:
 
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.
-- Key files: src/pages/*, src/components/*, src/pages/build/ability-scores/model/data.ts, src/pages/build/class/model/pageUtils.ts, src/pages/build/class/model/asi.ts, src/pages/build/class/model/levelsUtils.ts, src/lib/character/commands/classCommands.ts, src/lib/character/commands/raceCommands.ts, src/lib/character/commands/backgroundCommands.ts, src/lib/character/commands/featCommands.ts, src/lib/character/commands/spellCommands.ts, src/lib/character/commands/originSelectionCommand.ts, src/hooks/character/useUnifiedClassSelection.ts, src/pages/build/proficiencies/model/data.ts, src/pages/build/proficiencies/model/types.ts, src/pages/build/background/model/data.ts, src/pages/build/ability-scores/components/MethodPanels.tsx, src/pages/build/ability-scores/components/DetailsPanel.tsx, src/pages/build/ability-scores/components/RacialBonusesPanel.tsx, src/pages/build/class/components/AsiSection.tsx, src/pages/build/class/components/SpellSection.tsx, src/pages/build/class/components/SubclassSection.tsx, src/pages/build/class/components/PassiveFeatureList.tsx, src/pages/build/class/components/ProgressionChoiceCard.tsx, src/pages/build/proficiencies/components/DetailsPanel.tsx, src/pages/build/proficiencies/components/TabsPanel.tsx, src/pages/build/background/components/DetailsPanel.tsx, src/pages/compendium/CompendiumPage.tsx, src/pages/compendium/CompendiumEntryDetails.tsx, src/lib/compendiumEntries.ts, src/components/modals/FeatOptionsModal.tsx, src/components/updates/ChangelogModal.tsx, src/components/updates/UpdateProgressModal.tsx.
-- Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through `RenderedEntryWithTooltip`; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items.
+- Key files: src/pages/*, src/components/*, src/pages/rules/RulesPage.tsx, src/pages/sources/SourcesPage.tsx, src/pages/details/ConditionsPage.tsx, src/components/modals/LevelUpModal.tsx, src/components/modals/HitPointsModal.tsx, src/components/modals/ArmorClassModal.tsx, src/pages/build/ability-scores/model/data.ts, src/pages/build/class/model/pageUtils.ts, src/pages/build/class/model/asi.ts, src/pages/build/class/model/levelsUtils.ts, src/lib/character/commands/classCommands.ts, src/lib/character/commands/raceCommands.ts, src/lib/character/commands/backgroundCommands.ts, src/lib/character/commands/featCommands.ts, src/lib/character/commands/spellCommands.ts, src/lib/character/commands/originSelectionCommand.ts, src/hooks/character/useUnifiedClassSelection.ts, src/pages/build/proficiencies/model/data.ts, src/pages/build/proficiencies/model/types.ts, src/pages/build/background/model/data.ts, src/pages/build/ability-scores/components/MethodPanels.tsx, src/pages/build/ability-scores/components/DetailsPanel.tsx, src/pages/build/class/components/AsiSection.tsx, src/pages/build/class/components/SpellSection.tsx, src/pages/build/class/components/SubclassSection.tsx, src/pages/build/class/components/PassiveFeatureList.tsx, src/pages/build/class/components/ProgressionChoiceCard.tsx, src/pages/build/proficiencies/components/DetailsPanel.tsx, src/pages/build/proficiencies/components/TabsPanel.tsx, src/pages/build/background/components/DetailsPanel.tsx, src/pages/compendium/CompendiumPage.tsx, src/pages/compendium/CompendiumEntryDetails.tsx, src/lib/compendiumEntries.ts, src/components/modals/FeatOptionsModal.tsx, src/components/updates/ChangelogModal.tsx, src/components/updates/UpdateProgressModal.tsx.
+- Full user-facing 5etools rules text renders through `GameContent`, which applies sanitized,
+  source-aware recursive previews consistently across build, selection, and Compendium detail
+  surfaces. Static exports, text projections, and compact non-interactive summaries use the
+  lower-level string renderer explicitly.
+- Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through the same interactive path; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items.
 - Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Name-only fallback is used only when the reference has no source and is deterministic.
 - Character creation uses src/hooks/data/useWizardGameData.ts as its draft-scoped data boundary. Wizard steps receive filtered collections or resolved entities and never read the raw game-data store directly.
 - Recursive tooltip lookup construction lives in src/lib/renderer/recursiveTooltip.ts. Raw and filtered callers pass an explicit collection set to the same builder, including `itemsBase`.
@@ -56,7 +65,12 @@ Current implementation notes:
 - Race, class, background, feat, and spell mutations use complete pure commands returning `characterPatch` plus `provenanceUpdate`.
 - BuildClassPage arranges sections and modals; subclass, spell, ASI/feat, and optional-feature decisions live in focused hooks under src/pages/build/class/hooks. Subclass eligibility is a pure parsed-first calculation with isolated legacy fallbacks.
 - Character creation composes the same origin commands through `buildInitialCharacter`; pages and hooks do not reconstruct grant pipelines.
-- AC reads across UI and PDF surfaces are aligned on effective AC resolution.
+- Level-up HP choices are committed with class progression through `applyLevelUp`; the stored gain is the raw hit-die result so Constitution changes remain live.
+- HP reads resolve class/Constitution HP, per-level gain records, lasting adjustments, and an optional exact override in that order. Current and temporary HP remain mutable session values.
+- AC reads across UI and PDF surfaces resolve equipped armor and Dexterity, then lasting adjustments, then an optional exact override. The legacy `character.armorClass` field is not a display source.
+- The header heart and shield open the HP and AC management modals. A one-time anchored hint advertises these controls from the first Builder page.
+- Per-character Rules and Sources live in the Builder workspace's Options group. Rules are tabbed by Ruleset, Advancement, and Character Options; the selected ruleset itself remains fixed after creation.
+- Conditions is tabbed by Combat State, Exhaustion, Conditions, and Class Resources. Condition names and descriptions, including exhaustion rules, come from the loaded PHB/XPHB condition records selected for the character ruleset.
 
 Auto-update note:
 - `electron/updateManager.ts` manages the full electron-updater lifecycle (check, download, install, cancel).
@@ -90,10 +104,13 @@ Compendium edition filtering note:
 
 Character sheet PDF note:
 - Route src/pages/CharacterSheetPage.tsx renders the PDF preview/download workflow.
-- src/lib/pdf/characterSheetViewModel.ts is the pure character/game-data projection boundary and resolves class, race/subrace, and background entities from raw composite lookups.
-- Pure template mappings live in src/lib/pdf/characterSheetMapping2014.ts and src/lib/pdf/characterSheetMapping2024.ts. src/lib/pdf/pdfFormAdapter.ts owns AcroForm filling and MPMB cleanup; src/lib/pdf/pdfImageAdapter.ts owns portrait loading and embedding; src/lib/pdf/characterSheetPdf.ts is the thin orchestrator.
+- The route follows the standard flat workspace layout: export controls live in the full-width pane
+  header, while the scrollable preview sits directly on the workspace canvas without an enclosing
+  page card.
+- src/lib/pdf/characterSheetViewModel.ts is the pure character/game-data projection boundary and resolves class, race/subrace, background, spell, and item-property entities from raw composite lookups.
+- Pure template mappings live in src/lib/pdf/characterSheetMapping2014.ts and src/lib/pdf/characterSheetMapping2024.ts. src/lib/pdf/pdfFormAdapter.ts owns AcroForm filling, portable saved-file appearances, and MPMB cleanup; src/lib/pdf/pdfImageAdapter.ts owns portrait loading and embedding; src/lib/pdf/characterSheetPdf.ts is the thin orchestrator.
 - CharacterSheetPage prepares and memoizes the view model before template loading, then reuses it for mapping and adapter execution.
-- 2024 mapping coverage includes core identity/combat stats, save/skill proficiencies, inspiration and death save checkboxes, and narrative/proficiency blocks when matching fields exist.
+- The 2024 mapping covers every text and checkbox widget in the shipped two-page form, including weapons, spellcasting, prepared spells, inventory, attunement, and narrative blocks. The 2014 mapping targets semantic inputs across all four pages while excluding MPMB-only display/calculation helpers. See docs/pdf-generation.md for the audited coverage and fixed-template limits.
 - PDF form editing is powered by `@cantoo/pdf-lib` (maintained fork of pdf-lib) to keep browser-side AcroForm fill/edit behavior stable.
 - The 2014 pipeline also strips MPMB interactive chrome (buttons, ammo tracker widgets, calculation scripts, attack-mod placeholder state) before save/render.
 
@@ -103,6 +120,7 @@ Character sheet PDF note:
 - /build/*: Race, Class, Background, Proficiencies, Ability Scores
 - /feats, /spells, /equipment
 - /details/*: Portrait, Characteristics, Conditions
+- /rules, /sources
 - /character-sheet, /compendium, /settings
 
 Primary definition: src/App.tsx.

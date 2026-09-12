@@ -98,8 +98,8 @@ describe('EquipmentPage item details', () => {
     expect(screen.queryByText('No description is available for this item.')).toBeNull()
 
     fireEvent.mouseMove(screen.getByText('Base Relic'))
-    expect(screen.getByRole('tooltip').textContent).toContain('Base Relic')
-    expect(screen.getByRole('tooltip').textContent).toContain('Resolved base-item tooltip text.')
+    expect(screen.getByRole('dialog').textContent).toContain('Base Relic')
+    expect(screen.getByRole('dialog').textContent).toContain('Resolved base-item tooltip text.')
 
     const itemHeader = screen.getByText('Item')
     expect(itemHeader.closest('[data-slot="scroll-area"]')).toBeNull()
@@ -112,5 +112,74 @@ describe('EquipmentPage item details', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Inspect Custom Item' }))
     expect(screen.getByText('Stored custom description.')).toBeTruthy()
     expect(screen.queryByText(/Canonical rules text/)).toBeNull()
+  })
+
+  test('unequips invalid armor when restrictions are enabled', () => {
+    const baseCharacter = makeCharacterFixture()
+    const character = makeCharacterFixture({
+      variantRules: { ...baseCharacter.variantRules, ignoreEquipRestrictions: true },
+      proficiencies: {
+        ...baseCharacter.proficiencies,
+        armor: ['light armor', 'shields'],
+      },
+      equipment: [
+        {
+          id: 'heavy',
+          name: 'Plate',
+          type: 'HA',
+          armorType: 'heavy',
+          quantity: 1,
+          equipped: true,
+        },
+        {
+          id: 'light-first',
+          name: 'Leather Armor',
+          type: 'LA',
+          armorType: 'light',
+          quantity: 1,
+          equipped: true,
+        },
+        {
+          id: 'light-second',
+          name: 'Studded Leather',
+          type: 'LA',
+          armorType: 'light',
+          quantity: 1,
+          equipped: true,
+        },
+        {
+          id: 'shield',
+          name: 'Shield',
+          type: 'S',
+          armorType: 'shield',
+          quantity: 1,
+          equipped: true,
+        },
+        {
+          id: 'sword',
+          name: 'Longsword',
+          type: 'M',
+          weaponCategory: 'martial',
+          quantity: 1,
+          equipped: true,
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle equipment restrictions' }))
+
+    const updated = useCharacterStore.getState().activeCharacter
+    expect(updated?.variantRules?.ignoreEquipRestrictions).toBe(false)
+    expect(updated?.equipment.filter((item) => item.equipped).map((item) => item.id)).toEqual([
+      'light-first',
+      'shield',
+      'sword',
+    ])
   })
 })

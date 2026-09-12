@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { ensureStartupPromptResolved, selectCharacterFromHome } from './helpers/startup'
+import {
+  ensureStartupPromptResolved,
+  seedAppState,
+  selectCharacterFromHome,
+} from './helpers/startup'
 
 async function navigateToClassPage(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Build' }).click()
@@ -113,68 +117,10 @@ const MULTICLASS_CHARACTER = {
 }
 
 async function seedCharacter(page: import('@playwright/test').Page) {
-  await page.evaluate(
-    async ({ characterSeed, cacheSeed }) => {
-      await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('keyval-store')
-        request.onerror = () => reject(request.error)
-        request.onupgradeneeded = () => {
-          const db = request.result
-          if (!db.objectStoreNames.contains('keyval')) {
-            db.createObjectStore('keyval')
-          }
-        }
-        request.onsuccess = () => {
-          const db = request.result
-          const tx = db.transaction('keyval', 'readwrite')
-          const store = tx.objectStore('keyval')
-          store.put(characterSeed, 'character-storage')
-          store.put(cacheSeed, 'tb:game-data-cache')
-          tx.oncomplete = () => {
-            db.close()
-            resolve()
-          }
-          tx.onerror = () => reject(tx.error)
-        }
-      })
-    },
-    {
-      characterSeed: {
-        state: { characters: [MULTICLASS_CHARACTER], activeCharacterId: null },
-        version: 0,
-      },
-      cacheSeed: {
-        data: {
-          races: [],
-          classes: [],
-          backgrounds: [],
-          spells: [],
-          feats: [],
-          items: [],
-          itemsBase: [],
-          itemProperties: [],
-          itemTypes: [],
-          classFeatures: [],
-          actions: [],
-          conditions: [],
-          deities: [],
-          skills: [],
-          senses: [],
-          languages: [],
-          magicvariants: [],
-          optionalfeatures: [],
-          variantrules: [],
-          trapHazards: [],
-          rewards: [],
-          cultsBoons: [],
-          organizations: [],
-          sources: [],
-        },
-        cachedAt: new Date().toISOString(),
-        sourceSnapshot: { type: 'remote', path: 'e2e-multiclass-seed' },
-      },
-    },
-  )
+  await seedAppState(page, {
+    sourcePath: 'e2e-multiclass-seed',
+    characters: [MULTICLASS_CHARACTER],
+  })
 }
 
 test('multiclass character shows both classes in the class switcher', async ({ page }) => {
@@ -191,23 +137,6 @@ test('multiclass character shows both classes in the class switcher', async ({ p
 
   const classSwitcher = page.getByRole('combobox', { name: 'Switch class' })
   await expect(classSwitcher).toHaveAttribute('title', 'Fighter, level 5')
-  await classSwitcher.click()
-  await expect(page.getByRole('option', { name: 'Fighter · Level 5' })).toBeVisible()
-  await expect(page.getByRole('option', { name: 'Wizard · Level 3' })).toBeVisible()
-})
-
-test('multiclass class options show correct levels', async ({ page }) => {
-  await page.goto('/')
-  await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
-  await seedCharacter(page)
-  await page.reload()
-  await ensureStartupPromptResolved(page, 'e2e-multiclass-seed')
-
-  await selectCharacterFromHome(page, 'Multiclass E2E Hero')
-  await navigateToClassPage(page)
-  await expect(page).toHaveURL(/\/build\/class$/)
-
-  const classSwitcher = page.getByRole('combobox', { name: 'Switch class' })
   await classSwitcher.click()
   await expect(page.getByRole('option', { name: 'Fighter · Level 5' })).toBeVisible()
   await expect(page.getByRole('option', { name: 'Wizard · Level 3' })).toBeVisible()

@@ -95,7 +95,7 @@ export function getSkillAbility(
   return (resolved[key] as AbilityName | undefined) ?? null
 }
 
-export const SAVING_THROW_ABILITIES: readonly AbilityName[] = ABILITY_NAMES
+const SAVING_THROW_ABILITIES: readonly AbilityName[] = ABILITY_NAMES
 
 export function calculateSavingThrowModifier(
   abilityModifier: number,
@@ -117,7 +117,7 @@ export interface SavingThrowResult {
  *
  * @param abilityModifiers - Record of ability → current modifier (from `useAbilityScores` or `getAllAbilityModifiers`)
  * @param proficientSavingThrows - Array of ability names that are proficient (from `character.proficiencies.savingThrows`)
- * @param proficiencyBonus - Current proficiency bonus (from `useCharacterLevel`)
+ * @param proficiencyBonus - Current proficiency bonus derived from total character level
  */
 export function deriveAllSavingThrows(
   abilityModifiers: Record<AbilityName, number>,

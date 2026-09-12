@@ -496,7 +496,7 @@ describe('Multiclass Updates', () => {
   })
 
   describe('Hit points recalculation on class changes', () => {
-    test('hp should be recalculated when changing class levels', () => {
+    test('legacy stored maximum HP is preserved as an explicit override', () => {
       const character = makeCharacterFixture({
         class: 'Wizard',
         classSource: 'PHB',
@@ -562,7 +562,8 @@ describe('Multiclass Updates', () => {
       })
 
       const updated = useCharacterStore.getState().activeCharacter
-      expect(updated?.hitPoints.max).toBeGreaterThan(character.hitPoints.max)
+      expect(updated?.hitPoints.max).toBe(0)
+      expect(updated?.maxHitPointsOverride).toBe(24)
     })
   })
 

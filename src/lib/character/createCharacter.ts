@@ -81,6 +81,10 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
     },
     equipment: [],
     hitPoints: { max: 0, current: 0, temporary: 0 },
+    hitPointsInitialized: false,
+    hitPointGains: [],
+    hitPointAdjustments: [],
+    armorClassAdjustments: [],
     initiative: 0,
     speed: 30,
     savingThrows: {

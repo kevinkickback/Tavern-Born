@@ -278,7 +278,6 @@ export function BuildProficienciesPage() {
                       languages: character.proficiencies.languages,
                     }}
                     ledger={ledger}
-                    choiceCounts={choiceCounts}
                     activeTab={activeTab}
                     onActiveTabChange={setActiveTab}
                     dropdownToolSlots={dropdownToolSlots}
@@ -296,7 +295,6 @@ export function BuildProficienciesPage() {
                     onToggleExpertise={toggleExpertise}
                     availableExpertiseSlots={availableExpertiseSlots}
                     usedExpertiseSlots={usedExpertiseSlots}
-                    expertiseChoiceCount={expertiseChoiceCount}
                   />
                 </div>
               </ScrollArea>

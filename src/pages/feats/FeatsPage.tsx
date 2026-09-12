@@ -9,6 +9,7 @@ import {
   WarningCircle,
 } from '@phosphor-icons/react'
 import { memo, useCallback, useMemo, useState } from 'react'
+import { GameContent } from '@/components/editor/GameContent'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
@@ -318,10 +319,7 @@ function FeatDetailsInspector({
   const prerequisiteResult = featData
     ? checkAllPrerequisites(featData as { prerequisite?: Raw5ePrereq[] }, characterSnapshot)
     : { met: true, failures: [] }
-  const description = (featData?.entries ?? [])
-    .map((entry) => renderEntryCached(entry))
-    .filter(Boolean)
-    .join('<br/>')
+  const descriptionEntries = featData?.entries ?? []
 
   return (
     <>
@@ -357,10 +355,10 @@ function FeatDetailsInspector({
                   {prerequisiteResult.failures.join(' · ')}
                 </div>
               )}
-              {description ? (
-                <div
+              {descriptionEntries.length > 0 ? (
+                <GameContent
+                  entry={descriptionEntries}
                   className="space-y-2 text-sm leading-relaxed [&_li]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_p]:my-2 [&_ul]:ml-4 [&_ul]:list-disc"
-                  dangerouslySetInnerHTML={{ __html: description }}
                 />
               ) : (
                 <p className="text-sm italic text-muted-foreground">No description available.</p>

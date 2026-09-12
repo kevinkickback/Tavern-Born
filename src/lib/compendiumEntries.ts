@@ -471,7 +471,7 @@ export function buildCompendiumEntries(
   return entries
 }
 
-export function getCompendiumEntryEdition(
+function getCompendiumEntryEdition(
   entry: CompendiumEntry,
 ): Exclude<CompendiumEditionFilter, 'both'> {
   const data = entry.data as Record<string, unknown>

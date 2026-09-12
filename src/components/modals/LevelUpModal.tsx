@@ -16,9 +16,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -30,10 +32,27 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { checkMulticlassRequirements, MAX_CHARACTER_LEVEL } from '@/lib/calculations/gameRules'
-import { addMulticlass, applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
+import {
+  checkMulticlassRequirements,
+  getAbilityModifier,
+  getHitDiceFromClass,
+  MAX_CHARACTER_LEVEL,
+  rollDie,
+} from '@/lib/calculations/gameRules'
+import {
+  addMulticlass,
+  applyClassProgressionUpdate,
+  applyLevelUp,
+  type LevelUpHitPointChoice,
+} from '@/lib/character/commands/classCommands'
 import { removeSpellFromCharacter } from '@/lib/character/commands/spellCommands'
-import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
+import {
+  calculateHitPointAdjustmentTotal,
+  calculateMaxHP,
+  getCharacterClassEntries,
+  getMaxHitPointsOverride,
+  getTotalCharacterLevel,
+} from '@/lib/characterUtils'
 import { getClassIconUrl } from '@/lib/classIcons'
 import { getSpellsGrantedAtLevel, removeSpellChoicesAtLevel } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
@@ -46,6 +65,14 @@ interface LevelUpModalProps {
   onOpenChange: (open: boolean) => void
 }
 
+interface PendingLevelUp {
+  kind: 'existing' | 'multiclass'
+  className: string
+  classSource?: string
+  classLevel: number
+  hitDie: number
+}
+
 export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
@@ -54,10 +81,14 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const [ignoreRestrictions, setIgnoreRestrictions] = useState(false)
   const [multiclassSelection, setMulticlassSelection] = useState('')
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
+  const [pendingLevelUp, setPendingLevelUp] = useState<PendingLevelUp | null>(null)
+  const [hpEntryMethod, setHpEntryMethod] = useState<'rolled' | 'manual'>('rolled')
+  const [hpDieResult, setHpDieResult] = useState('')
   const [levelHistory, setLevelHistory] = useState<
     Array<{ className: string; classLevel: number }>
   >([])
   const ignoreRestrictionsId = useId()
+  const manualHpRollId = useId()
 
   if (!character) return null
 
@@ -90,18 +121,92 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     multiclassOptions.map((option) => [option.cls.name, option.cls]),
   )
 
-  function syncUpdate(char: typeof character, newProgression: CharacterClassEntry[]) {
-    if (!char) return
-    const result = applyClassProgressionUpdate(
-      char,
-      char.provenance ?? emptyProvenance(),
-      newProgression,
-    )
+  const findClass = (name: string, source?: string) =>
+    classes.find((cls) => cls.name === name && (source == null || cls.source === source)) ??
+    classes.find((cls) => cls.name === name)
 
-    updateCharacter(char.id, {
+  const commitLevelUp = (pending: PendingLevelUp, hpChoice: LevelUpHitPointChoice) => {
+    if (pending.kind === 'existing') {
+      const targetIndex = classProgression.findIndex(
+        (entry) =>
+          entry.name === pending.className && (entry.source ?? '') === (pending.classSource ?? ''),
+      )
+      if (targetIndex < 0) {
+        toast.error('Could not find the class to level up.')
+        return
+      }
+      const newProgression = classProgression.map((entry, index) =>
+        index === targetIndex ? { ...entry, levels: pending.classLevel } : entry,
+      )
+      const result = applyLevelUp(
+        character,
+        character.provenance ?? emptyProvenance(),
+        newProgression,
+        hpChoice,
+      )
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+      setLevelHistory((previous) => [
+        ...previous,
+        { className: pending.className, classLevel: pending.classLevel },
+      ])
+      toast.success(`${pending.className} is now level ${pending.classLevel}.`)
+      return
+    }
+
+    const selectedClass = findClass(pending.className, pending.classSource)
+    const newEntry: CharacterClassEntry = {
+      name: pending.className,
+      source: pending.classSource,
+      levels: 1,
+    }
+    const newProgression = [...classProgression, newEntry]
+    const multiclassResult = selectedClass
+      ? addMulticlass(
+          character,
+          character.provenance ?? emptyProvenance(),
+          pending.className,
+          selectedClass,
+          selectedClass.source,
+          1,
+        )
+      : null
+    const nextProficiencies =
+      multiclassResult?.characterPatch.proficiencies ?? character.proficiencies
+    const nextProvenance =
+      multiclassResult?.provenanceUpdate ?? character.provenance ?? emptyProvenance()
+    const result = applyLevelUp(character, nextProvenance, newProgression, hpChoice)
+
+    updateCharacter(character.id, {
       ...result.characterPatch,
+      proficiencies: nextProficiencies,
+      skills: multiclassResult?.characterPatch.skills ?? character.skills,
       provenance: result.provenanceUpdate,
     })
+    toast.success(`Added ${pending.className} (level 1).`)
+    setMulticlassSelection('')
+    setLevelHistory((previous) => [...previous, { className: pending.className, classLevel: 1 }])
+  }
+
+  const beginLevelUp = (pending: PendingLevelUp) => {
+    const averageHitPoints = character.variantRules?.averageHitPoints !== false
+    if (averageHitPoints) {
+      const dieResult = Math.floor(pending.hitDie / 2) + 1
+      commitLevelUp(pending, {
+        className: pending.className,
+        classSource: pending.classSource,
+        classLevel: pending.classLevel,
+        hitDie: pending.hitDie,
+        dieResult,
+        method: 'average',
+      })
+      return
+    }
+    setHpEntryMethod('rolled')
+    setHpDieResult('')
+    setPendingLevelUp(pending)
   }
 
   const handleAddLevel = (index: number) => {
@@ -111,12 +216,14 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     }
     const entry = classProgression[index]
     const newClassLevel = entry.levels + 1
-    const newProgression = classProgression.map((e, i) =>
-      i === index ? { ...e, levels: newClassLevel } : e,
-    )
-    syncUpdate(character, newProgression)
-    setLevelHistory((prev) => [...prev, { className: entry.name, classLevel: newClassLevel }])
-    toast.success(`${entry.name} is now level ${newClassLevel}.`)
+    const classEntity = findClass(entry.name, entry.source)
+    beginLevelUp({
+      kind: 'existing',
+      className: entry.name,
+      classSource: entry.source,
+      classLevel: newClassLevel,
+      hitDie: getHitDiceFromClass(classEntity),
+    })
   }
 
   const handleAddMulticlass = () => {
@@ -137,41 +244,13 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       toast.warning(`You don't meet the ability score requirements for ${multiclassSelection}.`)
       return
     }
-    const newEntry: CharacterClassEntry = {
-      name: multiclassSelection,
-      source: selectedClass?.source,
-      levels: 1,
-    }
-
-    const newProgression = [...classProgression, newEntry]
-
-    const multiclassResult = selectedClass
-      ? addMulticlass(
-          character,
-          character.provenance ?? emptyProvenance(),
-          multiclassSelection,
-          selectedClass,
-          selectedClass.source,
-          1,
-        )
-      : null
-
-    const nextProficiencies =
-      multiclassResult?.characterPatch.proficiencies ?? character.proficiencies
-    const nextProvenance =
-      multiclassResult?.provenanceUpdate ?? character.provenance ?? emptyProvenance()
-    const progressionResult = applyClassProgressionUpdate(character, nextProvenance, newProgression)
-
-    updateCharacter(character.id, {
-      ...progressionResult.characterPatch,
-      proficiencies: nextProficiencies,
-      skills: multiclassResult?.characterPatch.skills ?? character.skills,
-      provenance: progressionResult.provenanceUpdate,
+    beginLevelUp({
+      kind: 'multiclass',
+      className: multiclassSelection,
+      classSource: selectedClass?.source,
+      classLevel: 1,
+      hitDie: getHitDiceFromClass(selectedClass),
     })
-
-    toast.success(`Added ${multiclassSelection} (level 1).`)
-    setMulticlassSelection('')
-    setLevelHistory((prev) => [...prev, { className: multiclassSelection, classLevel: 1 }])
   }
 
   const handleRemoveLastLevel = () => {
@@ -181,7 +260,10 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       return
     }
 
-    const lastHistoryEntry = levelHistory[levelHistory.length - 1]
+    const lastRecordedGain = [...(character.hitPointGains ?? [])].sort(
+      (a, b) => b.characterLevel - a.characterLevel,
+    )[0]
+    const lastHistoryEntry = levelHistory[levelHistory.length - 1] ?? lastRecordedGain
     const targetClassName =
       lastHistoryEntry?.className ?? classProgression[classProgression.length - 1].name
     const targetClassLevel =
@@ -236,8 +318,57 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   }
 
   const lastHistoryEntry = levelHistory[levelHistory.length - 1]
+  const lastPersistedGain = [...(character.hitPointGains ?? [])].sort(
+    (a, b) => b.characterLevel - a.characterLevel,
+  )[0]
   const lastClassName =
-    lastHistoryEntry?.className ?? classProgression[classProgression.length - 1]?.name ?? ''
+    lastHistoryEntry?.className ??
+    lastPersistedGain?.className ??
+    classProgression[classProgression.length - 1]?.name ??
+    ''
+
+  const parsedHpDieResult = Number.parseInt(hpDieResult, 10)
+  const validHpDieResult =
+    pendingLevelUp != null &&
+    Number.isInteger(parsedHpDieResult) &&
+    parsedHpDieResult >= 1 &&
+    parsedHpDieResult <= pendingLevelUp.hitDie
+  const conModifier = getAbilityModifier(character.abilityScores.constitution)
+  const hpIncrease = validHpDieResult ? Math.max(1, parsedHpDieResult + conModifier) : null
+  const calculatedMaxHp = calculateMaxHP(classProgression, conModifier, {
+    averageHp: character.variantRules?.averageHitPoints !== false,
+    classesData: classes,
+    hitPointGains: character.hitPointGains,
+  })
+  const currentAdjustmentTotal = calculateHitPointAdjustmentTotal(
+    character.hitPointAdjustments,
+    totalLevel,
+  )
+  const projectedAdjustmentTotal = calculateHitPointAdjustmentTotal(
+    character.hitPointAdjustments,
+    totalLevel + 1,
+  )
+  const currentAdjustedMaxHp = Math.max(1, calculatedMaxHp + currentAdjustmentTotal)
+  const projectedAdjustedMaxHp = Math.max(
+    1,
+    calculatedMaxHp + (hpIncrease ?? 0) + projectedAdjustmentTotal,
+  )
+  const maximumOverride = getMaxHitPointsOverride(character)
+  const currentEffectiveMaxHp = maximumOverride ?? currentAdjustedMaxHp
+  const projectedEffectiveMaxHp = maximumOverride ?? projectedAdjustedMaxHp
+
+  const handleConfirmHitPoints = () => {
+    if (!pendingLevelUp || !validHpDieResult) return
+    commitLevelUp(pendingLevelUp, {
+      className: pendingLevelUp.className,
+      classSource: pendingLevelUp.classSource,
+      classLevel: pendingLevelUp.classLevel,
+      hitDie: pendingLevelUp.hitDie,
+      dieResult: parsedHpDieResult,
+      method: hpEntryMethod,
+    })
+    setPendingLevelUp(null)
+  }
 
   return (
     <>
@@ -424,6 +555,119 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
               Close
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={pendingLevelUp != null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setPendingLevelUp(null)
+        }}
+      >
+        <DialogContent className="border-border bg-workspace-detail sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Hit Point Increase</DialogTitle>
+            <DialogDescription>
+              {pendingLevelUp
+                ? `${pendingLevelUp.className} level ${pendingLevelUp.classLevel} uses a d${pendingLevelUp.hitDie} hit die.`
+                : 'Choose the hit-die result for this level.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {pendingLevelUp && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  aria-label={`Roll d${pendingLevelUp.hitDie}`}
+                  onClick={() => {
+                    setHpEntryMethod('rolled')
+                    setHpDieResult(String(rollDie(pendingLevelUp.hitDie)))
+                  }}
+                  className={cn(
+                    'rounded-md border p-3 text-left transition-colors',
+                    hpEntryMethod === 'rolled'
+                      ? 'border-primary/60 bg-primary/10'
+                      : 'border-border bg-workspace-pane hover:border-primary/40',
+                  )}
+                >
+                  <span className="block text-sm font-semibold">Roll d{pendingLevelUp.hitDie}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Roll within Tavern Born
+                  </span>
+                </button>
+
+                <div
+                  className={cn(
+                    'rounded-md border p-3 transition-colors',
+                    hpEntryMethod === 'manual'
+                      ? 'border-primary/60 bg-primary/10'
+                      : 'border-border bg-workspace-pane',
+                  )}
+                >
+                  <Label htmlFor={manualHpRollId} className="text-sm font-semibold">
+                    Enter a roll
+                  </Label>
+                  <Input
+                    id={manualHpRollId}
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={pendingLevelUp.hitDie}
+                    value={hpEntryMethod === 'manual' ? hpDieResult : ''}
+                    placeholder={`1–${pendingLevelUp.hitDie}`}
+                    className="mt-2 h-8"
+                    aria-invalid={
+                      hpEntryMethod === 'manual' && hpDieResult !== '' && !validHpDieResult
+                    }
+                    onFocus={() => {
+                      setHpEntryMethod('manual')
+                      setHpDieResult('')
+                    }}
+                    onChange={(event) => {
+                      setHpEntryMethod('manual')
+                      setHpDieResult(event.target.value)
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-md border border-border bg-workspace-pane p-4 text-center">
+                {validHpDieResult && hpIncrease != null ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      {hpEntryMethod === 'rolled' ? 'Rolled' : 'Entered'} {parsedHpDieResult}
+                      {' + '}
+                      {conModifier >= 0 ? `+${conModifier}` : conModifier} CON
+                    </p>
+                    <p className="mt-1 text-xl font-bold text-primary">+{hpIncrease} HP</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Maximum HP: {currentEffectiveMaxHp} → {projectedEffectiveMaxHp}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Roll or enter an integer from 1 to {pendingLevelUp.hitDie}.
+                  </p>
+                )}
+              </div>
+
+              {maximumOverride != null && (
+                <p className="text-xs text-warning-foreground dark:text-warning">
+                  This character has an exact maximum-HP override of {maximumOverride}. The roll
+                  will be saved, but that override remains authoritative.
+                </p>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingLevelUp(null)}>
+              Cancel
+            </Button>
+            <Button disabled={!validHpDieResult} onClick={handleConfirmHitPoints}>
+              Confirm Level Up
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       <AlertDialog open={confirmRemoveOpen} onOpenChange={setConfirmRemoveOpen}>

@@ -49,6 +49,18 @@ describe('desktop workspace navigation', () => {
     expect(screen.getByRole('link', { name: 'Class' }).getAttribute('aria-current')).toBe('page')
   })
 
+  test('organizes Builder navigation into Core, Details, and Options', () => {
+    renderSidebar('/rules')
+
+    expect(screen.getByText('Core')).toBeTruthy()
+    expect(screen.getByText('Details')).toBeTruthy()
+    expect(screen.getByText('Options')).toBeTruthy()
+    expect(screen.queryByText('Character Core')).toBeNull()
+    expect(screen.queryByText('Character Details')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Rules' }).getAttribute('aria-current')).toBe('page')
+    expect(screen.getByRole('link', { name: 'Sources' })).toBeTruthy()
+  })
+
   test('keeps application settings as a primary-rail utility', async () => {
     const user = userEvent.setup()
     renderSidebar()

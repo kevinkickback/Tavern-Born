@@ -7,7 +7,7 @@ import { z } from 'zod'
  * format drift without blocking app startup.
  */
 
-export const RaceSchema = z
+const RaceSchema = z
   .object({
     name: z.string(),
     source: z.string(),
@@ -25,26 +25,9 @@ export const RaceDataSchema = z
   })
   .passthrough()
 
-export const ClassSchema = z
-  .object({
-    name: z.string(),
-    source: z.string(),
-    hd: z.object({ number: z.number(), faces: z.number() }).optional(),
-    proficiency: z.array(z.string()).optional(),
-    startingProficiencies: z.any().optional(),
-    classFeatures: z.array(z.any()).optional(),
-  })
-  .passthrough()
-
-export const ClassDataSchema = z
-  .object({
-    class: z.array(ClassSchema),
-  })
-  .passthrough()
-
 export const IndexSchema = z.record(z.string())
 
-export const BackgroundSchema = z
+const BackgroundSchema = z
   .object({
     name: z.string(),
     source: z.string(),
@@ -59,27 +42,7 @@ export const BackgroundDataSchema = z
   })
   .passthrough()
 
-export const SpellSchema = z
-  .object({
-    name: z.string(),
-    source: z.string(),
-    level: z.number(),
-    school: z.string(),
-    time: z.array(z.any()).optional(),
-    range: z.any().optional(),
-    components: z.any().optional(),
-    duration: z.array(z.any()).optional(),
-    entries: z.array(z.any()).optional(),
-  })
-  .passthrough()
-
-export const SpellDataSchema = z
-  .object({
-    spell: z.array(SpellSchema),
-  })
-  .passthrough()
-
-export const FeatSchema = z
+const FeatSchema = z
   .object({
     name: z.string(),
     source: z.string(),
@@ -94,7 +57,7 @@ export const FeatDataSchema = z
   })
   .passthrough()
 
-export const ItemSchema = z
+const ItemSchema = z
   .object({
     name: z.string(),
     source: z.string(),
@@ -112,7 +75,7 @@ export const ItemDataSchema = z
   })
   .passthrough()
 
-export const BookSchema = z
+const BookSchema = z
   .object({
     id: z.string(),
     name: z.string(),
@@ -128,7 +91,7 @@ export const BookDataSchema = z
   })
   .passthrough()
 
-export const ActionSchema = z
+const ActionSchema = z
   .object({
     name: z.string(),
     source: z.string(),
@@ -142,7 +105,7 @@ export const ActionDataSchema = z
   })
   .passthrough()
 
-export const ConditionSchema = z
+const ConditionSchema = z
   .object({
     name: z.string(),
     source: z.string(),
@@ -157,7 +120,7 @@ export const ConditionDataSchema = z
   })
   .passthrough()
 
-export const LanguageSchema = z
+const LanguageSchema = z
   .object({
     name: z.string(),
     source: z.string(),
@@ -172,7 +135,7 @@ export const LanguageDataSchema = z
   })
   .passthrough()
 
-export const OptionalFeatureSchema = z
+const OptionalFeatureSchema = z
   .object({
     name: z.string(),
     source: z.string(),
@@ -187,7 +150,7 @@ export const OptionalFeatureDataSchema = z
   })
   .passthrough()
 
-export const GenericSchema = z
+const GenericSchema = z
   .object({
     name: z.string().optional(),
     source: z.string().optional(),

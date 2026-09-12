@@ -5,10 +5,6 @@ import type { Character, SpellProfile } from '@/types/character'
 import { toClassProfileId } from './spellProfiles.constants'
 import { ensureSpellProfiles } from './spellProfiles.profiles'
 
-export function getProfileKnownNames(profile: SpellProfile): Set<string> {
-  return new Set([...profile.cantrips, ...profile.spellsKnown])
-}
-
 export function buildClassSpellSelectionsByLevel(params: {
   character: Character
   className?: string

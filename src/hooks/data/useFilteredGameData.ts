@@ -51,6 +51,8 @@ export function useFilteredGameDataParams(params: FilterParams) {
         languages: [] as Language5e[],
         magicvariants: [],
         variantrules: [],
+        trapHazards: [],
+        rewards: [],
       }
     }
 

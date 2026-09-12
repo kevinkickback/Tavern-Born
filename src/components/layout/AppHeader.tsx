@@ -15,6 +15,7 @@ import {
   PersonSimple,
   Scroll,
   Shield,
+  SlidersHorizontal,
   Sparkle,
   Star,
   Sword,
@@ -24,13 +25,22 @@ import {
 import { useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
+import { ArmorClassModal } from '@/components/modals/ArmorClassModal'
+import { HitPointsModal } from '@/components/modals/HitPointsModal'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { AnchoredHint } from '@/components/workspace'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
+import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
+import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
+
+const STAT_MENUS_HINT_ID = 'header-stat-management-menus'
+const STAT_MENUS_HINT_SELECTOR = '[data-character-stat-menus]'
+const STAT_MENUS_HINT_WIDTH = 340
 
 const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
   ['/build/ability-scores', 'Ability Scores', Barbell],
@@ -44,6 +54,7 @@ const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
   ['/character-sheet', 'Character Sheet', FilePdf],
   ['/compendium', 'Compendium', Book],
   ['/equipment', 'Equipment', Backpack],
+  ['/rules', 'Character Rules', SlidersHorizontal],
   ['/settings', 'Settings', Gear],
   ['/sources', 'Sources', Books],
   ['/spells', 'Spells', MagicWand],
@@ -63,13 +74,31 @@ export function AppHeader() {
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const saveActiveCharacter = useCharacterStore((state) => state.saveActiveCharacter)
   const [levelUpOpen, setLevelUpOpen] = useState(false)
+  const [armorClassOpen, setArmorClassOpen] = useState(false)
+  const [hitPointsOpen, setHitPointsOpen] = useState(false)
+  const [showStatMenusHint, setShowStatMenusHint] = useState(
+    () => !isHintDismissed(STAT_MENUS_HINT_ID),
+  )
   const { effectiveAC } = useArmorClass()
   const { effectiveMaxHP } = useHitPoints()
   const pageDetails = getPageDetails(location.pathname)
   const PageIcon = pageDetails?.[2]
-  const showLevelUp = ['/build', '/feats', '/spells', '/equipment', '/details', '/sources'].some(
-    (prefix) => location.pathname.startsWith(prefix),
-  )
+  const showStatMenusHintOnPage = location.pathname.startsWith('/build/race')
+  const statMenusHintPosition = useAnchoredHintPosition({
+    enabled: showStatMenusHint && showStatMenusHintOnPage && !!activeCharacter,
+    selector: STAT_MENUS_HINT_SELECTOR,
+    width: STAT_MENUS_HINT_WIDTH,
+    horizontalAlign: 'end',
+  })
+  const showLevelUp = [
+    '/build',
+    '/feats',
+    '/spells',
+    '/equipment',
+    '/details',
+    '/rules',
+    '/sources',
+  ].some((prefix) => location.pathname.startsWith(prefix))
 
   const characterSummary = useMemo(() => {
     if (!activeCharacter) return { visible: '', classBreakdown: '', isCondensed: false }
@@ -111,8 +140,23 @@ export function AppHeader() {
     toast.success('Character saved')
   }
 
+  const dismissStatMenusHint = () => {
+    setShowStatMenusHint(false)
+    setHintDismissed(STAT_MENUS_HINT_ID, true)
+  }
+
   return (
     <TooltipProvider delayDuration={300}>
+      <AnchoredHint
+        position={showStatMenusHint ? statMenusHintPosition : null}
+        width={STAT_MENUS_HINT_WIDTH}
+        onDismiss={dismissStatMenusHint}
+        dismissLabel="Dismiss Armor Class and Hit Points hint"
+      >
+        Click the shield or heart to manage Armor Class and Hit Points, including lasting bonuses or
+        penalties.
+      </AnchoredHint>
+
       <header className="app-drag grid h-16 shrink-0 grid-cols-[minmax(12rem,1fr)_auto_minmax(12rem,1fr)] items-center bg-workspace-canvas px-5">
         <div className="flex min-w-0 items-center gap-3">
           {PageIcon && <PageIcon className="size-7 shrink-0 text-primary" weight="fill" />}
@@ -154,34 +198,49 @@ export function AppHeader() {
                   </p>
                 )}
               </div>
-              <div className="ml-1 hidden items-center gap-1.5 border-l border-border pl-4 xl:flex">
+              <div
+                className="ml-1 hidden items-center gap-1.5 border-l border-border pl-4 xl:flex"
+                data-character-stat-menus
+              >
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div
+                    <button
+                      type="button"
                       className="relative flex size-10 items-center justify-center tabular-nums"
                       data-testid="header-ac-badge"
+                      aria-label={`Manage Armor Class. Current ${effectiveAC}`}
+                      onClick={() => {
+                        dismissStatMenusHint()
+                        setArmorClassOpen(true)
+                      }}
                     >
                       <Shield className="absolute inset-0 size-10 text-primary" weight="fill" />
                       <span className="relative z-10 mt-0.5 text-xs font-bold leading-none text-primary-foreground drop-shadow-sm">
                         {effectiveAC}
                       </span>
                       <span className="sr-only">Armor Class {effectiveAC}</span>
-                    </div>
+                    </button>
                   </TooltipTrigger>
                   <TooltipContent>Armor Class: {effectiveAC}</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div
+                    <button
+                      type="button"
                       className="relative flex size-10 items-center justify-center tabular-nums"
                       data-testid="header-hp-badge"
+                      aria-label={`Manage hit points. Maximum ${effectiveMaxHP}`}
+                      onClick={() => {
+                        dismissStatMenusHint()
+                        setHitPointsOpen(true)
+                      }}
                     >
                       <Heart className="absolute inset-0 size-10 text-red-500" weight="fill" />
                       <span className="relative z-10 -mt-0.5 text-xs font-bold leading-none text-white drop-shadow-sm">
                         {effectiveMaxHP}
                       </span>
                       <span className="sr-only">Maximum Hit Points {effectiveMaxHP}</span>
-                    </div>
+                    </button>
                   </TooltipTrigger>
                   <TooltipContent>Maximum Hit Points: {effectiveMaxHP}</TooltipContent>
                 </Tooltip>
@@ -238,6 +297,8 @@ export function AppHeader() {
       </header>
 
       <LevelUpModal open={levelUpOpen} onOpenChange={setLevelUpOpen} />
+      <ArmorClassModal open={armorClassOpen} onOpenChange={setArmorClassOpen} />
+      <HitPointsModal open={hitPointsOpen} onOpenChange={setHitPointsOpen} />
     </TooltipProvider>
   )
 }

@@ -150,9 +150,7 @@ export function getClassSpellGainAtLevel(
   }
 }
 
-export function groupFeaturesByLevel<T extends { level?: number }>(
-  features: T[],
-): Map<number, T[]> {
+function groupFeaturesByLevel<T extends { level?: number }>(features: T[]): Map<number, T[]> {
   const map = new Map<number, T[]>()
   for (const feature of features) {
     const level = feature.level ?? 0
@@ -424,16 +422,6 @@ export function getClassHasRitualCasting(classData: Class5e | undefined): boolea
     if (found) return true
   }
   return RITUAL_CASTING_CLASSES.has(classData.name)
-}
-
-export function getSubclassByName(
-  classData: Class5e | undefined,
-  subclassName?: string,
-): Subclass5e | undefined {
-  if (!classData || !subclassName) return undefined
-  return classData.subclasses?.find(
-    (subclass) => subclass.name === subclassName || subclass.shortName === subclassName,
-  )
 }
 
 export function getSelectedSubclassData(

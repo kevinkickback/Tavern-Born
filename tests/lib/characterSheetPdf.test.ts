@@ -1,13 +1,20 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { PDFDocument } from '@cantoo/pdf-lib'
 import { describe, expect, test } from 'vitest'
-import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
+import {
+  buildBackgroundLookup,
+  buildClassLookup,
+  buildRaceLookup,
+  buildSpellLookup,
+} from '@/lib/5etools/lookups'
 import {
   type CharacterSheetTemplateId,
   createCharacterSheetViewModel,
   generateFilledCharacterSheetPdf as fillCharacterSheetViewModel,
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
-import type { Background5e, Class5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -16,11 +23,15 @@ function prepareViewModel(
   classesData: Class5e[] = [],
   racesData: Race5e[] = [],
   backgroundsData: Background5e[] = [],
+  spellsData: Spell5e[] = [],
+  itemPropertyByAbbr: Record<string, string> = {},
 ) {
   return createCharacterSheetViewModel(character, {
     classesByKey: buildClassLookup(classesData),
     racesByKey: buildRaceLookup(racesData),
     backgroundsByKey: buildBackgroundLookup(backgroundsData),
+    spellsByKey: buildSpellLookup(spellsData),
+    itemPropertyByAbbr,
   })
 }
 
@@ -104,22 +115,24 @@ describe('characterSheetPdf', () => {
     const map = buildCharacterSheetFieldMap(character, '2024')
 
     expect(map.textFields.Text_1).toBe('Aria Stormborn')
-    expect(map.textFields.Text_2).toBe('Ranger 3 / Fighter 1')
+    expect(map.textFields.Text_2).toBe('Outlander')
     expect(map.textFields.Text_3).toBe('Wood Elf')
-    expect(map.textFields.Text_4).toBe('Outlander')
-    expect(map.textFields.Text_5).toBe('Chaotic Good')
+    expect(map.textFields.Text_4).toBe('Ranger / Fighter')
+    expect(map.textFields.Text_5).toBe('')
     expect(map.textFields.Text_6).toBe('4')
+    expect(map.textFields.Text_229).toBe('Chaotic Good')
 
-    expect(map.textFields.Text_22).toBe('12')
-    expect(map.textFields.Text_23).toBe('16')
-    expect(map.textFields.Text_14).toBe('16')
-    expect(map.textFields.Text_9).toBe('35 ft')
-    expect(map.textFields.Text_10).toBe('31')
-    expect(map.textFields.Text_11).toBe('24')
-    expect(map.textFields.Text_12).toBe('5')
-    expect(map.textFields.Text_13).toBe('3')
-    expect(map.textFields.Text_56).toBe('Common, Elvish')
-    expect(map.textFields.Text_58).toBe('Alert: You gain a +5 bonus to initiative.')
+    expect(map.textFields.Text_25).toBe('12')
+    expect(map.textFields.Text_26).toBe('16')
+    expect(map.textFields.Text_8).toBe('16')
+    expect(map.textFields.Text_17).toBe('35 ft')
+    expect(map.textFields.Text_11).toBe('31')
+    expect(map.textFields.Text_9).toBe('24')
+    expect(map.textFields.Text_10).toBe('5')
+    expect(map.textFields.Text_12).toBe('1')
+    expect(map.textFields.Text_13).toBe('4')
+    expect(map.textFields.Text_91).toBe('Common, Elvish')
+    expect(map.textFields.Text_60).toBe('Alert: You gain a +5 bonus to initiative.')
   })
 
   test('should map inspiration and death saves for 2024 template', () => {
@@ -133,7 +146,8 @@ describe('characterSheetPdf', () => {
 
     const map = buildCharacterSheetFieldMap(character, '2024')
 
-    expect(map.checkboxFields.Checkbox_1).toBe(true)
+    expect(map.checkboxFields.Checkbox_32).toBe(true)
+    expect(map.checkboxFields.Checkbox_1).toBe(false)
     expect(map.checkboxFields.Checkbox_2).toBe(true)
     expect(map.checkboxFields.Checkbox_3).toBe(true)
     expect(map.checkboxFields.Checkbox_4).toBe(false)
@@ -169,15 +183,15 @@ describe('characterSheetPdf', () => {
 
     const map = buildCharacterSheetFieldMap(character, '2024')
 
-    expect(map.checkboxFields.Checkbox_9).toBe(true)
-    expect(map.checkboxFields.Checkbox_12).toBe(true)
+    expect(map.checkboxFields.Checkbox_10).toBe(true)
+    expect(map.checkboxFields.Checkbox_30).toBe(true)
     expect(map.checkboxFields.Checkbox_8).toBe(false)
 
-    expect(map.checkboxFields.Checkbox_28).toBe(true)
-    expect(map.checkboxFields.Checkbox_18).toBe(true)
-    expect(map.checkboxFields.Checkbox_20).toBe(false)
+    expect(map.checkboxFields.Checkbox_13).toBe(true)
+    expect(map.checkboxFields.Checkbox_17).toBe(true)
+    expect(map.checkboxFields.Checkbox_19).toBe(false)
 
-    expect(map.textFields.Text_46).toBe('+9')
+    expect(map.textFields.Text_50).toBe('+9')
   })
 
   test('should map key identity and proficiency fields for 2014 template', () => {
@@ -888,8 +902,8 @@ describe('characterSheetPdf', () => {
     expect(map.textFields['Adventuring Gear Row 4']).toBeUndefined()
   })
 
-  test('2014 equipment is capped at 54 rows', () => {
-    const equipment = Array.from({ length: 60 }, (_, i) => ({
+  test('2014 equipment continues onto the 36-row extra gear page', () => {
+    const equipment = Array.from({ length: 95 }, (_, i) => ({
       id: `e${i}`,
       name: `Item ${i + 1}`,
       type: 'G',
@@ -901,5 +915,265 @@ describe('characterSheetPdf', () => {
 
     expect(map.textFields['Adventuring Gear Row 54']).toBe('Item 54')
     expect(map.textFields['Adventuring Gear Row 55']).toBeUndefined()
+    expect(map.textFields['Extra.Gear Row 1']).toBe('Item 55')
+    expect(map.textFields['Extra.Gear Row 36']).toBe('Item 90')
+    expect(map.textFields['Extra.Gear Row 37']).toBeUndefined()
+  })
+
+  test('2024 maps weapons, spellcasting, spell slots, spells, history, and inventory', () => {
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
+      level: 5,
+      abilityScores: {
+        strength: 8,
+        dexterity: 16,
+        constitution: 14,
+        intelligence: 18,
+        wisdom: 12,
+        charisma: 10,
+      },
+      proficiencies: {
+        armor: ['Light Armor'],
+        weapons: ['Martial Weapons'],
+        tools: ["Calligrapher's Supplies"],
+        languages: ['Common', 'Draconic'],
+        skills: ['arcana'],
+        savingThrows: ['intelligence', 'wisdom'],
+      },
+      equipment: [
+        {
+          id: 'longbow',
+          name: 'Longbow',
+          type: 'R',
+          quantity: 1,
+          equipped: true,
+          weaponCategory: 'martial',
+          dmg1: '1d8',
+          dmgType: 'P',
+          properties: ['A'],
+          range: '150/600 ft.',
+        },
+        {
+          id: 'wand',
+          name: 'Wand of Web',
+          type: 'WD',
+          quantity: 1,
+          equipped: true,
+          attuned: true,
+          rarity: 'Uncommon',
+        },
+      ],
+      currency: { cp: 1, sp: 2, ep: 3, gp: 42, pp: 5 },
+      details: {
+        alignment: 'Neutral Good',
+        appearance: 'Ink-stained fingers and blue robes.',
+        personalityTraits: 'Always asks one more question.',
+        backstory: 'Studied a map written in starlight.',
+      },
+      spells: {
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard (Lv 5)',
+            className: 'Wizard',
+            classSource: 'PHB',
+            castingAbility: 'int',
+            cantrips: ['Fire Bolt|PHB'],
+            spellsKnown: [],
+            preparedSpells: ['Magic Missile|PHB'],
+          },
+        ],
+        spellSlots: { 1: { max: 4, used: 2 } },
+      },
+    })
+    const classesData = [
+      {
+        name: 'Wizard',
+        source: 'PHB',
+        spellcastingAbility: 'int',
+        casterProgression: 'full',
+        hd: { faces: 6 },
+      } as Class5e,
+    ]
+    const spellsData: Spell5e[] = [
+      {
+        name: 'Fire Bolt',
+        source: 'PHB',
+        level: 0,
+        school: 'V',
+        time: [{ number: 1, unit: 'action' }],
+        range: { type: 'point', distance: { type: 'feet', amount: 120 } },
+        components: { v: true, s: true },
+        duration: [{ type: 'instant' }],
+      },
+      {
+        name: 'Magic Missile',
+        source: 'PHB',
+        level: 1,
+        school: 'V',
+        time: [{ number: 1, unit: 'action' }],
+        range: { type: 'point', distance: { type: 'feet', amount: 120 } },
+        components: { v: true, s: true },
+        duration: [{ type: 'instant' }],
+        meta: { ritual: true },
+      },
+    ]
+    const viewModel = prepareViewModel(character, classesData, [], [], spellsData, {
+      A: 'Ammunition',
+    })
+    const map = mapCharacterSheetViewModel(viewModel, '2024')
+
+    expect(map.textFields.Text_61).toBe('Longbow')
+    expect(map.textFields.Text_67).toBe('+6')
+    expect(map.textFields.Text_73).toBe('1d8 + 3 Piercing')
+    expect(map.textFields.Text_79).toBe('Ammunition')
+    expect(map.textFields.Text_230).toBe('Intelligence')
+    expect(map.textFields.Text_85).toBe('+4')
+    expect(map.textFields.Text_86).toBe('15')
+    expect(map.textFields.Text_87).toBe('+7')
+    expect(map.textFields.Text_220).toBe('4')
+    expect(map.checkboxFields.Checkbox_37).toBe(true)
+    expect(map.checkboxFields.Checkbox_38).toBe(true)
+    expect(map.checkboxFields.Checkbox_39).toBe(false)
+    expect(map.textFields.Text_92).toBe('C')
+    expect(map.textFields.Text_122).toBe('Fire Bolt')
+    expect(map.textFields.Text_93).toBe('1')
+    expect(map.textFields.Text_123).toBe('Magic Missile')
+    expect(map.checkboxFields.Checkbox_63).toBe(true)
+    expect(map.textFields.Text_88).toContain('Ink-stained fingers')
+    expect(map.textFields.Text_89).toContain('Studied a map')
+    expect(map.textFields.Text_90).toContain('Longbow')
+    expect(map.textFields.Text_212).toBe('Wand of Web')
+    expect(map.checkboxFields.Checkbox_151).toBe(true)
+    expect(map.textFields.Text_218).toBe('42')
+  })
+
+  test('2014 maps attacks, hit dice, defenses, armor details, and character history', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 5 }],
+      level: 5,
+      hitDiceUsed: 2,
+      abilityScores: {
+        strength: 16,
+        dexterity: 14,
+        constitution: 14,
+        intelligence: 10,
+        wisdom: 12,
+        charisma: 8,
+      },
+      proficiencies: {
+        armor: ['Heavy Armor', 'Shields'],
+        weapons: ['Martial Weapons'],
+        tools: [],
+        languages: ['Common'],
+        skills: [],
+        savingThrows: ['strength', 'constitution'],
+      },
+      equipment: [
+        {
+          id: 'sword',
+          name: 'Longsword',
+          type: 'M',
+          quantity: 1,
+          equipped: true,
+          weaponCategory: 'martial',
+          dmg1: '1d8',
+          dmg2: '1d10',
+          dmgType: 'S',
+          properties: ['V'],
+          weight: 3,
+        },
+        {
+          id: 'plate',
+          name: 'Plate Armor',
+          type: 'HA',
+          quantity: 1,
+          equipped: true,
+          armorType: 'heavy',
+          ac: 18,
+          weight: 65,
+        },
+        {
+          id: 'shield',
+          name: 'Shield',
+          type: 'S',
+          quantity: 1,
+          equipped: true,
+          armorType: 'shield',
+          ac: 2,
+          weight: 6,
+        },
+      ],
+      damageResistances: ['Fire'],
+      damageImmunities: ['Poison'],
+      conditionImmunities: ['Charmed'],
+      details: {
+        faith: 'Torm',
+        lifestyle: 'Comfortable',
+        appearance: 'A veteran with a broken nose.',
+        backstory: 'Held the bridge at dawn.',
+        faction: 'The Harpers',
+        rank: 'Watcher',
+      },
+    })
+    const classesData = [{ name: 'Fighter', source: 'PHB', hd: { faces: 10 } } as Class5e]
+    const map = mapCharacterSheetViewModel(
+      prepareViewModel(character, classesData, [], [], [], { V: 'Versatile' }),
+      '2014',
+    )
+
+    expect(map.textFields['Attack.1.Weapon Selection']).toBe('Longsword')
+    expect(map.textFields['Attack.1.To Hit']).toBe('+6')
+    expect(map.textFields['Attack.1.Damage']).toBe('1d8 + 3')
+    expect(map.textFields['Attack.1.Damage Type']).toBe('Slashing')
+    expect(map.textFields['Attack.1.Description']).toContain('Versatile 1d10')
+    expect(map.textFields['HD1 Level']).toBe('5')
+    expect(map.textFields['HD1 Die']).toBe('d10')
+    expect(map.textFields['HD1 Used']).toBe('2')
+    expect(map.textFields['Resistance Damage Type 1']).toBe('Fire resistance')
+    expect(map.textFields['Resistance Damage Type 2']).toBe('Poison immunity')
+    expect(map.textFields['Resistance Damage Type 3']).toBe('Charmed condition immunity')
+    expect(map.textFields['AC Armor Description']).toBe('Plate Armor')
+    expect(map.textFields['AC Shield Bonus Description']).toBe('Shield')
+    expect(map.textFields['Faith/Deity']).toBe('Torm')
+    expect(map.textFields.Lifestyle).toBe('Comfortable')
+    expect(map.textFields.Background_History).toContain('Held the bridge at dawn')
+    expect(map.textFields['Background_Faction.Text']).toBe('The Harpers')
+    expect(map.textFields['Background_FactionRank.Text']).toBe('Watcher')
+  })
+
+  test.each([
+    '2014',
+    '2024',
+  ] as const)('%s mapping only targets fields present in the shipped template', async (templateId) => {
+    const equipment = Array.from({ length: 90 }, (_, index) => ({
+      id: `item-${index}`,
+      name: `Item ${index + 1}`,
+      type: index < 5 ? 'WO' : 'G',
+      quantity: 1,
+      equipped: false,
+      attuned: index < 3,
+      rarity: index < 5 ? 'Uncommon' : undefined,
+    }))
+    const map = buildCharacterSheetFieldMap(makeCharacterFixture({ equipment }), templateId)
+    const templateBytes = new Uint8Array(
+      readFileSync(join(process.cwd(), 'public', 'pdf', `${templateId}_Character_Sheet.pdf`)),
+    )
+    const template = await PDFDocument.load(templateBytes)
+    const fieldNames = new Set(
+      template
+        .getForm()
+        .getFields()
+        .map((field) => field.getName()),
+    )
+
+    expect(Object.keys(map.textFields).filter((name) => !fieldNames.has(name))).toEqual([])
+    expect(Object.keys(map.checkboxFields).filter((name) => !fieldNames.has(name))).toEqual([])
+    if (templateId === '2024') {
+      expect(Object.keys(map.textFields)).toHaveLength(230)
+      expect(Object.keys(map.checkboxFields)).toHaveLength(151)
+    }
   })
 })

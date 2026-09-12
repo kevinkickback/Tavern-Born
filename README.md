@@ -16,11 +16,12 @@
 ## ✨ Features
 
 - **Step-by-step character creation** — Race, class, background, and ability scores with source filtering
-- **Level-up wizard** — Multiclassing, ASI/feat selection, and automatic feature detection
+- **Level-up wizard** — Multiclassing, ASI/feat selection, automatic feature detection, and fixed, rolled, or manually entered HP gains
+- **Combat stat management** — Track current and temporary HP, lasting HP/AC bonuses or penalties, and optional fixed maximum values from the character header
 - **Spell management** — Class spell lists, preparation, and multiclass slot calculation
 - **Equipment & inventory** — Item management with encumbrance tracking
 - **Multiple ability score methods** — Point Buy, Standard Array, Rolling, or Manual Entry
-- **Character details** — Portraits, backstory, and physical characteristics
+- **Character rules and details** — Review rules and sources after creation, manage portraits and characteristics, and track conditions and exhaustion
 - **PDF export** — Generate a printable character sheet as a PDF
 
 ## 📸 Screenshots

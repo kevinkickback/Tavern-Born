@@ -20,6 +20,44 @@ export interface CharacterClassEntry {
   subclassSource?: string
 }
 
+export type HitPointGainMethod = 'average' | 'rolled' | 'manual'
+
+/** The raw hit-die result chosen for a level after character level 1. */
+export interface HitPointGain {
+  className: string
+  classSource?: string
+  classLevel: number
+  characterLevel: number
+  hitDie: number
+  dieResult: number
+  method: HitPointGainMethod
+}
+
+export type HitPointAdjustmentMode = 'flat' | 'per-level'
+export type AdjustmentSource = 'manual' | 'item' | 'feat' | 'other'
+export type HitPointAdjustmentSource = AdjustmentSource
+
+/** A permanent additive change applied after class and Constitution HP. */
+export interface HitPointAdjustment {
+  id: string
+  label: string
+  amount: number
+  mode: HitPointAdjustmentMode
+  sourceType: HitPointAdjustmentSource
+  sourceRef?: string
+  createdAt: string
+}
+
+/** A lasting additive change applied after equipment and Dexterity AC. */
+export interface ArmorClassAdjustment {
+  id: string
+  label: string
+  amount: number
+  sourceType: AdjustmentSource
+  sourceRef?: string
+  createdAt: string
+}
+
 export interface Character {
   id: string
   version: string
@@ -54,10 +92,20 @@ export interface Character {
   visions?: Array<{ type: string; range?: number }>
 
   hitPoints: HitPoints
+  /** Whether current HP has been deliberately initialized or edited. */
+  hitPointsInitialized?: boolean
+  /** Per-level hit-die results. Constitution is deliberately applied at calculation time. */
+  hitPointGains?: HitPointGain[]
+  /** Permanent flat or per-character-level changes to maximum HP. */
+  hitPointAdjustments?: HitPointAdjustment[]
+  /** Exact maximum HP override. When set, derived HP and adjustments do not change the maximum. */
+  maxHitPointsOverride?: number
   /** Stored AC — retained for migration compatibility only; never read for display. Use `computeEffectiveCharacterArmorClass` instead. */
   armorClass?: number
   /** Optional manual override that takes precedence over calculated AC in UI reads. */
   armorClassOverride?: number
+  /** Lasting bonuses or penalties applied to calculated AC. */
+  armorClassAdjustments?: ArmorClassAdjustment[]
   initiative: number
   speed: number
 

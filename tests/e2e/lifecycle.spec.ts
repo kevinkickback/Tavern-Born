@@ -1,7 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
-import { ensureStartupPromptResolved, selectCharacterFromHome } from './helpers/startup'
+import {
+  ensureStartupPromptResolved,
+  seedAppState,
+  selectCharacterFromHome,
+} from './helpers/startup'
 
 test('import -> edit portrait -> save -> reload persists character changes', async ({ page }) => {
   const fixturePath = path.resolve('tests/fixtures/equipment-e2e.tbc')
@@ -102,67 +106,10 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
   await page.goto('/')
   await ensureStartupPromptResolved(page, 'e2e-lifecycle-seed')
 
-  await page.evaluate(
-    async ({ characterSeed, cacheSeed }) => {
-      await new Promise<void>((resolve, reject) => {
-        const request = indexedDB.open('keyval-store')
-        request.onerror = () => reject(request.error)
-        request.onupgradeneeded = () => {
-          const db = request.result
-          if (!db.objectStoreNames.contains('keyval')) {
-            db.createObjectStore('keyval')
-          }
-        }
-        request.onsuccess = () => {
-          const db = request.result
-          const tx = db.transaction('keyval', 'readwrite')
-          const store = tx.objectStore('keyval')
-          store.put(characterSeed, 'character-storage')
-          store.put(cacheSeed, 'tb:game-data-cache')
-          tx.oncomplete = () => {
-            db.close()
-            resolve()
-          }
-          tx.onerror = () => reject(tx.error)
-        }
-      })
-    },
-    {
-      characterSeed: {
-        state: {
-          characters: [baseCharacter],
-          activeCharacterId: null,
-        },
-        version: 0,
-      },
-      cacheSeed: {
-        data: {
-          races: [],
-          classes: [],
-          backgrounds: [],
-          spells: [],
-          feats: [],
-          items: [],
-          itemsBase: [],
-          itemProperties: [],
-          itemTypes: [],
-          classFeatures: [],
-          actions: [],
-          conditions: [],
-          deities: [],
-          skills: [],
-          senses: [],
-          languages: [],
-          magicvariants: [],
-          optionalfeatures: [],
-          variantrules: [],
-          sources: [],
-        },
-        cachedAt: new Date().toISOString(),
-        sourceSnapshot: { type: 'remote', path: 'e2e-lifecycle-seed' },
-      },
-    },
-  )
+  await seedAppState(page, {
+    sourcePath: 'e2e-lifecycle-seed',
+    characters: [baseCharacter],
+  })
 
   await page.reload()
   await ensureStartupPromptResolved(page, 'e2e-lifecycle-seed')

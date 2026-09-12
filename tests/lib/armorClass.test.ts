@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  calculateArmorClassAdjustmentTotal,
   computeArmorClass,
   computeEffectiveCharacterArmorClass,
   getArmorCategory,
@@ -98,5 +99,31 @@ describe('armorClass', () => {
     })
 
     expect(effective).toBe(15)
+  })
+
+  test('computeEffectiveCharacterArmorClass includes lasting adjustments', () => {
+    const effective = computeEffectiveCharacterArmorClass({
+      abilityScores: { dexterity: 14 },
+      equipment: [],
+      armorClassAdjustments: [
+        {
+          id: 'ring',
+          label: 'Ring of protection',
+          amount: 1,
+          sourceType: 'item',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        {
+          id: 'curse',
+          label: 'Curse',
+          amount: -2,
+          sourceType: 'other',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+    })
+
+    expect(calculateArmorClassAdjustmentTotal([])).toBe(0)
+    expect(effective).toBe(11)
   })
 })

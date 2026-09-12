@@ -80,7 +80,63 @@ Unsaved changes behavior:
 - electron/main.ts blocks close with a confirmation dialog when unsaved changes exist.
 - App preference changes do not flow through the character store and therefore never mark a character dirty.
 
-## 3b) Desktop Window State Restore
+## 3a) Hit Point Advancement and Management
+
+Entry points:
+- src/components/modals/LevelUpModal.tsx
+- src/lib/character/commands/classCommands.ts (`applyLevelUp`)
+- src/hooks/character/useHitPoints.ts
+- src/components/modals/HitPointsModal.tsx
+
+Level-up flow:
+1. With Average Hit Points enabled, the level-up modal commits the class's fixed average automatically.
+2. With it disabled, the modal requires the player to roll the displayed hit die or enter a valid result manually.
+3. `applyLevelUp()` validates the class/level relationship and records the raw die result, die size, method, and class identity with the progression update.
+4. Maximum HP is recalculated from current class progression and Constitution whenever it is read, so later Constitution changes affect every level without rewriting the gain history.
+5. Removing a level prunes gain records outside the retained progression.
+
+Header management flow:
+1. The header heart opens `HitPointsModal` with the character's actual current and temporary HP. Legacy characters whose current HP was never initialized begin from their effective maximum.
+2. The player may edit current/temp HP and add labeled flat or per-level maximum-HP bonuses or penalties. Negative adjustments are valid.
+3. An optional exact maximum overrides calculation and adjustments without deleting them.
+4. `useHitPoints().saveHitPointSettings()` applies the complete settings patch in one character-store mutation.
+
+Effective maximum HP resolves in this order: class/Constitution calculation, lasting adjustments, exact override. `hitPoints.max` is a zeroed legacy field and is not a canonical maximum-HP read.
+
+## 3b) Armor Class Management
+
+Entry points:
+- src/components/modals/ArmorClassModal.tsx
+- src/hooks/character/useArmorClass.ts
+- src/lib/calculations/armorClass.ts
+
+Flow:
+1. The header shield opens `ArmorClassModal` with the live effective AC.
+2. Base AC is calculated from equipped armor/shields and Dexterity.
+3. Labeled lasting bonuses or penalties are applied to the calculated base.
+4. An optional exact override takes final precedence without deleting saved adjustments.
+5. The modal saves adjustments and the optional override atomically.
+
+All UI and PDF reads must use `computeEffectiveCharacterArmorClass()` or `useArmorClass()`. The legacy `character.armorClass` field is retained only for migration compatibility.
+
+## 3c) Per-Character Rules and Sources
+
+Entry points:
+- src/pages/rules/RulesPage.tsx
+- src/pages/sources/SourcesPage.tsx
+- src/hooks/data/useFilteredGameData.ts
+
+Flow:
+1. The Builder sidebar's Options group exposes Rules and Sources after character creation.
+2. Rules edits patch `character.variantRules`; the selected `originSystem` is displayed but cannot be changed because switching it would require rebuilding origin and progression choices.
+3. Source edits patch `character.allowedSources`. The character's implicit PHB/XPHB ruleset source remains included in the effective filter.
+4. The Prefer Newer Printings control patches `variantRules.preferNewerPrintings` and changes the source-page warning to explain the active filtering behavior.
+5. Removing sources or applying a preset prunes spells from disabled sources and warns the player; other existing source conflicts are surfaced for review.
+6. Shared filtered-data hooks apply the current source and reprint settings to character-scoped selection surfaces.
+
+Existing choices are preserved when rules change. Pages warn the player to review the affected Builder area rather than silently removing prior choices.
+
+## 3d) Desktop Window State Restore
 
 Entry points:
 - electron/main.ts
@@ -123,17 +179,36 @@ Background equipment detail:
 
 Entry points:
 - src/lib/renderer.ts
-- src/components/editor/FormattedTextRenderer.tsx
+- src/lib/entryRenderCache.ts
+- src/components/editor/GameContent.tsx
+- src/components/editor/RenderedEntryWithTooltip.tsx
 
 Flow:
-1. UI passes 5etools entries into renderEntry.
-2. Renderer recursively formats structured content and inline tags.
-3. UI displays rendered output rather than raw JSON.
+1. Full user-facing rules text passes 5etools entries to `GameContent`, the canonical React surface.
+2. `GameContent` obtains the shared cached recursive lookup and delegates rendering and interaction
+   to `RenderedEntryWithTooltip`.
+3. The lower-level renderer recursively formats structured content and inline tags, then sanitizes
+   the resulting HTML before display.
+4. Explicitly static contexts such as PDFs, text projections, and compact non-interactive summaries
+   call `renderEntry` or `renderEntryCached` directly.
 
-## 5b) Source Preset and Reprint Filtering
+Tooltip note:
+- `useRecursiveLookup()` supplies source-aware entity resolution for inline references.
+- Lookup construction is cached by the immutable game-data object, so multiple `GameContent`
+  instances share one set of maps. Loaded trap/hazard, reward, class-feature, subclass, and
+  subclass-feature records participate alongside spells, items, feats, races, classes,
+  backgrounds, optional features, actions, conditions, deities, skills, senses, variant rules, and
+  languages. Parent class/subclass identity disambiguates feature names that collide within a source.
+- Generated inline references are focusable and expose button/dialog semantics. Hover or focus opens
+  a preview, Enter/Space pins it, and Escape closes it and restores focus to the reference.
+- Rich text inside an open tooltip can open another tooltip. Each nested reference keeps its parent visible, shares the parent card styling, and uses the same source-aware lookup, allowing the interaction to continue recursively. Dismissal includes a short grace period so the pointer can cross the gap between parent and child previews. The newest card receives the strongest border and elevation, older cards remain fully opaque, active triggers stay highlighted, and constrained placement staggers overlapping cards to preserve visible context.
+
+## 5a) Source Preset and Reprint Filtering
 
 Entry points:
 - src/components/character/wizard/steps/2-RulesStep.tsx
+- src/pages/sources/SourcesPage.tsx
+- src/pages/rules/RulesPage.tsx
 - src/hooks/data/useFilteredGameData.ts
 - src/hooks/data/useWizardGameData.ts
 - src/lib/5etools/reprints.ts
@@ -146,6 +221,7 @@ Flow:
 5. When `variantRules.preferNewerPrintings` is enabled, the shared hooks build a suppression set from 5etools `reprintedAs` metadata.
 6. DataFilter removes any entity whose `name|source` key is in the suppression set.
 7. Older printings remain available when newer reprints are not in the selected source list.
+8. After creation, `/sources` updates `allowedSources` and the newer-printing preference; `/rules` exposes the same preference alongside the other character rules.
 
 Wizard defaults:
 - New-character setup defaults `allowedSources` to the `2014-recommended` source preset (filtered to currently loaded sources).
@@ -156,6 +232,22 @@ Important behavior:
 - Reprint suppression is content-driven from parsed 5etools data, not a hardcoded override map.
 - Suppression is transitive across reprint chains (A -> B -> C), so selecting C suppresses A and B when present.
 - If no source filter is active, data remains unfiltered and suppression is not applied.
+
+## 5b) Condition and Exhaustion Rules
+
+Entry points:
+- src/lib/5etools/parsers/basic.ts (`parseConditions`)
+- src/hooks/data/useGameData.ts (`useConditions`)
+- src/pages/details/ConditionsPage.tsx
+- src/components/editor/RenderedEntryWithTooltip.tsx
+
+Flow:
+1. Ingestion preserves condition records and their structured entries while tagging condition versus disease records.
+2. `useConditions()` returns valid condition records and excludes diseases.
+3. The Conditions page prefers records from the character's implicit rules source (`PHB` for 2014 or `XPHB` for 2024), falls back to another loaded printing when needed, and uses one record per condition name.
+4. Condition cards render their loaded descriptions and inline references through the shared formatted-text/tooltip path. Clicking anywhere on a card toggles the persisted condition name.
+5. Exhaustion uses the loaded ruleset record: PHB table rows are displayed and highlighted cumulatively, while formula-based XPHB text is rendered directly.
+6. Only active condition names and the exhaustion level are persisted; rules text remains game data.
 
 ## 6) Character Schema Versioning and Migrations
 
@@ -172,6 +264,7 @@ Flow:
 
 Current implementation note:
 - `downgradeCharacter()` is intentionally infrastructure-only today (rollback/export support) and has no runtime callers in the app flow.
+- `CURRENT_SCHEMA_VERSION` is 6. v5 adds durable per-level hit-point gain records; v6 migrates legacy maximum HP into the explicit override model and initializes lasting HP/AC adjustment collections.
 
 Versioning strategy:
 - Schema version is incremented only on **breaking changes** (added required fields, removed fields, restructured data).

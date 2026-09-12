@@ -1,5 +1,6 @@
 import { Warning } from '@phosphor-icons/react'
 import { memo, useCallback, useMemo } from 'react'
+import { GameContent } from '@/components/editor/GameContent'
 import {
   type ActiveFilters,
   type CategoryLimit,
@@ -11,7 +12,6 @@ import {
   checkAllPrerequisites,
   type PrereqCharacterSnapshot,
 } from '@/lib/calculations/prerequisites'
-import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
 import type { Raw5ePrereq } from '@/types/5etools'
 
@@ -49,7 +49,6 @@ const FeatureCard = memo(function FeatureCard({
   prereqReasons,
 }: FeatureCardProps) {
   const firstEntry = feature.entries?.[0]
-  const descHtml = firstEntry ? renderEntryCached(firstEntry) : ''
 
   return (
     <div className="p-3.5">
@@ -79,14 +78,13 @@ const FeatureCard = memo(function FeatureCard({
           <div className="text-xs text-warning/90 leading-snug">{prereqReasons.join(' · ')}</div>
         </div>
       )}
-      {descHtml && (
-        <div
+      {firstEntry != null && (
+        <GameContent
+          entry={firstEntry}
           className={cn(
             'text-sm text-muted-foreground line-clamp-3 leading-snug',
             !prereqMet && !isSelected && 'opacity-70',
           )}
-          // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
-          dangerouslySetInnerHTML={{ __html: descHtml }}
         />
       )}
     </div>

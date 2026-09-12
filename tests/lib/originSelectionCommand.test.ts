@@ -48,4 +48,32 @@ describe('buildInitialCharacter (2024 origin system)', () => {
       ),
     ).toHaveLength(1)
   })
+
+  test('starts a new character at full health', () => {
+    const fighter = {
+      name: 'Fighter',
+      source: 'PHB',
+      hd: { faces: 10, number: 1 },
+    } as Class5e
+    const character = buildInitialCharacter(
+      {
+        initial: {
+          abilityScores: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 14,
+            intelligence: 10,
+            wisdom: 10,
+            charisma: 10,
+          },
+        },
+        classEntity: fighter,
+      },
+      new Map(),
+      resolveRaceChoiceOptions,
+    )
+
+    expect(character.hitPoints.current).toBe(12)
+    expect(character.hitPointsInitialized).toBe(true)
+  })
 })

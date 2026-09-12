@@ -23,10 +23,10 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.d.ts', 'src/main.tsx', 'src/App.tsx', 'src/**/*.stories.{ts,tsx}'],
       thresholds: {
-        statements: 53,
-        branches: 43,
-        functions: 49,
-        lines: 56,
+        statements: 60,
+        branches: 50,
+        functions: 57,
+        lines: 63,
       },
     },
     alias: {

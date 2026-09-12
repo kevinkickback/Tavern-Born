@@ -4,6 +4,7 @@ import {
   addMulticlass,
   applyClassEquipmentChoiceCommand,
   applyClassProgressionUpdate,
+  applyLevelUp,
   removeMulticlass,
   selectBaseClass,
   selectSubclass,
@@ -175,6 +176,64 @@ describe('Class Commands', () => {
     expect(result.characterPatch.class).toBe('Wizard')
     expect(result.characterPatch.classSource).toBe('PHB')
     expect(result.characterPatch.classProgression).toHaveLength(2)
+  })
+
+  test('applyLevelUp records the raw die result with the progression update', () => {
+    const character = makeCharacterFixture({
+      level: 1,
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+      hitPointGains: [],
+    })
+    const ledger = character.provenance ?? emptyProvenance()
+    const result = applyLevelUp(
+      character,
+      ledger,
+      [{ name: 'Fighter', source: 'PHB', levels: 2 }],
+      {
+        className: 'Fighter',
+        classSource: 'PHB',
+        classLevel: 2,
+        hitDie: 10,
+        dieResult: 7,
+        method: 'manual',
+      },
+    )
+
+    expect(result.characterPatch.level).toBe(2)
+    expect(result.characterPatch.hitPointGains).toEqual([
+      expect.objectContaining({
+        className: 'Fighter',
+        classLevel: 2,
+        characterLevel: 2,
+        dieResult: 7,
+        method: 'manual',
+      }),
+    ])
+  })
+
+  test('level removal prunes its persisted hit-point gain', () => {
+    const character = makeCharacterFixture({
+      level: 2,
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 2 }],
+      hitPointGains: [
+        {
+          className: 'Fighter',
+          classSource: 'PHB',
+          classLevel: 2,
+          characterLevel: 2,
+          hitDie: 10,
+          dieResult: 7,
+          method: 'rolled',
+        },
+      ],
+    })
+    const result = applyClassProgressionUpdate(
+      character,
+      character.provenance ?? emptyProvenance(),
+      [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+    )
+
+    expect(result.characterPatch.hitPointGains).toEqual([])
   })
 
   test('applyClassProgressionUpdate reconciles provenance for removed class entries', () => {

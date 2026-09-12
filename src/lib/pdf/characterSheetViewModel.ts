@@ -1,3 +1,5 @@
+import { getClassResourceDefs } from '@/lib/5etools/classData'
+import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import {
   type EntityLookupSet,
   resolveBackgroundReference,
@@ -11,6 +13,13 @@ import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
+import {
+  formatCastingTime,
+  formatComponents,
+  formatDuration,
+  formatRange,
+  isRitualSpell,
+} from '@/lib/calculations/spellUtils'
 import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
 import {
   getCharacterClassEntries,
@@ -18,14 +27,54 @@ import {
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
 import { renderEntry } from '@/lib/renderer'
-import type { Background5e, Class5e, Race5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { Background5e, Class5e, Race5e, Spell5e } from '@/types/5etools'
+import type { Character, Equipment } from '@/types/character'
 
 type ModifierResult = { modifier: number; proficient: boolean }
+
+export interface CharacterSheetLookupSet extends EntityLookupSet {
+  spellsByKey?: Readonly<Record<string, Spell5e>>
+  itemPropertyByAbbr?: Readonly<Record<string, string>>
+}
+
+export interface CharacterSheetWeaponRow {
+  name: string
+  attackBonus: string
+  damage: string
+  damageType: string
+  range: string
+  notes: string
+  description: string
+}
+
+export interface CharacterSheetSpellRow {
+  name: string
+  level: string
+  castingTimeAndDuration: string
+  notes: string
+  concentration: boolean
+  ritual: boolean
+  material: boolean
+}
+
+export interface CharacterSheetClassResourceRow {
+  label: string
+  max: number
+  used: number
+  recovery: string
+}
+
+export interface CharacterSheetHitDieRow {
+  level: number
+  die: string
+  used: number | null
+}
 
 export interface CharacterSheetViewModel {
   character: Character
   level: number
+  classSummary: string
+  subclassSummary: string
   classLevelSummary: string
   raceSummary: string
   proficiencyBonus: number
@@ -35,6 +84,11 @@ export interface CharacterSheetViewModel {
   effectiveArmorClass: number
   maxHP: number
   remainingHitDice: number
+  hitDiceRows: CharacterSheetHitDieRow[]
+  classResourceRows: CharacterSheetClassResourceRow[]
+  weaponRows: CharacterSheetWeaponRow[]
+  spellRows: CharacterSheetSpellRow[]
+  magicItems: Equipment[]
   resolvedClasses: readonly Class5e[]
   mergedRace: Race5e | undefined
   background: Background5e | undefined
@@ -50,6 +104,31 @@ export interface CharacterSheetViewModel {
   featsSummary: string
   customOrganizationSummary: string
   carriedWeight: string
+  sizeSummary: string
+  appearanceSummary: string
+  historyAndPersonalitySummary: string
+  alliesAndOrganizationsSummary: string
+  organizationDetailsSummary: string
+  defensiveTraits: string[]
+}
+
+function getClassSummary(character: Character): string {
+  const entries = getCharacterClassEntries(character)
+  return (
+    entries
+      .map((entry) => entry.name)
+      .filter(Boolean)
+      .join(' / ') ||
+    character.class ||
+    ''
+  )
+}
+
+function getSubclassSummary(character: Character): string {
+  return getCharacterClassEntries(character)
+    .map((entry) => entry.subclass)
+    .filter((subclass): subclass is string => !!subclass)
+    .join(' / ')
 }
 
 function getClassLevelSummary(character: Character): string {
@@ -225,9 +304,248 @@ function buildProficienciesSummary(character: Character): string {
   return rows.join('\n')
 }
 
+function buildLabeledSummary(
+  rows: Array<[label: string, value: string | number | undefined]>,
+): string {
+  return rows
+    .filter(([, value]) => value !== undefined && String(value).trim().length > 0)
+    .map(([label, value]) => `${label}: ${value}`)
+    .join('\n\n')
+}
+
+function buildAppearanceSummary(character: Character): string {
+  const details = character.details
+  const description = details.appearance || details.physicalDescription
+  return [
+    description,
+    buildLabeledSummary([
+      ['Distinguishing marks', details.distinguishingMarks],
+      ['Clothing', details.clothingStyle],
+      ['Mannerisms', details.mannerisms],
+    ]),
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+function buildHistoryAndPersonalitySummary(character: Character): string {
+  const details = character.details
+  return buildLabeledSummary([
+    ['Personality', details.personalityTraits || details.personality],
+    ['Ideals', details.ideals],
+    ['Bonds', details.bonds],
+    ['Flaws', details.flaws],
+    ['Backstory', details.backstory],
+    ['Origin', details.origin],
+    ['Family', details.family],
+    ['Defining moment', details.definingMoment],
+    ['Life events', details.lifeEvents],
+    ['Goals', details.goals],
+    ['Fears', details.fears],
+  ])
+}
+
+function buildAlliesAndOrganizationsSummary(character: Character): string {
+  const allies = character.details.allies ?? []
+  const allySummary = allies
+    .map((ally) => {
+      const relationship = ally.relationship ? ` (${ally.relationship})` : ''
+      const description = ally.description ? `: ${ally.description}` : ''
+      return `${ally.name}${relationship}${description}`
+    })
+    .join('\n')
+  return [character.details.alliesAndOrganizations, allySummary].filter(Boolean).join('\n\n')
+}
+
+function buildOrganizationDetailsSummary(character: Character): string {
+  const details = character.details
+  return buildLabeledSummary([
+    ['Faction', details.faction],
+    ['Rank', details.rank],
+    ['Faction notes', details.factionNotes],
+    ['Patron', details.patron],
+    ['Patron details', details.patronDetails],
+  ])
+}
+
+function isWeapon(item: Equipment): boolean {
+  return !!item.dmg1 || !!item.weaponCategory || item.type === 'M' || item.type === 'R'
+}
+
+function isProficientWithWeapon(character: Character, item: Equipment): boolean {
+  const proficiencies = character.proficiencies.weapons.map((value) => value.toLowerCase())
+  const name = item.name.toLowerCase()
+  const category = item.weaponCategory?.toLowerCase()
+  return proficiencies.some(
+    (proficiency) =>
+      proficiency === name ||
+      (category != null &&
+        (proficiency === category || proficiency.includes(`${category} weapon`))),
+  )
+}
+
+function buildWeaponRows(
+  character: Character,
+  abilityModifiers: Record<AbilityName, number>,
+  proficiencyBonus: number,
+  propertyLookup: Readonly<Record<string, string>>,
+): CharacterSheetWeaponRow[] {
+  return character.equipment
+    .filter(isWeapon)
+    .sort((left, right) => Number(right.equipped) - Number(left.equipped))
+    .map((item) => {
+      const properties = item.properties ?? []
+      const propertyKeys = properties.map((property) => property.split('|')[0].toUpperCase())
+      const abilityModifier = propertyKeys.includes('F')
+        ? Math.max(abilityModifiers.strength, abilityModifiers.dexterity)
+        : item.type === 'R'
+          ? abilityModifiers.dexterity
+          : abilityModifiers.strength
+      const attackBonus =
+        abilityModifier + (isProficientWithWeapon(character, item) ? proficiencyBonus : 0)
+      const damageBonus =
+        abilityModifier > 0
+          ? ` + ${abilityModifier}`
+          : abilityModifier < 0
+            ? ` - ${Math.abs(abilityModifier)}`
+            : ''
+      const propertyLabels = properties.map((property) => {
+        const key = property.split('|')[0].toUpperCase()
+        return propertyLookup[key] ?? property
+      })
+      if (item.dmg2) propertyLabels.push(`Versatile ${item.dmg2}`)
+      return {
+        name: item.name,
+        attackBonus: formatModifier(attackBonus),
+        damage: item.dmg1 ? `${item.dmg1}${damageBonus}` : '',
+        damageType: item.dmgType
+          ? (DAMAGE_TYPE_LABELS[item.dmgType.toUpperCase()] ?? item.dmgType)
+          : '',
+        range: item.range ?? '',
+        notes: propertyLabels.join(', '),
+        description: item.description?.trim() ?? '',
+      }
+    })
+}
+
+function resolveSpellReference(
+  reference: string,
+  spellsByKey: Readonly<Record<string, Spell5e>>,
+): Spell5e | undefined {
+  const direct = spellsByKey[reference]
+  if (direct) return direct
+  const separator = reference.lastIndexOf('|')
+  const name = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
+  const source = separator >= 0 ? reference.slice(separator + 1).trim() : ''
+  const candidates = Object.values(spellsByKey)
+    .filter((spell) => spell.name === name && (!source || spell.source === source))
+    .sort((left, right) => left.source.localeCompare(right.source))
+  return candidates[0]
+}
+
+function buildSpellRows(
+  character: Character,
+  spellsByKey: Readonly<Record<string, Spell5e>>,
+): CharacterSheetSpellRow[] {
+  const references = character.spells.spellProfiles.flatMap((profile) => [
+    ...(profile.cantrips ?? []),
+    ...(profile.spellsKnown ?? []),
+    ...(profile.preparedSpells ?? []),
+    ...(profile.fixedSpells ?? []),
+    ...(profile.alwaysPreparedSpells ?? []),
+  ])
+  const uniqueReferences = [...new Set(references)]
+  return uniqueReferences
+    .map((reference) => {
+      const spell = resolveSpellReference(reference, spellsByKey)
+      const separator = reference.lastIndexOf('|')
+      const fallbackName = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
+      return {
+        name: spell?.name ?? fallbackName,
+        level: spell ? (spell.level === 0 ? 'C' : String(spell.level)) : '',
+        castingTimeAndDuration: spell
+          ? `${formatCastingTime(spell.time)}; ${formatDuration(spell.duration)}`
+          : '',
+        notes: spell
+          ? `Range: ${formatRange(spell.range)}; ${formatComponents(spell.components)}`
+          : '',
+        concentration: spell?.duration.some((duration) => duration.concentration) ?? false,
+        ritual: isRitualSpell(spell),
+        material: !!spell?.components?.m,
+      }
+    })
+    .sort((left, right) => {
+      const leftLevel = left.level === 'C' ? 0 : Number(left.level || 99)
+      const rightLevel = right.level === 'C' ? 0 : Number(right.level || 99)
+      return leftLevel - rightLevel || left.name.localeCompare(right.name)
+    })
+}
+
+function buildHitDiceRows(
+  character: Character,
+  rawLookups: CharacterSheetLookupSet,
+): CharacterSheetHitDieRow[] {
+  const entries = getCharacterClassEntries(character)
+  return entries.slice(0, 3).map((entry) => {
+    const classData = resolveClassReference(entry, rawLookups)
+    return {
+      level: entry.levels,
+      die: classData?.hd?.faces ? `d${classData.hd.faces}` : '',
+      used:
+        entries.length === 1
+          ? Math.min(entry.levels, Math.max(0, character.hitDiceUsed ?? 0))
+          : null,
+    }
+  })
+}
+
+function buildClassResourceRows(
+  character: Character,
+  rawLookups: CharacterSheetLookupSet,
+): CharacterSheetClassResourceRow[] {
+  const stored = character.classResources ?? {}
+  const charismaModifier = Math.max(1, getAbilityModifier(character.abilityScores.charisma))
+  return getCharacterClassEntries(character).flatMap((entry) => {
+    const classData = resolveClassReference(entry, rawLookups)
+    const levelIndex = Math.max(0, Math.min(19, entry.levels - 1))
+    return getClassResourceDefs(classData, entry.levels).map((definition) => {
+      const max =
+        definition.maxFormula === 'cha-mod'
+          ? charismaModifier
+          : (definition.maxPerLevel[levelIndex] ?? 0)
+      const current = stored[definition.id] ?? max
+      const restType = definition.restTypeByLevel?.[levelIndex] ?? definition.restType
+      return {
+        label: definition.label,
+        max,
+        used: Math.max(0, max - current),
+        recovery: restType === 'short' ? 'Short rest' : 'Long rest',
+      }
+    })
+  })
+}
+
+function buildDefensiveTraits(character: Character): string[] {
+  return [
+    ...(character.damageResistances ?? []).map((value) => `${value} resistance`),
+    ...(character.damageImmunities ?? []).map((value) => `${value} immunity`),
+    ...(character.conditionImmunities ?? []).map((value) => `${value} condition immunity`),
+  ]
+}
+
+function isMagicItem(item: Equipment): boolean {
+  return (
+    !!item.attuned ||
+    !!item.reqAttune ||
+    !!item.wondrous ||
+    !!item.tattoo ||
+    (!!item.rarity && item.rarity.toLowerCase() !== 'none')
+  )
+}
+
 export function createCharacterSheetViewModel(
   character: Character,
-  rawLookups: EntityLookupSet,
+  rawLookups: CharacterSheetLookupSet,
 ): CharacterSheetViewModel {
   const level = getTotalCharacterLevel(character) || 1
   const proficiencyBonus = getProficiencyBonus(level)
@@ -281,6 +599,8 @@ export function createCharacterSheetViewModel(
   return {
     character,
     level,
+    classSummary: getClassSummary(character),
+    subclassSummary: getSubclassSummary(character),
     classLevelSummary: getClassLevelSummary(character),
     raceSummary: getRaceSummary(character),
     proficiencyBonus,
@@ -290,6 +610,16 @@ export function createCharacterSheetViewModel(
     effectiveArmorClass: computeEffectiveCharacterArmorClass(character),
     maxHP: getEffectiveMaxHP(character, resolvedClasses),
     remainingHitDice: Math.max(0, level - Math.max(0, character.hitDiceUsed ?? 0)),
+    hitDiceRows: buildHitDiceRows(character, rawLookups),
+    classResourceRows: buildClassResourceRows(character, rawLookups),
+    weaponRows: buildWeaponRows(
+      character,
+      abilityModifiers,
+      proficiencyBonus,
+      rawLookups.itemPropertyByAbbr ?? {},
+    ),
+    spellRows: buildSpellRows(character, rawLookups.spellsByKey ?? {}),
+    magicItems: character.equipment.filter(isMagicItem),
     resolvedClasses,
     mergedRace: raceResolution.mergedRace,
     background,
@@ -319,6 +649,12 @@ export function createCharacterSheetViewModel(
     carriedWeight: character.equipment
       .reduce((sum, item) => sum + (item.weight ?? 0) * (item.quantity ?? 1), 0)
       .toFixed(1),
+    sizeSummary: raceResolution.mergedRace?.size?.[0] ?? '',
+    appearanceSummary: buildAppearanceSummary(character),
+    historyAndPersonalitySummary: buildHistoryAndPersonalitySummary(character),
+    alliesAndOrganizationsSummary: buildAlliesAndOrganizationsSummary(character),
+    organizationDetailsSummary: buildOrganizationDetailsSummary(character),
+    defensiveTraits: buildDefensiveTraits(character),
   }
 }
 

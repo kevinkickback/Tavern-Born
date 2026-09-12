@@ -42,7 +42,7 @@ import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { ARMOR_TYPE_MAP } from '@/lib/calculations/armorClass'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
-import { isEquippable } from '@/lib/calculations/itemEquippable'
+import { enforceArmorEquipmentRestrictions, isEquippable } from '@/lib/calculations/itemEquippable'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
@@ -186,11 +186,16 @@ export function EquipmentPage() {
   const ignoreEquipRestrictions = character?.variantRules?.ignoreEquipRestrictions ?? false
   const toggleIgnoreRestrictions = () => {
     if (!character) return
+    const nextIgnoreEquipRestrictions = !ignoreEquipRestrictions
+    const enforced = nextIgnoreEquipRestrictions
+      ? null
+      : enforceArmorEquipmentRestrictions(character.equipment, character.proficiencies.armor)
     updateCharacter(character.id, {
       variantRules: {
         ...character.variantRules,
-        ignoreEquipRestrictions: !ignoreEquipRestrictions,
+        ignoreEquipRestrictions: nextIgnoreEquipRestrictions,
       },
+      ...(enforced ? { equipment: enforced.equipment } : {}),
     })
   }
   const { getSourcesRowsBySection } = useProvenanceLedger()

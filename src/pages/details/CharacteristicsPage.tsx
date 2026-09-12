@@ -33,6 +33,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { ALIGNMENTS, LIFESTYLES } from '@/lib/5etools/constants'
+import { resolveBundledAssetSrc } from '@/lib/assetUrls'
 import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
 import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
 import { cn } from '@/lib/utils'
@@ -169,9 +170,9 @@ function getOrganizationImageStyle(label: string) {
 
 function normalizeOrganizationImagePath(path: string) {
   if (path.startsWith('/assets/factions/')) {
-    return path.replace('/assets/factions/', '/assets/images/factions/')
+    return resolveBundledAssetSrc(path.replace('/assets/factions/', '/assets/images/factions/'))
   }
-  return path
+  return resolveBundledAssetSrc(path)
 }
 
 function Field({ id, label, children }: { id: string; label: string; children: ReactNode }) {
@@ -364,10 +365,11 @@ export function CharacteristicsPage() {
       ? organizationCustomDescription || ''
       : selectedOrganization?.description || ''
 
-  const previewImage =
+  const previewImage = normalizeOrganizationImagePath(
     organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
       ? organizationCustomImage || ''
-      : normalizeOrganizationImagePath(selectedOrganization?.imagePath || '')
+      : selectedOrganization?.imagePath || '',
+  )
 
   const previewGradient =
     organizationSelectionKey === CUSTOM_ORGANIZATION_KEY

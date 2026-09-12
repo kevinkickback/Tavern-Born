@@ -1,8 +1,8 @@
 import { BookOpen, MagnifyingGlass, Shield, Toolbox, X } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
+import { GameContent } from '@/components/editor/GameContent'
 import { Input } from '@/components/ui/input'
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
-import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import type { Background5e } from '@/types/5etools'
 import { DetailSection } from '../../DetailCards'
@@ -243,10 +243,10 @@ export function BackgroundStep({ data, onChange, backgrounds }: BackgroundStepPr
                         const key = seen === 0 ? baseKey : `${baseKey}#${seen}`
 
                         return (
-                          <div
+                          <GameContent
                             key={key}
+                            entry={entry}
                             className="text-sm leading-relaxed"
-                            dangerouslySetInnerHTML={{ __html: renderEntry(entry) }}
                           />
                         )
                       })

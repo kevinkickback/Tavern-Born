@@ -122,6 +122,30 @@ describe('migrateCharacter', () => {
     expect(result.provenance?.feats['magic initiate; cleric']).toBeUndefined()
   })
 
+  it('adds an empty hit-point gain history to version 4 characters', () => {
+    const result = migrateCharacter({ ...baseCharacter, version: '4.0.0' }, 4)
+
+    expect(result.hitPointGains).toEqual([])
+    expect(result.version).toBe(`${CURRENT_SCHEMA_VERSION}.0.0`)
+  })
+
+  it('migrates a stored maximum HP value into an explicit override', () => {
+    const result = migrateCharacter(
+      {
+        ...baseCharacter,
+        version: '5.0.0',
+        hitPoints: { max: 42, current: 30, temporary: 3 },
+      },
+      5,
+    )
+
+    expect(result.hitPoints).toEqual({ max: 0, current: 30, temporary: 3 })
+    expect(result.hitPointsInitialized).toBe(true)
+    expect(result.hitPointAdjustments).toEqual([])
+    expect(result.armorClassAdjustments).toEqual([])
+    expect(result.maxHitPointsOverride).toBe(42)
+  })
+
   it('merges a parameterized fixed grant with an existing base feat key', () => {
     const result = migrateCharacter(
       {

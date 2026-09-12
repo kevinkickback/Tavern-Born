@@ -11,6 +11,29 @@ vi.mock('@/components/character/TraitTooltip', () => ({
 describe('RaceStep', () => {
   afterEach(() => {
     cleanup()
+    vi.restoreAllMocks()
+  })
+
+  test('renders repeated trait names without duplicate React keys', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const trait = { type: 'entries', name: 'Keen Senses', entries: ['A benefit.'] }
+    const { getAllByText, rerender } = render(
+      <RaceStep
+        data={{ ...INITIAL_CHARACTER_DATA, race: 'Elf', raceSource: 'PHB' }}
+        onChange={vi.fn()}
+        races={[{ name: 'Elf', source: 'PHB', entries: [trait, trait] } as Race5e]}
+      />,
+    )
+    expect(getAllByText('Keen Senses')).toHaveLength(2)
+    rerender(
+      <RaceStep
+        data={{ ...INITIAL_CHARACTER_DATA, race: 'Elf', raceSource: 'PHB' }}
+        onChange={vi.fn()}
+        races={[{ name: 'Elf', source: 'PHB', entries: [trait] } as Race5e]}
+      />,
+    )
+    expect(getAllByText('Keen Senses')).toHaveLength(1)
+    expect(consoleError).not.toHaveBeenCalled()
   })
 
   test('defaults to the first available subrace when none is selected', async () => {

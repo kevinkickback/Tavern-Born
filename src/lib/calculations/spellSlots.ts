@@ -7,7 +7,7 @@ export type CasterProgression = 'full' | '1/2' | '1/3' | 'pact' | 'artificer' | 
  * Mirrors `Parser.SP_CASTER_PROGRESSION_TO_FULL` from the 5etools source,
  * extended with 'artificer' and 'none' for our internal CasterProgression type.
  */
-export const CASTER_PROGRESSION_TO_FULL: Readonly<Record<CasterProgression, string>> = {
+const CASTER_PROGRESSION_TO_FULL: Readonly<Record<CasterProgression, string>> = {
   full: 'Full',
   '1/2': 'Half',
   '1/3': 'One-Third',

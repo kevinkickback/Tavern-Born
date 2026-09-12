@@ -28,7 +28,13 @@ import {
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Class5e, Item5e } from '@/types/5etools'
-import type { Character, CharacterClassEntry, Skills } from '@/types/character'
+import type {
+  Character,
+  CharacterClassEntry,
+  HitPointGain,
+  HitPointGainMethod,
+  Skills,
+} from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
 
 const SAVING_THROW_NAME_BY_KEY: Record<string, string> = {
@@ -66,6 +72,15 @@ export interface ClassSelectionEntity {
 
 export interface ClassCommandResult extends CharacterCommandResult {
   classEntity?: Class5e
+}
+
+export interface LevelUpHitPointChoice {
+  className: string
+  classSource?: string
+  classLevel: number
+  hitDie: number
+  dieResult: number
+  method: HitPointGainMethod
 }
 
 interface SelectSubclassOptions {
@@ -139,7 +154,7 @@ function getClassChoiceKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`
 }
 
-export function replaceClassEquipmentGrants(
+function replaceClassEquipmentGrants(
   ledger: ProvenanceLedger,
   className: string,
   classSource: string | undefined,
@@ -352,16 +367,93 @@ export function applyClassProgressionUpdate(
   }
 
   const newTotalLevel = nextProgression.reduce((sum, entry) => sum + entry.levels, 0)
+  const previousTotalLevel = previousProgression.reduce((sum, entry) => sum + entry.levels, 0)
+  const retainedHitPointGains = (character.hitPointGains ?? []).filter((gain) => {
+    const matchingEntry = nextProgression.find(
+      (entry) =>
+        entry.name === gain.className &&
+        (entry.source == null || gain.classSource == null || entry.source === gain.classSource),
+    )
+    return matchingEntry != null && gain.classLevel <= matchingEntry.levels
+  })
+  const hitPointGains =
+    newTotalLevel < previousTotalLevel
+      ? retainedHitPointGains
+          .sort((a, b) => a.characterLevel - b.characterLevel)
+          .map((gain, index, gains) => ({
+            ...gain,
+            characterLevel: newTotalLevel - gains.length + index + 1,
+          }))
+      : retainedHitPointGains
   const characterPatch: Partial<Character> = {
     classProgression: nextProgression,
     level: newTotalLevel,
     class: nextProgression[0]?.name ?? character.class,
     classSource: nextProgression[0]?.source ?? character.classSource,
+    hitPointGains,
   }
 
   return {
     characterPatch,
     provenanceUpdate,
+  }
+}
+
+/**
+ * Atomically apply a class-level increase and its raw hit-die result.
+ * Constitution is intentionally not stored so later CON changes recalculate HP correctly.
+ */
+export function applyLevelUp(
+  character: Character,
+  ledger: ProvenanceLedger,
+  nextProgression: CharacterClassEntry[],
+  hpChoice: LevelUpHitPointChoice,
+): ClassCommandResult {
+  const characterLevel = nextProgression.reduce((sum, entry) => sum + entry.levels, 0)
+  const targetEntry = nextProgression.find(
+    (entry) =>
+      entry.name === hpChoice.className &&
+      (entry.source == null ||
+        hpChoice.classSource == null ||
+        entry.source === hpChoice.classSource),
+  )
+
+  if (!targetEntry || targetEntry.levels !== hpChoice.classLevel) {
+    throw new Error('Hit-point choice does not match the level being added.')
+  }
+  if (characterLevel < 2 || characterLevel > 20) {
+    throw new RangeError('Hit-point gains can only be recorded for character levels 2 through 20.')
+  }
+  if (
+    !Number.isInteger(hpChoice.hitDie) ||
+    hpChoice.hitDie < 1 ||
+    !Number.isInteger(hpChoice.dieResult) ||
+    hpChoice.dieResult < 1 ||
+    hpChoice.dieResult > hpChoice.hitDie
+  ) {
+    throw new RangeError('Hit-point die result must be an integer within the hit die range.')
+  }
+
+  const progressionResult = applyClassProgressionUpdate(character, ledger, nextProgression)
+  const gain: HitPointGain = { ...hpChoice, characterLevel }
+  const hitPointGains = [
+    ...(progressionResult.characterPatch.hitPointGains ?? character.hitPointGains ?? []).filter(
+      (existing) =>
+        !(
+          existing.className === gain.className &&
+          existing.classLevel === gain.classLevel &&
+          (existing.classSource ?? '') === (gain.classSource ?? '')
+        ),
+    ),
+    gain,
+  ].sort((a, b) => a.characterLevel - b.characterLevel)
+
+  return {
+    ...progressionResult,
+    characterPatch: {
+      ...progressionResult.characterPatch,
+      hitPointGains,
+    },
   }
 }
 

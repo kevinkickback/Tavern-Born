@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
 import { HomePage } from '@/pages/HomePage'
@@ -292,7 +293,7 @@ describe('home page integration workflows', () => {
     expect(imported?.originSystem).toBe('2014')
   })
 
-  test('rejects invalid character file on import', async () => {
+  test('rejects a current-version character with corrupted nested data and reports why', async () => {
     const user = userEvent.setup()
     useCharacterStore.setState({
       characters: [makeCharacterFixture({ id: 'existing-1', name: 'Existing' })],
@@ -307,7 +308,13 @@ describe('home page integration workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Import' }))
     expect(fileInput.click).toHaveBeenCalled()
 
-    const invalidFile = new File([JSON.stringify({ foo: 'bar' })], 'bad.json', {
+    const corruptedCharacter = makeCharacterFixture({ id: 'bad', name: 'Corrupted' })
+    corruptedCharacter.version = `${CURRENT_SCHEMA_VERSION}.0.0`
+    corruptedCharacter.proficiencies.weapons = [
+      // @ts-expect-error Deliberately invalid import payload.
+      { name: 'Not a valid proficiency' },
+    ]
+    const invalidFile = new File([JSON.stringify(corruptedCharacter)], 'bad.json', {
       type: 'application/json',
     })
 
@@ -319,6 +326,11 @@ describe('home page integration workflows', () => {
     await fileInput.onchange?.({ target: fileInput } as unknown as Event)
 
     expect(useCharacterStore.getState().characters).toHaveLength(1)
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /Invalid character: Invalid character structure: proficiencies\.weapons\.0/,
+      ),
+    )
   })
 
   test('configures file input for character import', async () => {

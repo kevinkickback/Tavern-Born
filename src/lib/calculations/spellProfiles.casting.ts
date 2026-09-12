@@ -10,7 +10,7 @@ import {
   getSpellSlotsFromClassData,
   getStandardSpellSlotsFromClassData,
 } from '@/lib/calculations/spellSlots'
-import { getCharacterClassEntries, getTotalLevel } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
 import type { AbilityScores, Character } from '@/types/character'
 import { toClassProfileId } from './spellProfiles.constants'
@@ -231,7 +231,7 @@ export function buildSpellcastingClassDetails(
   classesById: Map<string, Class5e>,
 ): SpellcastingClassDetail[] {
   const entries = getCharacterClassEntries(character)
-  const totalLevel = getTotalLevel({ classes: entries })
+  const totalLevel = getTotalClassLevels(entries)
   const proficiency = getProficiencyBonus(totalLevel)
 
   return entries

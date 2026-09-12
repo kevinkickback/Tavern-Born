@@ -69,6 +69,16 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     (weapon) =>
       !weapon.toLowerCase().includes('simple') && !weapon.toLowerCase().includes('martial'),
   )
+  const equippedArmor = character.equipment.find(
+    (item) => item.equipped && item.armorType && item.armorType !== 'shield',
+  )
+  const equippedShield = character.equipment.find(
+    (item) => item.equipped && (item.armorType === 'shield' || item.type === 'S'),
+  )
+  const armorAdjustments = character.armorClassAdjustments ?? []
+  const spellcastingOne = viewModel.spellcastingDetails[0]
+  const spellcastingTwo = viewModel.spellcastingDetails[1]
+  const strengthScore = character.abilityScores.strength
   const textFields: Record<string, string> = {
     'PC Name': character.name || '',
     'Player Name': character.details.playerName || '',
@@ -86,7 +96,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'HP Max': String(viewModel.maxHP),
     'HP Current': String(character.hitPoints.current),
     'HP Temp': String(character.hitPoints.temporary),
-    'Total Experience': String(character.experiencePoints || ''),
+    'Total Experience': String(character.experiencePoints),
     'Copper Pieces': character.currency?.cp != null ? String(character.currency.cp) : '',
     'Silver Pieces': character.currency?.sp != null ? String(character.currency.sp) : '',
     'Electrum Pieces': character.currency?.ep != null ? String(character.currency.ep) : '',
@@ -105,28 +115,59 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     Ideal: character.details.ideals || '',
     Bond: character.details.bonds || '',
     Flaw: character.details.flaws || '',
-    Background_History:
-      character.details.backstory || character.details.lifeEvents || character.details.origin || '',
+    Background_History: viewModel.historyAndPersonalitySummary,
     'Class Features': viewModel.classFeaturesSummary2014,
     'Racial Traits': viewModel.racialTraitsSummary,
     'Background Feature': viewModel.backgroundFeature.name,
     'Background Feature Description': viewModel.backgroundFeature.description,
     'Background_Organisation.Left': usesCustomOrganization(viewModel)
-      ? viewModel.customOrganizationSummary || character.details.alliesAndOrganizations || ''
-      : character.details.alliesAndOrganizations || '',
-    Background_Appearance:
-      character.details.appearance || character.details.physicalDescription || '',
+      ? viewModel.customOrganizationSummary || viewModel.alliesAndOrganizationsSummary
+      : viewModel.alliesAndOrganizationsSummary,
+    'Background_Organisation.Right': viewModel.organizationDetailsSummary,
+    'Background_Faction.Text': character.details.faction || '',
+    'Background_FactionRank.Text': character.details.rank || '',
+    Background_Appearance: viewModel.appearanceSummary,
     Background_Enemies: character.details.nemesis || '',
+    'Faith/Deity': character.details.faith || '',
+    Lifestyle: character.details.lifestyle || '',
     Vision: viewModel.visionSummary,
     'Size Category': normalizeSize(viewModel.mergedRace?.size?.[0]),
+    'AC Armor Bonus': equippedArmor?.ac != null ? String(equippedArmor.ac) : '',
+    'AC Armor Description': equippedArmor?.name ?? '',
+    'AC Armor Weight': equippedArmor?.weight != null ? String(equippedArmor.weight) : '',
+    'AC Shield Bonus': equippedShield?.ac != null ? String(equippedShield.ac) : '',
+    'AC Shield Bonus Description': equippedShield?.name ?? '',
+    'AC Shield Weight': equippedShield?.weight != null ? String(equippedShield.weight) : '',
+    'AC Dexterity Modifier': formatViewModelModifier(viewModel.abilityModifiers.dexterity),
+    'AC Misc Mod 1':
+      armorAdjustments[0]?.amount != null
+        ? formatViewModelModifier(armorAdjustments[0].amount)
+        : '',
+    'AC Misc Mod 1 Description': armorAdjustments[0]?.label ?? '',
+    'AC Misc Mod 2':
+      armorAdjustments[1]?.amount != null
+        ? formatViewModelModifier(armorAdjustments[1].amount)
+        : '',
+    'AC Misc Mod 2 Description': armorAdjustments[1]?.label ?? '',
+    'Weight Carrying Capacity.Field': String(strengthScore * 15),
+    'Weight Encumbered': String(strengthScore * 5),
+    'Weight Heavily Encumbered': String(strengthScore * 10),
+    'Weight Push/Drag/Lift': String(strengthScore * 30),
+    'Speed encumbered': `${Math.max(0, (character.speed || 30) - 10)} ft`,
     'Spell save DC 1':
-      viewModel.spellcastingDetails[0]?.spellSaveDC != null
-        ? String(viewModel.spellcastingDetails[0].spellSaveDC)
-        : '',
+      spellcastingOne?.spellSaveDC != null ? String(spellcastingOne.spellSaveDC) : '',
     'Spell save DC 2':
-      viewModel.spellcastingDetails[1]?.spellSaveDC != null
-        ? String(viewModel.spellcastingDetails[1].spellSaveDC)
+      spellcastingTwo?.spellSaveDC != null ? String(spellcastingTwo.spellSaveDC) : '',
+    'Spell DC 1 Mod':
+      spellcastingOne?.spellcastingAbility != null
+        ? formatViewModelModifier(viewModel.abilityModifiers[spellcastingOne.spellcastingAbility])
         : '',
+    'Spell DC 2 Mod':
+      spellcastingTwo?.spellcastingAbility != null
+        ? formatViewModelModifier(viewModel.abilityModifiers[spellcastingTwo.spellcastingAbility])
+        : '',
+    'Spell DC 1 Bonus': spellcastingOne ? formatViewModelModifier(viewModel.proficiencyBonus) : '',
+    'Spell DC 2 Bonus': spellcastingTwo ? formatViewModelModifier(viewModel.proficiencyBonus) : '',
     'Language 1': languages[0] ?? '',
     'Language 2': languages[1] ?? '',
     'Language 3': languages[2] ?? '',
@@ -152,15 +193,64 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'Feat Note 2': character.feats[1]?.prerequisites ?? '',
     'Feat Note 3': character.feats[2]?.prerequisites ?? '',
     'Feat Note 4': character.feats[3]?.prerequisites ?? '',
+    'Extra.Notes': viewModel.defensiveTraits.slice(6).join('\n'),
   }
 
-  for (let index = 0; index < Math.min(character.equipment.length, 54); index += 1) {
+  for (let index = 0; index < Math.min(character.equipment.length, 90); index += 1) {
     const item = character.equipment[index]
     if (!item) continue
+    if (index < 54) {
+      const row = index + 1
+      textFields[`Adventuring Gear Row ${row}`] = item.name
+      textFields[`Adventuring Gear Amount ${row}`] = String(item.quantity)
+      textFields[`Adventuring Gear Weight ${row}`] = item.weight != null ? String(item.weight) : ''
+    } else {
+      const row = index - 53
+      textFields[`Extra.Gear Row ${row}`] = item.name
+      textFields[`Extra.Gear Amount ${row}`] = String(item.quantity)
+      textFields[`Extra.Gear Weight ${row}`] = item.weight != null ? String(item.weight) : ''
+    }
+  }
+
+  for (let index = 0; index < 5; index += 1) {
+    const item = viewModel.magicItems[index]
     const row = index + 1
-    textFields[`Adventuring Gear Row ${row}`] = item.name
-    textFields[`Adventuring Gear Amount ${row}`] = String(item.quantity)
-    textFields[`Adventuring Gear Weight ${row}`] = item.weight != null ? String(item.weight) : ''
+    textFields[`Extra.Magic Item ${row}`] = item?.name ?? ''
+    textFields[`Extra.Magic Item Description ${row}`] = item?.description ?? ''
+    textFields[`Extra.Magic Item Note ${row}`] = item?.rarity ?? ''
+    textFields[`Extra.Magic Item Weight ${row}`] = item?.weight != null ? String(item.weight) : ''
+  }
+
+  for (let index = 0; index < 6; index += 1) {
+    textFields[`Resistance Damage Type ${index + 1}`] = viewModel.defensiveTraits[index] ?? ''
+  }
+
+  for (let index = 0; index < 3; index += 1) {
+    const row = viewModel.hitDiceRows[index]
+    textFields[`HD${index + 1} Level`] = row ? String(row.level) : ''
+    textFields[`HD${index + 1} Die`] = row?.die ?? ''
+    textFields[`HD${index + 1} Used`] = row?.used != null ? String(row.used) : ''
+  }
+
+  for (let index = 0; index < 8; index += 1) {
+    const row = viewModel.classResourceRows[index]
+    textFields[`Limited Feature ${index + 1}`] = row?.label ?? ''
+    textFields[`Limited Feature Max Usages ${index + 1}`] = row ? String(row.max) : ''
+    textFields[`Limited Feature Recovery ${index + 1}`] = row?.recovery ?? ''
+    textFields[`Limited Feature Used ${index + 1}`] = row ? String(row.used) : ''
+  }
+
+  for (let index = 0; index < 5; index += 1) {
+    const row = viewModel.weaponRows[index]
+    const fieldNumber = index + 1
+    textFields[`Attack.${fieldNumber}.Weapon Selection`] = row?.name ?? ''
+    textFields[`Attack.${fieldNumber}.Range`] = row?.range ?? ''
+    textFields[`Attack.${fieldNumber}.To Hit`] = row?.attackBonus ?? ''
+    textFields[`Attack.${fieldNumber}.Damage`] = row?.damage ?? ''
+    textFields[`Attack.${fieldNumber}.Damage Type`] = row?.damageType ?? ''
+    textFields[`Attack.${fieldNumber}.Description`] = row
+      ? [row.notes, row.description].filter(Boolean).join('\n')
+      : ''
   }
   for (const [ability, mapping] of Object.entries(ABILITY_FIELD_MAP) as Array<
     [AbilityName, { score: string; modifier: string }]
@@ -184,6 +274,9 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'Proficiency Weapon Simple': weaponsLower.some((weapon) => weapon.includes('simple')),
     'Proficiency Weapon Martial': weaponsLower.some((weapon) => weapon.includes('martial')),
     'Proficiency Weapon Other': otherWeapons.length > 0,
+  }
+  for (let index = 0; index < 5; index += 1) {
+    checkboxFields[`Extra.Magic Item Attuned ${index + 1}`] = !!viewModel.magicItems[index]?.attuned
   }
   for (const [ability, mapping] of Object.entries(SAVE_FIELD_MAP) as Array<
     [AbilityName, { modifier: string; proficiency: string }]

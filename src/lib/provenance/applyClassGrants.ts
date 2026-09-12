@@ -193,29 +193,3 @@ export function applyClassSpellGrant(
 
   return addSpellGrant(nextLedger, spellName, tag)
 }
-
-/**
- * Record a class-level spell choice placeholder (cantrips/spells gained at level N).
- */
-export function addClassSpellChoicePlaceholder(
-  ledger: ProvenanceLedger,
-  className: string,
-  classSource: string | undefined,
-  level: number,
-  type: 'cantrip' | 'spell',
-  count: number,
-  maxSpellLevel?: number,
-): ProvenanceLedger {
-  const tag = makeSourceTag('class', className, 'placeholder', classSource)
-  const id = `class:${normalizeKey(className)}:${type}:level${level}`
-  const choiceRecord: ChoiceRecord = {
-    id,
-    domain: 'spells',
-    sourceTag: tag,
-    chooseCount: count,
-    optionPool: maxSpellLevel ? [`level 0-${maxSpellLevel}`] : [],
-    selected: [],
-    status: 'pending',
-  }
-  return addChoicePlaceholder(ledger, choiceRecord)
-}

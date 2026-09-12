@@ -37,7 +37,7 @@ export function getStoredAppearanceTheme(): AppearanceTheme {
   }
 }
 
-export function applyThemeRootAttributes(
+function applyThemeRootAttributes(
   root: HTMLElement,
   accent: AccentTheme,
   appearance: AppearanceTheme,
