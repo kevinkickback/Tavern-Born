@@ -122,7 +122,9 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
         cls,
         meetsRequirements,
         requirementText,
-        already: classProgression.some((e) => e.name === cls.name),
+        already: classProgression.some(
+          (entry) => entry.name === cls.name && (entry.source ?? '') === (cls.source ?? ''),
+        ),
       }
     })
   const multiclassOptionByKey = new Map(
@@ -292,8 +294,10 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     const lastHistoryEntry = levelHistory[levelHistory.length - 1] ?? lastRecordedGain
     const targetClassName =
       lastHistoryEntry?.className ?? classProgression[classProgression.length - 1].name
-    const targetClassSource =
-      lastHistoryEntry?.classSource ?? classProgression[classProgression.length - 1].source
+    const matchingProgressionEntry = classProgression.find(
+      (entry) => entry.name === targetClassName,
+    )
+    const targetClassSource = lastHistoryEntry?.classSource ?? matchingProgressionEntry?.source
     const targetClassLevel =
       lastHistoryEntry?.classLevel ?? classProgression[classProgression.length - 1].levels
 

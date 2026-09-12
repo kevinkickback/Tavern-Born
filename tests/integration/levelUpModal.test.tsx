@@ -126,6 +126,23 @@ describe('level up modal multiclass requirement text', () => {
     expect(screen.getAllByText('Wizard')).toHaveLength(2)
     expect(screen.getByText('(XPHB)')).toBeTruthy()
   })
+
+  test('marks only the already-selected class printing as taken', () => {
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classSource: 'PHB',
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+    })
+    resetCharacterStoreWith(character)
+    mockClasses = [
+      makeClassFixture({ name: 'Wizard', source: 'PHB' }),
+      makeClassFixture({ name: 'Wizard', source: 'XPHB' }),
+    ]
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+
+    expect(screen.getAllByText('(already taken)')).toHaveLength(1)
+  })
 })
 
 describe('level up hit-point choices', () => {
@@ -280,6 +297,40 @@ describe('level up hit-point choices', () => {
 
     expect(useCharacterStore.getState().activeCharacter?.level).toBe(1)
     expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([])
+  })
+
+  test('removes a legacy source-less HP gain from its matching multiclass entry', async () => {
+    const user = userEvent.setup()
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        class: 'Fighter',
+        classSource: 'PHB',
+        level: 3,
+        classProgression: [
+          { name: 'Fighter', source: 'PHB', levels: 2 },
+          { name: 'Wizard', source: 'XPHB', levels: 1 },
+        ],
+        hitPointGains: [
+          {
+            className: 'Fighter',
+            classLevel: 2,
+            characterLevel: 3,
+            hitDie: 10,
+            dieResult: 6,
+            method: 'average',
+          },
+        ],
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByText('Remove last level'))
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+    expect(useCharacterStore.getState().activeCharacter?.classProgression).toEqual([
+      { name: 'Fighter', source: 'PHB', levels: 1 },
+      { name: 'Wizard', source: 'XPHB', levels: 1 },
+    ])
   })
 
   test('clears level history when the active character changes', async () => {
