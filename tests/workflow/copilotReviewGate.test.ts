@@ -67,6 +67,7 @@ describe('Copilot review gate', () => {
     expect(gate.isCopilot({ login: 'copilot-pull-request-reviewer[bot]', type: 'Bot' })).toBe(true)
     expect(gate.isCopilot({ login: 'Copilot' })).toBe(true)
     expect(gate.isCopilot({ login: 'maintainer' })).toBe(false)
+    expect(gate.isCopilot({ login: 'untrusted-copilot-bot', type: 'Bot' })).toBe(false)
   })
 
   test.each([

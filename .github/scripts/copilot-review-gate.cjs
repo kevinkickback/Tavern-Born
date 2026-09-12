@@ -3,7 +3,7 @@ const COPILOT_LOGINS = new Set(['copilot', 'copilot-pull-request-reviewer', COPI
 
 function isCopilot(user) {
   const login = (user?.login ?? '').toLowerCase()
-  return COPILOT_LOGINS.has(login) || (user?.type === 'Bot' && login.includes('copilot'))
+  return COPILOT_LOGINS.has(login)
 }
 
 function getBlockingReason(review, comments) {

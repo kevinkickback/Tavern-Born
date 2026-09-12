@@ -21,6 +21,7 @@ jobs:
       pull-requests: write
     outputs:
       sha: ${{ steps.merge.outputs.sha }}
+      reviewed-head-sha: ${{ steps.merge.outputs.reviewed-head-sha }}
     steps:
       # workflow_run loads this workflow from the protected default branch. Keep the
       # write-capable job isolated from the pull request checkout and its scripts.
@@ -43,10 +44,11 @@ jobs:
 
             const testedPull = associatedPulls[0];
             const pullNumber = testedPull.number;
+            const testedHead = testedPull.head.sha;
             const { data: pr } = await github.rest.pulls.get({
               owner, repo, pull_number: pullNumber,
             });
-            if (pr.head.sha !== run.head_sha) {
+            if (pr.head.sha !== testedHead) {
               throw new Error('The PR changed; its latest CI run must pass before merging.');
             }
             if (pr.state !== 'open' || pr.draft || pr.base.ref !== 'main' ||
@@ -61,7 +63,7 @@ jobs:
               owner,
               repo,
               pullNumber,
-              expectedHead: run.head_sha,
+              expectedHead: testedHead,
               requestReview: true,
               timeoutMs: 15 * 60 * 1000,
             });
@@ -73,15 +75,18 @@ jobs:
               throw new Error('main changed during review; update the PR and rerun CI before merging.');
             }
 
+            // Main Protection uses strict required checks, so GitHub atomically rejects
+            // this merge if main advances after the preflight comparison above.
             const { data: result } = await github.rest.pulls.merge({
               owner,
               repo,
               pull_number: pullNumber,
               merge_method: 'squash',
-              sha: run.head_sha,
+              sha: testedHead,
             });
             if (!result.merged) throw new Error(result.message);
             core.setOutput('sha', result.sha);
+            core.setOutput('reviewed-head-sha', testedHead);
 
   release:
     name: Release merged version
@@ -97,3 +102,4 @@ jobs:
     uses: ./.github/workflows/release.yml
     with:
       source-sha: ${{ needs.squash-merge.outputs.sha }}
+      reviewed-head-sha: ${{ needs.squash-merge.outputs.reviewed-head-sha }}

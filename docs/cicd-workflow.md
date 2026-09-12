@@ -8,9 +8,11 @@
 | `main` | Stable branch — only updated via PR from `dev` |
 
 Protect `main` with the repository's **Main Protection** ruleset so direct pushes are disabled,
-review conversations must be resolved, and required CI checks must pass. Enable automatic Copilot
-review for every new PR revision. Enable squash merging and allow the workflow's `contents: write`
-and `pull-requests: write` permissions. Select the two CI jobs as required checks:
+review conversations must be resolved, and required CI checks must pass. Require branches to be
+up to date before merging (strict required checks); this makes GitHub reject a merge atomically if
+`main` advances after CI. Enable automatic Copilot review for every new PR revision. Enable squash
+merging and allow the workflow's `contents: write` and `pull-requests: write` permissions. Select
+the two CI jobs as required checks:
 
 - **Lint, type-check, coverage, and build**
 - **Browser end-to-end tests**
@@ -111,7 +113,8 @@ Electron builds → asset upload and verification**
 After merging, `merge.yml` calls the reusable `release.yml` from the same trusted workflow
 revision. This avoids relying on a push event, which a merge performed with `GITHUB_TOKEN` does not
 trigger for other workflows.
-The release workflow:
+The merge workflow passes the exact reviewed pre-merge commit to the release workflow rather than
+re-reading the mutable `dev` branch head. The release workflow:
 
 1. Compares the package version at the squash commit with its parent. If unchanged, all remaining
    release stages are skipped. The PR still merges; its title alone does not request a release.
@@ -135,6 +138,7 @@ changelog section, removes the old draft assets, moves the version tag, and rebu
 ```bash
 gh workflow run release.yml --ref main \
   -f source-sha=<corrected-main-sha> \
+  -f reviewed-head-sha=<reviewed-pr-head-sha> \
   -f rebuild-existing-draft=true
 ```
 

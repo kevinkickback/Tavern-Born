@@ -7,10 +7,18 @@ on:
         description: Squash merge commit that passed the dev to main PR checks
         required: true
         type: string
+      reviewed-head-sha:
+        description: Exact pre-merge PR head approved by Copilot
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       source-sha:
         description: Existing release commit to rebuild and verify
+        required: true
+        type: string
+      reviewed-head-sha:
+        description: Exact pre-merge PR head approved by Copilot
         required: true
         type: string
       rebuild-existing-draft:
@@ -32,6 +40,7 @@ concurrency:
 
 env:
   SOURCE_SHA: ${{ inputs.source-sha }}
+  REVIEWED_HEAD_SHA: ${{ inputs.reviewed-head-sha }}
   REBUILD_EXISTING_DRAFT: ${{ inputs['rebuild-existing-draft'] || false }}
 
 jobs:
@@ -103,6 +112,7 @@ jobs:
         uses: actions/github-script@v9
         env:
           SOURCE_SHA: ${{ inputs.source-sha }}
+          REVIEWED_HEAD_SHA: ${{ inputs.reviewed-head-sha }}
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -118,6 +128,13 @@ jobs:
             );
             if (!pull) throw new Error(`Commit ${process.env.SOURCE_SHA} did not come from a merged dev -> main PR.`);
 
+            const pullCommits = await github.paginate(github.rest.pulls.listCommits, {
+              owner, repo, pull_number: pull.number, per_page: 100,
+            });
+            if (pullCommits.at(-1)?.sha !== process.env.REVIEWED_HEAD_SHA) {
+              throw new Error(`${process.env.REVIEWED_HEAD_SHA} was not the final pre-merge commit in PR #${pull.number}.`);
+            }
+
             const { requireCopilotReview } = require('./trusted/.github/scripts/copilot-review-gate.cjs');
             await requireCopilotReview({
               github,
@@ -125,7 +142,7 @@ jobs:
               owner,
               repo,
               pullNumber: pull.number,
-              expectedHead: pull.head.sha,
+              expectedHead: process.env.REVIEWED_HEAD_SHA,
             });
       - name: Validate release version and changelog
         id: release
