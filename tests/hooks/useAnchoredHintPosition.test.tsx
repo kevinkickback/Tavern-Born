@@ -33,7 +33,7 @@ describe('useAnchoredHintPosition', () => {
       value: vi.fn(() => (covered ? [cover, anchor] : [anchor])),
     })
 
-    const { result } = renderHook(() =>
+    const { result, unmount } = renderHook(() =>
       useAnchoredHintPosition({
         enabled: true,
         selector: '[data-hint-anchor="true"]',
@@ -66,6 +66,8 @@ describe('useAnchoredHintPosition', () => {
         gap: 12,
       }),
     )
+
+    unmount()
   })
 
   test('rejects CSS-hidden and clipped anchors', () => {

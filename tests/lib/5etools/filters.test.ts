@@ -12,7 +12,7 @@ import {
   searchByName,
   sortByName,
 } from '@/lib/5etools/filters'
-import type { Feat5e, Race5e } from '@/types/5etools'
+import type { Feat5e, Race5e, Subclass5e } from '@/types/5etools'
 import {
   makeClassFixture,
   makeRaceFixture,
@@ -76,6 +76,112 @@ describe('5etools/filters', () => {
     expect(filtered.map((c) => `${c.name}|${c.source}`)).toEqual(['Wizard|XPHB'])
   })
 
+  test('filterClasses suppresses reprinted nested class content', () => {
+    const wizard = makeClassFixture({
+      classFeatures: [
+        { name: 'Legacy Training', source: 'PHB' },
+        { name: 'Current Training', source: 'XPHB' },
+      ],
+      subclasses: [
+        {
+          name: 'Legacy School',
+          shortName: 'Legacy',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+        {
+          name: 'Current School',
+          shortName: 'Current',
+          source: 'XPHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+      ],
+    })
+
+    const [filtered] = DataFilter.filterClasses([wizard], {
+      sources: ['PHB', 'XPHB'],
+      suppressedKeys: new Set(['Legacy Training|PHB', 'Legacy School|PHB']),
+    })
+
+    expect(filtered.classFeatures).toEqual([{ name: 'Current Training', source: 'XPHB' }])
+    expect(filtered.subclasses?.map((subclass) => subclass.shortName)).toEqual(['Current'])
+  })
+
+  test('filterClasses removes nested subclasses and features from disabled sources', () => {
+    const wizard = makeClassFixture({
+      name: 'Wizard',
+      source: 'PHB',
+      classFeatures: [
+        { name: 'Spellcasting', source: 'PHB' },
+        { name: 'Forbidden Training', source: 'XGE' },
+      ],
+      classFeatureRefs: [
+        {
+          ref: 'Spellcasting|Wizard|PHB|1|PHB',
+          name: 'Spellcasting',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+        {
+          ref: 'Forbidden Training|Wizard|PHB|1|XGE',
+          name: 'Forbidden Training',
+          source: 'XGE',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+      ],
+      subclasses: [
+        {
+          name: 'School of Abjuration',
+          shortName: 'Abjuration',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatures: [
+            'Arcane Ward|Wizard|PHB|Abjuration|PHB|2|PHB',
+            'Forbidden Ward|Wizard|PHB|Abjuration|PHB|2|XGE',
+          ],
+          levelFeatures: [
+            {
+              level: 2,
+              features: [
+                { name: 'Allowed Feature', source: 'PHB' },
+                { name: 'Excluded Feature', source: 'XGE' },
+              ],
+            },
+            {
+              level: 3,
+              features: [{ name: 'Excluded Level', source: 'XGE' }],
+            },
+          ],
+        },
+        {
+          name: 'War Magic',
+          shortName: 'War Magic',
+          source: 'XGE',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+      ] as Subclass5e[],
+    })
+
+    const [filtered] = DataFilter.filterClasses([wizard], { sources: ['PHB'] })
+
+    expect(filtered.classFeatures).toEqual([{ name: 'Spellcasting', source: 'PHB' }])
+    expect(filtered.classFeatureRefs?.map((reference) => reference.name)).toEqual(['Spellcasting'])
+    expect(filtered.subclasses?.map((subclass) => subclass.shortName)).toEqual(['Abjuration'])
+    expect(filtered.subclasses?.[0].subclassFeatures).toEqual([
+      'Arcane Ward|Wizard|PHB|Abjuration|PHB|2|PHB',
+    ])
+    expect(filtered.subclasses?.[0].levelFeatures).toHaveLength(1)
+    expect(filtered.subclasses?.[0].levelFeatures?.[0].features).toEqual([
+      { name: 'Allowed Feature', source: 'PHB' },
+    ])
+  })
+
   test('filterSpells applies class, concentration, and component filters', () => {
     const spells = [
       makeSpellFixture({
@@ -99,6 +205,14 @@ describe('5etools/filters', () => {
     })
 
     expect(filtered.map((s) => s.name)).toEqual(['Fly'])
+  })
+
+  test('filterSpells reads the canonical ritual metadata', () => {
+    const ritual = makeSpellFixture({ name: 'Identify', meta: { ritual: true } })
+    const ordinary = makeSpellFixture({ name: 'Magic Missile', meta: { ritual: false } })
+
+    expect(DataFilter.filterSpells([ritual, ordinary], { ritual: true })).toEqual([ritual])
+    expect(DataFilter.filterSpells([ritual, ordinary], { ritual: false })).toEqual([ordinary])
   })
 
   test('search and sort helpers are case-insensitive and stable by name', () => {

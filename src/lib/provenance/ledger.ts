@@ -293,12 +293,16 @@ export function getSpellsGrantedAtLevel(
   ledger: ProvenanceLedger,
   className: string,
   level: number,
+  classSource?: string,
 ): string[] {
   const results: string[] = []
   for (const [key, tags] of Object.entries(ledger.spells)) {
     const match = tags.some(
       (t) =>
-        t.sourceType === 'class' && t.sourceName === className && t.spellGrantedAtLevel === level,
+        t.sourceType === 'class' &&
+        t.sourceName === className &&
+        (classSource == null || (t.sourceRef ?? '') === classSource) &&
+        t.spellGrantedAtLevel === level,
     )
     if (match) results.push(key)
   }
@@ -313,16 +317,41 @@ export function removeSpellChoicesAtLevel(
   ledger: ProvenanceLedger,
   className: string,
   level: number,
+  classSource?: string,
 ): ProvenanceLedger {
   const choices = ledger.choices.filter(
     (c) =>
       !(
         c.sourceTag.sourceType === 'class' &&
         c.sourceTag.sourceName === className &&
+        (classSource == null || (c.sourceTag.sourceRef ?? '') === classSource) &&
         c.id.includes(`level${level}`)
       ),
   )
   return { ...ledger, choices }
+}
+
+/** Remove spell grant tags attributed to one class printing at a character level. */
+export function removeSpellGrantsAtLevel(
+  ledger: ProvenanceLedger,
+  className: string,
+  level: number,
+  classSource?: string,
+): ProvenanceLedger {
+  const spells: ProvenanceLedger['spells'] = {}
+  for (const [key, tags] of Object.entries(ledger.spells)) {
+    const retained = tags.filter(
+      (tag) =>
+        !(
+          tag.sourceType === 'class' &&
+          tag.sourceName === className &&
+          (classSource == null || (tag.sourceRef ?? '') === classSource) &&
+          tag.spellGrantedAtLevel === level
+        ),
+    )
+    if (retained.length > 0) spells[key] = retained
+  }
+  return { ...ledger, spells }
 }
 
 /** Return an empty fresh ledger. Re-exported convenience alias. */

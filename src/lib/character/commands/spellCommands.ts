@@ -104,6 +104,7 @@ export function removeSpellFromCharacter(
     profileId?: string
   },
 ): SpellCommandResult {
+  const normKey = normalizeKey(spellName)
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (options?.profileId && profile.id !== options.profileId) {
       return profile
@@ -114,23 +115,22 @@ export function removeSpellFromCharacter(
     if (!options?.spellKind || options.spellKind === 'cantrip') {
       updated = {
         ...updated,
-        cantrips: updated.cantrips.filter((s) => s !== spellName),
-        preparedSpells: updated.preparedSpells.filter((s) => s !== spellName),
+        cantrips: updated.cantrips.filter((spell) => normalizeKey(spell) !== normKey),
+        preparedSpells: updated.preparedSpells.filter((spell) => normalizeKey(spell) !== normKey),
       }
     }
 
     if (!options?.spellKind || options.spellKind === 'spell') {
       updated = {
         ...updated,
-        spellsKnown: updated.spellsKnown.filter((s) => s !== spellName),
-        preparedSpells: updated.preparedSpells.filter((s) => s !== spellName),
+        spellsKnown: updated.spellsKnown.filter((spell) => normalizeKey(spell) !== normKey),
+        preparedSpells: updated.preparedSpells.filter((spell) => normalizeKey(spell) !== normKey),
       }
     }
 
     return updated
   })
 
-  const normKey = normalizeKey(spellName)
   const newSpells = { ...ledger.spells }
   delete newSpells[normKey]
   const updatedLedger = { ...ledger, spells: newSpells }

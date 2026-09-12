@@ -1,3 +1,4 @@
+import { isRitualSpell } from '@/lib/calculations/spellUtils'
 import type {
   Background5e,
   Class5e,
@@ -139,10 +140,112 @@ export class DataFilter {
     if (filters.sources && filters.sources.length > 0) {
       const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
       filtered = filtered.filter((c) => sourcesUpper.has(c.source.toUpperCase()))
+      filtered = filtered.map((cls) => ({
+        ...cls,
+        classFeatures: cls.classFeatures?.filter((feature) => {
+          const source =
+            typeof feature === 'string'
+              ? feature.split('|')[4] || feature.split('|')[2] || cls.source
+              : feature.source || cls.source
+          return sourcesUpper.has(source.toUpperCase())
+        }) as typeof cls.classFeatures,
+        classFeatureRefs: cls.classFeatureRefs?.filter((reference) =>
+          sourcesUpper.has(
+            (reference.source || reference.feature?.source || cls.source).toUpperCase(),
+          ),
+        ),
+        subclasses: cls.subclasses
+          ?.filter((subclass) => sourcesUpper.has(subclass.source.toUpperCase()))
+          .map((subclass) => {
+            const subclassFeatures = subclass.subclassFeatures?.filter((feature) => {
+              const source =
+                typeof feature === 'string'
+                  ? feature.split('|')[6] || subclass.source
+                  : feature.source || subclass.source
+              return sourcesUpper.has(source.toUpperCase())
+            }) as typeof subclass.subclassFeatures
+            const levelFeatures = subclass.levelFeatures
+              ?.map((group) => ({
+                ...group,
+                features: group.features.filter((feature) =>
+                  sourcesUpper.has((feature.source || subclass.source).toUpperCase()),
+                ),
+              }))
+              .filter((group) => group.features.length > 0)
+            return {
+              ...subclass,
+              subclassFeatures,
+              subclassFeatureRefs: subclass.subclassFeatureRefs?.filter((reference) =>
+                sourcesUpper.has(
+                  (reference.source || reference.feature?.source || subclass.source).toUpperCase(),
+                ),
+              ),
+              levelFeatures,
+            }
+          }),
+      }))
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {
-      filtered = filtered.filter((c) => !isSuppressed(c.name, c.source, filters.suppressedKeys))
+      filtered = filtered
+        .filter((c) => !isSuppressed(c.name, c.source, filters.suppressedKeys))
+        .map((cls) => ({
+          ...cls,
+          classFeatures: cls.classFeatures?.filter((feature) => {
+            const [name, source] =
+              typeof feature === 'string'
+                ? [feature.split('|')[0], feature.split('|')[4] || feature.split('|')[2]]
+                : [feature.name, feature.source]
+            return !isSuppressed(name, source || cls.source, filters.suppressedKeys)
+          }) as typeof cls.classFeatures,
+          classFeatureRefs: cls.classFeatureRefs?.filter(
+            (reference) =>
+              !isSuppressed(
+                reference.name,
+                reference.source || reference.feature?.source || cls.source,
+                filters.suppressedKeys,
+              ),
+          ),
+          subclasses: cls.subclasses
+            ?.filter(
+              (subclass) => !isSuppressed(subclass.name, subclass.source, filters.suppressedKeys),
+            )
+            .map((subclass) => {
+              const subclassFeatures = subclass.subclassFeatures?.filter((feature) => {
+                const [name, source] =
+                  typeof feature === 'string'
+                    ? [feature.split('|')[0], feature.split('|')[6]]
+                    : [feature.name, feature.source]
+                return !isSuppressed(name, source || subclass.source, filters.suppressedKeys)
+              }) as typeof subclass.subclassFeatures
+              const levelFeatures = subclass.levelFeatures
+                ?.map((group) => ({
+                  ...group,
+                  features: group.features.filter(
+                    (feature) =>
+                      !isSuppressed(
+                        feature.name,
+                        feature.source || subclass.source,
+                        filters.suppressedKeys,
+                      ),
+                  ),
+                }))
+                .filter((group) => group.features.length > 0)
+              return {
+                ...subclass,
+                subclassFeatures,
+                subclassFeatureRefs: subclass.subclassFeatureRefs?.filter(
+                  (reference) =>
+                    !isSuppressed(
+                      reference.name,
+                      reference.source || reference.feature?.source || subclass.source,
+                      filters.suppressedKeys,
+                    ),
+                ),
+                levelFeatures,
+              }
+            }),
+        }))
     }
 
     if (filters.hasProficiency && filters.hasProficiency.length > 0) {
@@ -208,7 +311,7 @@ export class DataFilter {
 
     if (filters.ritual !== undefined) {
       filtered = filtered.filter((s) => {
-        const isRitual = (s as { ritual?: unknown }).ritual === true
+        const isRitual = isRitualSpell(s)
         return filters.ritual ? isRitual : !isRitual
       })
     }

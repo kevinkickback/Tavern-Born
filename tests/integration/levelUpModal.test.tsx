@@ -1,12 +1,13 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { makeClassFixture } from '../fixtures/gameDataFixtures'
+import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => ({
@@ -17,6 +18,8 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 }))
 
 let mockClasses: Class5e[] = []
+
+afterEach(() => useGameDataStore.setState({ gameData: null }))
 
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
@@ -110,6 +113,36 @@ describe('level up modal multiclass requirement text', () => {
 
     expect(screen.getByText(/\(Dexterity 13; Wisdom 13; Strength 13\)/)).toBeTruthy()
   })
+
+  test('keeps class printings distinct by source', () => {
+    mockClasses = [
+      ...mockClasses,
+      makeClassFixture({ name: 'Wizard', source: 'PHB' }),
+      makeClassFixture({ name: 'Wizard', source: 'XPHB' }),
+    ]
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+
+    expect(screen.getAllByText('Wizard')).toHaveLength(2)
+    expect(screen.getByText('(XPHB)')).toBeTruthy()
+  })
+
+  test('marks only the already-selected class printing as taken', () => {
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classSource: 'PHB',
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+    })
+    resetCharacterStoreWith(character)
+    mockClasses = [
+      makeClassFixture({ name: 'Wizard', source: 'PHB' }),
+      makeClassFixture({ name: 'Wizard', source: 'XPHB' }),
+    ]
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+
+    expect(screen.getAllByText('(already taken)')).toHaveLength(1)
+  })
 })
 
 describe('level up hit-point choices', () => {
@@ -122,6 +155,34 @@ describe('level up hit-point choices', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  test.each([
+    ['an exact class hidden by source filters', 'PHB', false],
+    ['a legacy class with an empty source', '', true],
+  ])('uses the raw hit die for %s', async (_label, classSource, includeFilteredClass) => {
+    const user = userEvent.setup()
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'PHB',
+      hd: { faces: 10, number: 1 },
+    })
+    mockClasses = includeFilteredClass ? [fighter] : []
+    useGameDataStore.setState({ gameData: makeGameDataFixture({ classes: [fighter] }) })
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        class: 'Fighter',
+        classSource,
+        level: 1,
+        classProgression: [{ name: 'Fighter', source: classSource, levels: 1 }],
+        variantRules: { averageHitPoints: false },
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+
+    expect(screen.getByRole('button', { name: /Roll d10/ })).toBeTruthy()
   })
 
   test('asks for and persists a manual roll when fixed average is disabled', async () => {
@@ -236,5 +297,130 @@ describe('level up hit-point choices', () => {
 
     expect(useCharacterStore.getState().activeCharacter?.level).toBe(1)
     expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([])
+  })
+
+  test('removes a legacy source-less HP gain from its matching multiclass entry', async () => {
+    const user = userEvent.setup()
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        class: 'Fighter',
+        classSource: 'PHB',
+        level: 3,
+        classProgression: [
+          { name: 'Fighter', source: 'PHB', levels: 2 },
+          { name: 'Wizard', source: 'XPHB', levels: 1 },
+        ],
+        hitPointGains: [
+          {
+            className: 'Fighter',
+            classLevel: 2,
+            characterLevel: 3,
+            hitDie: 10,
+            dieResult: 6,
+            method: 'average',
+          },
+        ],
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByText('Remove last level'))
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+    expect(useCharacterStore.getState().activeCharacter?.classProgression).toEqual([
+      { name: 'Fighter', source: 'PHB', levels: 1 },
+      { name: 'Wizard', source: 'XPHB', levels: 1 },
+    ])
+  })
+
+  test('rejects an ambiguous printing for a legacy source-less HP gain', async () => {
+    const user = userEvent.setup()
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        class: 'Fighter',
+        classSource: 'PHB',
+        level: 3,
+        classProgression: [
+          { name: 'Fighter', source: 'PHB', levels: 2 },
+          { name: 'Fighter', source: 'XPHB', levels: 1 },
+        ],
+        hitPointGains: [
+          {
+            className: 'Fighter',
+            classLevel: 2,
+            characterLevel: 3,
+            hitDie: 10,
+            dieResult: 6,
+            method: 'average',
+          },
+        ],
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByText('Remove last level'))
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+    expect(useCharacterStore.getState().activeCharacter?.classProgression).toEqual([
+      { name: 'Fighter', source: 'PHB', levels: 2 },
+      { name: 'Fighter', source: 'XPHB', levels: 1 },
+    ])
+  })
+
+  test('clears level history when the active character changes', async () => {
+    const user = userEvent.setup()
+    const fighter = makeCharacterFixture({
+      id: 'fighter-id',
+      name: 'Fighter Hero',
+      class: 'Fighter',
+      classSource: 'PHB',
+      level: 1,
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+      variantRules: { averageHitPoints: true },
+      hitPointGains: [],
+    })
+    const wizard = makeCharacterFixture({
+      id: 'wizard-id',
+      name: 'Wizard Hero',
+      class: 'Wizard',
+      classSource: 'PHB',
+      level: 3,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
+      variantRules: { averageHitPoints: true },
+      hitPointGains: [],
+    })
+    mockClasses = [
+      makeClassFixture({ name: 'Fighter', source: 'PHB' }),
+      makeClassFixture({ name: 'Wizard', source: 'PHB' }),
+    ]
+    resetCharacterStoreWith(fighter)
+    function CharacterScopedLevelUpModal() {
+      const activeCharacterId = useCharacterStore((state) => state.activeCharacter?.id)
+      return (
+        <LevelUpModal
+          key={activeCharacterId ?? 'no-character'}
+          open={true}
+          onOpenChange={() => {}}
+        />
+      )
+    }
+
+    render(<CharacterScopedLevelUpModal />)
+
+    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+    const updatedFighter = useCharacterStore.getState().activeCharacter
+    act(() => {
+      useCharacterStore.setState({
+        characters: [updatedFighter!, wizard],
+        activeCharacterId: wizard.id,
+        activeCharacter: wizard,
+      })
+    })
+    await user.click(screen.getByText('Remove last level'))
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+    expect(useCharacterStore.getState().activeCharacter?.classProgression).toEqual([
+      { name: 'Wizard', source: 'PHB', levels: 2 },
+    ])
   })
 })

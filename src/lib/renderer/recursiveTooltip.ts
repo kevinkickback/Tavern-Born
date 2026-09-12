@@ -3,6 +3,7 @@ import type { Spell5e } from '@/types/5etools'
 
 export interface TooltipEntityLike {
   name?: string
+  shortName?: string
   source?: string
   page?: number
   entries?: unknown[]
@@ -81,6 +82,14 @@ export function getEntityKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`.toLowerCase()
 }
 
+export function resolveRecursiveEntity<T>(
+  entities: Map<string, T>,
+  name: string,
+  source?: string,
+): T | undefined {
+  return entities.get(getEntityKey(name, source))
+}
+
 function getClassScopedKey(
   name: string,
   source?: string,
@@ -145,6 +154,24 @@ function buildScopedFeatureMap(
         )
       : getClassScopedKey(item.name, item.source, item.className, item.classSource)
     if (!map.has(key)) map.set(key, item)
+  }
+  return map
+}
+
+function buildSubclassMap(items: readonly TooltipEntityLike[]): Map<string, TooltipEntityLike> {
+  const map = buildScopedFeatureMap(items, false)
+  for (const item of items) {
+    const shortName = item.shortName?.trim()
+    if (!shortName || shortName === item.name) continue
+
+    const sourceKey = getEntityKey(shortName, item.source)
+    if (!map.has(sourceKey)) map.set(sourceKey, item)
+
+    const nameKey = getEntityKey(shortName)
+    if (!map.has(nameKey)) map.set(nameKey, item)
+
+    const scopedKey = getClassScopedKey(shortName, item.source, item.className, item.classSource)
+    if (!map.has(scopedKey)) map.set(scopedKey, item)
   }
   return map
 }
@@ -220,7 +247,7 @@ export function buildRecursiveLookup(collections: RecursiveTooltipCollections): 
     trapHazards: buildNameMap(asTooltipEntities(collections.trapHazards)),
     rewards: buildNameMap(asTooltipEntities(collections.rewards)),
     classFeatures: buildScopedFeatureMap(asTooltipEntities(collections.classFeatures), false),
-    subclasses: buildScopedFeatureMap(nestedClassEntities.subclasses, false),
+    subclasses: buildSubclassMap(nestedClassEntities.subclasses),
     subclassFeatures: buildScopedFeatureMap(nestedClassEntities.subclassFeatures, true),
   }
 }
@@ -314,9 +341,7 @@ export function getRecursiveTooltipData(
   if (!reference.name) return simpleFallback
 
   if (normalizeKind(reference.kind) === 'spell') {
-    const spell =
-      lookup.spells.get(getEntityKey(reference.name, reference.source)) ??
-      lookup.spells.get(getEntityKey(reference.name))
+    const spell = resolveRecursiveEntity(lookup.spells, reference.name, reference.source)
     if (!spell) return simpleFallback
 
     const levelStr = formatSpellLevel ? formatSpellLevel(spell.level) : `Level ${spell.level}`
@@ -354,8 +379,7 @@ export function getRecursiveTooltipData(
           )
     const entity =
       entityMap.get(scopedKey) ??
-      entityMap.get(getEntityKey(reference.name, reference.source)) ??
-      entityMap.get(getEntityKey(reference.name))
+      resolveRecursiveEntity(entityMap, reference.name, reference.source)
     if (!entity) return simpleFallback
 
     const label =
@@ -390,9 +414,9 @@ export function getRecursiveTooltipData(
   }
 
   const entityMap = mapByKind[normalizedKind]
-  const entity =
-    entityMap?.get(getEntityKey(reference.name, reference.source)) ??
-    entityMap?.get(getEntityKey(reference.name))
+  const entity = entityMap
+    ? resolveRecursiveEntity(entityMap, reference.name, reference.source)
+    : undefined
   if (!entity) return simpleFallback
 
   const kindLabels: Record<string, string> = {

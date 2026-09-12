@@ -93,7 +93,7 @@ export function applyClassGrants(
     'tools',
     toProficiencyBlocks(profs.toolProficiencies),
     clsTag,
-    `class:${normalizeKey(cls.name)}`,
+    `class:${normalizeKey(cls.name)}:${normalizeKey(cls.source ?? '')}`,
   )
 
   const skillsArray = Array.isArray(profs.skills)
@@ -106,7 +106,7 @@ export function applyClassGrants(
   ) as { choose?: { from: string[]; count: number } } | undefined
   if (skillChoiceEntry?.choose) {
     const choiceRecord: ChoiceRecord = {
-      id: `class:${normalizeKey(cls.name)}:skills:choose`,
+      id: `class:${normalizeKey(cls.name)}:${normalizeKey(cls.source ?? '')}:skills:choose`,
       domain: 'skills',
       sourceTag: { ...clsTag, grantType: 'placeholder' },
       chooseCount: skillChoiceEntry.choose.count ?? 2,

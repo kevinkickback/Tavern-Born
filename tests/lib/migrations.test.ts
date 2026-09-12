@@ -146,6 +146,21 @@ describe('migrateCharacter', () => {
     expect(result.maxHitPointsOverride).toBe(42)
   })
 
+  it('preserves zero current HP as initialized when a legacy maximum exists', () => {
+    const result = migrateCharacter(
+      {
+        ...baseCharacter,
+        version: '5.0.0',
+        hitPoints: { max: 42, current: 0, temporary: 0 },
+      },
+      5,
+    )
+
+    expect(result.hitPoints.current).toBe(0)
+    expect(result.hitPointsInitialized).toBe(true)
+    expect(result.maxHitPointsOverride).toBe(42)
+  })
+
   it('merges a parameterized fixed grant with an existing base feat key', () => {
     const result = migrateCharacter(
       {
@@ -229,5 +244,15 @@ describe('downgradeCharacter', () => {
 
     expect(() => downgradeCharacter(migrated, -1)).toThrow(/invalid target/i)
     expect(() => downgradeCharacter(migrated, CURRENT_SCHEMA_VERSION)).toThrow(/invalid target/i)
+  })
+
+  it('rejects a v5 downgrade when no exact maximum HP can be represented', () => {
+    const character = {
+      ...migrateCharacter({ id: 'downgrade-id', name: 'Downgrade Hero', version: 0 }, 0),
+      hitPoints: { max: 0, current: 12, temporary: 0 },
+      maxHitPointsOverride: undefined,
+    }
+
+    expect(() => downgradeCharacter(character, 5)).toThrow(/maximum-HP value/i)
   })
 })

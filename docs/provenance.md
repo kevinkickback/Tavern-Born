@@ -158,6 +158,8 @@ For existing characters where `ChoiceRecord.selected` may be empty (e.g. created
 - Spell grants may include optional class-level attribution metadata:
 	- exact: selected from class-page level picker
 	- inferred-lowest-eligible: selected from spells page and attributed to the lowest eligible class level with remaining gain capacity
+- Class-level spell and choice removal uses the full `class name|source` identity. Removing a level
+  from one printing preserves grants owned by another printing of the same class.
 - Inferred spell attribution is descriptive metadata, not a canonical source of spell ownership.
 
 ## Common Pitfalls

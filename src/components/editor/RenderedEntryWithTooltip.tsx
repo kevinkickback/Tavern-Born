@@ -12,7 +12,6 @@ import {
 } from '@/lib/calculations/spellUtils'
 import { renderEntryCached } from '@/lib/entryRenderCache'
 import {
-  getEntityKey,
   getEntryWithHoverTitles,
   getRecursiveHintPosition,
   getRecursiveTooltipData,
@@ -21,6 +20,7 @@ import {
   parseRecursiveReference,
   type RecursiveHintState,
   type RecursiveLookup,
+  resolveRecursiveEntity,
 } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
@@ -178,9 +178,11 @@ export function RenderedEntryWithTooltip({
       setRecursiveHints([])
 
       if (normalizeKind(scopedReference.kind) === 'spell') {
-        const spell =
-          recursiveLookup.spells.get(getEntityKey(scopedReference.name, scopedReference.source)) ??
-          recursiveLookup.spells.get(getEntityKey(scopedReference.name))
+        const spell = resolveRecursiveEntity(
+          recursiveLookup.spells,
+          scopedReference.name,
+          scopedReference.source,
+        )
         if (spell) {
           setHint({ kind: 'spell', spell, left, pos, triggerElement: el })
           return
@@ -459,12 +461,13 @@ export function RenderedEntryWithTooltip({
 
                   <div className="px-3 pb-3 text-sm leading-relaxed space-y-1.5 max-h-[220px] overflow-y-auto [&_p]:my-0.5 [&_p+_p]:mt-1 [&_ul]:my-1 [&_ul]:ml-4 [&_ul]:list-disc [&_li]:my-0.5 [&_ol]:my-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-border [&_th]:bg-muted/20 [&_th]:px-1.5 [&_th]:py-1 [&_td]:border [&_td]:border-border [&_td]:px-1.5 [&_td]:py-1 [&_.cursor-help]:underline [&_.cursor-help]:decoration-dotted [&_.cursor-help]:underline-offset-2">
                     {[...(hint.spell.entries ?? []), ...(hint.spell.entriesHigherLevel ?? [])].map(
-                      (e) => {
+                      (e, index) => {
                         const entryHtml = markRecursiveTooltipReferences(renderEntryCached(e))
                         return (
                           <div
+                            // biome-ignore lint/suspicious/noArrayIndexKey: Spell entry order is canonical and entries have no stable IDs.
+                            key={`${hint.spell.name}|${index}|${entryHtml.slice(0, 48)}`}
                             // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
-                            key={`${hint.spell.name}|${entryHtml.slice(0, 48)}`}
                             dangerouslySetInnerHTML={{ __html: entryHtml }}
                           />
                         )

@@ -1,6 +1,7 @@
 import { GameContent } from '@/components/editor/GameContent'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { useRawRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import type { CompendiumEntry } from '@/lib/compendiumEntries'
 import type { Class5e } from '@/types/5etools'
 
@@ -183,6 +184,7 @@ function getRenderableEntries(selectedEntry: CompendiumEntry): unknown[] {
 }
 
 export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetailsProps) {
+  const recursiveLookup = useRawRecursiveLookup()
   const spellLevel = typeof selectedEntry.data.level === 'number' ? selectedEntry.data.level : null
   const spellSchool = typeof selectedEntry.data.school === 'string' ? selectedEntry.data.school : ''
 
@@ -264,6 +266,7 @@ export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetails
               <GameContent
                 key={`${selectedEntry.name}|${selectedEntry.source}|${entryKey}`}
                 entry={entry}
+                recursiveLookup={recursiveLookup}
                 className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
               />
             )

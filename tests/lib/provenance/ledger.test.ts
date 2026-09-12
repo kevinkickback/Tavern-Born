@@ -3,10 +3,14 @@ import {
   addAbilityBonus,
   addChoicePlaceholder,
   addGrant,
+  addSpellGrant,
   clearChoiceSelectionsBySource,
   emptyProvenance,
+  getSpellsGrantedAtLevel,
   removeGrantsBySource,
   removeGrantsBySourceFromDomain,
+  removeSpellChoicesAtLevel,
+  removeSpellGrantsAtLevel,
   replaceSourceGrants,
   resolveChoice,
 } from '@/lib/provenance/ledger'
@@ -180,5 +184,38 @@ describe('provenance/ledger', () => {
       selected: ['History'],
       status: 'resolved',
     })
+  })
+
+  test('level removal scopes spell grants and choices to one class printing', () => {
+    const xphbTag: SourceTag = { ...classTag, sourceRef: 'XPHB' }
+    let ledger = emptyProvenance()
+    ledger = addSpellGrant(ledger, 'Shield', { ...classTag, spellGrantedAtLevel: 3 })
+    ledger = addSpellGrant(ledger, 'Shield', { ...xphbTag, spellGrantedAtLevel: 3 })
+    ledger = addChoicePlaceholder(ledger, {
+      id: 'class:wizard:phb:spells:level3',
+      domain: 'spells',
+      sourceTag: classTag,
+      chooseCount: 1,
+      optionPool: ['Shield'],
+      selected: ['Shield'],
+      status: 'resolved',
+    })
+    ledger = addChoicePlaceholder(ledger, {
+      id: 'class:wizard:xphb:spells:level3',
+      domain: 'spells',
+      sourceTag: xphbTag,
+      chooseCount: 1,
+      optionPool: ['Shield'],
+      selected: ['Shield'],
+      status: 'resolved',
+    })
+
+    expect(getSpellsGrantedAtLevel(ledger, 'Wizard', 3, 'PHB')).toEqual(['shield'])
+
+    ledger = removeSpellChoicesAtLevel(ledger, 'Wizard', 3, 'PHB')
+    ledger = removeSpellGrantsAtLevel(ledger, 'Wizard', 3, 'PHB')
+
+    expect(ledger.spells.shield).toEqual([{ ...xphbTag, spellGrantedAtLevel: 3 }])
+    expect(ledger.choices.map((choice) => choice.id)).toEqual(['class:wizard:xphb:spells:level3'])
   })
 })

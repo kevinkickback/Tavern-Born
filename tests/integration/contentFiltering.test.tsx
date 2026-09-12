@@ -162,6 +162,57 @@ describe('Content Filtering (allowedSources)', () => {
       expect(result.current.items.length).toBe(3)
       expect(result.current.items.map((i) => i.name)).not.toContain('Immovable Rod')
     })
+
+    test('preferNewerPrintings suppresses nested class reprints', () => {
+      const character = makeCharacterFixture({
+        allowedSources: ['PHB', 'XPHB'],
+        variantRules: { preferNewerPrintings: true },
+      })
+      useCharacterStore.setState({ activeCharacter: character, characters: [character] })
+
+      useGameDataStore.setState({
+        gameData: partialGameData({
+          classes: [
+            {
+              name: 'Wizard',
+              source: 'PHB',
+              classFeatures: [
+                {
+                  name: 'Legacy Training',
+                  source: 'PHB',
+                  reprintedAs: ['Legacy Training|XPHB'],
+                },
+                { name: 'Legacy Training', source: 'XPHB' },
+              ],
+              subclasses: [
+                {
+                  name: 'Legacy School',
+                  shortName: 'Legacy',
+                  source: 'PHB',
+                  className: 'Wizard',
+                  reprintedAs: ['Current School|Wizard|XPHB|XPHB'],
+                },
+                {
+                  name: 'Current School',
+                  shortName: 'Current',
+                  source: 'XPHB',
+                  className: 'Wizard',
+                },
+              ],
+            },
+          ],
+        }),
+      })
+
+      const { result } = renderHook(() => useFilteredGameData())
+
+      expect(result.current.classes[0]?.classFeatures).toEqual([
+        { name: 'Legacy Training', source: 'XPHB' },
+      ])
+      expect(result.current.classes[0]?.subclasses?.map((subclass) => subclass.shortName)).toEqual([
+        'Current',
+      ])
+    })
   })
 
   describe('Character with expanded allowedSources', () => {
