@@ -1,7 +1,18 @@
 import { SP_SCHOOL_ABV_TO_FULL } from '@/lib/5etools/constants'
-import type { CastingTime, SpellComponents, SpellDuration, SpellRange } from '@/types/5etools'
+import type {
+  CastingTime,
+  Spell5e,
+  SpellComponents,
+  SpellDuration,
+  SpellRange,
+} from '@/types/5etools'
 
 export const SPELL_SCHOOL_NAMES: Readonly<Record<string, string>> = SP_SCHOOL_ABV_TO_FULL
+
+/** Returns whether a spell carries the canonical 5etools ritual flag. */
+export function isRitualSpell(spell: Pick<Spell5e, 'meta'> | null | undefined): boolean {
+  return spell?.meta?.ritual === true
+}
 
 /** Uses the parsed spell entity's canonical casing, with title case for unresolved references. */
 export function formatSpellDisplayName(storedName: string, canonicalName?: string): string {

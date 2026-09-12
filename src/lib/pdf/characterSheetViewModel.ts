@@ -18,6 +18,7 @@ import {
   formatComponents,
   formatDuration,
   formatRange,
+  isRitualSpell,
 } from '@/lib/calculations/spellUtils'
 import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
 import {
@@ -469,7 +470,7 @@ function buildSpellRows(
           ? `Range: ${formatRange(spell.range)}; ${formatComponents(spell.components)}`
           : '',
         concentration: spell?.duration.some((duration) => duration.concentration) ?? false,
-        ritual: (spell as { ritual?: unknown } | undefined)?.ritual === true,
+        ritual: isRitualSpell(spell),
         material: !!spell?.components?.m,
       }
     })

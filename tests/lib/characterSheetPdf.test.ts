@@ -1017,6 +1017,7 @@ describe('characterSheetPdf', () => {
         range: { type: 'point', distance: { type: 'feet', amount: 120 } },
         components: { v: true, s: true },
         duration: [{ type: 'instant' }],
+        meta: { ritual: true },
       },
     ]
     const viewModel = prepareViewModel(character, classesData, [], [], spellsData, {
@@ -1040,6 +1041,7 @@ describe('characterSheetPdf', () => {
     expect(map.textFields.Text_122).toBe('Fire Bolt')
     expect(map.textFields.Text_93).toBe('1')
     expect(map.textFields.Text_123).toBe('Magic Missile')
+    expect(map.checkboxFields.Checkbox_63).toBe(true)
     expect(map.textFields.Text_88).toContain('Ink-stained fingers')
     expect(map.textFields.Text_89).toContain('Studied a map')
     expect(map.textFields.Text_90).toContain('Longbow')

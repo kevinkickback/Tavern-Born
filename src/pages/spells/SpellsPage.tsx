@@ -71,6 +71,9 @@ export function SpellsPage() {
     senses,
     variantrules,
     languages,
+    classFeatures,
+    trapHazards,
+    rewards,
   } = useFilteredGameData()
   const ledger = character?.provenance ?? emptyProvenance()
   const {
@@ -124,6 +127,9 @@ export function SpellsPage() {
         senses,
         variantrules,
         languages,
+        classFeatures,
+        trapHazards,
+        rewards,
       }),
     [
       backgrounds,
@@ -140,6 +146,9 @@ export function SpellsPage() {
       itemsBase,
       optionalfeatures,
       races,
+      classFeatures,
+      trapHazards,
+      rewards,
       allSpells,
     ],
   )

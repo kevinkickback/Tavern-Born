@@ -15,6 +15,7 @@ import {
   formatRange,
   formatSpellLevel,
   getSchoolName,
+  isRitualSpell,
   SPELL_SCHOOL_NAMES,
 } from '@/lib/calculations/spellUtils'
 import { cn } from '@/lib/utils'
@@ -103,14 +104,6 @@ function buildVisibilityFilter(
   ]
   if (options.length === 0) return null
   return { key: 'visibility', label: 'Visibility', type: 'switches', columns: 1, options }
-}
-
-function isRitualSpell(spell: Spell5e): boolean {
-  const meta = spell.meta
-  if (!meta || typeof meta !== 'object') {
-    return false
-  }
-  return !!(meta as { ritual?: unknown }).ritual
 }
 
 function matchSpell(

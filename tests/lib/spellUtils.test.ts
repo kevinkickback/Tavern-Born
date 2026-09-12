@@ -3,8 +3,21 @@ import {
   formatSpellDisplayName,
   formatSpellLevel,
   getOrdinalForm,
+  isRitualSpell,
   ordinalSuffix,
 } from '@/lib/calculations/spellUtils'
+
+describe('isRitualSpell', () => {
+  test('reads the canonical 5etools meta.ritual flag', () => {
+    expect(isRitualSpell({ meta: { ritual: true } })).toBe(true)
+  })
+
+  test('returns false when the ritual flag is absent or not true', () => {
+    expect(isRitualSpell(undefined)).toBe(false)
+    expect(isRitualSpell({ meta: {} })).toBe(false)
+    expect(isRitualSpell({ meta: { ritual: false } })).toBe(false)
+  })
+})
 
 describe('formatSpellDisplayName', () => {
   test('prefers canonical parsed casing', () => {

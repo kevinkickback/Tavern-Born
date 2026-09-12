@@ -262,6 +262,10 @@ export interface Spell5e {
   range: SpellRange
   components?: SpellComponents
   duration: SpellDuration[]
+  meta?: {
+    ritual?: boolean
+    [key: string]: unknown
+  }
   entries?: unknown[]
   entriesHigherLevel?: unknown[]
   classes?: {
