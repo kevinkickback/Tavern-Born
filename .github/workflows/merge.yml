@@ -100,9 +100,12 @@ jobs:
             if (pr.head.sha !== testedHead) {
               throw new Error('The PR changed; its latest CI run must pass before merging.');
             }
-            if (pr.state !== 'open' || pr.draft || pr.base.ref !== 'main' ||
-                pr.head.ref !== 'dev' || pr.head.repo.full_name !== `${owner}/${repo}`) {
+            if (pr.base.ref !== 'main' || pr.head.ref !== 'dev' ||
+                pr.head.repo.full_name !== `${owner}/${repo}`) {
               throw new Error('The PR is not an eligible dev to main merge.');
+            }
+            if (!pr.merged && (pr.state !== 'open' || pr.draft)) {
+              throw new Error('The PR is neither open for merge nor already merged.');
             }
 
             const { join } = require('node:path');
@@ -125,9 +128,25 @@ jobs:
             if (reviewedPr.head.sha !== testedHead) {
               throw new Error('The PR changed during review; its latest CI run must pass before merging.');
             }
-            if (reviewedPr.state !== 'open' || reviewedPr.draft || reviewedPr.base.ref !== 'main' ||
-                reviewedPr.head.ref !== 'dev' || reviewedPr.head.repo.full_name !== `${owner}/${repo}`) {
+            if (reviewedPr.base.ref !== 'main' || reviewedPr.head.ref !== 'dev' ||
+                reviewedPr.head.repo.full_name !== `${owner}/${repo}`) {
               throw new Error('The PR is no longer an eligible dev to main merge.');
+            }
+
+            // A rerun can begin after the merge API succeeded but before this job
+            // persisted its outputs. Recover the exact squash commit idempotently so
+            // the release job can resume without attempting a second merge.
+            if (reviewedPr.merged) {
+              if (!reviewedPr.merge_commit_sha) {
+                throw new Error('The merged PR has no squash commit to release.');
+              }
+              core.info(`PR #${pullNumber} is already merged at ${reviewedPr.merge_commit_sha}; resuming release.`);
+              core.setOutput('sha', reviewedPr.merge_commit_sha);
+              core.setOutput('reviewed-head-sha', testedHead);
+              return;
+            }
+            if (reviewedPr.state !== 'open' || reviewedPr.draft) {
+              throw new Error('The PR is no longer open and ready to merge.');
             }
 
             const { data: currentBase } = await github.rest.repos.getBranch({

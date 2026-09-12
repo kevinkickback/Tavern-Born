@@ -24,6 +24,8 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain('const testedHead = testedPull.head.sha')
     expect(workflow).toContain('const { data: reviewedPr }')
     expect(workflow).toContain('reviewedPr.head.sha !== testedHead')
+    expect(workflow).toContain('if (reviewedPr.merged)')
+    expect(workflow).toContain("core.setOutput('sha', reviewedPr.merge_commit_sha)")
     expect(workflow).toContain('sha: testedHead')
     expect(workflow).not.toContain('sha: run.head_sha')
     expect(workflow).toContain(
@@ -56,12 +58,22 @@ describe('trusted workflow policy', () => {
     expect(workflow).not.toContain(
       'gh release view "$tag" --json isDraft --jq \'isDraft\' 2>/dev/null',
     )
-    expect(workflow).toContain('Build artifacts without repository credentials')
-    expect(workflow).toContain('run: npm run dist')
+    expect(workflow).toContain('Build artifacts and update manifests without publishing')
+    expect(workflow).toContain('run: npm run dist -- --publish never')
     expect(workflow).not.toContain('run: npm run release')
+    expect(workflow).not.toContain('--method PATCH')
+    expect(workflow).not.toContain('force=true')
+    expect(workflow).not.toContain('--method DELETE')
     expect(workflow).toContain('needs: [release-source, build]')
     expect(workflow).toContain('name: Create and populate draft release')
     expect(workflow).toContain('pattern: release-build-*')
+    expect(workflow).toContain('Validate completed artifact bundle')
+    expect(workflow).toContain('Expected exactly 10 release artifacts')
+    expect(workflow).toContain('Expected exactly 10 release assets')
+    expect(workflow).toContain("require_manifest 'latest.yml'")
+    expect(workflow).toContain("require_manifest 'latest-mac.yml'")
+    expect(workflow).toContain("require_manifest 'latest-linux.yml'")
+    expect(workflow).toContain('if [[ "$tag_sha" != "$SOURCE_SHA" ]]')
 
     const buildJob = workflow.slice(
       workflow.indexOf('\n  build:'),
@@ -78,5 +90,31 @@ describe('trusted workflow policy', () => {
     expect(publishJob).not.toContain('actions/checkout')
     expect(publishJob).toContain('contents: write')
     expect(publishJob).toContain('gh release create')
+
+    const validateIndex = publishJob.indexOf('Validate completed artifact bundle')
+    const attestIndex = publishJob.indexOf('Attest build provenance')
+    const createIndex = publishJob.indexOf('Create tag and draft from completed artifacts')
+    const releaseCheckIndex = publishJob.indexOf('if release_state="$(lookup_release)"')
+    const tagCheckIndex = publishJob.indexOf('if tag_sha="$(lookup_tag_sha)"')
+    const tagCreateIndex = publishJob.indexOf('gh api --method POST')
+    const draftCreateIndex = publishJob.indexOf('gh release create')
+    expect(validateIndex).toBeGreaterThan(-1)
+    expect(validateIndex).toBeLessThan(attestIndex)
+    expect(attestIndex).toBeLessThan(createIndex)
+    expect(releaseCheckIndex).toBeGreaterThan(-1)
+    expect(tagCheckIndex).toBeGreaterThan(releaseCheckIndex)
+    expect(tagCreateIndex).toBeGreaterThan(tagCheckIndex)
+    expect(draftCreateIndex).toBeGreaterThan(tagCreateIndex)
+  })
+
+  test('uses upload-safe Windows installer names that match update metadata', async () => {
+    const packageJson = JSON.parse(await readFile(resolve(process.cwd(), 'package.json'), 'utf8'))
+    const expectedArtifactName = [
+      '$' + '{productName}',
+      'Setup',
+      '$' + '{version}.' + '$' + '{ext}',
+    ].join('-')
+
+    expect(packageJson.build.nsis.artifactName).toBe(expectedArtifactName)
   })
 })

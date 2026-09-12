@@ -39,10 +39,11 @@ assessment, suppressed finding, or inline finding fails the merge. The merge als
 to still match the base commit recorded by that exact CI run. Push a corrective revision and obtain
 a clean re-review before retrying. The release workflow repeats this check and runs its release
 metadata validator from code pinned to the protected workflow revision, treating the candidate
-package files and changelog only as input data. It does this before creating or updating any tag or
-draft. A rebuild reuses the existing unpublished draft rather than deleting it. Release lookups fail
-closed: only a confirmed missing release is treated as absent; permission, rate-limit, and network
-failures stop the workflow before it moves a tag or updates a draft.
+package files and changelog only as input data. It does this before creating any tag or draft. Rebuild
+mode requires a maintainer to remove the old unpublished draft and tag first; the workflow never
+deletes or changes an existing release or tag. It can reuse a tag only when that tag already points
+to the exact validated source, allowing an interrupted draft creation to resume safely. Release
+lookups fail closed: permission, rate-limit, and network failures stop the workflow.
 
 ---
 
@@ -134,28 +135,32 @@ re-reading the mutable `dev` branch head. The release workflow:
    `package.json` and both root version fields in `package-lock.json`, and exactly one complete,
    nonempty changelog section. Ensures any existing version tag points to the squash commit.
 4. Builds Windows, macOS, and Linux packages in parallel from the exact squash commit without a
-   repository write token. Compilation for packaging is required; lint and tests are not rerun.
+   repository write token. Electron Builder runs with `--publish never`, which still creates the
+   updater manifests but cannot contact GitHub to publish. Packaging does not run lint and tests a
+   third time; both suites already passed the original CI run and the protected trusted rerun.
 5. A trusted publishing job downloads the completed packages, records provenance attestations,
-   creates the `v<version>` tag and draft release, and uploads every package. Candidate build scripts
-   never receive credentials that can change tags or releases.
+   verifies the exact ten-file bundle and updater-manifest targets, creates the `v<version>` tag and
+   draft release, and uploads every package. Candidate build scripts never receive credentials that
+   can change tags or releases.
 6. Verifies every expected artifact exists and the release is still a draft.
 
 ### Rebuilding an unpublished draft without changing the version
 
 Use this only after corrective code is merged while the version is still unpublished. First verify
-the old release is a draft, then remove that draft. The workflow deliberately refuses to delete or
-modify an existing release because a maintainer could publish it during cleanup. Leave the existing
-tag in place; the protected rebuild moves it only after every replacement package finishes building.
+the old release is a draft, then remove that draft and its remote tag. The workflow deliberately
+refuses to delete or modify an existing release or tag because a maintainer could publish the release
+during cleanup. It creates replacements only after every package finishes building.
 
 ```bash
 gh release view v0.3.0 --repo kevinkickback/Tavern-Born --json isDraft,tagName
 gh release delete v0.3.0 --repo kevinkickback/Tavern-Born --yes
+git push origin --delete v0.3.0
 ```
 
 Then dispatch the rebuild. The repository event always loads the release workflow from protected
 `main`; it cannot run a writable recovery workflow from a caller-selected branch. It requires the
 source commit to be a merged `dev` to `main` PR with a clean Copilot review, validates the existing
-changelog section, moves the version tag, builds every platform without repository credentials, and
+changelog section, builds every platform without repository credentials, and
 creates a fresh draft only after all packages are ready:
 
 ```bash
@@ -198,8 +203,9 @@ releases immutable and prevents a draft-to-published race during automated clean
 
 - Do not create or push the version tag manually; the workflow creates it after validation succeeds.
 - Do not create the GitHub Release manually; the workflow creates and populates the draft.
-- If a failed run already created a draft, verify and remove that unpublished draft before rerunning
-  the publishing job. Never convert a published release back to a draft for replacement.
+- If a failed run already created a draft that must be replaced, verify and remove that unpublished
+  draft and its tag before rerunning the entire workflow. Never convert a published release back to
+  a draft for replacement.
 - After the workflow completes, inspect the draft and publish it manually when approved:
   ```bash
   gh release view v1.0.0 --repo kevinkickback/Tavern-Born --json isDraft,assets | ConvertFrom-Json
@@ -234,19 +240,24 @@ gh run view <RUN_ID> --repo kevinkickback/Tavern-Born
 gh run view --repo kevinkickback/Tavern-Born --job <JOB_ID> --log
 ```
 
-For a transient runner or network failure before draft creation, rerun the failed jobs. If the
-failed run already created a draft, verify and remove only that unpublished draft before rerunning.
-Use **Re-run failed jobs** (or `gh run rerun <RUN_ID> --failed`) to avoid repeating successful PR
-checks. Release jobs appear inside the calling **Merge reviewed dev changes** run.
+For a transient runner or network failure before draft creation, rerun the failed jobs. If only final
+verification failed transiently, leave the draft in place and rerun only failed jobs. If draft
+creation stopped after creating the exact tag, rerunning can safely reuse that tag. If a successful
+publishing job produced a draft that must be replaced, verify that it is still unpublished, remove
+the draft and remote tag, then rerun the entire workflow with `gh run rerun <RUN_ID>` (without
+`--failed`). The merge job recognizes the already-merged PR and resumes the release safely. Release
+jobs appear inside the calling **Merge reviewed dev changes** run.
 
 If an unpublished draft needs corrected workflow, application, or packaging source, fix it through
 the normal `dev` to `main` process, then use the documented unpublished-draft rebuild mode with the
-corrective squash commit. It replaces only the existing draft for the unchanged package version;
-published releases remain immutable through this recovery path. Remove the old draft first as shown
-in the rebuild procedure; the workflow will not perform that destructive step.
+corrective squash commit. It creates a replacement draft for the unchanged package version;
+published releases remain immutable through this recovery path. Remove the old unpublished draft
+and remote tag first as shown in the rebuild procedure; the workflow will not perform those
+destructive steps.
 
-If needed, remove a failed draft separately (only after verifying that it is still unpublished).
-Leave its tag for rebuild mode to move after the replacement artifacts finish:
+If needed, remove a failed draft and tag separately (only after verifying that the release is still
+unpublished):
 ```bash
 gh release delete v1.0.0 --repo kevinkickback/Tavern-Born --yes
+git push origin --delete v1.0.0
 ```

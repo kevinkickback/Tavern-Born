@@ -150,6 +150,19 @@ jobs:
             return 1
           }
 
+          lookup_tag_sha() {
+            local output
+            if output="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$1" --jq '.object.sha' 2>&1)"; then
+              printf '%s' "$output"
+              return 0
+            fi
+            if [[ "$output" == *"HTTP 404"* ]]; then
+              return 4
+            fi
+            echo "$output" >&2
+            return 1
+          }
+
           version="$(node -p "require('./package.json').version")"
           previous_version="$(
             git show "$SOURCE_SHA^:package.json" |
@@ -162,9 +175,16 @@ jobs:
           fi
           tag="v$version"
 
-          if existing_sha="$(git rev-list -n 1 "$tag" 2>/dev/null)"; then
-            if [[ "$existing_sha" != "$SOURCE_SHA" && "$REBUILD_EXISTING_DRAFT" != "true" ]]; then
-              echo "Tag $tag already points to $existing_sha instead of $SOURCE_SHA." >&2
+          if existing_sha="$(lookup_tag_sha "$tag")"; then
+            if [[ "$existing_sha" != "$SOURCE_SHA" ]]; then
+              echo "Tag $tag points to $existing_sha instead of $SOURCE_SHA; refusing to replace it." >&2
+              exit 1
+            fi
+            echo "Tag $tag already points to the exact release source; it can be reused after an interrupted attempt."
+          else
+            tag_lookup_status=$?
+            if [[ "$tag_lookup_status" -ne 4 ]]; then
+              echo "Could not verify the state of tag $tag; refusing to continue." >&2
               exit 1
             fi
           fi
@@ -217,8 +237,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Build artifacts without repository credentials
-        run: npm run dist
+      - name: Build artifacts and update manifests without publishing
+        run: npm run dist -- --publish never
       - name: Preserve build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -244,6 +264,7 @@ jobs:
       artifact-metadata: write
     env:
       RELEASE_TAG: ${{ needs.release-source.outputs.tag }}
+      RELEASE_VERSION: ${{ needs.release-source.outputs.version }}
     steps:
       - name: Download validated release notes
         uses: actions/download-artifact@v4
@@ -256,6 +277,55 @@ jobs:
           pattern: release-build-*
           path: release-artifacts
           merge-multiple: true
+      - name: Validate completed artifact bundle
+        shell: bash
+        run: |
+          require_file() {
+            if [[ ! -f "release-artifacts/$1" ]]; then
+              echo "::error::Missing completed build artifact: $1"
+              exit 1
+            fi
+          }
+
+          require_manifest() {
+            local manifest="$1"
+            local expected="$2"
+            local manifest_path="release-artifacts/$manifest"
+            if [[ "$(grep -Fxc "path: $expected" "$manifest_path" || true)" -ne 1 ]] ||
+               [[ "$(grep -Fxc "  - url: $expected" "$manifest_path" || true)" -ne 1 ]] ||
+               ! grep -Eq '^sha512: [A-Za-z0-9+/=]+$' "$manifest_path"; then
+              echo "::error::$manifest does not describe the expected artifact $expected."
+              exit 1
+            fi
+          }
+
+          require_file "Tavern-Born-Setup-$RELEASE_VERSION.exe"
+          require_file "Tavern-Born-Setup-$RELEASE_VERSION.exe.blockmap"
+          require_file "Tavern-Born-$RELEASE_VERSION-portable.exe"
+          require_file "Tavern-Born-$RELEASE_VERSION.AppImage"
+          require_file "tavern-born_${RELEASE_VERSION}_amd64.deb"
+          require_file 'latest.yml'
+          require_file 'latest-mac.yml'
+          require_file 'latest-linux.yml'
+
+          shopt -s nullglob
+          dmg_files=(release-artifacts/Tavern-Born-"$RELEASE_VERSION"*.dmg)
+          if [[ "${#dmg_files[@]}" -ne 1 || ! -f "${dmg_files[0]}.blockmap" ]]; then
+            echo "::error::Expected exactly one macOS DMG and its blockmap."
+            exit 1
+          fi
+
+          dmg_name="$(basename "${dmg_files[0]}")"
+          require_manifest 'latest.yml' "Tavern-Born-Setup-$RELEASE_VERSION.exe"
+          require_manifest 'latest-mac.yml' "$dmg_name"
+          require_manifest 'latest-linux.yml' "Tavern-Born-$RELEASE_VERSION.AppImage"
+
+          artifact_files=(release-artifacts/*)
+          if [[ "${#artifact_files[@]}" -ne 10 ]]; then
+            echo "::error::Expected exactly 10 release artifacts; found ${#artifact_files[@]}."
+            printf '%s\n' "${artifact_files[@]}"
+            exit 1
+          fi
       - name: Attest build provenance
         uses: actions/attest@v4
         with:
@@ -301,25 +371,29 @@ jobs:
           if release_state="$(lookup_release)"; then
             echo "Release $RELEASE_TAG already exists; refusing to replace or modify it." >&2
             exit 1
-          elif [[ "$?" -ne 4 ]]; then
-            echo "Could not verify that release $RELEASE_TAG is absent; refusing to continue." >&2
-            exit 1
+          else
+            release_lookup_status=$?
+            if [[ "$release_lookup_status" -ne 4 ]]; then
+              echo "Could not verify that release $RELEASE_TAG is absent; refusing to continue." >&2
+              exit 1
+            fi
           fi
 
           if tag_sha="$(lookup_tag_sha)"; then
-            if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-              gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG" \
-                -f sha="$SOURCE_SHA" -F force=true
-            elif [[ "$tag_sha" != "$SOURCE_SHA" ]]; then
-              echo "Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA." >&2
+            if [[ "$tag_sha" != "$SOURCE_SHA" ]]; then
+              echo "Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA; refusing to replace it." >&2
               exit 1
             fi
+            echo "Tag $RELEASE_TAG already points to the exact release source; resuming draft creation."
           else
             tag_lookup_status=$?
             if [[ "$tag_lookup_status" -ne 4 ]]; then
               echo "Could not verify the state of tag $RELEASE_TAG; refusing to continue." >&2
               exit 1
             fi
+
+            # Creating a new ref is atomic: a concurrent tag or release wins and
+            # this request fails without moving any existing tag.
             gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref="refs/tags/$RELEASE_TAG" -f sha="$SOURCE_SHA"
           fi
@@ -360,6 +434,7 @@ jobs:
           }
 
           require_asset "Tavern-Born-Setup-$RELEASE_VERSION.exe"
+          require_asset "Tavern-Born-Setup-$RELEASE_VERSION.exe.blockmap"
           require_asset "Tavern-Born-$RELEASE_VERSION-portable.exe"
           require_asset "Tavern-Born-$RELEASE_VERSION.AppImage"
           require_asset "tavern-born_${RELEASE_VERSION}_amd64.deb"
@@ -367,8 +442,22 @@ jobs:
           require_asset 'latest-mac.yml'
           require_asset 'latest-linux.yml'
 
-          if ! grep -F "Tavern-Born-$RELEASE_VERSION" <<<"$assets" | grep -Eq '\.dmg$'; then
-            echo "::error::Missing macOS DMG for Tavern-Born $RELEASE_VERSION."
+          dmg_assets=()
+          while IFS= read -r asset; do
+            if [[ "$asset" == Tavern-Born-"$RELEASE_VERSION"*.dmg ]]; then
+              dmg_assets+=("$asset")
+            fi
+          done <<<"$assets"
+          if [[ "${#dmg_assets[@]}" -ne 1 ]]; then
+            echo "::error::Expected exactly one macOS DMG for Tavern-Born $RELEASE_VERSION."
+            missing=1
+          else
+            require_asset "${dmg_assets[0]}.blockmap"
+          fi
+
+          asset_count="$(grep -c . <<<"$assets")"
+          if [[ "$asset_count" -ne 10 ]]; then
+            echo "::error::Expected exactly 10 release assets; found $asset_count."
             missing=1
           fi
 
