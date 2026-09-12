@@ -111,14 +111,13 @@ jobs:
         run: |
           mkdir -p ../release-metadata
 
-          lookup_release_draft() {
+          lookup_releases() {
             local output
-            if output="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$1" --jq '.draft' 2>&1)"; then
+            if output="$(gh api --paginate \
+              "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq ".[] | select(.tag_name == \"$1\") | [.id, .draft] | @tsv" 2>&1)"; then
               printf '%s' "$output"
               return 0
-            fi
-            if [[ "$output" == *"HTTP 404"* ]]; then
-              return 4
             fi
             echo "$output" >&2
             return 1
@@ -160,25 +159,24 @@ jobs:
             fi
           fi
 
-          release_found=false
-          if is_draft="$(lookup_release_draft "$tag")"; then
-            release_found=true
-          else
-            lookup_status=$?
-            if [[ "$lookup_status" -ne 4 ]]; then
-              echo "Could not verify that release $tag is absent; refusing to continue." >&2
-              exit 1
-            fi
-          fi
-
-          if [[ "$release_found" == "true" && "$is_draft" != "true" ]]; then
-            echo "Release $tag is published; refusing to modify it." >&2
+          if ! release_info="$(lookup_releases "$tag")"; then
+            echo "Could not enumerate releases for $tag; refusing to continue." >&2
             exit 1
           fi
 
+          draft_count=0
+          while IFS=$'\t' read -r release_id release_is_draft; do
+            [[ -z "$release_id" ]] && continue
+            if [[ "$release_is_draft" != "true" ]]; then
+              echo "Release $tag is published; refusing to modify it." >&2
+              exit 1
+            fi
+            draft_count=$((draft_count + 1))
+          done <<<"$release_info"
+
           if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            if [[ "$release_found" == "true" ]]; then
-              echo "Draft $tag will be replaced only after all new packages finish building."
+            if [[ "$draft_count" -gt 0 ]]; then
+              echo "$draft_count draft(s) for $tag will be replaced only after all new packages finish building."
             else
               echo "No $tag release exists; the rebuild will resume draft creation after the builds finish."
             fi
@@ -187,12 +185,12 @@ jobs:
               echo "Tag $tag points to $existing_sha instead of $SOURCE_SHA; use explicit draft rebuild mode." >&2
               exit 1
             fi
-            if [[ "$release_found" == "true" ]]; then
-              if [[ "$tag_found" != "true" || "$existing_sha" != "$SOURCE_SHA" ]]; then
-                echo "Draft $tag is not attached to the exact release source; use explicit draft rebuild mode." >&2
+            if [[ "$draft_count" -gt 0 ]]; then
+              if [[ "$tag_found" != "true" ]]; then
+                echo "Draft $tag has no matching tag; use explicit draft rebuild mode." >&2
                 exit 1
               fi
-              echo "Draft $tag already targets the exact source and will be refreshed after the builds finish."
+              echo "$draft_count draft(s) for $tag will be replaced with one clean draft after the builds finish."
             elif [[ "$tag_found" == "true" ]]; then
               echo "Tag $tag already targets the exact source; draft creation can resume."
             fi
@@ -332,20 +330,19 @@ jobs:
             release-artifacts/*.deb
             release-artifacts/*.blockmap
             release-artifacts/latest*.yml
-      - name: Create or refresh draft from completed artifacts
+      - name: Replace or create draft from completed artifacts
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          lookup_release() {
+          lookup_releases() {
             local output
-            if output="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '[.id, .draft] | @tsv' 2>&1)"; then
+            if output="$(gh api --paginate \
+              "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq ".[] | select(.tag_name == \"$RELEASE_TAG\") | [.id, .draft] | @tsv" 2>&1)"; then
               printf '%s' "$output"
               return 0
-            fi
-            if [[ "$output" == *"HTTP 404"* ]]; then
-              return 4
             fi
             echo "$output" >&2
             return 1
@@ -377,17 +374,20 @@ jobs:
             return 1
           }
 
-          release_found=false
-          if release_info="$(lookup_release)"; then
-            release_found=true
-            IFS=$'\t' read -r release_id release_is_draft <<<"$release_info"
-          else
-            release_lookup_status=$?
-            if [[ "$release_lookup_status" -ne 4 ]]; then
-              echo "Could not verify that release $RELEASE_TAG is absent; refusing to continue." >&2
+          if ! release_info="$(lookup_releases)"; then
+            echo "Could not enumerate releases for $RELEASE_TAG; refusing to continue." >&2
+            exit 1
+          fi
+
+          release_ids=()
+          while IFS=$'\t' read -r release_id release_is_draft; do
+            [[ -z "$release_id" ]] && continue
+            if [[ "$release_is_draft" != "true" ]]; then
+              echo "Release $RELEASE_TAG is published; refusing to modify it." >&2
               exit 1
             fi
-          fi
+            release_ids+=("$release_id")
+          done <<<"$release_info"
 
           tag_found=false
           if tag_sha="$(lookup_tag_sha)"; then
@@ -400,19 +400,20 @@ jobs:
             fi
           fi
 
-          if [[ "$release_found" == "true" && "$release_is_draft" != "true" ]]; then
-            echo "Release $RELEASE_TAG is published; refusing to modify it." >&2
+          if [[ "$REBUILD_EXISTING_DRAFT" != "true" && "$tag_found" == "true" &&
+                "$tag_sha" != "$SOURCE_SHA" ]]; then
+            echo "Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA; use explicit draft rebuild mode." >&2
             exit 1
           fi
 
-          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            # Replacement is destructive only to an explicitly requested draft,
-            # and happens after every new artifact has passed validation.
-            if [[ "$release_found" == "true" ]]; then
-              assert_draft "$release_id"
-              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"
-            fi
+          # Every replacement starts from one clean draft. This also repairs an
+          # interrupted run that left duplicate unpublished drafts for the tag.
+          for release_id in "${release_ids[@]}"; do
+            assert_draft "$release_id"
+            gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/$release_id"
+          done
 
+          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
             if [[ "$tag_found" == "true" ]]; then
               if ! current_tag_sha="$(lookup_tag_sha)" || [[ "$current_tag_sha" != "$tag_sha" ]]; then
                 echo "Tag $RELEASE_TAG changed during the rebuild; refusing to delete it." >&2
@@ -420,44 +421,28 @@ jobs:
               fi
               gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"
             fi
+            tag_found=false
+          fi
 
+          if [[ "$tag_found" != "true" ]]; then
+            # Creating a new ref is atomic: a concurrent tag wins and this
+            # request fails without moving any existing tag.
             gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
               -f ref="refs/tags/$RELEASE_TAG" -f sha="$SOURCE_SHA"
-            gh release create "$RELEASE_TAG" release-artifacts/* \
-              --draft --title "$RELEASE_TAG" \
-              --notes-file release-metadata/release-notes.md --verify-tag
-          elif [[ "$release_found" == "true" ]]; then
-            if [[ "$tag_found" != "true" || "$tag_sha" != "$SOURCE_SHA" ]]; then
-              echo "Draft $RELEASE_TAG does not target $SOURCE_SHA; use explicit draft rebuild mode." >&2
-              exit 1
-            fi
-
-            assert_draft "$release_id"
-            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" \
-              --notes-file release-metadata/release-notes.md
-            assert_draft "$release_id"
-            gh release upload "$RELEASE_TAG" release-artifacts/* --clobber
-          else
-            if [[ "$tag_found" == "true" && "$tag_sha" != "$SOURCE_SHA" ]]; then
-              echo "Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA; refusing to replace it." >&2
-              exit 1
-            fi
-            if [[ "$tag_found" != "true" ]]; then
-              # Creating a new ref is atomic: a concurrent tag wins and this
-              # request fails without moving an existing tag.
-              gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
-                -f ref="refs/tags/$RELEASE_TAG" -f sha="$SOURCE_SHA"
-            fi
-
-            gh release create "$RELEASE_TAG" release-artifacts/* \
-              --draft --title "$RELEASE_TAG" \
-              --notes-file release-metadata/release-notes.md --verify-tag
           fi
+
+          gh release create "$RELEASE_TAG" release-artifacts/* \
+            --draft --title "$RELEASE_TAG" \
+            --notes-file release-metadata/release-notes.md --verify-tag
 
   verify-release:
     name: Verify draft release artifacts
     needs: [release-source, publish-release]
     runs-on: ubuntu-latest
+    # GitHub exposes draft releases only to tokens with push access. This job
+    # executes protected workflow code and performs read-only API calls.
+    permissions:
+      contents: write
     env:
       RELEASE_TAG: ${{ needs.release-source.outputs.tag }}
       RELEASE_VERSION: ${{ needs.release-source.outputs.version }}
@@ -468,11 +453,32 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          is_draft="$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft')"
-          assets="$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name')"
+          if ! release_info="$(gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"$RELEASE_TAG\") | [.id, .draft] | @tsv")"; then
+            echo "::error::Could not enumerate releases for $RELEASE_TAG."
+            exit 1
+          fi
 
-          if [[ "$is_draft" != "true" ]]; then
-            echo "::error::Release $RELEASE_TAG is not a draft."
+          release_ids=()
+          while IFS=$'\t' read -r release_id is_draft; do
+            [[ -z "$release_id" ]] && continue
+            if [[ "$is_draft" != "true" ]]; then
+              echo "::error::Release $RELEASE_TAG is not a draft."
+              exit 1
+            fi
+            release_ids+=("$release_id")
+          done <<<"$release_info"
+
+          if [[ "${#release_ids[@]}" -ne 1 ]]; then
+            echo "::error::Expected exactly one draft for $RELEASE_TAG; found ${#release_ids[@]}."
+            exit 1
+          fi
+
+          assets="$(gh api "repos/$GITHUB_REPOSITORY/releases/${release_ids[0]}" --jq '.assets[].name')"
+          tag_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha')"
+          if [[ "$tag_sha" != "$SOURCE_SHA" ]]; then
+            echo "::error::Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA."
             exit 1
           fi
 

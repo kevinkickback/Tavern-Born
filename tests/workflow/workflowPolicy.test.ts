@@ -61,7 +61,7 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain('run: npm run dist -- --publish never')
     expect(workflow).not.toContain('run: npm run release')
     expect(workflow).toContain('needs: [release-source, build]')
-    expect(workflow).toContain('name: Create or refresh draft from completed artifacts')
+    expect(workflow).toContain('name: Replace or create draft from completed artifacts')
     expect(workflow).toContain('pattern: release-build-*')
     expect(workflow).toContain('path: release-metadata/release-notes.md')
     expect(workflow).not.toContain('path: source/release-notes.md')
@@ -69,6 +69,10 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain('Validate completed artifact bundle')
     expect(workflow).toContain('Expected exactly 10 release artifacts')
     expect(workflow).toContain('Expected exactly 10 release assets')
+    expect(workflow).toContain('Expected exactly one draft for $RELEASE_TAG')
+    expect(workflow).toContain('gh api --paginate')
+    expect(workflow).not.toContain('--slurp')
+    expect(workflow).not.toContain('/releases/tags/')
     expect(workflow).toContain("require_manifest 'latest.yml'")
     expect(workflow).toContain("require_manifest 'latest-mac.yml'")
     expect(workflow).toContain("require_manifest 'latest-linux.yml'")
@@ -87,6 +91,7 @@ describe('trusted workflow policy', () => {
     )
     expect(publishJob).not.toContain('actions/checkout')
     expect(publishJob).toContain('contents: write')
+    expect(publishJob).toContain(`for release_id in "\${release_ids[@]}"`)
     expect(publishJob).toContain('assert_draft "$release_id"')
     expect(publishJob).toContain('Release $RELEASE_TAG is published; refusing to modify it.')
     expect(publishJob).toContain(
@@ -95,12 +100,12 @@ describe('trusted workflow policy', () => {
     expect(publishJob).toContain(
       'gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG"',
     )
-    expect(publishJob).toContain('gh release upload "$RELEASE_TAG" release-artifacts/* --clobber')
+    expect(publishJob).not.toContain('gh release upload')
     expect(publishJob).toContain('gh release create "$RELEASE_TAG" release-artifacts/*')
 
     const validateIndex = publishJob.indexOf('Validate completed artifact bundle')
     const attestIndex = publishJob.indexOf('Attest build provenance')
-    const mutateIndex = publishJob.indexOf('Create or refresh draft from completed artifacts')
+    const mutateIndex = publishJob.indexOf('Replace or create draft from completed artifacts')
     const deleteIndex = publishJob.indexOf('gh api --method DELETE')
     expect(validateIndex).toBeGreaterThan(-1)
     expect(validateIndex).toBeLessThan(attestIndex)
