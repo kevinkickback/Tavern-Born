@@ -150,6 +150,31 @@ describe('Copilot review gate', () => {
     )
   })
 
+  test('does not accept an older clean review while a newer review is pending', async () => {
+    const github = createGithubApi({
+      reviews: [
+        {
+          id: 1,
+          state: 'COMMENTED',
+          commit_id: 'head-sha',
+          submitted_at: '2026-09-12T00:01:00Z',
+          user: { login: 'Copilot', type: 'Bot' },
+        },
+        {
+          id: 2,
+          state: 'PENDING',
+          commit_id: 'head-sha',
+          submitted_at: '2026-09-12T00:02:00Z',
+          user: { login: 'Copilot', type: 'Bot' },
+        },
+      ],
+    })
+
+    await expect(gate.requireCopilotReview(gateOptions(github))).rejects.toThrow(
+      'did not complete a review',
+    )
+  })
+
   test('fails closed after polling reaches its timeout', async () => {
     vi.useFakeTimers()
     const github = createGithubApi()

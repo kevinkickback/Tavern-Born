@@ -30,14 +30,10 @@ async function getExactReview({ github, owner, repo, pullNumber, expectedHead })
     pull_number: pullNumber,
     per_page: 100,
   })
-  return reviews
-    .filter(
-      (review) =>
-        review.commit_id === expectedHead &&
-        review.state !== 'PENDING' &&
-        isCopilot(review.user),
-    )
-    .sort((left, right) => Date.parse(right.submitted_at) - Date.parse(left.submitted_at))[0]
+  const latest = reviews
+    .filter((review) => review.commit_id === expectedHead && isCopilot(review.user))
+    .sort((left, right) => (right.id ?? 0) - (left.id ?? 0))[0]
+  return latest?.state === 'PENDING' ? undefined : latest
 }
 
 async function requireCopilotReview({

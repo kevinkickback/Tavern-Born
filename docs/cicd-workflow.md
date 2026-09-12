@@ -22,7 +22,8 @@ other branch protection rules still apply; the workflow does not bypass them. Au
 merging is restricted to non-draft PRs from this repository's `dev` branch into `main`.
 Other PRs are not automatically merged.
 
-After CI completes, `merge.yml` runs from the protected default-branch revision. Its write-capable
+After CI completes, `merge.yml` runs from the protected default-branch revision and independently
+repeats the complete quality, browser, and desktop test suites in read-only jobs. Its write-capable
 job never checks out or executes pull-request code. It relies on the configured automatic Copilot
 review and waits up to fifteen minutes for a completed review of the exact tested revision. A
 missing review, incomplete or dismissed review, timeout, API failure, "Changes recommended"
@@ -31,9 +32,9 @@ to still match the base commit recorded by that exact CI run. Push a corrective 
 a clean re-review before retrying. The release workflow repeats this check and runs its release
 metadata validator from code pinned to the protected workflow revision, treating the candidate
 package files and changelog only as input data. It does this before creating or updating any tag or
-draft. Release lookups fail closed: only a confirmed missing release is treated as absent;
-permission, rate-limit, and network failures stop the workflow before it moves a tag or replaces a
-draft.
+draft. A rebuild reuses the existing unpublished draft rather than deleting it. Release lookups fail
+closed: only a confirmed missing release is treated as absent; permission, rate-limit, and network
+failures stop the workflow before it moves a tag or updates a draft.
 
 ---
 

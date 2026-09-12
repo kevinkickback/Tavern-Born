@@ -286,25 +286,6 @@ jobs:
             return 1
           }
 
-          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            if is_draft="$(lookup_release_draft "$RELEASE_TAG")"; then
-              if [[ "$is_draft" != "true" ]]; then
-                echo "A published release already exists for $RELEASE_TAG; refusing to replace it." >&2
-                exit 1
-              fi
-              gh release delete "$RELEASE_TAG" --yes
-            else
-              lookup_status=$?
-              if [[ "$lookup_status" -ne 4 ]]; then
-                echo "Could not verify the state of release $RELEASE_TAG; refusing to replace it." >&2
-                exit 1
-              fi
-            fi
-            gh release create "$RELEASE_TAG" --draft --title "$RELEASE_TAG" \
-              --notes-file release-notes.md --verify-tag
-            exit 0
-          fi
-
           if is_draft="$(lookup_release_draft "$RELEASE_TAG")"; then
             if [[ "$is_draft" != "true" ]]; then
               echo "A published release already exists for $RELEASE_TAG; refusing to replace it." >&2

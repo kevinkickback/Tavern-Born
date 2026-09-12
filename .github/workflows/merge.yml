@@ -9,11 +9,61 @@ permissions:
   contents: read
 
 jobs:
-  squash-merge:
-    name: Secure squash merge dev into main
+  trusted-quality:
+    name: Trusted lint, type-check, coverage, and build
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.conclusion == 'success'
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.pull_requests[0].base.ref == 'main' &&
+      github.event.workflow_run.pull_requests[0].head.ref == 'dev' &&
+      github.event.workflow_run.pull_requests[0].head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.pull_requests[0].head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx biome ci .
+      - run: npx tsc -b
+      - run: npm run test:coverage
+      - run: npm run build
+
+  trusted-e2e:
+    name: Trusted browser and desktop tests
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.pull_requests[0].base.ref == 'main' &&
+      github.event.workflow_run.pull_requests[0].head.ref == 'dev' &&
+      github.event.workflow_run.pull_requests[0].head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.pull_requests[0].head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: npm run build
+      - run: xvfb-run --auto-servernum npm run test:electron
+
+  squash-merge:
+    name: Secure squash merge dev into main
+    needs: [trusted-quality, trusted-e2e]
     runs-on: ubuntu-latest
     permissions:
       contents: write
