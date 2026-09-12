@@ -57,6 +57,7 @@ import { getClassIconUrl } from '@/lib/classIcons'
 import { getSpellsGrantedAtLevel, removeSpellChoicesAtLevel } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
 
@@ -75,11 +76,14 @@ interface PendingLevelUp {
 
 const getClassOptionKey = (cls: Pick<Class5e, 'name' | 'source'>) =>
   `${cls.name}|${cls.source ?? ''}`
+const EMPTY_CLASSES: Class5e[] = []
 
 export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { classes } = useFilteredGameData()
+  const rawClasses = useGameDataStore((state) => state.gameData?.classes ?? EMPTY_CLASSES)
+  const allClasses = rawClasses.length > 0 ? rawClasses : classes
 
   const [ignoreRestrictions, setIgnoreRestrictions] = useState(false)
   const [multiclassSelection, setMulticlassSelection] = useState('')
@@ -125,10 +129,16 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     multiclassOptions.map((option) => [getClassOptionKey(option.cls), option.cls]),
   )
 
-  const findClass = (name: string, source?: string) =>
-    source == null
-      ? classes.find((cls) => cls.name === name)
-      : classes.find((cls) => cls.name === name && cls.source === source)
+  const findClass = (name: string, source?: string) => {
+    const normalizedSource = source?.trim()
+    if (!normalizedSource) {
+      return classes.find((cls) => cls.name === name) ?? allClasses.find((cls) => cls.name === name)
+    }
+    return (
+      classes.find((cls) => cls.name === name && cls.source === normalizedSource) ??
+      allClasses.find((cls) => cls.name === name && cls.source === normalizedSource)
+    )
+  }
 
   const commitLevelUp = (pending: PendingLevelUp, hpChoice: LevelUpHitPointChoice) => {
     if (pending.kind === 'existing') {
@@ -359,7 +369,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const hpIncrease = validHpDieResult ? Math.max(1, parsedHpDieResult + conModifier) : null
   const calculatedMaxHp = calculateMaxHP(classProgression, conModifier, {
     averageHp: character.variantRules?.averageHitPoints !== false,
-    classesData: classes,
+    classesData: allClasses,
     hitPointGains: character.hitPointGains,
   })
   const currentAdjustmentTotal = calculateHitPointAdjustmentTotal(

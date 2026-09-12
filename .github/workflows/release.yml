@@ -86,6 +86,14 @@ jobs:
           ref: ${{ inputs.source-sha }}
           fetch-depth: 0
           persist-credentials: false
+          path: source
+      - uses: actions/checkout@v6
+        with:
+          # The validation code comes from the workflow's protected revision,
+          # never from the candidate release source.
+          ref: ${{ job.workflow_sha }}
+          persist-credentials: false
+          path: trusted
       - name: Require merged PR and clean Copilot review
         uses: actions/github-script@v9
         env:
@@ -105,7 +113,7 @@ jobs:
             );
             if (!pull) throw new Error(`Commit ${process.env.SOURCE_SHA} did not come from a merged dev -> main PR.`);
 
-            const { requireCopilotReview } = require('./.github/scripts/copilot-review-gate.cjs');
+            const { requireCopilotReview } = require('./trusted/.github/scripts/copilot-review-gate.cjs');
             await requireCopilotReview({
               github,
               core,
@@ -117,6 +125,7 @@ jobs:
       - name: Validate release version and changelog
         id: release
         shell: bash
+        working-directory: source
         run: |
           version="$(node -p "require('./package.json').version")"
           previous_version="$(

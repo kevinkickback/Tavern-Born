@@ -12,7 +12,7 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 import { useRawRecursiveLookup, useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Item5e } from '@/types/5etools'
+import type { Item5e, Subclass5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -66,6 +66,49 @@ describe('useRecursiveLookup', () => {
 
     expect(result.current.items.get('allowed relic|phb')).toBe(allowedItem)
     expect(result.current.items.get('excluded relic|dmg')).toBeUndefined()
+  })
+
+  test('excludes source-disabled nested subclasses and subclass features', () => {
+    const character = makeCharacterFixture({ allowedSources: ['PHB'] })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        classes: [
+          {
+            name: 'Wizard',
+            source: 'PHB',
+            subclasses: [
+              {
+                name: 'War Magic',
+                shortName: 'War Magic',
+                source: 'XGE',
+                className: 'Wizard',
+                classSource: 'PHB',
+                subclassFeatures: [{ name: 'Arcane Deflection', source: 'XGE' }],
+              },
+            ] as Subclass5e[],
+          },
+        ],
+      }),
+    })
+
+    const { result } = renderHook(() => useRecursiveLookup())
+
+    expect(result.current.subclasses.get('war magic|xge')).toBeUndefined()
+    expect(result.current.subclassFeatures.get('arcane deflection|xge')).toBeUndefined()
+  })
+
+  test('shares filtered lookup maps across character-scoped consumers', () => {
+    const gameData = makeGameDataFixture()
+    useGameDataStore.setState({ gameData })
+
+    const { result } = renderHook(() => [useRecursiveLookup(), useRecursiveLookup()] as const)
+
+    expect(result.current[0]).toBe(result.current[1])
   })
 
   test('retains an explicit raw lookup for global content', () => {

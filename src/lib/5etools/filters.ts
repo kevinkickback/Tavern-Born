@@ -140,6 +140,33 @@ export class DataFilter {
     if (filters.sources && filters.sources.length > 0) {
       const sourcesUpper = new Set(filters.sources.map((s) => s.toUpperCase()))
       filtered = filtered.filter((c) => sourcesUpper.has(c.source.toUpperCase()))
+      filtered = filtered.map((cls) => ({
+        ...cls,
+        subclasses: cls.subclasses
+          ?.filter((subclass) => sourcesUpper.has(subclass.source.toUpperCase()))
+          .map((subclass) => {
+            const subclassFeatures = subclass.subclassFeatures?.filter(
+              (feature) =>
+                typeof feature === 'string' ||
+                sourcesUpper.has((feature.source || subclass.source).toUpperCase()),
+            ) as typeof subclass.subclassFeatures
+            return {
+              ...subclass,
+              subclassFeatures,
+              subclassFeatureRefs: subclass.subclassFeatureRefs?.filter((reference) =>
+                sourcesUpper.has(
+                  (reference.source || reference.feature?.source || subclass.source).toUpperCase(),
+                ),
+              ),
+              levelFeatures: subclass.levelFeatures?.map((group) => ({
+                ...group,
+                features: group.features.filter((feature) =>
+                  sourcesUpper.has((feature.source || subclass.source).toUpperCase()),
+                ),
+              })),
+            }
+          }),
+      }))
     }
 
     if (filters.suppressedKeys && filters.suppressedKeys.size > 0) {

@@ -4,9 +4,10 @@ import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
 import { useCharacterStore } from '@/store/characterStore'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
-import { makeClassFixture } from '../fixtures/gameDataFixtures'
+import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => ({
@@ -17,6 +18,8 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 }))
 
 let mockClasses: Class5e[] = []
+
+afterEach(() => useGameDataStore.setState({ gameData: null }))
 
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
@@ -135,6 +138,34 @@ describe('level up hit-point choices', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+  })
+
+  test.each([
+    ['an exact class hidden by source filters', 'PHB', false],
+    ['a legacy class with an empty source', '', true],
+  ])('uses the raw hit die for %s', async (_label, classSource, includeFilteredClass) => {
+    const user = userEvent.setup()
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'PHB',
+      hd: { faces: 10, number: 1 },
+    })
+    mockClasses = includeFilteredClass ? [fighter] : []
+    useGameDataStore.setState({ gameData: makeGameDataFixture({ classes: [fighter] }) })
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        class: 'Fighter',
+        classSource,
+        level: 1,
+        classProgression: [{ name: 'Fighter', source: classSource, levels: 1 }],
+        variantRules: { averageHitPoints: false },
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByRole('button', { name: 'Level Up' }))
+
+    expect(screen.getByRole('button', { name: /Roll d10/ })).toBeTruthy()
   })
 
   test('asks for and persists a manual roll when fixed average is disabled', async () => {

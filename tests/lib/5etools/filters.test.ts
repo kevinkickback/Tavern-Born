@@ -12,7 +12,7 @@ import {
   searchByName,
   sortByName,
 } from '@/lib/5etools/filters'
-import type { Feat5e, Race5e } from '@/types/5etools'
+import type { Feat5e, Race5e, Subclass5e } from '@/types/5etools'
 import {
   makeClassFixture,
   makeRaceFixture,
@@ -74,6 +74,52 @@ describe('5etools/filters', () => {
     })
 
     expect(filtered.map((c) => `${c.name}|${c.source}`)).toEqual(['Wizard|XPHB'])
+  })
+
+  test('filterClasses removes nested subclasses and features from disabled sources', () => {
+    const wizard = makeClassFixture({
+      name: 'Wizard',
+      source: 'PHB',
+      subclasses: [
+        {
+          name: 'School of Abjuration',
+          shortName: 'Abjuration',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+          subclassFeatures: [
+            { name: 'Arcane Ward', source: 'PHB' },
+            { name: 'Forbidden Ward', source: 'XGE' },
+          ],
+          levelFeatures: [
+            {
+              level: 2,
+              features: [
+                { name: 'Allowed Feature', source: 'PHB' },
+                { name: 'Excluded Feature', source: 'XGE' },
+              ],
+            },
+          ],
+        },
+        {
+          name: 'War Magic',
+          shortName: 'War Magic',
+          source: 'XGE',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+      ] as Subclass5e[],
+    })
+
+    const [filtered] = DataFilter.filterClasses([wizard], { sources: ['PHB'] })
+
+    expect(filtered.subclasses?.map((subclass) => subclass.shortName)).toEqual(['Abjuration'])
+    expect(filtered.subclasses?.[0].subclassFeatures).toEqual([
+      { name: 'Arcane Ward', source: 'PHB' },
+    ])
+    expect(filtered.subclasses?.[0].levelFeatures?.[0].features).toEqual([
+      { name: 'Allowed Feature', source: 'PHB' },
+    ])
   })
 
   test('filterSpells applies class, concentration, and component filters', () => {

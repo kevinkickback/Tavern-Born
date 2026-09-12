@@ -8,15 +8,30 @@ interface GameContentProps {
   recursiveLookup?: RecursiveLookup
 }
 
-/** Canonical interactive renderer for user-facing 5etools rules text. */
-export function GameContent({ entry, className, recursiveLookup }: GameContentProps) {
-  const characterScopedLookup = useRecursiveLookup()
+function CharacterScopedGameContent({
+  entry,
+  className,
+}: Omit<GameContentProps, 'recursiveLookup'>) {
+  const recursiveLookup = useRecursiveLookup()
 
   return (
     <RenderedEntryWithTooltip
       entry={entry}
       className={className}
-      recursiveLookup={recursiveLookup ?? characterScopedLookup}
+      recursiveLookup={recursiveLookup}
+    />
+  )
+}
+
+/** Canonical interactive renderer for user-facing 5etools rules text. */
+export function GameContent({ entry, className, recursiveLookup }: GameContentProps) {
+  if (!recursiveLookup) return <CharacterScopedGameContent entry={entry} className={className} />
+
+  return (
+    <RenderedEntryWithTooltip
+      entry={entry}
+      className={className}
+      recursiveLookup={recursiveLookup}
     />
   )
 }

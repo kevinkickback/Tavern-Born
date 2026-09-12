@@ -20,11 +20,13 @@ other branch protection rules still apply; the workflow does not bypass them. Au
 merging is restricted to non-draft PRs from this repository's `dev` branch into `main`.
 Other PRs are not automatically merged.
 
-The merge job explicitly requests Copilot review of the exact checked revision and waits up to
-fifteen minutes for completion. A missing review, timeout, API failure, "Changes recommended"
-assessment, suppressed finding, or inline finding fails the merge job. Push a corrective revision
-and obtain a clean re-review before retrying. The release workflow repeats this check against the
-merged PR before it creates or updates any tag or draft.
+After CI completes, `merge.yml` runs from the protected default-branch revision. Its write-capable
+job never checks out or executes pull-request code. It explicitly requests Copilot review of the
+exact tested revision and waits up to fifteen minutes for completion. A missing review, incomplete
+or dismissed review, timeout, API failure, "Changes recommended" assessment, suppressed finding,
+or inline finding fails the merge. Push a corrective revision and obtain a clean re-review before
+retrying. The release workflow repeats this check using validation code from its own trusted
+workflow revision before it creates or updates any tag or draft.
 
 ---
 
@@ -44,8 +46,8 @@ Lint, type checking, coverage tests, production builds, browser end-to-end tests
 smoke test run before merging. Each new PR revision needs passing checks; lint and tests are not
 repeated after the squash merge.
 
-Both CI jobs must pass before the automatic merge job runs. It merges only the checked PR head.
-If `main` changed during checks, update the PR to include the latest base before retrying.
+Both CI jobs must pass before the separate trusted merge workflow runs. It merges only the tested
+PR head. If `main` changed during checks, update the PR to include the latest base before retrying.
 
 ---
 
@@ -102,8 +104,9 @@ and starts this sequence automatically; otherwise, opening the PR starts it.
 **PR checks → automatic squash merge → version/tag and source validation → draft creation →
 Electron builds → asset upload and verification**
 
-After merging, `ci.yml` calls the reusable `release.yml` directly. This avoids relying on a
-push event, which a merge performed with `GITHUB_TOKEN` does not trigger for other workflows.
+After merging, `merge.yml` calls the reusable `release.yml` from the same trusted workflow
+revision. This avoids relying on a push event, which a merge performed with `GITHUB_TOKEN` does not
+trigger for other workflows.
 The release workflow:
 
 1. Compares the package version at the squash commit with its parent. If unchanged, all remaining
@@ -219,16 +222,12 @@ gh run view --repo kevinkickback/Tavern-Born --job <JOB_ID> --log
 
 For a transient runner or network failure, rerun the failed jobs; the existing tag and draft are
 reused safely. Use **Re-run failed jobs** (or `gh run rerun <RUN_ID> --failed`) to avoid repeating
-successful PR checks. Release jobs appear inside the calling **CI** run.
+successful PR checks. Release jobs appear inside the calling **Merge reviewed dev changes** run.
 
-If only the release workflow needs correction, fix it through the normal `dev` to `main` process,
-then run the **Release** workflow manually from `main`. Supply the original version-bump squash
-commit as `source-sha`; the current workflow will rebuild and verify that already-validated source.
-Do not supply the later workflow-fix commit, because its package version did not change.
-
-If application source or packaging configuration needs correction, use a new version and changelog
-section in the next `dev` to `main` PR. A manual recovery deliberately checks out the original
-release source, so it cannot incorporate later product changes.
+If an unpublished draft needs corrected workflow, application, or packaging source, fix it through
+the normal `dev` to `main` process, then use the documented unpublished-draft rebuild mode with the
+corrective squash commit. It replaces only the existing draft for the unchanged package version;
+published releases remain immutable through this recovery path.
 
 If needed, remove the failed draft and its tag separately (only for an unpublished failed release):
 ```bash

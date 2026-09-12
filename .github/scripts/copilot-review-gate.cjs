@@ -9,6 +9,9 @@ function isCopilot(user) {
 function getBlockingReason(review, comments) {
   const body = review.body ?? ''
   if (review.state === 'CHANGES_REQUESTED') return 'Copilot requested changes.'
+  if (!['APPROVED', 'COMMENTED'].includes(review.state)) {
+    return `Copilot review is not complete (state: ${review.state || 'unknown'}).`
+  }
   if (/changes recommended/i.test(body)) return 'Copilot recommends changes.'
   if (/suppressed comments\s*\([1-9]\d*\)/i.test(body)) {
     return 'Copilot reported suppressed findings.'
