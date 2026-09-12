@@ -12,6 +12,9 @@ function getBlockingReason(review, comments) {
   if (!['APPROVED', 'COMMENTED'].includes(review.state)) {
     return `Copilot review is not complete (state: ${review.state || 'unknown'}).`
   }
+  if (/\b(review (?:is |was )?incomplete|incomplete review|could not complete (?:the )?review)\b/i.test(body)) {
+    return 'Copilot review is incomplete.'
+  }
   if (/changes recommended/i.test(body)) return 'Copilot recommends changes.'
   if (/suppressed comments\s*\([1-9]\d*\)/i.test(body)) {
     return 'Copilot reported suppressed findings.'

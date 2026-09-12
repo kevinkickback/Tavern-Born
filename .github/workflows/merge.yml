@@ -4,7 +4,8 @@ on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-    branches: [dev]
+    # For pull_request CI runs, workflow_run.branches filters the PR base branch.
+    branches: [main]
 
 permissions:
   contents: read
@@ -68,10 +69,21 @@ jobs:
               timeoutMs: 15 * 60 * 1000,
             });
 
+            const { data: reviewedPr } = await github.rest.pulls.get({
+              owner, repo, pull_number: pullNumber,
+            });
+            if (reviewedPr.head.sha !== testedHead) {
+              throw new Error('The PR changed during review; its latest CI run must pass before merging.');
+            }
+            if (reviewedPr.state !== 'open' || reviewedPr.draft || reviewedPr.base.ref !== 'main' ||
+                reviewedPr.head.ref !== 'dev' || reviewedPr.head.repo.full_name !== `${owner}/${repo}`) {
+              throw new Error('The PR is no longer an eligible dev to main merge.');
+            }
+
             const { data: currentBase } = await github.rest.repos.getBranch({
               owner, repo, branch: 'main',
             });
-            if (pr.base.sha !== testedPull.base.sha || currentBase.commit.sha !== testedPull.base.sha) {
+            if (reviewedPr.base.sha !== testedPull.base.sha || currentBase.commit.sha !== testedPull.base.sha) {
               throw new Error('main changed during review; update the PR and rerun CI before merging.');
             }
 

@@ -73,6 +73,7 @@ describe('Copilot review gate', () => {
   test.each([
     [{ state: 'CHANGES_REQUESTED' }, [], 'requested changes'],
     [{ state: 'DISMISSED' }, [], 'not complete'],
+    [{ state: 'COMMENTED', body: 'Review incomplete.' }, [], 'review is incomplete'],
     [{ state: 'COMMENTED', body: '### 🟡 Changes recommended' }, [], 'recommends changes'],
     [{ state: 'COMMENTED', body: '### Suppressed comments (2)' }, [], 'suppressed findings'],
     [{ state: 'COMMENTED' }, [{}], '1 review finding'],
