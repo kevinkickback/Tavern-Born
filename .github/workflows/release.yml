@@ -16,11 +16,8 @@ on:
     types: [rebuild-release]
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: read
-  id-token: write
-  attestations: write
-  artifact-metadata: write
 
 concurrency:
   group: release-main
@@ -123,7 +120,10 @@ jobs:
               throw new Error(`${process.env.REVIEWED_HEAD_SHA} was not the final pre-merge commit in PR #${pull.number}.`);
             }
 
-            const { requireCopilotReview } = require('./trusted/.github/scripts/copilot-review-gate.cjs');
+            const { join } = require('node:path');
+            const { requireCopilotReview } = require(
+              join(process.env.GITHUB_WORKSPACE, 'trusted/.github/scripts/copilot-review-gate.cjs'),
+            );
             await requireCopilotReview({
               github,
               core,
@@ -156,9 +156,9 @@ jobs:
               node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk).on("end", () => console.log(JSON.parse(input).version))'
           )"
           if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            node ../trusted/scripts/check-release.mjs --source-root .
+            node ../trusted/scripts/check-release.mjs --source-root . --notes-file release-notes.md
           else
-            node ../trusted/scripts/check-release.mjs --source-root . --previous-version "$previous_version"
+            node ../trusted/scripts/check-release.mjs --source-root . --previous-version "$previous_version" --notes-file release-notes.md
           fi
           tag="v$version"
 
@@ -169,23 +169,18 @@ jobs:
             fi
           fi
 
-          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            if is_draft="$(lookup_release_draft "$tag")"; then
-              if [[ "$is_draft" != "true" ]]; then
-                echo "Release $tag is not an unpublished draft; refusing to replace it." >&2
-                exit 1
-              fi
+          if is_draft="$(lookup_release_draft "$tag")"; then
+            if [[ "$REBUILD_EXISTING_DRAFT" == "true" && "$is_draft" == "true" ]]; then
+              echo "Draft $tag still exists. Remove that unpublished draft before starting a rebuild." >&2
             else
-              lookup_status=$?
-              if [[ "$lookup_status" -ne 4 ]]; then
-                echo "Could not verify the state of release $tag; refusing to rebuild it." >&2
-                exit 1
-              fi
-              if [[ "${existing_sha:-}" != "$SOURCE_SHA" ]]; then
-                echo "Release $tag is missing and its tag does not point to $SOURCE_SHA; refusing to rebuild it." >&2
-                exit 1
-              fi
-              echo "Release $tag is missing after its tag was moved; resuming the interrupted draft rebuild."
+              echo "Release $tag already exists; refusing to replace or modify it." >&2
+            fi
+            exit 1
+          else
+            lookup_status=$?
+            if [[ "$lookup_status" -ne 4 ]]; then
+              echo "Could not verify that release $tag is absent; refusing to continue." >&2
+              exit 1
             fi
           fi
 
@@ -194,144 +189,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-
-  create-release:
-    name: Create draft release
-    needs: release-source
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    env:
-      RELEASE_TAG: ${{ needs.release-source.outputs.tag }}
-      RELEASE_VERSION: ${{ needs.release-source.outputs.version }}
-    steps:
-      - uses: actions/checkout@v6
+      - name: Preserve validated release notes
+        uses: actions/upload-artifact@v4
         with:
-          ref: ${{ env.SOURCE_SHA }}
-          fetch-depth: 0
-          persist-credentials: false
-          path: source
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.workflow_sha || github.sha }}
-          persist-credentials: false
-          path: trusted
-      - name: Create version tag
-        shell: bash
-        working-directory: source
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          lookup_release_draft() {
-            local output
-            if output="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$1" --jq '.draft' 2>&1)"; then
-              printf '%s' "$output"
-              return 0
-            fi
-            if [[ "$output" == *"HTTP 404"* ]]; then
-              return 4
-            fi
-            echo "$output" >&2
-            return 1
-          }
-
-          if is_draft="$(lookup_release_draft "$RELEASE_TAG")"; then
-            if [[ "$is_draft" != "true" ]]; then
-              echo "A published release already exists for $RELEASE_TAG; refusing to change its tag." >&2
-              exit 1
-            fi
-          else
-            lookup_status=$?
-            if [[ "$lookup_status" -ne 4 ]]; then
-              echo "Could not verify the state of release $RELEASE_TAG; refusing to change its tag." >&2
-              exit 1
-            fi
-          fi
-
-          if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG" \
-              -f sha="$SOURCE_SHA" -F force=true
-            echo "Moved $RELEASE_TAG to $SOURCE_SHA; the draft will be replaced immediately before builds start."
-          fi
-
-          if existing_sha="$(git rev-list -n 1 "$RELEASE_TAG" 2>/dev/null)"; then
-            if [[ "$existing_sha" != "$SOURCE_SHA" && "$REBUILD_EXISTING_DRAFT" != "true" ]]; then
-              echo "Tag $RELEASE_TAG already points to $existing_sha instead of $SOURCE_SHA." >&2
-              exit 1
-            fi
-            echo "Reusing existing tag $RELEASE_TAG."
-          else
-            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
-              -f ref="refs/tags/$RELEASE_TAG" \
-              -f sha="$SOURCE_SHA"
-          fi
-      - name: Extract release notes from changelog
-        working-directory: source
-        run: node ../trusted/scripts/check-release.mjs --source-root . --notes-file release-notes.md
-      - name: Create GitHub release draft
-        shell: bash
-        working-directory: source
-        run: |
-          lookup_release_draft() {
-            local output
-            if output="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$1" --jq '.draft' 2>&1)"; then
-              printf '%s' "$output"
-              return 0
-            fi
-            if [[ "$output" == *"HTTP 404"* ]]; then
-              return 4
-            fi
-            echo "$output" >&2
-            return 1
-          }
-
-          if is_draft="$(lookup_release_draft "$RELEASE_TAG")"; then
-            if [[ "$is_draft" != "true" ]]; then
-              echo "A published release already exists for $RELEASE_TAG; refusing to replace it." >&2
-              exit 1
-            fi
-            if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-              release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '.id')"
-              mapfile -t asset_ids < <(
-                gh api --paginate "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" --jq '.[].id'
-              )
-              for asset_id in "${asset_ids[@]}"; do
-                current_is_draft="$(
-                  gh api "repos/$GITHUB_REPOSITORY/releases/$release_id" --jq '.draft'
-                )"
-                if [[ "$current_is_draft" != "true" ]]; then
-                  echo "Release $RELEASE_TAG was published during rebuild; refusing to remove assets." >&2
-                  exit 1
-                fi
-                gh api --method DELETE \
-                  "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id"
-              done
-              echo "Removed ${#asset_ids[@]} stale asset(s) from draft $RELEASE_TAG."
-            fi
-            echo "Reusing existing draft release $RELEASE_TAG."
-            gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file release-notes.md
-          else
-            lookup_status=$?
-            if [[ "$lookup_status" -ne 4 ]]; then
-              echo "Could not verify the state of release $RELEASE_TAG; refusing to create it." >&2
-              exit 1
-            fi
-            release_flags=(--draft --title "$RELEASE_TAG" --notes-file release-notes.md --verify-tag)
-            gh release create "$RELEASE_TAG" "${release_flags[@]}"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
+          name: release-notes
+          path: source/release-notes.md
+          if-no-files-found: error
+          retention-days: 1
 
   build:
     name: Build (${{ matrix.os }})
-    needs: [release-source, create-release]
+    needs: release-source
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
         with:
@@ -342,27 +217,120 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Build and publish artifacts
-        run: npm run release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EP_DRAFT: true
-          # The caller retains PR context, but source validation requires a merged commit.
-          PUBLISH_FOR_PULL_REQUEST: 'true'
-      - name: Attest build provenance
-        uses: actions/attest@v4
+      - name: Build artifacts without repository credentials
+        run: npm run dist
+      - name: Preserve build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          subject-path: |
+          name: release-build-${{ matrix.os }}
+          path: |
             release/*.exe
             release/*.dmg
             release/*.AppImage
             release/*.deb
             release/*.blockmap
             release/latest*.yml
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-release:
+    name: Create and populate draft release
+    needs: [release-source, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    env:
+      RELEASE_TAG: ${{ needs.release-source.outputs.tag }}
+    steps:
+      - name: Download validated release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: release-metadata
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-build-*
+          path: release-artifacts
+          merge-multiple: true
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            release-artifacts/*.exe
+            release-artifacts/*.dmg
+            release-artifacts/*.AppImage
+            release-artifacts/*.deb
+            release-artifacts/*.blockmap
+            release-artifacts/latest*.yml
+      - name: Create tag and draft from completed artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          lookup_release() {
+            local output
+            if output="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '.draft' 2>&1)"; then
+              printf '%s' "$output"
+              return 0
+            fi
+            if [[ "$output" == *"HTTP 404"* ]]; then
+              return 4
+            fi
+            echo "$output" >&2
+            return 1
+          }
+
+          lookup_tag_sha() {
+            local output
+            if output="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" --jq '.object.sha' 2>&1)"; then
+              printf '%s' "$output"
+              return 0
+            fi
+            if [[ "$output" == *"HTTP 404"* ]]; then
+              return 4
+            fi
+            echo "$output" >&2
+            return 1
+          }
+
+          if release_state="$(lookup_release)"; then
+            echo "Release $RELEASE_TAG already exists; refusing to replace or modify it." >&2
+            exit 1
+          elif [[ "$?" -ne 4 ]]; then
+            echo "Could not verify that release $RELEASE_TAG is absent; refusing to continue." >&2
+            exit 1
+          fi
+
+          if tag_sha="$(lookup_tag_sha)"; then
+            if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
+              gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG" \
+                -f sha="$SOURCE_SHA" -F force=true
+            elif [[ "$tag_sha" != "$SOURCE_SHA" ]]; then
+              echo "Tag $RELEASE_TAG points to $tag_sha instead of $SOURCE_SHA." >&2
+              exit 1
+            fi
+          else
+            tag_lookup_status=$?
+            if [[ "$tag_lookup_status" -ne 4 ]]; then
+              echo "Could not verify the state of tag $RELEASE_TAG; refusing to continue." >&2
+              exit 1
+            fi
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/tags/$RELEASE_TAG" -f sha="$SOURCE_SHA"
+          fi
+
+          gh release create "$RELEASE_TAG" release-artifacts/* \
+            --draft --title "$RELEASE_TAG" \
+            --notes-file release-metadata/release-notes.md --verify-tag
 
   verify-release:
     name: Verify draft release artifacts
-    needs: [release-source, build]
+    needs: [release-source, publish-release]
     runs-on: ubuntu-latest
     env:
       RELEASE_TAG: ${{ needs.release-source.outputs.tag }}

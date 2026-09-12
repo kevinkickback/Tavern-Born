@@ -118,8 +118,8 @@ requirements are satisfied. No manual merge command is needed.
 If the ready `dev` to `main` PR is already open, pushing the version-bump commit updates that PR
 and starts this sequence automatically; otherwise, opening the PR starts it.
 
-**PR checks → automatic squash merge → version/tag and source validation → draft creation →
-Electron builds → asset upload and verification**
+**PR checks → automatic squash merge → version/tag and source validation → credential-free
+Electron builds → trusted draft creation, asset upload, and verification**
 
 After merging, `merge.yml` calls the reusable `release.yml` from the same trusted workflow
 revision. This avoids relying on a push event, which a merge performed with `GITHUB_TOKEN` does not
@@ -133,20 +133,30 @@ re-reading the mutable `dev` branch head. The release workflow:
 3. Runs `scripts/check-release.mjs` to require an increased stable version, matching versions in
    `package.json` and both root version fields in `package-lock.json`, and exactly one complete,
    nonempty changelog section. Ensures any existing version tag points to the squash commit.
-4. Creates the `v<version>` tag and draft release, using the version's changelog section as notes.
-5. Builds Windows, macOS, and Linux packages in parallel from the exact squash commit and uploads
-   them to the draft. Each build records provenance attestations for its installers, updater
-   manifests, and blockmaps. Compilation for packaging is required; lint and tests are not rerun.
+4. Builds Windows, macOS, and Linux packages in parallel from the exact squash commit without a
+   repository write token. Compilation for packaging is required; lint and tests are not rerun.
+5. A trusted publishing job downloads the completed packages, records provenance attestations,
+   creates the `v<version>` tag and draft release, and uploads every package. Candidate build scripts
+   never receive credentials that can change tags or releases.
 6. Verifies every expected artifact exists and the release is still a draft.
 
 ### Rebuilding an unpublished draft without changing the version
 
-Use this only to replace an existing draft after corrective code is merged while the version is
-still unpublished. The repository event always loads the release workflow from protected `main`;
-it cannot run a writable recovery workflow from a caller-selected branch. It refuses to replace a
-published release, requires the source commit to be a merged `dev` to `main` PR with a clean Copilot
-review, validates the existing changelog section, removes the old draft assets, moves the version
-tag, and rebuilds every platform:
+Use this only after corrective code is merged while the version is still unpublished. First verify
+the old release is a draft, then remove that draft. The workflow deliberately refuses to delete or
+modify an existing release because a maintainer could publish it during cleanup. Leave the existing
+tag in place; the protected rebuild moves it only after every replacement package finishes building.
+
+```bash
+gh release view v0.3.0 --repo kevinkickback/Tavern-Born --json isDraft,tagName
+gh release delete v0.3.0 --repo kevinkickback/Tavern-Born --yes
+```
+
+Then dispatch the rebuild. The repository event always loads the release workflow from protected
+`main`; it cannot run a writable recovery workflow from a caller-selected branch. It requires the
+source commit to be a merged `dev` to `main` PR with a clean Copilot review, validates the existing
+changelog section, moves the version tag, builds every platform without repository credentials, and
+creates a fresh draft only after all packages are ready:
 
 ```bash
 gh api --method POST repos/kevinkickback/Tavern-Born/dispatches \
@@ -157,10 +167,6 @@ gh api --method POST repos/kevinkickback/Tavern-Born/dispatches \
 
 Normal releases must continue to increase the package version. Draft rebuild mode rejects a commit
 that also changes the version.
-
-Electron Builder receives `PUBLISH_FOR_PULL_REQUEST=true` only in the release build step because
-reusable workflows retain the caller's PR context. Source validation first requires a merged commit;
-unmerged PRs do not reach this publishing step.
 
 The workflow never publishes the release. Review the notes and attached artifacts, then publish the
 draft manually when it is ready.
@@ -185,28 +191,15 @@ The release will contain:
 
 ## Critical gotcha — do not pre-create the tag or release
 
-electron-builder (`--publish always`) uploads artifacts into the **draft** GitHub Release created by
-the workflow. If a published (non-draft) release already exists for the tag, electron-builder logs:
-
-```
-GitHub release not created  reason=existing type not compatible with publishing type
-existingType=release publishingType=draft
-skipped publishing  file=... reason=existing type not compatible...
-```
-
-...and skips uploads from that build job. The workflow refuses to reuse an already published
-release before building; final verification also rejects missing assets or a non-draft release.
+The publishing job refuses to replace or modify any existing GitHub Release. This keeps published
+releases immutable and prevents a draft-to-published race during automated cleanup.
 
 **Rules:**
 
 - Do not create or push the version tag manually; the workflow creates it after validation succeeds.
 - Do not create the GitHub Release manually; the workflow creates and populates the draft.
-- If a draft already exists for the workflow-created tag, a rerun safely refreshes its notes and artifacts.
-- If you accidentally published the release before a rerun, convert it back to a draft first:
-  ```bash
-  gh release edit v1.0.0 --draft=true --repo kevinkickback/Tavern-Born
-  gh run rerun <RUN_ID> --failed --repo kevinkickback/Tavern-Born
-  ```
+- If a failed run already created a draft, verify and remove that unpublished draft before rerunning
+  the publishing job. Never convert a published release back to a draft for replacement.
 - After the workflow completes, inspect the draft and publish it manually when approved:
   ```bash
   gh release view v1.0.0 --repo kevinkickback/Tavern-Born --json isDraft,assets | ConvertFrom-Json
@@ -236,23 +229,24 @@ Go to the **Actions** tab on GitHub, open the failed run, and check which platfo
 
 To inspect logs via CLI:
 ```bash
-gh run list --repo kevinkickback/Tavern-Born --workflow ci.yml --limit 5
+gh run list --repo kevinkickback/Tavern-Born --workflow merge.yml --limit 5
 gh run view <RUN_ID> --repo kevinkickback/Tavern-Born
 gh run view --repo kevinkickback/Tavern-Born --job <JOB_ID> --log
 ```
 
-For a transient runner or network failure, rerun the failed jobs; the existing tag and draft are
-reused safely. Use **Re-run failed jobs** (or `gh run rerun <RUN_ID> --failed`) to avoid repeating
-successful PR checks. Release jobs appear inside the calling **Merge reviewed dev changes** run.
+For a transient runner or network failure before draft creation, rerun the failed jobs. If the
+failed run already created a draft, verify and remove only that unpublished draft before rerunning.
+Use **Re-run failed jobs** (or `gh run rerun <RUN_ID> --failed`) to avoid repeating successful PR
+checks. Release jobs appear inside the calling **Merge reviewed dev changes** run.
 
 If an unpublished draft needs corrected workflow, application, or packaging source, fix it through
 the normal `dev` to `main` process, then use the documented unpublished-draft rebuild mode with the
 corrective squash commit. It replaces only the existing draft for the unchanged package version;
-published releases remain immutable through this recovery path.
+published releases remain immutable through this recovery path. Remove the old draft first as shown
+in the rebuild procedure; the workflow will not perform that destructive step.
 
-If needed, remove the failed draft and its tag separately (only for an unpublished failed release):
+If needed, remove a failed draft separately (only after verifying that it is still unpublished).
+Leave its tag for rebuild mode to move after the replacement artifacts finish:
 ```bash
 gh release delete v1.0.0 --repo kevinkickback/Tavern-Born --yes
-git push origin --delete v1.0.0
-git tag -d v1.0.0
 ```

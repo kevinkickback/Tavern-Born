@@ -105,7 +105,10 @@ jobs:
               throw new Error('The PR is not an eligible dev to main merge.');
             }
 
-            const { requireCopilotReview } = require('./.github/scripts/copilot-review-gate.cjs');
+            const { join } = require('node:path');
+            const { requireCopilotReview } = require(
+              join(process.env.GITHUB_WORKSPACE, '.github/scripts/copilot-review-gate.cjs'),
+            );
             await requireCopilotReview({
               github,
               core,
