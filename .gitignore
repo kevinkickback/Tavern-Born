@@ -33,6 +33,8 @@ docs/review/
 # Temp folders
 /temp/
 /.tmp/
+/release-review/
+/release-review-final/
 /test-results
 /coverage
 /playwright-report
