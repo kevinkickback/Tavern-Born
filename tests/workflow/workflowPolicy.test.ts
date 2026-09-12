@@ -6,28 +6,34 @@ const readWorkflow = (name: string) =>
   readFile(resolve(process.cwd(), '.github', 'workflows', name), 'utf8')
 
 describe('trusted workflow policy', () => {
-  test('pins trusted workflow checkouts and merges only the tested base', async () => {
+  test('validates the original CI result and merges only the tested base', async () => {
     const workflow = await readWorkflow('merge.yml')
 
     expect(workflow).toContain(`ref: \${{ github.workflow_sha }}`)
     expect(workflow).not.toContain('branches: [')
     expect(workflow).not.toContain('job.workflow_sha')
-    expect(workflow).toContain('needs: [trusted-quality, trusted-e2e]')
-    expect(workflow).toContain("pull_requests[0].base.ref == 'main'")
-    expect(workflow).toContain("pull_requests[0].head.ref == 'dev'")
-    expect(workflow).toContain(`ref: \${{ github.event.workflow_run.pull_requests[0].head.sha }}`)
-    expect(workflow).toContain('npm run test:coverage')
-    expect(workflow).toContain('npm run test:e2e')
-    expect(workflow).toContain('npm run test:electron')
-    expect(workflow).toContain('reviewedPr.base.sha !== testedPull.base.sha')
-    expect(workflow).toContain('currentBase.commit.sha !== testedPull.base.sha')
-    expect(workflow).toContain('const testedHead = testedPull.head.sha')
+    expect(workflow).toContain('github.rest.actions.listJobsForWorkflowRun')
+    expect(workflow).toContain("'Lint, type-check, coverage, and build'")
+    expect(workflow).toContain("'Browser end-to-end tests'")
+    expect(workflow).toContain("matches[0].conclusion !== 'success'")
+    expect(workflow).toContain("pr.base.ref !== 'main'")
+    expect(workflow).toContain("pr.head.ref !== 'dev'")
+    expect(workflow).toContain('pr.draft')
+    expect(workflow).not.toContain('actions/setup-node')
+    expect(workflow).not.toContain('npm ci')
+    expect(workflow).not.toContain('npm run test:coverage')
+    expect(workflow).not.toContain('npm run test:e2e')
+    expect(workflow).not.toContain('npm run test:electron')
+    expect(workflow).toContain('reviewedPr.base.sha !== testedBase')
+    expect(workflow).toContain('currentBase.commit.sha !== testedBase')
+    expect(workflow).toContain('const testedHead = process.env.TESTED_HEAD_SHA')
     expect(workflow).toContain('const { data: reviewedPr }')
     expect(workflow).toContain('reviewedPr.head.sha !== testedHead')
     expect(workflow).toContain('if (reviewedPr.merged)')
-    expect(workflow).toContain("core.setOutput('sha', reviewedPr.merge_commit_sha)")
     expect(workflow).toContain('sha: testedHead')
     expect(workflow).not.toContain('sha: run.head_sha')
+    expect(workflow).toContain("event_type: 'release-merged'")
+    expect(workflow).toContain('github.rest.repos.createDispatchEvent')
     expect(workflow).toContain(
       "join(process.env.GITHUB_WORKSPACE, '.github/scripts/copilot-review-gate.cjs')",
     )
@@ -38,13 +44,17 @@ describe('trusted workflow policy', () => {
 
     expect(workflow).toContain(`ref: \${{ github.workflow_sha || github.sha }}`)
     expect(workflow).toContain('repository_dispatch:')
+    expect(workflow).toContain('types: [release-merged, rebuild-release]')
+    expect(workflow).not.toContain('workflow_call:')
     expect(workflow).not.toContain('workflow_dispatch:')
     expect(workflow).not.toContain('gh release delete')
     expect(workflow).not.toContain('/releases/assets/')
     expect(workflow).toContain('refusing to replace or modify it')
     expect(workflow).not.toContain('job.workflow_sha')
     expect(workflow).toContain('if [[ "$output" == *"HTTP 404"* ]]')
-    expect(workflow).toContain('node ../trusted/scripts/check-release.mjs --source-root .')
+    expect(workflow).toContain(
+      'node ../trusted/scripts/check-release.mjs --source-root . --notes-file ../release-metadata/release-notes.md',
+    )
     expect(workflow).not.toContain('node scripts/check-release.mjs')
     expect(workflow).toContain(
       "join(process.env.GITHUB_WORKSPACE, 'trusted/.github/scripts/copilot-review-gate.cjs')",
@@ -67,6 +77,9 @@ describe('trusted workflow policy', () => {
     expect(workflow).toContain('needs: [release-source, build]')
     expect(workflow).toContain('name: Create and populate draft release')
     expect(workflow).toContain('pattern: release-build-*')
+    expect(workflow).toContain('path: release-metadata/release-notes.md')
+    expect(workflow).not.toContain('path: source/release-notes.md')
+    expect(workflow.match(/overwrite: true/g)).toHaveLength(2)
     expect(workflow).toContain('Validate completed artifact bundle')
     expect(workflow).toContain('Expected exactly 10 release artifacts')
     expect(workflow).toContain('Expected exactly 10 release assets')
@@ -116,5 +129,20 @@ describe('trusted workflow policy', () => {
     ].join('-')
 
     expect(packageJson.build.nsis.artifactName).toBe(expectedArtifactName)
+  })
+
+  test('pins every official action to an immutable commit', async () => {
+    const workflows = await Promise.all(
+      ['ci.yml', 'merge.yml', 'release.yml'].map((name) => readWorkflow(name)),
+    )
+    const actionUses = workflows.flatMap((workflow) =>
+      [...workflow.matchAll(/uses:\s+(actions\/[^@\s]+)@([^\s#]+)/g)].map((match) => ({
+        action: match[1],
+        revision: match[2],
+      })),
+    )
+
+    expect(actionUses.length).toBeGreaterThan(0)
+    expect(actionUses.every(({ revision }) => /^[0-9a-f]{40}$/.test(revision))).toBe(true)
   })
 })

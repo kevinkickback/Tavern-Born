@@ -30,14 +30,15 @@ protected branch only after both required CI checks pass, Copilot finishes a cle
 exact PR head, and every review thread is resolved. After that one-time installation, `merge.yml`
 handles eligible `dev` to `main` PRs.
 
-After CI completes, `merge.yml` runs from the protected default-branch revision and independently
-repeats the complete quality, browser, and desktop test suites in read-only jobs. Its write-capable
-job never checks out or executes pull-request code. It relies on the configured automatic Copilot
-review and waits up to fifteen minutes for a completed review of the exact tested revision. A
+After CI completes, `merge.yml` runs from the protected default-branch revision. It confirms that
+the two required jobs in the original CI run both passed; it does not duplicate the full test suite.
+Its write-capable job never checks out or executes pull-request code. It relies on the configured
+automatic Copilot review and waits up to fifteen minutes for a completed review of the exact tested revision. A
 missing review, incomplete or dismissed review, timeout, API failure, "Changes recommended"
 assessment, suppressed finding, or inline finding fails the merge. The merge also requires `main`
 to still match the base commit recorded by that exact CI run. Push a corrective revision and obtain
-a clean re-review before retrying. The release workflow repeats this check and runs its release
+a clean re-review before retrying. Copilot is a required additional signal, not a replacement for
+the deterministic checks or maintainer judgment. The release workflow repeats this check and runs its release
 metadata validator from code pinned to the protected workflow revision, treating the candidate
 package files and changelog only as input data. It does this before creating any tag or draft. Rebuild
 mode requires a maintainer to remove the old unpublished draft and tag first; the workflow never
@@ -61,8 +62,7 @@ git push
 for review. Draft PRs wait until they are marked ready. There is no push-triggered CI run.
 Lint, type checking, coverage tests, production builds, browser end-to-end tests, and the Electron
 smoke test run before merging. Each new PR revision needs passing checks; lint and tests are not
-repeated after the squash merge. For eligible `dev` to `main` PRs, the protected merge workflow
-also repeats those checks independently after the original CI run and before the squash merge.
+repeated by the merge or release workflows.
 
 Both CI jobs must pass before the separate trusted merge workflow runs. It merges only the tested
 PR head. If `main` changed during checks, update the PR to include the latest base before retrying.
@@ -119,12 +119,14 @@ requirements are satisfied. No manual merge command is needed.
 If the ready `dev` to `main` PR is already open, pushing the version-bump commit updates that PR
 and starts this sequence automatically; otherwise, opening the PR starts it.
 
-**PR checks → automatic squash merge → version/tag and source validation → credential-free
-Electron builds → trusted draft creation, asset upload, and verification**
+**PR checks → exact-revision Copilot gate → automatic squash merge → protected release event →
+version/tag and source validation → credential-free Electron builds → trusted draft creation,
+asset upload, and verification**
 
-After merging, `merge.yml` calls the reusable `release.yml` from the same trusted workflow
-revision. This avoids relying on a push event, which a merge performed with `GITHUB_TOKEN` does not
-trigger for other workflows.
+After merging, `merge.yml` sends a `repository_dispatch` event. GitHub loads `release.yml` from
+protected `main`; a pull-request branch cannot select or modify the privileged release workflow.
+This avoids relying on a push event, which a merge performed with `GITHUB_TOKEN` does not trigger
+for other workflows.
 The merge workflow passes the exact reviewed pre-merge commit to the release workflow rather than
 re-reading the mutable `dev` branch head. The release workflow:
 
@@ -136,8 +138,8 @@ re-reading the mutable `dev` branch head. The release workflow:
    nonempty changelog section. Ensures any existing version tag points to the squash commit.
 4. Builds Windows, macOS, and Linux packages in parallel from the exact squash commit without a
    repository write token. Electron Builder runs with `--publish never`, which still creates the
-   updater manifests but cannot contact GitHub to publish. Packaging does not run lint and tests a
-   third time; both suites already passed the original CI run and the protected trusted rerun.
+   updater manifests but cannot contact GitHub to publish. Packaging does not rerun lint or tests;
+   both suites already passed the original CI run.
 5. A trusted publishing job downloads the completed packages, records provenance attestations,
    verifies the exact ten-file bundle and updater-manifest targets, creates the `v<version>` tag and
    draft release, and uploads every package. Candidate build scripts never receive credentials that
@@ -245,8 +247,9 @@ verification failed transiently, leave the draft in place and rerun only failed 
 creation stopped after creating the exact tag, rerunning can safely reuse that tag. If a successful
 publishing job produced a draft that must be replaced, verify that it is still unpublished, remove
 the draft and remote tag, then rerun the entire workflow with `gh run rerun <RUN_ID>` (without
-`--failed`). The merge job recognizes the already-merged PR and resumes the release safely. Release
-jobs appear inside the calling **Merge reviewed dev changes** run.
+`--failed`). The merge job recognizes the already-merged PR and requests the release safely. Release
+jobs appear in a separate **Release** run because the release definition is loaded from protected
+`main`.
 
 If an unpublished draft needs corrected workflow, application, or packaging source, fix it through
 the normal `dev` to `main` process, then use the documented unpublished-draft rebuild mode with the
