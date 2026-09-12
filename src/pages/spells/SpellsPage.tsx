@@ -26,7 +26,7 @@ import {
   toClassProfileId,
 } from '@/lib/calculations/spellProfiles.constants'
 import { formatSpellDisplayName } from '@/lib/calculations/spellUtils'
-import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SourceRow } from '@/lib/provenance/types'
 import {
@@ -395,7 +395,7 @@ export function SpellsPage() {
   )
 
   const proficiencyBonus = useMemo(
-    () => getProficiencyBonus(getTotalClassLevels(character?.classProgression)),
+    () => getProficiencyBonus(getTotalCharacterLevel(character)),
     [character],
   )
 

@@ -85,11 +85,26 @@ export function useFilteredGameDataParams(params: FilterParams) {
       }
     }
 
+    const nestedClassEntities = classes.flatMap((classEntity) => [
+      ...(classEntity.classFeatures ?? []).filter((feature) => typeof feature !== 'string'),
+      ...(classEntity.classFeatureRefs ?? []).flatMap((reference) =>
+        reference.feature ? [reference.feature] : [],
+      ),
+      ...(classEntity.subclasses ?? []).flatMap((subclass) => [
+        subclass,
+        ...(subclass.subclassFeatures ?? []).filter((feature) => typeof feature !== 'string'),
+        ...(subclass.subclassFeatureRefs ?? []).flatMap((reference) =>
+          reference.feature ? [reference.feature] : [],
+        ),
+        ...(subclass.levelFeatures ?? []).flatMap((group) => group.features),
+      ]),
+    ])
     const suppressedKeys = preferNewerPrintings
       ? buildSuppressedKeys(
           [
             ...races,
             ...classes,
+            ...nestedClassEntities,
             ...backgrounds,
             ...spells,
             ...feats,

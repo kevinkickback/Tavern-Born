@@ -143,6 +143,45 @@ describe('Class Commands', () => {
     expect(result.characterPatch.classProgression?.[1]?.name).toBe('Fighter')
   })
 
+  test('addMulticlass permits a source-distinct printing but rejects an exact duplicate', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
+    })
+    const ledger = character.provenance ?? emptyProvenance()
+    const xphbWizard = { name: 'Wizard', source: 'XPHB' } as never
+
+    const result = addMulticlass(character, ledger, 'Wizard', xphbWizard, 'XPHB')
+
+    expect(result.characterPatch.classProgression).toEqual([
+      { name: 'Wizard', source: 'PHB', levels: 3 },
+      { name: 'Wizard', source: 'XPHB', levels: 1 },
+    ])
+    expect(() => addMulticlass(character, ledger, 'Wizard', xphbWizard, 'PHB')).toThrow(
+      'Cannot add duplicate class',
+    )
+  })
+
+  test('addMulticlass preserves an explicit empty source for progression and grants', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+    })
+    const ledger = character.provenance ?? emptyProvenance()
+    const result = addMulticlass(
+      character,
+      ledger,
+      'Wizard',
+      {
+        name: 'Wizard',
+        source: 'XPHB',
+        multiclassing: { proficienciesGained: { armor: ['light armor'] } },
+      } as never,
+      '',
+    )
+
+    expect(result.characterPatch.classProgression?.[1]?.source).toBe('')
+    expect(result.provenanceUpdate.proficiencies.armor['light armor']?.[0]?.sourceRef).toBe('')
+  })
+
   test('removeMulticlass removes secondary class entry', () => {
     const character = makeCharacterFixture({
       classProgression: [
@@ -156,6 +195,22 @@ describe('Class Commands', () => {
 
     expect(result.characterPatch.classProgression).toHaveLength(1)
     expect(result.characterPatch.classProgression?.[0]?.name).toBe('Wizard')
+  })
+
+  test('removeMulticlass removes only the requested source printing', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 3 },
+        { name: 'Wizard', source: 'XPHB', levels: 1 },
+      ],
+    })
+
+    const ledger = character.provenance ?? emptyProvenance()
+    const result = removeMulticlass(character, ledger, 'Wizard', 'XPHB')
+
+    expect(result.characterPatch.classProgression).toEqual([
+      { name: 'Wizard', source: 'PHB', levels: 3 },
+    ])
   })
 
   test('applyClassProgressionUpdate syncs total level and top-level class fields', () => {

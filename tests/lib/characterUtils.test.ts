@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   calculateMaxHP,
   getEffectiveMaxHP,
+  getTotalCharacterLevel,
   getTotalClassLevels,
   matchesGameDataEntry,
 } from '@/lib/characterUtils'
@@ -17,6 +18,16 @@ describe('characterUtils', () => {
     ]
 
     expect(getTotalClassLevels(progression)).toBe(5)
+  })
+
+  test('getTotalCharacterLevel falls back to a legacy flat level', () => {
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      level: 9,
+      classProgression: undefined,
+    })
+
+    expect(getTotalCharacterLevel(character)).toBe(9)
   })
 
   test('matchesGameDataEntry matches name and source when source exists', () => {
