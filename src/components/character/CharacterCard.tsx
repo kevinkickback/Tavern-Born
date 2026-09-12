@@ -164,6 +164,7 @@ export const CharacterCard = memo(function CharacterCard({
               <Button
                 variant="outline"
                 size="default"
+                aria-label={`Export ${character.name || 'character'}`}
                 className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
                 onClick={handleExport}
               >
@@ -172,6 +173,7 @@ export const CharacterCard = memo(function CharacterCard({
               <Button
                 variant="destructive"
                 size="default"
+                aria-label={`Delete ${character.name || 'character'}`}
                 className={actionButtonClass}
                 onClick={handleDelete}
               >

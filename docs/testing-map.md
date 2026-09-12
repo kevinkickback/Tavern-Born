@@ -16,7 +16,7 @@ Key scripts in package.json:
 - npm run test:e2e
 - npm run test:electron (run after `npm run build`)
 
-The current global coverage floor is 53% statements, 43% branches, 49% functions, and 56% lines.
+The current global coverage floor is 60% statements, 50% branches, 57% functions, and 63% lines.
 These values are an honest ratchet based on the measured suite, not the long-term target; raise them as
 new tests land and do not lower them to merge a change.
 
@@ -71,10 +71,11 @@ new tests land and do not lower them to merge a change.
 - Schema migrations in src/lib/schema/migrations.ts with dedicated unit coverage in tests/lib/migrations.test.ts
 - Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)
 - Current workflow coverage in tests/integration/spellOperations.test.tsx, tests/integration/multiclassUpdates.test.tsx, tests/integration/contentFiltering.test.tsx, and tests/integration/armorClass.test.tsx
-- Spell page E2E no-character scenarios in tests/e2e/spells.spec.ts
 - Basic E2E startup/navigation smoke
-- Spell page no-character E2E coverage in tests/e2e/spells.spec.ts
+- Exhaustive no-character route-guard E2E for every protected character route, with public Settings and Compendium access checks
 - Character lifecycle E2E (import -> portrait edit -> save -> reload) in tests/e2e/lifecycle.spec.ts
+- Complete create-character E2E (required wizard selections -> review -> create -> reload persistence)
+- Character-library E2E for metadata search, cancel/confirm deletion, persisted deletion, and distinct malformed/schema-invalid import errors
 - Active-character spell workflow E2E (profile switching, add/remove, prepared toggle) in tests/e2e/spells-active.spec.ts
 - Startup cache-branch full coverage in tests/hooks/useDataInit.test.tsx (unconfigured, stale, fresh, offline, source-changed, direct-load)
 - Provenance reconciliation edge cases in tests/lib/provenance/reconciliation.test.ts (mixed-source retention, background choice removal, multiclass-safe class reconciliation)
@@ -92,7 +93,7 @@ new tests land and do not lower them to merge a change.
 - SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
 - Spell display-name coverage verifies lowercase 5etools grant tokens render with canonical parsed casing
 - Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
-- Electron updater offline safeguards in tests/lib/updateManager.test.ts (offline short-circuit and startup schedule skip)
+- Electron updater lifecycle coverage in tests/lib/updateManager.test.ts (offline short-circuit, startup schedule skip, event forwarding, destroyed-window handling, duplicate-download guard, cancellation, and completed-token cleanup)
 - Electron security boundary coverage in tests/electron/security.test.ts (renderer origins and canonical local-root containment)
 - Compiled Electron smoke coverage in tests/electron-smoke/startup.ts (sandbox isolation, preload bridge, trusted IPC)
 - Bundled asset URL coverage in tests/lib/assetUrls.test.ts and the compiled Electron smoke test,
@@ -103,10 +104,9 @@ new tests land and do not lower them to merge a change.
 
 ## High-Priority Gaps
 
-1. **Corrupted character recovery**: Import of invalid/schema-mismatched characters beyond the valid+invalid payload cases already covered.
-2. **SpellProfileManager decomposition**: Large component (~783 lines); defer until next feature touch.
-3. **FeatOptionsModal**: Fixed-step skipping and unrestricted spellcasting-list initialization are covered; broader multi-step navigation and every option kind still need dedicated component coverage.
-4. **Auto-update lifecycle**: `electron/updateManager.ts` has partial unit tests (semver comparator in `tests/lib/updateManager.test.ts`) but key lifecycle logic remains untested: portable detection, event forwarding, cancel-in-flight guard.
+1. **SpellProfileManager decomposition**: Large component (~783 lines); defer until next feature touch.
+2. **FeatOptionsModal**: Fixed-step skipping and unrestricted spellcasting-list initialization are covered; broader multi-step navigation and every option kind still need dedicated component coverage.
+3. **Character page journeys**: Route access is covered comprehensively, but Race, Background, Proficiencies, Ability Scores, Feats, Rules, Conditions, and character-sheet behavior still rely primarily on integration tests rather than focused E2E journeys.
 
 ## Test Coverage by Layer
 

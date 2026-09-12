@@ -9,6 +9,9 @@ const {
   downloadUpdateMock,
   quitAndInstallMock,
   onMock,
+  cancelMock,
+  rendererSendMock,
+  windowState,
 } = vi.hoisted(() => ({
   appState: {
     isPackaged: false,
@@ -23,6 +26,14 @@ const {
   downloadUpdateMock: vi.fn(),
   quitAndInstallMock: vi.fn(),
   onMock: vi.fn(),
+  cancelMock: vi.fn(),
+  rendererSendMock: vi.fn(),
+  windowState: {
+    windows: [] as Array<{
+      isDestroyed: () => boolean
+      webContents: { send: (...args: unknown[]) => void }
+    }>,
+  },
 }))
 
 vi.mock('electron', () => ({
@@ -33,7 +44,7 @@ vi.mock('electron', () => ({
     },
   },
   BrowserWindow: {
-    getAllWindows: () => [],
+    getAllWindows: () => windowState.windows,
   },
   net: {
     fetch: netFetchMock,
@@ -55,10 +66,13 @@ vi.mock('electron-updater', () => ({
     downloadUpdate: downloadUpdateMock,
     quitAndInstall: quitAndInstallMock,
   },
-  CancellationToken: class {},
+  CancellationToken: class {
+    cancel = cancelMock
+  },
 }))
 
 import {
+  cancelDownload,
   checkForUpdate,
   compareSemver,
   downloadUpdate,
@@ -69,6 +83,12 @@ import {
   startAutoCheckSchedule,
   stopAutoCheckSchedule,
 } from '../../electron/updateManager'
+
+function updaterHandler(eventName: string): (...args: never[]) => unknown {
+  const registration = onMock.mock.calls.find(([event]) => event === eventName)
+  expect(registration, `expected ${eventName} listener to be registered`).toBeDefined()
+  return registration?.[1] as (...args: never[]) => unknown
+}
 
 describe('compareSemver', () => {
   test('returns 0 for equal versions', () => {
@@ -188,6 +208,154 @@ describe('installUpdate', () => {
     installUpdate()
 
     expect(quitAndInstallMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('update event lifecycle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    appState.isPackaged = true
+    netState.online = true
+    delete process.env.PORTABLE_EXECUTABLE_DIR
+    windowState.windows = [
+      {
+        isDestroyed: () => false,
+        webContents: { send: rendererSendMock },
+      },
+    ]
+    initAutoUpdater()
+  })
+
+  afterEach(() => {
+    windowState.windows = []
+  })
+
+  test('forwards checking, progress, and downloaded events with renderer-safe payloads', () => {
+    updaterHandler('checking-for-update')()
+    expect(getUpdateStatus()).toEqual({ status: 'checking' })
+    expect(rendererSendMock).toHaveBeenLastCalledWith('update-checking', undefined)
+
+    const progress = {
+      percent: 42.5,
+      bytesPerSecond: 2_000,
+      total: 10_000,
+      transferred: 4_250,
+    }
+    updaterHandler('download-progress')(progress as never)
+    expect(getUpdateStatus()).toEqual({ status: 'downloading', progress })
+    expect(rendererSendMock).toHaveBeenLastCalledWith('download-progress', {
+      percentage: 42.5,
+      bytesPerSecond: 2_000,
+      total: 10_000,
+      transferred: 4_250,
+    })
+
+    updaterHandler('update-downloaded')({ version: '2.0.0' } as never)
+    expect(getUpdateStatus()).toEqual({ status: 'downloaded', version: '2.0.0' })
+    expect(rendererSendMock).toHaveBeenLastCalledWith('update-downloaded', { version: '2.0.0' })
+  })
+
+  test('forwards update availability with changelog and install-mode metadata', async () => {
+    netFetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ body: 'Detailed release notes' }),
+    })
+
+    await updaterHandler('update-available')({ version: '2.1.0' } as never)
+
+    expect(getUpdateStatus()).toEqual({
+      status: 'available',
+      version: '2.1.0',
+      changelog: 'Detailed release notes',
+    })
+    expect(rendererSendMock).toHaveBeenLastCalledWith('update-available', {
+      version: '2.1.0',
+      changelog: 'Detailed release notes',
+      isPortable: false,
+    })
+  })
+
+  test('classifies connectivity errors as not available and forwards other failures', () => {
+    updaterHandler('error')(new Error('network timed out') as never)
+    expect(getUpdateStatus()).toEqual({ status: 'not-available' })
+    expect(rendererSendMock).toHaveBeenLastCalledWith('update-not-available', undefined)
+
+    updaterHandler('error')(new Error('signature validation failed') as never)
+    expect(getUpdateStatus()).toEqual({
+      status: 'error',
+      error: 'signature validation failed',
+    })
+    expect(rendererSendMock).toHaveBeenLastCalledWith('update-error', {
+      message: 'signature validation failed',
+    })
+  })
+
+  test('does not send events to a destroyed window', () => {
+    windowState.windows = [
+      {
+        isDestroyed: () => true,
+        webContents: { send: rendererSendMock },
+      },
+    ]
+
+    updaterHandler('update-not-available')({} as never)
+
+    expect(getUpdateStatus()).toEqual({ status: 'not-available' })
+    expect(rendererSendMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('download cancellation lifecycle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    appState.isPackaged = true
+    netState.online = true
+    delete process.env.PORTABLE_EXECUTABLE_DIR
+    windowState.windows = [
+      {
+        isDestroyed: () => false,
+        webContents: { send: rendererSendMock },
+      },
+    ]
+    initAutoUpdater()
+  })
+
+  afterEach(() => {
+    cancelDownload()
+    windowState.windows = []
+  })
+
+  test('starts only one updater download while a request is in flight and cancels it once', async () => {
+    let finishDownload: (() => void) | undefined
+    downloadUpdateMock.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishDownload = resolve
+        }),
+    )
+
+    const firstDownload = downloadUpdate()
+    await downloadUpdate()
+
+    expect(downloadUpdateMock).toHaveBeenCalledTimes(1)
+    expect(cancelDownload()).toBe(true)
+    expect(cancelMock).toHaveBeenCalledTimes(1)
+    expect(getUpdateStatus()).toEqual({ status: 'idle' })
+    expect(rendererSendMock).toHaveBeenLastCalledWith('update-cancelled', undefined)
+    expect(cancelDownload()).toBe(false)
+
+    finishDownload?.()
+    await firstDownload
+  })
+
+  test('clears the cancellation handle after a completed download', async () => {
+    downloadUpdateMock.mockResolvedValueOnce(undefined)
+
+    await downloadUpdate()
+
+    expect(downloadUpdateMock).toHaveBeenCalledTimes(1)
+    expect(cancelDownload()).toBe(false)
+    expect(cancelMock).not.toHaveBeenCalled()
   })
 })
 

@@ -347,8 +347,15 @@ export async function downloadUpdate(): Promise<void> {
     throw new Error('Automatic updates are unavailable in portable builds')
   }
 
-  cancellationToken = new CancellationToken()
-  await autoUpdater.downloadUpdate(cancellationToken)
+  if (cancellationToken) return
+
+  const token = new CancellationToken()
+  cancellationToken = token
+  try {
+    await autoUpdater.downloadUpdate(token)
+  } finally {
+    if (cancellationToken === token) cancellationToken = null
+  }
 }
 
 export async function openPortableUpdatePage(): Promise<void> {
