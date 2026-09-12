@@ -142,6 +142,13 @@ export class DataFilter {
       filtered = filtered.filter((c) => sourcesUpper.has(c.source.toUpperCase()))
       filtered = filtered.map((cls) => ({
         ...cls,
+        classFeatures: cls.classFeatures?.filter((feature) => {
+          const source =
+            typeof feature === 'string'
+              ? feature.split('|')[4] || feature.split('|')[2] || cls.source
+              : feature.source || cls.source
+          return sourcesUpper.has(source.toUpperCase())
+        }) as typeof cls.classFeatures,
         classFeatureRefs: cls.classFeatureRefs?.filter((reference) =>
           sourcesUpper.has(
             (reference.source || reference.feature?.source || cls.source).toUpperCase(),

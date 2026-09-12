@@ -80,6 +80,10 @@ describe('5etools/filters', () => {
     const wizard = makeClassFixture({
       name: 'Wizard',
       source: 'PHB',
+      classFeatures: [
+        { name: 'Spellcasting', source: 'PHB' },
+        { name: 'Forbidden Training', source: 'XGE' },
+      ],
       classFeatureRefs: [
         {
           ref: 'Spellcasting|Wizard|PHB|1|PHB',
@@ -133,6 +137,7 @@ describe('5etools/filters', () => {
 
     const [filtered] = DataFilter.filterClasses([wizard], { sources: ['PHB'] })
 
+    expect(filtered.classFeatures).toEqual([{ name: 'Spellcasting', source: 'PHB' }])
     expect(filtered.classFeatureRefs?.map((reference) => reference.name)).toEqual(['Spellcasting'])
     expect(filtered.subclasses?.map((subclass) => subclass.shortName)).toEqual(['Abjuration'])
     expect(filtered.subclasses?.[0].subclassFeatures).toEqual([

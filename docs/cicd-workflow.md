@@ -131,15 +131,17 @@ re-reading the mutable `dev` branch head. The release workflow:
 ### Rebuilding an unpublished draft without changing the version
 
 Use this only to replace an existing draft after corrective code is merged while the version is
-still unpublished. The manual workflow refuses to replace a published release, requires the source
-commit to be a merged `dev` to `main` PR with a clean Copilot review, validates the existing
-changelog section, removes the old draft assets, moves the version tag, and rebuilds every platform:
+still unpublished. The repository event always loads the release workflow from protected `main`;
+it cannot run a writable recovery workflow from a caller-selected branch. It refuses to replace a
+published release, requires the source commit to be a merged `dev` to `main` PR with a clean Copilot
+review, validates the existing changelog section, removes the old draft assets, moves the version
+tag, and rebuilds every platform:
 
 ```bash
-gh workflow run release.yml --ref main \
-  -f source-sha=<corrected-main-sha> \
-  -f reviewed-head-sha=<reviewed-pr-head-sha> \
-  -f rebuild-existing-draft=true
+gh api --method POST repos/kevinkickback/Tavern-Born/dispatches \
+  -f event_type=rebuild-release \
+  -f 'client_payload[source_sha]=<corrected-main-sha>' \
+  -f 'client_payload[reviewed_head_sha]=<reviewed-pr-head-sha>'
 ```
 
 Normal releases must continue to increase the package version. Draft rebuild mode rejects a commit

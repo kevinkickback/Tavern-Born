@@ -304,16 +304,18 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       : fallbackProgressionEntry.source
     const targetClassLevel = lastHistoryEntry?.classLevel ?? fallbackProgressionEntry.levels
 
-    const targetIdx = classProgression.findIndex(
-      (entry) =>
-        entry.name === targetClassName &&
-        (targetClassSource == null || entry.source === targetClassSource),
+    const targetIndices = classProgression.flatMap((entry, index) =>
+      entry.name === targetClassName &&
+      (targetClassSource == null || entry.source === targetClassSource)
+        ? [index]
+        : [],
     )
-    if (targetIdx === -1) {
+    if (targetIndices.length !== 1) {
       toast.error('Could not find the target class to remove a level from.')
       setConfirmRemoveOpen(false)
       return
     }
+    const targetIdx = targetIndices[0]
 
     const ledger = character.provenance ?? emptyProvenance()
     const affectedSpells = getSpellsGrantedAtLevel(

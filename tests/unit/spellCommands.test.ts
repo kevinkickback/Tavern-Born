@@ -144,6 +144,36 @@ describe('Spell Commands', () => {
       // Provenance grant should be removed
       expect(result.provenanceUpdate.spells['fire bolt']).toBeUndefined()
     })
+
+    test('matches a normalized ledger key against the stored display name', () => {
+      const character = makeCharacterFixture({
+        spells: {
+          spellProfiles: [
+            {
+              id: 'class:Wizard|PHB',
+              type: 'class' as const,
+              label: 'Wizard',
+              className: 'Wizard',
+              classSource: 'PHB',
+              cantrips: [],
+              spellsKnown: ['Magic Missile'],
+              preparedSpells: ['Magic Missile'],
+              alwaysPrepared: false,
+            },
+          ],
+          spellSlots: makeCharacterFixture().spells.spellSlots,
+        },
+      })
+
+      const result = removeSpellFromCharacter(
+        character,
+        character.provenance ?? emptyProvenance(),
+        'magic missile',
+      )
+
+      expect(result.characterPatch.spells?.spellProfiles[0]?.spellsKnown).toEqual([])
+      expect(result.characterPatch.spells?.spellProfiles[0]?.preparedSpells).toEqual([])
+    })
   })
 
   describe('swapSpellOnCharacter', () => {

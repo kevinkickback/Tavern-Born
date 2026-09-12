@@ -161,6 +161,27 @@ describe('Class Commands', () => {
     )
   })
 
+  test('addMulticlass preserves an explicit empty source for progression and grants', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+    })
+    const ledger = character.provenance ?? emptyProvenance()
+    const result = addMulticlass(
+      character,
+      ledger,
+      'Wizard',
+      {
+        name: 'Wizard',
+        source: 'XPHB',
+        multiclassing: { proficienciesGained: { armor: ['light armor'] } },
+      } as never,
+      '',
+    )
+
+    expect(result.characterPatch.classProgression?.[1]?.source).toBe('')
+    expect(result.provenanceUpdate.proficiencies.armor['light armor']?.[0]?.sourceRef).toBe('')
+  })
+
   test('removeMulticlass removes secondary class entry', () => {
     const character = makeCharacterFixture({
       classProgression: [

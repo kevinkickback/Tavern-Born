@@ -11,21 +11,9 @@ on:
         description: Exact pre-merge PR head approved by Copilot
         required: true
         type: string
-  workflow_dispatch:
-    inputs:
-      source-sha:
-        description: Existing release commit to rebuild and verify
-        required: true
-        type: string
-      reviewed-head-sha:
-        description: Exact pre-merge PR head approved by Copilot
-        required: true
-        type: string
-      rebuild-existing-draft:
-        description: Replace the unpublished draft and tag when the package version is unchanged
-        required: true
-        default: false
-        type: boolean
+  # repository_dispatch always loads this workflow from the protected default branch.
+  repository_dispatch:
+    types: [rebuild-release]
 
 permissions:
   contents: write
@@ -39,9 +27,9 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SOURCE_SHA: ${{ inputs.source-sha }}
-  REVIEWED_HEAD_SHA: ${{ inputs.reviewed-head-sha }}
-  REBUILD_EXISTING_DRAFT: ${{ inputs['rebuild-existing-draft'] || false }}
+  SOURCE_SHA: ${{ inputs['source-sha'] || github.event.client_payload.source_sha }}
+  REVIEWED_HEAD_SHA: ${{ inputs['reviewed-head-sha'] || github.event.client_payload.reviewed_head_sha }}
+  REBUILD_EXISTING_DRAFT: ${{ github.event_name == 'repository_dispatch' }}
 
 jobs:
   detect-version-change:
@@ -54,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.source-sha }}
+          ref: ${{ env.SOURCE_SHA }}
           fetch-depth: 0
           persist-credentials: false
       - name: Compare package versions
@@ -97,7 +85,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.source-sha }}
+          ref: ${{ env.SOURCE_SHA }}
           fetch-depth: 0
           persist-credentials: false
           path: source
@@ -111,8 +99,8 @@ jobs:
       - name: Require merged PR and clean Copilot review
         uses: actions/github-script@v9
         env:
-          SOURCE_SHA: ${{ inputs.source-sha }}
-          REVIEWED_HEAD_SHA: ${{ inputs.reviewed-head-sha }}
+          SOURCE_SHA: ${{ env.SOURCE_SHA }}
+          REVIEWED_HEAD_SHA: ${{ env.REVIEWED_HEAD_SHA }}
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -219,7 +207,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.source-sha }}
+          ref: ${{ env.SOURCE_SHA }}
           fetch-depth: 0
           persist-credentials: false
           path: source
@@ -347,7 +335,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.source-sha }}
+          ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:

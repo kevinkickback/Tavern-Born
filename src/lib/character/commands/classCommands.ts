@@ -698,7 +698,7 @@ export function addMulticlass(
   classSource?: string,
   startAtLevel: number = 1,
 ): ClassCommandResult {
-  const resolvedClassSource = classSource || classEntity.source || undefined
+  const resolvedClassSource = classSource ?? classEntity.source ?? undefined
   const existingClassIndex =
     character.classProgression?.findIndex(
       (entry) => entry.name === className && (entry.source ?? '') === (resolvedClassSource ?? ''),
@@ -766,7 +766,10 @@ export function addMulticlass(
     skills: mergeSkillState(character.skills ?? {}, updatedProficiencies.skills),
   }
 
-  const provenanceUpdate = applyMulticlassGrants(classEntity, ledger)
+  const provenanceUpdate = applyMulticlassGrants(
+    { ...classEntity, source: resolvedClassSource ?? '' },
+    ledger,
+  )
 
   return {
     classEntity,

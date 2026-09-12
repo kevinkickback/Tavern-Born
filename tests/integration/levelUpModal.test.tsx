@@ -333,7 +333,7 @@ describe('level up hit-point choices', () => {
     ])
   })
 
-  test('does not infer a printing for a legacy source-less HP gain', async () => {
+  test('rejects an ambiguous printing for a legacy source-less HP gain', async () => {
     const user = userEvent.setup()
     resetCharacterStoreWith(
       makeCharacterFixture({
@@ -362,7 +362,7 @@ describe('level up hit-point choices', () => {
     await user.click(screen.getByRole('button', { name: 'Remove' }))
 
     expect(useCharacterStore.getState().activeCharacter?.classProgression).toEqual([
-      { name: 'Fighter', source: 'PHB', levels: 1 },
+      { name: 'Fighter', source: 'PHB', levels: 2 },
       { name: 'Fighter', source: 'XPHB', levels: 1 },
     ])
   })
