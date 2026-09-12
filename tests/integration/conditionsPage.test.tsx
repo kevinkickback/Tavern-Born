@@ -153,7 +153,7 @@ describe('ConditionsPage', () => {
     )
     expect(tooltipTrigger).toBeTruthy()
     fireEvent.mouseMove(tooltipTrigger as Element)
-    expect(screen.getByRole('tooltip')).toBeTruthy()
+    expect(screen.getByRole('dialog')).toBeTruthy()
 
     await user.click(tooltipTrigger as Element)
     expect(useCharacterStore.getState().activeCharacter?.conditions).toEqual([

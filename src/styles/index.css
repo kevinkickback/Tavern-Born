@@ -203,8 +203,8 @@
   color: var(--accent-foreground);
   background-color: color-mix(in oklab, var(--accent) 28%, transparent);
   border-radius: var(--radius-sm);
-  outline: 1px solid color-mix(in oklab, var(--accent) 72%, transparent);
-  outline-offset: 1px;
+  outline: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  outline-offset: 0;
   box-decoration-break: clone;
   transition:
     color 100ms ease,

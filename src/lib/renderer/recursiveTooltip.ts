@@ -6,12 +6,20 @@ export interface TooltipEntityLike {
   source?: string
   page?: number
   entries?: unknown[]
+  className?: string
+  classSource?: string
+  subclassShortName?: string
+  subclassSource?: string
 }
 
 export interface RecursiveReference {
   kind: string
   name: string
   source?: string
+  className?: string
+  classSource?: string
+  subclassName?: string
+  subclassSource?: string
 }
 
 export interface RecursiveTooltipData {
@@ -41,6 +49,11 @@ export interface RecursiveLookup {
   senses: Map<string, TooltipEntityLike>
   variantrules: Map<string, TooltipEntityLike>
   languages: Map<string, TooltipEntityLike>
+  trapHazards: Map<string, TooltipEntityLike>
+  rewards: Map<string, TooltipEntityLike>
+  classFeatures: Map<string, TooltipEntityLike>
+  subclasses: Map<string, TooltipEntityLike>
+  subclassFeatures: Map<string, TooltipEntityLike>
 }
 
 export interface RecursiveTooltipCollections {
@@ -59,10 +72,33 @@ export interface RecursiveTooltipCollections {
   senses?: readonly unknown[]
   variantrules?: readonly unknown[]
   languages?: readonly unknown[]
+  trapHazards?: readonly unknown[]
+  rewards?: readonly unknown[]
+  classFeatures?: readonly unknown[]
 }
 
 export function getEntityKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`.toLowerCase()
+}
+
+function getClassScopedKey(
+  name: string,
+  source?: string,
+  className?: string,
+  classSource?: string,
+): string {
+  return `${getEntityKey(name, source)}|${className ?? ''}|${classSource ?? ''}`.toLowerCase()
+}
+
+function getSubclassScopedKey(
+  name: string,
+  source?: string,
+  className?: string,
+  classSource?: string,
+  subclassName?: string,
+  subclassSource?: string,
+): string {
+  return `${getClassScopedKey(name, source, className, classSource)}|${subclassName ?? ''}|${subclassSource ?? ''}`.toLowerCase()
 }
 
 function buildNameMap<T extends TooltipEntityLike>(items: readonly T[] = []): Map<string, T> {
@@ -91,7 +127,78 @@ function asTooltipEntities(collection: readonly unknown[] | undefined): TooltipE
   )
 }
 
+function buildScopedFeatureMap(
+  items: readonly TooltipEntityLike[],
+  includeSubclass: boolean,
+): Map<string, TooltipEntityLike> {
+  const map = buildNameMap(items)
+  for (const item of items) {
+    if (!item.name) continue
+    const key = includeSubclass
+      ? getSubclassScopedKey(
+          item.name,
+          item.source,
+          item.className,
+          item.classSource,
+          item.subclassShortName,
+          item.subclassSource,
+        )
+      : getClassScopedKey(item.name, item.source, item.className, item.classSource)
+    if (!map.has(key)) map.set(key, item)
+  }
+  return map
+}
+
+function getNestedClassEntities(classes: readonly TooltipEntityLike[]): {
+  subclasses: TooltipEntityLike[]
+  subclassFeatures: TooltipEntityLike[]
+} {
+  const subclasses: TooltipEntityLike[] = []
+  const subclassFeatures: TooltipEntityLike[] = []
+
+  for (const classEntity of classes) {
+    const nested = (classEntity as { subclasses?: unknown[] }).subclasses
+    if (!Array.isArray(nested)) continue
+
+    for (const value of nested) {
+      if (!value || typeof value !== 'object') continue
+      const subclass = value as TooltipEntityLike & {
+        shortName?: string
+        levelFeatures?: Array<{ features?: unknown[] }>
+        subclassFeatures?: unknown[]
+      }
+      const normalizedSubclass: TooltipEntityLike = {
+        ...subclass,
+        className: subclass.className ?? classEntity.name,
+        classSource: subclass.classSource ?? classEntity.source,
+      }
+      subclasses.push(normalizedSubclass)
+
+      const candidates = [
+        ...(subclass.subclassFeatures ?? []),
+        ...(subclass.levelFeatures ?? []).flatMap((group) => group.features ?? []),
+      ]
+      for (const candidate of candidates) {
+        if (!candidate || typeof candidate !== 'object') continue
+        const feature = candidate as TooltipEntityLike
+        subclassFeatures.push({
+          ...feature,
+          className: feature.className ?? normalizedSubclass.className,
+          classSource: feature.classSource ?? normalizedSubclass.classSource,
+          subclassShortName:
+            feature.subclassShortName ?? subclass.shortName ?? normalizedSubclass.name,
+          subclassSource: feature.subclassSource ?? normalizedSubclass.source,
+        })
+      }
+    }
+  }
+
+  return { subclasses, subclassFeatures }
+}
+
 export function buildRecursiveLookup(collections: RecursiveTooltipCollections): RecursiveLookup {
+  const classes = asTooltipEntities(collections.classes)
+  const nestedClassEntities = getNestedClassEntities(classes)
   return {
     spells: buildNameMap(asTooltipEntities(collections.spells) as Spell5e[]),
     items: buildNameMap([
@@ -100,7 +207,7 @@ export function buildRecursiveLookup(collections: RecursiveTooltipCollections): 
     ]),
     feats: buildNameMap(asTooltipEntities(collections.feats)),
     races: buildNameMap(asTooltipEntities(collections.races)),
-    classes: buildNameMap(asTooltipEntities(collections.classes)),
+    classes: buildNameMap(classes),
     backgrounds: buildNameMap(asTooltipEntities(collections.backgrounds)),
     optionalfeatures: buildNameMap(asTooltipEntities(collections.optionalfeatures)),
     actions: buildNameMap(asTooltipEntities(collections.actions)),
@@ -110,6 +217,11 @@ export function buildRecursiveLookup(collections: RecursiveTooltipCollections): 
     senses: buildNameMap(asTooltipEntities(collections.senses)),
     variantrules: buildNameMap(asTooltipEntities(collections.variantrules)),
     languages: buildNameMap(asTooltipEntities(collections.languages)),
+    trapHazards: buildNameMap(asTooltipEntities(collections.trapHazards)),
+    rewards: buildNameMap(asTooltipEntities(collections.rewards)),
+    classFeatures: buildScopedFeatureMap(asTooltipEntities(collections.classFeatures), false),
+    subclasses: buildScopedFeatureMap(nestedClassEntities.subclasses, false),
+    subclassFeatures: buildScopedFeatureMap(nestedClassEntities.subclassFeatures, true),
   }
 }
 
@@ -119,12 +231,20 @@ export function parseRecursiveReference(
   hoverType?: string,
   hoverName?: string,
   hoverSource?: string,
+  hoverClassName?: string,
+  hoverClassSource?: string,
+  hoverSubclassName?: string,
+  hoverSubclassSource?: string,
 ): RecursiveReference {
   if (hoverName?.trim()) {
     return {
       kind: hoverType?.trim().toLowerCase() || 'note',
       name: hoverName.trim(),
       source: hoverSource?.trim() || undefined,
+      className: hoverClassName?.trim() || undefined,
+      classSource: hoverClassSource?.trim() || undefined,
+      subclassName: hoverSubclassName?.trim() || undefined,
+      subclassSource: hoverSubclassSource?.trim() || undefined,
     }
   }
 
@@ -160,6 +280,12 @@ export function normalizeKind(kind: string): string {
     background: 'backgrounds',
     optionalfeature: 'optionalfeatures',
     optfeature: 'optionalfeatures',
+    trap: 'trapHazards',
+    hazard: 'trapHazards',
+    reward: 'rewards',
+    classfeature: 'classFeatures',
+    subclass: 'subclasses',
+    subclassfeature: 'subclassFeatures',
   }
   return aliases[normalized] ?? normalized
 }
@@ -203,6 +329,48 @@ export function getRecursiveTooltipData(
     }
   }
 
+  const normalizedKind = normalizeKind(reference.kind)
+  if (
+    normalizedKind === 'classFeatures' ||
+    normalizedKind === 'subclasses' ||
+    normalizedKind === 'subclassFeatures'
+  ) {
+    const entityMap = lookup[normalizedKind]
+    const scopedKey =
+      normalizedKind === 'subclassFeatures'
+        ? getSubclassScopedKey(
+            reference.name,
+            reference.source,
+            reference.className,
+            reference.classSource,
+            reference.subclassName,
+            reference.subclassSource,
+          )
+        : getClassScopedKey(
+            reference.name,
+            reference.source,
+            reference.className,
+            reference.classSource,
+          )
+    const entity =
+      entityMap.get(scopedKey) ??
+      entityMap.get(getEntityKey(reference.name, reference.source)) ??
+      entityMap.get(getEntityKey(reference.name))
+    if (!entity) return simpleFallback
+
+    const label =
+      normalizedKind === 'classFeatures'
+        ? 'Class Feature'
+        : normalizedKind === 'subclassFeatures'
+          ? 'Subclass Feature'
+          : 'Subclass'
+    return {
+      title: entity.name ?? reference.name,
+      subtitle: `${label}${entity.source ? ` • ${entity.source}` : ''}${entity.page ? ` p. ${entity.page}` : ''}`,
+      html: getPreviewHtml(entity.entries),
+    }
+  }
+
   const mapByKind: Record<string, Map<string, TooltipEntityLike> | undefined> = {
     items: lookup.items,
     feats: lookup.feats,
@@ -217,18 +385,37 @@ export function getRecursiveTooltipData(
     senses: lookup.senses,
     variantrules: lookup.variantrules,
     languages: lookup.languages,
+    trapHazards: lookup.trapHazards,
+    rewards: lookup.rewards,
   }
 
-  const normalizedKind = normalizeKind(reference.kind)
   const entityMap = mapByKind[normalizedKind]
   const entity =
     entityMap?.get(getEntityKey(reference.name, reference.source)) ??
     entityMap?.get(getEntityKey(reference.name))
   if (!entity) return simpleFallback
 
+  const kindLabels: Record<string, string> = {
+    items: 'Item',
+    feats: 'Feat',
+    races: 'Race',
+    classes: 'Class',
+    backgrounds: 'Background',
+    optionalfeatures: 'Optional Feature',
+    actions: 'Action',
+    conditions: 'Condition',
+    deities: 'Deity',
+    skills: 'Skill',
+    senses: 'Sense',
+    variantrules: 'Variant Rule',
+    languages: 'Language',
+    trapHazards: 'Trap or Hazard',
+    rewards: 'Reward',
+  }
+
   return {
     title: entity.name ?? reference.name,
-    subtitle: `${normalizedKind.charAt(0).toUpperCase()}${normalizedKind.slice(1)}${entity.source ? ` • ${entity.source}` : ''}${entity.page ? ` p. ${entity.page}` : ''}`,
+    subtitle: `${kindLabels[normalizedKind] ?? normalizedKind}${entity.source ? ` • ${entity.source}` : ''}${entity.page ? ` p. ${entity.page}` : ''}`,
     html: getPreviewHtml(entity.entries),
   }
 }
@@ -283,11 +470,13 @@ export function getRecursiveHintPosition(
 
 export function markRecursiveTooltipReferences(html: string): string {
   return html
-    .replace(
-      /\stitle="([^"]+)"((?:\sdata-hover-type="[^"]*")?)(?:\sdata-hover-name="([^"]*)")?((?:\sdata-hover-source="[^"]*")?)/g,
-      (_match, title, maybeType = '', hoverName = '', maybeSource = '') =>
-        ` title="${title}" data-recursive-title="${title}"${maybeType}${hoverName ? ` data-hover-name="${hoverName}"` : ''}${maybeSource}`,
-    )
+    .replace(/<span([^>]*)>/g, (match, attributes: string) => {
+      if (!/\sdata-hover-type="[^"]+"/.test(attributes)) return match
+      const title = /\stitle="([^"]+)"/.exec(attributes)?.[1]
+      if (!title) return match
+      const withoutTitle = attributes.replace(/\stitle="[^"]+"/, '')
+      return `<span${withoutTitle} data-recursive-title="${title}" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false">`
+    })
     .replace(/\scursor-help/g, ' cursor-help underline decoration-dotted underline-offset-2')
 }
 

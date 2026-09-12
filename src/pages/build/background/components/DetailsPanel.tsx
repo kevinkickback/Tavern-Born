@@ -1,5 +1,6 @@
 import { Barbell, Brain, Star, Translate, Wrench } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
+import { GameContent } from '@/components/editor/GameContent'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WorkspaceDetailContent } from '@/components/workspace'
@@ -8,7 +9,6 @@ import {
   type ResolvedEquipmentBlock,
 } from '@/lib/5etools/startingEquipment'
 import { ABILITY_ABBREVIATIONS, type BackgroundAbilityData } from '@/lib/calculations/abilityScores'
-import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import { getBackgroundEntries } from '@/pages/build/background/model/data'
 import type { Background5e } from '@/types/5etools'
@@ -195,10 +195,10 @@ function BackgroundDetails2024({
               <div key={section.name ?? i} className="border-b border-border py-3">
                 {section.name && <div className="font-semibold text-sm mb-1.5">{section.name}</div>}
                 {section.entries.map((entry, idx) => (
-                  <div
+                  <GameContent
                     key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
+                    entry={entry}
                     className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic"
-                    dangerouslySetInnerHTML={{ __html: renderEntry(entry) }}
                   />
                 ))}
               </div>
@@ -305,10 +305,10 @@ function BackgroundDetails2014({
               <div key={section.name ?? i} className="border-b border-border py-3">
                 {section.name && <div className="font-semibold text-sm mb-1.5">{section.name}</div>}
                 {section.entries.map((entry, idx) => (
-                  <div
+                  <GameContent
                     key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
+                    entry={entry}
                     className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold [&_em]:italic [&_table]:text-xs [&_table]:w-full [&_th]:font-semibold [&_th]:text-left [&_td]:py-0.5"
-                    dangerouslySetInnerHTML={{ __html: renderEntry(entry) }}
                   />
                 ))}
               </div>

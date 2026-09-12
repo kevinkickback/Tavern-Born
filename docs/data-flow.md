@@ -180,15 +180,27 @@ Background equipment detail:
 Entry points:
 - src/lib/renderer.ts
 - src/lib/entryRenderCache.ts
+- src/components/editor/GameContent.tsx
 - src/components/editor/RenderedEntryWithTooltip.tsx
 
 Flow:
-1. UI passes 5etools entries into renderEntry.
-2. Renderer recursively formats structured content and inline tags.
-3. UI displays rendered output rather than raw JSON.
+1. Full user-facing rules text passes 5etools entries to `GameContent`, the canonical React surface.
+2. `GameContent` obtains the shared cached recursive lookup and delegates rendering and interaction
+   to `RenderedEntryWithTooltip`.
+3. The lower-level renderer recursively formats structured content and inline tags, then sanitizes
+   the resulting HTML before display.
+4. Explicitly static contexts such as PDFs, text projections, and compact non-interactive summaries
+   call `renderEntry` or `renderEntryCached` directly.
 
 Tooltip note:
 - `useRecursiveLookup()` supplies source-aware entity resolution for inline references.
+- Lookup construction is cached by the immutable game-data object, so multiple `GameContent`
+  instances share one set of maps. Loaded trap/hazard, reward, class-feature, subclass, and
+  subclass-feature records participate alongside spells, items, feats, races, classes,
+  backgrounds, optional features, actions, conditions, deities, skills, senses, variant rules, and
+  languages. Parent class/subclass identity disambiguates feature names that collide within a source.
+- Generated inline references are focusable and expose button/dialog semantics. Hover or focus opens
+  a preview, Enter/Space pins it, and Escape closes it and restores focus to the reference.
 - Rich text inside an open tooltip can open another tooltip. Each nested reference keeps its parent visible, shares the parent card styling, and uses the same source-aware lookup, allowing the interaction to continue recursively. Dismissal includes a short grace period so the pointer can cross the gap between parent and child previews. The newest card receives the strongest border and elevation, older cards remain fully opaque, active triggers stay highlighted, and constrained placement staggers overlapping cards to preserve visible context.
 
 ## 5a) Source Preset and Reprint Filtering

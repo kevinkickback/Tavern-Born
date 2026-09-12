@@ -91,9 +91,19 @@ export function SpellNameTooltip({
     const hoverName = withTitle.getAttribute('data-hover-name') ?? undefined
     const hoverSource = withTitle.getAttribute('data-hover-source') ?? undefined
     const fallbackName = withTitle.textContent?.trim() ?? ''
-    const reference = parseRecursiveReference(text, fallbackName, hoverType, hoverName, hoverSource)
+    const scopedReference = parseRecursiveReference(
+      text,
+      fallbackName,
+      hoverType,
+      hoverName,
+      hoverSource,
+      withTitle.getAttribute('data-hover-class-name') ?? undefined,
+      withTitle.getAttribute('data-hover-class-source') ?? undefined,
+      withTitle.getAttribute('data-hover-subclass-name') ?? undefined,
+      withTitle.getAttribute('data-hover-subclass-source') ?? undefined,
+    )
     const resolved = getRecursiveTooltipData(
-      reference,
+      scopedReference,
       recursiveLookup,
       text,
       formatSpellLevel,
@@ -147,7 +157,7 @@ export function SpellNameTooltip({
         className={cn(
           'w-[320px] max-w-[calc(100vw-2rem)] p-0 !bg-card !text-card-foreground border transition-[box-shadow,border-color] duration-100',
           recursiveHints.length === 0
-            ? 'border-accent/80 ring-2 ring-accent/60 shadow-2xl'
+            ? 'border-accent/70 ring-1 ring-accent/45 shadow-xl'
             : 'border-border/80 shadow-md',
         )}
       >

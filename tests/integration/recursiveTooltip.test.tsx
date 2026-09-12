@@ -1,14 +1,35 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test } from 'vitest'
+import { GameContent } from '@/components/editor/GameContent'
 import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { SpellNameTooltip } from '@/pages/spells/components/SpellNameTooltip'
+import { useGameDataStore } from '@/store/gameDataStore'
 import type { Spell5e } from '@/types/5etools'
+import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
 describe('RenderedEntryWithTooltip', () => {
-  afterEach(cleanup)
+  afterEach(() => {
+    cleanup()
+    useGameDataStore.setState({ gameData: null })
+  })
+
+  test('uses the app game-data lookup through the canonical content component', () => {
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        conditions: [{ name: 'Prone', source: 'PHB', entries: ['Canonical preview text.'] }],
+      }),
+    })
+
+    render(<GameContent entry="The target is {@condition Prone|PHB}." />)
+    fireEvent.mouseMove(screen.getByRole('button', { name: 'Prone' }))
+
+    expect(screen.getByRole('dialog', { name: 'Prone preview' }).textContent).toContain(
+      'Canonical preview text.',
+    )
+  })
 
   test('opens references recursively and keeps every parent tooltip available', () => {
     const recursiveLookup = buildRecursiveLookup({
@@ -40,30 +61,30 @@ describe('RenderedEntryWithTooltip', () => {
 
     const firstTrigger = screen.getByText('First')
     fireEvent.mouseMove(firstTrigger)
-    expect(screen.getAllByRole('tooltip')).toHaveLength(1)
-    expect(screen.getByRole('tooltip').textContent).toContain('First points to Second.')
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(screen.getByRole('dialog').textContent).toContain('First points to Second.')
     expect(firstTrigger.getAttribute('data-recursive-preview-active')).toBe('true')
 
     const secondTrigger = document.querySelector('[data-hover-name="Second"]') as Element
     fireEvent.mouseMove(secondTrigger)
-    expect(screen.getAllByRole('tooltip')).toHaveLength(2)
-    expect(screen.getAllByRole('tooltip')[1]?.textContent).toContain('Second points to Third.')
+    expect(screen.getAllByRole('dialog')).toHaveLength(2)
+    expect(screen.getAllByRole('dialog')[1]?.textContent).toContain('Second points to Third.')
     expect(secondTrigger.getAttribute('data-recursive-preview-active')).toBe('true')
 
     fireEvent.mouseMove(document.querySelector('[data-recursive-tooltip-depth="0"]') as Element)
     const childTooltip = document.querySelector('[data-recursive-tooltip-depth="1"]')
     expect(childTooltip).toBeTruthy()
     expect(childTooltip?.className).toContain('bg-card')
-    expect(childTooltip?.className).toContain('ring-2')
+    expect(childTooltip?.className).toContain('ring-1')
 
     const thirdTrigger = document.querySelector('[data-hover-name="Third"]') as Element
     fireEvent.mouseMove(thirdTrigger)
-    expect(screen.getAllByRole('tooltip')).toHaveLength(3)
-    expect(screen.getAllByRole('tooltip')[2]?.textContent).toContain('Third-level tooltip content.')
+    expect(screen.getAllByRole('dialog')).toHaveLength(3)
+    expect(screen.getAllByRole('dialog')[2]?.textContent).toContain('Third-level tooltip content.')
     expect(childTooltip?.className).toContain('shadow-md')
-    expect(childTooltip?.className).not.toContain('ring-2')
+    expect(childTooltip?.className).not.toContain('ring-1')
     expect(document.querySelector('[data-recursive-tooltip-depth="2"]')?.className).toContain(
-      'ring-2',
+      'ring-1',
     )
     expect(thirdTrigger.getAttribute('data-recursive-preview-active')).toBe('true')
     expect(screen.getByText('1 of 3')).toBeTruthy()
@@ -74,6 +95,35 @@ describe('RenderedEntryWithTooltip', () => {
     expect(firstTrigger.hasAttribute('data-recursive-preview-active')).toBe(false)
     expect(secondTrigger.hasAttribute('data-recursive-preview-active')).toBe(false)
     expect(thirdTrigger.hasAttribute('data-recursive-preview-active')).toBe(false)
+  })
+
+  test('opens reference previews from the keyboard and restores focus on close', async () => {
+    const user = userEvent.setup()
+    render(
+      <RenderedEntryWithTooltip
+        entry="Read the {@condition Prone|PHB} condition."
+        recursiveLookup={buildRecursiveLookup({
+          conditions: [{ name: 'Prone', source: 'PHB', entries: ['Prone details.'] }],
+        })}
+      />,
+    )
+
+    const trigger = screen.getByRole('button', { name: 'Prone' })
+    expect(trigger.getAttribute('tabindex')).toBe('0')
+    expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
+
+    await user.tab()
+    expect(document.activeElement).toBe(trigger)
+    expect(await screen.findByRole('dialog', { name: 'Prone preview' })).toBeTruthy()
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+
+    await user.keyboard('{Enter}')
+    expect(document.activeElement).toBe(screen.getByTitle('Unpin tooltip'))
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog', { name: 'Prone preview' })).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
   })
 
   test('continues recursively from a spell-name tooltip', async () => {

@@ -1,5 +1,5 @@
 import { PushPin, X } from '@phosphor-icons/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { RecursiveTooltipChain } from '@/components/editor/RecursiveTooltipChain'
 import {
@@ -45,6 +45,22 @@ type HintState =
       triggerElement: HTMLElement
     }
 
+const RenderedHtml = memo(function RenderedHtml({
+  className,
+  html,
+}: {
+  className?: string
+  html: string
+}) {
+  return (
+    <div
+      className={className}
+      // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
+})
+
 interface RenderedEntryWithTooltipProps {
   entry: unknown
   className?: string
@@ -69,15 +85,30 @@ export function RenderedEntryWithTooltip({
   const [recursiveHints, setRecursiveHints] = useState<RecursiveHintState[]>([])
   const [pinned, setPinned] = useState(false)
   const pinnedRef = useRef(false)
+  const suppressFocusPreviewRef = useRef(false)
+  const focusPreviewOnOpenRef = useRef(false)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const previewId = useId()
 
   useEffect(() => {
     const trigger = hint?.triggerElement
     if (!trigger) return
     trigger.setAttribute('data-recursive-preview-active', 'true')
-    return () => trigger.removeAttribute('data-recursive-preview-active')
-  }, [hint?.triggerElement])
+    trigger.setAttribute('aria-expanded', 'true')
+    trigger.setAttribute('aria-controls', previewId)
+    return () => {
+      trigger.removeAttribute('data-recursive-preview-active')
+      trigger.setAttribute('aria-expanded', 'false')
+      trigger.removeAttribute('aria-controls')
+    }
+  }, [hint?.triggerElement, previewId])
+
+  useEffect(() => {
+    if (!hint || !focusPreviewOnOpenRef.current) return
+    focusPreviewOnOpenRef.current = false
+    tooltipRef.current?.querySelector<HTMLButtonElement>('button')?.focus()
+  }, [hint])
 
   const html = useMemo(
     () =>
@@ -122,17 +153,8 @@ export function RenderedEntryWithTooltip({
     [clearHide, scheduleHide],
   )
 
-  const handleMouseMove = useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      if (pinnedRef.current) return
-
-      const target = event.target as HTMLElement
-      const el = target.closest('[data-recursive-title]') as HTMLElement | null
-
-      if (!el) {
-        return
-      }
-
+  const showPreview = useCallback(
+    (el: HTMLElement) => {
       clearHide()
 
       const text = el.getAttribute('data-recursive-title') ?? ''
@@ -141,14 +163,24 @@ export function RenderedEntryWithTooltip({
       const hoverSource = el.getAttribute('data-hover-source') ?? undefined
       const fallback = el.textContent?.trim() ?? ''
 
-      const reference = parseRecursiveReference(text, fallback, hoverType, hoverName, hoverSource)
+      const scopedReference = parseRecursiveReference(
+        text,
+        fallback,
+        hoverType,
+        hoverName,
+        hoverSource,
+        el.getAttribute('data-hover-class-name') ?? undefined,
+        el.getAttribute('data-hover-class-source') ?? undefined,
+        el.getAttribute('data-hover-subclass-name') ?? undefined,
+        el.getAttribute('data-hover-subclass-source') ?? undefined,
+      )
       const { left, pos } = positionNearElement(el.getBoundingClientRect())
       setRecursiveHints([])
 
-      if (normalizeKind(reference.kind) === 'spell') {
+      if (normalizeKind(scopedReference.kind) === 'spell') {
         const spell =
-          recursiveLookup.spells.get(getEntityKey(reference.name, reference.source)) ??
-          recursiveLookup.spells.get(getEntityKey(reference.name))
+          recursiveLookup.spells.get(getEntityKey(scopedReference.name, scopedReference.source)) ??
+          recursiveLookup.spells.get(getEntityKey(scopedReference.name))
         if (spell) {
           setHint({ kind: 'spell', spell, left, pos, triggerElement: el })
           return
@@ -156,7 +188,7 @@ export function RenderedEntryWithTooltip({
       }
 
       const resolved = getRecursiveTooltipData(
-        reference,
+        scopedReference,
         recursiveLookup,
         text,
         formatSpellLevel,
@@ -167,11 +199,47 @@ export function RenderedEntryWithTooltip({
     [recursiveLookup, clearHide],
   )
 
-  const handleRecursiveMouseMove = useCallback(
+  const handleMouseMove = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
+      if (pinnedRef.current) return
+      const el = (event.target as HTMLElement).closest(
+        '[data-recursive-title]',
+      ) as HTMLElement | null
+      if (el) showPreview(el)
+    },
+    [showPreview],
+  )
+
+  const handleFocus = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      if (suppressFocusPreviewRef.current) return
+      const el = (event.target as HTMLElement).closest(
+        '[data-recursive-title]',
+      ) as HTMLElement | null
+      if (el) showPreview(el)
+    },
+    [showPreview],
+  )
+
+  const handleClick = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const el = (event.target as HTMLElement).closest(
+        '[data-recursive-title]',
+      ) as HTMLElement | null
+      if (!el) return
+      event.preventDefault()
+      event.stopPropagation()
+      showPreview(el)
+      pinnedRef.current = true
+      setPinned(true)
+    },
+    [showPreview],
+  )
+
+  const showRecursivePreview = useCallback(
+    (target: HTMLElement) => {
       clearHide()
 
-      const target = event.target as HTMLElement
       const withTitle = target.closest('[data-recursive-title]') as HTMLElement | null
       const tooltip = target.closest('[data-recursive-tooltip-depth]') as HTMLElement | null
       const depth = Number(tooltip?.dataset.recursiveTooltipDepth ?? 0)
@@ -187,6 +255,10 @@ export function RenderedEntryWithTooltip({
         withTitle.getAttribute('data-hover-type') ?? undefined,
         withTitle.getAttribute('data-hover-name') ?? undefined,
         withTitle.getAttribute('data-hover-source') ?? undefined,
+        withTitle.getAttribute('data-hover-class-name') ?? undefined,
+        withTitle.getAttribute('data-hover-class-source') ?? undefined,
+        withTitle.getAttribute('data-hover-subclass-name') ?? undefined,
+        withTitle.getAttribute('data-hover-subclass-source') ?? undefined,
       )
       const resolved = getRecursiveTooltipData(
         reference,
@@ -203,6 +275,20 @@ export function RenderedEntryWithTooltip({
       ])
     },
     [clearHide, recursiveLookup],
+  )
+
+  const handleRecursiveMouseMove = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      showRecursivePreview(event.target as HTMLElement)
+    },
+    [showRecursivePreview],
+  )
+
+  const handleRecursiveFocus = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      showRecursivePreview(event.target as HTMLElement)
+    },
+    [showRecursivePreview],
   )
 
   const handleWrapperMouseLeave = useCallback(
@@ -222,12 +308,54 @@ export function RenderedEntryWithTooltip({
   }, [scheduleHide])
 
   const handleClose = useCallback(() => {
+    const trigger = hint?.triggerElement
     clearHide()
     pinnedRef.current = false
     setPinned(false)
     setHint(null)
     setRecursiveHints([])
-  }, [clearHide])
+    if (trigger) {
+      suppressFocusPreviewRef.current = true
+      trigger.focus()
+      suppressFocusPreviewRef.current = false
+    }
+  }, [clearHide, hint?.triggerElement])
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'Escape' && hint) {
+        event.preventDefault()
+        handleClose()
+        return
+      }
+
+      const el = (event.target as HTMLElement).closest(
+        '[data-recursive-title]',
+      ) as HTMLElement | null
+      if (!el || (event.key !== 'Enter' && event.key !== ' ')) return
+
+      event.preventDefault()
+      focusPreviewOnOpenRef.current = true
+      showPreview(el)
+      pinnedRef.current = true
+      setPinned(true)
+    },
+    [handleClose, hint, showPreview],
+  )
+
+  const handleBlur = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      const destination = event.relatedTarget as Node | null
+      if (
+        destination &&
+        (event.currentTarget.contains(destination) || tooltipRef.current?.contains(destination))
+      ) {
+        return
+      }
+      scheduleHide()
+    },
+    [scheduleHide],
+  )
 
   if (!html) return null
 
@@ -258,25 +386,33 @@ export function RenderedEntryWithTooltip({
 
   return (
     <>
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: hover tracking wrapper for tooltip triggers — no interactive action */}
-      <div onMouseMove={handleMouseMove} onMouseLeave={handleWrapperMouseLeave}>
-        <div
-          className={className}
-          // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: delegates pointer, focus, and keyboard behavior to generated inline reference controls. */}
+      <div
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleWrapperMouseLeave}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+      >
+        <RenderedHtml className={className} html={html} />
       </div>
       {hint
         ? createPortal(
             <div
+              id={previewId}
               ref={setTooltipRef}
-              role="tooltip"
+              role="dialog"
+              aria-label={`${hint.kind === 'spell' ? hint.spell.name : hint.title} preview`}
               data-recursive-tooltip-depth={0}
               onMouseMove={handleRecursiveMouseMove}
+              onFocus={handleRecursiveFocus}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
               className={cn(
                 'fixed z-[9999] w-[320px] max-w-[calc(100vw-1rem)] rounded border bg-card text-card-foreground transition-[box-shadow,border-color] duration-100',
                 recursiveHints.length === 0
-                  ? 'border-accent/80 ring-2 ring-accent/60 shadow-2xl'
+                  ? 'border-accent/70 ring-1 ring-accent/45 shadow-xl'
                   : 'border-border/80 shadow-md',
               )}
               style={{ left: hint.left, ...hint.pos }}

@@ -1,9 +1,9 @@
+import { GameContent } from '@/components/editor/GameContent'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
 import type { AbilityName } from '@/lib/calculations/abilityScores'
 import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills'
-import { renderEntry } from '@/lib/renderer'
 import {
   buildSkillSourceTags,
   formatTitleCase,
@@ -13,10 +13,6 @@ import {
 interface BuildAbilityScoresDetailsPanelProps {
   selectedAbility: AbilityName
   selectedSkillDetails: SkillDetail[]
-}
-
-function renderInlineEntry(entry: unknown): string {
-  return renderEntry(entry).replace(/^<p>|<\/p>$/g, '')
 }
 
 export function BuildAbilityScoresDetailsPanel({
@@ -46,12 +42,7 @@ export function BuildAbilityScoresDetailsPanel({
                 {selectedSkillDetails.map((skill) => (
                   <div key={skill.name} className="space-y-1">
                     <div className="text-base font-semibold">{skill.name}</div>
-                    <div
-                      className="text-sm text-muted-foreground"
-                      dangerouslySetInnerHTML={{
-                        __html: skill.entries.map((entry) => renderInlineEntry(entry)).join(' '),
-                      }}
-                    />
+                    <GameContent entry={skill.entries} className="text-sm text-muted-foreground" />
                   </div>
                 ))}
                 {sourceTags.length > 0 && (

@@ -140,6 +140,7 @@ Rules, sources, and condition tracking:
 - src/lib/renderer.ts
 - src/lib/entryRenderCache.ts — object-identity cache for repeatedly rendered entries
 - src/lib/renderer/recursiveTooltip.ts — shared recursive tooltip types, reference resolution, positioning, and explicit collection-set lookup builder
+- src/components/editor/GameContent.tsx — canonical user-facing rules-text renderer with the cached app lookup
 - src/components/editor/RenderedEntryWithTooltip.tsx — recursive source-aware rich-text UI
 
 Character sheet PDF:

@@ -98,8 +98,8 @@ describe('EquipmentPage item details', () => {
     expect(screen.queryByText('No description is available for this item.')).toBeNull()
 
     fireEvent.mouseMove(screen.getByText('Base Relic'))
-    expect(screen.getByRole('tooltip').textContent).toContain('Base Relic')
-    expect(screen.getByRole('tooltip').textContent).toContain('Resolved base-item tooltip text.')
+    expect(screen.getByRole('dialog').textContent).toContain('Base Relic')
+    expect(screen.getByRole('dialog').textContent).toContain('Resolved base-item tooltip text.')
 
     const itemHeader = screen.getByText('Item')
     expect(itemHeader.closest('[data-slot="scroll-area"]')).toBeNull()

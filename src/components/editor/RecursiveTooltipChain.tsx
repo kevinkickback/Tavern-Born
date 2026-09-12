@@ -14,7 +14,11 @@ export function RecursiveTooltipChain({ hints, index = 0 }: RecursiveTooltipChai
   useEffect(() => {
     if (!triggerElement) return
     triggerElement.setAttribute('data-recursive-preview-active', 'true')
-    return () => triggerElement.removeAttribute('data-recursive-preview-active')
+    triggerElement.setAttribute('aria-expanded', 'true')
+    return () => {
+      triggerElement.removeAttribute('data-recursive-preview-active')
+      triggerElement.setAttribute('aria-expanded', 'false')
+    }
   }, [triggerElement])
 
   if (!hint) return null
@@ -23,12 +27,13 @@ export function RecursiveTooltipChain({ hints, index = 0 }: RecursiveTooltipChai
 
   return (
     <div
-      role="tooltip"
+      role="dialog"
+      aria-label={`${hint.title} preview`}
       data-recursive-tooltip-depth={index + 1}
       className={cn(
         'absolute w-[320px] max-w-[calc(100vw-1rem)] rounded border bg-card text-card-foreground transition-[box-shadow,border-color] duration-100',
         isNewest
-          ? 'border-accent/80 ring-2 ring-accent/60 shadow-2xl'
+          ? 'border-accent/70 ring-1 ring-accent/45 shadow-xl'
           : 'border-border/80 shadow-md',
       )}
       style={{ left: hint.x, top: hint.y, zIndex: 100 + index }}

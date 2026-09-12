@@ -1,4 +1,5 @@
 import { CaretLeft, Sword } from '@phosphor-icons/react'
+import { GameContent } from '@/components/editor/GameContent'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
@@ -7,7 +8,6 @@ import {
   getSavingThrowsDisplay,
   getSpellcastingStatDisplay,
 } from '@/lib/calculations/classUtils'
-import { renderEntry } from '@/lib/renderer'
 import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 
@@ -93,9 +93,11 @@ export function BuildClassDetailsPanel({
                 {selectedFeature.entries
                   .filter((entry) => typeof entry === 'string')
                   .map((entry) => (
-                    <p key={entry} className="text-sm text-muted-foreground leading-relaxed">
-                      {entry}
-                    </p>
+                    <GameContent
+                      key={entry}
+                      entry={entry}
+                      className="text-sm text-muted-foreground leading-relaxed"
+                    />
                   ))}
 
                 {selectedFeature.levelFeatures
@@ -115,12 +117,10 @@ export function BuildClassDetailsPanel({
                           <div key={`${feature.name}|${feature.source ?? ''}`}>
                             <div className="text-sm font-semibold mb-1">{feature.name}</div>
                             {feature.entries?.map((entry, idx) => (
-                              <div
+                              <GameContent
                                 key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
+                                entry={entry}
                                 className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
-                                dangerouslySetInnerHTML={{
-                                  __html: renderEntry(entry) ?? '',
-                                }}
                               />
                             ))}
                           </div>
@@ -131,10 +131,10 @@ export function BuildClassDetailsPanel({
               </>
             ) : selectedFeature.entries.length > 0 ? (
               selectedFeature.entries.map((entry, idx) => (
-                <div
+                <GameContent
                   key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
+                  entry={entry}
                   className="text-sm leading-relaxed [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-2 [&_strong]:font-semibold [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:bg-muted [&_td]:border [&_td]:border-border [&_td]:p-2"
-                  dangerouslySetInnerHTML={{ __html: renderEntry(entry) ?? '' }}
                 />
               ))
             ) : (
@@ -198,9 +198,9 @@ export function BuildClassDetailsPanel({
                     )}
                   >
                     <span className="font-semibold">{label}</span>
-                    <span
+                    <GameContent
+                      entry={value}
                       className="text-muted-foreground [&_a]:text-primary [&_a]:no-underline"
-                      dangerouslySetInnerHTML={{ __html: value ?? '' }}
                     />
                   </div>
                 ))}
@@ -213,12 +213,10 @@ export function BuildClassDetailsPanel({
                 </h4>
                 <div className="space-y-2">
                   {viewingClassEntries.map((entry, idx) => (
-                    <div
+                    <GameContent
                       key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
+                      entry={entry}
                       className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold"
-                      dangerouslySetInnerHTML={{
-                        __html: renderEntry(entry) ?? '',
-                      }}
                     />
                   ))}
                 </div>
@@ -237,12 +235,10 @@ export function BuildClassDetailsPanel({
                       <h5 className="text-sm font-semibold mb-2">{section.name}</h5>
                       <div className="space-y-2">
                         {section.entries.map((entry, idx) => (
-                          <div
+                          <GameContent
                             key={typeof entry === 'string' ? `${idx}:${entry}` : idx}
+                            entry={entry}
                             className="text-sm leading-relaxed text-muted-foreground [&_ul]:list-disc [&_ul]:ml-4 [&_li]:my-1 [&_p]:my-1 [&_strong]:font-semibold"
-                            dangerouslySetInnerHTML={{
-                              __html: renderEntry(entry) ?? '',
-                            }}
                           />
                         ))}
                       </div>

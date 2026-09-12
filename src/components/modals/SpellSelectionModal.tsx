@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { GameContent } from '@/components/editor/GameContent'
 import {
   type ActiveFilters,
   type CategoryLimit,
@@ -16,7 +17,6 @@ import {
   getSchoolName,
   SPELL_SCHOOL_NAMES,
 } from '@/lib/calculations/spellUtils'
-import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 
@@ -175,7 +175,6 @@ const SpellCard = memo(function SpellCard({
   const isRitual = isRitualSpell(spell)
   const isConcentration = spell.duration.some((d) => d.concentration)
   const firstEntry = spell.entries?.[0]
-  const descHtml = renderEntryCached(firstEntry)
 
   return (
     <div className="p-3.5">
@@ -234,11 +233,10 @@ const SpellCard = memo(function SpellCard({
           </div>
         ))}
       </div>
-      {descHtml && (
-        <div
+      {firstEntry != null && (
+        <GameContent
+          entry={firstEntry}
           className="text-sm text-muted-foreground line-clamp-3 leading-snug"
-          // eslint-disable-next-line react/no-danger -- HTML is generated from structured 5etools entries.
-          dangerouslySetInnerHTML={{ __html: descHtml }}
         />
       )}
     </div>

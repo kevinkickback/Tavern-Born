@@ -137,9 +137,9 @@ export function CompendiumPage() {
   }
 
   return (
-    <WorkspacePage className="gap-3 p-3">
-      <div className="shrink-0 overflow-hidden rounded-md border border-border-subtle bg-surface-raised">
-        <WorkspaceToolbar className="h-11 gap-3 border-0 bg-transparent px-3">
+    <WorkspacePage>
+      <div className="shrink-0 bg-surface-raised">
+        <WorkspaceToolbar className="h-11 gap-3 border-b border-border-subtle bg-transparent px-3">
           <div className="relative min-w-0 flex-1">
             <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-[18px] -translate-y-1/2 text-foreground/65" />
             <Input
@@ -235,7 +235,7 @@ export function CompendiumPage() {
         </WorkspaceToolbar>
       </div>
 
-      <WorkspaceBody className="overflow-hidden">
+      <WorkspaceBody className="overflow-hidden p-3">
         <MasterDetail
           className="gap-3 overflow-visible"
           masterWidth="clamp(21rem, 36vw, 28rem)"

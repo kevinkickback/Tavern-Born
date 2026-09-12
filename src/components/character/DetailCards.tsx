@@ -1,4 +1,5 @@
 import type { Icon } from '@phosphor-icons/react'
+import { GameContent } from '@/components/editor/GameContent'
 import { cn } from '@/lib/utils'
 
 export function DetailSection({
@@ -39,9 +40,9 @@ export function DetailHtmlSection({
         <span className="text-xs font-semibold uppercase text-muted-foreground">{label}</span>
       </div>
       {html ? (
-        <span
+        <GameContent
+          entry={html}
           className="text-sm [&_a]:text-accent-foreground [&_a]:no-underline"
-          dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
         <p className="text-sm text-muted-foreground">None</p>

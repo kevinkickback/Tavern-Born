@@ -4,14 +4,13 @@
 ## ✨ Changes
 
 * Characters can now use average HP, roll hit die, or enter a roll manually when leveling up
-* Click the heart in the character header to manage current, temporary, and custom HP values
-* Click the shield in the character header to manage Armor Class bonuses, penalties, and custom values
+* Click the heart in the app header panel to manage current, temporary, and custom HP values
+* Click the shield in the app header panel to manage Armor Class bonuses, penalties, and custom values
 * Character rules can now be reviewed and changed after creation from the new Rules page
 * The Conditions page now provides focused trackers, condition reminders, and ruleset-specific exhaustion guidance
-* PDF generation for both 2014 & 2024 character sheets should be mostly completed
-* Fixed 2014 PDF resistance, armor, language, and tool fields disappearing in some saved-file viewers
+* PDF generation for both 2014 & 2024 character sheets should be mostly complete
 * Enabling armor-slot and proficiency enforcement now automatically unequips invalid equipment
-* Tooltip previews are now fully recursive
+* Tooltip previews are now fully recursive and should work across the entire app, not just certain pages
 * Fixed class icons not being displayed properly
 
 
