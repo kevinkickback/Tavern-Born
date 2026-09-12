@@ -80,6 +80,22 @@ describe('5etools/filters', () => {
     const wizard = makeClassFixture({
       name: 'Wizard',
       source: 'PHB',
+      classFeatureRefs: [
+        {
+          ref: 'Spellcasting|Wizard|PHB|1|PHB',
+          name: 'Spellcasting',
+          source: 'PHB',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+        {
+          ref: 'Forbidden Training|Wizard|PHB|1|XGE',
+          name: 'Forbidden Training',
+          source: 'XGE',
+          className: 'Wizard',
+          classSource: 'PHB',
+        },
+      ],
       subclasses: [
         {
           name: 'School of Abjuration',
@@ -88,8 +104,8 @@ describe('5etools/filters', () => {
           className: 'Wizard',
           classSource: 'PHB',
           subclassFeatures: [
-            { name: 'Arcane Ward', source: 'PHB' },
-            { name: 'Forbidden Ward', source: 'XGE' },
+            'Arcane Ward|Wizard|PHB|Abjuration|PHB|2|PHB',
+            'Forbidden Ward|Wizard|PHB|Abjuration|PHB|2|XGE',
           ],
           levelFeatures: [
             {
@@ -98,6 +114,10 @@ describe('5etools/filters', () => {
                 { name: 'Allowed Feature', source: 'PHB' },
                 { name: 'Excluded Feature', source: 'XGE' },
               ],
+            },
+            {
+              level: 3,
+              features: [{ name: 'Excluded Level', source: 'XGE' }],
             },
           ],
         },
@@ -113,10 +133,12 @@ describe('5etools/filters', () => {
 
     const [filtered] = DataFilter.filterClasses([wizard], { sources: ['PHB'] })
 
+    expect(filtered.classFeatureRefs?.map((reference) => reference.name)).toEqual(['Spellcasting'])
     expect(filtered.subclasses?.map((subclass) => subclass.shortName)).toEqual(['Abjuration'])
     expect(filtered.subclasses?.[0].subclassFeatures).toEqual([
-      { name: 'Arcane Ward', source: 'PHB' },
+      'Arcane Ward|Wizard|PHB|Abjuration|PHB|2|PHB',
     ])
+    expect(filtered.subclasses?.[0].levelFeatures).toHaveLength(1)
     expect(filtered.subclasses?.[0].levelFeatures?.[0].features).toEqual([
       { name: 'Allowed Feature', source: 'PHB' },
     ])

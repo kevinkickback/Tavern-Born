@@ -333,6 +333,40 @@ describe('level up hit-point choices', () => {
     ])
   })
 
+  test('does not infer a printing for a legacy source-less HP gain', async () => {
+    const user = userEvent.setup()
+    resetCharacterStoreWith(
+      makeCharacterFixture({
+        class: 'Fighter',
+        classSource: 'PHB',
+        level: 3,
+        classProgression: [
+          { name: 'Fighter', source: 'PHB', levels: 2 },
+          { name: 'Fighter', source: 'XPHB', levels: 1 },
+        ],
+        hitPointGains: [
+          {
+            className: 'Fighter',
+            classLevel: 2,
+            characterLevel: 3,
+            hitDie: 10,
+            dieResult: 6,
+            method: 'average',
+          },
+        ],
+      }),
+    )
+
+    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
+    await user.click(screen.getByText('Remove last level'))
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+
+    expect(useCharacterStore.getState().activeCharacter?.classProgression).toEqual([
+      { name: 'Fighter', source: 'PHB', levels: 1 },
+      { name: 'Fighter', source: 'XPHB', levels: 1 },
+    ])
+  })
+
   test('clears level history when the active character changes', async () => {
     const user = userEvent.setup()
     const fighter = makeCharacterFixture({

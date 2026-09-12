@@ -91,7 +91,7 @@ jobs:
         with:
           # The validation code comes from the workflow's protected revision,
           # never from the candidate release source.
-          ref: ${{ job.workflow_sha }}
+          ref: ${{ github.workflow_sha }}
           persist-credentials: false
           path: trusted
       - name: Require merged PR and clean Copilot review
@@ -127,6 +127,19 @@ jobs:
         shell: bash
         working-directory: source
         run: |
+          lookup_release_draft() {
+            local output
+            if output="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$1" --jq '.draft' 2>&1)"; then
+              printf '%s' "$output"
+              return 0
+            fi
+            if [[ "$output" == *"HTTP 404"* ]]; then
+              return 4
+            fi
+            echo "$output" >&2
+            return 1
+          }
+
           version="$(node -p "require('./package.json').version")"
           previous_version="$(
             git show "$SOURCE_SHA^:package.json" |
@@ -147,15 +160,21 @@ jobs:
           fi
 
           if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            if is_draft="$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
+            if is_draft="$(lookup_release_draft "$tag")"; then
               if [[ "$is_draft" != "true" ]]; then
                 echo "Release $tag is not an unpublished draft; refusing to replace it." >&2
                 exit 1
               fi
-            elif [[ "${existing_sha:-}" != "$SOURCE_SHA" ]]; then
-              echo "Release $tag is missing and its tag does not point to $SOURCE_SHA; refusing to rebuild it." >&2
-              exit 1
             else
+              lookup_status=$?
+              if [[ "$lookup_status" -ne 4 ]]; then
+                echo "Could not verify the state of release $tag; refusing to rebuild it." >&2
+                exit 1
+              fi
+              if [[ "${existing_sha:-}" != "$SOURCE_SHA" ]]; then
+                echo "Release $tag is missing and its tag does not point to $SOURCE_SHA; refusing to rebuild it." >&2
+                exit 1
+              fi
               echo "Release $tag is missing after its tag was moved; resuming the interrupted draft rebuild."
             fi
           fi
@@ -185,10 +204,31 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
+          lookup_release_draft() {
+            local output
+            if output="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$1" --jq '.draft' 2>&1)"; then
+              printf '%s' "$output"
+              return 0
+            fi
+            if [[ "$output" == *"HTTP 404"* ]]; then
+              return 4
+            fi
+            echo "$output" >&2
+            return 1
+          }
+
           if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            if is_draft="$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' 2>/dev/null)" && [[ "$is_draft" != "true" ]]; then
-              echo "Release $RELEASE_TAG is not an unpublished draft; refusing to replace it." >&2
-              exit 1
+            if is_draft="$(lookup_release_draft "$RELEASE_TAG")"; then
+              if [[ "$is_draft" != "true" ]]; then
+                echo "Release $RELEASE_TAG is not an unpublished draft; refusing to replace it." >&2
+                exit 1
+              fi
+            else
+              lookup_status=$?
+              if [[ "$lookup_status" -ne 4 ]]; then
+                echo "Could not verify the state of release $RELEASE_TAG; refusing to replace it." >&2
+                exit 1
+              fi
             fi
             gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG" \
               -f sha="$SOURCE_SHA" -F force=true
@@ -211,20 +251,39 @@ jobs:
       - name: Create GitHub release draft
         shell: bash
         run: |
+          lookup_release_draft() {
+            local output
+            if output="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$1" --jq '.draft' 2>&1)"; then
+              printf '%s' "$output"
+              return 0
+            fi
+            if [[ "$output" == *"HTTP 404"* ]]; then
+              return 4
+            fi
+            echo "$output" >&2
+            return 1
+          }
+
           if [[ "$REBUILD_EXISTING_DRAFT" == "true" ]]; then
-            if is_draft="$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
+            if is_draft="$(lookup_release_draft "$RELEASE_TAG")"; then
               if [[ "$is_draft" != "true" ]]; then
                 echo "A published release already exists for $RELEASE_TAG; refusing to replace it." >&2
                 exit 1
               fi
               gh release delete "$RELEASE_TAG" --yes
+            else
+              lookup_status=$?
+              if [[ "$lookup_status" -ne 4 ]]; then
+                echo "Could not verify the state of release $RELEASE_TAG; refusing to replace it." >&2
+                exit 1
+              fi
             fi
             gh release create "$RELEASE_TAG" --draft --title "$RELEASE_TAG" \
               --notes-file release-notes.md --verify-tag
             exit 0
           fi
 
-          if is_draft="$(gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' 2>/dev/null)"; then
+          if is_draft="$(lookup_release_draft "$RELEASE_TAG")"; then
             if [[ "$is_draft" != "true" ]]; then
               echo "A published release already exists for $RELEASE_TAG; refusing to replace it." >&2
               exit 1
@@ -232,6 +291,11 @@ jobs:
             echo "Reusing existing draft release $RELEASE_TAG."
             gh release edit "$RELEASE_TAG" --title "$RELEASE_TAG" --notes-file release-notes.md
           else
+            lookup_status=$?
+            if [[ "$lookup_status" -ne 4 ]]; then
+              echo "Could not verify the state of release $RELEASE_TAG; refusing to create it." >&2
+              exit 1
+            fi
             release_flags=(--draft --title "$RELEASE_TAG" --notes-file release-notes.md --verify-tag)
             gh release create "$RELEASE_TAG" "${release_flags[@]}"
           fi

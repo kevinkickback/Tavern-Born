@@ -1,0 +1,31 @@
+import { readFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
+import { describe, expect, test } from 'vitest'
+
+const readWorkflow = (name: string) =>
+  readFile(resolve(process.cwd(), '.github', 'workflows', name), 'utf8')
+
+describe('trusted workflow policy', () => {
+  test('pins trusted workflow checkouts and merges only the tested base', async () => {
+    const workflow = await readWorkflow('merge.yml')
+
+    expect(workflow).toContain(`ref: \${{ github.workflow_sha }}`)
+    expect(workflow).not.toContain('job.workflow_sha')
+    expect(workflow).toContain('pr.base.sha !== testedPull.base.sha')
+    expect(workflow).toContain('currentBase.commit.sha !== testedPull.base.sha')
+  })
+
+  test('release lookups distinguish a confirmed 404 from operational failures', async () => {
+    const workflow = await readWorkflow('release.yml')
+
+    expect(workflow).toContain(`ref: \${{ github.workflow_sha }}`)
+    expect(workflow).not.toContain('job.workflow_sha')
+    expect(workflow).toContain('if [[ "$output" == *"HTTP 404"* ]]')
+    expect(workflow).not.toContain(
+      'gh release view "$RELEASE_TAG" --json isDraft --jq \'isDraft\' 2>/dev/null',
+    )
+    expect(workflow).not.toContain(
+      'gh release view "$tag" --json isDraft --jq \'isDraft\' 2>/dev/null',
+    )
+  })
+})

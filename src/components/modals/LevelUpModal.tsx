@@ -292,14 +292,12 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       (a, b) => b.characterLevel - a.characterLevel,
     )[0]
     const lastHistoryEntry = levelHistory[levelHistory.length - 1] ?? lastRecordedGain
-    const targetClassName =
-      lastHistoryEntry?.className ?? classProgression[classProgression.length - 1].name
-    const matchingProgressionEntry = classProgression.find(
-      (entry) => entry.name === targetClassName,
-    )
-    const targetClassSource = lastHistoryEntry?.classSource ?? matchingProgressionEntry?.source
-    const targetClassLevel =
-      lastHistoryEntry?.classLevel ?? classProgression[classProgression.length - 1].levels
+    const fallbackProgressionEntry = classProgression[classProgression.length - 1]
+    const targetClassName = lastHistoryEntry?.className ?? fallbackProgressionEntry.name
+    const targetClassSource = lastHistoryEntry
+      ? lastHistoryEntry.classSource || undefined
+      : fallbackProgressionEntry.source
+    const targetClassLevel = lastHistoryEntry?.classLevel ?? fallbackProgressionEntry.levels
 
     const targetIdx = classProgression.findIndex(
       (entry) =>

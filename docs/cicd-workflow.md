@@ -24,9 +24,12 @@ After CI completes, `merge.yml` runs from the protected default-branch revision.
 job never checks out or executes pull-request code. It explicitly requests Copilot review of the
 exact tested revision and waits up to fifteen minutes for completion. A missing review, incomplete
 or dismissed review, timeout, API failure, "Changes recommended" assessment, suppressed finding,
-or inline finding fails the merge. Push a corrective revision and obtain a clean re-review before
-retrying. The release workflow repeats this check using validation code from its own trusted
-workflow revision before it creates or updates any tag or draft.
+or inline finding fails the merge. The merge also requires `main` to still match the base commit
+recorded by that exact CI run. Push a corrective revision and obtain a clean re-review before
+retrying. The release workflow repeats this check using validation code pinned to its protected
+workflow revision before it creates or updates any tag or draft. Release lookups fail closed: only
+a confirmed missing release is treated as absent; permission, rate-limit, and network failures stop
+the workflow before it moves a tag or replaces a draft.
 
 ---
 
