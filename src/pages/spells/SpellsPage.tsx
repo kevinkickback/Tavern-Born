@@ -50,7 +50,8 @@ import { NoCharCard } from '../_shared'
 const SPELLS_PREPARE_SELECTOR = '[data-spell-prepare-toggle="true"]'
 const SPELLS_HINT_WIDTH = 300
 
-type SpellView = 'all' | 'class' | 'racial' | 'bonus'
+type ClassSpellView = `class:${string}`
+type SpellView = 'all' | 'racial' | 'bonus' | ClassSpellView
 
 export function SpellsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -97,7 +98,7 @@ export function SpellsPage() {
   const [bonusSpellModalOpen, setBonusSpellModalOpen] = useState(false)
   const [listCollapsed, setListCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
-  const [spellView, setSpellView] = useState<SpellView>('all')
+  const [selectedSpellView, setSelectedSpellView] = useState<SpellView>('all')
   const [activeRacialChoice, setActiveRacialChoice] = useState<{
     profileId: string
     choiceId: string
@@ -312,8 +313,13 @@ export function SpellsPage() {
     return map
   }, [spellListItems])
 
+  const classSpellProfiles = useMemo(
+    () => spellProfiles.filter((profile) => profile.type === 'class'),
+    [spellProfiles],
+  )
+
   const spellCountsByView = useMemo(() => {
-    const counts: Record<SpellView, number> = { all: 0, class: 0, racial: 0, bonus: 0 }
+    const counts: Record<string, number> = { all: 0, racial: 0, bonus: 0 }
 
     for (const profile of spellProfiles) {
       const profileItems = groupedItems.get(profile.id) ?? []
@@ -322,19 +328,38 @@ export function SpellsPage() {
         ? profileItems.filter((item) => item.kind === 'cantrip').length +
           (preparedCasterItemsByProfile.get(profile.id)?.length ?? 0)
         : profileItems.length
-      const view: Exclude<SpellView, 'all'> =
+      const view =
         profile.id === SPECIAL_SPELL_PROFILE_ID
           ? 'bonus'
           : profile.type === 'racial'
             ? 'racial'
-            : 'class'
+            : profile.id
 
-      counts[view] += count
+      counts[view] = (counts[view] ?? 0) + count
       counts.all += count
     }
 
     return counts
   }, [detailsByProfileId, groupedItems, preparedCasterItemsByProfile, spellProfiles])
+
+  const spellView =
+    selectedSpellView.startsWith('class:') &&
+    !classSpellProfiles.some((profile) => profile.id === selectedSpellView)
+      ? 'all'
+      : selectedSpellView
+
+  const spellViewTabs = useMemo(
+    () => [
+      { value: 'all' as const, label: 'All' },
+      ...classSpellProfiles.map((profile) => ({
+        value: profile.id as ClassSpellView,
+        label: profile.className ?? profile.label,
+      })),
+      { value: 'racial' as const, label: 'Racial' },
+      { value: 'bonus' as const, label: 'Bonus' },
+    ],
+    [classSpellProfiles],
+  )
 
   const visibleSpellProfiles = useMemo(
     () =>
@@ -342,7 +367,7 @@ export function SpellsPage() {
         if (spellView === 'all') return true
         if (spellView === 'bonus') return profile.id === SPECIAL_SPELL_PROFILE_ID
         if (spellView === 'racial') return profile.type === 'racial'
-        return profile.type === 'class'
+        return profile.id === spellView
       }),
     [spellProfiles, spellView],
   )
@@ -625,14 +650,7 @@ export function SpellsPage() {
                     role="tablist"
                     aria-label="Spell view"
                   >
-                    {(
-                      [
-                        { value: 'all', label: 'All' },
-                        { value: 'class', label: 'Class' },
-                        { value: 'racial', label: 'Racial' },
-                        { value: 'bonus', label: 'Bonus' },
-                      ] as const
-                    ).map(({ value, label }) => {
+                    {spellViewTabs.map(({ value, label }) => {
                       const active = spellView === value
                       return (
                         <button
@@ -640,7 +658,7 @@ export function SpellsPage() {
                           type="button"
                           role="tab"
                           aria-selected={active}
-                          onClick={() => setSpellView(value)}
+                          onClick={() => setSelectedSpellView(value)}
                           className={cn(
                             'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',
                             active

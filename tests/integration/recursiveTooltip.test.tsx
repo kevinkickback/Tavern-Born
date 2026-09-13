@@ -87,14 +87,119 @@ describe('RenderedEntryWithTooltip', () => {
       'ring-1',
     )
     expect(thirdTrigger.getAttribute('data-recursive-preview-active')).toBe('true')
-    expect(screen.getByText('1 of 3')).toBeTruthy()
-    expect(screen.getByText('2 of 3')).toBeTruthy()
-    expect(screen.getByText('3 of 3')).toBeTruthy()
+    const historyControls = screen.getAllByLabelText('Preview history') as HTMLSelectElement[]
+    expect(historyControls.map((control) => control.value)).toEqual(['1', '2'])
+    expect(historyControls[1]?.textContent).toContain('1/3 First')
+    expect(historyControls[1]?.textContent).toContain('2/3 Second')
+    expect(historyControls[1]?.textContent).toContain('3/3 Third')
+    expect(screen.queryByTitle('Back one preview')).toBeNull()
+    expect(screen.queryByTitle('Close tooltip')).toBeNull()
+    expect(screen.queryByTitle('Close this preview')).toBeNull()
+  })
 
-    fireEvent.click(screen.getByTitle('Close tooltip'))
-    expect(firstTrigger.hasAttribute('data-recursive-preview-active')).toBe(false)
-    expect(secondTrigger.hasAttribute('data-recursive-preview-active')).toBe(false)
-    expect(thirdTrigger.hasAttribute('data-recursive-preview-active')).toBe(false)
+  test('navigates backward through the history control without redundant buttons', () => {
+    const recursiveLookup = buildRecursiveLookup({
+      conditions: [
+        { name: 'First', source: 'PHB', entries: ['See {@condition Second|PHB}.'] },
+        { name: 'Second', source: 'PHB', entries: ['See {@condition Third|PHB}.'] },
+        { name: 'Third', source: 'PHB', entries: ['Third details.'] },
+      ],
+    })
+
+    render(
+      <RenderedEntryWithTooltip
+        entry="Start with {@condition First|PHB}."
+        recursiveLookup={recursiveLookup}
+      />,
+    )
+
+    fireEvent.mouseMove(screen.getByText('First'))
+    fireEvent.mouseMove(document.querySelector('[data-hover-name="Second"]') as Element)
+    fireEvent.mouseMove(document.querySelector('[data-hover-name="Third"]') as Element)
+    expect(screen.getAllByRole('dialog')).toHaveLength(3)
+
+    const historyControls = screen.getAllByLabelText('Preview history')
+    const deepestHistory = historyControls[historyControls.length - 1] as HTMLSelectElement
+    fireEvent.change(deepestHistory, { target: { value: '1' } })
+
+    expect(screen.getAllByRole('dialog')).toHaveLength(2)
+    expect(screen.queryByRole('dialog', { name: 'Third preview' })).toBeNull()
+    expect(screen.getByRole('dialog', { name: 'Second preview' })).toBeTruthy()
+
+    fireEvent.change(screen.getByLabelText('Preview history'), { target: { value: '0' } })
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    expect(screen.getByRole('dialog', { name: 'First preview' })).toBeTruthy()
+    expect(screen.queryByLabelText('Preview history')).toBeNull()
+  })
+
+  test('pins only the selected deep preview and keeps its history navigable', () => {
+    const recursiveLookup = buildRecursiveLookup({
+      conditions: [
+        { name: 'First', source: 'PHB', entries: ['See {@condition Second|PHB}.'] },
+        { name: 'Second', source: 'PHB', entries: ['See {@condition Third|PHB}.'] },
+        { name: 'Third', source: 'PHB', entries: ['Third details.'] },
+      ],
+    })
+
+    render(
+      <RenderedEntryWithTooltip
+        entry="Start with {@condition First|PHB}."
+        recursiveLookup={recursiveLookup}
+      />,
+    )
+
+    fireEvent.mouseMove(screen.getByText('First'))
+    fireEvent.mouseMove(document.querySelector('[data-hover-name="Second"]') as Element)
+    fireEvent.mouseMove(document.querySelector('[data-hover-name="Third"]') as Element)
+    const thirdPreview = screen.getByRole('dialog', { name: 'Third preview' })
+    thirdPreview.getBoundingClientRect = () =>
+      ({
+        bottom: 380,
+        height: 200,
+        left: 220,
+        right: 540,
+        top: 180,
+        width: 320,
+        x: 220,
+        y: 180,
+        toJSON: () => ({}),
+      }) as DOMRect
+    const pinButtons = screen.getAllByTitle('Pin tooltip')
+    fireEvent.click(pinButtons[pinButtons.length - 1] as Element)
+
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+    const pinnedPreview = screen.getByRole('dialog', { name: 'Third preview' })
+    expect(pinnedPreview.style.left).toBe('220px')
+    expect(pinnedPreview.style.top).toBe('180px')
+    expect(screen.getByTitle('Unpin tooltip')).toBeTruthy()
+
+    pinnedPreview.getBoundingClientRect = () =>
+      ({
+        bottom: 380,
+        height: 200,
+        left: 220,
+        right: 540,
+        top: 180,
+        width: 320,
+        x: 220,
+        y: 180,
+        toJSON: () => ({}),
+      }) as DOMRect
+    const dragHandle = screen.getByRole('button', { name: /Move Third preview/ })
+    fireEvent.pointerDown(dragHandle, { button: 0, clientX: 240, clientY: 200, pointerId: 7 })
+    fireEvent.pointerMove(dragHandle, { clientX: 300, clientY: 260, pointerId: 7 })
+    fireEvent.pointerUp(dragHandle, { clientX: 300, clientY: 260, pointerId: 7 })
+    expect(pinnedPreview.style.left).toBe('280px')
+    expect(pinnedPreview.style.top).toBe('240px')
+
+    fireEvent.change(screen.getByLabelText('Preview history'), { target: { value: '1' } })
+    const previousPreview = screen.getByRole('dialog', { name: 'Second preview' })
+    expect(previousPreview.style.left).toBe('280px')
+    expect(previousPreview.style.top).toBe('240px')
+    expect(screen.queryByRole('dialog', { name: 'Third preview' })).toBeNull()
+    expect(screen.queryByTitle('Dock preview left')).toBeNull()
+    expect(screen.queryByTitle('Dock preview right')).toBeNull()
+    expect(screen.queryByTitle('Close this preview')).toBeNull()
   })
 
   test('opens reference previews from the keyboard and restores focus on close', async () => {
@@ -119,6 +224,12 @@ describe('RenderedEntryWithTooltip', () => {
 
     await user.keyboard('{Enter}')
     expect(document.activeElement).toBe(screen.getByTitle('Unpin tooltip'))
+    const pinnedPreview = screen.getByRole('dialog', { name: 'Prone preview' })
+    fireEvent.keyDown(screen.getByRole('button', { name: /Move Prone preview/ }), {
+      key: 'ArrowRight',
+    })
+    expect(pinnedPreview.style.left).toBe('18px')
+    expect(pinnedPreview.style.top).toBe('40px')
     await user.keyboard('{Escape}')
 
     expect(screen.queryByRole('dialog', { name: 'Prone preview' })).toBeNull()
@@ -174,6 +285,14 @@ describe('RenderedEntryWithTooltip', () => {
     expect(document.querySelector('[data-recursive-tooltip-depth="2"]')?.textContent).toContain(
       'Second-level tooltip content.',
     )
+
+    const pinButtons = screen.getAllByTitle('Pin tooltip')
+    fireEvent.click(pinButtons[pinButtons.length - 1] as Element)
+    expect(screen.queryByRole('tooltip')).toBeNull()
+    expect(screen.getByRole('dialog', { name: 'Second preview' })).toBeTruthy()
+
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Second preview' }), { key: 'Escape' })
+    expect(screen.getByRole('dialog', { name: 'First preview' })).toBeTruthy()
   })
 
   test('renders canonical spell casing instead of a lowercase stored reference', () => {

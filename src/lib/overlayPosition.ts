@@ -2,6 +2,16 @@ export const TITLE_BAR_BASE_HEIGHT = 32
 export const OVERLAY_VIEWPORT_MARGIN = 8
 export const OVERLAY_GAP = 4
 
+export interface PreviewPosition {
+  left: number
+  top: number
+}
+
+export interface PreviewBounds extends PreviewPosition {
+  width: number
+  height: number
+}
+
 interface RectBounds {
   top: number
   right: number
@@ -52,6 +62,24 @@ export function getTitleBarCollisionPadding(
   }
 }
 
+export function clampPreviewPosition(
+  position: PreviewPosition,
+  overlay: OverlaySize,
+  viewport: ViewportSize,
+  safeTop: number,
+): PreviewPosition {
+  const maxLeft = Math.max(
+    OVERLAY_VIEWPORT_MARGIN,
+    viewport.width - overlay.width - OVERLAY_VIEWPORT_MARGIN,
+  )
+  const maxTop = Math.max(safeTop, viewport.height - overlay.height - OVERLAY_VIEWPORT_MARGIN)
+
+  return {
+    left: Math.max(OVERLAY_VIEWPORT_MARGIN, Math.min(position.left, maxLeft)),
+    top: Math.max(safeTop, Math.min(position.top, maxTop)),
+  }
+}
+
 export function getFloatingPreviewPosition(
   trigger: RectBounds,
   overlay: OverlaySize,
@@ -64,7 +92,7 @@ export function getFloatingPreviewPosition(
   )
   const left = Math.max(OVERLAY_VIEWPORT_MARGIN, Math.min(trigger.left, maxLeft))
   const aboveTop = trigger.top - OVERLAY_GAP - overlay.height
-  const belowTop = trigger.bottom + OVERLAY_GAP
+  const belowTop = Math.max(trigger.bottom + OVERLAY_GAP, safeTop)
   const maxTop = Math.max(safeTop, viewport.height - overlay.height - OVERLAY_VIEWPORT_MARGIN)
 
   if (aboveTop >= safeTop) return { left, top: aboveTop }

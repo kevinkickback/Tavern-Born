@@ -114,7 +114,9 @@ describe('FeatsPage bonus feat configuration', () => {
     render(<FeatsPage />)
 
     expect(screen.queryByRole('tab', { name: /Needs Setup/ })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Add Bonus Feat' }))
+    const addBonusFeat = screen.getByRole('button', { name: 'Add Bonus Feat' })
+    expect(addBonusFeat.className).toContain('bg-primary')
+    fireEvent.click(addBonusFeat)
     fireEvent.click(screen.getByRole('button', { name: 'Select Skilled' }))
 
     expect(screen.queryByRole('dialog', { name: 'Select bonus feat' })).toBeNull()
@@ -159,6 +161,9 @@ describe('FeatsPage bonus feat configuration', () => {
       expect(button.className).toContain('text-accent')
       expect(button.getAttribute('data-feat-edit-setup-btn')).toBe('true')
     }
+    const addFeatButton = screen.getByRole('button', { name: 'Add Feat' })
+    expect(addFeatButton.className).toContain('bg-primary')
+    expect(addFeatButton.parentElement?.parentElement?.className).toContain('pb-2')
     expect(screen.getByRole('status').textContent).toContain(
       "You can revise a configured feat's spells, skills, or other choices later.",
     )

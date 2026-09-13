@@ -19,9 +19,12 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
     classSource: 'PHB',
     background: 'Sage',
     backgroundSource: 'PHB',
-    level: 2,
+    level: 3,
     experiencePoints: 0,
-    classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
+    classProgression: [
+      { name: 'Wizard', source: 'PHB', levels: 2 },
+      { name: 'Cleric', source: 'PHB', levels: 1 },
+    ],
     abilityScores: {
       strength: 8,
       dexterity: 14,
@@ -47,6 +50,17 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
           type: 'class',
           label: 'Wizard (Lv 2)',
           className: 'Wizard',
+          classSource: 'PHB',
+          cantrips: [],
+          spellsKnown: [],
+          preparedSpells: [],
+          alwaysPrepared: false,
+        },
+        {
+          id: 'class:Cleric|PHB',
+          type: 'class',
+          label: 'Cleric (Lv 1)',
+          className: 'Cleric',
           classSource: 'PHB',
           cantrips: [],
           spellsKnown: [],
@@ -122,6 +136,16 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
         spellcastingAbility: 'intelligence',
         spellSlotProgression: [[2], [3]],
       },
+      {
+        name: 'Cleric',
+        source: 'PHB',
+        classFeatures: [],
+        classFeatureRefs: [],
+        casterProgression: 'full',
+        spellcastingAbility: 'wisdom',
+        preparedSpells: '<$level$> + <$wis_mod$>',
+        spellSlotProgression: [[2]],
+      },
     ],
     backgrounds: [],
     spells: [
@@ -195,6 +219,23 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
   await ensureStartupPromptResolved(page, 'e2e-spell-seed', gameData)
 
   await expect(page.getByRole('heading', { name: 'Spells', exact: true })).toBeVisible()
+
+  const spellViewTabs = page.getByRole('tablist', { name: 'Spell view' })
+  const wizardTab = spellViewTabs.getByRole('tab', { name: /Wizard/ })
+  const clericTab = spellViewTabs.getByRole('tab', { name: /Cleric/ })
+  await expect(wizardTab).toBeVisible()
+  await expect(clericTab).toBeVisible()
+  await expect(spellViewTabs.getByRole('tab', { name: /^Class(?:\s+\d+)?$/ })).toHaveCount(0)
+
+  await clericTab.click()
+  await expect(clericTab).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('main').getByText('Cleric (Lv 1)')).toBeVisible()
+  await expect(page.locator('main').getByText('Wizard (Lv 2)')).toHaveCount(0)
+
+  await wizardTab.click()
+  await expect(wizardTab).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('main').getByText('Wizard (Lv 2)')).toBeVisible()
+  await expect(page.locator('main').getByText('Cleric (Lv 1)')).toHaveCount(0)
 
   // Seed Magic Missile into the Bonus Spells profile via IndexedDB, then reload.
   await page.evaluate(

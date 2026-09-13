@@ -59,7 +59,7 @@ new tests land and do not lower them to merge a change.
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
 - Header HP/AC launch controls and one-time anchored hint coverage in tests/integration/appHeader.test.tsx
-- Title-bar-safe collision padding and measured floating-preview positioning across supported interface scales
+- Title-bar-safe collision padding and measured floating-preview positioning across supported interface scales, plus nested-only history navigation, streamlined transient controls, selected-entry pinning without a position jump, and constrained pointer/keyboard movement
 - HP and AC management modal coverage in tests/integration/hitPointsModal.test.tsx and tests/integration/armorClassModal.test.tsx
 - Rules and Sources page behavior/layout coverage in tests/integration/rulesPage.test.tsx and tests/integration/sourcesPageLayout.test.tsx
 - Conditions tab, data-driven rule text/tooltip, whole-card toggle, and exhaustion-state coverage in tests/integration/conditionsPage.test.tsx

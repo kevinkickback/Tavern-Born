@@ -5,7 +5,8 @@
 
 * Adjusted color / contrast of the Light theme
 * Window controls (minimize/maximize/close) no longer obscure tooltips/preview windows
-* 
+* Tooltip preview windows enhanced. Drag to possition after pinning, return to a previous window, and more
+* Spells page: Classes now have their own individual tabs instead of all being grouped under "Classes"
 
 
 

@@ -1038,7 +1038,7 @@ export function FeatsPage() {
 
                   {showBonusGroup && (
                     <section className="w-full">
-                      <div className="flex h-10 items-center justify-between border-b border-border px-1">
+                      <div className="flex min-h-10 items-center justify-between border-b border-border px-1 pt-1 pb-2">
                         <div className="flex items-center gap-2">
                           <Lightning className="h-4 w-4 text-primary" weight="duotone" />
                           <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
@@ -1052,7 +1052,7 @@ export function FeatsPage() {
                           {bonusFeats.length > 0 && (
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="default"
                               className="h-8 cursor-pointer px-3 text-xs"
                               onClick={() => setBonusModalOpen(true)}
                             >
@@ -1105,7 +1105,7 @@ export function FeatsPage() {
                           </p>
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="default"
                             className="mt-4 h-8 cursor-pointer px-3 text-xs"
                             onClick={() => setBonusModalOpen(true)}
                           >

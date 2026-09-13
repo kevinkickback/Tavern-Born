@@ -263,7 +263,6 @@ export function BuildRacePage() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-semibold text-sm truncate">{race.name}</div>
-                            <div className="text-xs text-muted-foreground">{race.source}</div>
                           </div>
                         </button>
 

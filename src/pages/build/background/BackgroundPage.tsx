@@ -511,7 +511,6 @@ export function BuildBackgroundPage() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-semibold text-sm truncate">{bg.name}</div>
-                            <div className="text-xs text-muted-foreground">{bg.source}</div>
                           </div>
                         </button>
                         <div className="flex max-w-[50%] min-w-0 flex-wrap items-center justify-end gap-1">

@@ -206,7 +206,7 @@ export function AppHeader() {
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="relative flex size-10 items-center justify-center tabular-nums"
+                      className="relative flex size-10 cursor-pointer items-center justify-center tabular-nums"
                       data-testid="header-ac-badge"
                       aria-label={`Manage Armor Class. Current ${effectiveAC}`}
                       onClick={() => {
@@ -227,7 +227,7 @@ export function AppHeader() {
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="relative flex size-10 items-center justify-center tabular-nums"
+                      className="relative flex size-10 cursor-pointer items-center justify-center tabular-nums"
                       data-testid="header-hp-badge"
                       aria-label={`Manage hit points. Maximum ${effectiveMaxHP}`}
                       onClick={() => {

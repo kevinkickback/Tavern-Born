@@ -137,6 +137,8 @@ describe('app header character summary', () => {
 
     expect(screen.getByTestId('header-ac-badge').textContent).toContain('Armor Class 18')
     expect(screen.getByTestId('header-hp-badge').textContent).toContain('Maximum Hit Points 42')
+    expect(screen.getByTestId('header-ac-badge').className).toContain('cursor-pointer')
+    expect(screen.getByTestId('header-hp-badge').className).toContain('cursor-pointer')
     expect(screen.getByText('18')).toBeTruthy()
     expect(screen.getByText('42')).toBeTruthy()
   })
