@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -384,6 +384,7 @@ export function FeatsPage() {
   const { ledger, getSourcesRowsBySection } = useProvenanceLedger()
   const [listCollapsed, setListCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [selectedFeatName, setSelectedFeatName] = useState<string | null>(null)
   const [featView, setFeatView] = useState<FeatView>('all')
   const [bonusModalOpen, setBonusModalOpen] = useState(false)
@@ -401,6 +402,7 @@ export function FeatsPage() {
   const handleSelectFeat = useCallback((featName: string) => {
     setSelectedFeatName(featName)
     setDetailCollapsed(false)
+    setCompactPane('right')
   }, [])
 
   // ASI calculations for the warning banner (multiclass-aware)
@@ -713,6 +715,10 @@ export function FeatsPage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setListCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Feats"
+          compactRightLabel="Feat details"
           rightFixedWidth="var(--workspace-master-width)"
           left={
             <>

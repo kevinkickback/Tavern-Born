@@ -15,6 +15,7 @@ const item: Item5e = {
   type: 'MA',
   ac: 13,
   weight: 20,
+  value: 5000,
 }
 
 describe('equipment commands', () => {
@@ -31,6 +32,7 @@ describe('equipment commands', () => {
         name: 'Chain Shirt',
         source: 'PHB',
         armorType: 'medium',
+        value: 5000,
         quantity: 1,
         equipped: false,
       }),

@@ -94,6 +94,12 @@ Only suppress the Biome exhaustive-deps rule when the pattern is intentional and
 
 Workbench-style pages use `WorkspacePage` as the flat parent surface. If a page has functional tabs or controls, place them in a full-width `WorkspacePaneHeader`, then put the scrolling content in `WorkspaceBody` with a centered max-width inner container.
 
+List/detail workspaces use the shared `SplitPane`. Give both compact panes concise, page-specific
+labels. Below the shared container breakpoint, `SplitPane` shows one full-width pane at a time;
+selection handlers that reveal details should control `compactPane` and select the right pane without
+changing the desktop `leftCollapsed` or `rightCollapsed` preferences. Toolbars inside a pane should
+respond to their own container width rather than the application viewport.
+
 Rules and Conditions are the reference tabbed pages. Their parent remains flat while each meaningful section may use its own bordered card. Sources is the reference for a flat configuration page with controls placed directly inside its constrained content area. Avoid wrapping the entire content area in a second card unless the page intentionally uses the dual-pane/workbench pattern.
 
 Settings and Compendium retain their established route-specific containers. Character cards and the sidebar remain full-bleed by design.

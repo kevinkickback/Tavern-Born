@@ -1,7 +1,7 @@
 import { Sword } from '@phosphor-icons/react'
 import { useMemo, useState } from 'react'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { AnchoredHint, WorkspaceBody, WorkspacePage } from '@/components/workspace'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
@@ -16,7 +16,10 @@ import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
-import { BuildClassDetailsPanel } from '@/pages/build/class/components/DetailsPanel'
+import {
+  BuildClassDetailsPanel,
+  type SelectedFeatureState,
+} from '@/pages/build/class/components/DetailsPanel'
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
@@ -40,6 +43,7 @@ export function BuildClassPage() {
   const classLookup = useClassLookup()
   const { selectClass } = useUnifiedClassSelection()
   const { applyClassEquipmentChoice } = useClassProvenanceMutations()
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const {
     selectedClassTab,
     classPickerOpen,
@@ -108,8 +112,14 @@ export function BuildClassPage() {
     onSelectionApplied: (feature) => {
       setSelectedFeature(feature)
       setDetailCollapsed(false)
+      setCompactPane('right')
     },
   })
+
+  const handleSelectFeature = (feature: SelectedFeatureState) => {
+    setSelectedFeature(feature)
+    setCompactPane('right')
+  }
 
   const handleClassChange = (className: string, classSource?: string) => {
     if (!character) return
@@ -278,6 +288,10 @@ export function BuildClassPage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Class levels"
+          compactRightLabel="Class details"
           leftWidth="var(--workspace-master-width)"
           left={
             <BuildClassLevelsPanel
@@ -327,8 +341,11 @@ export function BuildClassPage() {
                 if (!viewingClassData) return
                 applyClassEquipmentChoice(viewingClassData, blockIndex, choice)
               }}
-              onSelectFeature={setSelectedFeature}
-              onExpandDetails={() => setDetailCollapsed(false)}
+              onSelectFeature={handleSelectFeature}
+              onExpandDetails={() => {
+                setDetailCollapsed(false)
+                setCompactPane('right')
+              }}
               onAsiReset={handleAsiReset}
               onSetAsiModeByLevel={setAsiMode}
               onClearFeatSelectionsForAsi={clearFeatSelectionForAsi}

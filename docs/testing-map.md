@@ -50,7 +50,8 @@ new tests land and do not lower them to merge a change.
 	- Grouped tool-choice expansion coverage (gaming set/musical instrument/artisan's tools/any-tool)
 	- `formatWeaponCategoryLabel` weapon category key → display label
 - Compendium entry shaping and filtering in src/lib/compendiumEntries.ts, including 5e / 5.5e / Both edition classification and composition with type, source, and text filters
-- Equipment page detail rendering, recursive link tooltips, and persistent inventory headers in tests/integration/equipmentPage.test.tsx; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
+- Equipment page detail rendering, category-matched detail icons, type-aware metadata, canonical armor enrichment, exceptional populated statistics, theme-surface styling, recursive link tooltips, persistent inventory headers, and the container-responsive inventory summary in tests/integration/equipmentPage.test.tsx, tests/unit/itemDetailFields.test.ts, and tests/e2e/equipment.spec.ts; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
+- Shared compact list/detail pane behavior in tests/integration/splitPane.test.tsx and tests/e2e/responsive-workspaces.spec.ts, including every split workspace and persistent secondary navigation at the 900x700 minimum app window
 - Atomic equipment command coverage for add/remove/manual proficiency alignment, duplicate names, and retained source tags
 - Armor-restriction reconciliation coverage for nonproficient armor, duplicate body/shield slots,
 	legacy type-only armor records, and preservation of other equipped gear
@@ -59,6 +60,7 @@ new tests land and do not lower them to merge a change.
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
 - Header HP/AC launch controls and one-time anchored hint coverage in tests/integration/appHeader.test.tsx
+- Character-card action behavior and consistent accent-colored level, race, and class icons in tests/integration/characterCard.test.tsx
 - Title-bar-safe collision padding and measured floating-preview positioning across supported interface scales, plus nested-only history navigation, streamlined transient controls, selected-entry pinning without a position jump, and constrained pointer/keyboard movement
 - HP and AC management modal coverage in tests/integration/hitPointsModal.test.tsx and tests/integration/armorClassModal.test.tsx
 - Rules and Sources page behavior/layout coverage in tests/integration/rulesPage.test.tsx and tests/integration/sourcesPageLayout.test.tsx

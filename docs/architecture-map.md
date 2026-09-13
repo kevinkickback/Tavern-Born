@@ -13,6 +13,9 @@ This document describes the current Tavern-Born runtime architecture and where r
 2. Application shell and routing
 - Purpose: route composition, global providers, app-level overlays.
 - Key files: src/main.tsx, src/App.tsx, src/components/layout/AppLayout.tsx.
+- Shared `SplitPane` workspaces switch from side-by-side panes to a labeled, one-pane-at-a-time view
+  when their own container is narrower than 840px; compact pane state is separate from the user's
+  desktop collapse choices. The secondary workspace navigation remains permanently visible.
 - Bundled files from `public/` resolve through `src/lib/assetUrls.ts`; this preserves Vite dev-server
   URLs while producing relative URLs for packaged Electron's `file://` renderer. Class icons,
   placeholder portraits, organization artwork, the About logo, and PDF templates share this path.
@@ -56,7 +59,7 @@ Spellcasting note:
   source-aware recursive previews consistently across build, selection, and Compendium detail
   surfaces. Static exports, text projections, and compact non-interactive summaries use the
   lower-level string renderer explicitly.
-- Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through the same interactive path; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items.
+- Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through the same interactive path; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items. The detail metadata grid is type-aware and omits irrelevant empty fields while retaining any exceptional populated statistics.
 - Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Name-only fallback is used only when the reference has no source and is deterministic.
 - Character creation uses src/hooks/data/useWizardGameData.ts as its draft-scoped data boundary. Wizard steps receive filtered collections or resolved entities and never read the raw game-data store directly.
 - Recursive tooltip lookup construction lives in src/lib/renderer/recursiveTooltip.ts. Raw and filtered callers pass an explicit collection set to the same builder, including `itemsBase`.

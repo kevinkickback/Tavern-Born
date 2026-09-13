@@ -108,6 +108,8 @@ export function PortraitPicker({
         rightCollapsed={libraryCollapsed}
         onLeftCollapsedChange={setPreviewCollapsed}
         onRightCollapsedChange={setLibraryCollapsed}
+        compactLeftLabel="Preview"
+        compactRightLabel="Portrait library"
         showCollapseControls={collapsible}
         left={
           <section className="flex h-full w-full flex-col overflow-hidden">

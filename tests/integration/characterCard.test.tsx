@@ -16,7 +16,7 @@ describe('CharacterCard', () => {
     const onDelete = vi.fn()
     const onExport = vi.fn()
 
-    render(
+    const { container } = render(
       <CharacterCard
         character={character}
         onLoad={onLoad}
@@ -29,6 +29,12 @@ describe('CharacterCard', () => {
       screen.getByRole('img', { name: 'Accessible Hero portrait' }).getAttribute('src'),
     ).toContain('placeholder_char_card.jpg')
     expect(screen.getByText('Level 1').textContent).toBe('Level 1')
+    const detailIcons = container.querySelectorAll('[data-slot="character-card-detail-icon"]')
+    expect(detailIcons).toHaveLength(3)
+    for (const icon of detailIcons) {
+      expect(icon.getAttribute('class')).toContain('text-primary')
+      expect(icon.getAttribute('class')).not.toContain('dark:text-accent-foreground')
+    }
 
     await user.click(screen.getByRole('button', { name: 'Export Accessible Hero' }))
     expect(onExport).toHaveBeenCalledWith(character)

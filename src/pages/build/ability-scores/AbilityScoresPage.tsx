@@ -2,7 +2,7 @@ import { Barbell, Coins, ListNumbers, PencilSimple } from '@phosphor-icons/react
 import { useMemo, useState } from 'react'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Progress } from '@/components/ui/progress'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -51,7 +51,13 @@ export function BuildAbilityScoresPage() {
   const { applyRaceSelection, applyRaceAsiChoices } = useRaceProvenanceMutations()
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [selectedAbility, setSelectedAbility] = useState<AbilityName>('charisma')
+
+  const handleSelectAbility = (ability: AbilityName) => {
+    setSelectedAbility(ability)
+    setCompactPane('right')
+  }
 
   const method = character?.variantRules?.abilityScoreMethod ?? 'standard-array'
 
@@ -144,6 +150,10 @@ export function BuildAbilityScoresPage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Ability scores"
+          compactRightLabel="Ability details"
           rightFixedWidth="var(--workspace-master-width)"
           left={
             <>
@@ -236,7 +246,7 @@ export function BuildAbilityScoresPage() {
                           pointBuyRemaining={pointBuyRemaining}
                           setScore={setScore}
                           selectedAbility={selectedAbility}
-                          onSelectAbility={setSelectedAbility}
+                          onSelectAbility={handleSelectAbility}
                         />
                       </TabsContent>
 
@@ -246,7 +256,7 @@ export function BuildAbilityScoresPage() {
                           racialBonuses={displayBonuses}
                           setAllScores={setAllScores}
                           selectedAbility={selectedAbility}
-                          onSelectAbility={setSelectedAbility}
+                          onSelectAbility={handleSelectAbility}
                         />
                       </TabsContent>
 
@@ -256,7 +266,7 @@ export function BuildAbilityScoresPage() {
                           racialBonuses={displayBonuses}
                           setScore={setScore}
                           selectedAbility={selectedAbility}
-                          onSelectAbility={setSelectedAbility}
+                          onSelectAbility={handleSelectAbility}
                         />
                       </TabsContent>
                     </Tabs>

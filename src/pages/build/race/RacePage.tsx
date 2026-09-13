@@ -13,7 +13,7 @@ import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -63,6 +63,7 @@ export function BuildRacePage() {
   const [raceSearch, setRaceSearch] = useState('')
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [featModalOpen, setFeatModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
   const [optionsPendingFeat, setOptionsPendingFeat] = useState<Feat5e | null>(null)
@@ -193,6 +194,10 @@ export function BuildRacePage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Races"
+          compactRightLabel="Race details"
           className={cn(
             'my-0 h-full overflow-visible',
             !leftCollapsed && !detailCollapsed && 'gap-3',
@@ -248,6 +253,7 @@ export function BuildRacePage() {
                           onClick={() => {
                             const firstSubrace = namedSubraces[0]
                             applyRaceSelection(race, firstSubrace, 0)
+                            setCompactPane('right')
                           }}
                           className="flex items-center gap-3 min-w-0 flex-1 text-left"
                         >

@@ -7,6 +7,7 @@
 * Window controls (minimize/maximize/close) no longer obscure tooltips/preview windows
 * Tooltip preview windows enhanced. Drag to possition after pinning, return to a previous window, and more
 * Spells page: Classes now have their own individual tabs instead of all being grouped under "Classes"
+* Equipment page: Inventory and Item details panes slighlty redesigned.
 
 
 

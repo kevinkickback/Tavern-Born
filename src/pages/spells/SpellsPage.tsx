@@ -640,6 +640,8 @@ export function SpellsPage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setListCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactLeftLabel="Spells"
+          compactRightLabel="Spellcasting"
           rightFixedWidth="var(--workspace-master-width)"
           left={
             <>

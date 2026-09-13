@@ -47,6 +47,7 @@ export const CharacterCard = memo(function CharacterCard({
       : 'h-10 min-w-12 px-3.5'
   const actionIconClass = isSmall ? 'size-4' : 'size-5'
   const footerTextClass = isSmall ? 'text-[9px]' : isMedium ? 'text-[10px]' : 'text-xs'
+  const detailIconClass = cn('text-primary', isSmall ? 'size-3.5' : 'size-4')
   const portraitTransform = character.portraitTransform
   const portraitZoom = (portraitTransform?.zoom ?? 100) / 100
   const portraitPanX = portraitTransform?.panX ?? 0
@@ -135,7 +136,9 @@ export const CharacterCard = memo(function CharacterCard({
             <div className="flex items-center gap-2 text-foreground/90">
               <span className="font-semibold">Level {getTotalCharacterLevel(character)}</span>
               <Crown
-                className={cn('text-accent-foreground', isSmall ? 'size-3.5' : 'size-4')}
+                data-slot="character-card-detail-icon"
+                data-detail-icon="level"
+                className={detailIconClass}
                 weight="fill"
               />
             </div>
@@ -143,7 +146,9 @@ export const CharacterCard = memo(function CharacterCard({
               <div className="flex items-center gap-2 text-foreground/90">
                 <span className="font-medium">{character.race}</span>
                 <User
-                  className={cn('text-accent-foreground', isSmall ? 'size-3.5' : 'size-4')}
+                  data-slot="character-card-detail-icon"
+                  data-detail-icon="race"
+                  className={detailIconClass}
                   weight="fill"
                 />
               </div>
@@ -152,7 +157,9 @@ export const CharacterCard = memo(function CharacterCard({
               <div className="flex items-center gap-2 text-foreground/90">
                 <span className="font-medium">{character.class}</span>
                 <Sword
-                  className={cn('text-accent-foreground', isSmall ? 'size-3.5' : 'size-4')}
+                  data-slot="character-card-detail-icon"
+                  data-detail-icon="class"
+                  className={detailIconClass}
                   weight="fill"
                 />
               </div>

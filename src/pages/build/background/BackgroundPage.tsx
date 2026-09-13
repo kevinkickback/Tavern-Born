@@ -4,7 +4,7 @@ import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -67,6 +67,7 @@ export function BuildBackgroundPage() {
   const filteredBackgroundLookup = useMemo(() => buildBackgroundLookup(backgrounds), [backgrounds])
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [bgSearch, setBgSearch] = useState('')
   const { applyBackgroundSelection, applyBackgroundAbilityChoices } =
     useBackgroundProvenanceMutations()
@@ -251,6 +252,7 @@ export function BuildBackgroundPage() {
       }
     }
     if (detailCollapsed) setDetailCollapsed(false)
+    setCompactPane('right')
   }
 
   const skills = getBackgroundSkillNames(selectedBg)
@@ -456,6 +458,10 @@ export function BuildBackgroundPage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Backgrounds"
+          compactRightLabel="Background details"
           leftWidth="var(--workspace-master-width)"
           left={
             <div className="flex h-full min-h-0 flex-col">

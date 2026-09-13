@@ -1,7 +1,7 @@
 import { Certificate } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
@@ -47,6 +47,7 @@ export function BuildProficienciesPage() {
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [focused, setFocused] = useState<ProfFocus | null>(null)
   const [activeTab, setActiveTab] = useState<ProficiencyTabValue>('skills')
 
@@ -89,6 +90,7 @@ export function BuildProficienciesPage() {
       } else {
         setFocused(focus)
       }
+      setCompactPane('right')
     },
     [itemsByName, languagesByName],
   )
@@ -243,6 +245,10 @@ export function BuildProficienciesPage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Proficiencies"
+          compactRightLabel="Proficiency details"
           rightFixedWidth="var(--workspace-master-width)"
           left={
             <>
@@ -290,6 +296,7 @@ export function BuildProficienciesPage() {
                     onFocusChange={handleFocusChange}
                     onExpandDetails={() => {
                       if (detailCollapsed) setDetailCollapsed(false)
+                      setCompactPane('right')
                     }}
                     onResolveChoiceSelection={resolveChoiceSelection}
                     onToggleExpertise={toggleExpertise}

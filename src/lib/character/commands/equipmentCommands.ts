@@ -27,6 +27,7 @@ function buildEquipment(item: Item5e): Equipment {
     attuned: false,
     description: '',
     weight: item.weight,
+    value: item.value,
     rarity: item.rarity,
     reqAttune: Boolean(item.reqAttune),
     ac: item.ac,
