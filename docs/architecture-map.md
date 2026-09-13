@@ -69,6 +69,7 @@ Current implementation notes:
 - HP reads resolve class/Constitution HP, per-level gain records, lasting adjustments, and an optional exact override in that order. Current and temporary HP remain mutable session values.
 - AC reads across UI and PDF surfaces resolve equipped armor and Dexterity, then lasting adjustments, then an optional exact override. The legacy `character.armorClass` field is not a display source.
 - The header heart and shield open the HP and AC management modals. A one-time anchored hint advertises these controls from the first Builder page.
+- Portaled tooltips and recursive rules previews share the scale-aware native title-bar safe inset in `src/lib/overlayPosition.ts`; measured preview cards are repositioned after layout so they cannot sit beneath Electron window controls.
 - Per-character Rules and Sources live in the Builder workspace's Options group. Rules are tabbed by Ruleset, Advancement, and Character Options; the selected ruleset itself remains fixed after creation.
 - Conditions is tabbed by Combat State, Exhaustion, Conditions, and Class Resources. Condition names and descriptions, including exhaustion rules, come from the loaded PHB/XPHB condition records selected for the character ruleset.
 

@@ -60,7 +60,6 @@ vi.mock('electron-updater', () => ({
     autoDownload: false,
     autoInstallOnAppQuit: false,
     allowDowngrade: false,
-    forceDevUpdateConfig: false,
     on: onMock,
     checkForUpdates: checkForUpdatesMock,
     downloadUpdate: downloadUpdateMock,

@@ -120,7 +120,9 @@ export function AppearancePanel() {
                     <div
                       className={cn(
                         'flex h-7 items-center gap-1.5 px-2 text-xs font-medium',
-                        isSelected ? 'text-accent-foreground' : 'text-foreground',
+                        isSelected
+                          ? 'text-[color:var(--color-accent-12)] dark:text-accent-foreground'
+                          : 'text-foreground',
                       )}
                     >
                       {isDark ? (
@@ -177,7 +179,9 @@ export function AppearancePanel() {
                     <div
                       className={cn(
                         'flex h-7 items-center gap-1.5 px-2 text-xs font-medium',
-                        isSelected ? 'text-accent-foreground' : 'text-foreground',
+                        isSelected
+                          ? 'text-[color:var(--color-accent-12)] dark:text-accent-foreground'
+                          : 'text-foreground',
                       )}
                     >
                       {label}

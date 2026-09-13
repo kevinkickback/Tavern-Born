@@ -1,5 +1,14 @@
 import { PushPin, X } from '@phosphor-icons/react'
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { createPortal } from 'react-dom'
 import { RecursiveTooltipChain } from '@/components/editor/RecursiveTooltipChain'
 import {
@@ -11,6 +20,7 @@ import {
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
 import { renderEntryCached } from '@/lib/entryRenderCache'
+import { getFloatingPreviewPosition, getTitleBarSafeTop } from '@/lib/overlayPosition'
 import {
   getEntryWithHoverTitles,
   getRecursiveHintPosition,
@@ -23,25 +33,22 @@ import {
   resolveRecursiveEntity,
 } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import type { Spell5e } from '@/types/5etools'
 
 const TOOLTIP_WIDTH = 320
-const GAP = 4
-const MARGIN = 8
 const HIDE_DELAY_MS = 200
 const EST_HEIGHT = 240
 
-type HintPos = { top: number; bottom?: never } | { bottom: number; top?: never }
-
 type HintState =
-  | { kind: 'spell'; spell: Spell5e; left: number; pos: HintPos; triggerElement: HTMLElement }
+  | { kind: 'spell'; spell: Spell5e; left: number; top: number; triggerElement: HTMLElement }
   | {
       kind: 'generic'
       title: string
       subtitle?: string
       html?: string
       left: number
-      pos: HintPos
+      top: number
       triggerElement: HTMLElement
     }
 
@@ -67,20 +74,13 @@ interface RenderedEntryWithTooltipProps {
   recursiveLookup: RecursiveLookup
 }
 
-function positionNearElement(rect: DOMRect): { left: number; pos: HintPos } {
-  const vw = window.innerWidth
-  const vh = window.innerHeight
-  const left = Math.max(MARGIN, Math.min(rect.left, vw - TOOLTIP_WIDTH - MARGIN))
-  const fitsAbove = rect.top - GAP - EST_HEIGHT >= MARGIN
-  const pos: HintPos = fitsAbove ? { bottom: vh - rect.top + GAP } : { top: rect.bottom + GAP }
-  return { left, pos }
-}
-
 export function RenderedEntryWithTooltip({
   entry,
   className,
   recursiveLookup,
 }: RenderedEntryWithTooltipProps) {
+  const uiScale = useAppPreferencesStore((state) => state.uiScale)
+  const safeTop = getTitleBarSafeTop(uiScale)
   const [hint, setHint] = useState<HintState | null>(null)
   const [recursiveHints, setRecursiveHints] = useState<RecursiveHintState[]>([])
   const [pinned, setPinned] = useState(false)
@@ -109,6 +109,34 @@ export function RenderedEntryWithTooltip({
     focusPreviewOnOpenRef.current = false
     tooltipRef.current?.querySelector<HTMLButtonElement>('button')?.focus()
   }, [hint])
+
+  useLayoutEffect(() => {
+    const tooltip = tooltipRef.current
+    const trigger = hint?.triggerElement
+    if (!tooltip || !trigger) return
+
+    const updatePosition = () => {
+      const position = getFloatingPreviewPosition(
+        trigger.getBoundingClientRect(),
+        { width: tooltip.offsetWidth || TOOLTIP_WIDTH, height: tooltip.offsetHeight || EST_HEIGHT },
+        { width: window.innerWidth, height: window.innerHeight },
+        safeTop,
+      )
+      tooltip.style.left = `${position.left}px`
+      tooltip.style.top = `${position.top}px`
+    }
+
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updatePosition)
+    resizeObserver?.observe(tooltip)
+
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      resizeObserver?.disconnect()
+    }
+  }, [hint, safeTop])
 
   const html = useMemo(
     () =>
@@ -174,7 +202,12 @@ export function RenderedEntryWithTooltip({
         el.getAttribute('data-hover-subclass-name') ?? undefined,
         el.getAttribute('data-hover-subclass-source') ?? undefined,
       )
-      const { left, pos } = positionNearElement(el.getBoundingClientRect())
+      const { left, top } = getFloatingPreviewPosition(
+        el.getBoundingClientRect(),
+        { width: TOOLTIP_WIDTH, height: EST_HEIGHT },
+        { width: window.innerWidth, height: window.innerHeight },
+        safeTop,
+      )
       setRecursiveHints([])
 
       if (normalizeKind(scopedReference.kind) === 'spell') {
@@ -184,7 +217,7 @@ export function RenderedEntryWithTooltip({
           scopedReference.source,
         )
         if (spell) {
-          setHint({ kind: 'spell', spell, left, pos, triggerElement: el })
+          setHint({ kind: 'spell', spell, left, top, triggerElement: el })
           return
         }
       }
@@ -196,9 +229,9 @@ export function RenderedEntryWithTooltip({
         formatSpellLevel,
         getSchoolName,
       )
-      setHint({ kind: 'generic', ...resolved, left, pos, triggerElement: el })
+      setHint({ kind: 'generic', ...resolved, left, top, triggerElement: el })
     },
-    [recursiveLookup, clearHide],
+    [recursiveLookup, clearHide, safeTop],
   )
 
   const handleMouseMove = useCallback(
@@ -269,14 +302,14 @@ export function RenderedEntryWithTooltip({
         formatSpellLevel,
         getSchoolName,
       )
-      const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html)
+      const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html, safeTop)
 
       setRecursiveHints((current) => [
         ...current.slice(0, depth),
         { ...resolved, x, y, triggerElement: withTitle },
       ])
     },
-    [clearHide, recursiveLookup],
+    [clearHide, recursiveLookup, safeTop],
   )
 
   const handleRecursiveMouseMove = useCallback(
@@ -417,7 +450,7 @@ export function RenderedEntryWithTooltip({
                   ? 'border-accent/70 ring-1 ring-accent/45 shadow-xl'
                   : 'border-border/80 shadow-md',
               )}
-              style={{ left: hint.left, ...hint.pos }}
+              style={{ left: hint.left, top: hint.top }}
             >
               {hint.kind === 'spell' ? (
                 <>

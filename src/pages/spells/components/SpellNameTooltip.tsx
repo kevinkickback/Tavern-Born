@@ -11,6 +11,7 @@ import {
   formatSpellLevel,
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
+import { getTitleBarSafeTop } from '@/lib/overlayPosition'
 import {
   getEntryWithHoverTitles,
   getRecursiveHintPosition,
@@ -20,6 +21,7 @@ import {
   type RecursiveLookup,
 } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import type { Spell5e } from '@/types/5etools'
 
 interface SpellNameTooltipProps {
@@ -37,6 +39,8 @@ export function SpellNameTooltip({
   recursiveLookup,
   sourceContext,
 }: SpellNameTooltipProps) {
+  const uiScale = useAppPreferencesStore((state) => state.uiScale)
+  const safeTop = getTitleBarSafeTop(uiScale)
   const [open, setOpen] = useState(false)
   const [pinned, setPinned] = useState(false)
   const [recursiveHints, setRecursiveHints] = useState<RecursiveHintState[]>([])
@@ -109,7 +113,7 @@ export function SpellNameTooltip({
       formatSpellLevel,
       getSchoolName,
     )
-    const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html)
+    const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html, safeTop)
 
     setRecursiveHints((current) => [
       ...current.slice(0, depth),

@@ -221,4 +221,34 @@ describe('buildRecursiveLookup', () => {
       container.remove()
     }
   })
+
+  test('keeps a measured child preview below the native title-bar safe area', () => {
+    const container = document.createElement('div')
+    const target = document.createElement('span')
+    container.dataset.recursiveTooltipDepth = '0'
+    container.append(target)
+    document.body.append(container)
+
+    const originalWidth = window.innerWidth
+    const originalHeight = window.innerHeight
+    try {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 })
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 720 })
+      container.getBoundingClientRect = () =>
+        ({ left: 24, right: 344, top: 44, bottom: 344, width: 320, height: 300 }) as DOMRect
+      target.getBoundingClientRect = () =>
+        ({ left: 64, right: 124, top: 52, bottom: 72, width: 60, height: 20 }) as DOMRect
+
+      const position = getRecursiveHintPosition(target, true, 46, {
+        width: 320,
+        height: 280,
+      })
+
+      expect(position.y + 44).toBe(46)
+    } finally {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth })
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight })
+      container.remove()
+    }
+  })
 })

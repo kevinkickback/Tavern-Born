@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
-import type { RecursiveHintState } from '@/lib/renderer/recursiveTooltip'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { getTitleBarSafeTop } from '@/lib/overlayPosition'
+import { getRecursiveHintPosition, type RecursiveHintState } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
 interface RecursiveTooltipChainProps {
   hints: RecursiveHintState[]
@@ -8,6 +10,9 @@ interface RecursiveTooltipChainProps {
 }
 
 export function RecursiveTooltipChain({ hints, index = 0 }: RecursiveTooltipChainProps) {
+  const uiScale = useAppPreferencesStore((state) => state.uiScale)
+  const safeTop = getTitleBarSafeTop(uiScale)
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
   const hint = hints[index]
   const triggerElement = hint?.triggerElement
 
@@ -21,12 +26,38 @@ export function RecursiveTooltipChain({ hints, index = 0 }: RecursiveTooltipChai
     }
   }, [triggerElement])
 
+  useLayoutEffect(() => {
+    const tooltip = tooltipRef.current
+    if (!tooltip || !triggerElement || !hint) return
+
+    const updatePosition = () => {
+      const { x, y } = getRecursiveHintPosition(triggerElement, !!hint.html, safeTop, {
+        width: tooltip.offsetWidth || 320,
+        height: tooltip.offsetHeight || (hint.html ? 220 : 88),
+      })
+      tooltip.style.left = `${x}px`
+      tooltip.style.top = `${y}px`
+    }
+
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updatePosition)
+    resizeObserver?.observe(tooltip)
+
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      resizeObserver?.disconnect()
+    }
+  }, [hint, safeTop, triggerElement])
+
   if (!hint) return null
   const totalCards = hints.length + 1
   const isNewest = index === hints.length - 1
 
   return (
     <div
+      ref={tooltipRef}
       role="dialog"
       aria-label={`${hint.title} preview`}
       data-recursive-tooltip-depth={index + 1}

@@ -1,4 +1,17 @@
 <details>
+<summary><strong>v0.4.0</strong></summary>
+
+## ✨ Changes
+
+* Adjusted color / contrast of the Light theme
+* Window controls (minimize/maximize/close) no longer obscure tooltips/preview windows
+* 
+
+
+
+</details>
+
+<details>
 <summary><strong>v0.3.0</strong></summary>
 
 ## ✨ Changes

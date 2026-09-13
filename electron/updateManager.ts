@@ -149,10 +149,6 @@ export function initAutoUpdater() {
   autoUpdater.autoInstallOnAppQuit = false
   autoUpdater.allowDowngrade = false
 
-  if (!app.isPackaged) {
-    autoUpdater.forceDevUpdateConfig = true
-  }
-
   try {
     isPortableMode = !!process.env.PORTABLE_EXECUTABLE_DIR
   } catch {}

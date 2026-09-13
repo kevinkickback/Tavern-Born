@@ -1,3 +1,4 @@
+import { getTitleBarSafeTop } from '@/lib/overlayPosition'
 import { renderEntry } from '@/lib/renderer'
 import type { Spell5e } from '@/types/5etools'
 
@@ -447,6 +448,8 @@ export function getRecursiveTooltipData(
 export function getRecursiveHintPosition(
   target: HTMLElement,
   hasBody: boolean,
+  safeTop = getTitleBarSafeTop(100),
+  measuredSize?: { width: number; height: number },
 ): { x: number; y: number } {
   const rect = target.getBoundingClientRect()
   const container = target.closest('[data-recursive-tooltip-depth]') as HTMLElement | null
@@ -457,8 +460,8 @@ export function getRecursiveHintPosition(
     right: window.innerWidth,
     bottom: window.innerHeight,
   }
-  const tooltipWidthEstimate = 320
-  const tooltipHeightEstimate = hasBody ? 220 : 88
+  const tooltipWidthEstimate = measuredSize?.width ?? 320
+  const tooltipHeightEstimate = measuredSize?.height ?? (hasBody ? 220 : 88)
   const gap = 8
   const margin = 8
   const overlapStagger = 24
@@ -484,7 +487,7 @@ export function getRecursiveHintPosition(
     ? Math.max(centeredViewportY, containerRect.top + overlapStagger)
     : centeredViewportY
   const viewportY = Math.max(
-    margin,
+    safeTop,
     Math.min(staggeredViewportY, window.innerHeight - tooltipHeightEstimate - margin),
   )
   const y = viewportY - containerRect.top

@@ -138,4 +138,16 @@ describe('trusted workflow policy', () => {
     expect(actionUses.length).toBeGreaterThan(0)
     expect(actionUses.every(({ revision }) => /^[0-9a-f]{40}$/.test(revision))).toBe(true)
   })
+
+  test('uses Node 24 for every repository-run Node step', async () => {
+    const workflows = await Promise.all(['ci.yml', 'release.yml'].map((name) => readWorkflow(name)))
+    const nodeVersions = workflows.flatMap((workflow) =>
+      [
+        ...workflow.matchAll(/uses: actions\/setup-node@[^\n]+\n\s+with:\n\s+node-version: (\d+)/g),
+      ].map((match) => match[1]),
+    )
+
+    expect(nodeVersions.length).toBeGreaterThan(0)
+    expect(nodeVersions.every((version) => version === '24')).toBe(true)
+  })
 })

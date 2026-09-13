@@ -83,7 +83,7 @@ Download the latest installer or portable build for your platform from the
 
 ### Option 2: Build from Source
 
-**Prerequisites:** [Node.js](https://nodejs.org/) 22.12 or newer and npm.
+**Prerequisites:** [Node.js](https://nodejs.org/) 24 or newer and npm.
 
 ```bash
 git clone https://github.com/kevinkickback/Tavern-Born.git

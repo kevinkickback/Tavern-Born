@@ -32,4 +32,12 @@ describe('Windows title-bar overlay', () => {
 
     await waitFor(() => expect(setTitleBarOverlay).toHaveBeenCalledWith('#111113', '#fafafa', 38))
   })
+
+  test('keeps the native overlay aligned with the softened light shell', async () => {
+    useAppPreferencesStore.setState({ themeAppearance: 'light', uiScale: 100 })
+
+    render(<AppTitleBar />)
+
+    await waitFor(() => expect(setTitleBarOverlay).toHaveBeenCalledWith('#e8e8ec', '#1c2024', 32))
+  })
 })

@@ -47,7 +47,8 @@ release-infrastructure changes use the same manual exception.
 
 Work on `dev`, commit, and push normally. `ci.yml` runs on non-draft PRs targeting `dev` or `main`.
 It performs linting, type checking, coverage tests, a production build, browser end-to-end tests,
-and the Electron smoke test.
+and the Electron smoke test. Repository-run Node commands use Node 24 throughout CI and release
+validation/build jobs, matching `.nvmrc` and the package engine requirement.
 
 For an ordinary ready `dev` to `main` PR:
 
