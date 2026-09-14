@@ -57,6 +57,7 @@ import type { Feat5e, Spell5e } from '@/types/5etools'
 type FeatOptionsTarget = Feat5e & {
   grantVariant?: string
   fixedSpellcastingClass?: string
+  provenanceChoiceId?: string
 }
 
 export function BuildBackgroundPage() {
@@ -193,7 +194,9 @@ export function BuildBackgroundPage() {
       resolveFeatChoiceSelection(activeFeatChoiceId, { name: feat.name, source: feat.source })
       setFeatModalOpen(false)
       setActiveFeatChoiceId(null)
-      if (hasFeatOptions(feat)) setOptionsPendingFeat(feat)
+      if (hasFeatOptions(feat)) {
+        setOptionsPendingFeat({ ...feat, provenanceChoiceId: activeFeatChoiceId })
+      }
     },
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
@@ -666,7 +669,6 @@ export function BuildBackgroundPage() {
         characterSnapshot={characterSnapshot}
         onConfirm={handleFeatModalConfirm}
         initialFilters={featModalInitialFilters}
-        allowIgnoreLimit={false}
       />
 
       {optionsPendingFeat && (

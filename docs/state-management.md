@@ -128,6 +128,10 @@ edit.
 - `character.classProgression` is the authoritative class progression structure for level math, multiclassing, and spell/feature derivation.
 - Top-level `character.class`, `character.classSource`, and `character.level` remain persisted mirrors used for summary display and compatibility with existing UI surfaces.
 - New code should derive progression-sensitive behavior from `classProgression`, not from the mirrored top-level fields.
+- Feats awarded by class `featProgression` blocks are stored in `character.classFeatChoices`, keyed
+  by full class printing and progression identity. Their slot levels allow level-down and class
+  removal to retract only the affected choices. `character.specialFeats` is reserved for unscoped
+  bonus feats.
 
 ## Spell State Model
 

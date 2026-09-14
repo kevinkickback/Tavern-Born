@@ -1,5 +1,7 @@
 import type { ProvenanceLedger } from '@/lib/provenance/types'
+import type { FeatOptionSelections } from '@/types/feat'
 
+export type { FeatOptionSelections } from '@/types/feat'
 export type { ProvenanceLedger }
 
 export type OriginSystem = '2014' | '2024'
@@ -163,6 +165,9 @@ export interface Character {
    *  are never removed by normal feat-slot management (e.g. level-down, class change). */
   specialFeats?: Feat[]
 
+  /** Feat selections owned by a specific class progression grant. */
+  classFeatChoices?: ClassFeatChoice[]
+
   /** Follow-up selections for fixed provenance feat grants, keyed by name|source|variant. */
   fixedFeatOptions?: Record<string, FeatOptionSelections>
 
@@ -225,25 +230,6 @@ export interface Feature {
   level?: number
 }
 
-export interface FeatOptionSelections {
-  /** Spellcaster class name chosen (e.g. "Wizard"), when the feat keys off a class list. */
-  spellcastingClass?: string
-  /** Spell names granted by the feat (stored as `name|source` composite keys). */
-  spells?: string[]
-  /** Skill names granted by the feat. */
-  skills?: string[]
-  /** Language names granted by the feat. */
-  languages?: string[]
-  /** Tool names granted by the feat. */
-  tools?: string[]
-  /** Ability score key targeted (e.g. "str"), for feats with a single +1 to choose. */
-  abilityScore?: string
-  /** Optional feature name chosen (e.g. a Fighting Style name). */
-  optionalFeature?: string
-  /** Skill name chosen for expertise. */
-  expertiseSkill?: string
-}
-
 export interface Feat {
   id: string
   name: string
@@ -256,6 +242,16 @@ export interface Feat {
   className?: string
   classSource?: string
   classLevel?: number
+}
+
+export interface ClassFeatChoice {
+  /** Stable owner identity derived from class printing and progression metadata. */
+  id: string
+  className: string
+  classSource?: string
+  progressionName: string
+  categories: string[]
+  feats: Feat[]
 }
 
 export interface AsiChoice {

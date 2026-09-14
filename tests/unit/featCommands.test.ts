@@ -3,8 +3,11 @@ import {
   applyOptionalFeatureSelectionCommand,
   commitFeatOptionsCommand,
   editFeatOptionsCommand,
+  replaceBonusFeatSelectionsCommand,
+  replaceClassFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
   replaceOptionalFeatureSelectionsCommand,
+  resolveFeatChoiceCommand,
   retractFeatOptionsCommand,
 } from '@/lib/character/commands/featCommands'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
@@ -196,5 +199,124 @@ describe('feat commands', () => {
       fixedFeatTag,
       makeSourceTag('manual', 'User Choice', 'choice', 'XPHB'),
     ])
+  })
+
+  test('keeps class progression feats isolated from other classes and bonus feats', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        { name: 'Fighter', source: 'XPHB', levels: 1 },
+        { name: 'Paladin', source: 'XPHB', levels: 2 },
+      ],
+      specialFeats: [{ id: 'bonus-alert', name: 'Alert', source: 'XPHB', description: '' }],
+    })
+    const fighterOwner = {
+      className: 'Fighter',
+      classSource: 'XPHB',
+      progressionName: 'Fighting Style',
+      categories: ['FS'],
+      slotLevels: [1],
+    }
+    const fighterResult = replaceClassFeatSelectionsCommand(
+      character,
+      emptyProvenance(),
+      fighterOwner,
+      [{ name: 'Defense', source: 'XPHB' }],
+    )
+    const withFighter = applyResult(character, fighterResult)
+    const paladinResult = replaceClassFeatSelectionsCommand(
+      withFighter,
+      withFighter.provenance,
+      {
+        className: 'Paladin',
+        classSource: 'XPHB',
+        progressionName: 'Fighting Style',
+        categories: ['FS', 'FS:P'],
+        slotLevels: [2],
+      },
+      [{ name: 'Dueling', source: 'XPHB' }],
+    )
+    const configured = applyResult(withFighter, paladinResult)
+
+    expect(configured.classFeatChoices).toHaveLength(2)
+    expect(configured.classFeatChoices?.map((choice) => choice.feats[0]?.name)).toEqual([
+      'Defense',
+      'Dueling',
+    ])
+    expect(configured.specialFeats?.map((feat) => feat.name)).toEqual(['Alert'])
+
+    const paladinChoiceId = configured.classFeatChoices?.[1]?.id
+    const withOptionsResult = commitFeatOptionsCommand(
+      configured,
+      configured.provenance,
+      { name: 'Dueling', source: 'XPHB', classFeatChoiceId: paladinChoiceId },
+      { skills: ['Athletics'] },
+    )
+    const withOptions = applyResult(configured, withOptionsResult)
+    expect(withOptions.classFeatChoices?.[0]?.feats[0]?.options).toBeUndefined()
+    expect(withOptions.classFeatChoices?.[1]?.feats[0]?.options).toEqual({
+      skills: ['Athletics'],
+    })
+
+    const bonusResult = replaceBonusFeatSelectionsCommand(withOptions, withOptions.provenance, [
+      { name: 'Lucky', source: 'PHB' },
+    ])
+    expect(bonusResult.characterPatch.specialFeats?.map((feat) => feat.name)).toEqual(['Lucky'])
+    expect(withOptions.classFeatChoices?.map((choice) => choice.feats[0]?.name)).toEqual([
+      'Defense',
+      'Dueling',
+    ])
+  })
+
+  test('persists source-qualified choice options and retracts them when the feat changes', () => {
+    const character = makeCharacterFixture()
+    const choice = {
+      id: 'variant-human-feat',
+      domain: 'feats' as const,
+      sourceTag: makeSourceTag('race', 'Variant Human', 'placeholder', 'PHB'),
+      chooseCount: 1,
+      optionPool: [],
+      selected: [],
+      status: 'pending' as const,
+    }
+    const ledger = { ...emptyProvenance(), choices: [choice] }
+    const selected = resolveFeatChoiceCommand(character, ledger, choice.id, {
+      name: 'Skill Expert',
+      source: 'TCE',
+    })
+    const withSelection = applyResult(character, selected)
+    const committed = commitFeatOptionsCommand(
+      withSelection,
+      withSelection.provenance,
+      { name: 'Skill Expert', source: 'TCE', provenanceChoiceId: choice.id },
+      { skills: ['Arcana'], abilityScore: 'intelligence', expertiseSkill: 'Arcana' },
+    )
+    const configured = applyResult(withSelection, committed)
+
+    expect(configured.provenance.choices[0]?.selectedRefs).toEqual([
+      {
+        name: 'Skill Expert',
+        source: 'TCE',
+        options: {
+          skills: ['Arcana'],
+          abilityScore: 'intelligence',
+          expertiseSkill: 'Arcana',
+        },
+      },
+    ])
+    expect(configured.abilityScores.intelligence).toBe(11)
+    expect(configured.skills?.arcana?.expertise).toBe(true)
+
+    const replaced = resolveFeatChoiceCommand(configured, configured.provenance, choice.id, {
+      name: 'Alert',
+      source: 'PHB',
+    })
+    expect(replaced.characterPatch.abilityScores?.intelligence).toBe(10)
+    expect(replaced.characterPatch.proficiencies?.skills).toEqual([])
+    expect(replaced.characterPatch.skills?.arcana?.expertise).toBe(false)
+    expect(replaced.provenanceUpdate.choices[0]?.selectedRefs).toEqual([
+      { name: 'Alert', source: 'PHB' },
+    ])
+    expect(replaced.provenanceUpdate.feats['skill expert']).toBeUndefined()
+    expect(replaced.provenanceUpdate.feats.alert).toHaveLength(1)
   })
 })

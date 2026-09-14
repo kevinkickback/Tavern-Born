@@ -54,6 +54,8 @@ import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Feat5e, Race5e, Spell5e } from '@/types/5etools'
 
+type FeatOptionsTarget = Feat5e & { provenanceChoiceId?: string }
+
 export function BuildRacePage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const { races, feats, spells } = useFilteredGameData()
@@ -66,7 +68,7 @@ export function BuildRacePage() {
   const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [featModalOpen, setFeatModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
-  const [optionsPendingFeat, setOptionsPendingFeat] = useState<Feat5e | null>(null)
+  const [optionsPendingFeat, setOptionsPendingFeat] = useState<FeatOptionsTarget | null>(null)
   const selectedRaceRef = useRef<HTMLDivElement | null>(null)
 
   const filteredRaces = useMemo(() => {
@@ -170,7 +172,9 @@ export function BuildRacePage() {
       resolveFeatChoiceSelection(activeFeatChoiceId, { name: feat.name, source: feat.source })
       setFeatModalOpen(false)
       setActiveFeatChoiceId(null)
-      if (hasFeatOptions(feat)) setOptionsPendingFeat(feat)
+      if (hasFeatOptions(feat)) {
+        setOptionsPendingFeat({ ...feat, provenanceChoiceId: activeFeatChoiceId })
+      }
     },
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
@@ -556,7 +560,6 @@ export function BuildRacePage() {
         characterSnapshot={characterSnapshot}
         onConfirm={handleFeatModalConfirm}
         initialFilters={featModalInitialFilters}
-        allowIgnoreLimit={false}
       />
 
       {optionsPendingFeat && (

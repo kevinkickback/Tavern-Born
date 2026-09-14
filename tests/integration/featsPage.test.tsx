@@ -21,6 +21,12 @@ const configurableFeat = {
   entries: ['Gain proficiency in one skill.'],
 } as Feat5e
 
+const configurableFeat2024 = {
+  ...configurableFeat,
+  source: 'XPHB',
+  entries: ['Gain proficiency using the revised printing.'],
+} as Feat5e
+
 const magicInitiate = {
   name: 'Magic Initiate',
   source: 'XPHB',
@@ -35,7 +41,7 @@ const magicInitiate = {
 
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
-    feats: [configurableFeat, magicInitiate],
+    feats: [configurableFeat, configurableFeat2024, magicInitiate],
     spells: [],
     classes: [],
   }),
@@ -207,5 +213,33 @@ describe('FeatsPage bonus feat configuration', () => {
         'magic initiate|xphb|cleric'
       ],
     ).toEqual({ spellcastingClass: 'Cleric Spells' })
+  })
+
+  test('selects and removes regular feats by name and source', () => {
+    const character = makeCharacterFixture({
+      feats: [
+        { id: 'skilled-phb', name: 'Skilled', source: 'PHB', description: '' },
+        { id: 'skilled-xphb', name: 'Skilled', source: 'XPHB', description: '' },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    render(<FeatsPage />)
+
+    const selectButtons = screen.getAllByRole('button', { name: 'Select Skilled' })
+    fireEvent.click(selectButtons[1])
+    expect(selectButtons[0].getAttribute('aria-pressed')).toBe('false')
+    expect(selectButtons[1].getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getAllByText('XPHB').length).toBeGreaterThan(0)
+
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove Skilled' })
+    act(() => fireEvent.click(removeButtons[0]))
+    expect(useCharacterStore.getState().activeCharacter?.feats).toEqual([
+      expect.objectContaining({ name: 'Skilled', source: 'XPHB' }),
+    ])
   })
 })

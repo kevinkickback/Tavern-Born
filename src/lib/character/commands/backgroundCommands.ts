@@ -10,6 +10,7 @@ import {
   normalizeBackgroundForOriginSystem,
 } from '@/lib/calculations/originSystem'
 import { mergeSkillState } from '@/lib/calculations/skills'
+import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
 import {
   removeSourceGrantedEquipment,
   upsertGrantedEquipment,
@@ -48,7 +49,11 @@ export function applyBackgroundSelectionCommand(
   const isBackgroundChanged =
     oldBackgroundName !== background.name ||
     (character.backgroundSource ?? '') !== (background.source ?? '')
-  let provenanceUpdate = reconcileBackgroundChange(ledger, oldBackgroundName)
+  const retracted = retractFeatChoiceOptionsForSources(character, ledger, [
+    { sourceType: 'background', sourceName: oldBackgroundName },
+  ])
+  const workingCharacter = { ...character, ...retracted.characterPatch }
+  let provenanceUpdate = reconcileBackgroundChange(retracted.provenanceUpdate, oldBackgroundName)
   provenanceUpdate = applyBackgroundGrants(normalizedBackground, provenanceUpdate, {
     itemLookup,
     suppressLanguageGrants: character.originSystem === '2024',
@@ -56,11 +61,16 @@ export function applyBackgroundSelectionCommand(
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureOriginSystemInvariants(provenanceUpdate, character.originSystem)
 
-  let proficiencies = { ...character.proficiencies }
-  let equipment = [...(character.equipment ?? [])]
+  let proficiencies = { ...workingCharacter.proficiencies }
+  let equipment = [...(workingCharacter.equipment ?? [])]
   if (oldBackgroundName) {
     for (const domain of ['skills', 'languages', 'tools'] as const) {
-      const { toRemove } = diffProficiencyGrants(ledger, domain, 'background', oldBackgroundName)
+      const { toRemove } = diffProficiencyGrants(
+        retracted.provenanceUpdate,
+        domain,
+        'background',
+        oldBackgroundName,
+      )
       if (toRemove.length === 0) continue
       proficiencies = {
         ...proficiencies,
@@ -68,7 +78,7 @@ export function applyBackgroundSelectionCommand(
       }
     }
 
-    const equipmentToRemove = Object.entries(ledger.equipment)
+    const equipmentToRemove = Object.entries(retracted.provenanceUpdate.equipment)
       .filter(
         ([, tags]) =>
           tags.length > 0 &&
@@ -124,8 +134,10 @@ export function applyBackgroundSelectionCommand(
     characterPatch: {
       background: background.name,
       backgroundSource: background.source || undefined,
+      spells: workingCharacter.spells,
+      abilityScores: workingCharacter.abilityScores,
       proficiencies,
-      skills: mergeSkillState(character.skills ?? {}, proficiencies.skills),
+      skills: mergeSkillState(workingCharacter.skills ?? {}, proficiencies.skills),
       equipment: upsertGrantedEquipment(equipment, resolvedPackage.items),
       currency,
       backgroundCurrencyGrant: resolvedPackage.currency,

@@ -204,7 +204,21 @@ function parseCharacterData(character: unknown): {
   // upgraded to the current schema version before Zod validation.
   let migrated = character
   if (isRecord(character)) {
-    const storedVersion = semverToMigrationVersion((character as Record<string, unknown>).version)
+    const rawVersion = (character as Record<string, unknown>).version
+    const hasRecognizedVersion =
+      rawVersion == null ||
+      (typeof rawVersion === 'number' && Number.isFinite(rawVersion) && rawVersion >= 0) ||
+      (typeof rawVersion === 'string' && /^\d+(?:\.\d+){0,2}$/.test(rawVersion.trim()))
+    if (!hasRecognizedVersion) {
+      return { data: null, error: 'Character schema version is not recognized' }
+    }
+    const storedVersion = semverToMigrationVersion(rawVersion)
+    if (storedVersion > CURRENT_SCHEMA_VERSION) {
+      return {
+        data: null,
+        error: `Character schema version ${storedVersion} is newer than supported version ${CURRENT_SCHEMA_VERSION}`,
+      }
+    }
     if (storedVersion < CURRENT_SCHEMA_VERSION) {
       try {
         migrated = migrateCharacter(character, storedVersion)

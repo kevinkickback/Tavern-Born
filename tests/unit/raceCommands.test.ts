@@ -3,6 +3,7 @@ import {
   applyRaceSelectionCommand,
   applySubraceSelectionCommand,
 } from '@/lib/character/commands/raceCommands'
+import { makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -59,5 +60,61 @@ describe('race commands', () => {
     expect(result.characterPatch.subraceSource).toBe('SCAG')
     expect(result.characterPatch.raceAsiChoices).toEqual([])
     expect(result.characterPatch.visions).toContainEqual({ type: 'darkvision', range: 120 })
+  })
+
+  test('changing race retracts options owned by its feat choice', () => {
+    const choiceId = 'variant-human-feat'
+    const character = makeCharacterFixture({
+      race: 'Variant Human',
+      raceSource: 'PHB',
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        skills: ['arcana'],
+        languages: [],
+        savingThrows: [],
+      },
+      skills: { arcana: { proficient: true, expertise: false, bonus: 0 } },
+    })
+    const ledger = {
+      ...emptyProvenance(),
+      proficiencies: {
+        ...emptyProvenance().proficiencies,
+        skills: {
+          arcana: [
+            {
+              ...makeSourceTag('feat', 'Skill Expert', 'choice', 'TCE'),
+              grantVariant: `choice:${choiceId}`,
+            },
+          ],
+        },
+      },
+      choices: [
+        {
+          id: choiceId,
+          domain: 'feats' as const,
+          sourceTag: makeSourceTag('race', 'Variant Human', 'placeholder', 'PHB'),
+          chooseCount: 1,
+          optionPool: [],
+          selected: ['Skill Expert'],
+          selectedRefs: [{ name: 'Skill Expert', source: 'TCE', options: { skills: ['Arcana'] } }],
+          status: 'resolved' as const,
+        },
+      ],
+    }
+
+    const result = applyRaceSelectionCommand(
+      character,
+      ledger,
+      { name: 'Elf', source: 'PHB' } as Race5e,
+      undefined,
+      0,
+      resolveNoChoices,
+    )
+
+    expect(result.characterPatch.proficiencies?.skills).toEqual([])
+    expect(result.characterPatch.skills?.arcana?.proficient).toBe(false)
+    expect(result.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
   })
 })

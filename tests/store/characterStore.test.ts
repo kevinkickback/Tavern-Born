@@ -44,6 +44,24 @@ describe('characterStore', () => {
     expect(validateCharacterData({ foo: 'bar' })).toContain('Invalid character structure')
   })
 
+  test('validateCharacterData rejects characters from a newer schema without stripping data', () => {
+    const futureCharacter = {
+      ...makeCharacterFixture(),
+      version: '7.0.0',
+      campaignState: { renown: 4 },
+    }
+
+    expect(validateCharacterData(futureCharacter)).toContain(
+      'schema version 7 is newer than supported version 6',
+    )
+  })
+
+  test('validateCharacterData rejects unrecognized schema versions', () => {
+    expect(validateCharacterData({ ...makeCharacterFixture(), version: '6-next' })).toContain(
+      'schema version is not recognized',
+    )
+  })
+
   test('validateCharacterData rejects payloads missing proficiencies.skills', () => {
     const fixture = makeCharacterFixture()
     const invalid = {

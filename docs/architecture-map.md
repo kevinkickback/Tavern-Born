@@ -88,9 +88,11 @@ Feat options note:
 - `src/components/modals/FeatOptionsModal.tsx` is a multi-step wizard for feats with optional player choices (spell picks, proficiency selections, ability score bonuses, optional features, expertise).
 - Steps are generated dynamically from the feat's `additionalSpells` and option blocks; dynamic steps are injected after the user chooses a spellcasting class.
 - Valid fixed spellcasting classes are retained in completed selections but omitted from wizard navigation, which starts on the remaining spell choices.
-- Completed selections are persisted on `character.feats[].options` or
-	`character.specialFeats[].options` as `FeatOptionSelections`; both collections use the same
-	provenance-aware commit, edit, and removal workflow.
+- Completed selections are persisted with their owning feat: regular feats use
+	`character.feats[].options`, bonus feats use `character.specialFeats[].options`, class progression
+	feats use `character.classFeatChoices[].feats[].options`, and race/background choice feats use
+	`ChoiceRecord.selectedRefs[].options`. All paths use the same provenance-aware commit, edit, and
+	removal workflow.
 - Selecting a new configurable bonus feat continues directly from the selection modal into the
 	options wizard; pending cards retain Complete Setup as a recovery action.
 - Configured feat cards anchor a one-time Edit Setup hint; its dismissal uses the

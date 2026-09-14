@@ -12,6 +12,7 @@ import {
 } from '@/lib/5etools/startingEquipment'
 import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { mergeSkillState } from '@/lib/calculations/skills'
+import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import {
   removeSourceGrantedEquipment,
   upsertGrantedEquipment,
@@ -33,6 +34,7 @@ import type { Class5e, Item5e } from '@/types/5etools'
 import type {
   Character,
   CharacterClassEntry,
+  ClassFeatChoice,
   HitPointGain,
   HitPointGainMethod,
   Skills,
@@ -381,6 +383,55 @@ export function applyClassProgressionUpdate(
     )
   }
 
+  let workingCharacter = character
+  const retainedClassFeatChoices: ClassFeatChoice[] = []
+  for (const choice of character.classFeatChoices ?? []) {
+    const matchingEntry = nextProgression.find(
+      (entry) =>
+        entry.name === choice.className && (entry.source ?? '') === (choice.classSource ?? ''),
+    )
+    const retainedFeats = matchingEntry
+      ? choice.feats.filter(
+          (feat) => feat.classLevel == null || feat.classLevel <= matchingEntry.levels,
+        )
+      : []
+    const retainedIds = new Set(retainedFeats.map((feat) => feat.id))
+    for (const feat of choice.feats) {
+      if (retainedIds.has(feat.id)) continue
+      if (feat.options) {
+        const result = retractFeatOptionsCommand(
+          workingCharacter,
+          provenanceUpdate,
+          { name: feat.name, source: feat.source, classFeatChoiceId: choice.id },
+          feat.options,
+        )
+        workingCharacter = {
+          ...workingCharacter,
+          ...result.characterPatch,
+          provenance: result.provenanceUpdate,
+        }
+        provenanceUpdate = result.provenanceUpdate
+      }
+      const key = normalizeKey(feat.name)
+      const retainedTags = (provenanceUpdate.feats[key] ?? []).filter(
+        (tag) =>
+          !(
+            tag.sourceType === 'class' &&
+            tag.sourceName === choice.className &&
+            (tag.sourceRef ?? '') === (choice.classSource ?? '') &&
+            tag.grantVariant === choice.id
+          ),
+      )
+      const feats = { ...provenanceUpdate.feats }
+      if (retainedTags.length > 0) feats[key] = retainedTags
+      else delete feats[key]
+      provenanceUpdate = { ...provenanceUpdate, feats }
+    }
+    if (matchingEntry && retainedFeats.length > 0) {
+      retainedClassFeatChoices.push({ ...choice, feats: retainedFeats })
+    }
+  }
+
   const newTotalLevel = nextProgression.reduce((sum, entry) => sum + entry.levels, 0)
   const previousTotalLevel = previousProgression.reduce((sum, entry) => sum + entry.levels, 0)
   const retainedHitPointGains = (character.hitPointGains ?? []).filter((gain) => {
@@ -406,6 +457,11 @@ export function applyClassProgressionUpdate(
     class: nextProgression[0]?.name ?? character.class,
     classSource: nextProgression[0]?.source ?? character.classSource,
     hitPointGains,
+    classFeatChoices: retainedClassFeatChoices,
+    spells: workingCharacter.spells,
+    proficiencies: workingCharacter.proficiencies,
+    skills: workingCharacter.skills,
+    abilityScores: workingCharacter.abilityScores,
   }
 
   return {
@@ -672,16 +728,10 @@ export function updateCharacterLevel(
     return entry
   })
 
-  const characterPatch: Partial<Character> = {
-    level: newLevel,
-    classProgression: updatedProgression,
-  }
-
-  const provenanceUpdate = ledger
-
+  const result = applyClassProgressionUpdate(character, ledger, updatedProgression)
   return {
-    characterPatch,
-    provenanceUpdate,
+    ...result,
+    characterPatch: { ...result.characterPatch, level: newLevel },
   }
 }
 
@@ -813,17 +863,5 @@ export function removeMulticlass(
   const updatedProgression =
     character.classProgression?.filter((entry) => !matchesClass(entry)) ?? []
 
-  const characterPatch: Partial<Character> = {
-    classProgression: updatedProgression,
-  }
-
-  const provenanceUpdate =
-    classSource == null
-      ? reconcileClassChange(ledger, className, undefined)
-      : removeGrantsBySourceRef(ledger, 'class', className, classSource)
-
-  return {
-    characterPatch,
-    provenanceUpdate,
-  }
+  return applyClassProgressionUpdate(character, ledger, updatedProgression)
 }

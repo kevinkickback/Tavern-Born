@@ -119,6 +119,15 @@ const featSchema = z.object({
   classLevel: z.number().int().min(1).optional(),
 })
 
+const classFeatChoiceSchema = z.object({
+  id: z.string().min(1),
+  className: z.string().min(1),
+  classSource: z.string().optional(),
+  progressionName: z.string().min(1),
+  categories: z.array(z.string()),
+  feats: z.array(featSchema),
+})
+
 const equipmentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -304,6 +313,15 @@ const choiceRecordSchema = z.object({
   chooseCount: z.number().int().min(1),
   optionPool: z.array(z.string()),
   selected: z.array(z.string()),
+  selectedRefs: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        source: z.string().optional(),
+        options: featOptionSelectionsSchema.optional(),
+      }),
+    )
+    .optional(),
   status: choiceStatusSchema,
 })
 
@@ -541,6 +559,7 @@ export const characterSchema = z
     portraitTransform: portraitTransformSchema.optional(),
     asiChoices: z.array(asiChoiceSchema).optional(),
     specialFeats: z.array(featSchema).optional(),
+    classFeatChoices: z.array(classFeatChoiceSchema).optional(),
     fixedFeatOptions: z.record(featOptionSelectionsSchema).optional(),
     provenance: provenanceLedgerSchema.optional(),
     inspiration: z.boolean().optional(),

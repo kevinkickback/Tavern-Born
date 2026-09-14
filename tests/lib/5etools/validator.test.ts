@@ -8,6 +8,26 @@ function makeJsonResponse(jsonData: unknown, ok = true) {
   })
 }
 
+const payloadByFile: Record<string, unknown> = {
+  'books.json': { book: [{ id: 'PHB', name: 'Players Handbook' }] },
+  'races.json': { race: [{ name: 'Human', source: 'PHB' }] },
+  'class/index.json': { phb: 'class-phb.json' },
+  'backgrounds.json': { background: [{ name: 'Acolyte', source: 'PHB' }] },
+  'spells/index.json': { phb: 'spells-phb.json' },
+  'feats.json': { feat: [{ name: 'Alert', source: 'PHB' }] },
+  'items.json': { item: [{ name: 'Rope', source: 'PHB' }] },
+  'items-base.json': { item: [{ name: 'Longsword', source: 'PHB' }] },
+  'actions.json': { action: [{ name: 'Attack', source: 'PHB' }] },
+  'conditionsdiseases.json': { condition: [{ name: 'Blinded', source: 'PHB' }] },
+  'deities.json': { deity: [{}] },
+  'skills.json': { skill: [{}] },
+  'senses.json': { sense: [{}] },
+  'languages.json': { language: [{ name: 'Common', source: 'PHB' }] },
+  'magicvariants.json': { variant: [{}] },
+  'optionalfeatures.json': { optionalfeature: [{ name: 'Feature', source: 'PHB' }] },
+  'variantrules.json': { variantrule: [{}] },
+}
+
 describe('5etools/validator', () => {
   const originalFetch = globalThis.fetch
 
@@ -55,30 +75,6 @@ describe('5etools/validator', () => {
   })
 
   test('accepts remote source when all required files validate', async () => {
-    const payloadByFile: Record<string, unknown> = {
-      'books.json': { book: [{ id: 'PHB', name: 'Players Handbook' }] },
-      'races.json': { race: [{ name: 'Human', source: 'PHB' }] },
-      'class/index.json': { phb: 'class-phb.json' },
-      'backgrounds.json': { background: [{ name: 'Acolyte', source: 'PHB' }] },
-      'spells/index.json': { phb: 'spells-phb.json' },
-      'feats.json': { feat: [{ name: 'Alert', source: 'PHB' }] },
-      'items.json': { item: [{ name: 'Rope', source: 'PHB' }] },
-      'items-base.json': { item: [{ name: 'Longsword', source: 'PHB' }] },
-      'actions.json': { action: [{ name: 'Attack', source: 'PHB' }] },
-      'conditionsdiseases.json': {
-        condition: [{ name: 'Blinded', source: 'PHB' }],
-      },
-      'deities.json': { deity: [{}] },
-      'skills.json': { skill: [{}] },
-      'senses.json': { sense: [{}] },
-      'languages.json': { language: [{ name: 'Common', source: 'PHB' }] },
-      'magicvariants.json': { variant: [{}] },
-      'optionalfeatures.json': {
-        optionalfeature: [{ name: 'Feature', source: 'PHB' }],
-      },
-      'variantrules.json': { variantrule: [{}] },
-    }
-
     globalThis.fetch = vi.fn((input: string | URL | Request) => {
       const url = String(input)
       const entry = Object.entries(payloadByFile).find(([name]) => url.endsWith(`/data/${name}`))
@@ -95,5 +91,25 @@ describe('5etools/validator', () => {
     expect(result.isValid).toBe(true)
     expect(result.foundResources?.length).toBe(17)
     expect(result.normalizedPath).toBe('https://example.com')
+  })
+
+  test('falls back to GET when a remote source does not support HEAD', async () => {
+    globalThis.fetch = vi.fn((input: string | URL | Request, init?: RequestInit) => {
+      if (init?.method === 'HEAD') {
+        return new Response(null, { status: 405 })
+      }
+      const url = String(input)
+      const entry = Object.entries(payloadByFile).find(([name]) => url.endsWith(`/data/${name}`))
+      return entry ? makeJsonResponse(entry[1]) : makeJsonResponse({}, false)
+    }) as unknown as typeof fetch
+
+    const result = await validateDataSource({
+      type: 'remote',
+      path: 'https://example.com',
+      isValid: false,
+    })
+
+    expect(result.isValid).toBe(true)
+    expect(result.foundResources).toHaveLength(17)
   })
 })

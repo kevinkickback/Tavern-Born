@@ -291,6 +291,69 @@ describe('Class Commands', () => {
     expect(result.characterPatch.hitPointGains).toEqual([])
   })
 
+  test('level removal retracts class-owned feat choices and their effects', () => {
+    const choiceId = 'fighter|phb|epic boon|eb'
+    const optionTag = {
+      ...makeSourceTag('feat', 'Skill Expert', 'choice', 'PHB'),
+      grantVariant: `class:${choiceId}`,
+    }
+    const featTag = {
+      ...makeSourceTag('class', 'Fighter', 'choice', 'PHB'),
+      grantVariant: choiceId,
+    }
+    const character = makeCharacterFixture({
+      level: 4,
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 4 }],
+      classFeatChoices: [
+        {
+          id: choiceId,
+          className: 'Fighter',
+          classSource: 'PHB',
+          progressionName: 'Epic Boon',
+          categories: ['EB'],
+          feats: [
+            {
+              id: 'class-skill-expert',
+              name: 'Skill Expert',
+              source: 'PHB',
+              description: '',
+              className: 'Fighter',
+              classSource: 'PHB',
+              classLevel: 4,
+              options: { skills: ['Arcana'] },
+            },
+          ],
+        },
+      ],
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        skills: ['arcana'],
+        languages: [],
+        savingThrows: [],
+      },
+      skills: { arcana: { proficient: true, expertise: false, bonus: 0 } },
+    })
+    const ledger = {
+      ...(character.provenance ?? emptyProvenance()),
+      proficiencies: {
+        ...(character.provenance?.proficiencies ?? emptyProvenance().proficiencies),
+        skills: { arcana: [optionTag] },
+      },
+      feats: { 'skill expert': [featTag] },
+    }
+
+    const result = applyClassProgressionUpdate(character, ledger, [
+      { name: 'Fighter', source: 'PHB', levels: 3 },
+    ])
+
+    expect(result.characterPatch.classFeatChoices).toEqual([])
+    expect(result.characterPatch.proficiencies?.skills).toEqual([])
+    expect(result.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
+    expect(result.provenanceUpdate.feats['skill expert']).toBeUndefined()
+  })
+
   test('applyClassProgressionUpdate reconciles provenance for removed class entries', () => {
     const character = makeCharacterFixture({
       classProgression: [

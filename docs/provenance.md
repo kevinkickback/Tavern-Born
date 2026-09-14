@@ -56,6 +56,12 @@ variant so multiple fixed forms remain distinct. Follow-up selections for these 
 `character.fixedFeatOptions` under a normalized `name|source|variant` key; they do not consume class
 feat slots or become bonus feats.
 
+Race and background feat choices keep their legacy display names in `ChoiceRecord.selected` and store
+the authoritative `name|source` identity plus follow-up selections in `ChoiceRecord.selectedRefs`.
+Class progression feats are owned separately by `character.classFeatChoices`; their provenance tags
+include the class-choice ID as `grantVariant`. Replacing a feat, changing its granting origin, removing
+a class, or losing its class level retracts the owned option grants before removing the selection.
+
 ## Background Ability Score Choices (XPHB 2024)
 
 XPHB 2024 backgrounds carry two alternative ability score blocks (field `ability[]`):

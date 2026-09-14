@@ -27,6 +27,7 @@ import {
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
 } from '@/lib/calculations/spellProfiles'
+import { findClassFeatChoice, getClassFeatSlotLevels } from '@/lib/character/classFeatChoices'
 import { cn } from '@/lib/utils'
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Character, CharacterClassEntry, Feat } from '@/types/character'
@@ -88,7 +89,14 @@ interface BuildClassLevelsPanelProps {
   onOpenFeatPicker: (level: number) => void
   onOpenAsiPicker: (level: number) => void
   onOpenOptPicker: (state: { progName: string; featureTypes: string[]; total: number }) => void
-  onOpenClassFeatPicker: (state: { progName: string; categories: string[]; total: number }) => void
+  onOpenClassFeatPicker: (state: {
+    className: string
+    classSource?: string
+    progName: string
+    categories: string[]
+    total: number
+    slotLevels: number[]
+  }) => void
   onBlockChoiceChange: (blockIndex: number, choice: string) => void
   onItemChoiceChange?: (blockIndex: number, choice: string, key: string, itemRef: string) => void
   onSelectFeature: (feature: SelectedFeatureState) => void
@@ -286,13 +294,16 @@ export function BuildClassLevelsPanel({
                 const spellChoiceComplete =
                   !spellGain || selectedSpellCount >= spellGain.cantrips + spellGain.spells
                 const classFeatChoicesComplete = classFeatGainsAtLevel.every((prog) => {
-                  const categorySet = new Set(prog.category)
-                  const selectedCount = (character.specialFeats ?? []).filter((specialFeat) => {
-                    const feat = featByCompositeId.get(
-                      `${specialFeat.name}|${specialFeat.source ?? ''}`,
-                    )
-                    return !!feat?.category && categorySet.has(feat.category)
-                  }).length
+                  const progName =
+                    prog.name ??
+                    prog.category.map((category) => featCategoryToFull(category)).join(', ')
+                  const selectedCount =
+                    findClassFeatChoice(character.classFeatChoices, {
+                      className: viewingClass,
+                      classSource: viewingClassSource,
+                      progressionName: progName,
+                      categories: prog.category,
+                    })?.feats.length ?? 0
                   return selectedCount >= getOptFeatureTotal(prog.progression, viewingClassLevel)
                 })
                 const optionalFeatureChoicesComplete = optFeatureGainsAtLevel.every((prog) => {
@@ -368,15 +379,17 @@ export function BuildClassLevelsPanel({
                             prog.progression,
                             viewingClassLevel,
                           )
-                          const categorySet = new Set(prog.category)
-                          const chosenStyles = (character.specialFeats ?? []).filter((sf) => {
-                            const feat = featByCompositeId.get(`${sf.name}|${sf.source ?? ''}`)
-                            return !!feat?.category && categorySet.has(feat.category)
-                          })
-                          const selectedCount = chosenStyles.length
                           const progLabel =
                             prog.name ??
                             prog.category.map((category) => featCategoryToFull(category)).join(', ')
+                          const chosenStyles =
+                            findClassFeatChoice(character.classFeatChoices, {
+                              className: viewingClass,
+                              classSource: viewingClassSource,
+                              progressionName: progLabel,
+                              categories: prog.category,
+                            })?.feats ?? []
+                          const selectedCount = chosenStyles.length
                           const isFull = selectedCount >= totalAllowed
 
                           return (
@@ -400,9 +413,15 @@ export function BuildClassLevelsPanel({
                               detailCollapsed={detailCollapsed}
                               onChoose={() =>
                                 onOpenClassFeatPicker({
+                                  className: viewingClass,
+                                  classSource: viewingClassSource,
                                   progName: progLabel,
                                   categories: prog.category,
                                   total: totalAllowed,
+                                  slotLevels: getClassFeatSlotLevels(
+                                    prog.progression,
+                                    viewingClassLevel,
+                                  ),
                                 })
                               }
                               onSelectFeature={onSelectFeature}

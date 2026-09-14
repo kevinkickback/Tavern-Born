@@ -1,3 +1,5 @@
+import type { FeatOptionSelections } from '@/types/feat'
+
 export type SourceType =
   | 'race'
   | 'subrace'
@@ -69,6 +71,12 @@ export interface ChoiceRecord {
   optionPool: string[]
   /** Names the user has selected so far. */
   selected: string[]
+  /** Source-qualified feat selections and their owned follow-up choices. */
+  selectedRefs?: Array<{
+    name: string
+    source?: string
+    options?: FeatOptionSelections
+  }>
   status: ChoiceStatus
 }
 

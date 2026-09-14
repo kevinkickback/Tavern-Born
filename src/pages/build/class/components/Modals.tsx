@@ -37,9 +37,12 @@ interface OptPickerState {
 }
 
 interface ClassFeatPickerState {
+  className: string
+  classSource?: string
   progName: string
   categories: string[]
   total: number
+  slotLevels: number[]
 }
 
 type OptionalFeatureModalOption = {
@@ -118,8 +121,8 @@ interface BuildClassModalsProps {
 
   classFeatPickerState: ClassFeatPickerState | null
   onClassFeatPickerStateChange: (state: ClassFeatPickerState | null) => void
+  onClassFeatConfirm: (selectedFeats: Feat5e[]) => void
   feats: Feat5e[]
-  featByCompositeId: Map<string, Feat5e>
 }
 
 export function BuildClassModals({
@@ -167,8 +170,8 @@ export function BuildClassModals({
   onFeatConfirm,
   classFeatPickerState,
   onClassFeatPickerStateChange,
+  onClassFeatConfirm,
   feats,
-  featByCompositeId,
 }: BuildClassModalsProps) {
   const { total: totalAbilityScores } = useTotalAbilityScores(character)
   return (
@@ -447,7 +450,6 @@ export function BuildClassModals({
         maxSelections={1}
         initialSelectedIds={featPickerInitialSelectedIds}
         characterSnapshot={characterSnapshot}
-        allowIgnoreLimit={false}
         onConfirm={onFeatConfirm}
       />
 
@@ -458,10 +460,15 @@ export function BuildClassModals({
             (feat) => !!feat.category && categorySet.has(feat.category),
           )
           const availableIds = new Set(available.map((feat) => `${feat.name}|${feat.source ?? ''}`))
-          const savedInCategory = (character.specialFeats ?? []).filter((specialFeat) => {
-            const feat = featByCompositeId.get(`${specialFeat.name}|${specialFeat.source ?? ''}`)
-            return !!feat?.category && categorySet.has(feat.category)
-          })
+          const savedInCategory =
+            character.classFeatChoices?.find(
+              (choice) =>
+                choice.className === classFeatPickerState.className &&
+                (choice.classSource ?? '') === (classFeatPickerState.classSource ?? '') &&
+                choice.progressionName === classFeatPickerState.progName &&
+                choice.categories.length === classFeatPickerState.categories.length &&
+                choice.categories.every((category) => categorySet.has(category)),
+            )?.feats ?? []
           const savedNotInList = savedInCategory
             .filter(
               (specialFeat) => !availableIds.has(`${specialFeat.name}|${specialFeat.source ?? ''}`),
@@ -494,27 +501,7 @@ export function BuildClassModals({
                 prereq: new Set(['showUnmet']),
               }}
               characterSnapshot={characterSnapshot}
-              allowIgnoreLimit={false}
-              onConfirm={(selectedFeats) => {
-                const keptSpecial = (character.specialFeats ?? []).filter((specialFeat) => {
-                  const feat = featByCompositeId.get(
-                    `${specialFeat.name}|${specialFeat.source ?? ''}`,
-                  )
-                  return !feat?.category || !categorySet.has(feat.category)
-                })
-
-                const newSpecial = selectedFeats.map((feat) => ({
-                  id: `${feat.name}-${feat.source ?? ''}`,
-                  name: feat.name,
-                  source: feat.source ?? '',
-                  description: '',
-                }))
-
-                onUpdateCharacter({
-                  specialFeats: [...keptSpecial, ...newSpecial],
-                })
-                onClassFeatPickerStateChange(null)
-              }}
+              onConfirm={onClassFeatConfirm}
             />
           )
         })()}

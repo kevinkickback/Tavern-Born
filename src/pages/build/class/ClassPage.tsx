@@ -167,6 +167,7 @@ export function BuildClassPage() {
     setFeatPickerLevel,
     classFeatPickerState,
     setClassFeatPickerState,
+    confirmClassFeatSelections,
     asiPickerLevel,
     setAsiPickerLevel,
     asiModeByLevel,
@@ -417,8 +418,8 @@ export function BuildClassPage() {
         onFeatConfirm={handleFeatConfirm}
         classFeatPickerState={classFeatPickerState}
         onClassFeatPickerStateChange={setClassFeatPickerState}
+        onClassFeatConfirm={confirmClassFeatSelections}
         feats={(feats ?? []) as Feat5e[]}
-        featByCompositeId={featByCompositeId}
         onApplyBatchSpellSelections={applyBatchSpellSelections}
         onRemoveSpellProvenance={removeSpellProvenance}
         onSwapSpellProvenance={swapSpellProvenance}

@@ -9,6 +9,7 @@ import {
   removeFeatChoiceCommand,
   removeFeatProvenanceCommand,
   replaceBonusFeatSelectionsCommand,
+  replaceClassFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
   replaceOptionalFeatureSelectionsCommand,
   resolveFeatChoiceCommand,
@@ -118,15 +119,15 @@ export function useFeatProvenanceMutations() {
   const resolveFeatChoiceSelection = useCallback(
     (choiceId: string, feat: { name: string; source?: string }) => {
       if (!character) return
-      applyCommand(resolveFeatChoiceCommand(ledger, choiceId, feat))
+      applyCommand(resolveFeatChoiceCommand(character, ledger, choiceId, feat))
     },
     [character, ledger, applyCommand],
   )
 
   const removeFeatChoiceSelection = useCallback(
-    (choiceId: string, featName: string) => {
+    (choiceId: string, featName: string, featSource?: string) => {
       if (!character) return
-      applyCommand(removeFeatChoiceCommand(ledger, choiceId, featName))
+      applyCommand(removeFeatChoiceCommand(character, ledger, choiceId, featName, featSource))
     },
     [character, ledger, applyCommand],
   )
@@ -150,6 +151,23 @@ export function useFeatProvenanceMutations() {
     (feat: FeatOptionTarget, selections: FeatOptionSelections, allSpells?: Spell5e[]) => {
       if (!character) return
       applyCommand(commitFeatOptionsCommand(character, ledger, feat, selections, allSpells))
+    },
+    [character, ledger, applyCommand],
+  )
+
+  const replaceClassFeatSelections = useCallback(
+    (
+      owner: {
+        className: string
+        classSource?: string
+        progressionName: string
+        categories: string[]
+        slotLevels: number[]
+      },
+      selectedFeats: Array<{ name: string; source?: string }>,
+    ) => {
+      if (!character) return
+      applyCommand(replaceClassFeatSelectionsCommand(character, ledger, owner, selectedFeats))
     },
     [character, ledger, applyCommand],
   )
@@ -182,6 +200,7 @@ export function useFeatProvenanceMutations() {
     removeFeatProvenance,
     replaceFeatSelections,
     replaceBonusFeatSelections,
+    replaceClassFeatSelections,
     applyOptionalFeatureSelection,
     replaceOptionalFeatureSelections,
     resolveFeatChoiceSelection,

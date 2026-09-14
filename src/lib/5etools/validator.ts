@@ -78,25 +78,27 @@ async function validateRemoteFile(basePath: string, file: FileValidationConfig):
       method: 'HEAD',
       signal: AbortSignal.timeout(10000),
     })
-    if (!headResponse.ok) return false
+    if (headResponse.ok) {
+      const contentType = headResponse.headers.get('content-type')
+      if (
+        contentType &&
+        !contentType.includes('application/json') &&
+        !contentType.includes('text/plain')
+      ) {
+        return false
+      }
 
-    const contentType = headResponse.headers.get('content-type')
-    if (
-      contentType &&
-      !contentType.includes('application/json') &&
-      !contentType.includes('text/plain')
-    ) {
-      return false
+      if (!file.schema) return true
     }
 
-    if (!file.schema) return true
-
-    // GET only when a schema must be validated
+    // Validate content when a schema exists, and fall back to GET when the host
+    // does not support HEAD.
     const response = await fetch(url, {
       method: 'GET',
       signal: AbortSignal.timeout(10000),
     })
     if (!response.ok) return false
+    if (!file.schema) return true
 
     const data = await response.json()
     if (!data || typeof data !== 'object') return false

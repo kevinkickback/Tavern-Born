@@ -54,6 +54,7 @@ import {
   getFixedSpellcastingClass,
   resolveFixedFeatGrant,
 } from '@/lib/featGrants'
+import type { ChoiceRecord } from '@/lib/provenance/types'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { countTotalFeatSlots } from '@/pages/build/class/model/pageUtils'
@@ -72,6 +73,24 @@ type FeatView = 'all' | 'character' | 'bonus'
 type FeatOptionsTarget = Feat5e & {
   grantVariant?: string
   fixedSpellcastingClass?: string
+  provenanceChoiceId?: string
+  classFeatChoiceId?: string
+}
+
+type SelectedFeatIdentity = { name: string; source: string }
+
+function getChoiceFeatSelections(
+  choice: ChoiceRecord,
+): Array<{ name: string; source?: string; options?: FeatOptionSelections }> {
+  return choice.selectedRefs ?? choice.selected.map((name) => ({ name }))
+}
+
+function isSelectedFeat(
+  selected: SelectedFeatIdentity | null,
+  name: string,
+  source: string | undefined,
+): boolean {
+  return selected?.name === name && selected.source === (source ?? '')
 }
 
 interface FeatDetailCardProps {
@@ -79,21 +98,35 @@ interface FeatDetailCardProps {
   featData: Feat5e | undefined
   characterSnapshot: PrereqCharacterSnapshot
   onRemove?: (name: string, source: string) => void
-  onCompleteSetup?: (name: string, source: string, grantVariant?: string) => void
+  onCompleteSetup?: (
+    name: string,
+    source: string,
+    grantVariant?: string,
+    provenanceChoiceId?: string,
+    classFeatChoiceId?: string,
+  ) => void
   /** Triggered when user clicks "Edit Setup" on a feat with existing options. */
-  onEditSetup?: (name: string, source: string, grantVariant?: string) => void
+  onEditSetup?: (
+    name: string,
+    source: string,
+    grantVariant?: string,
+    provenanceChoiceId?: string,
+    classFeatChoiceId?: string,
+  ) => void
   isBonus?: boolean
   isOrigin?: boolean
   /** Shows a "Granted by …" badge instead of the remove button. */
   grantedBy?: string
   grantVariant?: string
   grantVariantLabel?: string
+  provenanceChoiceId?: string
+  classFeatChoiceId?: string
   /** True when this feat requires option selections that haven't been made yet. */
   optionsPending?: boolean
   /** True when this feat has been configured and can be re-edited. */
   optionsConfigured?: boolean
   selected?: boolean
-  onSelect?: (name: string) => void
+  onSelect?: (name: string, source: string) => void
 }
 
 const FeatDetailCard = memo(function FeatDetailCard({
@@ -108,6 +141,8 @@ const FeatDetailCard = memo(function FeatDetailCard({
   grantedBy,
   grantVariant,
   grantVariantLabel,
+  provenanceChoiceId,
+  classFeatChoiceId,
   optionsPending,
   optionsConfigured,
   selected,
@@ -172,7 +207,7 @@ const FeatDetailCard = memo(function FeatDetailCard({
         aria-label={`Select ${feat.name}`}
         aria-pressed={selected}
         className="absolute inset-0 z-0 cursor-default rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        onClick={() => onSelect?.(feat.name)}
+        onClick={() => onSelect?.(feat.name, feat.source)}
       />
       <div className="pointer-events-none relative z-10 p-4">
         <div className="flex items-start gap-4">
@@ -258,7 +293,13 @@ const FeatDetailCard = memo(function FeatDetailCard({
                 className="pointer-events-auto mt-3 h-8 gap-1.5 border-warning/40 text-sm text-warning hover:border-warning/60 hover:bg-warning/10"
                 onClick={(event) => {
                   event.stopPropagation()
-                  onCompleteSetup(feat.name, feat.source, grantVariant)
+                  onCompleteSetup(
+                    feat.name,
+                    feat.source,
+                    grantVariant,
+                    provenanceChoiceId,
+                    classFeatChoiceId,
+                  )
                 }}
               >
                 Complete Setup
@@ -273,7 +314,13 @@ const FeatDetailCard = memo(function FeatDetailCard({
                 className="pointer-events-auto mt-3 h-8 gap-1.5 border-accent/40 text-sm text-accent hover:border-accent/60 hover:bg-accent/10"
                 onClick={(event) => {
                   event.stopPropagation()
-                  onEditSetup(feat.name, feat.source, grantVariant)
+                  onEditSetup(
+                    feat.name,
+                    feat.source,
+                    grantVariant,
+                    provenanceChoiceId,
+                    classFeatChoiceId,
+                  )
                 }}
               >
                 <PencilSimple className="h-3 w-3" />
@@ -385,7 +432,7 @@ export function FeatsPage() {
   const [listCollapsed, setListCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [compactPane, setCompactPane] = useState<CompactPane>('left')
-  const [selectedFeatName, setSelectedFeatName] = useState<string | null>(null)
+  const [selectedFeat, setSelectedFeat] = useState<SelectedFeatIdentity | null>(null)
   const [featView, setFeatView] = useState<FeatView>('all')
   const [bonusModalOpen, setBonusModalOpen] = useState(false)
   const [featOptionsTarget, setFeatOptionsTarget] = useState<FeatOptionsTarget | null>(null)
@@ -399,8 +446,8 @@ export function FeatsPage() {
   } | null>(null)
   const classLookup = useClassLookup()
 
-  const handleSelectFeat = useCallback((featName: string) => {
-    setSelectedFeatName(featName)
+  const handleSelectFeat = useCallback((featName: string, featSource: string) => {
+    setSelectedFeat({ name: featName, source: featSource })
     setDetailCollapsed(false)
     setCompactPane('right')
   }, [])
@@ -417,6 +464,13 @@ export function FeatsPage() {
   )
   const usedASI = character?.feats?.length ?? 0
   const remainingASI = totalFeatSlots - usedASI
+  const classProgressionFeats = useMemo(
+    () =>
+      (character?.classFeatChoices ?? []).flatMap((choice) =>
+        choice.feats.map((feat) => ({ choice, feat })),
+      ),
+    [character?.classFeatChoices],
+  )
 
   const characterSnapshot = useMemo<PrereqCharacterSnapshot>(
     () => buildPrerequisiteSnapshot({ character, classProgression }),
@@ -480,12 +534,14 @@ export function FeatsPage() {
 
   const hasCharacterSection =
     (character?.feats?.length ?? 0) > 0 ||
+    classProgressionFeats.length > 0 ||
     racialFixedFeats.length > 0 ||
     resolvedRacialChoices.length > 0 ||
     originFixedFeats.length > 0 ||
     resolvedOriginChoices.length > 0
   const characterFeatCount =
     (character?.feats?.length ?? 0) +
+    classProgressionFeats.length +
     racialFixedFeats.length +
     resolvedRacialChoices.reduce((sum, c) => sum + c.selected.length, 0) +
     originFixedFeats.length +
@@ -499,23 +555,23 @@ export function FeatsPage() {
   )
 
   const handleRemoveFeat = useCallback(
-    (featName: string) => {
+    (featName: string, featSource: string) => {
       if (!character) return
       const remaining = (character.feats ?? [])
-        .filter((f) => f.name !== featName)
+        .filter((f) => f.name !== featName || f.source !== featSource)
         .map((f) => ({ name: f.name, source: f.source }) as Feat5e)
       replaceFeatSelections(remaining)
-      if (selectedFeatName === featName) setSelectedFeatName(null)
+      if (isSelectedFeat(selectedFeat, featName, featSource)) setSelectedFeat(null)
     },
-    [character, replaceFeatSelections, selectedFeatName],
+    [character, replaceFeatSelections, selectedFeat],
   )
 
   const handleRemoveGrantedChoice = useCallback(
-    (choiceId: string, featName: string) => {
-      removeFeatChoiceSelection(choiceId, featName)
-      if (selectedFeatName === featName) setSelectedFeatName(null)
+    (choiceId: string, featName: string, featSource: string) => {
+      removeFeatChoiceSelection(choiceId, featName, featSource)
+      if (isSelectedFeat(selectedFeat, featName, featSource)) setSelectedFeat(null)
     },
-    [removeFeatChoiceSelection, selectedFeatName],
+    [removeFeatChoiceSelection, selectedFeat],
   )
 
   const handleBonusModalConfirm = useCallback(
@@ -541,14 +597,20 @@ export function FeatsPage() {
           (feat) => feat.name !== featName || feat.source !== featSource,
         ),
       )
-      if (selectedFeatName === featName) setSelectedFeatName(null)
+      if (isSelectedFeat(selectedFeat, featName, featSource)) setSelectedFeat(null)
     },
-    [character, replaceBonusFeatSelections, selectedFeatName],
+    [character, replaceBonusFeatSelections, selectedFeat],
   )
 
   // Open the options wizard for a feat that needs setup
   const handleCompleteSetup = useCallback(
-    (featName: string, featSource: string, grantVariant?: string) => {
+    (
+      featName: string,
+      featSource: string,
+      grantVariant?: string,
+      provenanceChoiceId?: string,
+      classFeatChoiceId?: string,
+    ) => {
       const feat5e = (feats as Feat5e[]).find(
         (feat) => feat.name === featName && (feat.source ?? '') === featSource,
       )
@@ -557,6 +619,8 @@ export function FeatsPage() {
           ...feat5e,
           grantVariant,
           fixedSpellcastingClass: getFixedSpellcastingClass(feat5e, grantVariant),
+          provenanceChoiceId,
+          classFeatChoiceId,
         })
       }
     },
@@ -574,7 +638,13 @@ export function FeatsPage() {
 
   // Open edit confirmation for a feat that already has options
   const handleEditSetup = useCallback(
-    (featName: string, featSource: string, grantVariant?: string) => {
+    (
+      featName: string,
+      featSource: string,
+      grantVariant?: string,
+      provenanceChoiceId?: string,
+      classFeatChoiceId?: string,
+    ) => {
       const feat5e = (feats as Feat5e[]).find(
         (feat) => feat.name === featName && (feat.source ?? '') === featSource,
       )
@@ -584,19 +654,39 @@ export function FeatsPage() {
       const existing = (character?.feats ?? []).find(
         (feat) => feat.name === featName && feat.source === featSource,
       )
-      const priorOptions = fixedOptions ?? existing?.options
+      const choiceOptions = provenanceChoiceId
+        ? character?.provenance?.choices
+            .find((choice) => choice.id === provenanceChoiceId)
+            ?.selectedRefs?.find(
+              (selected) => selected.name === featName && (selected.source ?? '') === featSource,
+            )?.options
+        : undefined
+      const classOptions = classFeatChoiceId
+        ? character?.classFeatChoices
+            ?.find((choice) => choice.id === classFeatChoiceId)
+            ?.feats.find((feat) => feat.name === featName && feat.source === featSource)?.options
+        : undefined
+      const priorOptions = fixedOptions ?? existing?.options ?? choiceOptions ?? classOptions
       if (feat5e && priorOptions) {
         setFeatEditCandidate({
           feat5e: {
             ...feat5e,
             grantVariant,
             fixedSpellcastingClass: getFixedSpellcastingClass(feat5e, grantVariant),
+            provenanceChoiceId,
+            classFeatChoiceId,
           },
           priorOptions,
         })
       }
     },
-    [feats, character?.feats, character?.fixedFeatOptions],
+    [
+      feats,
+      character?.feats,
+      character?.fixedFeatOptions,
+      character?.provenance?.choices,
+      character?.classFeatChoices,
+    ],
   )
 
   const handleEditBonusSetup = useCallback(
@@ -665,9 +755,16 @@ export function FeatsPage() {
 
   const proficientSkillNames = character?.proficiencies?.skills ?? EMPTY_STRINGS
 
+  const configuredChoiceOptionCount = [...resolvedRacialChoices, ...resolvedOriginChoices].reduce(
+    (count, choice) =>
+      count + getChoiceFeatSelections(choice).filter((selection) => selection.options).length,
+    0,
+  )
   const configuredOptionFeatCount =
     (character?.feats ?? []).filter((feat) => feat.options).length +
-    (character?.specialFeats ?? []).filter((feat) => feat.options).length
+    (character?.specialFeats ?? []).filter((feat) => feat.options).length +
+    classProgressionFeats.filter(({ feat }) => feat.options).length +
+    configuredChoiceOptionCount
   const [showEditHint, setShowEditHint] = useState(() => !isHintDismissed(FEATS_EDIT_HINT_ID))
   const hintPosition = useAnchoredHintPosition({
     enabled: showEditHint && configuredOptionFeatCount > 0,
@@ -680,7 +777,32 @@ export function FeatsPage() {
     setHintDismissed(FEATS_EDIT_HINT_ID, true)
   }
 
-  const pendingOptionCount = pendingOptionFeatIds.size + pendingOptionBonusFeatIds.size
+  const pendingClassOptionCount = classProgressionFeats.filter(({ feat }) => {
+    if (feat.options) return false
+    const data = (feats as Feat5e[]).find(
+      (candidate) => candidate.name === feat.name && (candidate.source ?? '') === feat.source,
+    )
+    return data ? hasFeatOptions(data) : false
+  }).length
+  const pendingChoiceOptionCount = [...resolvedRacialChoices, ...resolvedOriginChoices].reduce(
+    (count, choice) =>
+      count +
+      getChoiceFeatSelections(choice).filter((selection) => {
+        if (selection.options) return false
+        const data = (feats as Feat5e[]).find(
+          (candidate) =>
+            candidate.name.toLowerCase() === selection.name.toLowerCase() &&
+            (selection.source == null || candidate.source === selection.source),
+        )
+        return data ? hasFeatOptions(data) : false
+      }).length,
+    0,
+  )
+  const pendingOptionCount =
+    pendingOptionFeatIds.size +
+    pendingOptionBonusFeatIds.size +
+    pendingClassOptionCount +
+    pendingChoiceOptionCount
 
   if (!character) {
     return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />
@@ -691,8 +813,11 @@ export function FeatsPage() {
     pendingRacialChoices.length > 0 ||
     pendingOriginChoices.length > 0 ||
     pendingOptionCount > 0
-  const activeFeatName = selectedFeatName
-  const activeFeatData = (feats as Feat5e[]).find((feat) => feat.name === activeFeatName)
+  const activeFeatName = selectedFeat?.name ?? null
+  const activeFeatData = (feats as Feat5e[]).find(
+    (feat) =>
+      feat.name === selectedFeat?.name && (feat.source ?? '') === (selectedFeat?.source ?? ''),
+  )
   const showCharacterGroup = featView === 'all' || featView === 'character'
   const showBonusGroup = featView === 'all' || featView === 'bonus'
   return (
@@ -874,7 +999,11 @@ export function FeatsPage() {
                         {hasCharacterSection ? (
                           <div className="space-y-3">
                             {(character.feats ?? []).map((feat) => {
-                              const featData = (feats as Feat5e[]).find((f) => f.name === feat.name)
+                              const featData = (feats as Feat5e[]).find(
+                                (candidate) =>
+                                  candidate.name === feat.name &&
+                                  (candidate.source ?? '') === feat.source,
+                              )
                               const isPending = pendingOptionFeatIds.has(
                                 `${feat.name}|${feat.source}`,
                               )
@@ -885,13 +1014,37 @@ export function FeatsPage() {
                                   feat={feat}
                                   featData={featData}
                                   characterSnapshot={characterSnapshot}
-                                  selected={activeFeatName === feat.name}
+                                  selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
                                   onSelect={handleSelectFeat}
                                   onRemove={handleRemoveFeat}
                                   onCompleteSetup={isPending ? handleCompleteSetup : undefined}
                                   onEditSetup={isConfigured ? handleEditSetup : undefined}
                                   optionsPending={isPending}
                                   optionsConfigured={isConfigured}
+                                />
+                              )
+                            })}
+                            {classProgressionFeats.map(({ choice, feat }) => {
+                              const featData = (feats as Feat5e[]).find(
+                                (candidate) =>
+                                  candidate.name === feat.name &&
+                                  (candidate.source ?? '') === feat.source,
+                              )
+                              const needsOptions = !!featData && hasFeatOptions(featData)
+                              return (
+                                <FeatDetailCard
+                                  key={`class-${choice.id}-${feat.id}`}
+                                  feat={feat}
+                                  featData={featData}
+                                  characterSnapshot={characterSnapshot}
+                                  selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
+                                  onSelect={handleSelectFeat}
+                                  grantedBy={`${choice.className}: ${choice.progressionName}`}
+                                  classFeatChoiceId={choice.id}
+                                  optionsPending={needsOptions && !feat.options}
+                                  optionsConfigured={!!feat.options}
+                                  onCompleteSetup={handleCompleteSetup}
+                                  onEditSetup={handleEditSetup}
                                 />
                               )
                             })}
@@ -905,7 +1058,11 @@ export function FeatsPage() {
                                 }}
                                 featData={granted.featData}
                                 characterSnapshot={characterSnapshot}
-                                selected={activeFeatName === granted.name}
+                                selected={isSelectedFeat(
+                                  selectedFeat,
+                                  granted.name,
+                                  granted.source,
+                                )}
                                 onSelect={handleSelectFeat}
                                 grantedBy={granted.sourceLabel}
                                 grantVariant={granted.grantVariant}
@@ -935,26 +1092,44 @@ export function FeatsPage() {
                               />
                             ))}
                             {resolvedRacialChoices.flatMap((choice) =>
-                              choice.selected.map((selectedName) => {
+                              getChoiceFeatSelections(choice).map((selection) => {
                                 const data = (feats as Feat5e[]).find(
-                                  (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
+                                  (feat) =>
+                                    feat.name.toLowerCase() === selection.name.toLowerCase() &&
+                                    (selection.source == null || feat.source === selection.source),
                                 )
+                                const selectedName = data?.name ?? selection.name
+                                const selectedSource = selection.source ?? data?.source ?? ''
+                                const needsOptions = !!data && hasFeatOptions(data)
                                 return (
                                   <FeatDetailCard
-                                    key={`choice-${choice.id}-${selectedName}`}
+                                    key={`choice-${choice.id}-${selectedName}|${selectedSource}`}
                                     feat={{
-                                      id: `choice-${choice.id}-${selectedName}`,
-                                      name: data?.name ?? selectedName,
-                                      source: data?.source ?? '',
+                                      id: `choice-${choice.id}-${selectedName}|${selectedSource}`,
+                                      name: selectedName,
+                                      source: selectedSource,
                                     }}
                                     featData={data}
                                     characterSnapshot={characterSnapshot}
-                                    selected={activeFeatName === selectedName}
+                                    selected={isSelectedFeat(
+                                      selectedFeat,
+                                      selectedName,
+                                      selectedSource,
+                                    )}
                                     onSelect={handleSelectFeat}
                                     grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
                                     onRemove={() =>
-                                      handleRemoveGrantedChoice(choice.id, selectedName)
+                                      handleRemoveGrantedChoice(
+                                        choice.id,
+                                        selectedName,
+                                        selectedSource,
+                                      )
                                     }
+                                    provenanceChoiceId={choice.id}
+                                    optionsPending={needsOptions && !selection.options}
+                                    optionsConfigured={!!selection.options}
+                                    onCompleteSetup={handleCompleteSetup}
+                                    onEditSetup={handleEditSetup}
                                   />
                                 )
                               }),
@@ -969,7 +1144,11 @@ export function FeatsPage() {
                                 }}
                                 featData={granted.featData}
                                 characterSnapshot={characterSnapshot}
-                                selected={activeFeatName === granted.name}
+                                selected={isSelectedFeat(
+                                  selectedFeat,
+                                  granted.name,
+                                  granted.source,
+                                )}
                                 onSelect={handleSelectFeat}
                                 grantedBy={granted.sourceLabel}
                                 grantVariant={granted.grantVariant}
@@ -1000,26 +1179,44 @@ export function FeatsPage() {
                               />
                             ))}
                             {resolvedOriginChoices.flatMap((choice) =>
-                              choice.selected.map((selectedName) => {
+                              getChoiceFeatSelections(choice).map((selection) => {
                                 const data = (feats as Feat5e[]).find(
-                                  (f) => f.name.toLowerCase() === selectedName.toLowerCase(),
+                                  (feat) =>
+                                    feat.name.toLowerCase() === selection.name.toLowerCase() &&
+                                    (selection.source == null || feat.source === selection.source),
                                 )
+                                const selectedName = data?.name ?? selection.name
+                                const selectedSource = selection.source ?? data?.source ?? ''
+                                const needsOptions = !!data && hasFeatOptions(data)
                                 return (
                                   <FeatDetailCard
-                                    key={`choice-${choice.id}-${selectedName}`}
+                                    key={`choice-${choice.id}-${selectedName}|${selectedSource}`}
                                     feat={{
-                                      id: `choice-${choice.id}-${selectedName}`,
-                                      name: data?.name ?? selectedName,
-                                      source: data?.source ?? '',
+                                      id: `choice-${choice.id}-${selectedName}|${selectedSource}`,
+                                      name: selectedName,
+                                      source: selectedSource,
                                     }}
                                     featData={data}
                                     characterSnapshot={characterSnapshot}
-                                    selected={activeFeatName === selectedName}
+                                    selected={isSelectedFeat(
+                                      selectedFeat,
+                                      selectedName,
+                                      selectedSource,
+                                    )}
                                     onSelect={handleSelectFeat}
                                     grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
                                     onRemove={() =>
-                                      handleRemoveGrantedChoice(choice.id, selectedName)
+                                      handleRemoveGrantedChoice(
+                                        choice.id,
+                                        selectedName,
+                                        selectedSource,
+                                      )
                                     }
+                                    provenanceChoiceId={choice.id}
+                                    optionsPending={needsOptions && !selection.options}
+                                    optionsConfigured={!!selection.options}
+                                    onCompleteSetup={handleCompleteSetup}
+                                    onEditSetup={handleEditSetup}
                                     isOrigin
                                   />
                                 )
@@ -1085,7 +1282,7 @@ export function FeatsPage() {
                                 feat={feat}
                                 featData={featData}
                                 characterSnapshot={characterSnapshot}
-                                selected={activeFeatName === feat.name}
+                                selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
                                 onSelect={handleSelectFeat}
                                 onRemove={handleRemoveBonusFeat}
                                 onCompleteSetup={isPending ? handleCompleteSetup : undefined}
@@ -1152,7 +1349,6 @@ export function FeatsPage() {
         initialSelectedIds={bonusInitialSelectedIds}
         characterSnapshot={characterSnapshot}
         onConfirm={handleBonusModalConfirm}
-        allowIgnoreLimit={false}
       />
 
       {/* Feat options wizard — opened via "Complete Setup" on a pending feat */}

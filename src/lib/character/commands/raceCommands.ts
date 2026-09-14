@@ -8,6 +8,7 @@ import {
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
 import { mergeSkillState } from '@/lib/calculations/skills'
+import { retractFeatChoiceOptionsForSources } from '@/lib/character/commands/featCommands'
 import { extractFixedGrantNames } from '@/lib/character/equipmentHelpers'
 import {
   applyRaceGrants,
@@ -144,7 +145,16 @@ export function applyRaceSelectionCommand(
 
   const oldRaceName = character.race || undefined
   const oldSubraceName = character.subrace || undefined
-  let provenanceUpdate = reconcileRaceChange(ledger, oldRaceName, oldSubraceName)
+  const retracted = retractFeatChoiceOptionsForSources(character, ledger, [
+    { sourceType: 'race', sourceName: oldRaceName },
+    { sourceType: 'subrace', sourceName: oldSubraceName },
+  ])
+  const workingCharacter = { ...character, ...retracted.characterPatch }
+  let provenanceUpdate = reconcileRaceChange(
+    retracted.provenanceUpdate,
+    oldRaceName,
+    oldSubraceName,
+  )
   provenanceUpdate = applyRaceGrants(
     normalized.race,
     normalized.subrace,
@@ -165,10 +175,18 @@ export function applyRaceSelectionCommand(
       subraceSource: subrace?.source || undefined,
       raceAsiBlockIndex,
       raceAsiChoices: [],
-      ...buildRaceMaterializedPatch(character, ledger, normalized.race, normalized.subrace, [
-        ['race', oldRaceName],
-        ['subrace', oldSubraceName],
-      ]),
+      spells: workingCharacter.spells,
+      abilityScores: workingCharacter.abilityScores,
+      ...buildRaceMaterializedPatch(
+        workingCharacter,
+        retracted.provenanceUpdate,
+        normalized.race,
+        normalized.subrace,
+        [
+          ['race', oldRaceName],
+          ['subrace', oldSubraceName],
+        ],
+      ),
     },
     provenanceUpdate,
   }
@@ -184,7 +202,11 @@ export function applySubraceSelectionCommand(
   const normalized = normalizeRaceSelectionForOriginSystem(race, subrace, character.originSystem)
   if (!normalized.race) return { characterPatch: {}, provenanceUpdate: ledger }
   const oldSubraceName = character.subrace || undefined
-  let provenanceUpdate = reconcileSubraceChange(ledger, oldSubraceName)
+  const retracted = retractFeatChoiceOptionsForSources(character, ledger, [
+    { sourceType: 'subrace', sourceName: oldSubraceName },
+  ])
+  const workingCharacter = { ...character, ...retracted.characterPatch }
+  let provenanceUpdate = reconcileSubraceChange(retracted.provenanceUpdate, oldSubraceName)
   if (normalized.subrace) {
     provenanceUpdate = applyRaceGrants(
       {
@@ -213,9 +235,15 @@ export function applySubraceSelectionCommand(
       subrace: subrace?.name,
       subraceSource: subrace?.source || undefined,
       raceAsiChoices: [],
-      ...buildRaceMaterializedPatch(character, ledger, normalized.race, normalized.subrace, [
-        ['subrace', oldSubraceName],
-      ]),
+      spells: workingCharacter.spells,
+      abilityScores: workingCharacter.abilityScores,
+      ...buildRaceMaterializedPatch(
+        workingCharacter,
+        retracted.provenanceUpdate,
+        normalized.race,
+        normalized.subrace,
+        [['subrace', oldSubraceName]],
+      ),
     },
     provenanceUpdate,
   }

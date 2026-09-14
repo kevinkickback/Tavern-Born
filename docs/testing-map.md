@@ -61,6 +61,8 @@ new tests land and do not lower them to merge a change.
 	legacy type-only armor records, and preservation of other equipped gear
 - Wizard data-controller coverage for draft source filtering, implicit ruleset sources, reprint suppression, and raw fallback resolution
 - Shared prerequisite snapshot and feat option-pool coverage, including multiclass progression and source collisions
+- Feat command coverage includes class-owned progression choices, bonus-feat isolation,
+  source-qualified race/background choices, option retraction, and class level-down cleanup.
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
 - Header HP/AC launch controls and one-time anchored hint coverage in tests/integration/appHeader.test.tsx
