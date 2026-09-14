@@ -7,10 +7,32 @@ import {
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import type { Background5e } from '@/types/5etools'
+import type { Character } from '@/types/character'
+
+function buildBackgroundAbilityChoicesPatch(
+  character: Character,
+  ledger: ProvenanceLedger,
+  background: Background5e,
+  blockIndex: number,
+  choices: string[],
+): Partial<Character> {
+  const result = applyBackgroundAbilityChoicesCommand(
+    character,
+    ledger,
+    background,
+    blockIndex,
+    choices,
+  )
+  return {
+    ...result.characterPatch,
+    provenance: result.provenanceUpdate,
+  }
+}
 
 export function useBackgroundProvenanceMutations() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const reconcileCharacter = useCharacterStore((s) => s.reconcileCharacter)
   const itemLookup = useItemLookup()
 
   const ledger = useMemo<ProvenanceLedger>(
@@ -58,20 +80,44 @@ export function useBackgroundProvenanceMutations() {
       choices: string[],
     ) => {
       if (!character) return
-      const result = applyBackgroundAbilityChoicesCommand(
-        character,
-        ledger,
-        bg as Background5e,
-        blockIndex,
-        choices,
+      updateCharacter(
+        character.id,
+        buildBackgroundAbilityChoicesPatch(
+          character,
+          ledger,
+          bg as Background5e,
+          blockIndex,
+          choices,
+        ),
       )
-      updateCharacter(character.id, {
-        ...result.characterPatch,
-        provenance: result.provenanceUpdate,
-      })
     },
     [character, ledger, updateCharacter],
   )
 
-  return { applyBackgroundSelection, applyBackgroundAbilityChoices }
+  const reconcileBackgroundAbilityChoices = useCallback(
+    (
+      bg: { name: string; source?: string; ability?: unknown[] },
+      blockIndex: number,
+      choices: string[],
+    ) => {
+      if (!character) return
+      reconcileCharacter(
+        character.id,
+        buildBackgroundAbilityChoicesPatch(
+          character,
+          ledger,
+          bg as Background5e,
+          blockIndex,
+          choices,
+        ),
+      )
+    },
+    [character, ledger, reconcileCharacter],
+  )
+
+  return {
+    applyBackgroundSelection,
+    applyBackgroundAbilityChoices,
+    reconcileBackgroundAbilityChoices,
+  }
 }

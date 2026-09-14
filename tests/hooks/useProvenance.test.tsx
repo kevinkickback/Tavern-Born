@@ -204,4 +204,48 @@ describe('useProvenance mutations', () => {
     expect(updated?.currency).toEqual({ cp: 5, sp: 8, ep: 0, gp: 2, pp: 0 })
     expect(updated?.backgroundEquipmentChoices).toEqual(['b'])
   })
+
+  test('background auto-choices preserve unrelated unsaved edits', () => {
+    const character = makeCharacterFixture({
+      id: 'background-auto-choices',
+      name: 'Persisted Name',
+      originSystem: '2024',
+      background: 'Guard',
+      backgroundSource: 'XPHB',
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+      isActiveCharacterDirty: false,
+    })
+    useCharacterStore.getState().updateCharacter(character.id, { name: 'Unsaved Name' })
+    const { result } = renderHook(() => useProvenance())
+
+    result.current.reconcileBackgroundAbilityChoices(
+      {
+        name: 'Guard',
+        source: 'XPHB',
+        ability: [
+          {
+            choose: {
+              weighted: {
+                from: ['strength', 'dexterity'],
+                weights: [2, 1],
+              },
+            },
+          },
+        ],
+      },
+      0,
+      ['strength', 'dexterity'],
+    )
+
+    const state = useCharacterStore.getState()
+    expect(state.activeCharacter?.name).toBe('Unsaved Name')
+    expect(state.activeCharacter?.backgroundAsiChoices).toEqual(['strength', 'dexterity'])
+    expect(state.characters[0]?.name).toBe('Persisted Name')
+    expect(state.characters[0]?.backgroundAsiChoices).toBeUndefined()
+    expect(state.hasUnsavedChanges()).toBe(true)
+  })
 })

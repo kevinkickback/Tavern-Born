@@ -20,7 +20,7 @@ export interface ItemSelectionModalProps {
   onConfirm: (items: Item5e[]) => void
 }
 
-type ItemCategory =
+export type ItemCategory =
   | 'weapons'
   | 'armor'
   | 'ammunition'
@@ -29,8 +29,9 @@ type ItemCategory =
   | 'wondrous'
   | 'potions'
   | 'scrolls'
+  | 'other'
 
-const TYPE_OPTIONS: Array<{ value: ItemCategory; label: string }> = [
+const CORE_TYPE_OPTIONS: Array<{ value: ItemCategory; label: string }> = [
   { value: 'weapons', label: 'Weapons' },
   { value: 'armor', label: 'Armor' },
   { value: 'ammunition', label: 'Ammunition' },
@@ -101,7 +102,7 @@ function getItemDescription(
   return getArmorStatSummary(item, itemTypeByAbbr)
 }
 
-function getItemCategories(
+export function getItemCategories(
   item: Item5e,
   itemTypeByAbbr: Readonly<Record<string, string>>,
 ): Set<ItemCategory> {
@@ -116,6 +117,7 @@ function getItemCategories(
   if (traits.isWondrous) categories.add('wondrous')
   if (traits.isPotion) categories.add('potions')
   if (traits.isScroll) categories.add('scrolls')
+  if (categories.size === 0) categories.add('other')
 
   return categories
 }
@@ -134,10 +136,17 @@ function getPrimaryCategoryLabel(
     'wondrous',
     'potions',
     'scrolls',
+    'other',
   ]
 
   const primary = ordered.find((category) => categories.has(category))
-  return TYPE_OPTIONS.find((option) => option.value === primary)?.label ?? 'Item'
+  if (primary === 'other') {
+    const labels = getNormalizedItemTraits(item, itemTypeByAbbr)
+      .typeCodes.map((code) => itemTypeByAbbr[code])
+      .filter((label): label is string => Boolean(label))
+    return labels.join(', ') || 'Other'
+  }
+  return CORE_TYPE_OPTIONS.find((option) => option.value === primary)?.label ?? 'Other'
 }
 
 function matchItem(
@@ -151,10 +160,6 @@ function matchItem(
   }
 
   const categories = getItemCategories(item, itemTypeByAbbr)
-  if (categories.size === 0) {
-    return false
-  }
-
   if ((item.rarity ?? '').toLowerCase() === 'varies') {
     return false
   }
@@ -294,10 +299,19 @@ export function ItemSelectionModal({
     () =>
       items.filter((item) => {
         if (Array.isArray((item as { items?: unknown }).items)) return false
-        return getItemCategories(item, itemTypeByAbbr).size > 0
+        return true
       }),
-    [itemTypeByAbbr, items],
+    [items],
   )
+
+  const typeOptions = useMemo(() => {
+    const hasOther = filteredItems.some((item) =>
+      getItemCategories(item, itemTypeByAbbr).has('other'),
+    )
+    return hasOther
+      ? [...CORE_TYPE_OPTIONS, { value: 'other' as const, label: 'Other' }]
+      : CORE_TYPE_OPTIONS
+  }, [filteredItems, itemTypeByAbbr])
 
   const rarityOptions = useMemo(() => {
     const seen = new Set<string>()
@@ -327,7 +341,7 @@ export function ItemSelectionModal({
       label: 'Type',
       type: 'checkboxes',
       columns: 1,
-      options: TYPE_OPTIONS,
+      options: typeOptions,
     },
     {
       key: 'rarity',

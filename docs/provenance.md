@@ -71,6 +71,11 @@ The mutation `applyBackgroundAbilityChoices(bg, blockIndex, choices)` in `usePro
 2. Writes new `abilityBonuses` entries via `addAbilityBonus` (one per choice/weight pair).
 3. Persists `backgroundAsiBlockIndex` and `backgroundAsiChoices` on the character.
 
+The Background page uses the reconciliation variant of this mutation only when it auto-selects a
+fully determined XPHB block. On a clean draft the correction is synchronized to the persisted
+record without creating an unsaved change. If unrelated draft edits already exist, the correction
+stays in the draft and the dirty state is preserved until the user explicitly saves.
+
 When a background is swapped, `reconcileBackgroundChange` → `removeGrantsBySource('background', ...)` clears all background ability bonuses and resets `backgroundAsiBlockIndex`/`backgroundAsiChoices`.
 
 The UI for choosing ability blocks and slots lives in `src/pages/build/background/BackgroundPage.tsx`. The bonuses are included in `displayBonuses` on `AbilityScoresPage` via `buildBackgroundBonuses` from `src/lib/calculations/abilityScores.ts`.

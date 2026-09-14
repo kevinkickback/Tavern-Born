@@ -20,6 +20,46 @@ describe('parseRemoteDataSourceUrl', () => {
     })
   })
 
+  test.each([
+    [
+      'https://github.com/example/rules?ref=feature%2F5etools',
+      'https://raw.githubusercontent.com/example/rules/feature/5etools',
+    ],
+    [
+      'https://github.com/example/rules/tree/feature/5etools?ref=feature%2F5etools',
+      'https://raw.githubusercontent.com/example/rules/feature/5etools',
+    ],
+    [
+      'https://github.com/example/rules/tree/feature/5etools/packages/core?ref=feature%2F5etools',
+      'https://raw.githubusercontent.com/example/rules/feature/5etools/packages/core',
+    ],
+    [
+      'https://github.com/example/rules/blob/feature/5etools/packages/core/data/races.json?ref=feature%2F5etools',
+      'https://raw.githubusercontent.com/example/rules/feature/5etools/packages/core',
+    ],
+    [
+      'https://raw.githubusercontent.com/example/rules/feature/5etools/packages/core/data/races.json?ref=feature%2F5etools',
+      'https://raw.githubusercontent.com/example/rules/feature/5etools/packages/core',
+    ],
+  ])('normalizes an explicit slash-containing ref in %s', (url, normalizedUrl) => {
+    expect(parseRemoteDataSourceUrl(url)).toMatchObject({
+      kind: 'github-repository',
+      branch: 'feature/5etools',
+      normalizedUrl,
+    })
+  })
+
+  test('rejects ambiguous tree and raw paths instead of truncating a slash-containing ref', () => {
+    expect(
+      parseRemoteDataSourceUrl('https://github.com/example/rules/tree/feature/5etools'),
+    ).toMatchObject({
+      kind: 'invalid',
+    })
+    expect(
+      parseRemoteDataSourceUrl('https://raw.githubusercontent.com/example/rules/feature/5etools'),
+    ).toMatchObject({ kind: 'invalid' })
+  })
+
   test('does not treat lookalike hosts as GitHub repositories', () => {
     expect(parseRemoteDataSourceUrl('https://github.com.evil.example/owner/repo')).toEqual({
       kind: 'remote',

@@ -748,7 +748,7 @@ export function ConditionsPage() {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold">{resource.label}</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
-                            {resource.className} · Restores on a {resource.restType} rest
+                            {resource.className} · {resource.recoveryText}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">

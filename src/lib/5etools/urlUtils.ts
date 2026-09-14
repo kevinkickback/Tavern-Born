@@ -13,6 +13,51 @@ function stripTrailingSlash(value: string): string {
   return value.length > 'https://x/'.length ? value.replace(/\/+$/, '') : value
 }
 
+function parseExplicitGitHubRef(url: URL): string | undefined {
+  const value = url.searchParams
+    .get('ref')
+    ?.trim()
+    .replace(/^refs\/heads\//, '')
+  return value || undefined
+}
+
+function isValidGitHubRef(ref: string): boolean {
+  return (
+    !ref.startsWith('/') &&
+    !ref.endsWith('/') &&
+    !ref.includes('..') &&
+    !ref.includes('//') &&
+    !/[\\\s~^:?*[\]]/.test(ref)
+  )
+}
+
+function startsWithParts(parts: readonly string[], prefix: readonly string[]): boolean {
+  return prefix.every((part, index) => parts[index] === part)
+}
+
+function getRepositoryRootParts(contentParts: readonly string[]): string[] {
+  const dataIndex = contentParts.findIndex((part) => part.toLowerCase() === 'data')
+  return [...(dataIndex >= 0 ? contentParts.slice(0, dataIndex) : contentParts)]
+}
+
+function buildGitHubRawBase(
+  owner: string,
+  repo: string,
+  branch: string,
+  contentParts: readonly string[],
+): string {
+  const rootParts = getRepositoryRootParts(contentParts)
+  return `https://raw.githubusercontent.com/${owner}/${repo}/${[branch, ...rootParts].join('/')}`
+}
+
+function ambiguousRefError(): ParsedRemoteDataSourceUrl {
+  return {
+    kind: 'invalid',
+    error:
+      'GitHub branch and folder path are ambiguous; add ?ref=branch-name (URL-encode slashes as %2F)',
+  }
+}
+
 /** Parse and normalize a user-provided remote data source under one HTTPS policy. */
 export function parseRemoteDataSourceUrl(input: string): ParsedRemoteDataSourceUrl {
   const value = input.trim()
@@ -34,8 +79,14 @@ export function parseRemoteDataSourceUrl(input: string): ParsedRemoteDataSourceU
     }
 
     url.hostname = hostname
-    url.search = ''
-    url.hash = ''
+    const isGitHubHost =
+      hostname === 'raw.githubusercontent.com' ||
+      hostname === 'github.com' ||
+      hostname === 'www.github.com'
+    const explicitRef = isGitHubHost ? parseExplicitGitHubRef(url) : undefined
+    if (explicitRef && !isValidGitHubRef(explicitRef)) {
+      return { kind: 'invalid', error: 'GitHub ref is not valid' }
+    }
     url.pathname = url.pathname.replace(/\/+$/, '') || '/'
 
     const pathParts = url.pathname.split('/').filter(Boolean)
@@ -46,14 +97,33 @@ export function parseRemoteDataSourceUrl(input: string): ParsedRemoteDataSourceU
           error: 'GitHub raw URLs must include owner, repository, and branch',
         }
       }
-      const [owner, rawRepo, branch] = pathParts
+      const [owner, rawRepo] = pathParts
       const repo = rawRepo.replace(/\.git$/i, '')
+      const refAndContent = pathParts.slice(2)
+      let branch: string
+      let contentParts: string[]
+      if (explicitRef) {
+        const refParts = explicitRef.split('/')
+        if (!startsWithParts(refAndContent, refParts)) return ambiguousRefError()
+        branch = explicitRef
+        contentParts = refAndContent.slice(refParts.length)
+      } else if (
+        refAndContent.length === 1 ||
+        refAndContent[0] === 'main' ||
+        refAndContent[0] === 'master' ||
+        refAndContent[1]?.toLowerCase() === 'data'
+      ) {
+        branch = refAndContent[0]
+        contentParts = refAndContent.slice(1)
+      } else {
+        return ambiguousRefError()
+      }
       return {
         kind: 'github-repository',
         owner,
         repo,
         branch,
-        normalizedUrl: `https://raw.githubusercontent.com/${owner}/${repo}/${branch}`,
+        normalizedUrl: buildGitHubRawBase(owner, repo, branch, contentParts),
       }
     }
 
@@ -63,17 +133,46 @@ export function parseRemoteDataSourceUrl(input: string): ParsedRemoteDataSourceU
       }
       const owner = pathParts[0]
       const repo = pathParts[1].replace(/\.git$/i, '')
-      const markerIndex = pathParts.findIndex((part) => part === 'tree' || part === 'blob')
-      const branch = markerIndex >= 0 ? pathParts[markerIndex + 1] : undefined
+      const marker = pathParts[2]
+      const markerIndex = marker === 'tree' || marker === 'blob' ? 2 : -1
+      if (pathParts.length > 2 && markerIndex < 0) {
+        return { kind: 'invalid', error: 'Unsupported GitHub repository URL path' }
+      }
+
+      const refAndContent = markerIndex >= 0 ? pathParts.slice(markerIndex + 1) : []
+      let branch = explicitRef
+      let contentParts: string[] = []
+      if (explicitRef && markerIndex >= 0) {
+        const refParts = explicitRef.split('/')
+        if (!startsWithParts(refAndContent, refParts)) return ambiguousRefError()
+        contentParts = refAndContent.slice(refParts.length)
+      } else if (!explicitRef && markerIndex >= 0) {
+        if (refAndContent.length === 0) {
+          return { kind: 'invalid', error: 'GitHub tree/blob URLs must include a branch' }
+        }
+        if (
+          refAndContent.length > 1 &&
+          refAndContent[0] !== 'main' &&
+          refAndContent[0] !== 'master' &&
+          refAndContent[1]?.toLowerCase() !== 'data'
+        ) {
+          return ambiguousRefError()
+        }
+        branch = refAndContent[0]
+        contentParts = refAndContent.slice(1)
+      }
+
       return {
         kind: 'github-repository',
         owner,
         repo,
         ...(branch ? { branch } : {}),
-        normalizedUrl: `https://raw.githubusercontent.com/${owner}/${repo}/${branch ?? 'main'}`,
+        normalizedUrl: buildGitHubRawBase(owner, repo, branch ?? 'main', contentParts),
       }
     }
 
+    url.search = ''
+    url.hash = ''
     return { kind: 'remote', normalizedUrl: stripTrailingSlash(url.toString()) }
   } catch {
     return { kind: 'invalid', error: 'Invalid URL format' }

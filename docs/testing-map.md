@@ -51,6 +51,10 @@ new tests land and do not lower them to merge a change.
 	- `formatWeaponCategoryLabel` weapon category key → display label
 - Compendium entry shaping and filtering in src/lib/compendiumEntries.ts, including 5e / 5.5e / Both edition classification and composition with type, source, and text filters
 - Equipment page detail rendering, category-matched detail icons, type-aware metadata, canonical armor enrichment, exceptional populated statistics, theme-surface styling, recursive link tooltips, persistent inventory headers, and the container-responsive inventory summary in tests/integration/equipmentPage.test.tsx, tests/unit/itemDetailFields.test.ts, and tests/e2e/equipment.spec.ts; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
+- Manual item-selection category coverage includes parsed spellcasting-focus types and unknown or
+  homebrew type codes in tests/unit/itemSelectionModal.test.ts.
+- Shared class/background generic-equipment selection has an accessible-name regression test in
+  tests/integration/genericEquipmentSelect.test.tsx.
 - Shared compact list/detail pane behavior in tests/integration/splitPane.test.tsx and tests/e2e/responsive-workspaces.spec.ts, including every split workspace and persistent secondary navigation at the 900x700 minimum app window
 - Atomic equipment command coverage for add/remove/manual proficiency alignment, duplicate names, and retained source tags
 - Armor-restriction reconciliation coverage for nonproficient armor, duplicate body/shield slots,
@@ -64,12 +68,16 @@ new tests land and do not lower them to merge a change.
 - Title-bar-safe collision padding and measured floating-preview positioning across supported interface scales, plus nested-only history navigation, streamlined transient controls, selected-entry pinning without a position jump, and constrained pointer/keyboard movement
 - HP and AC management modal coverage in tests/integration/hitPointsModal.test.tsx and tests/integration/armorClassModal.test.tsx
 - Rules and Sources page behavior/layout coverage in tests/integration/rulesPage.test.tsx and tests/integration/sourcesPageLayout.test.tsx
+- Ability-score method descriptors are tested for both origin systems in
+  tests/unit/abilityScoreMethods.test.ts.
 - Conditions tab, data-driven rule text/tooltip, whole-card toggle, and exhaustion-state coverage in tests/integration/conditionsPage.test.tsx
 - Characteristics page draft synchronization, immediate detail persistence, and legacy/custom/preset
 	organization transitions in tests/integration/characteristicsPage.test.tsx
 - Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
 - Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
 - Spell hook behavior coverage in tests/hooks/useSpellSlots.test.tsx (add/remove spells, profile management, prepared toggles)
+- Spell identity coverage includes lowercase legacy references, source-qualified catalog resolution,
+  modal hiding/locking, and mixed-case command deduplication.
 - Command-layer spell and class coverage in tests/unit/spellCommands.test.ts and tests/unit/classCommands.test.ts
 - Schema migrations in src/lib/schema/migrations.ts with dedicated unit coverage in tests/lib/migrations.test.ts
 - Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)

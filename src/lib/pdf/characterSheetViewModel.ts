@@ -1,4 +1,8 @@
 import { getClassResourceDefs } from '@/lib/5etools/classData'
+import {
+  formatClassResourceRecovery,
+  getClassResourceRecoveryAtLevel,
+} from '@/lib/5etools/classRuleNormalization'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import {
   type EntityLookupSet,
@@ -514,12 +518,12 @@ function buildClassResourceRows(
           ? charismaModifier
           : (definition.maxPerLevel[levelIndex] ?? 0)
       const current = stored[definition.id] ?? max
-      const restType = definition.restTypeByLevel?.[levelIndex] ?? definition.restType
+      const recovery = getClassResourceRecoveryAtLevel(definition, levelIndex)
       return {
         label: definition.label,
         max,
         used: Math.max(0, max - current),
-        recovery: restType === 'short' ? 'Short rest' : 'Long rest',
+        recovery: formatClassResourceRecovery(recovery),
       }
     })
   })

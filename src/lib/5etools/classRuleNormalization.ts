@@ -1,6 +1,12 @@
 import type { Class5e, ClassFeatureReference } from '@/types/5etools'
 
 export type ClassResourceMaxFormula = 'cha-mod'
+export type ClassResourceRecoveryAmount = number | 'all'
+
+export interface ClassResourceRecovery {
+  shortRest?: ClassResourceRecoveryAmount
+  longRest?: ClassResourceRecoveryAmount
+}
 
 export interface ClassResourceDef {
   id: string
@@ -8,6 +14,8 @@ export interface ClassResourceDef {
   maxPerLevel: readonly number[]
   restType: 'short' | 'long'
   restTypeByLevel?: readonly ('short' | 'long')[]
+  recovery?: ClassResourceRecovery
+  recoveryByLevel?: readonly ClassResourceRecovery[]
   maxFormula?: ClassResourceMaxFormula
 }
 
@@ -17,9 +25,24 @@ export interface NormalizedClassRules {
   ritualCasting: boolean
 }
 
-const NON_RESOURCE_LABEL =
-  /bonus|damage|dice?|movement|speed|range|known|prepared|spell slots?|slot level/i
 const ASI_FEATURE = /ability score (?:improvement|increase)|epic boon/i
+const TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE: Readonly<Record<string, ReadonlySet<string>>> = {
+  'Barbarian|PHB': new Set(['rages']),
+  'Barbarian|XPHB': new Set(['rages']),
+  'Cleric|XPHB': new Set(['channel divinity']),
+  'Druid|XPHB': new Set(['wild shape']),
+  'Fighter|XPHB': new Set(['second wind']),
+  'Monk|PHB': new Set(['ki points']),
+  'Monk|XPHB': new Set(['focus points']),
+  'Mystic|UATheMysticClass': new Set(['psi points']),
+  'Paladin|XPHB': new Set(['channel divinity']),
+  'Ranger|XPHB': new Set(['favored enemy']),
+  'Sorcerer|PHB': new Set(['sorcery points']),
+  'Sorcerer|XPHB': new Set(['sorcery points']),
+}
+
+const LONG_REST_RECOVERY: ClassResourceRecovery = { longRest: 'all' }
+const SHORT_REST_RECOVERY: ClassResourceRecovery = { shortRest: 'all', longRest: 'all' }
 
 function getReferenceLevel(ref: ClassFeatureReference): number | undefined {
   const encodedLevel = Number.parseInt(ref.ref.split('|')[3] ?? '', 10)
@@ -39,6 +62,10 @@ const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
       maxPerLevel: twenty(1),
       maxFormula: 'cha-mod',
       restTypeByLevel: [...Array(4).fill('long'), ...Array(16).fill('short')],
+      recoveryByLevel: [
+        ...Array(4).fill(LONG_REST_RECOVERY),
+        ...Array(16).fill(SHORT_REST_RECOVERY),
+      ],
       restType: 'long',
     },
   ],
@@ -46,8 +73,14 @@ const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
     {
       id: 'bard-bardic-inspiration',
       label: 'Bardic Inspiration',
-      maxPerLevel: [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6],
-      restType: 'short',
+      maxPerLevel: twenty(1),
+      maxFormula: 'cha-mod',
+      restTypeByLevel: [...Array(4).fill('long'), ...Array(16).fill('short')],
+      recoveryByLevel: [
+        ...Array(4).fill(LONG_REST_RECOVERY),
+        ...Array(16).fill(SHORT_REST_RECOVERY),
+      ],
+      restType: 'long',
     },
   ],
   'Wizard|PHB': [
@@ -56,6 +89,7 @@ const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
       label: 'Arcane Recovery',
       maxPerLevel: twenty(1),
       restType: 'long',
+      recovery: LONG_REST_RECOVERY,
     },
   ],
   'Wizard|XPHB': [
@@ -63,7 +97,8 @@ const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
       id: 'wizard-arcane-recovery',
       label: 'Arcane Recovery',
       maxPerLevel: twenty(1),
-      restType: 'short',
+      restType: 'long',
+      recovery: LONG_REST_RECOVERY,
     },
   ],
   'Fighter|PHB': [
@@ -72,18 +107,21 @@ const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
       label: 'Second Wind',
       maxPerLevel: twenty(1),
       restType: 'short',
+      recovery: SHORT_REST_RECOVERY,
     },
     {
       id: 'fighter-action-surge',
       label: 'Action Surge',
       maxPerLevel: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
       restType: 'short',
+      recovery: SHORT_REST_RECOVERY,
     },
     {
       id: 'fighter-indomitable',
       label: 'Indomitable',
       maxPerLevel: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
       restType: 'long',
+      recovery: LONG_REST_RECOVERY,
     },
   ],
   'Paladin|PHB': [
@@ -92,12 +130,14 @@ const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
       label: 'Channel Divinity',
       maxPerLevel: [0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3],
       restType: 'short',
+      recovery: SHORT_REST_RECOVERY,
     },
     {
       id: 'paladin-lay-on-hands',
       label: 'Lay on Hands (HP)',
       maxPerLevel: Array.from({ length: 20 }, (_, index) => (index + 1) * 5),
       restType: 'long',
+      recovery: LONG_REST_RECOVERY,
     },
   ],
   'Cleric|PHB': [
@@ -106,6 +146,7 @@ const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
       label: 'Channel Divinity',
       maxPerLevel: [0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3],
       restType: 'short',
+      recovery: SHORT_REST_RECOVERY,
     },
   ],
   'Druid|PHB': [
@@ -114,6 +155,16 @@ const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
       label: 'Wild Shape',
       maxPerLevel: [0, ...Array(19).fill(2)],
       restType: 'short',
+      recovery: SHORT_REST_RECOVERY,
+    },
+  ],
+  'Paladin|XPHB': [
+    {
+      id: 'paladin-lay-on-hands',
+      label: 'Lay on Hands (HP)',
+      maxPerLevel: Array.from({ length: 20 }, (_, index) => (index + 1) * 5),
+      restType: 'long',
+      recovery: LONG_REST_RECOVERY,
     },
   ],
 }
@@ -133,15 +184,60 @@ function featureText(ref: ClassFeatureReference): string {
   }
 }
 
-function inferRestType(label: string, refs: readonly ClassFeatureReference[]): 'short' | 'long' {
+function inferRecovery(
+  label: string,
+  refs: readonly ClassFeatureReference[],
+): ClassResourceRecovery {
   const labelLower = label.toLowerCase()
-  const matching = refs.find((ref) => {
-    const name = ref.name.toLowerCase()
-    return name.includes(labelLower) || labelLower.includes(name)
-  })
+  const matching =
+    refs.find((ref) => {
+      const name = ref.name.toLowerCase()
+      return name.includes(labelLower) || labelLower.includes(name)
+    }) ?? refs.find((ref) => featureText(ref).includes(labelLower))
   const text = matching ? featureText(matching) : ''
-  if (/short rest/.test(text)) return 'short'
-  return 'long'
+
+  const recovery: ClassResourceRecovery = { longRest: 'all' }
+  if (/regain (?:one|1|a single)[^.]{0,240}short rest/.test(text)) {
+    recovery.shortRest = 1
+  } else if (
+    /regain all[^.]{0,240}short rest/.test(text) ||
+    (/short rest/.test(text) && /long rest/.test(text) && /regain all/.test(text))
+  ) {
+    recovery.shortRest = 'all'
+  }
+
+  return recovery
+}
+
+export function getClassResourceRecoveryAtLevel(
+  definition: ClassResourceDef,
+  levelIndex: number,
+): ClassResourceRecovery {
+  const explicit = definition.recoveryByLevel?.[levelIndex] ?? definition.recovery
+  if (explicit) return explicit
+  const restType = definition.restTypeByLevel?.[levelIndex] ?? definition.restType
+  return restType === 'short' ? SHORT_REST_RECOVERY : LONG_REST_RECOVERY
+}
+
+export function formatClassResourceRecovery(recovery: ClassResourceRecovery): string {
+  const shortAmount = recovery.shortRest
+  const longAmount = recovery.longRest
+  if (shortAmount === 'all' && longAmount === 'all') {
+    return 'Restores all uses on a short or long rest'
+  }
+
+  const parts: string[] = []
+  if (shortAmount !== undefined) {
+    parts.push(
+      `${shortAmount === 'all' ? 'all uses' : `${shortAmount} use${shortAmount === 1 ? '' : 's'}`} on a short rest`,
+    )
+  }
+  if (longAmount !== undefined) {
+    parts.push(
+      `${longAmount === 'all' ? 'all uses' : `${longAmount} use${longAmount === 1 ? '' : 's'}`} on a long rest`,
+    )
+  }
+  return `Restores ${parts.join('; ')}`
 }
 
 function normalizeId(className: string, label: string): string {
@@ -152,10 +248,12 @@ function normalizeId(className: string, label: string): string {
 }
 
 function parseTableResources(
-  classData: Pick<Class5e, 'name' | 'classTableGroups'>,
+  classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups'>,
   refs: readonly ClassFeatureReference[],
 ): ClassResourceDef[] {
   const resources: ClassResourceDef[] = []
+  const supportedLabels =
+    TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE[`${classData.name}|${classData.source}`]
   for (const rawGroup of classData.classTableGroups ?? []) {
     if (!rawGroup || typeof rawGroup !== 'object') continue
     const group = rawGroup as Record<string, unknown>
@@ -165,14 +263,16 @@ function parseTableResources(
 
     labels.forEach((rawLabel, columnIndex) => {
       const label = typeof rawLabel === 'string' ? rawLabel.trim() : ''
-      if (!label || label.includes('{@') || NON_RESOURCE_LABEL.test(label)) return
+      if (!supportedLabels?.has(label.toLowerCase())) return
       const values = rows.map((row) => parseResourceValue(row[columnIndex]))
       if (values.some((value) => value === null) || values.every((value) => value === 0)) return
+      const recovery = inferRecovery(label, refs)
       resources.push({
         id: normalizeId(classData.name, label),
         label,
         maxPerLevel: values as number[],
-        restType: inferRestType(label, refs),
+        restType: recovery.shortRest !== undefined ? 'short' : 'long',
+        recovery,
       })
     })
   }

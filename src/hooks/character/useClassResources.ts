@@ -2,6 +2,11 @@ import { useCallback, useMemo } from 'react'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
+import {
+  type ClassResourceRecovery,
+  formatClassResourceRecovery,
+  getClassResourceRecoveryAtLevel,
+} from '@/lib/5etools/classRuleNormalization'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -13,6 +18,8 @@ export interface ComputedClassResource {
   current: number
   max: number
   restType: 'short' | 'long'
+  recovery: ClassResourceRecovery
+  recoveryText: string
   className: string
 }
 
@@ -45,13 +52,15 @@ export function useClassResources(): {
       const levelIdx = Math.max(0, Math.min(19, (entry.levels ?? 1) - 1))
       return defs.map((def) => {
         const max = def.maxFormula === 'cha-mod' ? chaMod : (def.maxPerLevel[levelIdx] ?? 0)
-        const restType = def.restTypeByLevel?.[levelIdx] ?? def.restType
+        const recovery = getClassResourceRecoveryAtLevel(def, levelIdx)
         return {
           id: def.id,
           label: def.label,
           current: stored[def.id] ?? max,
           max,
-          restType,
+          restType: recovery.shortRest !== undefined ? 'short' : 'long',
+          recovery,
+          recoveryText: formatClassResourceRecovery(recovery),
           className: entry.name,
         }
       })

@@ -14,6 +14,11 @@ import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import { getFeatureTypes, type OptionalFeatureLike } from '@/lib/5etools/classData'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
+  buildSpellNameKeySet,
+  dedupeSpellNames,
+  getSpellNameKey,
+} from '@/lib/calculations/spellIdentity'
+import {
   buildClassProfileLabel,
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
@@ -191,7 +196,7 @@ export function BuildClassModals({
           const profiles = ensureSpellProfiles(character)
           const classProfile = profiles.find((profile) => profile.id === classProfileId)
           const classProfileNames = classProfile
-            ? new Set([...classProfile.cantrips, ...classProfile.spellsKnown])
+            ? buildSpellNameKeySet([...classProfile.cantrips, ...classProfile.spellsKnown])
             : new Set<string>()
           const selectionsByLevel = buildClassSpellSelectionsByLevel({
             character,
@@ -200,11 +205,15 @@ export function BuildClassModals({
           })
           const initialSelectedNames = selectionsByLevel.get(spellPickerLevel) ?? []
           const lockedNames = new Set(
-            [...getKnownSpellNames(profiles)].filter((name) => !classProfileNames.has(name)),
+            [...getKnownSpellNames(profiles)].filter(
+              (name) => !classProfileNames.has(getSpellNameKey(name)),
+            ),
           )
-          const initialSelectedSet = new Set(initialSelectedNames)
+          const initialSelectedSet = buildSpellNameKeySet(initialSelectedNames)
           const characterSpellNames = new Set(
-            [...getKnownSpellNames(profiles)].filter((name) => !initialSelectedSet.has(name)),
+            [...getKnownSpellNames(profiles)].filter(
+              (name) => !initialSelectedSet.has(getSpellNameKey(name)),
+            ),
           )
 
           const categories: CategoryLimit<Spell5e>[] = []
@@ -270,8 +279,8 @@ export function BuildClassModals({
               allowedLevels={allowedLevels}
               onConfirm={(names) => {
                 const previousLevelNames = selectionsByLevel.get(spellPickerLevel) ?? []
-                const previousLevelSet = new Set(previousLevelNames)
-                const nextLevelSet = new Set(names)
+                const previousLevelSet = buildSpellNameKeySet(previousLevelNames)
+                const nextLevelSet = buildSpellNameKeySet(names)
                 const newSpells: Array<{ name: string; grantedAtLevel?: number }> = []
 
                 const nextSelectionsByLevel = new Map(selectionsByLevel)
@@ -284,13 +293,16 @@ export function BuildClassModals({
                 const classSelectedNames = Array.from(nextSelectionsByLevel.values()).flatMap(
                   (selected) => selected ?? [],
                 )
-                const uniqueClassSelectedNames = [...new Set(classSelectedNames)]
+                const uniqueClassSelectedNames = dedupeSpellNames(classSelectedNames)
                 const nextProfileCantrips = uniqueClassSelectedNames.filter(
-                  (name) => spellByName.get(name)?.level === 0,
+                  (name) =>
+                    (spellByName.get(name) ?? spellByName.get(getSpellNameKey(name)))?.level === 0,
                 )
                 const nextProfileKnown = uniqueClassSelectedNames.filter(
-                  (name) => spellByName.get(name)?.level !== 0,
+                  (name) =>
+                    (spellByName.get(name) ?? spellByName.get(getSpellNameKey(name)))?.level !== 0,
                 )
+                const nextProfileKnownKeys = buildSpellNameKeySet(nextProfileKnown)
 
                 const mappedProfiles = profiles.map((profile) => {
                   if (profile.id !== classProfileId) return profile
@@ -299,7 +311,7 @@ export function BuildClassModals({
                     cantrips: nextProfileCantrips,
                     spellsKnown: nextProfileKnown,
                     preparedSpells: profile.preparedSpells.filter((spellName) =>
-                      nextProfileKnown.includes(spellName),
+                      nextProfileKnownKeys.has(getSpellNameKey(spellName)),
                     ),
                   }
                 })
@@ -340,7 +352,7 @@ export function BuildClassModals({
                 })
 
                 for (const name of names) {
-                  if (previousLevelSet.has(name)) continue
+                  if (previousLevelSet.has(getSpellNameKey(name))) continue
                   if (viewingClass) {
                     newSpells.push({ name, grantedAtLevel: spellPickerLevel })
                   }
@@ -349,12 +361,13 @@ export function BuildClassModals({
                   onApplyBatchSpellSelections(viewingClass, viewingClassSource, newSpells)
                 }
 
-                const remainingKnownNames = new Set(
+                const remainingKnownNames = buildSpellNameKeySet(
                   nextProfiles.flatMap((profile) => [...profile.cantrips, ...profile.spellsKnown]),
                 )
 
                 for (const name of previousLevelNames) {
-                  if (nextLevelSet.has(name) || remainingKnownNames.has(name)) {
+                  const spellNameKey = getSpellNameKey(name)
+                  if (nextLevelSet.has(spellNameKey) || remainingKnownNames.has(spellNameKey)) {
                     continue
                   }
                   onRemoveSpellProvenance(name)
@@ -569,7 +582,9 @@ export function BuildClassModals({
 
           // Step 2: Pick the replacement spell
           const lockedNames = new Set(
-            [...getKnownSpellNames(profiles)].filter((name) => name !== spellSwapDrop),
+            [...getKnownSpellNames(profiles)].filter(
+              (name) => getSpellNameKey(name) !== getSpellNameKey(spellSwapDrop),
+            ),
           )
           const characterSpellNames = lockedNames
           const allowedLevels = new Set(
@@ -613,11 +628,13 @@ export function BuildClassModals({
 
                 // Update spellsKnown: remove dropped, add replacement
                 const nextKnown = classProfile.spellsKnown
-                  .filter((n) => n !== spellSwapDrop)
+                  .filter((name) => getSpellNameKey(name) !== getSpellNameKey(spellSwapDrop))
                   .concat(replacement)
 
                 // Also remove from preparedSpells if dropped spell was prepared
-                const nextPrepared = classProfile.preparedSpells.filter((n) => n !== spellSwapDrop)
+                const nextPrepared = classProfile.preparedSpells.filter(
+                  (name) => getSpellNameKey(name) !== getSpellNameKey(spellSwapDrop),
+                )
 
                 // Record the swap
                 const nextSwaps = {

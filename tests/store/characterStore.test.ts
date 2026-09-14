@@ -113,6 +113,47 @@ describe('characterStore', () => {
     expect(state.hasUnsavedChanges()).toBe(true)
   })
 
+  test('reconcileCharacter keeps a clean system correction synchronized and clean', () => {
+    const existing = makeCharacterFixture({ id: 'clean-reconciliation', speed: 30 })
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: existing,
+      isActiveCharacterDirty: false,
+    })
+
+    useCharacterStore.getState().reconcileCharacter(existing.id, { speed: 35 })
+
+    const state = useCharacterStore.getState()
+    expect(state.activeCharacter?.speed).toBe(35)
+    expect(state.characters[0]?.speed).toBe(35)
+    expect(state.hasUnsavedChanges()).toBe(false)
+  })
+
+  test('reconcileCharacter never persists a system correction over an existing dirty draft', () => {
+    const existing = makeCharacterFixture({
+      id: 'dirty-reconciliation',
+      name: 'Persisted Name',
+      speed: 30,
+    })
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: existing,
+      isActiveCharacterDirty: false,
+    })
+    useCharacterStore.getState().updateCharacter(existing.id, { name: 'Unsaved Name' })
+
+    useCharacterStore.getState().reconcileCharacter(existing.id, { speed: 35 })
+
+    const state = useCharacterStore.getState()
+    expect(state.activeCharacter?.name).toBe('Unsaved Name')
+    expect(state.activeCharacter?.speed).toBe(35)
+    expect(state.characters[0]?.name).toBe('Persisted Name')
+    expect(state.characters[0]?.speed).toBe(30)
+    expect(state.hasUnsavedChanges()).toBe(true)
+  })
+
   test('saveActiveCharacter writes draft into persisted characters', () => {
     const existing = makeCharacterFixture({ id: 'c2', name: 'Before Save' })
     useCharacterStore.setState({

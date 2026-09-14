@@ -10,6 +10,10 @@
 * List-and-detail pages now switch to a focused single-pane view in narrow windows while keeping page navigation available
 * Redesigned the Equipment summary and filters to remain usable at smaller window sizes
 * Equipment details now adapt to each item type, hiding irrelevant fields and showing matching category icons
+* The Add Item window now includes spellcasting foci and unfamiliar or homebrew item types instead of silently hiding them
+* Class resource trackers now distinguish partial short-rest recovery from full recovery and use corrected 2024 Bard, Fighter, Paladin, and Wizard rules
+* Spell selection now recognizes existing spell names regardless of capitalization and preserves explicit source choices
+* GitHub data sources now support slash-containing branches through an explicit ref and report ambiguous URLs clearly
 * Polished several builder screens by simplifying Race and Background entries, removing unused Class artwork information, and improving the Bonus Feat action
 
 </details>

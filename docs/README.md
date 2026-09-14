@@ -23,6 +23,8 @@ If you are new to the repository, read these in order:
 - [Testing Map](testing-map.md): test layers, commands, coverage thresholds, and expectations.
 - [PDF Generation](pdf-generation.md): template contracts, mapped fields, audit findings, and fixed-form limits.
 - [Codebase Tour](codebase-tour.md): concern-to-file routing for fast navigation.
+- [Review Prompts](review/README.md): Tavern-Born review order, convergence controls, finding
+  ledger policy, and portable prompt templates.
 - [Changelog](changelog.md): released changes plus the next planned release.
 
 ## Update Policy

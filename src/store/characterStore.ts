@@ -80,9 +80,8 @@ interface CharacterState {
   setCharacters: (characters: Character[]) => void
   addCharacter: (character: Character) => Character
   updateCharacter: (id: string, updates: Partial<Character>) => void
-  /** Silent system correction: writes updates to both activeCharacter and characters[i]
-   * atomically so hasUnsavedChanges() stays false. Use only for auto-corrections that
-   * are not initiated by the user (e.g. auto-selecting a default subrace on mount). */
+  /** Silent system correction. Clean drafts receive the patch in both snapshots;
+   * dirty drafts receive it only in-memory so unrelated user edits are never persisted. */
   reconcileCharacter: (id: string, updates: Partial<Character>) => void
   updateActiveCharacter: (updates: Partial<Character>) => void
   updateActiveCharacterDetails: (updates: Partial<Character['details']>) => void
@@ -359,22 +358,51 @@ export const useCharacterStore = create<CharacterState>()(
           return { characters }
         }),
 
-      // Atomically applies updates to both the draft and the persisted record so
-      // hasUnsavedChanges() stays false. Use for silent system corrections only.
+      // Apply silent corrections to both snapshots only when the draft was already clean.
+      // A dirty draft keeps the correction in-memory until the user's explicit Save.
       reconcileCharacter: (id, updates) =>
         set((state) => {
           if (state.activeCharacterId !== id || !state.activeCharacter) return {}
           const now = new Date().toISOString()
-          const next = { ...state.activeCharacter, ...updates, lastModified: now }
-          const parsed = parseCharacterData(next)
-          if (!parsed.data) {
-            console.error('reconcileCharacter validation failed:', { id, error: parsed.error })
+          const nextActive = parseCharacterData({
+            ...state.activeCharacter,
+            ...updates,
+            lastModified: now,
+          })
+          if (!nextActive.data) {
+            console.error('reconcileCharacter validation failed:', { id, error: nextActive.error })
             return {}
           }
-          const characters = state.characters.map((c) =>
-            c.id === id ? (parsed.data as Character) : c,
+
+          const persistedCharacter = state.characters.find((character) => character.id === id)
+          const hadUnsavedChanges =
+            state.isActiveCharacterDirty ||
+            !persistedCharacter ||
+            state.activeCharacter.lastModified !== persistedCharacter.lastModified
+          if (hadUnsavedChanges) {
+            return { activeCharacter: nextActive.data, isActiveCharacterDirty: true }
+          }
+
+          const nextPersisted = parseCharacterData({
+            ...persistedCharacter,
+            ...updates,
+            lastModified: now,
+          })
+          if (!nextPersisted.data) {
+            console.error('reconcileCharacter validation failed:', {
+              id,
+              error: nextPersisted.error,
+            })
+            return {}
+          }
+          const characters = state.characters.map((character) =>
+            character.id === id ? (nextPersisted.data as Character) : character,
           )
-          return { activeCharacter: parsed.data, characters, isActiveCharacterDirty: false }
+          return {
+            activeCharacter: nextActive.data,
+            characters,
+            isActiveCharacterDirty: false,
+          }
         }),
 
       updateActiveCharacter: (updates) =>

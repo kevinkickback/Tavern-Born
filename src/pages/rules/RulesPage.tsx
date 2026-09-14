@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -83,24 +84,6 @@ function RulesSection({
   )
 }
 
-const ABILITY_METHODS = [
-  {
-    value: 'point-buy' as const,
-    label: 'Point Buy',
-    description: 'Use the 27-point budget when editing scores.',
-  },
-  {
-    value: 'standard-array' as const,
-    label: 'Standard Array',
-    description: 'Assign 15, 14, 13, 12, 10, and 8.',
-  },
-  {
-    value: 'custom' as const,
-    label: 'Custom',
-    description: 'Enter scores freely, including rolled scores.',
-  },
-]
-
 export function RulesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const character = useCharacterStore((state) => state.activeCharacter)
@@ -117,6 +100,7 @@ export function RulesPage() {
 
   const rules = character.variantRules ?? {}
   const abilityMethod = rules.abilityScoreMethod ?? 'standard-array'
+  const abilityMethods = getAbilityScoreMethodOptions(character.originSystem)
   const hasOptionalFeatureGrants = Object.values(character.provenance?.features ?? {}).some(
     (tags) => tags.some((tag) => tag.sourceType === 'optionalFeature'),
   )
@@ -232,7 +216,7 @@ export function RulesPage() {
                     Changing the method does not replace your existing scores.
                   </p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    {ABILITY_METHODS.map((method) => {
+                    {abilityMethods.map((method) => {
                       const selected = abilityMethod === method.value
                       return (
                         <Button

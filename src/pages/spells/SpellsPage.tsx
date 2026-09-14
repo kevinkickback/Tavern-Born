@@ -19,6 +19,11 @@ import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
+import {
+  buildSpellNameKeySet,
+  dedupeSpellNames,
+  getSpellNameKey,
+} from '@/lib/calculations/spellIdentity'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { buildSpellSelectionSourceMap } from '@/lib/calculations/spellProfiles.attribution'
 import {
@@ -531,17 +536,17 @@ export function SpellsPage() {
     (names: string[]) => {
       if (!activeRacialChoice) return
 
-      const previousSelected = new Set(activeRacialChoice.selected)
-      const nextSelected = new Set(names)
+      const previousSelected = buildSpellNameKeySet(activeRacialChoice.selected)
+      const nextSelected = buildSpellNameKeySet(names)
 
       for (const name of names) {
-        if (!previousSelected.has(name)) {
+        if (!previousSelected.has(getSpellNameKey(name))) {
           selectRacialSpell(activeRacialChoice.profileId, activeRacialChoice.choiceId, name)
         }
       }
 
       for (const name of activeRacialChoice.selected) {
-        if (!nextSelected.has(name)) {
+        if (!nextSelected.has(getSpellNameKey(name))) {
           removeRacialSpell(activeRacialChoice.profileId, activeRacialChoice.choiceId, name)
         }
       }
@@ -604,8 +609,8 @@ export function SpellsPage() {
       }
     }
 
-    const mergedCantrips = [...new Set([...bonusProfile.cantrips, ...newCantrips])]
-    const mergedSpells = [...new Set([...bonusProfile.spellsKnown, ...newSpells])]
+    const mergedCantrips = dedupeSpellNames([...bonusProfile.cantrips, ...newCantrips])
+    const mergedSpells = dedupeSpellNames([...bonusProfile.spellsKnown, ...newSpells])
     setProfileSpells(SPECIAL_SPELL_PROFILE_ID, mergedCantrips, mergedSpells)
 
     setBonusSpellModalOpen(false)

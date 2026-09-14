@@ -409,7 +409,8 @@ export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfi
                     )}
                     {validationStatus === 'idle' && (
                       <p className="text-sm text-muted-foreground">
-                        Enter an HTTPS URL to a 5etools data repository
+                        Enter an HTTPS URL to a 5etools data repository. For branch names containing
+                        a slash, add <code>?ref=feature%2Fbranch</code>.
                       </p>
                     )}
                   </div>

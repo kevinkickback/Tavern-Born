@@ -1,25 +1,18 @@
 import { Check, Package } from '@phosphor-icons/react'
 import { Fragment, useMemo } from 'react'
+import { GenericEquipmentSelect } from '@/components/character/GenericEquipmentSelect'
 import { GameContent } from '@/components/editor/GameContent'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useItemLookup } from '@/hooks/data/useGameData'
 import {
   formatEquipmentOptionEntries,
-  type GenericEquipmentChoice,
   resolveClassEquipmentBlocks,
 } from '@/lib/5etools/startingEquipment'
 import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 import type { SelectedFeatureState } from './DetailsPanel'
 
-const STARTING_EQUIPMENT_DESCRIPTION =
-  'When you create your character, you receive equipment based on a combination of your class and background. Alternatively, you can start with a number of gold pieces based on your class and spend them on items from the lists in this section. See the Starting Wealth by Class table to determine how much gold you have to spend.\n\nYou decide how your character came by this starting equipment. It might have been an inheritance, or goods that the character purchased during his or her upbringing. You might have been equipped with a weapon, armor, and a backpack as part of military service. You might even have stolen your gear. A weapon could be a family heirloom, passed down from generation to generation until your character finally took up the mantle and followed in an ancestor\u2019s adventurous footsteps.'
+const STARTING_EQUIPMENT_HELP =
+  'Tavern-Born applies the equipment package selected below together with equipment granted by your background. Choose each alternative and any specific item requested by a generic equipment option.'
 
 interface BuildClassEquipmentSectionProps {
   viewingClassData?: Class5e
@@ -30,34 +23,6 @@ interface BuildClassEquipmentSectionProps {
   onItemChoiceChange: (blockIndex: number, choice: string, key: string, itemRef: string) => void
   onSelectFeature: (feature: SelectedFeatureState) => void
   onExpandDetails: () => void
-}
-
-function GenericEquipmentSelect({
-  choice,
-  value,
-  onChange,
-}: {
-  choice: GenericEquipmentChoice
-  value: string
-  onChange: (itemRef: string) => void
-}) {
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="mt-2 h-8 w-full text-xs">
-        <SelectValue placeholder="Choose a specific item…" />
-      </SelectTrigger>
-      <SelectContent>
-        {choice.candidates.map((candidate) => {
-          const itemRef = `${candidate.name}|${candidate.source ?? ''}`
-          return (
-            <SelectItem key={itemRef} value={itemRef}>
-              {candidate.name} {candidate.source ? `(${candidate.source})` : ''}
-            </SelectItem>
-          )
-        })}
-      </SelectContent>
-    </Select>
-  )
 }
 
 export function BuildClassEquipmentSection({
@@ -79,8 +44,8 @@ export function BuildClassEquipmentSection({
   const showEquipmentDetails = () => {
     onSelectFeature({
       name: 'Starting Equipment',
-      source: viewingClassData?.source,
-      entries: [STARTING_EQUIPMENT_DESCRIPTION],
+      source: 'Tavern-Born',
+      entries: [STARTING_EQUIPMENT_HELP],
     })
     if (detailCollapsed) onExpandDetails()
   }
@@ -127,6 +92,7 @@ export function BuildClassEquipmentSection({
                     key={genericChoice.key}
                     choice={genericChoice}
                     value={itemChoices[genericChoice.key] ?? ''}
+                    ariaLabel={`Starting equipment choice ${block.index + 1} specific item`}
                     onChange={(itemRef) =>
                       onItemChoiceChange(block.index, '_', genericChoice.key, itemRef)
                     }
@@ -173,6 +139,7 @@ export function BuildClassEquipmentSection({
                   key={genericChoice.key}
                   choice={genericChoice}
                   value={itemChoices[genericChoice.key] ?? ''}
+                  ariaLabel={`Starting equipment choice ${block.index + 1} specific item`}
                   onChange={(itemRef) =>
                     onItemChoiceChange(block.index, currentChoice, genericChoice.key, itemRef)
                   }

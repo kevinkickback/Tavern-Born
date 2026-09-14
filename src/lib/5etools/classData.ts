@@ -1,6 +1,8 @@
 import {
   type ClassResourceDef,
   type ClassResourceMaxFormula,
+  type ClassResourceRecovery,
+  type ClassResourceRecoveryAmount,
   normalizeClassRules,
 } from '@/lib/5etools/classRuleNormalization'
 import {
@@ -157,11 +159,17 @@ export function getSubclassSelectionInfo(classData: Class5e | undefined): {
 // ── Class Resource Definitions ─────────────────────────────────────────────
 
 /** 'cha-mod' → max = character's Charisma modifier (min 1), computed at render time. */
-export type { ClassResourceDef, ClassResourceMaxFormula }
+export type {
+  ClassResourceDef,
+  ClassResourceMaxFormula,
+  ClassResourceRecovery,
+  ClassResourceRecoveryAmount,
+}
 
 /**
  * Derives limited-use class resource definitions from 5etools class data.
- * Parsed from classTableGroups where possible; falls back to hardcoded tables.
+ * Parsed from known resource columns in classTableGroups where possible; source-qualified adapters
+ * fill resources that the upstream records expose only through prose.
  * Returns only resources with max > 0 at the given level.
  */
 export function getClassResourceDefs(

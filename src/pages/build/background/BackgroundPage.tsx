@@ -1,5 +1,6 @@
 import { Scroll, Star } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { GenericEquipmentSelect } from '@/components/character/GenericEquipmentSelect'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import { Badge } from '@/components/ui/badge'
@@ -60,7 +61,6 @@ type FeatOptionsTarget = Feat5e & {
 
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
-  const reconcileCharacter = useCharacterStore((s) => s.reconcileCharacter)
   const { backgrounds, feats, spells } = useFilteredGameData()
   const itemLookup = useItemLookup()
   const rawBackgroundLookup = useBackgroundLookup()
@@ -69,8 +69,11 @@ export function BuildBackgroundPage() {
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [bgSearch, setBgSearch] = useState('')
-  const { applyBackgroundSelection, applyBackgroundAbilityChoices } =
-    useBackgroundProvenanceMutations()
+  const {
+    applyBackgroundSelection,
+    applyBackgroundAbilityChoices,
+    reconcileBackgroundAbilityChoices,
+  } = useBackgroundProvenanceMutations()
   const { resolveFeatChoiceSelection, commitFeatWithOptions } = useFeatProvenanceMutations()
   const { ledger } = useProvenanceLedger()
   const selectedBackgroundRef = useRef<HTMLDivElement | null>(null)
@@ -210,16 +213,8 @@ export function BuildBackgroundPage() {
     const choices = character.backgroundAsiChoices ?? []
     const alreadySet = currentAsiBlock.from.every((a, i) => choices[i] === a)
     if (alreadySet) return
-    applyBackgroundAbilityChoices(selectedBg, blockIndex, [...currentAsiBlock.from])
-    reconcileCharacter(character.id, {})
-  }, [
-    isXphbAutoAssign,
-    character,
-    selectedBg,
-    currentAsiBlock,
-    applyBackgroundAbilityChoices,
-    reconcileCharacter,
-  ])
+    reconcileBackgroundAbilityChoices(selectedBg, blockIndex, [...currentAsiBlock.from])
+  }, [isXphbAutoAssign, character, selectedBg, currentAsiBlock, reconcileBackgroundAbilityChoices])
 
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
@@ -619,31 +614,19 @@ export function BuildBackgroundPage() {
                                   </Select>
                                 )}
                                 {currentPackage?.genericChoices?.map((genericChoice) => (
-                                  <Select
+                                  <GenericEquipmentSelect
                                     key={genericChoice.key}
+                                    choice={genericChoice}
                                     value={bgEquipmentItemChoices[genericChoice.key] ?? ''}
-                                    onValueChange={(itemRef) =>
+                                    ariaLabel={`Equipment choice ${block.index + 1} specific item`}
+                                    triggerClassName="bg-background"
+                                    onChange={(itemRef) =>
                                       applyBackgroundSelection(selectedBg, bgEquipmentChoices, {
                                         ...bgEquipmentItemChoices,
                                         [genericChoice.key]: itemRef,
                                       })
                                     }
-                                  >
-                                    <SelectTrigger className="mt-2 h-8 w-full bg-background text-xs">
-                                      <SelectValue placeholder="Choose a specific item…" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {genericChoice.candidates.map((candidate) => {
-                                        const itemRef = `${candidate.name}|${candidate.source ?? ''}`
-                                        return (
-                                          <SelectItem key={itemRef} value={itemRef}>
-                                            {candidate.name}{' '}
-                                            {candidate.source ? `(${candidate.source})` : ''}
-                                          </SelectItem>
-                                        )
-                                      })}
-                                    </SelectContent>
-                                  </Select>
+                                  />
                                 ))}
                               </div>
                             )

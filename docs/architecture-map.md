@@ -30,7 +30,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 5. Domain logic
 - Purpose: pure calculations and game rules.
-- Key files: src/lib/characterUtils.ts, src/lib/character/ids.ts, src/lib/character/equipmentHelpers.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/featChoices.ts, src/lib/calculations/subclassEligibility.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
+- Key files: src/lib/characterUtils.ts, src/lib/character/ids.ts, src/lib/character/equipmentHelpers.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellIdentity.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/featChoices.ts, src/lib/calculations/subclassEligibility.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
 
 6. Provenance system
 - Purpose: track source of grants and reconcile when race/class/features change.
@@ -39,6 +39,8 @@ This document describes the current Tavern-Born runtime architecture and where r
 - Test aggregator (not for production use): src/hooks/character/useProvenanceMutations.ts calls all six `use*ProvenanceMutations` hooks and spreads their results; src/hooks/character/useProvenance.ts is the integration test harness that composes mutations + rows. Use these in tests that need cross-domain interactions (e.g. apply race + class + verify ledger). Do not call them from pages.
 - Read-only derivation hook: src/hooks/character/useProvenanceRows.ts.
 - Shared pure equipment helpers (canonical — used by both lib commands and hooks): src/lib/character/equipmentHelpers.ts.
+- Class and background starting-equipment screens share the generic concrete-item selector in
+  src/components/character/GenericEquipmentSelect.tsx while retaining separate domain commands.
 - Manual equipment add/remove/proficiency transitions live in src/lib/character/commands/equipmentCommands.ts. Inventory and ledger changes are one command result and one store update.
 
 7. Hooks and view derivations

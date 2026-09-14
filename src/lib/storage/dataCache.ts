@@ -2,10 +2,12 @@ import { del, get, set } from 'idb-keyval'
 import type { DataSourceConfig, GameData } from '@/types/5etools'
 
 const CACHE_KEY = 'tb:game-data-cache'
+export const GAME_DATA_CACHE_SCHEMA_VERSION = 2
 const MAX_AGE_MS = 24 * 60 * 60 * 1000
 
 export interface GameDataCacheEntry {
   data: GameData
+  cacheSchemaVersion?: number
   cachedAt: string
   contentFingerprint?: string
   lastDataChangedAt?: string
@@ -35,7 +37,8 @@ function computeContentFingerprint(data: GameData): string {
 
 export async function readGameDataCache(): Promise<GameDataCacheEntry | null> {
   try {
-    return (await get<GameDataCacheEntry>(CACHE_KEY)) ?? null
+    const entry = (await get<GameDataCacheEntry>(CACHE_KEY)) ?? null
+    return entry?.cacheSchemaVersion === GAME_DATA_CACHE_SCHEMA_VERSION ? entry : null
   } catch {
     return null
   }
@@ -78,6 +81,7 @@ export async function writeGameDataCache(
 
   const entry: GameDataCacheEntry = {
     data,
+    cacheSchemaVersion: GAME_DATA_CACHE_SCHEMA_VERSION,
     cachedAt: now,
     contentFingerprint,
     lastDataChangedAt,

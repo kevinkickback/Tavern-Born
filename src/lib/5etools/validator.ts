@@ -124,15 +124,22 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
     }
 
     let normalizedPath = config.path
+    let persistedPath = config.path
     if (config.type === 'remote') {
       const parsedUrl = parseRemoteDataSourceUrl(config.path)
       if (parsedUrl.kind === 'invalid') {
         return { isValid: false, error: parsedUrl.error }
       }
       normalizedPath = parsedUrl.normalizedUrl
+      if (parsedUrl.kind === 'github-repository' && parsedUrl.branch?.includes('/')) {
+        persistedPath = config.path.trim()
+      } else {
+        persistedPath = normalizedPath
+      }
       if (parsedUrl.kind === 'github-repository' && !parsedUrl.branch) {
         const correctBranch = await findCorrectBranch(parsedUrl.owner, parsedUrl.repo)
         normalizedPath = `https://raw.githubusercontent.com/${parsedUrl.owner}/${parsedUrl.repo}/${correctBranch}`
+        persistedPath = normalizedPath
       }
     }
 
@@ -152,7 +159,7 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
       return {
         isValid: false,
         error: 'No valid 5etools data files found at this location',
-        normalizedPath,
+        normalizedPath: persistedPath,
       }
     }
 
@@ -164,14 +171,14 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
       return {
         isValid: false,
         error: `Missing required ${missingRequired.length === 1 ? 'file' : 'files'}: ${missingRequired.join(', ')}`,
-        normalizedPath,
+        normalizedPath: persistedPath,
       }
     }
 
     return {
       isValid: true,
       foundResources,
-      normalizedPath,
+      normalizedPath: persistedPath,
     }
   } catch (error) {
     return {

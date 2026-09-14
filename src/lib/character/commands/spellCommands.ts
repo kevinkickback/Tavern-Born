@@ -5,6 +5,11 @@
  * return a single result object for callers to apply.
  */
 
+import {
+  buildSpellNameKeySet,
+  dedupeSpellNames,
+  getSpellNameKey,
+} from '@/lib/calculations/spellIdentity'
 import { addSpellGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
 import type { Character, SpellProfile } from '@/types/character'
@@ -58,7 +63,7 @@ export function addSpellToCharacter(
     if (profile.id !== targetProfileId) return profile
 
     const list = spellKind === 'cantrip' ? 'cantrips' : 'spellsKnown'
-    if (profile[list].includes(spellName)) {
+    if (profile[list].some((name) => getSpellNameKey(name) === getSpellNameKey(spellName))) {
       return profile
     }
 
@@ -208,16 +213,19 @@ export function setProfileSpells(
   cantrips: string[],
   spellsKnown: string[],
 ): SpellCommandResult {
+  const dedupedCantrips = dedupeSpellNames(cantrips)
+  const dedupedSpellsKnown = dedupeSpellNames(spellsKnown)
+  const knownSpellKeys = buildSpellNameKeySet(dedupedSpellsKnown)
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (profile.id !== profileId) return profile
 
     return {
       ...profile,
-      cantrips: [...new Set(cantrips)],
-      spellsKnown: [...new Set(spellsKnown)],
+      cantrips: dedupedCantrips,
+      spellsKnown: dedupedSpellsKnown,
       preparedSpells: profile.alwaysPrepared
         ? []
-        : profile.preparedSpells.filter((s) => spellsKnown.includes(s)),
+        : profile.preparedSpells.filter((spell) => knownSpellKeys.has(getSpellNameKey(spell))),
     }
   })
 
@@ -246,18 +254,23 @@ export function toggleSpellPrepared(
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (profile.id !== profileId) return profile
 
-    const isPrepared = profile.preparedSpells.includes(spellName)
+    const spellKey = getSpellNameKey(spellName)
+    const isPrepared = profile.preparedSpells.some(
+      (preparedSpell) => getSpellNameKey(preparedSpell) === spellKey,
+    )
     if (isPrepared) {
       return {
         ...profile,
-        preparedSpells: profile.preparedSpells.filter((s) => s !== spellName),
+        preparedSpells: profile.preparedSpells.filter(
+          (preparedSpell) => getSpellNameKey(preparedSpell) !== spellKey,
+        ),
       }
     }
 
     const isKnown =
       isTruePreparedCaster ||
-      profile.cantrips.includes(spellName) ||
-      profile.spellsKnown.includes(spellName) ||
+      profile.cantrips.some((name) => getSpellNameKey(name) === spellKey) ||
+      profile.spellsKnown.some((name) => getSpellNameKey(name) === spellKey) ||
       profile.alwaysPrepared
 
     if (!isKnown) {
@@ -303,7 +316,7 @@ export function selectRacialSpell(
     const choices = profile.choices?.map((entry) => {
       if (
         entry.id !== choiceId ||
-        entry.selected.includes(spellName) ||
+        entry.selected.some((name) => getSpellNameKey(name) === getSpellNameKey(spellName)) ||
         entry.selected.length >= entry.count
       ) {
         return entry
@@ -313,10 +326,10 @@ export function selectRacialSpell(
     return {
       ...profile,
       ...(choices ? { choices } : {}),
-      cantrips: isCantrip ? [...new Set([...profile.cantrips, spellName])] : profile.cantrips,
+      cantrips: isCantrip ? dedupeSpellNames([...profile.cantrips, spellName]) : profile.cantrips,
       spellsKnown: isCantrip
         ? profile.spellsKnown
-        : [...new Set([...profile.spellsKnown, spellName])],
+        : dedupeSpellNames([...profile.spellsKnown, spellName]),
     }
   })
 
@@ -347,6 +360,7 @@ export function removeRacialSpell(
   choiceId: string,
   spellName: string,
 ): SpellCommandResult {
+  const spellKey = getSpellNameKey(spellName)
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (profile.id !== profileId) return profile
 
@@ -354,16 +368,19 @@ export function removeRacialSpell(
       ...profile,
       choices: profile.choices?.map((choice) =>
         choice.id === choiceId
-          ? { ...choice, selected: choice.selected.filter((name) => name !== spellName) }
+          ? {
+              ...choice,
+              selected: choice.selected.filter((name) => getSpellNameKey(name) !== spellKey),
+            }
           : choice,
       ),
-      cantrips: profile.cantrips.filter((s) => s !== spellName),
-      spellsKnown: profile.spellsKnown.filter((s) => s !== spellName),
-      preparedSpells: profile.preparedSpells.filter((s) => s !== spellName),
+      cantrips: profile.cantrips.filter((name) => getSpellNameKey(name) !== spellKey),
+      spellsKnown: profile.spellsKnown.filter((name) => getSpellNameKey(name) !== spellKey),
+      preparedSpells: profile.preparedSpells.filter((name) => getSpellNameKey(name) !== spellKey),
     }
   })
 
-  const normKey = normalizeKey(spellName)
+  const normKey = spellKey
   const tags = ledger.spells[normKey] ?? []
   const raceName = choiceId.split(':')[0] ?? 'Race'
   const filtered = tags.filter((t) => !(t.sourceType === 'race' && t.sourceName === raceName))

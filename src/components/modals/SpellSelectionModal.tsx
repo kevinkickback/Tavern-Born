@@ -7,6 +7,12 @@ import {
   SelectionModal,
 } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
+import {
+  buildSpellNameKeySet,
+  dedupeSpellNames,
+  getSpellNameKey,
+  getSpellReferenceKey,
+} from '@/lib/calculations/spellIdentity'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import {
   formatCastingTime,
@@ -43,8 +49,33 @@ export interface SpellSelectionModalProps {
   onConfirm: (names: string[]) => void
 }
 
-function normalizeSpellName(value: string): string {
-  return value.trim().toLowerCase()
+const EMPTY_SPELL_NAMES = new Set<string>()
+
+export function getSpellSelectionId(spell: Pick<Spell5e, 'name' | 'source'>): string {
+  return getSpellReferenceKey(spell.name, spell.source)
+}
+
+export function resolveInitialSpellSelectionIds(
+  spells: readonly Pick<Spell5e, 'name' | 'source'>[],
+  references: readonly string[],
+): string[] {
+  const idsByReference = new Map(
+    spells.map((spell) => [
+      getSpellReferenceKey(spell.name, spell.source),
+      getSpellSelectionId(spell),
+    ]),
+  )
+  const idsByName = new Map<string, string>()
+  for (const spell of spells) {
+    const nameKey = getSpellNameKey(spell.name)
+    if (!idsByName.has(nameKey)) idsByName.set(nameKey, getSpellSelectionId(spell))
+  }
+  return references.map(
+    (reference) =>
+      idsByReference.get(getSpellReferenceKey(reference)) ??
+      idsByName.get(getSpellNameKey(reference)) ??
+      reference,
+  )
 }
 
 export function buildSpellLevelOptions(
@@ -131,9 +162,12 @@ function matchSpell(
   classListOverrides: Set<string> | undefined,
   enforceClassList: boolean,
   strictLevels: boolean,
-  characterSpellNames?: Set<string>,
+  characterSpellKeys?: ReadonlySet<string>,
 ): boolean {
-  if (characterSpellNames?.has(spell.name) && activeFilters.visibility?.has('hide-known')) {
+  if (
+    characterSpellKeys?.has(getSpellNameKey(spell.name)) &&
+    activeFilters.visibility?.has('hide-known')
+  ) {
     return false
   }
 
@@ -141,7 +175,7 @@ function matchSpell(
     enforceClassList &&
     className &&
     !isSpellOnClassList(spell, className, classSource) &&
-    !classListOverrides?.has(normalizeSpellName(spell.name))
+    !classListOverrides?.has(getSpellNameKey(spell.name))
   ) {
     return false
   }
@@ -257,7 +291,7 @@ export function SpellSelectionModal({
   onOpenChange,
   title = 'Add Spells',
   spells,
-  lockedNames = new Set(),
+  lockedNames = EMPTY_SPELL_NAMES,
   characterSpellNames,
   categories,
   initialSelectedNames = [],
@@ -268,10 +302,19 @@ export function SpellSelectionModal({
   classListOverrides,
   onConfirm,
 }: SpellSelectionModalProps) {
-  const getItemId = (spell: Spell5e) => `${spell.name}|${spell.source ?? ''}`
-
-  const spellIdsByName = new Map(spells.map((spell) => [spell.name, getItemId(spell)]))
-  const initialSelectedIds = initialSelectedNames.map((name) => spellIdsByName.get(name) ?? name)
+  const lockedSpellKeys = useMemo(() => buildSpellNameKeySet(lockedNames), [lockedNames])
+  const characterSpellKeys = useMemo(
+    () => buildSpellNameKeySet(characterSpellNames ?? EMPTY_SPELL_NAMES),
+    [characterSpellNames],
+  )
+  const classListOverrideKeys = useMemo(
+    () => (classListOverrides ? buildSpellNameKeySet(classListOverrides) : undefined),
+    [classListOverrides],
+  )
+  const initialSelectedIds = useMemo(
+    () => resolveInitialSpellSelectionIds(spells, initialSelectedNames),
+    [initialSelectedNames, spells],
+  )
 
   const hasCharSpells = !!(characterSpellNames && characterSpellNames.size > 0)
   const hasClassName = !!className
@@ -291,10 +334,19 @@ export function SpellSelectionModal({
     : initialFilters
 
   const canSelect = (spell: Spell5e, selectedIds: Set<string>, allItems: Spell5e[]) => {
-    const id = getItemId(spell)
+    const id = getSpellSelectionId(spell)
     if (selectedIds.has(id)) return true
-    if (characterSpellNames?.has(spell.name)) return false
-    if (lockedNames.has(spell.name)) return false
+    const spellNameKey = getSpellNameKey(spell.name)
+    if (characterSpellKeys.has(spellNameKey)) return false
+    if (lockedSpellKeys.has(spellNameKey)) return false
+    if (
+      allItems.some(
+        (item) =>
+          selectedIds.has(getSpellSelectionId(item)) && getSpellNameKey(item.name) === spellNameKey,
+      )
+    ) {
+      return false
+    }
 
     for (const category of categories ?? []) {
       if (category.max === Number.POSITIVE_INFINITY || !category.test(spell)) {
@@ -302,7 +354,7 @@ export function SpellSelectionModal({
       }
 
       const count = allItems.filter(
-        (item) => category.test(item) && selectedIds.has(getItemId(item)),
+        (item) => category.test(item) && selectedIds.has(getSpellSelectionId(item)),
       ).length
       if (count >= category.max) {
         return false
@@ -318,13 +370,13 @@ export function SpellSelectionModal({
       onOpenChange={onOpenChange}
       title={title}
       items={spells}
-      getItemId={getItemId}
+      getItemId={getSpellSelectionId}
       renderCard={(spell, isSelected) => (
         <SpellCard
           spell={spell}
           isSelected={isSelected}
-          isLocked={!isSelected && lockedNames.has(spell.name)}
-          isCharacterKnown={!isSelected && !!characterSpellNames?.has(spell.name)}
+          isLocked={!isSelected && lockedSpellKeys.has(getSpellNameKey(spell.name))}
+          isCharacterKnown={!isSelected && characterSpellKeys.has(getSpellNameKey(spell.name))}
         />
       )}
       canSelect={canSelect}
@@ -335,17 +387,19 @@ export function SpellSelectionModal({
           activeFilters,
           className,
           classSource,
-          classListOverrides,
+          classListOverrideKeys,
           !activeFilters.visibility?.has('ignore-class-list'),
           !!allowedLevels,
-          characterSpellNames,
+          characterSpellKeys,
         )
       }
       filterSections={filterSections}
       categories={categories}
       initialSelectedIds={initialSelectedIds}
       initialFilters={effectiveInitialFilters}
-      onConfirm={(_ids, selectedItems) => onConfirm(selectedItems.map((s) => s.name))}
+      onConfirm={(_ids, selectedItems) =>
+        onConfirm(dedupeSpellNames(selectedItems.map((s) => s.name)))
+      }
     />
   )
 }

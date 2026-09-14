@@ -29,7 +29,16 @@ Core modules:
   the Electron user-data directory, resolves symlinks before containment checks, and accepts only
   JSON files up to 50 MB below that canonical root.
 - Remote repository: production accepts HTTPS only, matching the renderer content-security policy.
+  GitHub repository, tree, blob, and raw URLs are normalized to their repository data root. Because
+  a slash-containing branch cannot be distinguished from a folder by URL shape alone, those URLs
+  require an explicit `?ref=feature%2Fbranch`; ambiguous inputs fail validation instead of silently
+  truncating the ref.
 - Remote source: loaded through fetch from normalized URL path.
+
+Full rulebook body files under `data/book/` are not part of the required source contract. UI help
+must therefore use clearly attributed Tavern-Born summaries unless the relevant structured content
+is already present on an ingested entity; it must not copy a book passage and present it as loaded
+source content.
 
 ## Pipeline Stages
 
@@ -48,9 +57,11 @@ Core modules:
 - parsers extract arrays and normalize structure differences.
 - Condition ingestion reads both `.condition[]` and `.disease[]` from `conditionsdiseases.json`, preserves their structured `entries`, and tags each record with its source type. `useConditions()` exposes valid condition records while excluding diseases; this lets the Conditions page render names, descriptions, inline tags, and PHB/XPHB exhaustion rules from data instead of local constants.
 - Class and subclass feature references are normalized for downstream consumption. Class ingestion
-  also produces `normalizedRules` for resources, reset cadence, ritual casting, and source-qualified
-  ASI levels. Encoded reference levels take precedence when repeated feature names occur at more
-  than one level.
+  also produces `normalizedRules` for spendable resources, recovery amount and cadence, ritual
+  casting, and source-qualified ASI levels. Only known spendable resource columns are accepted from
+  class tables, so numeric capacities such as Weapon Mastery do not become counters. Source-qualified
+  adapters cover rules that upstream exposes only through prose. Encoded reference levels take
+  precedence when repeated feature names occur at more than one level.
 - Background ingestion produces `normalizedOriginRules`. Structured ability and feat fields win;
   a ruleset-qualified, versioned 2024 adapter fills only the upstream prose-only gap and records its
   provenance.
@@ -68,6 +79,9 @@ Core modules:
 - Race ingestion also produces `presentationEntries`. Sections already represented by structured
   fields such as size, speed, and languages are removed there, while prose-only sections are
   retained. Views consume that normalized collection rather than suppressing English headings.
+- Item consumers resolve raw type codes through the parsed `itemType` catalog. The manual item picker
+  keeps records with unfamiliar or uncategorized codes in a data-derived Other group and displays the
+  parsed type label when available, rather than using recognized categories as an inclusion gate.
 - Fixed feat references may encode a grant parameter after a semicolon, such as
   `magic initiate; cleric|xphb`. Provenance parsing stores `Magic Initiate` as the canonical entity
   identity and retains `cleric` as grant metadata; consumers must not treat the full reference as a
@@ -84,6 +98,8 @@ Core modules:
 
 6. Caching and freshness
 - Parsed data plus source snapshot are cached in IndexedDB.
+- Cache entries carry a normalization-schema version. Changes to ingestion-owned normalized rules
+  invalidate older parsed caches so corrected adapters apply immediately after an app update.
 - Cache freshness is evaluated on startup; stale cache triggers background refresh.
 
 ## Non-Negotiable Rules

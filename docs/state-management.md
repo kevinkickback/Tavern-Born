@@ -33,15 +33,16 @@ This document defines state ownership, mutation rules, and persistence behavior.
 
 ## Character Mutation Contract
 
-The character store exposes three write paths. Use the correct one for the context:
+The character store exposes four write paths. Use the correct one for the context:
 
 | Method | When to use |
 |---|---|
 | `updateCharacter(id, patch)` | Any component that holds an explicit character `id` (e.g. character list, class page, level-up modal). The standard and preferred path for most writes. |
 | `updateActiveCharacter(patch)` | Components that are always scoped to the active character and don't have an explicit id (e.g. PortraitPage, detail sub-pages). Convenience wrapper around `updateCharacter` that fills in `activeCharacterId`. |
 | `updateActiveCharacterDetails(patch)` | Same as above, but restricted to the `character.details` sub-object. Use in detail-editing pages (CharacteristicsPage, BackstoryAppearancePage). |
+| `reconcileCharacter(id, patch)` | Silent, non-user system corrections only. A clean draft receives the patch in both snapshots and stays clean; a dirty draft receives it only in memory and remains dirty until explicit Save. |
 
-Rules that apply to all three paths:
+Rules that apply to the three user-edit paths:
 - Active character changes are draft updates until `saveActiveCharacter()` is called.
 - Non-active character updates patch the persisted collection directly.
 - No direct object mutation outside store reducers.
@@ -85,8 +86,9 @@ Derived examples (do not store as canonical):
 ## Unsaved Changes and App Close Safety
 
 - `hasUnsavedChanges()` is O(1): user mutations set the transient
-  `isActiveCharacterDirty` flag, and saving or reconciliation clears it. Timestamp comparison remains
-  as a compatibility safeguard for imported or injected state.
+  `isActiveCharacterDirty` flag, saving clears it, and clean-draft reconciliation preserves the
+  clean state. Reconciliation never clears an existing dirty state. Timestamp comparison remains as
+  a compatibility safeguard for imported or injected state.
 - src/main.tsx syncs unsaved state to Electron.
 - electron/main.ts shows close confirmation when unsaved edits exist.
 - App preferences and home-page layout changes do not participate in character dirty-state tracking.
@@ -131,6 +133,9 @@ edit.
 
 - Canonical spell state is now profile-based under `character.spells.spellProfiles`.
 - Class profiles are keyed by `class:<name>|<source>` and hold class-owned cantrips/spells/prepared flags.
+- Profile spell collections remain name strings for file compatibility. Equality is based on one
+  normalized, case-insensitive spell-name key; source-qualified input selects the matching catalog
+  row, while two printings with the same normalized name intentionally collapse to one profile entry.
 - The unrestricted profile is `special:unrestricted` and is always prepared by definition.
 - Spell slots remain persisted in `character.spells.spellSlots` as mutable runtime usage state.
 - `character.spells.spellSlots` is stored as a numeric-keyed map (`1..9`) where each key is `{ max, used }`.
@@ -140,6 +145,10 @@ edit.
 - Multiclass slot derivation follows 5e caster progression rules, including Artificer using ceiling half-caster contribution.
 - Shared spell-slot maxima come from parsed PHB/XPHB full-caster progression rows. A progression containing any 2024 class uses the XPHB table; otherwise it uses PHB. Missing canonical rows produce no synthetic slots and are reported during development.
 - This is a hard cutover model; legacy spell arrays and `spellsByLevel` are not used.
+
+Ability-score method labels and explanations are derived from the character's selected
+`CORE_RULES_METADATA` record. The wizard and Rules page consume the same view-neutral descriptors,
+so displayed point-buy limits and standard-array values follow the selected origin system.
 
 ## Implementation Checklist for State Changes
 

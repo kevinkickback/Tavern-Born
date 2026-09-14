@@ -9,6 +9,7 @@ import { describe, expect, test } from 'vitest'
 import {
   addSpellToCharacter,
   removeSpellFromCharacter,
+  setProfileSpells,
   swapSpellOnCharacter,
 } from '@/lib/character/commands/spellCommands'
 import { emptyProvenance } from '@/store/characterStore'
@@ -104,6 +105,72 @@ describe('Spell Commands', () => {
       // Profile should include new spell known
       const updatedProfile = result.characterPatch.spells?.spellProfiles[0]
       expect(updatedProfile?.spellsKnown).toContain('Faerie Fire')
+    })
+
+    test('does not duplicate a stored spell with different casing', () => {
+      const character = makeCharacterFixture({
+        spells: {
+          spellProfiles: [
+            {
+              id: 'class:Wizard|PHB',
+              type: 'class' as const,
+              label: 'Wizard',
+              className: 'Wizard',
+              classSource: 'PHB',
+              cantrips: ['mage hand'],
+              spellsKnown: [],
+              preparedSpells: [],
+              alwaysPrepared: false,
+            },
+          ],
+          spellSlots: makeCharacterFixture().spells.spellSlots,
+        },
+      })
+
+      const result = addSpellToCharacter(
+        character,
+        character.provenance ?? emptyProvenance(),
+        'Mage Hand',
+        'cantrip',
+        'class:Wizard|PHB',
+      )
+
+      expect(result.characterPatch.spells?.spellProfiles[0]?.cantrips).toEqual(['mage hand'])
+    })
+  })
+
+  describe('setProfileSpells', () => {
+    test('deduplicates mixed-case names and retains prepared state by canonical name', () => {
+      const character = makeCharacterFixture({
+        spells: {
+          spellProfiles: [
+            {
+              id: 'class:Wizard|PHB',
+              type: 'class' as const,
+              label: 'Wizard',
+              className: 'Wizard',
+              classSource: 'PHB',
+              cantrips: [],
+              spellsKnown: ['magic missile'],
+              preparedSpells: ['magic missile'],
+              alwaysPrepared: false,
+            },
+          ],
+          spellSlots: makeCharacterFixture().spells.spellSlots,
+        },
+      })
+
+      const result = setProfileSpells(
+        character,
+        character.provenance ?? emptyProvenance(),
+        'class:Wizard|PHB',
+        [],
+        ['Magic Missile', 'magic missile'],
+      )
+      const profile = result.characterPatch.spells?.spellProfiles[0]
+
+      expect(profile?.spellsKnown).toEqual(['Magic Missile'])
+      expect(profile?.preparedSpells).toEqual(['magic missile'])
     })
   })
 
