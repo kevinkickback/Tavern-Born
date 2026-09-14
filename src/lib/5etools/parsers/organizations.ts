@@ -5,11 +5,11 @@ import { asArray, asObject, type ParsedObject } from './shared'
 // Prefer parser-provided images when available; use these when source data omits
 // a reliable image reference or points to non-ideal assets.
 const ORGANIZATION_IMAGE_FALLBACKS: Record<string, string> = {
-  harpers: '/assets/images/factions/harpers-5e.png',
-  'order of the gauntlet': '/assets/images/factions/order-of-the-gauntlet.png',
-  'emerald enclave': '/assets/images/factions/emerald-enclave-banner.png',
-  'lords alliance': '/assets/images/factions/lords-alliance-5e.png',
-  zhentarim: '/assets/images/factions/zhentarim-5e-symbol.png',
+  harpers: '/assets/images/factions/harpers-5e.webp',
+  'order of the gauntlet': '/assets/images/factions/order-of-the-gauntlet.webp',
+  'emerald enclave': '/assets/images/factions/emerald-enclave-banner.webp',
+  'lords alliance': '/assets/images/factions/lords-alliance-5e.webp',
+  zhentarim: '/assets/images/factions/zhentarim-5e-symbol.webp',
 }
 
 function walkUnknown(value: unknown, visitor: (node: unknown) => void) {

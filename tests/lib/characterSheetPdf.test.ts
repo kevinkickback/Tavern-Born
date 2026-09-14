@@ -14,6 +14,7 @@ import {
   generateFilledCharacterSheetPdf as fillCharacterSheetViewModel,
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
+import { asFieldWithInternals } from '@/lib/pdf/pdfFieldInternals'
 import type { Background5e, Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -875,6 +876,35 @@ describe('characterSheetPdf', () => {
     expect(outputHiddenButton.acroField.getWidgets()[0].getRectangle().width).toBe(0)
     expect(outputAmmo.acroField.getWidgets()[0].getRectangle().width).toBe(0)
     expect(outputPortraitButton.acroField.getWidgets()[0].getRectangle().width).toBe(120)
+  })
+
+  test('embeds a custom organization image into the 2014 symbol field', async () => {
+    const templateDoc = await PDFDocument.create()
+    const page = templateDoc.addPage([600, 800])
+    const symbol = templateDoc.getForm().createButton('Symbol')
+    symbol.addToPage('Click Here To Change This Icon', page, {
+      x: 400,
+      y: 500,
+      width: 150,
+      height: 120,
+    })
+    const templateBytes = await templateDoc.save()
+    const imageBytes = readFileSync(
+      join(process.cwd(), 'public', 'assets', 'images', 'ui', 'logo.png'),
+    )
+    const organizationCustomImage = `data:image/png;base64,${imageBytes.toString('base64')}`
+    const character = makeCharacterFixture({
+      details: {
+        organizationSelectionKey: '__custom__',
+        organizationCustomImage,
+      },
+    })
+
+    const filledBytes = await generateFilledCharacterSheetPdf(character, templateBytes, '2014')
+    const outputDoc = await PDFDocument.load(filledBytes)
+    const outputSymbol = asFieldWithInternals(outputDoc.getForm().getButton('Symbol'))
+
+    expect(outputSymbol?.acroField.getWidgets()[0]?.getRectangle().width).toBe(0)
   })
 
   test('2014 equipment populates Adventuring Gear row fields', () => {

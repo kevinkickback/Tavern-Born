@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { getBundledFileUrl, resolveBundledAssetSrc } from '@/lib/assetUrls'
+import { resolveOrganizationImageSrc } from '@/lib/character/organizationConstants'
 import { getClassIconUrl } from '@/lib/classIcons'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 
@@ -14,6 +15,15 @@ describe('bundled file URLs', () => {
     expect(getClassIconUrl(' Wizard ', './')).toBe('./assets/images/ui/icons/wizard.svg')
     expect(resolvePortraitSrc('/assets/images/characters/portrait.jpg', './')).toBe(
       './assets/images/characters/portrait.jpg',
+    )
+    expect(resolveOrganizationImageSrc('/assets/factions/harpers-5e.png', './')).toBe(
+      './assets/images/factions/harpers-5e.webp',
+    )
+    expect(resolveOrganizationImageSrc('/assets/images/factions/harpers-5e.png', './')).toBe(
+      './assets/images/factions/harpers-5e.webp',
+    )
+    expect(resolveOrganizationImageSrc('/assets/images/factions/harpers-5e.webp', './')).toBe(
+      './assets/images/factions/harpers-5e.webp',
     )
   })
 

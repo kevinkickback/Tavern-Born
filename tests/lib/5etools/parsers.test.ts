@@ -383,13 +383,13 @@ describe('5etools/parsers', () => {
         name: 'The Harpers',
         source: 'SCAG',
         description: 'A secretive organization focused on knowledge and justice.',
-        imagePath: '/assets/images/factions/harpers-5e.png',
+        imagePath: '/assets/images/factions/harpers-5e.webp',
       },
       {
         name: 'The Zhentarim',
         source: 'SCAG',
         description: 'The Black Network seeks influence through covert operations.',
-        imagePath: '/assets/images/factions/zhentarim-5e-symbol.png',
+        imagePath: '/assets/images/factions/zhentarim-5e-symbol.webp',
       },
     ])
   })

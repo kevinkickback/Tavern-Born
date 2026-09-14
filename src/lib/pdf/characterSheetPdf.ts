@@ -58,5 +58,6 @@ export function generateFilledCharacterSheetPdf(
   return fillCharacterSheetPdf(templateBytes, buildCharacterSheetFieldMap(viewModel, templateId), {
     templateId,
     portrait: viewModel.character.portrait,
+    organizationImage: viewModel.organizationImage,
   })
 }

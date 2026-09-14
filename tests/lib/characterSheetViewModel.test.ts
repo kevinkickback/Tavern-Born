@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
-import type { Background5e, Class5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Organization5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('createCharacterSheetViewModel', () => {
@@ -72,5 +72,32 @@ describe('createCharacterSheetViewModel', () => {
       description: 'You know where to find lore.',
     })
     expect(viewModel.maxHP).toBe(6)
+  })
+
+  test('resolves preset and custom organization images', () => {
+    const organizations = [
+      {
+        name: 'Harpers',
+        source: 'SCAG',
+        description: 'A covert network.',
+        imagePath: '/assets/images/factions/harpers-5e.webp',
+      } as Organization5e,
+    ]
+    const preset = createCharacterSheetViewModel(
+      makeCharacterFixture({ details: { organizationSelectionKey: 'Harpers|SCAG' } }),
+      { organizations },
+    )
+    const custom = createCharacterSheetViewModel(
+      makeCharacterFixture({
+        details: {
+          organizationSelectionKey: '__custom__',
+          organizationCustomImage: 'data:image/png;base64,custom-image',
+        },
+      }),
+      { organizations },
+    )
+
+    expect(preset.organizationImage).toBe('/assets/images/factions/harpers-5e.webp')
+    expect(custom.organizationImage).toBe('data:image/png;base64,custom-image')
   })
 })

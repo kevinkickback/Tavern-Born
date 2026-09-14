@@ -16,6 +16,7 @@ import {
   useBackgroundLookup,
   useClassLookup,
   useItemPropertyLookup,
+  useOrganizations,
   useRaceLookup,
   useSpellLookup,
 } from '@/hooks/data/useGameData'
@@ -44,6 +45,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const backgroundsByKey = useBackgroundLookup()
   const spellsByKey = useSpellLookup()
   const itemPropertyByAbbr = useItemPropertyLookup()
+  const organizations = useOrganizations()
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -59,9 +61,18 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
             backgroundsByKey,
             spellsByKey,
             itemPropertyByAbbr,
+            organizations,
           })
         : null,
-    [backgroundsByKey, character, classesByKey, itemPropertyByAbbr, racesByKey, spellsByKey],
+    [
+      backgroundsByKey,
+      character,
+      classesByKey,
+      itemPropertyByAbbr,
+      organizations,
+      racesByKey,
+      spellsByKey,
+    ],
   )
 
   useEffect(() => {

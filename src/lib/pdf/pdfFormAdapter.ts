@@ -5,7 +5,7 @@ import {
   type FieldWithInternals,
   type FormWithInternals,
 } from '@/lib/pdf/pdfFieldInternals'
-import { embedPortraitImage } from '@/lib/pdf/pdfImageAdapter'
+import { embedOrganizationImage, embedPortraitImage } from '@/lib/pdf/pdfImageAdapter'
 import type { CharacterSheetFieldMap, CharacterSheetTemplateId } from '@/lib/pdf/types'
 
 const MPMB_BUTTON_KEEP_PATTERNS = [
@@ -21,7 +21,11 @@ const CALCULATED_FIELDS = ['AC', 'Proficiency Bonus', 'HP Max'] as const
 export async function fillCharacterSheetPdf(
   templateBytes: ArrayBuffer | Uint8Array,
   fields: CharacterSheetFieldMap,
-  options: { templateId: CharacterSheetTemplateId; portrait?: string },
+  options: {
+    templateId: CharacterSheetTemplateId
+    portrait?: string
+    organizationImage?: string
+  },
 ): Promise<Uint8Array> {
   const input = templateBytes instanceof Uint8Array ? templateBytes : new Uint8Array(templateBytes)
   const pdfDoc = await PDFDocument.load(input, { ignoreEncryption: false })
@@ -67,6 +71,9 @@ export async function fillCharacterSheetPdf(
   if (options.templateId === '2014') {
     stripCheckboxOffAppearances(form)
     if (options.portrait) await embedPortraitImage(pdfDoc, options.portrait)
+    if (options.organizationImage) {
+      await embedOrganizationImage(pdfDoc, options.organizationImage)
+    }
   }
   return pdfDoc.save({ updateFieldAppearances: false })
 }

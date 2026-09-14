@@ -24,14 +24,14 @@ import {
   formatRange,
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
-import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
+import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import {
   getCharacterClassEntries,
   getEffectiveMaxHP,
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
 import { renderEntry } from '@/lib/renderer'
-import type { Background5e, Class5e, Race5e, Spell5e } from '@/types/5etools'
+import type { Background5e, Class5e, Organization5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character, Equipment } from '@/types/character'
 
 type ModifierResult = { modifier: number; proficient: boolean }
@@ -39,6 +39,7 @@ type ModifierResult = { modifier: number; proficient: boolean }
 export interface CharacterSheetLookupSet extends EntityLookupSet {
   spellsByKey?: Readonly<Record<string, Spell5e>>
   itemPropertyByAbbr?: Readonly<Record<string, string>>
+  organizations?: readonly Organization5e[]
 }
 
 export interface CharacterSheetWeaponRow {
@@ -113,6 +114,7 @@ export interface CharacterSheetViewModel {
   historyAndPersonalitySummary: string
   alliesAndOrganizationsSummary: string
   organizationDetailsSummary: string
+  organizationImage?: string
   defensiveTraits: string[]
 }
 
@@ -370,6 +372,19 @@ function buildOrganizationDetailsSummary(character: Character): string {
     ['Patron', details.patron],
     ['Patron details', details.patronDetails],
   ])
+}
+
+function resolveOrganizationImage(
+  character: Character,
+  organizations: readonly Organization5e[],
+): string | undefined {
+  const selectionKey = character.details.organizationSelectionKey
+  if (selectionKey === CUSTOM_ORGANIZATION_KEY) {
+    return character.details.organizationCustomImage?.trim() || undefined
+  }
+  return organizations.find(
+    (organization) => getOrganizationKey(organization.name, organization.source) === selectionKey,
+  )?.imagePath
 }
 
 function isWeapon(item: Equipment): boolean {
@@ -658,6 +673,7 @@ export function createCharacterSheetViewModel(
     historyAndPersonalitySummary: buildHistoryAndPersonalitySummary(character),
     alliesAndOrganizationsSummary: buildAlliesAndOrganizationsSummary(character),
     organizationDetailsSummary: buildOrganizationDetailsSummary(character),
+    organizationImage: resolveOrganizationImage(character, rawLookups.organizations ?? []),
     defensiveTraits: buildDefensiveTraits(character),
   }
 }

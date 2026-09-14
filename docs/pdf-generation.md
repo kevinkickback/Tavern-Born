@@ -7,9 +7,11 @@ Character sheet export has four boundaries:
 1. `CharacterSheetPage` loads the selected template and supplies character plus game-data lookups.
 2. `characterSheetViewModel.ts` resolves class, race, background, spell, item-property, combat, and narrative data into a template-neutral projection.
 3. `characterSheetMapping2014.ts` or `characterSheetMapping2024.ts` maps that projection to the exact AcroForm field names in the shipped PDF.
-4. `pdfFormAdapter.ts` writes values, refreshes appearances, embeds the 2014 portrait, and removes unsupported MPMB controls and scripts.
+4. `pdfFormAdapter.ts` writes values, refreshes appearances, embeds the 2014 portrait and organization emblem, and removes unsupported MPMB controls and scripts.
 
 For the legacy 2014 template, saving also replaces mapped checkbox appearances with portable vector marks, records mapped text as both the current and reset/default value, and removes the obsolete MPMB action and calculation-order entries. This is required because some desktop PDF readers do not render the template's font-dependent checkbox glyphs and can reset MPMB-managed fields even though PDF.js displays them correctly in the app preview.
+
+Bundled organization artwork remains in its native WebP format throughout the app. The PDF image adapter converts it to PNG in memory only when embedding it into the 2014 form; custom images use the same format-normalization boundary when needed. Legacy bundled `.png` paths are translated to their canonical `.webp` names so cached data and older character files continue to work.
 
 The template field names are an external contract. Some are descriptive (2014), while the 2024 template uses positional names such as `Text_61`. Never infer a positional field from its number. Inspect its widget rectangle in the actual PDF and extend the template-contract tests whenever a mapping changes.
 
@@ -44,7 +46,7 @@ The original 2024 mapping assumed its numeric field names followed the page's vi
 - Class/racial/background features and four feats
 - Up to 90 inventory rows across the equipment and extra-equipment pages
 - Five magic items with description, rarity, weight, and attunement state
-- Currency, languages, tools, faith, lifestyle, faction/rank, allies/organizations, appearance, enemies, and expanded history/personality
+- Currency, languages, tools, faith, lifestyle, faction/rank, allies/organizations with the selected or custom emblem, appearance, enemies, and expanded history/personality
 - Up to two spellcasting save-DC summaries
 
 ## Intentional Limits
@@ -54,10 +56,10 @@ The original 2024 mapping assumed its numeric field names followed the page's vi
 - The 2024 template has one spellcasting summary, 30 spell rows, six weapon rows, and three attunement rows. Additional entries remain available in the app but cannot fit this fixed form.
 - The 2014 template has five attack rows, three hit-die rows, eight limited-resource rows, five magic-item cards, and 90 equipment rows. Additional data is limited by the template.
 - The 2014 portrait is supported; the 2024 template has no portrait field.
-- Organization images, daily lifestyle price, ammunition trackers, and other MPMB-only calculated helpers are not represented in character state or require the removed PDF JavaScript runtime.
+- Daily lifestyle price, ammunition trackers, and other MPMB-only calculated helpers are not represented in character state or require the removed PDF JavaScript runtime.
 
 ## Verification
 
 `tests/lib/characterSheetPdf.test.ts` covers semantic mapping, field-capacity boundaries, real-template field-name contracts, actual form filling, and 2014 cleanup. `tests/lib/pdfSavedOutput.test.ts` reopens an actual generated 2014 file and verifies the resistance, armor, language, and tool values plus portable checkbox appearances. When replacing either template, rerun those tests and visually inspect every generated page before changing field names.
 
-`tests/fixtures/pdf-kitchen-sink.tbc` is an importable level-20 regression character designed to populate both templates heavily. It includes three classes/subclasses, a race/subrace, four spell profiles with 31 unique spells, all skills and saves, six weapons, five magic items, 90 inventory rows, multiple defenses, runtime state, provenance, a portrait, and extensive character details. Its companion test validates the schema and both mapping-capacity boundaries.
+`tests/fixtures/pdf-kitchen-sink.tbc` is an importable level-20 regression character designed to populate both templates heavily. It includes three classes/subclasses, a race/subrace, class-owned and source-qualified choice feats, four spell profiles with 31 unique spells, all skills and saves, six weapons, five magic items, 90 inventory rows, multiple defenses, runtime state, provenance, a portrait, and extensive character details. Its companion test validates the schema, feat-choice ownership fields, and both mapping-capacity boundaries.

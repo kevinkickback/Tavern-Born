@@ -1817,7 +1817,7 @@
     },
     "arcana": {
       "proficient": true,
-      "expertise": false,
+      "expertise": true,
       "bonus": 1
     },
     "athletics": {
@@ -1954,7 +1954,7 @@
     "organizationSelectionKey": "__custom__",
     "organizationCustomName": "The Lantern Archive",
     "organizationCustomDescription": "A hidden network of scholars, scouts, and temple record-keepers who preserve dangerous knowledge without hoarding it.",
-    "organizationCustomImage": "/assets/images/factions/harpers-5e.png",
+    "organizationCustomImage": "/assets/images/factions/harpers-5e.webp",
     "organizationCustomGradient": "linear-gradient(135deg, #312e81, #0f766e)",
     "alliesAndOrganizations": "The Lantern Archive; the Harpers; the House of Restored Names."
   },
@@ -1969,7 +1969,8 @@
     "PHB",
     "DMG",
     "XGE",
-    "TCE"
+    "TCE",
+    "XPHB"
   ],
   "variantRules": {
     "optionalClassFeatures": true,
@@ -2077,6 +2078,28 @@
       "name": "Tough",
       "source": "PHB",
       "description": "Exercises a per-level maximum hit-point adjustment."
+    }
+  ],
+  "classFeatChoices": [
+    {
+      "id": "fighter|phb|fighting style|fs",
+      "className": "Fighter",
+      "classSource": "PHB",
+      "progressionName": "Fighting Style",
+      "categories": [
+        "FS"
+      ],
+      "feats": [
+        {
+          "id": "class-fighter-defense-xphb",
+          "name": "Defense",
+          "source": "XPHB",
+          "description": "Gain a defensive benefit while wearing armor.",
+          "className": "Fighter",
+          "classSource": "PHB",
+          "classLevel": 1
+        }
+      ]
     }
   ],
   "fixedFeatOptions": {
@@ -2359,6 +2382,14 @@
             "sourceRef": "PHB",
             "grantType": "fixed",
             "label": "PDF Test Selection"
+          },
+          {
+            "sourceType": "feat",
+            "sourceName": "Skill Expert",
+            "sourceRef": "TCE",
+            "grantVariant": "choice:choice-race-feat",
+            "grantType": "choice",
+            "label": "Skill Expert"
           }
         ],
         "athletics": [
@@ -2587,9 +2618,31 @@
           "grantType": "fixed",
           "label": "Ability Score Improvement"
         }
+      },
+      {
+        "ability": "intelligence",
+        "value": 1,
+        "sourceTag": {
+          "sourceType": "feat",
+          "sourceName": "Skill Expert",
+          "sourceRef": "TCE",
+          "grantVariant": "choice:choice-race-feat",
+          "grantType": "choice",
+          "label": "Skill Expert"
+        }
       }
     ],
     "features": {
+      "Armor of Shadows": [
+        {
+          "sourceType": "feat",
+          "sourceName": "Eldritch Adept",
+          "sourceRef": "TCE",
+          "grantVariant": "choice:choice-background-feat",
+          "grantType": "choice",
+          "label": "Eldritch Adept"
+        }
+      ],
       "Darkvision": [
         {
           "sourceType": "race",
@@ -2779,6 +2832,34 @@
           "sourceRef": "PHB",
           "grantType": "fixed",
           "label": "Feat Selection"
+        }
+      ],
+      "Defense": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "PHB",
+          "grantVariant": "fighter|phb|fighting style|fs",
+          "grantType": "choice",
+          "label": "Fighter"
+        }
+      ],
+      "Skill Expert": [
+        {
+          "sourceType": "race",
+          "sourceName": "Elf",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Elf"
+        }
+      ],
+      "Eldritch Adept": [
+        {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "choice",
+          "label": "Sage"
         }
       ]
     },
@@ -4036,6 +4117,62 @@
         ],
         "selected": [
           "Dice Set"
+        ],
+        "status": "resolved"
+      },
+      {
+        "id": "choice-race-feat",
+        "domain": "feats",
+        "sourceTag": {
+          "sourceType": "race",
+          "sourceName": "Elf",
+          "sourceRef": "PHB",
+          "grantType": "placeholder",
+          "label": "Elf"
+        },
+        "chooseCount": 1,
+        "optionPool": [],
+        "selected": [
+          "Skill Expert"
+        ],
+        "selectedRefs": [
+          {
+            "name": "Skill Expert",
+            "source": "TCE",
+            "options": {
+              "skills": [
+                "Arcana"
+              ],
+              "abilityScore": "intelligence",
+              "expertiseSkill": "Arcana"
+            }
+          }
+        ],
+        "status": "resolved"
+      },
+      {
+        "id": "choice-background-feat",
+        "domain": "feats",
+        "sourceTag": {
+          "sourceType": "background",
+          "sourceName": "Sage",
+          "sourceRef": "PHB",
+          "grantType": "placeholder",
+          "label": "Sage"
+        },
+        "chooseCount": 1,
+        "optionPool": [],
+        "selected": [
+          "Eldritch Adept"
+        ],
+        "selectedRefs": [
+          {
+            "name": "Eldritch Adept",
+            "source": "TCE",
+            "options": {
+              "optionalFeature": "Armor of Shadows"
+            }
+          }
         ],
         "status": "resolved"
       }

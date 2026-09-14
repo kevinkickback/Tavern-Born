@@ -115,8 +115,8 @@ Character sheet PDF note:
 - The route follows the standard flat workspace layout: export controls live in the full-width pane
   header, while the scrollable preview sits directly on the workspace canvas without an enclosing
   page card.
-- src/lib/pdf/characterSheetViewModel.ts is the pure character/game-data projection boundary and resolves class, race/subrace, background, spell, and item-property entities from raw composite lookups.
-- Pure template mappings live in src/lib/pdf/characterSheetMapping2014.ts and src/lib/pdf/characterSheetMapping2024.ts. src/lib/pdf/pdfFormAdapter.ts owns AcroForm filling, portable saved-file appearances, and MPMB cleanup; src/lib/pdf/pdfImageAdapter.ts owns portrait loading and embedding; src/lib/pdf/characterSheetPdf.ts is the thin orchestrator.
+- src/lib/pdf/characterSheetViewModel.ts is the pure character/game-data projection boundary and resolves class, race/subrace, background, organization, spell, and item-property entities from raw composite lookups.
+- Pure template mappings live in src/lib/pdf/characterSheetMapping2014.ts and src/lib/pdf/characterSheetMapping2024.ts. src/lib/pdf/pdfFormAdapter.ts owns AcroForm filling, portable saved-file appearances, and MPMB cleanup; src/lib/pdf/pdfImageAdapter.ts owns portrait and organization-image loading and embedding; src/lib/pdf/characterSheetPdf.ts is the thin orchestrator.
 - CharacterSheetPage prepares and memoizes the view model before template loading, then reuses it for mapping and adapter execution.
 - The 2024 mapping covers every text and checkbox widget in the shipped two-page form, including weapons, spellcasting, prepared spells, inventory, attunement, and narrative blocks. The 2014 mapping targets semantic inputs across all four pages while excluding MPMB-only display/calculation helpers. See docs/pdf-generation.md for the audited coverage and fixed-template limits.
 - PDF form editing is powered by `@cantoo/pdf-lib` (maintained fork of pdf-lib) to keep browser-side AcroForm fill/edit behavior stable.

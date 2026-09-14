@@ -31,6 +31,30 @@ describe('PDF kitchen sink character fixture', () => {
     expect(character.proficiencies.skills).toHaveLength(18)
     expect(character.details.allies).toHaveLength(3)
     expect(character.hitPointGains).toHaveLength(19)
+    expect(character.allowedSources).toContain('XPHB')
+    expect(character.classFeatChoices).toEqual([
+      expect.objectContaining({
+        id: 'fighter|phb|fighting style|fs',
+        className: 'Fighter',
+        feats: [expect.objectContaining({ name: 'Defense', source: 'XPHB', classLevel: 1 })],
+      }),
+    ])
+    expect(
+      character.provenance?.choices
+        .filter((choice) => choice.domain === 'feats')
+        .map((choice) => choice.selectedRefs?.[0]),
+    ).toEqual([
+      expect.objectContaining({
+        name: 'Skill Expert',
+        source: 'TCE',
+        options: expect.objectContaining({ expertiseSkill: 'Arcana' }),
+      }),
+      expect.objectContaining({
+        name: 'Eldritch Adept',
+        source: 'TCE',
+        options: { optionalFeature: 'Armor of Shadows' },
+      }),
+    ])
   })
 
   test('exercises both template mappings through their fixed row capacities', () => {

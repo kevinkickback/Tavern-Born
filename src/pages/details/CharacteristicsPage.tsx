@@ -33,9 +33,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { ALIGNMENTS, LIFESTYLES } from '@/lib/5etools/constants'
-import { resolveBundledAssetSrc } from '@/lib/assetUrls'
 import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
-import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
+import {
+  CUSTOM_ORGANIZATION_KEY,
+  getOrganizationKey,
+  resolveOrganizationImageSrc,
+} from '@/lib/character/organizationConstants'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Character } from '@/types/character'
@@ -144,10 +147,6 @@ const ORGANIZATION_THEMES: Record<string, string> = {
   zhentarim: 'from-black via-zinc-950 to-amber-300',
 }
 
-function getOrganizationKey(name: string, source: string) {
-  return `${name}|${source}`
-}
-
 function getInitials(label: string) {
   const parts = label.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return 'ORG'
@@ -166,13 +165,6 @@ function getOrganizationImageStyle(label: string) {
 
   const sum = [...label].reduce((acc, char) => acc + char.charCodeAt(0), 0)
   return ORGANIZATION_IMAGE_STYLES[sum % ORGANIZATION_IMAGE_STYLES.length]
-}
-
-function normalizeOrganizationImagePath(path: string) {
-  if (path.startsWith('/assets/factions/')) {
-    return resolveBundledAssetSrc(path.replace('/assets/factions/', '/assets/images/factions/'))
-  }
-  return resolveBundledAssetSrc(path)
 }
 
 function Field({ id, label, children }: { id: string; label: string; children: ReactNode }) {
@@ -365,7 +357,7 @@ export function CharacteristicsPage() {
       ? organizationCustomDescription || ''
       : selectedOrganization?.description || ''
 
-  const previewImage = normalizeOrganizationImagePath(
+  const previewImage = resolveOrganizationImageSrc(
     organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
       ? organizationCustomImage || ''
       : selectedOrganization?.imagePath || '',
