@@ -145,7 +145,9 @@ export function useSpellProfileMutations(
 
       if (!isPrepared) {
         const conflict = spellProfiles.find(
-          (p) => p.id !== profileId && p.preparedSpells.includes(name),
+          (p) =>
+            p.id !== profileId &&
+            p.preparedSpells.some((preparedName) => normalizeKey(preparedName) === spellKey),
         )
         if (conflict) {
           toast.warning(`Already prepared by ${conflict.label}`, {

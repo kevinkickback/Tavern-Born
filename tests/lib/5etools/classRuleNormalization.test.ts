@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
+import { getClassResourceDefs } from '@/lib/5etools/classData'
 import {
   formatClassResourceRecovery,
   getClassResourceRecoveryAtLevel,
@@ -11,6 +14,15 @@ function normalize(
   refs: readonly ClassFeatureReference[] = [],
 ) {
   return normalizeClassRules(classData, refs)
+}
+
+function loadClassData(fileName: string, name: string, source: string): Class5e {
+  const payload = JSON.parse(
+    readFileSync(join(process.cwd(), 'data', 'class', fileName), 'utf8'),
+  ) as { class: Class5e[] }
+  const classData = payload.class.find((entry) => entry.name === name && entry.source === source)
+  if (!classData) throw new Error(`Missing ${name}|${source} in ${fileName}`)
+  return classData
 }
 
 describe('class rule normalization', () => {
@@ -44,11 +56,48 @@ describe('class rule normalization', () => {
       ],
     )
 
-    expect(rules.resources).toHaveLength(1)
-    expect(rules.resources[0]).toMatchObject({
-      id: 'fighter-second-wind',
-      recovery: { shortRest: 1, longRest: 'all' },
-    })
+    expect(rules.resources.find((resource) => resource.id === 'fighter-second-wind')).toMatchObject(
+      {
+        id: 'fighter-second-wind',
+        recovery: { shortRest: 1, longRest: 'all' },
+      },
+    )
+    expect(rules.resources).not.toContainEqual(expect.objectContaining({ label: 'Weapon Mastery' }))
+    expect(rules.resources).not.toContainEqual(expect.objectContaining({ label: 'Damage Bonus' }))
+  })
+
+  test('keeps finite resource levels when the final level becomes unlimited', () => {
+    const classData = loadClassData('class-barbarian.json', 'Barbarian', 'PHB')
+    const rules = normalize(classData)
+    const rage = rules.resources.find((resource) => resource.id === 'barbarian-rages')
+
+    expect(rage?.maxPerLevel[0]).toBe(2)
+    expect(rage?.maxPerLevel[18]).toBe(6)
+    expect(rage?.maxPerLevel[19]).toBe(0)
+    expect(getClassResourceDefs(classData, 1)).toContainEqual(rage)
+    expect(getClassResourceDefs(classData, 19)).toContainEqual(rage)
+    expect(getClassResourceDefs(classData, 20)).not.toContainEqual(rage)
+  })
+
+  test('adds prose-backed Action Surge and Indomitable resources for 2024 fighters', () => {
+    const classData = loadClassData('class-fighter.json', 'Fighter', 'XPHB')
+    const rules = normalize(classData)
+    const actionSurge = rules.resources.find((resource) => resource.id === 'fighter-action-surge')
+    const indomitable = rules.resources.find((resource) => resource.id === 'fighter-indomitable')
+
+    expect(actionSurge?.maxPerLevel[1]).toBe(1)
+    expect(actionSurge?.maxPerLevel[16]).toBe(2)
+    expect(actionSurge?.recovery).toEqual({ shortRest: 'all', longRest: 'all' })
+    expect(indomitable?.maxPerLevel[8]).toBe(1)
+    expect(indomitable?.maxPerLevel[12]).toBe(2)
+    expect(indomitable?.maxPerLevel[16]).toBe(3)
+    expect(indomitable?.recovery).toEqual({ longRest: 'all' })
+    expect(getClassResourceDefs(classData, 2)).toContainEqual(actionSurge)
+    expect(getClassResourceDefs(classData, 9)).toContainEqual(indomitable)
+    expect(getClassResourceDefs(classData, 13)).toContainEqual(indomitable)
+    expect(getClassResourceDefs(classData, 17)).toEqual(
+      expect.arrayContaining([actionSurge, indomitable]),
+    )
   })
 
   test.each([

@@ -44,6 +44,23 @@ const TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE: Readonly<Record<string, ReadonlySet
 const LONG_REST_RECOVERY: ClassResourceRecovery = { longRest: 'all' }
 const SHORT_REST_RECOVERY: ClassResourceRecovery = { shortRest: 'all', longRest: 'all' }
 
+const FIGHTER_PROSE_RESOURCE_FIXUPS: readonly ClassResourceDef[] = [
+  {
+    id: 'fighter-action-surge',
+    label: 'Action Surge',
+    maxPerLevel: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
+    restType: 'short',
+    recovery: SHORT_REST_RECOVERY,
+  },
+  {
+    id: 'fighter-indomitable',
+    label: 'Indomitable',
+    maxPerLevel: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
+    restType: 'long',
+    recovery: LONG_REST_RECOVERY,
+  },
+]
+
 function getReferenceLevel(ref: ClassFeatureReference): number | undefined {
   const encodedLevel = Number.parseInt(ref.ref.split('|')[3] ?? '', 10)
   return Number.isNaN(encodedLevel) ? ref.level : encodedLevel
@@ -53,8 +70,8 @@ function twenty(value: number): number[] {
   return Array.from({ length: 20 }, () => value)
 }
 
-/** Source-qualified fixups for legacy resources not represented in class tables. */
-const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
+/** Source-qualified fixups for resources represented only in class-feature prose. */
+const PROSE_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
   'Bard|PHB': [
     {
       id: 'bard-bardic-inspiration',
@@ -109,21 +126,9 @@ const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
       restType: 'short',
       recovery: SHORT_REST_RECOVERY,
     },
-    {
-      id: 'fighter-action-surge',
-      label: 'Action Surge',
-      maxPerLevel: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
-      restType: 'short',
-      recovery: SHORT_REST_RECOVERY,
-    },
-    {
-      id: 'fighter-indomitable',
-      label: 'Indomitable',
-      maxPerLevel: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
-      restType: 'long',
-      recovery: LONG_REST_RECOVERY,
-    },
+    ...FIGHTER_PROSE_RESOURCE_FIXUPS,
   ],
+  'Fighter|XPHB': [...FIGHTER_PROSE_RESOURCE_FIXUPS],
   'Paladin|PHB': [
     {
       id: 'paladin-channel-divinity',
@@ -169,9 +174,10 @@ const LEGACY_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
   ],
 }
 
-function parseResourceValue(value: unknown): number | null {
+function parseResourceValue(value: unknown): number | 'unlimited' | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (typeof value !== 'string' || value.trim().toLowerCase() === 'unlimited') return null
+  if (typeof value !== 'string') return null
+  if (value.trim().toLowerCase() === 'unlimited') return 'unlimited'
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
 }
@@ -264,8 +270,12 @@ function parseTableResources(
     labels.forEach((rawLabel, columnIndex) => {
       const label = typeof rawLabel === 'string' ? rawLabel.trim() : ''
       if (!supportedLabels?.has(label.toLowerCase())) return
-      const values = rows.map((row) => parseResourceValue(row[columnIndex]))
-      if (values.some((value) => value === null) || values.every((value) => value === 0)) return
+      const parsedValues = rows.map((row) => parseResourceValue(row[columnIndex]))
+      if (!parsedValues.every((value): value is number | 'unlimited' => value !== null)) return
+      // An unlimited pool no longer needs a counter at that level, but it must not
+      // invalidate the finite progression at every earlier level.
+      const values = parsedValues.map((value) => (value === 'unlimited' ? 0 : value))
+      if (values.every((value) => value === 0)) return
       const recovery = inferRecovery(label, refs)
       resources.push({
         id: normalizeId(classData.name, label),
@@ -285,7 +295,7 @@ export function normalizeClassRules(
 ): NormalizedClassRules {
   const resources = parseTableResources(classData, refs)
   const seen = new Set(resources.map((resource) => resource.id))
-  for (const fixup of LEGACY_RESOURCE_FIXUPS[`${classData.name}|${classData.source}`] ?? []) {
+  for (const fixup of PROSE_RESOURCE_FIXUPS[`${classData.name}|${classData.source}`] ?? []) {
     if (!seen.has(fixup.id)) resources.push(fixup)
   }
 
