@@ -16,7 +16,7 @@ function subclass(name: string, overrides: Partial<Subclass5e> = {}): Subclass5e
 
 describe('isSubclassEligible', () => {
   test('applies the legacy Bladesinger race restriction and override', () => {
-    const bladesinger = subclass('Bladesinger')
+    const bladesinger = subclass('Bladesinger', { source: 'SCAG' })
 
     expect(
       isSubclassEligible({
@@ -45,7 +45,7 @@ describe('isSubclassEligible', () => {
   })
 
   test('applies the legacy Battlerager race restriction and override', () => {
-    const battlerager = subclass('Battlerager', { className: 'Barbarian' })
+    const battlerager = subclass('Battlerager', { className: 'Barbarian', source: 'SCAG' })
 
     expect(
       isSubclassEligible({
@@ -88,6 +88,16 @@ describe('isSubclassEligible', () => {
     expect(
       isSubclassEligible({
         subclass: subclass('Evocation'),
+        className: 'Wizard',
+        character: makeCharacterFixture({ race: 'Human' }),
+      }),
+    ).toBe(true)
+  })
+
+  test('does not apply legacy race restrictions to newer source-qualified subclasses', () => {
+    expect(
+      isSubclassEligible({
+        subclass: subclass('Bladesinger', { source: 'FRHoF', classSource: 'XPHB' }),
         className: 'Wizard',
         character: makeCharacterFixture({ race: 'Human' }),
       }),

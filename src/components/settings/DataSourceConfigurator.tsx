@@ -21,7 +21,7 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Section } from '@/components/workspace'
-import { validateDataSource } from '@/lib/5etools'
+import { parseRemoteDataSourceUrl, validateDataSource } from '@/lib/5etools'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 
@@ -32,16 +32,7 @@ type DataSourceConfiguratorProps = {
 }
 
 export function isValidatableRemoteUrl(value: string): boolean {
-  try {
-    const url = new URL(value)
-    if (url.protocol !== 'https:') return false
-
-    const hostname = url.hostname.replace(/\.$/, '')
-    const labels = hostname.split('.')
-    return labels.length >= 2 && labels.every((label) => label.length > 0)
-  } catch {
-    return false
-  }
+  return parseRemoteDataSourceUrl(value).kind !== 'invalid'
 }
 
 export function DataSourceConfigurator({ selectorOnly = false }: DataSourceConfiguratorProps) {

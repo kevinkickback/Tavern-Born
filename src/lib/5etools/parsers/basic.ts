@@ -1,12 +1,21 @@
-import type { ItemProperty5e, ItemType5e, Language5e } from '@/types/5etools'
+import type { Background5e, ItemProperty5e, ItemType5e, Language5e } from '@/types/5etools'
+import { normalizeBackgroundOriginRules } from '../backgroundRuleNormalization'
 import { SOURCE_FALLBACKS } from '../sourceFallbacks'
 import { asArray, asObject, type ParsedObject } from './shared'
 
 export function parseBackgrounds(data: unknown): unknown[] {
   const obj = asObject(data)
-  if (obj.background) return asArray(obj.background)
-  if (Array.isArray(data)) return data
-  return []
+  const backgrounds = obj.background ? asArray(obj.background) : Array.isArray(data) ? data : []
+  return backgrounds.map((background) => {
+    const record = asObject(background)
+    if (typeof record.name !== 'string' || typeof record.source !== 'string') return background
+    return {
+      ...record,
+      normalizedOriginRules: normalizeBackgroundOriginRules(
+        record as unknown as Pick<Background5e, 'name' | 'source' | 'ability' | 'feats'>,
+      ),
+    }
+  })
 }
 
 export function parseFeats(data: unknown): unknown[] {

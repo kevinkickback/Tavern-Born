@@ -57,13 +57,14 @@ function ensureUniqueCharacterIds(characters: Character[]): Character[] {
 /**
  * Two-source-of-truth design (intentional):
  *
- * `characters[]`    — the persisted array, written only on explicit Save.
- * `activeCharacter` — the in-memory draft for the currently open character.
+ * `characters[]`           — the persisted array, written only on explicit Save.
+ * `activeCharacter`        — the in-memory draft for the currently open character.
+ * `isActiveCharacterDirty` — transient edit state; it is never persisted.
  *
  * All edits go to `activeCharacter` only. `characters` stays at the last saved
- * state. `hasUnsavedChanges()` detects drift by comparing `lastModified`
- * timestamps: edits stamp a new time on `activeCharacter`; Save writes that
- * same stamp into `characters`, making them equal again.
+ * state. User edits mark the draft dirty explicitly, so multiple updates in the
+ * same millisecond cannot be mistaken for a saved character. The timestamp
+ * comparison remains as a compatibility check for imported/injected state.
  *
  * Any code that needs the "current truth" for the active character should read
  * `activeCharacter`, not `characters.find(...)`. The latter gives stale data
@@ -73,6 +74,7 @@ interface CharacterState {
   characters: Character[]
   activeCharacterId: string | null
   activeCharacter: Character | null
+  isActiveCharacterDirty: boolean
   hasUnsavedChanges: () => boolean
 
   setCharacters: (characters: Character[]) => void
@@ -260,13 +262,16 @@ export const useCharacterStore = create<CharacterState>()(
       characters: [],
       activeCharacterId: null,
       activeCharacter: null,
+      isActiveCharacterDirty: false,
 
       hasUnsavedChanges: () => {
-        const { characters, activeCharacter, activeCharacterId } = get()
+        const { characters, activeCharacter, activeCharacterId, isActiveCharacterDirty } = get()
         if (!activeCharacter || !activeCharacterId) return false
         const persistedCharacter = characters.find((c) => c.id === activeCharacterId)
         if (!persistedCharacter) return false
-        return activeCharacter.lastModified !== persistedCharacter.lastModified
+        return (
+          isActiveCharacterDirty || activeCharacter.lastModified !== persistedCharacter.lastModified
+        )
       },
 
       setCharacters: (characters) =>
@@ -281,6 +286,7 @@ export const useCharacterStore = create<CharacterState>()(
           return {
             characters: validated,
             activeCharacter,
+            isActiveCharacterDirty: false,
           }
         }),
 
@@ -331,7 +337,7 @@ export const useCharacterStore = create<CharacterState>()(
               })
               return {}
             }
-            return { activeCharacter: parsed.data }
+            return { activeCharacter: parsed.data, isActiveCharacterDirty: true }
           }
 
           // Fallback for non-active records: update persisted collection directly.
@@ -368,7 +374,7 @@ export const useCharacterStore = create<CharacterState>()(
           const characters = state.characters.map((c) =>
             c.id === id ? (parsed.data as Character) : c,
           )
-          return { activeCharacter: parsed.data, characters }
+          return { activeCharacter: parsed.data, characters, isActiveCharacterDirty: false }
         }),
 
       updateActiveCharacter: (updates) =>
@@ -384,7 +390,7 @@ export const useCharacterStore = create<CharacterState>()(
           })
           if (!parsed.data) return {}
 
-          return { activeCharacter: parsed.data }
+          return { activeCharacter: parsed.data, isActiveCharacterDirty: true }
         }),
 
       updateActiveCharacterDetails: (updates) =>
@@ -403,7 +409,7 @@ export const useCharacterStore = create<CharacterState>()(
           })
           if (!parsed.data) return {}
 
-          return { activeCharacter: parsed.data }
+          return { activeCharacter: parsed.data, isActiveCharacterDirty: true }
         }),
 
       deleteCharacter: (id) =>
@@ -413,6 +419,7 @@ export const useCharacterStore = create<CharacterState>()(
             characters: state.characters.filter((char) => char.id !== id),
             activeCharacterId: deletingActive ? null : state.activeCharacterId,
             activeCharacter: deletingActive ? null : state.activeCharacter,
+            isActiveCharacterDirty: deletingActive ? false : state.isActiveCharacterDirty,
           }
         }),
 
@@ -423,6 +430,7 @@ export const useCharacterStore = create<CharacterState>()(
           return {
             activeCharacterId: id,
             activeCharacter: character,
+            isActiveCharacterDirty: false,
           }
         }),
 
@@ -460,6 +468,7 @@ export const useCharacterStore = create<CharacterState>()(
             return {
               characters: [...state.characters, validatedCharacter],
               activeCharacter: validatedCharacter,
+              isActiveCharacterDirty: false,
             }
           }
 
@@ -469,6 +478,7 @@ export const useCharacterStore = create<CharacterState>()(
           return {
             characters,
             activeCharacter: validatedCharacter,
+            isActiveCharacterDirty: false,
           }
         }),
     }),
@@ -492,6 +502,7 @@ export const useCharacterStore = create<CharacterState>()(
           state.characters = validatedCharacters
           state.activeCharacterId = null
           state.activeCharacter = null
+          state.isActiveCharacterDirty = false
         }
       },
     },

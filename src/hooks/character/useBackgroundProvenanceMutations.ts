@@ -30,6 +30,9 @@ export function useBackgroundProvenanceMutations() {
         feats?: unknown[]
       },
       blockChoices: string[] = [],
+      genericSelections: Readonly<
+        Record<string, string>
+      > = character?.backgroundEquipmentItemChoices ?? {},
     ) => {
       if (!character) return
       const result = applyBackgroundSelectionCommand(
@@ -38,6 +41,7 @@ export function useBackgroundProvenanceMutations() {
         bg as Background5e,
         blockChoices,
         itemLookup,
+        genericSelections,
       )
       updateCharacter(character.id, {
         ...result.characterPatch,

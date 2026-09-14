@@ -115,12 +115,21 @@ export function BuildBackgroundPage() {
     character?.originSystem ?? '2014',
   )
   const selectedBackgroundKey = selectedBg ? `${selectedBg.name}|${selectedBg.source ?? ''}` : null
+  const bgEquipmentChoices = character?.backgroundEquipmentChoices ?? []
+  const bgEquipmentItemChoices = character?.backgroundEquipmentItemChoices ?? {}
 
   const equipmentBlocks = useMemo(
-    () => resolveBackgroundEquipmentBlocks(selectedBg?.startingEquipment, itemLookup),
-    [selectedBg?.startingEquipment, itemLookup],
+    () =>
+      resolveBackgroundEquipmentBlocks(
+        selectedBg?.startingEquipment,
+        itemLookup,
+        bgEquipmentItemChoices,
+      ),
+    [selectedBg?.startingEquipment, itemLookup, bgEquipmentItemChoices],
   )
-  const choiceBlocks = equipmentBlocks.filter((b) => !b.isFixed)
+  const configurableEquipmentBlocks = equipmentBlocks.filter(
+    (block) => !block.isFixed || (block.options._.genericChoices?.length ?? 0) > 0,
+  )
   const optionCountByBackground = useMemo(() => {
     const counts = new Map<string, number>()
     for (const bg of backgrounds) {
@@ -260,7 +269,6 @@ export function BuildBackgroundPage() {
   const tools = getBackgroundToolNames(selectedBg)
   const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0
   const bgChoices = character.backgroundAsiChoices ?? []
-  const bgEquipmentChoices = character.backgroundEquipmentChoices ?? []
   const chosenOriginFeat = originFeatChoices.find((c) => c.selected.length > 0)?.selected[0] ?? null
   const showBackgroundAsiPanel = character.originSystem === '2024'
   const showBackgroundAsiCard = !!selectedBg && bgAsiData.blocks.length > 0
@@ -558,50 +566,85 @@ export function BuildBackgroundPage() {
 
                     {backgroundConfigurationPanel}
 
-                    {choiceBlocks.length > 0 && (
+                    {configurableEquipmentBlocks.length > 0 && (
                       <div className="mt-4 border-t border-border pt-3">
                         <div className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Starting Equipment
                         </div>
                         <div className="flex flex-wrap gap-3">
-                          {choiceBlocks.map((block) => {
-                            const currentChoice =
-                              bgEquipmentChoices[block.index]?.toLowerCase() ??
-                              block.choiceKeys[0] ??
-                              'a'
+                          {configurableEquipmentBlocks.map((block) => {
+                            const currentChoice = block.isFixed
+                              ? '_'
+                              : (bgEquipmentChoices[block.index]?.toLowerCase() ??
+                                block.choiceKeys[0] ??
+                                'a')
+                            const currentPackage = block.options[currentChoice]
                             return (
                               <div key={block.index} className="min-w-0 max-w-md flex-1 basis-72">
                                 <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                                   Equipment choice {block.index + 1}
                                 </div>
-                                <Select
-                                  value={currentChoice}
-                                  onValueChange={(value) => {
-                                    const next = [...bgEquipmentChoices]
-                                    while (next.length <= block.index) next.push('a')
-                                    next[block.index] = value
-                                    applyBackgroundSelection(selectedBg, next)
-                                  }}
-                                >
-                                  <SelectTrigger
-                                    aria-label={`Equipment choice ${block.index + 1}`}
-                                    className="h-8 w-full overflow-hidden bg-background text-xs [&_[data-slot=select-value]]:min-w-0"
-                                  >
-                                    <SelectValue placeholder={`Choice ${block.index + 1}…`} />
-                                  </SelectTrigger>
-                                  <SelectContent className="w-max max-w-[min(32rem,var(--radix-select-content-available-width))]">
-                                    {block.choiceKeys.map((key) => {
-                                      const optionData = block.options[key]
-                                      const label =
-                                        formatEquipmentOptionEntries(optionData).join(', ')
-                                      return (
-                                        <SelectItem key={key} value={key} className="text-xs">
-                                          ({key.toUpperCase()}) {label}
-                                        </SelectItem>
+                                {!block.isFixed && (
+                                  <Select
+                                    value={currentChoice}
+                                    onValueChange={(value) => {
+                                      const next = [...bgEquipmentChoices]
+                                      while (next.length <= block.index) next.push('a')
+                                      next[block.index] = value
+                                      applyBackgroundSelection(
+                                        selectedBg,
+                                        next,
+                                        bgEquipmentItemChoices,
                                       )
-                                    })}
-                                  </SelectContent>
-                                </Select>
+                                    }}
+                                  >
+                                    <SelectTrigger
+                                      aria-label={`Equipment choice ${block.index + 1}`}
+                                      className="h-8 w-full overflow-hidden bg-background text-xs [&_[data-slot=select-value]]:min-w-0"
+                                    >
+                                      <SelectValue placeholder={`Choice ${block.index + 1}…`} />
+                                    </SelectTrigger>
+                                    <SelectContent className="w-max max-w-[min(32rem,var(--radix-select-content-available-width))]">
+                                      {block.choiceKeys.map((key) => {
+                                        const optionData = block.options[key]
+                                        const label =
+                                          formatEquipmentOptionEntries(optionData).join(', ')
+                                        return (
+                                          <SelectItem key={key} value={key} className="text-xs">
+                                            ({key.toUpperCase()}) {label}
+                                          </SelectItem>
+                                        )
+                                      })}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                                {currentPackage?.genericChoices?.map((genericChoice) => (
+                                  <Select
+                                    key={genericChoice.key}
+                                    value={bgEquipmentItemChoices[genericChoice.key] ?? ''}
+                                    onValueChange={(itemRef) =>
+                                      applyBackgroundSelection(selectedBg, bgEquipmentChoices, {
+                                        ...bgEquipmentItemChoices,
+                                        [genericChoice.key]: itemRef,
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="mt-2 h-8 w-full bg-background text-xs">
+                                      <SelectValue placeholder="Choose a specific item…" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {genericChoice.candidates.map((candidate) => {
+                                        const itemRef = `${candidate.name}|${candidate.source ?? ''}`
+                                        return (
+                                          <SelectItem key={itemRef} value={itemRef}>
+                                            {candidate.name}{' '}
+                                            {candidate.source ? `(${candidate.source})` : ''}
+                                          </SelectItem>
+                                        )
+                                      })}
+                                    </SelectContent>
+                                  </Select>
+                                ))}
                               </div>
                             )
                           })}

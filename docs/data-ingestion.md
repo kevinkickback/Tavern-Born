@@ -16,6 +16,9 @@ Core modules:
 - src/lib/5etools/filters.ts
 - src/lib/5etools/urlUtils.ts
 - src/lib/5etools/sourceFallbacks.ts
+- src/lib/5etools/rulesetMetadata.ts
+- src/lib/5etools/classRuleNormalization.ts
+- src/lib/5etools/backgroundRuleNormalization.ts
 - src/lib/5etools/index.ts
 - src/lib/storage/dataCache.ts
 
@@ -35,13 +38,22 @@ Core modules:
 - Validation confirms required resources and expected shape.
 
 2. Resource loading
-- dataLoader reads the known resource list in parallel.
-- Class and spell data are expanded via index files and loaded in parallel per indexed file.
+- dataLoader reads the known resource list through a bounded worker pool. No more than six requests
+  are active at once, including when class and spell indexes expand into many files.
+- Every remote request has a 15-second timeout. Caller cancellation propagates through top-level,
+  class, fluff, and spell requests and aborts the load instead of returning a partial cancellation.
+- Individual missing indexed files still use the existing partial-file recovery behavior.
 
 3. Parsing and normalization
 - parsers extract arrays and normalize structure differences.
 - Condition ingestion reads both `.condition[]` and `.disease[]` from `conditionsdiseases.json`, preserves their structured `entries`, and tags each record with its source type. `useConditions()` exposes valid condition records while excluding diseases; this lets the Conditions page render names, descriptions, inline tags, and PHB/XPHB exhaustion rules from data instead of local constants.
-- Class and subclass feature references are normalized for downstream consumption.
+- Class and subclass feature references are normalized for downstream consumption. Class ingestion
+  also produces `normalizedRules` for resources, reset cadence, ritual casting, and source-qualified
+  ASI levels. Encoded reference levels take precedence when repeated feature names occur at more
+  than one level.
+- Background ingestion produces `normalizedOriginRules`. Structured ability and feat fields win;
+  a ruleset-qualified, versioned 2024 adapter fills only the upstream prose-only gap and records its
+  provenance.
 - Class spell-slot progression is read from `classTableGroups[].rowsSpellProgression` and retained on parsed class records. Shared multiclass slots resolve against the loaded PHB or XPHB full-caster table; static slot tables are not used as a fallback.
 - Class loading also reads matching `fluff-class-*.json` resources and attaches both a short class summary and full fluff content to parsed class records.
 - The summary is taken from the last direct paragraph in the first class fluff section and is used by compact UI surfaces such as the character-creation wizard.
@@ -53,6 +65,9 @@ Core modules:
   - **Simple versions** (e.g., XPHB Elf's Drow/High Elf/Wood Elf lineages): direct objects with `name`, `_mod`, and properties like `additionalSpells`, `darkvision`, `speed`.
   - **Template versions** (e.g., XPHB Dragonborn colors): an `_abstract` template with `{{variable}}` placeholders expanded per `_implementations` entry.
 - Version entries apply `_mod` operations (`replaceArr`, `removeArr`) to parent entries at parse time, producing fully resolved `entries` on each synthetic subrace. These subraces carry an `_isVersion: true` flag so that `mergeRaceWithSubrace` uses the resolved entries directly instead of concatenating.
+- Race ingestion also produces `presentationEntries`. Sections already represented by structured
+  fields such as size, speed, and languages are removed there, while prose-only sections are
+  retained. Views consume that normalized collection rather than suppressing English headings.
 - Fixed feat references may encode a grant parameter after a semicolon, such as
   `magic initiate; cleric|xphb`. Provenance parsing stores `Magic Initiate` as the canonical entity
   identity and retains `cleric` as grant metadata; consumers must not treat the full reference as a
@@ -75,7 +90,12 @@ Core modules:
 
 - Never patch canonical values by editing data/.
 - Prefer parser improvements over new hardcoded constants.
-- Treat fallback values as emergency behavior only and isolate them in sourceFallbacks.
+- Treat fallback values as emergency behavior only. Source-specific content substitutions belong in
+  `sourceFallbacks.ts`; rules catalogs missing structured upstream data belong in the explicitly
+  versioned `rulesetMetadata.ts`. Parsed fields always take precedence.
+- Keep persisted-data compatibility aliases separate from current upstream catalogs. Classifiers may
+  consume both, but development validation must check only codes expected in the current parsed
+  catalog.
 
 ## Known Nuances
 
@@ -89,6 +109,15 @@ Core modules:
 - 5etools proficiency blocks can include grouped tool tokens (for example: `gaming set`, `anyMusicalInstrument`, `anyTool`) in addition to concrete tool names.
 - Parsing keeps these entries as source data, while provenance normalization maps grouped aliases to canonical labels.
 - Proficiencies UI expands grouped labels into concrete tool options from item data (`itemsBase` + `items`) and then records the concrete selected tool as the final proficiency grant.
+
+### Generic Starting Equipment
+
+- Generic class/background equipment tokens are normalized into choice descriptors rather than
+  persisted as invented `G` items.
+- Candidate weapons, armor, tools, focuses, and other gear are resolved from the loaded item and
+  item-type records.
+- The character stores the chosen concrete item reference separately from the package option, so a
+  later source/filter change can preserve and re-resolve the exact selection.
 
 ## Spell-Class Association Enrichment
 
@@ -166,7 +195,8 @@ When a user selects spells for a multiclass character:
 - Missing resource file: loader warning, empty collection, degraded feature surface.
 - Schema mismatch: validator should surface explicit shape errors.
 - Missing PHB/XPHB full-caster or pact progression rows: development validation reports the source-qualified class data gap; spell calculations return no invented slots.
-- Source URL issues: inspect URL normalization and remote base path.
+- Source URL issues: inspect the shared HTTPS parser and normalized remote base path. Host matching
+  is exact; GitHub-like hostname substrings are not accepted.
 - Local path issues: verify absolute folder and IPC file read behavior.
 
 ## Performance Notes
@@ -176,3 +206,5 @@ When a user selects spells for a multiclass character:
 - Background refresh is designed to reduce startup latency while keeping data fresh.
 - Background refresh reports dropped resources to the store so partial ingestion results are never committed over a complete cache.
 - Progress callbacks are completion-based during ingestion: each completed resource increments progress, regardless of completion order.
+- Remote request count is bounded across both top-level resources and expanded index files; do not
+  replace the worker pool with an unbounded `Promise.all()`.

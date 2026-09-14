@@ -56,6 +56,7 @@ export function useClassProvenanceMutations() {
       },
       blockIndex: number,
       choice: string,
+      genericSelections?: Readonly<Record<string, string>>,
     ) => {
       if (!character) return
       const result = applyClassEquipmentChoiceCommand(
@@ -65,6 +66,7 @@ export function useClassProvenanceMutations() {
         blockIndex,
         choice,
         itemLookup,
+        genericSelections,
       )
       updateCharacter(character.id, {
         ...result.characterPatch,

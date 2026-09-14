@@ -40,7 +40,8 @@ interface SplitPaneProps {
  * Manages two panes — a standard-width left/master pane and a flexible right/detail pane —
  * with animated collapse transitions and two toggle buttons in the top-right corner.
  *
- * Callers own the collapsed state; this component is fully controlled.
+ * Collapse state is controlled by the caller. Compact-pane state can be
+ * controlled with `compactPane` or initialized with `defaultCompactPane`.
  */
 export function SplitPane({
   left,

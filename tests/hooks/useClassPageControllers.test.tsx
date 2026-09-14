@@ -25,7 +25,7 @@ describe('class page controllers', () => {
       {
         name: 'Bladesinger',
         shortName: 'Bladesinger',
-        source: 'PHB',
+        source: 'SCAG',
         className: 'Wizard',
         classSource: 'PHB',
       },

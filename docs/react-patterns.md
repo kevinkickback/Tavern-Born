@@ -116,3 +116,18 @@ pane state, and cross-domain presentation only.
 `BuildClassPage` is the reference: subclass, spell, ASI/feat, and optional-feature controllers live
 under `src/pages/build/class/hooks/`. Do not move canonical rules into a controller; rules remain
 pure calculations or commands.
+
+---
+
+## Recursive Preview Roots
+
+Rules-entry and spell-name previews use `useRecursivePreviewController` for their shared history,
+pinning, close timing, Escape behavior, and navigation state. The root portal is rendered through
+`RecursivePreviewShell`; content-specific metadata and bodies remain in the calling feature.
+
+Do not create a second preview state machine in a page component. Recursive children remain owned by
+`RecursiveTooltipChain`, while pinned movement stays in `useDraggablePreview`. The visible title area
+is the pointer and keyboard drag handle, and pinning freezes only the selected preview in place.
+
+The first preview intentionally omits history and close controls. History becomes visible only after
+a child preview exists, and the history selector is the single way to return to an earlier preview.

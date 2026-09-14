@@ -1,26 +1,13 @@
 import type { ArmorClassAdjustment, Equipment } from '@/types/character'
 import { getAbilityModifier } from './gameRules'
+import {
+  type ArmorCategory,
+  getNormalizedItemTraits,
+  validateItemTypeFallbacks,
+} from './itemClassification'
 
-export type ArmorCategory = 'light' | 'medium' | 'heavy' | 'shield' | 'none'
-
-export const ARMOR_TYPE_MAP: Readonly<Record<string, ArmorCategory>> = {
-  LA: 'light',
-  MA: 'medium',
-  HA: 'heavy',
-  S: 'shield',
-}
-
-/**
- * Reverse map: armor category display names (as used in 5etools filter strings)
- * to their corresponding item type code.  Kept alongside ARMOR_TYPE_MAP so both
- * stay in sync from a single source.
- */
-export const ARMOR_CATEGORY_LABEL_TO_CODE: Readonly<Record<string, string>> = {
-  'light armor': 'LA',
-  'medium armor': 'MA',
-  'heavy armor': 'HA',
-  shield: 'S',
-}
+export { ARMOR_CATEGORY_LABEL_TO_CODE } from './itemClassification'
+export type { ArmorCategory }
 
 /**
  * Validate that ARMOR_TYPE_MAP codes are present in the parsed itemTypeByAbbr lookup.
@@ -28,30 +15,11 @@ export const ARMOR_CATEGORY_LABEL_TO_CODE: Readonly<Record<string, string>> = {
  * they surface if 5etools ever renames or removes a type abbreviation.
  */
 export function validateArmorTypeCodes(itemTypeByAbbr: Record<string, string>): void {
-  for (const code of Object.keys(ARMOR_TYPE_MAP)) {
-    if (!itemTypeByAbbr[code]) {
-      console.warn(
-        `[armorClass] validateArmorTypeCodes: code "${code}" in ARMOR_TYPE_MAP not found in ` +
-          'parsed itemTypeByAbbr (data/items-base.json → .itemType[]). ' +
-          'Verify the code is still valid in the current 5etools data.',
-      )
-    }
-  }
-}
-
-/**
- * Strips the optional 5etools source suffix from a type code.
- * e.g. "HA|XPHB" → "HA", "S|XPHB" → "S"
- */
-function normalizeTypeCode(raw: string): string {
-  return raw.split('|')[0]
+  validateItemTypeFallbacks(itemTypeByAbbr)
 }
 
 export function getArmorCategory(item: Equipment): ArmorCategory {
-  if (item.armorType) return item.armorType
-  const typeKey = normalizeTypeCode(item.type ?? '').toUpperCase()
-  if (typeKey === 'SHIELD') return 'shield'
-  return ARMOR_TYPE_MAP[typeKey] ?? 'none'
+  return getNormalizedItemTraits(item).armorCategory
 }
 
 export function isArmorOrShield(item: Equipment): boolean {
@@ -105,8 +73,7 @@ export function computeArmorClass(equipment: Equipment[], dexModifier: number): 
  * to store on an `Equipment` record at import time.
  */
 export function resolveArmorType(item5eType: string): ArmorCategory {
-  const code = normalizeTypeCode(item5eType ?? '').toUpperCase()
-  return ARMOR_TYPE_MAP[code] ?? 'none'
+  return getNormalizedItemTraits({ type: item5eType }).armorCategory
 }
 
 /**

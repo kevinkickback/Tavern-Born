@@ -1,9 +1,17 @@
 import { Check, Package } from '@phosphor-icons/react'
 import { Fragment, useMemo } from 'react'
 import { GameContent } from '@/components/editor/GameContent'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useItemLookup } from '@/hooks/data/useGameData'
 import {
   formatEquipmentOptionEntries,
+  type GenericEquipmentChoice,
   resolveClassEquipmentBlocks,
 } from '@/lib/5etools/startingEquipment'
 import { cn } from '@/lib/utils'
@@ -16,24 +24,56 @@ const STARTING_EQUIPMENT_DESCRIPTION =
 interface BuildClassEquipmentSectionProps {
   viewingClassData?: Class5e
   blockChoices: string[]
+  itemChoices: Readonly<Record<string, string>>
   detailCollapsed: boolean
   onBlockChoiceChange: (blockIndex: number, choice: string) => void
+  onItemChoiceChange: (blockIndex: number, choice: string, key: string, itemRef: string) => void
   onSelectFeature: (feature: SelectedFeatureState) => void
   onExpandDetails: () => void
+}
+
+function GenericEquipmentSelect({
+  choice,
+  value,
+  onChange,
+}: {
+  choice: GenericEquipmentChoice
+  value: string
+  onChange: (itemRef: string) => void
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="mt-2 h-8 w-full text-xs">
+        <SelectValue placeholder="Choose a specific item…" />
+      </SelectTrigger>
+      <SelectContent>
+        {choice.candidates.map((candidate) => {
+          const itemRef = `${candidate.name}|${candidate.source ?? ''}`
+          return (
+            <SelectItem key={itemRef} value={itemRef}>
+              {candidate.name} {candidate.source ? `(${candidate.source})` : ''}
+            </SelectItem>
+          )
+        })}
+      </SelectContent>
+    </Select>
+  )
 }
 
 export function BuildClassEquipmentSection({
   viewingClassData,
   blockChoices,
+  itemChoices,
   detailCollapsed,
   onBlockChoiceChange,
+  onItemChoiceChange,
   onSelectFeature,
   onExpandDetails,
 }: BuildClassEquipmentSectionProps) {
   const itemLookup = useItemLookup()
   const equipmentBlocks = useMemo(
-    () => resolveClassEquipmentBlocks(viewingClassData?.startingEquipment, itemLookup),
-    [viewingClassData?.startingEquipment, itemLookup],
+    () => resolveClassEquipmentBlocks(viewingClassData?.startingEquipment, itemLookup, itemChoices),
+    [viewingClassData?.startingEquipment, itemLookup, itemChoices],
   )
 
   const showEquipmentDetails = () => {
@@ -64,21 +104,34 @@ export function BuildClassEquipmentSection({
       <div className="divide-y divide-border/40">
         {equipmentBlocks.map((block) => {
           const currentChoice = blockChoices[block.index]?.toLowerCase() ?? 'a'
+          const currentPackage = block.options[block.isFixed ? '_' : currentChoice]
 
           if (block.isFixed) {
             return (
-              <div key={block.index} className="px-3 py-2 flex items-start gap-2">
-                <span className="text-xs text-muted-foreground mt-0.5 shrink-0">•</span>
-                {block.displayText ? (
-                  <GameContent
-                    entry={block.displayText}
-                    className="text-xs text-foreground equipment-entry"
+              <div key={block.index} className="px-3 py-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-muted-foreground mt-0.5 shrink-0">•</span>
+                  {block.displayText ? (
+                    <GameContent
+                      entry={block.displayText}
+                      className="text-xs text-foreground equipment-entry"
+                    />
+                  ) : (
+                    <span className="text-xs text-foreground">
+                      {formatEquipmentOptionEntries(block.options._).join(', ') || 'Fixed item'}
+                    </span>
+                  )}
+                </div>
+                {currentPackage?.genericChoices?.map((genericChoice) => (
+                  <GenericEquipmentSelect
+                    key={genericChoice.key}
+                    choice={genericChoice}
+                    value={itemChoices[genericChoice.key] ?? ''}
+                    onChange={(itemRef) =>
+                      onItemChoiceChange(block.index, '_', genericChoice.key, itemRef)
+                    }
                   />
-                ) : (
-                  <span className="text-xs text-foreground">
-                    {block.options._.items.map((i) => i.name).join(', ') || 'Fixed item'}
-                  </span>
-                )}
+                ))}
               </div>
             )
           }
@@ -115,6 +168,16 @@ export function BuildClassEquipmentSection({
                   )
                 })}
               </div>
+              {currentPackage?.genericChoices?.map((genericChoice) => (
+                <GenericEquipmentSelect
+                  key={genericChoice.key}
+                  choice={genericChoice}
+                  value={itemChoices[genericChoice.key] ?? ''}
+                  onChange={(itemRef) =>
+                    onItemChoiceChange(block.index, currentChoice, genericChoice.key, itemRef)
+                  }
+                />
+              ))}
             </div>
           )
         })}

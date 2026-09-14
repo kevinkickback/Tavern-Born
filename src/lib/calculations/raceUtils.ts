@@ -28,6 +28,12 @@ export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
     entries: isVersion
       ? (subrace.entries ?? [])
       : [...(parent.entries ?? []), ...(subrace.entries ?? [])],
+    presentationEntries: isVersion
+      ? (subrace.presentationEntries ?? subrace.entries ?? [])
+      : [
+          ...(parent.presentationEntries ?? parent.entries ?? []),
+          ...(subrace.presentationEntries ?? subrace.entries ?? []),
+        ],
     size: subrace.size ?? parent.size,
     speed: subrace.speed ?? parent.speed,
     darkvision: subrace.darkvision ?? parent.darkvision,
@@ -196,25 +202,17 @@ export function getDamageTraitDisplay(values?: unknown[]): string {
 
 /**
  * Extract displayable racial traits from a race's entries.
- * Filters out informational sections (Age, Alignment, etc.) and synthesizes
- * Darkvision and Tool Proficiency traits when present as tags.
+ * Uses entries normalized during ingestion and synthesizes Darkvision and Tool
+ * Proficiency traits when present as structured fields.
  */
 export function getRaceTraits(
   race: Race5e | undefined,
 ): { key: string; name: string; entries: unknown[] }[] {
   if (!race) return []
-  const skip = new Set(['Age', 'Alignment', 'Size', 'Speed', 'Languages', 'Names'])
-
-  const traits = ((race.entries as unknown[]) ?? [])
+  const traits = (race.presentationEntries ?? race.entries ?? [])
     .filter((e) => {
       const entry = e as RaceTraitEntry
-      return (
-        typeof e === 'object' &&
-        entry.type === 'entries' &&
-        typeof entry.name === 'string' &&
-        !skip.has(entry.name) &&
-        !entry.name.includes('Names')
-      )
+      return typeof e === 'object' && entry.type === 'entries' && typeof entry.name === 'string'
     })
     .map((e) => {
       const entry = e as RaceTraitEntry

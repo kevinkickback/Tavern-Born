@@ -1,3 +1,4 @@
+import { SKILL_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
 import type { Class5e } from '@/types/5etools'
 import type { CharacterClassEntry, Skills } from '@/types/character'
 import { ABILITY_ABBREV_TO_FULL } from './abilityNames'
@@ -12,26 +13,9 @@ export { formatModifier }
  * is available, prefer skillToAbilityMap from there — it is derived directly
  * from data/skills.json and takes precedence over this constant.
  */
-export const SKILL_TO_ABILITY: Readonly<Record<string, AbilityName>> = {
-  acrobatics: 'dexterity',
-  'animal handling': 'wisdom',
-  arcana: 'intelligence',
-  athletics: 'strength',
-  deception: 'charisma',
-  history: 'intelligence',
-  insight: 'wisdom',
-  intimidation: 'charisma',
-  investigation: 'intelligence',
-  medicine: 'wisdom',
-  nature: 'intelligence',
-  perception: 'wisdom',
-  performance: 'charisma',
-  persuasion: 'charisma',
-  religion: 'intelligence',
-  'sleight of hand': 'dexterity',
-  stealth: 'dexterity',
-  survival: 'wisdom',
-}
+export const SKILL_TO_ABILITY: Readonly<Record<string, AbilityName>> = Object.fromEntries(
+  SKILL_CATALOG_FALLBACK.map((skill) => [skill.name, skill.ability]),
+) as Readonly<Record<string, AbilityName>>
 
 export const ALL_SKILLS = Object.keys(SKILL_TO_ABILITY) as readonly string[]
 

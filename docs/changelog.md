@@ -3,13 +3,14 @@
 
 ## ✨ Changes
 
-* Adjusted color / contrast of the Light theme
-* Window controls (minimize/maximize/close) no longer obscure tooltips/preview windows
-* Tooltip preview windows enhanced. Drag to possition after pinning, return to a previous window, and more
-* Spells page: Classes now have their own individual tabs instead of all being grouped under "Classes"
-* Equipment page: Inventory and Item details panes slighlty redesigned.
-
-
+* Refreshed the light theme with softer neutral backgrounds, clearer borders, and stronger contrast
+* Window controls no longer obscure tooltips or preview windows
+* Tooltip previews can now pin any entry, drag pinned previews by their title, and jump directly to earlier entries from the preview history
+* Each class now has its own tab on the Spells page, making multiclass spell lists easier to browse
+* List-and-detail pages now switch to a focused single-pane view in narrow windows while keeping page navigation available
+* Redesigned the Equipment summary and filters to remain usable at smaller window sizes
+* Equipment details now adapt to each item type, hiding irrelevant fields and showing matching category icons
+* Polished several builder screens by simplifying Race and Background entries, removing unused Class artwork information, and improving the Bonus Feat action
 
 </details>
 

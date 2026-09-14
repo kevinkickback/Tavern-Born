@@ -1,9 +1,8 @@
 import {
-  ABILITY_NAMES,
   type AbilityName,
+  makeDefaultStandardArrayAssignment,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
-import { STANDARD_ARRAY } from '@/lib/calculations/gameRules'
 
 export interface SkillDetail {
   name: string
@@ -13,13 +12,7 @@ export interface SkillDetail {
 }
 
 export const DEFAULT_STANDARD_ARRAY_ASSIGNMENT: Partial<Record<AbilityName, number>> =
-  ABILITY_NAMES.reduce(
-    (acc, ability, idx) => {
-      acc[ability] = STANDARD_ARRAY[idx] ?? 8
-      return acc
-    },
-    {} as Partial<Record<AbilityName, number>>,
-  )
+  makeDefaultStandardArrayAssignment()
 
 export function formatTitleCase(input: string): string {
   return input.replace(/\b\w/g, (match) => match.toUpperCase())

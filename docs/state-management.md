@@ -60,7 +60,9 @@ Stored examples (mutable runtime):
 - organization connection selection state (`organizationSelectionKey`, `organizationCustomName`, `organizationCustomDescription`, `organizationCustomImage`)
 - inventory currency counters (`cp`, `sp`, `ep`, `gp`, `pp`)
 - selected background equipment options per block (`backgroundEquipmentChoices`)
+- selected concrete items for generic background equipment (`backgroundEquipmentItemChoices`)
 - selected class equipment option per class source (`classEquipmentChoices`)
+- selected concrete items for generic class equipment per class source (`classEquipmentItemChoices`)
 - race-applied trait state (`visions`, `damageResistances`, `damageImmunities`, `conditionImmunities`)
 - session state: `inspiration`, `deathSaves`, `conditions`, `exhaustion`, `hitDiceUsed`, `ritualCasting`, `classResources`
 
@@ -82,18 +84,25 @@ Derived examples (do not store as canonical):
 
 ## Unsaved Changes and App Close Safety
 
-- `hasUnsavedChanges()` is O(1): it compares `activeCharacter.lastModified` against `characters[activeCharacterId].lastModified`. Every mutation updates `activeCharacter.lastModified`; saving writes `activeCharacter` back into `characters[]`, equalising the timestamps. A mismatch means unsaved changes exist.
+- `hasUnsavedChanges()` is O(1): user mutations set the transient
+  `isActiveCharacterDirty` flag, and saving or reconciliation clears it. Timestamp comparison remains
+  as a compatibility safeguard for imported or injected state.
 - src/main.tsx syncs unsaved state to Electron.
 - electron/main.ts shows close confirmation when unsaved edits exist.
 - App preferences and home-page layout changes do not participate in character dirty-state tracking.
 
-## lastModified Timestamp Management
+## Dirty State and lastModified Timestamps
 
-**Design Pattern:** `lastModified` is updated in every character mutation and is the sole signal used by `hasUnsavedChanges()`.
+**Design Pattern:** Explicit transient dirty state determines whether the active draft has unsaved
+user edits. `lastModified` remains persisted metadata for display, sorting, and compatibility.
 
 ### Why This Works
 
-Every mutation path (`updateCharacter`, `updateActiveCharacter`, `updateActiveCharacterDetails`, `saveActiveCharacter`) always sets `lastModified = new Date().toISOString()` on the active character draft. The persisted copy (`characters[]`) only receives a new `lastModified` when `saveActiveCharacter()` is called. A timestamp mismatch between the two copies reliably indicates unsaved changes.
+Every user mutation path (`updateCharacter`, `updateActiveCharacter`, and
+`updateActiveCharacterDetails`) updates `lastModified` and marks the active draft dirty. Saving writes
+the draft into `characters[]` and clears the flag. `reconcileCharacter()` is reserved for silent
+system corrections and writes the draft and persisted copy atomically without creating an unsaved
+edit.
 
 `lastModified` also serves UI display purposes:
 - Character cards (HomePage, PortraitCardPreview)
@@ -102,9 +111,10 @@ Every mutation path (`updateCharacter`, `updateActiveCharacter`, `updateActiveCh
 
 ### Implications for Future Changes
 
-- Don't skip setting `lastModified` — both the dirty-check and the UI rely on it.
-- Don't add a new mutation path that bypasses the existing three without also setting `lastModified`.
-- Don't replace the timestamp comparison in `hasUnsavedChanges()` with deep equality — the timestamp approach is intentional for O(1) performance.
+- Don't skip setting `lastModified`; the UI uses it for display and sorting.
+- New user mutation paths must set `isActiveCharacterDirty`; save/reconciliation paths must clear it.
+- Keep the dirty flag transient and out of the persisted store payload.
+- Don't replace the O(1) dirty/revision contract with deep equality.
 
 ## Hydration and Init Ordering
 

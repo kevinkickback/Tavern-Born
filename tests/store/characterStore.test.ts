@@ -22,6 +22,7 @@ describe('characterStore', () => {
       characters: [],
       activeCharacterId: null,
       activeCharacter: null,
+      isActiveCharacterDirty: false,
     })
   })
 
@@ -125,6 +126,51 @@ describe('characterStore', () => {
     const state = useCharacterStore.getState()
     expect(state.characters[0]?.name).toBe('After Save')
     expect(state.hasUnsavedChanges()).toBe(false)
+  })
+
+  test('keeps an edit dirty when save and update occur in the same millisecond', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+    const existing = makeCharacterFixture({
+      id: 'same-millisecond',
+      name: 'Before Save',
+      lastModified: new Date().toISOString(),
+    })
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: existing,
+      isActiveCharacterDirty: false,
+    })
+
+    useCharacterStore.getState().saveActiveCharacter()
+    useCharacterStore.getState().updateCharacter(existing.id, { name: 'After Save' })
+
+    expect(useCharacterStore.getState().activeCharacter?.lastModified).toBe(
+      useCharacterStore.getState().characters[0]?.lastModified,
+    )
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+    vi.useRealTimers()
+  })
+
+  test('detects an edit made in the same millisecond as a save', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-13T12:00:00.000Z'))
+    const existing = makeCharacterFixture({ id: 'same-millisecond', name: 'Before' })
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: existing,
+      isActiveCharacterDirty: false,
+    })
+
+    useCharacterStore.getState().saveActiveCharacter()
+    useCharacterStore.getState().updateCharacter(existing.id, { name: 'After' })
+
+    const state = useCharacterStore.getState()
+    expect(state.activeCharacter?.lastModified).toBe(state.characters[0]?.lastModified)
+    expect(state.hasUnsavedChanges()).toBe(true)
+    vi.useRealTimers()
   })
 
   test('updateCharacter updates non-active character directly', () => {

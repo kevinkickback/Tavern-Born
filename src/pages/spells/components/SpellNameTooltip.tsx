@@ -1,9 +1,11 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PreviewNavigationControls } from '@/components/editor/PreviewNavigationControls'
+import { RecursivePreviewShell } from '@/components/editor/RecursivePreviewShell'
 import { RecursiveTooltipChain } from '@/components/editor/RecursiveTooltipChain'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { type PreviewDragHandleProps, useDraggablePreview } from '@/hooks/ui/useDraggablePreview'
+import { useRecursivePreviewController } from '@/hooks/ui/useRecursivePreviewController'
 import {
   formatCastingTime,
   formatComponents,
@@ -13,18 +15,12 @@ import {
   formatSpellLevel,
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
-import {
-  clampPreviewPosition,
-  getTitleBarSafeTop,
-  type PreviewBounds,
-  type PreviewPosition,
-} from '@/lib/overlayPosition'
+import { getTitleBarSafeTop } from '@/lib/overlayPosition'
 import {
   getEntryWithHoverTitles,
   getRecursiveHintPosition,
   getRecursiveTooltipData,
   parseRecursiveReference,
-  type RecursiveHintState,
   type RecursiveLookup,
 } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
@@ -37,8 +33,6 @@ interface SpellNameTooltipProps {
   recursiveLookup: RecursiveLookup
   sourceContext?: string
 }
-
-const HIDE_DELAY_MS = 200
 
 interface SpellPreviewContentsProps {
   spell?: Spell5e
@@ -145,11 +139,6 @@ function SpellPreviewContents({
   )
 }
 
-interface PinnedPreviewState {
-  depth: number
-  position: PreviewPosition
-}
-
 export function SpellNameTooltip({
   name,
   spell,
@@ -159,30 +148,29 @@ export function SpellNameTooltip({
   const uiScale = useAppPreferencesStore((state) => state.uiScale)
   const safeTop = getTitleBarSafeTop(uiScale)
   const [open, setOpen] = useState(false)
-  const [pinnedPreview, setPinnedPreview] = useState<PinnedPreviewState | null>(null)
-  const pinnedDepth = pinnedPreview?.depth ?? null
-  const [recursiveHints, setRecursiveHints] = useState<RecursiveHintState[]>([])
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pinnedTooltipRef = useRef<HTMLDivElement | null>(null)
   const displayName = formatSpellDisplayName(name, spell?.name)
-
-  const clearHide = useCallback(() => {
-    if (hideTimer.current !== null) {
-      clearTimeout(hideTimer.current)
-      hideTimer.current = null
-    }
-  }, [])
-
-  const scheduleHide = useCallback(() => {
-    if (pinnedDepth !== null) return
-    clearHide()
-    hideTimer.current = setTimeout(() => {
-      setOpen(false)
-      setRecursiveHints([])
-    }, HIDE_DELAY_MS)
-  }, [clearHide, pinnedDepth])
-
-  useEffect(() => clearHide, [clearHide])
+  const openRoot = useCallback(() => setOpen(true), [])
+  const closeRoot = useCallback(() => setOpen(false), [])
+  const {
+    appendRecursiveHint,
+    clearHide,
+    handleNavigate,
+    handleOpenChange,
+    handlePinnedPositionChange,
+    handlePinToggle,
+    handlePreviewKeyDown,
+    pinnedDepth,
+    pinnedPreview,
+    recursiveHints,
+    scheduleHide,
+  } = useRecursivePreviewController({
+    isRootOpen: open,
+    safeTop,
+    rootRef: pinnedTooltipRef,
+    onRootOpen: openRoot,
+    onRootClose: closeRoot,
+  })
 
   const renderedEntries = useMemo(() => {
     if (!spell) return []
@@ -234,82 +222,7 @@ export function SpellNameTooltip({
     )
     const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html, safeTop)
 
-    setRecursiveHints((current) => [
-      ...current.slice(0, depth),
-      {
-        ...resolved,
-        x,
-        y,
-        triggerElement: withTitle,
-      },
-    ])
-    if (pinnedDepth !== null) {
-      setPinnedPreview((current) => (current ? { ...current, depth: depth + 1 } : current))
-    }
-  }
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (pinnedDepth !== null) return
-    if (nextOpen) {
-      clearHide()
-      setOpen(true)
-      return
-    }
-    if (recursiveHints.length > 0) {
-      scheduleHide()
-      return
-    }
-    setOpen(nextOpen)
-    setRecursiveHints([])
-  }
-
-  const handleNavigate = (depth: number) => {
-    if (depth < 0) return
-    if (pinnedDepth !== null) {
-      setPinnedPreview((current) => (current ? { ...current, depth } : current))
-      return
-    }
-    setRecursiveHints((current) => current.slice(0, depth))
-  }
-
-  const handlePinToggle = (depth: number, bounds?: PreviewBounds) => {
-    if (pinnedDepth === depth) {
-      setPinnedPreview(null)
-      setOpen(true)
-      return
-    }
-    if (!bounds) return
-    clearHide()
-    setOpen(false)
-    setPinnedPreview({
-      depth,
-      position: clampPreviewPosition(
-        { left: bounds.left, top: bounds.top },
-        { width: bounds.width, height: bounds.height },
-        { width: window.innerWidth, height: window.innerHeight },
-        safeTop,
-      ),
-    })
-  }
-
-  const handlePinnedPositionChange = useCallback((position: PreviewPosition) => {
-    setPinnedPreview((current) => (current ? { ...current, position } : current))
-  }, [])
-
-  const handleCloseAll = () => {
-    clearHide()
-    setPinnedPreview(null)
-    setOpen(false)
-    setRecursiveHints([])
-  }
-
-  const handlePreviewKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Escape') return
-    event.preventDefault()
-    event.stopPropagation()
-    const activeDepth = pinnedDepth ?? recursiveHints.length
-    if (activeDepth > 0) handleNavigate(activeDepth - 1)
-    else handleCloseAll()
+    appendRecursiveHint(depth, { ...resolved, x, y, triggerElement: withTitle })
   }
 
   const historyTitles = [spell?.name ?? displayName, ...recursiveHints.map((hint) => hint.title)]
@@ -335,6 +248,7 @@ export function SpellNameTooltip({
           </span>
         </TooltipTrigger>
         <TooltipContent
+          ref={pinnedTooltipRef}
           data-recursive-tooltip-depth={0}
           side="top"
           align="start"
@@ -379,17 +293,15 @@ export function SpellNameTooltip({
       {pinnedPreview
         ? createPortal(
             pinnedPreview.depth === 0 ? (
-              <div
+              <RecursivePreviewShell
                 ref={pinnedTooltipRef}
-                role="dialog"
-                aria-label={`${spell?.name ?? displayName} preview`}
-                data-recursive-tooltip-depth={0}
+                label={spell?.name ?? displayName}
+                pinned
+                position={pinnedPreview.position}
                 onMouseMove={handleRecursiveHover}
                 onMouseEnter={clearHide}
                 onMouseLeave={scheduleHide}
                 onKeyDown={handlePreviewKeyDown}
-                className="fixed z-[9999] w-[320px] max-w-[calc(100vw-1rem)] rounded border border-accent/70 bg-card text-card-foreground ring-1 ring-accent/45 shadow-xl"
-                style={pinnedPreview.position}
               >
                 <SpellPreviewContents
                   spell={spell}
@@ -408,7 +320,7 @@ export function SpellNameTooltip({
                     />
                   }
                 />
-              </div>
+              </RecursivePreviewShell>
             ) : (
               // biome-ignore lint/a11y/noStaticElementInteractions: delegates interactions to the portaled preview and its generated inline references.
               <div

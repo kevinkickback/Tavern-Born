@@ -1,32 +1,11 @@
+import { normalizeBackgroundOriginRules } from '@/lib/5etools/backgroundRuleNormalization'
 import type { Background5e, Race5e } from '@/types/5etools'
 import type { OriginSystem } from '@/types/character'
-import { ABILITY_NAMES } from './abilityScores'
 import {
   count2024OriginLanguageChoiceUnits,
   ORIGIN_2024_BASE_LANGUAGE,
   ORIGIN_2024_LANGUAGE_CHOICE_COUNT,
 } from './languageOrigin'
-
-const SYNTHETIC_BACKGROUND_ABILITY = [
-  {
-    choose: {
-      weighted: {
-        from: [...ABILITY_NAMES],
-        weights: [2, 1],
-      },
-    },
-  },
-  {
-    choose: {
-      weighted: {
-        from: [...ABILITY_NAMES],
-        weights: [1, 1, 1],
-      },
-    },
-  },
-]
-
-const SYNTHETIC_ORIGIN_FEAT = [{ anyFromCategory: { category: ['O'], count: 1 } }]
 
 type OriginNormalizedRace = Race5e & {
   _tavernBornFlexibleAsi?: boolean
@@ -43,10 +22,6 @@ export function usesRaceOriginBenefits(originSystem: OriginSystem): boolean {
 
 function hasAbilityEntries(entity?: { ability?: unknown[] } | null): boolean {
   return Array.isArray(entity?.ability) && entity.ability.length > 0
-}
-
-function hasFeatEntries(entity?: Record<string, unknown> | null): boolean {
-  return Array.isArray(entity?.feats) && (entity.feats as unknown[]).length > 0
 }
 
 function stripRaceOriginFeats<T extends Race5e | undefined>(race: T): T {
@@ -122,10 +97,16 @@ export function normalizeBackgroundForOriginSystem(
     return rest as Background5e
   }
 
+  const normalizedRules =
+    background.normalizedOriginRules ?? normalizeBackgroundOriginRules(background)
+
   return {
     ...background,
-    ability: hasAbilityEntries(background) ? background.ability : SYNTHETIC_BACKGROUND_ABILITY,
-    feats: hasFeatEntries(background) ? background.feats : SYNTHETIC_ORIGIN_FEAT,
+    ability: normalizedRules.ability,
+    feats: normalizedRules.feats,
+    ...(normalizedRules.fallbackSource
+      ? { _tavernBornOriginFallback: normalizedRules.fallbackSource }
+      : {}),
   }
 }
 

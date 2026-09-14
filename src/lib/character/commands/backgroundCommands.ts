@@ -35,6 +35,8 @@ export function applyBackgroundSelectionCommand(
   background: Background5e,
   blockChoices: string[],
   itemLookup: Map<string, Item5e>,
+  genericSelections: Readonly<Record<string, string>> = character.backgroundEquipmentItemChoices ??
+    {},
 ): CharacterCommandResult {
   const normalizedBackground = normalizeBackgroundForOriginSystem(
     background,
@@ -100,7 +102,12 @@ export function applyBackgroundSelectionCommand(
   }
 
   const blocks = getBackgroundEquipmentBlocks(background.startingEquipment)
-  const resolvedPackage = resolveEquipmentWithBlockChoices(blocks, itemLookup, blockChoices)
+  const resolvedPackage = resolveEquipmentWithBlockChoices(
+    blocks,
+    itemLookup,
+    blockChoices,
+    genericSelections,
+  )
   const currency = {
     cp: character.currency?.cp ?? 0,
     sp: character.currency?.sp ?? 0,
@@ -123,6 +130,7 @@ export function applyBackgroundSelectionCommand(
       currency,
       backgroundCurrencyGrant: resolvedPackage.currency,
       backgroundEquipmentChoices: blockChoices,
+      backgroundEquipmentItemChoices: { ...genericSelections },
       backgroundAsiBlockIndex:
         character.originSystem === '2024'
           ? isBackgroundChanged

@@ -9,6 +9,7 @@ import {
   parseRaces,
   parseSpells,
 } from '@/lib/5etools/parsers'
+import type { Race5e } from '@/types/5etools'
 
 describe('5etools/parsers', () => {
   test('parseRaces nests subraces by race name and source', () => {
@@ -18,6 +19,30 @@ describe('5etools/parsers', () => {
     }) as Array<{ subraces?: Array<{ name: string }> }>
 
     expect(races[0]?.subraces?.map((s) => s.name)).toEqual(['High Elf'])
+  })
+
+  test('normalizes presentation entries only when structured race fields replace them', () => {
+    const [race] = parseRaces({
+      race: [
+        {
+          name: 'Test Race',
+          source: 'PHB',
+          size: ['M'],
+          speed: 30,
+          entries: [
+            { type: 'entries', name: 'Age', entries: ['Age text.'] },
+            { type: 'entries', name: 'Size', entries: ['Size text.'] },
+            { type: 'entries', name: 'Speed', entries: ['Speed text.'] },
+            { type: 'entries', name: 'Darkvision', entries: ['Darkvision text.'] },
+          ],
+        },
+      ],
+    }) as Race5e[]
+
+    expect(race?.presentationEntries).toEqual([
+      { type: 'entries', name: 'Age', entries: ['Age text.'] },
+      { type: 'entries', name: 'Darkvision', entries: ['Darkvision text.'] },
+    ])
   })
 
   test('parseRaces names unnamed base subraces as Default', () => {

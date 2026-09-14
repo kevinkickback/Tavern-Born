@@ -1,5 +1,8 @@
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
-import { ensureOriginLanguageBaseline } from '@/lib/calculations/languageOrigin'
+import {
+  deriveEffectiveRaceLanguageBlocks,
+  ensureOriginLanguageBaseline,
+} from '@/lib/calculations/languageOrigin'
 import {
   ensureOriginSystemInvariants,
   normalizeRaceSelectionForOriginSystem,
@@ -20,14 +23,6 @@ import type { Character } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
 
 export type ResolveRaceChoiceOptions = (domain: 'armor' | 'weapons', fromFilter: string) => string[]
-
-function getEffectiveRaceLanguageBlocks(race: Race5e): unknown[] {
-  if (Array.isArray(race.languageProficiencies) && race.languageProficiencies.length > 0) {
-    return race.languageProficiencies
-  }
-  if (typeof race.lineage === 'string') return [{ common: true, anyStandard: 1 }]
-  return []
-}
 
 function dedupeValues(values: string[]): string[] | undefined {
   const deduped = Array.from(new Set(values.map(normalizeKey))).filter(Boolean)
@@ -73,7 +68,7 @@ function buildRaceMaterializedPatch(
   const raceSkills = extractProficiencyBlockNames(race.skillProficiencies ?? [], {
     includeAnyStandard: false,
   }).filter((name) => !name.toLowerCase().startsWith('choose '))
-  const raceLanguages = extractProficiencyBlockNames(getEffectiveRaceLanguageBlocks(race), {
+  const raceLanguages = extractProficiencyBlockNames(deriveEffectiveRaceLanguageBlocks(race), {
     includeAnyStandard: false,
   }).filter((name) => !name.toLowerCase().startsWith('choose '))
   const subraceSkills = extractProficiencyBlockNames(subrace?.skillProficiencies ?? [], {

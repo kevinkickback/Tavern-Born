@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { GameContent } from '@/components/editor/GameContent'
 import {
   type ActiveFilters,
@@ -47,24 +47,40 @@ function normalizeSpellName(value: string): string {
   return value.trim().toLowerCase()
 }
 
-const ALL_LEVEL_OPTIONS = [
-  { value: '0', label: 'Cantrip' },
-  ...Array.from({ length: 9 }, (_, i) => ({
-    value: String(i + 1),
-    label: `Level ${i + 1}`,
-  })),
-]
+export function buildSpellLevelOptions(
+  spells: readonly Pick<Spell5e, 'level'>[],
+  allowedLevels?: ReadonlySet<string>,
+): Array<{ value: string; label: string }> {
+  const levels = new Set<number>()
+  for (const spell of spells) {
+    if (Number.isInteger(spell.level) && spell.level >= 0) levels.add(spell.level)
+  }
+  for (const rawLevel of allowedLevels ?? []) {
+    const level = Number(rawLevel)
+    if (Number.isInteger(level) && level >= 0) levels.add(level)
+  }
+  return [...levels]
+    .sort((left, right) => left - right)
+    .map((level) => ({
+      value: String(level),
+      label: level === 0 ? 'Cantrip' : `Level ${level}`,
+    }))
+}
 
-function buildLevelFilter(allowedLevels: Set<string> | undefined): FilterSection {
+function buildLevelFilter(
+  spells: readonly Pick<Spell5e, 'level'>[],
+  allowedLevels: Set<string> | undefined,
+): FilterSection {
+  const levelOptions = buildSpellLevelOptions(spells, allowedLevels)
   const disabledValues = allowedLevels
-    ? new Set(ALL_LEVEL_OPTIONS.map((o) => o.value).filter((v) => !allowedLevels.has(v)))
+    ? new Set(levelOptions.map((o) => o.value).filter((v) => !allowedLevels.has(v)))
     : undefined
   return {
     key: 'level',
     label: 'Level',
     type: 'checkboxes',
     columns: 2,
-    options: ALL_LEVEL_OPTIONS,
+    options: levelOptions,
     ...(disabledValues ? { disabledValues } : {}),
   }
 }
@@ -260,12 +276,15 @@ export function SpellSelectionModal({
   const hasCharSpells = !!(characterSpellNames && characterSpellNames.size > 0)
   const hasClassName = !!className
   const visibilityFilter = buildVisibilityFilter(hasCharSpells, hasClassName)
-  const filterSections = [
-    buildLevelFilter(allowedLevels),
-    SCHOOL_FILTER,
-    TYPE_FILTER,
-    ...(visibilityFilter ? [visibilityFilter] : []),
-  ]
+  const filterSections = useMemo(
+    () => [
+      buildLevelFilter(spells, allowedLevels),
+      SCHOOL_FILTER,
+      TYPE_FILTER,
+      ...(visibilityFilter ? [visibilityFilter] : []),
+    ],
+    [allowedLevels, spells, visibilityFilter],
+  )
 
   const effectiveInitialFilters = hasCharSpells
     ? { ...initialFilters, visibility: new Set(['hide-known']) }

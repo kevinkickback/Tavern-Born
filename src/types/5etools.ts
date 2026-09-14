@@ -16,6 +16,8 @@ export interface Race5e {
       }
   ability?: AbilityBonus[]
   entries?: unknown[]
+  /** Entry sections left after ingestion marks sections represented by structured race fields. */
+  presentationEntries?: unknown[]
   darkvision?: number
   languageProficiencies?: LanguageProficiency[]
   skillProficiencies?: SkillProficiency[]
@@ -72,6 +74,7 @@ export interface Class5e {
   classTableGroups?: unknown[]
   classFeatures?: string[] | ClassFeature[]
   classFeatureRefs?: ClassFeatureReference[]
+  normalizedRules?: import('@/lib/5etools/classRuleNormalization').NormalizedClassRules
   subclasses?: Subclass5e[]
   isSidekick?: boolean
   spellcastingAbility?: string
@@ -244,6 +247,8 @@ export interface Background5e {
   /** Present on 2024 (XPHB/one-D&D) backgrounds; value is 'one'. */
   edition?: string
   ability?: unknown[]
+  feats?: unknown[]
+  normalizedOriginRules?: import('@/lib/5etools/backgroundRuleNormalization').NormalizedBackgroundOriginRules
   skillProficiencies?: SkillProficiency[]
   languageProficiencies?: LanguageProficiency[]
   toolProficiencies?: ToolProficiency[]

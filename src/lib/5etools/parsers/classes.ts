@@ -1,3 +1,5 @@
+import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
+import type { ClassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
 
 function getClassFeatureIndex(classFeatureRecords: unknown[]): Map<string, ParsedObject> {
@@ -381,6 +383,10 @@ export function parseClasses(data: unknown): unknown[] {
       ...clsObj,
       subclasses: nested ?? [],
       classFeatureRefs,
+      normalizedRules: normalizeClassRules(
+        clsObj as unknown as import('@/types/5etools').Class5e,
+        classFeatureRefs as unknown as ClassFeatureReference[],
+      ),
       isSpellcaster: getIsSpellcasterClass(clsObj),
       spellSlotProgression,
     }

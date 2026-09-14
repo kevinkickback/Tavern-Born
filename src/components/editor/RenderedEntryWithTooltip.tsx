@@ -10,8 +10,10 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { PreviewNavigationControls } from '@/components/editor/PreviewNavigationControls'
+import { RecursivePreviewShell } from '@/components/editor/RecursivePreviewShell'
 import { RecursiveTooltipChain } from '@/components/editor/RecursiveTooltipChain'
 import { useDraggablePreview } from '@/hooks/ui/useDraggablePreview'
+import { useRecursivePreviewController } from '@/hooks/ui/useRecursivePreviewController'
 import {
   formatCastingTime,
   formatComponents,
@@ -21,13 +23,7 @@ import {
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
 import { renderEntryCached } from '@/lib/entryRenderCache'
-import {
-  clampPreviewPosition,
-  getFloatingPreviewPosition,
-  getTitleBarSafeTop,
-  type PreviewBounds,
-  type PreviewPosition,
-} from '@/lib/overlayPosition'
+import { getFloatingPreviewPosition, getTitleBarSafeTop } from '@/lib/overlayPosition'
 import {
   getEntryWithHoverTitles,
   getRecursiveHintPosition,
@@ -35,7 +31,6 @@ import {
   markRecursiveTooltipReferences,
   normalizeKind,
   parseRecursiveReference,
-  type RecursiveHintState,
   type RecursiveLookup,
   resolveRecursiveEntity,
 } from '@/lib/renderer/recursiveTooltip'
@@ -44,7 +39,6 @@ import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import type { Spell5e } from '@/types/5etools'
 
 const TOOLTIP_WIDTH = 320
-const HIDE_DELAY_MS = 200
 const EST_HEIGHT = 240
 
 type HintState =
@@ -58,11 +52,6 @@ type HintState =
       top: number
       triggerElement: HTMLElement
     }
-
-interface PinnedPreviewState {
-  depth: number
-  position: PreviewPosition
-}
 
 const RenderedHtml = memo(function RenderedHtml({
   className,
@@ -94,15 +83,40 @@ export function RenderedEntryWithTooltip({
   const uiScale = useAppPreferencesStore((state) => state.uiScale)
   const safeTop = getTitleBarSafeTop(uiScale)
   const [hint, setHint] = useState<HintState | null>(null)
-  const [recursiveHints, setRecursiveHints] = useState<RecursiveHintState[]>([])
-  const [pinnedPreview, setPinnedPreview] = useState<PinnedPreviewState | null>(null)
-  const pinnedDepth = pinnedPreview?.depth ?? null
-  const pinnedRef = useRef(false)
   const suppressFocusPreviewRef = useRef(false)
   const focusPreviewOnOpenRef = useRef(false)
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const previewId = useId()
+  const openRoot = useCallback(() => undefined, [])
+  const closeRoot = useCallback(() => setHint(null), [])
+  const focusRootTrigger = useCallback(() => {
+    const trigger = hint?.triggerElement
+    if (!trigger) return
+    suppressFocusPreviewRef.current = true
+    trigger.focus()
+    suppressFocusPreviewRef.current = false
+  }, [hint?.triggerElement])
+  const {
+    appendRecursiveHint,
+    clearHide,
+    handleNavigate,
+    handlePinToggle,
+    handlePinnedPositionChange,
+    handlePreviewKeyDown,
+    pinAtPosition,
+    pinnedDepth,
+    pinnedPreview,
+    recursiveHints,
+    scheduleHide,
+    setRecursiveHints,
+  } = useRecursivePreviewController({
+    isRootOpen: hint !== null,
+    safeTop,
+    rootRef: tooltipRef,
+    onRootOpen: openRoot,
+    onRootClose: closeRoot,
+    onCloseFocus: focusRootTrigger,
+  })
 
   useEffect(() => {
     const trigger = hint?.triggerElement
@@ -158,24 +172,6 @@ export function RenderedEntryWithTooltip({
         : getEntryWithHoverTitles(entry),
     [entry],
   )
-
-  const clearHide = useCallback(() => {
-    if (hideTimer.current !== null) {
-      clearTimeout(hideTimer.current)
-      hideTimer.current = null
-    }
-  }, [])
-
-  const scheduleHide = useCallback(() => {
-    if (pinnedRef.current) return
-    clearHide()
-    hideTimer.current = setTimeout(() => {
-      if (!pinnedRef.current && !tooltipRef.current?.matches(':hover')) {
-        setHint(null)
-        setRecursiveHints([])
-      }
-    }, HIDE_DELAY_MS)
-  }, [clearHide])
 
   // Tooltip content is portaled to document.body, so native listeners are more reliable here.
   const setTooltipRef = useCallback(
@@ -245,31 +241,18 @@ export function RenderedEntryWithTooltip({
       setHint({ kind: 'generic', ...resolved, left, top, triggerElement: el })
       return { left, top }
     },
-    [recursiveLookup, clearHide, safeTop],
-  )
-
-  const capturePinnedPosition = useCallback(
-    (fallback: PreviewPosition, bounds?: PreviewBounds | null): PreviewPosition => {
-      if (!bounds || (!bounds.width && !bounds.height)) return fallback
-      return clampPreviewPosition(
-        { left: bounds.left, top: bounds.top },
-        { width: bounds.width, height: bounds.height },
-        { width: window.innerWidth, height: window.innerHeight },
-        safeTop,
-      )
-    },
-    [safeTop],
+    [recursiveLookup, clearHide, safeTop, setRecursiveHints],
   )
 
   const handleMouseMove = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      if (pinnedRef.current) return
+      if (pinnedDepth !== null) return
       const el = (event.target as HTMLElement).closest(
         '[data-recursive-title]',
       ) as HTMLElement | null
       if (el) showPreview(el)
     },
-    [showPreview],
+    [pinnedDepth, showPreview],
   )
 
   const handleFocus = useCallback(
@@ -293,11 +276,9 @@ export function RenderedEntryWithTooltip({
       event.stopPropagation()
       const visibleBounds =
         hint?.triggerElement === el ? tooltipRef.current?.getBoundingClientRect() : null
-      const position = capturePinnedPosition(showPreview(el), visibleBounds)
-      pinnedRef.current = true
-      setPinnedPreview({ depth: 0, position })
+      pinAtPosition(0, showPreview(el), visibleBounds)
     },
-    [capturePinnedPosition, hint?.triggerElement, showPreview],
+    [hint?.triggerElement, pinAtPosition, showPreview],
   )
 
   const showRecursivePreview = useCallback(
@@ -333,15 +314,9 @@ export function RenderedEntryWithTooltip({
       )
       const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html, safeTop)
 
-      setRecursiveHints((current) => [
-        ...current.slice(0, depth),
-        { ...resolved, x, y, triggerElement: withTitle },
-      ])
-      if (pinnedRef.current) {
-        setPinnedPreview((current) => (current ? { ...current, depth: depth + 1 } : current))
-      }
+      appendRecursiveHint(depth, { ...resolved, x, y, triggerElement: withTitle })
     },
-    [clearHide, recursiveLookup, safeTop],
+    [appendRecursiveHint, clearHide, recursiveLookup, safeTop],
   )
 
   const handleRecursiveMouseMove = useCallback(
@@ -367,59 +342,10 @@ export function RenderedEntryWithTooltip({
     [scheduleHide],
   )
 
-  const handleCloseAll = useCallback(() => {
-    const trigger = hint?.triggerElement
-    clearHide()
-    pinnedRef.current = false
-    setPinnedPreview(null)
-    setHint(null)
-    setRecursiveHints([])
-    if (trigger) {
-      suppressFocusPreviewRef.current = true
-      trigger.focus()
-      suppressFocusPreviewRef.current = false
-    }
-  }, [clearHide, hint?.triggerElement])
-
-  const handleNavigate = useCallback((depth: number) => {
-    if (depth < 0) return
-    if (pinnedRef.current) {
-      setPinnedPreview((current) => (current ? { ...current, depth } : current))
-      return
-    }
-    setRecursiveHints((current) => current.slice(0, depth))
-  }, [])
-
-  const handlePinToggle = useCallback(
-    (depth: number, bounds?: PreviewBounds) => {
-      if (pinnedDepth === depth) {
-        pinnedRef.current = false
-        setPinnedPreview(null)
-        scheduleHide()
-        return
-      }
-      if (!bounds) return
-      clearHide()
-      pinnedRef.current = true
-      setPinnedPreview({
-        depth,
-        position: capturePinnedPosition({ left: bounds.left, top: bounds.top }, bounds),
-      })
-    },
-    [capturePinnedPosition, clearHide, pinnedDepth, scheduleHide],
-  )
-
-  const handlePinnedPositionChange = useCallback((position: PreviewPosition) => {
-    setPinnedPreview((current) => (current ? { ...current, position } : current))
-  }, [])
-
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key === 'Escape' && hint) {
-        event.preventDefault()
-        const activeDepth = pinnedDepth ?? recursiveHints.length
-        if (activeDepth > 0) handleNavigate(activeDepth - 1)
-        else handleCloseAll()
+        handlePreviewKeyDown(event)
         return
       }
 
@@ -432,19 +358,9 @@ export function RenderedEntryWithTooltip({
       focusPreviewOnOpenRef.current = true
       const visibleBounds =
         hint?.triggerElement === el ? tooltipRef.current?.getBoundingClientRect() : null
-      const position = capturePinnedPosition(showPreview(el), visibleBounds)
-      pinnedRef.current = true
-      setPinnedPreview({ depth: 0, position })
+      pinAtPosition(0, showPreview(el), visibleBounds)
     },
-    [
-      capturePinnedPosition,
-      handleCloseAll,
-      handleNavigate,
-      hint,
-      pinnedDepth,
-      recursiveHints.length,
-      showPreview,
-    ],
+    [handlePreviewKeyDown, hint, pinAtPosition, showPreview],
   )
 
   const handleBlur = useCallback(
@@ -514,27 +430,21 @@ export function RenderedEntryWithTooltip({
                 />
               </div>
             ) : (
-              <div
+              <RecursivePreviewShell
                 id={previewId}
                 ref={setTooltipRef}
-                role="dialog"
-                aria-label={`${hint.kind === 'spell' ? hint.spell.name : hint.title} preview`}
-                data-recursive-tooltip-depth={0}
-                onMouseMove={handleRecursiveMouseMove}
-                onFocus={handleRecursiveFocus}
-                onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
-                className={cn(
-                  'fixed z-[9999] w-[320px] max-w-[calc(100vw-1rem)] rounded border bg-card text-card-foreground transition-[box-shadow,border-color] duration-100',
-                  rootPinned || recursiveHints.length === 0
-                    ? 'border-accent/70 ring-1 ring-accent/45 shadow-xl'
-                    : 'border-border/80 shadow-md',
-                )}
-                style={
+                label={hint.kind === 'spell' ? hint.spell.name : hint.title}
+                pinned={rootPinned}
+                emphasized={rootPinned || recursiveHints.length === 0}
+                position={
                   rootPinned && pinnedPreview
                     ? pinnedPreview.position
                     : { left: hint.left, top: hint.top }
                 }
+                onMouseMove={handleRecursiveMouseMove}
+                onFocus={handleRecursiveFocus}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
               >
                 {hint.kind === 'spell' ? (
                   <>
@@ -691,7 +601,7 @@ export function RenderedEntryWithTooltip({
                     onPinnedPositionChange={handlePinnedPositionChange}
                   />
                 ) : null}
-              </div>
+              </RecursivePreviewShell>
             ),
             document.body,
           )

@@ -42,6 +42,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
+import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
@@ -306,6 +307,11 @@ export function HomePage() {
       const file = (event.target as HTMLInputElement).files?.[0]
       if (!file) return
       try {
+        if (file.size > MAX_CHARACTER_SIZE) {
+          const maxMB = (MAX_CHARACTER_SIZE / (1024 * 1024)).toFixed(0)
+          toast.error(`Character file exceeds the ${maxMB}MB safety limit.`)
+          return
+        }
         const character = JSON.parse(await file.text())
         const validationError = validateCharacterData(character)
         if (validationError) {

@@ -19,6 +19,7 @@ import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useRitualCasting } from '@/hooks/character/useRitualCasting'
 import { useConditions } from '@/hooks/data/useGameData'
 import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
+import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { getImplicitSource } from '@/lib/sourcePresets'
@@ -44,8 +45,31 @@ export function getExhaustionTableRows(entries: unknown[] | undefined): Exhausti
   return table.rows.flatMap((row) => {
     if (!Array.isArray(row) || row.length < 2) return []
     const level = Number(row[0])
-    return Number.isInteger(level) && level >= 1 && level <= 6 ? [{ level, effect: row[1] }] : []
+    return Number.isInteger(level) && level >= 1 ? [{ level, effect: row[1] }] : []
   })
+}
+
+export function getExhaustionMaximum(entries: unknown[] | undefined): number | null {
+  const rows = getExhaustionTableRows(entries)
+  if (rows.length > 0) return Math.max(...rows.map((row) => row.level))
+
+  const visit = (value: unknown): number | null => {
+    if (typeof value === 'string') {
+      const match = value.match(/exhaustion level is\s+(\d+)/i)
+      return match ? Number.parseInt(match[1], 10) : null
+    }
+    if (Array.isArray(value)) {
+      for (const child of value) {
+        const found = visit(child)
+        if (found !== null) return found
+      }
+    } else if (isRecord(value)) {
+      return visit(Object.values(value))
+    }
+    return null
+  }
+
+  return visit(entries)
 }
 
 function selectRulesetConditions(records: readonly Condition5e[], source: string) {
@@ -184,6 +208,20 @@ export function ConditionsPage() {
     () => getExhaustionTableRows(exhaustionRule?.entries),
     [exhaustionRule?.entries],
   )
+  const exhaustionMaximum =
+    getExhaustionMaximum(exhaustionRule?.entries) ??
+    CORE_RULES_METADATA[character?.originSystem ?? '2014'].exhaustionMaximum
+  const exhaustionLevels = useMemo(
+    () =>
+      [0, ...exhaustionRows.map((row) => row.level)].filter(
+        (level, index, levels) => levels.indexOf(level) === index,
+      ),
+    [exhaustionRows],
+  )
+  const selectableExhaustionLevels =
+    exhaustionLevels.length > 1
+      ? exhaustionLevels
+      : Array.from({ length: exhaustionMaximum + 1 }, (_, level) => level)
   const exhaustionRuleSections = useMemo(() => {
     const entries = exhaustionRule?.entries ?? []
     const tableIndex = entries.findIndex((entry) => isRecord(entry) && entry.type === 'table')
@@ -235,7 +273,7 @@ export function ConditionsPage() {
   }
 
   const setExhaustion = (level: number) => {
-    update('exhaustion', Math.max(0, Math.min(6, level)))
+    update('exhaustion', Math.max(0, Math.min(exhaustionMaximum, level)))
   }
 
   return (
@@ -425,7 +463,7 @@ export function ConditionsPage() {
                     <p
                       className={cn(
                         'mt-1 text-2xl font-bold tabular-nums',
-                        exhaustion === 6
+                        exhaustion === exhaustionMaximum
                           ? 'text-destructive'
                           : exhaustion > 0
                             ? 'text-primary'
@@ -435,8 +473,8 @@ export function ConditionsPage() {
                       Level {exhaustion}
                     </p>
                   </div>
-                  <div className="grid grid-cols-7 gap-2">
-                    {[0, 1, 2, 3, 4, 5, 6].map((level) => {
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(2.5rem,1fr))] gap-2">
+                    {selectableExhaustionLevels.map((level) => {
                       const current = exhaustion === level
                       return (
                         <button
@@ -447,7 +485,7 @@ export function ConditionsPage() {
                           aria-pressed={current}
                           className={cn(
                             'flex h-10 cursor-pointer items-center justify-center rounded-md border text-sm font-bold tabular-nums transition-colors',
-                            current && level === 6
+                            current && level === exhaustionMaximum
                               ? 'border-destructive bg-destructive text-destructive-foreground'
                               : current
                                 ? 'border-accent bg-accent text-accent-foreground'
@@ -482,7 +520,7 @@ export function ConditionsPage() {
                                 key={row.level}
                                 className={cn(
                                   'grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 px-2 py-3 transition-colors',
-                                  current && row.level === 6
+                                  current && row.level === exhaustionMaximum
                                     ? 'bg-destructive/15'
                                     : current
                                       ? 'bg-accent/15'

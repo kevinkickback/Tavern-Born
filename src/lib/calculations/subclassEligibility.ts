@@ -1,3 +1,4 @@
+import { LEGACY_SUBCLASS_PREREQUISITE_FIXUPS } from '@/lib/5etools/rulesetMetadata'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import type { Raw5ePrereq, Subclass5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -8,20 +9,9 @@ interface SubclassEligibilityParams {
   character: Character
 }
 
-type LegacyRestriction = {
+interface LegacyRestriction {
   variantOverride: 'bladesingerAnyRace' | 'battleragerAnyRace'
-  allowedRace: (raceName: string) => boolean
-}
-
-const LEGACY_RESTRICTIONS: Record<string, LegacyRestriction> = {
-  'wizard|bladesinger': {
-    variantOverride: 'bladesingerAnyRace',
-    allowedRace: (raceName) => raceName.includes('elf'),
-  },
-  'barbarian|battlerager': {
-    variantOverride: 'battleragerAnyRace',
-    allowedRace: (raceName) => raceName.includes('dwarf'),
-  },
+  allowedRaceKeyword: string
 }
 
 export function isSubclassEligible({
@@ -38,8 +28,11 @@ export function isSubclassEligible({
     ).met
   }
 
-  const restriction = LEGACY_RESTRICTIONS[`${className}|${subclass.name}`.toLowerCase()]
+  const key = `${className}|${subclass.classSource ?? ''}|${subclass.shortName}|${subclass.source}`
+  const restriction = (
+    LEGACY_SUBCLASS_PREREQUISITE_FIXUPS as Readonly<Record<string, LegacyRestriction>>
+  )[key]
   if (!restriction) return true
   if (character.variantRules?.[restriction.variantOverride]) return true
-  return restriction.allowedRace((character.race ?? '').toLowerCase())
+  return (character.race ?? '').toLowerCase().includes(restriction.allowedRaceKeyword)
 }

@@ -70,6 +70,7 @@ interface BuildClassLevelsPanelProps {
   viewingClassSource?: string
   viewingClassLevel: number
   classEquipmentBlockChoices: string[]
+  classEquipmentItemChoices?: Readonly<Record<string, string>>
   selectedNames: Set<string>
   optFeatures: OptionalFeatureLike[]
   featByCompositeId: Map<string, Feat5e>
@@ -89,6 +90,7 @@ interface BuildClassLevelsPanelProps {
   onOpenOptPicker: (state: { progName: string; featureTypes: string[]; total: number }) => void
   onOpenClassFeatPicker: (state: { progName: string; categories: string[]; total: number }) => void
   onBlockChoiceChange: (blockIndex: number, choice: string) => void
+  onItemChoiceChange?: (blockIndex: number, choice: string, key: string, itemRef: string) => void
   onSelectFeature: (feature: SelectedFeatureState) => void
   onExpandDetails: () => void
   onAsiReset: (level: number) => void
@@ -119,6 +121,7 @@ export function BuildClassLevelsPanel({
   viewingClassSource,
   viewingClassLevel,
   classEquipmentBlockChoices,
+  classEquipmentItemChoices = {},
   selectedNames,
   optFeatures,
   featByCompositeId,
@@ -138,6 +141,7 @@ export function BuildClassLevelsPanel({
   onOpenOptPicker,
   onOpenClassFeatPicker,
   onBlockChoiceChange,
+  onItemChoiceChange = () => undefined,
   onSelectFeature,
   onExpandDetails,
   onAsiReset,
@@ -240,8 +244,10 @@ export function BuildClassLevelsPanel({
                       <BuildClassEquipmentSection
                         viewingClassData={viewingClassData}
                         blockChoices={classEquipmentBlockChoices}
+                        itemChoices={classEquipmentItemChoices}
                         detailCollapsed={detailCollapsed}
                         onBlockChoiceChange={onBlockChoiceChange}
+                        onItemChoiceChange={onItemChoiceChange}
                         onSelectFeature={onSelectFeature}
                         onExpandDetails={onExpandDetails}
                       />

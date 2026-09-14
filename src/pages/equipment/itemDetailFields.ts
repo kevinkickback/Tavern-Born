@@ -1,4 +1,6 @@
 import { getArmorCategory } from '@/lib/calculations/armorClass'
+import { formatCopperValue } from '@/lib/calculations/currency'
+import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import type { Item5e } from '@/types/5etools'
 import type { Equipment } from '@/types/character'
 
@@ -16,20 +18,13 @@ export interface ItemDetailField {
   value: string | number
 }
 
-const ARMOR_TYPE_CODES = new Set(['LA', 'MA', 'HA', 'S'])
-const WEAPON_TYPE_CODES = new Set(['M', 'R'])
-
-function getTypeCode(item: Equipment): string {
-  return (item.type ?? '').split('|')[0].toUpperCase()
-}
-
 export function getItemCategory(item: Equipment): Exclude<ItemCategory, 'All'> {
-  const typeCode = getTypeCode(item)
-  if (item.weaponCategory || WEAPON_TYPE_CODES.has(typeCode)) return 'Weapons'
-  if (item.armorType || ARMOR_TYPE_CODES.has(typeCode)) return 'Armor'
-  if (typeCode === 'A') return 'Ammunition'
-  if (typeCode === 'P') return 'Potions'
-  if (typeCode === 'SC') return 'Scrolls'
+  const traits = getNormalizedItemTraits(item)
+  if (traits.isWeapon) return 'Weapons'
+  if (traits.isArmor) return 'Armor'
+  if (traits.isAmmunition) return 'Ammunition'
+  if (traits.isPotion) return 'Potions'
+  if (traits.isScroll) return 'Scrolls'
   return 'Gear'
 }
 
@@ -72,18 +67,6 @@ export function getPropertySummary(
   return properties.map((property) => resolvePropertyLabel(property, propertyByAbbr)).join(', ')
 }
 
-function formatItemValue(value: number): string {
-  if (value >= 100) {
-    const gp = Math.floor(value / 100)
-    const remainingCopper = value % 100
-    if (remainingCopper === 0) return `${gp} gp`
-    if (remainingCopper % 10 === 0) return `${gp} gp ${remainingCopper / 10} sp`
-    return `${gp} gp ${remainingCopper} cp`
-  }
-  if (value >= 10 && value % 10 === 0) return `${value / 10} sp`
-  return `${value} cp`
-}
-
 function getArmorTypeLabel(item: Equipment): string | null {
   const armorType = getArmorCategory(item)
   if (armorType === 'none') return null
@@ -106,7 +89,7 @@ export function buildItemDetailFields(
   const properties = getPropertySummary(item, propertyByAbbr, itemData)
 
   if (weight !== undefined) fields.push({ label: 'Weight', value: `${weight} lb each` })
-  if (value !== undefined) fields.push({ label: 'Value', value: formatItemValue(value) })
+  if (value !== undefined) fields.push({ label: 'Value', value: formatCopperValue(value) })
 
   if (category === 'Armor') {
     const armorType = getArmorTypeLabel(item)

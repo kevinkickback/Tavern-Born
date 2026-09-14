@@ -10,6 +10,7 @@ import {
   getClassDefaultEquipmentBlocks,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
+import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { mergeSkillState } from '@/lib/calculations/skills'
 import {
   removeSourceGrantedEquipment,
@@ -38,18 +39,9 @@ import type {
 } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
 
-const SAVING_THROW_NAME_BY_KEY: Record<string, string> = {
-  str: 'strength',
-  dex: 'dexterity',
-  con: 'constitution',
-  int: 'intelligence',
-  wis: 'wisdom',
-  cha: 'charisma',
-}
-
 function normalizeSavingThrowName(name: string): string {
   const normalized = normalizeKey(name)
-  return SAVING_THROW_NAME_BY_KEY[normalized] ?? normalized
+  return toAbilityName(normalized) ?? normalized
 }
 
 const isNarrativeTool = (value: string) => /of your choice|choose|one type of/i.test(value)
@@ -191,6 +183,9 @@ export function applyClassEquipmentChoiceCommand(
   blockIndex: number,
   choice: string,
   itemLookup: Map<string, Item5e>,
+  genericSelections: Readonly<Record<string, string>> = character.classEquipmentItemChoices?.[
+    getClassChoiceKey(cls.name, cls.source)
+  ] ?? {},
 ): CharacterCommandResult {
   const equipmentToRemove = Object.entries(ledger.equipment)
     .filter(([, tags]) =>
@@ -212,7 +207,7 @@ export function applyClassEquipmentChoiceCommand(
   choices[blockIndex] = choice.toLowerCase()
 
   const blocks = getClassDefaultEquipmentBlocks(cls.startingEquipment)
-  const resolved = resolveEquipmentWithBlockChoices(blocks, itemLookup, choices)
+  const resolved = resolveEquipmentWithBlockChoices(blocks, itemLookup, choices, genericSelections)
 
   return {
     characterPatch: {
@@ -220,6 +215,10 @@ export function applyClassEquipmentChoiceCommand(
       classEquipmentChoices: {
         ...(character.classEquipmentChoices ?? {}),
         [classChoiceKey]: choices,
+      },
+      classEquipmentItemChoices: {
+        ...(character.classEquipmentItemChoices ?? {}),
+        [classChoiceKey]: { ...genericSelections },
       },
     },
     provenanceUpdate: replaceClassEquipmentGrants(
@@ -322,6 +321,7 @@ function computeClassSelectionEffects(
     classBlocks,
     itemLookup,
     savedBlockChoices,
+    character.classEquipmentItemChoices?.[classChoiceKey] ?? {},
   )
   provenanceUpdate = replaceClassEquipmentGrants(
     provenanceUpdate,
@@ -338,6 +338,12 @@ function computeClassSelectionEffects(
       classEquipmentChoices: {
         ...(character.classEquipmentChoices ?? {}),
         [classChoiceKey]: savedBlockChoices,
+      },
+      classEquipmentItemChoices: {
+        ...(character.classEquipmentItemChoices ?? {}),
+        [classChoiceKey]: {
+          ...(character.classEquipmentItemChoices?.[classChoiceKey] ?? {}),
+        },
       },
     },
     provenanceUpdate,

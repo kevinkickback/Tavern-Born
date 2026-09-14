@@ -102,6 +102,10 @@ export function BuildClassPage() {
     (classEquipmentChoiceKey
       ? character?.classEquipmentChoices?.[classEquipmentChoiceKey]
       : undefined) ?? []
+  const classEquipmentItemChoices =
+    (classEquipmentChoiceKey
+      ? character?.classEquipmentItemChoices?.[classEquipmentChoiceKey]
+      : undefined) ?? {}
   const subclassController = useSubclassSelectionController({
     character,
     viewingClassData,
@@ -316,6 +320,7 @@ export function BuildClassPage() {
               viewingClassSource={viewingClassSource}
               viewingClassLevel={viewingClassLevel}
               classEquipmentBlockChoices={classEquipmentBlockChoices}
+              classEquipmentItemChoices={classEquipmentItemChoices}
               selectedNames={selectedNames}
               optFeatures={optFeatures}
               featByCompositeId={featByCompositeId}
@@ -340,6 +345,13 @@ export function BuildClassPage() {
               onBlockChoiceChange={(blockIndex, choice) => {
                 if (!viewingClassData) return
                 applyClassEquipmentChoice(viewingClassData, blockIndex, choice)
+              }}
+              onItemChoiceChange={(blockIndex, choice, key, itemRef) => {
+                if (!viewingClassData) return
+                applyClassEquipmentChoice(viewingClassData, blockIndex, choice, {
+                  ...classEquipmentItemChoices,
+                  [key]: itemRef,
+                })
               }}
               onSelectFeature={handleSelectFeature}
               onExpandDetails={() => {

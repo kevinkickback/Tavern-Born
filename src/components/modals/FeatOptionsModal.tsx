@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useSkillList } from '@/hooks/data/useGameData'
 import { getFeatureTypes } from '@/lib/5etools/classData'
 import {
   deriveFeatOptionSteps,
@@ -26,21 +27,12 @@ import {
   type FeatOptionStep,
   parseFeatSpellFilter,
 } from '@/lib/5etools/parsers/featOptions'
-import { ALL_SKILLS } from '@/lib/calculations/skills'
+import { ABILITY_ABBREV_TO_TITLE } from '@/lib/calculations/abilityNames'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { getSchoolName } from '@/lib/calculations/spellUtils'
 import { cn } from '@/lib/utils'
 import type { Feat5e, Language5e, OptionalFeatureLike, Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
-
-const ABILITY_LABELS: Record<string, string> = {
-  str: 'Strength',
-  dex: 'Dexterity',
-  con: 'Constitution',
-  int: 'Intelligence',
-  wis: 'Wisdom',
-  cha: 'Charisma',
-}
 
 type StepSelections = Record<number, string | string[]>
 
@@ -171,20 +163,22 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
   selected,
   onToggle,
   languages,
+  skillNames,
 }: {
   step: Extract<FeatOptionStep, { kind: 'proficiency' }>
   selected: string[]
   onToggle: (name: string) => void
   languages: Language5e[]
+  skillNames: readonly string[]
 }) {
   const pool = useMemo(() => {
     if (step.optionPool && step.optionPool.length > 0) return step.optionPool
-    if (step.domain === 'skills') return ALL_SKILLS as string[]
+    if (step.domain === 'skills') return [...skillNames]
     if (step.domain === 'languages') {
       return [...new Set(languages.map((l) => l.name))].sort()
     }
     return []
-  }, [step.domain, step.optionPool, languages])
+  }, [step.domain, step.optionPool, languages, skillNames])
 
   return (
     <div className="space-y-3">
@@ -240,7 +234,7 @@ const AbilityScoreStep = memo(function AbilityScoreStep({
       <p className="text-sm text-muted-foreground">{step.label}</p>
       <div className="flex flex-wrap gap-2">
         {step.from.map((abilityKey) => {
-          const label = ABILITY_LABELS[abilityKey] ?? abilityKey
+          const label = ABILITY_ABBREV_TO_TITLE[abilityKey] ?? abilityKey
           const isSelected = value === abilityKey
           return (
             <button
@@ -322,13 +316,15 @@ const ExpertiseStep = memo(function ExpertiseStep({
   value,
   onChange,
   proficientSkillNames,
+  skillNames,
 }: {
   step: Extract<FeatOptionStep, { kind: 'expertise' }>
   value: string
   onChange: (v: string) => void
   proficientSkillNames: string[]
+  skillNames: readonly string[]
 }) {
-  const pool = proficientSkillNames.length > 0 ? proficientSkillNames : (ALL_SKILLS as string[])
+  const pool = proficientSkillNames.length > 0 ? proficientSkillNames : skillNames
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{step.label}</p>
@@ -470,6 +466,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   onDismiss,
 }: FeatOptionsModalProps) {
   const { spells, optionalfeatures, languages } = useFilteredGameData()
+  const skillNames = useSkillList()
   const validatedFixedSpellcastingClass = validateFixedSpellcastingClass(
     feat,
     fixedSpellcastingClass,
@@ -640,6 +637,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
               selected={Array.isArray(currentValue) ? currentValue : []}
               onToggle={(name) => toggleMulti(stepIndex, name, currentStep.count)}
               languages={languages}
+              skillNames={skillNames}
             />
           )}
           {currentStep.kind === 'abilityScore' && (
@@ -663,6 +661,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
               value={typeof currentValue === 'string' ? currentValue : ''}
               onChange={(v) => setSingle(stepIndex, v)}
               proficientSkillNames={proficientSkillNames}
+              skillNames={skillNames}
             />
           )}
         </div>

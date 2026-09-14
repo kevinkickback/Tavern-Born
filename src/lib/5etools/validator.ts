@@ -13,7 +13,7 @@ import {
   OptionalFeatureDataSchema,
   RaceDataSchema,
 } from './schemas'
-import { findCorrectBranch, normalizeGitHubUrl } from './urlUtils'
+import { findCorrectBranch, parseRemoteDataSourceUrl } from './urlUtils'
 
 interface ValidationResult {
   isValid: boolean
@@ -123,44 +123,16 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
       }
     }
 
-    if (config.type === 'remote') {
-      try {
-        const url = new URL(config.path)
-        if (!['http:', 'https:'].includes(url.protocol)) {
-          return {
-            isValid: false,
-            error: 'URL must use HTTP or HTTPS protocol',
-          }
-        }
-      } catch {
-        return {
-          isValid: false,
-          error: 'Invalid URL format',
-        }
-      }
-    }
-
     let normalizedPath = config.path
     if (config.type === 'remote') {
-      const initialNormalized = normalizeGitHubUrl(config.path)
-
-      const url = new URL(config.path)
-      if (
-        url.hostname.includes('github.com') &&
-        !url.pathname.includes('/tree/') &&
-        !url.pathname.includes('/blob/')
-      ) {
-        const pathParts = url.pathname.split('/').filter(Boolean)
-        if (pathParts.length >= 2) {
-          const owner = pathParts[0]
-          const repo = pathParts[1]
-          const correctBranch = await findCorrectBranch(owner, repo)
-          normalizedPath = `https://raw.githubusercontent.com/${owner}/${repo}/${correctBranch}`
-        } else {
-          normalizedPath = initialNormalized
-        }
-      } else {
-        normalizedPath = initialNormalized
+      const parsedUrl = parseRemoteDataSourceUrl(config.path)
+      if (parsedUrl.kind === 'invalid') {
+        return { isValid: false, error: parsedUrl.error }
+      }
+      normalizedPath = parsedUrl.normalizedUrl
+      if (parsedUrl.kind === 'github-repository' && !parsedUrl.branch) {
+        const correctBranch = await findCorrectBranch(parsedUrl.owner, parsedUrl.repo)
+        normalizedPath = `https://raw.githubusercontent.com/${parsedUrl.owner}/${parsedUrl.repo}/${correctBranch}`
       }
     }
 

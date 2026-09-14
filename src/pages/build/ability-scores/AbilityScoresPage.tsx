@@ -18,13 +18,13 @@ import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
 import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useSkillList, useSkillToAbilityMap } from '@/hooks/data/useGameData'
 import {
   ABILITY_ABBREVIATIONS,
   type AbilityName,
   hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
 import { POINT_BUY_BUDGET } from '@/lib/calculations/gameRules'
-import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildAbilityScoresDetailsPanel } from '@/pages/build/ability-scores/components/DetailsPanel'
@@ -46,6 +46,8 @@ export function BuildAbilityScoresPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { skills } = useFilteredGameData()
+  const skillList = useSkillList()
+  const skillToAbilityMap = useSkillToAbilityMap()
   const { scores, setScore, setAllScores, pointBuyTotal, pointBuyRemaining } = useAbilityScores()
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const { applyRaceSelection, applyRaceAsiChoices } = useRaceProvenanceMutations()
@@ -102,8 +104,8 @@ export function BuildAbilityScoresPage() {
   const skillDetailsMap = useMemo(() => buildSkillDetailsMap(skills), [skills])
 
   const selectedSkills = useMemo(
-    () => ALL_SKILLS.filter((skill) => getSkillAbility(skill) === selectedAbility),
-    [selectedAbility],
+    () => skillList.filter((skill) => skillToAbilityMap[skill] === selectedAbility),
+    [selectedAbility, skillList, skillToAbilityMap],
   )
 
   const selectedSkillDetails = useMemo(
@@ -406,6 +408,7 @@ export function BuildAbilityScoresPage() {
           right={
             <BuildAbilityScoresDetailsPanel
               selectedAbility={selectedAbility}
+              selectedSkillNames={selectedSkills}
               selectedSkillDetails={selectedSkillDetails}
             />
           }

@@ -38,7 +38,7 @@ describe('5etools/validator', () => {
     })
 
     expect(result.isValid).toBe(false)
-    expect(result.error).toContain('HTTP or HTTPS')
+    expect(result.error).toContain('HTTPS')
   })
 
   test('returns invalid when no required resources are found', async () => {

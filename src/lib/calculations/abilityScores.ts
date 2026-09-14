@@ -3,6 +3,7 @@ import {
   ABILITY_ABBREV_ORDER,
   ABILITY_ABBREV_TO_FULL,
   ABILITY_ABBREV_TO_TITLE,
+  toAbilityName,
 } from './abilityNames'
 import {
   ABILITY_SCORE_ABSOLUTE_MAX,
@@ -44,6 +45,12 @@ export function makeDefaultAbilityScores(base = 8): AbilityScores {
     wisdom: base,
     charisma: base,
   }
+}
+
+export function makeDefaultStandardArrayAssignment(): AbilityScores {
+  return Object.fromEntries(
+    ABILITY_NAMES.map((ability, index) => [ability, STANDARD_ARRAY[index] ?? POINT_BUY_MIN]),
+  ) as unknown as AbilityScores
 }
 
 export function makeEmptyAbilityBonuses(): AbilityBonuses {
@@ -184,21 +191,7 @@ type RaceAbilityEntry = {
 }
 
 export function normalizeAbilityName(input: string): AbilityName | null {
-  const map: Record<string, AbilityName> = {
-    str: 'strength',
-    strength: 'strength',
-    dex: 'dexterity',
-    dexterity: 'dexterity',
-    con: 'constitution',
-    constitution: 'constitution',
-    int: 'intelligence',
-    intelligence: 'intelligence',
-    wis: 'wisdom',
-    wisdom: 'wisdom',
-    cha: 'charisma',
-    charisma: 'charisma',
-  }
-  return map[input.toLowerCase().trim()] ?? null
+  return toAbilityName(input) as AbilityName | null
 }
 
 export interface BackgroundAbilityBlock {

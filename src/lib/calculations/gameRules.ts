@@ -1,3 +1,5 @@
+import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
+import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { Class5e } from '@/types/5etools'
 import type { AbilityScores } from '@/types/character'
 import {
@@ -7,31 +9,19 @@ import {
   toAbilityAbbrev,
 } from './abilityNames'
 
-export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const
+const DEFAULT_RULES = CORE_RULES_METADATA['2014']
 
-export const POINT_BUY_BUDGET = 27
-
-export const POINT_BUY_COSTS: Record<number, number> = {
-  8: 0,
-  9: 1,
-  10: 2,
-  11: 3,
-  12: 4,
-  13: 5,
-  14: 7,
-  15: 9,
-}
-
-export const POINT_BUY_MIN = 8
-export const POINT_BUY_MAX = 15
-
-export const ABILITY_SCORE_MIN = 1
-export const ABILITY_SCORE_MAX = 20
-export const ABILITY_SCORE_ABSOLUTE_MAX = 30
-
-export const MAX_CHARACTER_LEVEL = 20
-export const MAX_ATTUNEMENT_SLOTS = 3
-const CARRY_CAPACITY_MULTIPLIER = 15
+export const STANDARD_ARRAY = DEFAULT_RULES.standardArray
+export const POINT_BUY_BUDGET: number = DEFAULT_RULES.pointBuyBudget
+export const POINT_BUY_COSTS: Record<number, number> = DEFAULT_RULES.pointBuyCosts
+export const POINT_BUY_MIN: number = DEFAULT_RULES.pointBuyMin
+export const POINT_BUY_MAX: number = DEFAULT_RULES.pointBuyMax
+export const ABILITY_SCORE_MIN: number = DEFAULT_RULES.abilityScoreMinimum
+export const ABILITY_SCORE_MAX: number = DEFAULT_RULES.abilityScoreCap
+export const ABILITY_SCORE_ABSOLUTE_MAX: number = DEFAULT_RULES.abilityScoreAbsoluteMaximum
+export const MAX_CHARACTER_LEVEL: number = DEFAULT_RULES.maxCharacterLevel
+export const MAX_ATTUNEMENT_SLOTS: number = DEFAULT_RULES.maxAttunedItems
+const CARRY_CAPACITY_MULTIPLIER = DEFAULT_RULES.carryingCapacityMultiplier
 
 export const MAX_CHARACTER_SIZE = 10 * 1024 * 1024
 export const MAX_PORTRAIT_SIZE = 5 * 1024 * 1024
@@ -72,37 +62,9 @@ export function rollDie(faces: number, random: () => number = Math.random): numb
   return Math.floor(sample * faces) + 1
 }
 
-/**
- * Read ASI levels from parsed class feature references.
- * Falls back to the standard [4,8,12,16,19] if parsed refs are unavailable.
- */
-const ASI_NAME_PATTERNS = ['ability score improvement', 'ability score increase', 'epic boon']
-
 export function getASILevelsFromClass(cls: Class5e | undefined | null): number[] {
-  if (cls?.classFeatureRefs && cls.classFeatureRefs.length > 0) {
-    const levels = cls.classFeatureRefs
-      .filter(
-        (ref) =>
-          ASI_NAME_PATTERNS.some((pattern) => ref.name.toLowerCase().includes(pattern)) &&
-          typeof ref.level === 'number',
-      )
-      .map((ref) => ref.level as number)
-      .filter((level, index, arr) => arr.indexOf(level) === index)
-
-    if (levels.length > 0) {
-      return levels.sort((a, b) => a - b)
-    }
-  }
-
-  if (import.meta.env.DEV) {
-    console.warn(
-      `[gameRules] getASILevelsFromClass: no ASI levels found in classFeatureRefs for ${
-        cls?.name ?? 'unknown'
-      }; using standard Fighter/Rogue fallback [4,8,12,16,19]. ` +
-        'This may be wrong for classes with more than 5 ASIs (e.g. Fighter, Barbarian).',
-    )
-  }
-  return [4, 8, 12, 16, 19]
+  if (!cls) return []
+  return (cls.normalizedRules ?? normalizeClassRules(cls, cls.classFeatureRefs ?? [])).asiLevels
 }
 
 function normalizeReqKeyToAbilityAbv(key: string): string | null {

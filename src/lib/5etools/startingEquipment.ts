@@ -1,4 +1,5 @@
 import { resolveArmorType } from '@/lib/calculations/armorClass'
+import { getItemTypeCodes } from '@/lib/calculations/itemClassification'
 import type { Item5e } from '@/types/5etools'
 import type { Equipment } from '@/types/character'
 
@@ -31,16 +32,21 @@ export interface CurrencyTotals {
 export interface BackgroundStartingPackage {
   items: EquipmentLike[]
   currency: CurrencyTotals
+  genericChoices?: GenericEquipmentChoice[]
 }
 
 const DEFAULT_ITEM_SOURCE = 'phb'
 
-const EQUIPMENT_TYPE_LABELS: Record<string, string> = {
-  toolArtisan: "Artisan's Tools",
-  instrumentMusical: 'Musical Instrument',
-  setGaming: 'Gaming Set',
-  weaponSimple: 'Simple Weapon',
-  weaponMartial: 'Martial Weapon',
+export interface GenericEquipmentCandidate {
+  name: string
+  source?: string
+}
+
+export interface GenericEquipmentChoice {
+  key: string
+  token: string
+  quantity: number
+  candidates: GenericEquipmentCandidate[]
 }
 
 function normalizeName(value: string): string {
@@ -61,6 +67,60 @@ function parseUid(uid: string): { name: string; source?: string } {
 
 function buildItemKey(name: string, source?: string): string {
   return `${normalizeName(name)}|${normalizeSource(source)}`
+}
+
+export function buildGenericEquipmentChoiceKey(
+  blockIndex: number,
+  optionKey: string,
+  entryIndex: number,
+): string {
+  return `${blockIndex}:${optionKey.toLowerCase()}:${entryIndex}`
+}
+
+function isEquipmentTypeCandidate(token: string, item: Item5e): boolean {
+  const normalizedToken = token.toLowerCase()
+  const typeCodes = getItemTypeCodes(item.type)
+  const weaponCategory = item.weaponCategory?.toLowerCase()
+  const isMelee = typeCodes.includes('M')
+
+  if (normalizedToken === 'toolartisan') return typeCodes.includes('AT')
+  if (normalizedToken === 'instrumentmusical') return typeCodes.includes('INS')
+  if (normalizedToken === 'setgaming') return typeCodes.includes('GS')
+  if (normalizedToken.startsWith('weaponsimple')) {
+    return weaponCategory === 'simple' && (!normalizedToken.endsWith('melee') || isMelee)
+  }
+  if (normalizedToken.startsWith('weaponmartial')) {
+    return weaponCategory === 'martial' && (!normalizedToken.endsWith('melee') || isMelee)
+  }
+  if (normalizedToken.startsWith('focusspellcasting')) {
+    const focusType = normalizedToken.replace('focusspellcasting', '').replace('druidic', 'druid')
+    return (
+      String(item.scfType ?? '').toLowerCase() === focusType ||
+      (Array.isArray(item.group) &&
+        item.group.some((group) =>
+          String(group)
+            .toLowerCase()
+            .includes(`${focusType === 'druid' ? 'druidic' : focusType} focus`),
+        ))
+    )
+  }
+  return false
+}
+
+export function getGenericEquipmentCandidates(
+  token: string,
+  itemLookup: Map<string, Item5e>,
+): GenericEquipmentCandidate[] {
+  const candidates = new Map<string, GenericEquipmentCandidate>()
+  for (const item of itemLookup.values()) {
+    if (!isEquipmentTypeCandidate(token, item)) continue
+    const key = buildItemKey(item.name, item.source)
+    candidates.set(key, { name: item.name, source: item.source })
+  }
+  return [...candidates.values()].sort(
+    (left, right) =>
+      left.name.localeCompare(right.name) || (left.source ?? '').localeCompare(right.source ?? ''),
+  )
 }
 
 function normalizeChoiceBlock(block: unknown): EquipmentChoiceBlock | null {
@@ -150,6 +210,8 @@ function resolveFromItemRef(
 function resolveFromEntry(
   entry: EquipmentEntry,
   itemLookup: Map<string, Item5e>,
+  genericChoiceKey?: string,
+  genericSelections: Readonly<Record<string, string>> = {},
 ): EquipmentLike | null {
   if (typeof entry === 'string') {
     return resolveFromItemRef(entry, itemLookup)
@@ -174,12 +236,10 @@ function resolveFromEntry(
   }
 
   if (entry.equipmentType) {
-    return {
-      name: EQUIPMENT_TYPE_LABELS[entry.equipmentType] ?? entry.equipmentType,
-      source: DEFAULT_ITEM_SOURCE,
-      type: 'G',
-      quantity: entry.quantity ?? 1,
-    }
+    const selection = genericChoiceKey ? genericSelections[genericChoiceKey] : undefined
+    return selection
+      ? resolveFromItemRef(selection, itemLookup, { quantity: entry.quantity })
+      : null
   }
 
   return null
@@ -267,11 +327,17 @@ function collectChosenEntries(
 function resolveEntries(
   entries: EquipmentEntry[],
   itemLookup: Map<string, Item5e>,
+  context?: {
+    blockIndex: number
+    optionKey: string
+    genericSelections?: Readonly<Record<string, string>>
+  },
 ): BackgroundStartingPackage {
   const resolved: EquipmentLike[] = []
   const currency = emptyCurrency()
+  const genericChoices: GenericEquipmentChoice[] = []
 
-  for (const entry of entries) {
+  entries.forEach((entry, entryIndex) => {
     if (typeof entry === 'object' && entry !== null) {
       if (typeof entry.value === 'number') {
         addCurrency(currency, toCurrencyFromCopper(entry.value))
@@ -281,13 +347,25 @@ function resolveEntries(
       }
     }
 
-    const item = resolveFromEntry(entry, itemLookup)
+    const genericChoiceKey = context
+      ? buildGenericEquipmentChoiceKey(context.blockIndex, context.optionKey, entryIndex)
+      : undefined
+    if (typeof entry === 'object' && entry?.equipmentType && genericChoiceKey) {
+      genericChoices.push({
+        key: genericChoiceKey,
+        token: entry.equipmentType,
+        quantity: entry.quantity ?? 1,
+        candidates: getGenericEquipmentCandidates(entry.equipmentType, itemLookup),
+      })
+    }
+    const item = resolveFromEntry(entry, itemLookup, genericChoiceKey, context?.genericSelections)
     if (item) resolved.push(item)
-  }
+  })
 
   return {
     items: resolved,
     currency,
+    genericChoices,
   }
 }
 
@@ -334,6 +412,8 @@ export function resolveClassStartingEquipmentOptions(
   const optionBItems: EquipmentLike[] = []
   const optionACurrency = emptyCurrency()
   const optionBCurrency = emptyCurrency()
+  const optionAGenericChoices: GenericEquipmentChoice[] = []
+  const optionBGenericChoices: GenericEquipmentChoice[] = []
 
   for (const block of defaultData) {
     const normalized = normalizeChoiceBlock(block)
@@ -346,16 +426,20 @@ export function resolveClassStartingEquipmentOptions(
     optionBItems.push(...resolvedB.items)
     addCurrency(optionACurrency, resolvedA.currency)
     addCurrency(optionBCurrency, resolvedB.currency)
+    optionAGenericChoices.push(...(resolvedA.genericChoices ?? []))
+    optionBGenericChoices.push(...(resolvedB.genericChoices ?? []))
   }
 
   return {
     A: {
       items: mergeEquipment(optionAItems),
       currency: optionACurrency,
+      genericChoices: optionAGenericChoices,
     },
     B: {
       items: mergeEquipment(optionBItems),
       currency: optionBCurrency,
+      genericChoices: optionBGenericChoices,
     },
   }
 }
@@ -378,6 +462,7 @@ export function resolveBackgroundStartingEquipmentPackage(
 
   const items: EquipmentLike[] = []
   const currency = emptyCurrency()
+  const genericChoices: GenericEquipmentChoice[] = []
 
   for (const block of blocks) {
     const normalized = normalizeChoiceBlock(block)
@@ -385,6 +470,7 @@ export function resolveBackgroundStartingEquipmentPackage(
     const resolved = resolveEntries(collectChosenEntries(normalized, preferredOption), itemLookup)
     items.push(...resolved.items)
     addCurrency(currency, resolved.currency)
+    genericChoices.push(...(resolved.genericChoices ?? []))
   }
 
   const mergedItems = mergeEquipment(items)
@@ -393,6 +479,7 @@ export function resolveBackgroundStartingEquipmentPackage(
   return {
     items: mergedItems,
     currency,
+    genericChoices,
   }
 }
 
@@ -436,9 +523,11 @@ export function resolveEquipmentWithBlockChoices(
   blocks: unknown[],
   itemLookup: Map<string, Item5e>,
   blockChoices: string[],
+  genericSelections: Readonly<Record<string, string>> = {},
 ): BackgroundStartingPackage {
   const allItems: EquipmentLike[] = []
   const currency = emptyCurrency()
+  const genericChoices: GenericEquipmentChoice[] = []
 
   blocks.forEach((rawBlock, i) => {
     const block = normalizeChoiceBlock(rawBlock)
@@ -453,10 +542,15 @@ export function resolveEquipmentWithBlockChoices(
 
     const fixed = block._ ?? []
     const chosen = actualKey ? (block[actualKey] ?? []) : []
-    const resolved = resolveEntries([...fixed, ...chosen], itemLookup)
+    const resolved = resolveEntries([...fixed, ...chosen], itemLookup, {
+      blockIndex: i,
+      optionKey: actualKey ?? '_',
+      genericSelections,
+    })
 
     allItems.push(...resolved.items)
     addCurrency(currency, resolved.currency)
+    genericChoices.push(...(resolved.genericChoices ?? []))
   })
 
   const mergedItems = mergeEquipment(allItems)
@@ -465,6 +559,7 @@ export function resolveEquipmentWithBlockChoices(
   return {
     items: mergedItems,
     currency,
+    genericChoices,
   }
 }
 
@@ -472,6 +567,7 @@ function resolveBlocksToStructure(
   blocks: unknown[],
   displayTexts: (string | null)[],
   itemLookup: Map<string, Item5e>,
+  genericSelections: Readonly<Record<string, string>> = {},
 ): ResolvedEquipmentBlock[] {
   return blocks.flatMap((rawBlock, index) => {
     const block = normalizeChoiceBlock(rawBlock)
@@ -485,13 +581,22 @@ function resolveBlocksToStructure(
     const options: Record<string, BackgroundStartingPackage> = {}
 
     if (isFixed) {
-      options._ = resolveEntries(block._ ?? [], itemLookup)
+      options._ = resolveEntries(block._ ?? [], itemLookup, {
+        blockIndex: index,
+        optionKey: '_',
+        genericSelections,
+      })
     } else {
       for (const key of choiceKeys) {
         const actualKey = rawKeys.find((k) => k.toLowerCase() === key) ?? key
         const combined = resolveEntries(
           [...(block._ ?? []), ...(block[actualKey] ?? [])],
           itemLookup,
+          {
+            blockIndex: index,
+            optionKey: actualKey,
+            genericSelections,
+          },
         )
         options[key] = combined
       }
@@ -504,6 +609,7 @@ function resolveBlocksToStructure(
 export function resolveClassEquipmentBlocks(
   startingEquipment: unknown,
   itemLookup: Map<string, Item5e>,
+  genericSelections: Readonly<Record<string, string>> = {},
 ): ResolvedEquipmentBlock[] {
   const defaultData = getClassDefaultEquipmentBlocks(startingEquipment)
   const se = startingEquipment as {
@@ -521,17 +627,18 @@ export function resolveClassEquipmentBlocks(
     return null
   })
 
-  return resolveBlocksToStructure(defaultData, displayTexts, itemLookup)
+  return resolveBlocksToStructure(defaultData, displayTexts, itemLookup, genericSelections)
 }
 
 export function resolveBackgroundEquipmentBlocks(
   startingEquipment: unknown,
   itemLookup: Map<string, Item5e>,
+  genericSelections: Readonly<Record<string, string>> = {},
 ): ResolvedEquipmentBlock[] {
   const blocks = getBackgroundEquipmentBlocks(startingEquipment)
 
   const displayTexts: (string | null)[] = blocks.map(() => null)
-  return resolveBlocksToStructure(blocks, displayTexts, itemLookup)
+  return resolveBlocksToStructure(blocks, displayTexts, itemLookup, genericSelections)
 }
 
 export function formatEquipmentOptionEntries(pkg: BackgroundStartingPackage): string[] {
@@ -539,6 +646,14 @@ export function formatEquipmentOptionEntries(pkg: BackgroundStartingPackage): st
 
   for (const item of pkg.items) {
     entries.push(item.quantity > 1 ? `${item.quantity}× ${item.name}` : item.name)
+  }
+
+  for (const choice of pkg.genericChoices ?? []) {
+    if (
+      !pkg.items.some((item) => choice.candidates.some((candidate) => candidate.name === item.name))
+    ) {
+      entries.push(`Choose ${choice.quantity > 1 ? `${choice.quantity} × ` : ''}item`)
+    }
   }
 
   const { cp, sp, ep, gp, pp } = pkg.currency

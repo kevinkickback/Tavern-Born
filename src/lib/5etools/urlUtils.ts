@@ -1,48 +1,88 @@
-export function normalizeGitHubUrl(inputUrl: string): string {
+export type ParsedRemoteDataSourceUrl =
+  | { kind: 'remote'; normalizedUrl: string }
+  | {
+      kind: 'github-repository'
+      normalizedUrl: string
+      owner: string
+      repo: string
+      branch?: string
+    }
+  | { kind: 'invalid'; error: string }
+
+function stripTrailingSlash(value: string): string {
+  return value.length > 'https://x/'.length ? value.replace(/\/+$/, '') : value
+}
+
+/** Parse and normalize a user-provided remote data source under one HTTPS policy. */
+export function parseRemoteDataSourceUrl(input: string): ParsedRemoteDataSourceUrl {
+  const value = input.trim()
+  if (!value) return { kind: 'invalid', error: 'Path cannot be empty' }
+
   try {
-    let cleanUrl = inputUrl.trim()
-
-    if (cleanUrl.endsWith('/')) {
-      cleanUrl = cleanUrl.slice(0, -1)
+    const url = new URL(value)
+    if (url.protocol !== 'https:') {
+      return { kind: 'invalid', error: 'URL must use HTTPS protocol' }
+    }
+    if (url.username || url.password) {
+      return { kind: 'invalid', error: 'URL cannot include credentials' }
     }
 
-    const url = new URL(cleanUrl)
-
-    if (!url.hostname.includes('github.com') && !url.hostname.includes('githubusercontent.com')) {
-      return cleanUrl
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, '')
+    const labels = hostname.split('.')
+    if (labels.length < 2 || labels.some((label) => label.length === 0)) {
+      return { kind: 'invalid', error: 'URL must include a complete domain name' }
     }
 
-    if (url.hostname === 'raw.githubusercontent.com') {
-      const pathParts = url.pathname.split('/').filter(Boolean)
-      if (pathParts.length >= 3) {
-        return `https://raw.githubusercontent.com/${pathParts[0]}/${pathParts[1]}/${pathParts[2]}`
-      }
-      return cleanUrl
-    }
+    url.hostname = hostname
+    url.search = ''
+    url.hash = ''
+    url.pathname = url.pathname.replace(/\/+$/, '') || '/'
 
     const pathParts = url.pathname.split('/').filter(Boolean)
-    if (pathParts.length < 2) return cleanUrl
-
-    const owner = pathParts[0]
-    const repo = pathParts[1]
-    let branch = 'main'
-
-    if (url.pathname.includes('/tree/')) {
-      const treeIndex = pathParts.indexOf('tree')
-      if (treeIndex !== -1 && pathParts.length > treeIndex + 1) {
-        branch = pathParts[treeIndex + 1]
+    if (hostname === 'raw.githubusercontent.com') {
+      if (pathParts.length < 3) {
+        return {
+          kind: 'invalid',
+          error: 'GitHub raw URLs must include owner, repository, and branch',
+        }
       }
-    } else if (url.pathname.includes('/blob/')) {
-      const blobIndex = pathParts.indexOf('blob')
-      if (blobIndex !== -1 && pathParts.length > blobIndex + 1) {
-        branch = pathParts[blobIndex + 1]
+      const [owner, rawRepo, branch] = pathParts
+      const repo = rawRepo.replace(/\.git$/i, '')
+      return {
+        kind: 'github-repository',
+        owner,
+        repo,
+        branch,
+        normalizedUrl: `https://raw.githubusercontent.com/${owner}/${repo}/${branch}`,
       }
     }
 
-    return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}`
+    if (hostname === 'github.com' || hostname === 'www.github.com') {
+      if (pathParts.length < 2) {
+        return { kind: 'invalid', error: 'GitHub URLs must include an owner and repository' }
+      }
+      const owner = pathParts[0]
+      const repo = pathParts[1].replace(/\.git$/i, '')
+      const markerIndex = pathParts.findIndex((part) => part === 'tree' || part === 'blob')
+      const branch = markerIndex >= 0 ? pathParts[markerIndex + 1] : undefined
+      return {
+        kind: 'github-repository',
+        owner,
+        repo,
+        ...(branch ? { branch } : {}),
+        normalizedUrl: `https://raw.githubusercontent.com/${owner}/${repo}/${branch ?? 'main'}`,
+      }
+    }
+
+    return { kind: 'remote', normalizedUrl: stripTrailingSlash(url.toString()) }
   } catch {
-    return inputUrl
+    return { kind: 'invalid', error: 'Invalid URL format' }
   }
+}
+
+export function normalizeGitHubUrl(inputUrl: string): string {
+  const parsed = parseRemoteDataSourceUrl(inputUrl)
+  return parsed.kind === 'invalid' ? inputUrl : parsed.normalizedUrl
 }
 
 async function testUrlWithBranch(
@@ -64,14 +104,8 @@ async function testUrlWithBranch(
 }
 
 export async function findCorrectBranch(owner: string, repo: string): Promise<string> {
-  const branches = ['main', 'master']
-
-  for (const branch of branches) {
-    const isValid = await testUrlWithBranch(owner, repo, branch, 'races.json')
-    if (isValid) {
-      return branch
-    }
+  for (const branch of ['main', 'master']) {
+    if (await testUrlWithBranch(owner, repo, branch, 'races.json')) return branch
   }
-
   return 'main'
 }

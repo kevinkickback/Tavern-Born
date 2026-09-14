@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { getExhaustionTableRows } from '@/pages/details/ConditionsPage'
+import { getExhaustionMaximum, getExhaustionTableRows } from '@/pages/details/ConditionsPage'
 
 describe('getExhaustionTableRows', () => {
   test('reads exhaustion levels and effects from a structured game-data table', () => {
@@ -24,7 +24,15 @@ describe('getExhaustionTableRows', () => {
     expect(getExhaustionTableRows(['Formula-based exhaustion rules'])).toEqual([])
   })
 
-  test('ignores malformed and out-of-range rows', () => {
+  test('derives a formula-based terminal level from loaded rules text', () => {
+    expect(
+      getExhaustionMaximum([
+        { type: 'entries', entries: ['You die if your Exhaustion level is 8.'] },
+      ]),
+    ).toBe(8)
+  })
+
+  test('ignores malformed rows without imposing a hardcoded maximum', () => {
     expect(
       getExhaustionTableRows([
         {
@@ -32,6 +40,6 @@ describe('getExhaustionTableRows', () => {
           rows: [['0', 'Not a tracked level'], ['3'], ['7', 'Out of range'], null],
         },
       ]),
-    ).toEqual([])
+    ).toEqual([{ level: 7, effect: 'Out of range' }])
   })
 })

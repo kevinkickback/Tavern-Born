@@ -1,3 +1,4 @@
+import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
 import type { Raw5ePrereq } from '@/types/5etools'
@@ -77,22 +78,7 @@ function parseSpellPrereqRef(ref: string): {
 }
 
 function normalizeAbilityName(input: string): AbilityName | null {
-  const map: Record<string, AbilityName> = {
-    str: 'strength',
-    strength: 'strength',
-    dex: 'dexterity',
-    dexterity: 'dexterity',
-    con: 'constitution',
-    constitution: 'constitution',
-    int: 'intelligence',
-    intelligence: 'intelligence',
-    wis: 'wisdom',
-    wisdom: 'wisdom',
-    cha: 'charisma',
-    charisma: 'charisma',
-  }
-
-  return map[input.toLowerCase().trim()] ?? null
+  return toAbilityName(input) as AbilityName | null
 }
 
 export interface CheckPrereqOptions {

@@ -140,12 +140,16 @@ export interface Character {
 
   /** Preferred background starting-equipment option keys per block. */
   backgroundEquipmentChoices?: string[]
+  /** Concrete item references selected for generic background equipment choices. */
+  backgroundEquipmentItemChoices?: Record<string, string>
 
   /** Last currency grant applied from background starting equipment. */
   backgroundCurrencyGrant?: Currency
 
   /** Equipment option choices for each class, keyed by "className|source". Per-block choice keys array. */
   classEquipmentChoices?: Record<string, string[]>
+  /** Concrete item references selected for generic class equipment choices, keyed by class. */
+  classEquipmentItemChoices?: Record<string, Record<string, string>>
   /**
    * Ordered ability selections for the chosen background ability block.
    * selections[i] receives weights[i] bonus from the selected block.

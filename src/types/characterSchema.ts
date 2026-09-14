@@ -4,7 +4,6 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
-import { ALL_SKILLS } from '@/lib/calculations/skills'
 
 export const sourceSchema = z
   .string()
@@ -180,10 +179,7 @@ const skillEntrySchema = z.object({
   bonus: z.number().int(),
 })
 
-const skillsSchema = z.record(skillEntrySchema).transform((record) => {
-  const validKeySet = new Set<string>(ALL_SKILLS)
-  return Object.fromEntries(Object.entries(record).filter(([key]) => validKeySet.has(key)))
-})
+const skillsSchema = z.record(skillEntrySchema)
 
 const portraitTransformSchema = z.object({
   zoom: z.number(),
@@ -510,9 +506,11 @@ export const characterSchema = z
     raceAsiBlockIndex: z.union([z.literal(0), z.literal(1)]).optional(),
     backgroundAsiBlockIndex: z.number().int().nonnegative().optional(),
     backgroundEquipmentChoices: z.array(z.string()).optional(),
+    backgroundEquipmentItemChoices: z.record(z.string()).optional(),
     backgroundAsiChoices: z.array(z.string()).optional(),
     backgroundCurrencyGrant: currencySchema.optional(),
     classEquipmentChoices: z.record(z.array(z.string())).optional(),
+    classEquipmentItemChoices: z.record(z.record(z.string())).optional(),
     spells: spellSelectionSchema,
     equipment: z.array(equipmentSchema),
     visions: z
@@ -553,7 +551,7 @@ export const characterSchema = z
       })
       .optional(),
     conditions: z.array(z.string()).optional(),
-    exhaustion: z.number().int().min(0).max(6).optional(),
+    exhaustion: z.number().int().min(0).optional(),
     hitDiceUsed: z.number().int().min(0).optional(),
     ritualCasting: z.boolean().optional(),
     classResources: z.record(z.number().int().min(0)).optional(),
