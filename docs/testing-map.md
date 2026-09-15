@@ -131,6 +131,9 @@ new tests land and do not lower them to merge a change.
 - Character lifecycle E2E (import -> portrait edit -> save -> reload) in tests/e2e/lifecycle.spec.ts
 - Complete create-character E2E (required wizard selections -> review -> create -> reload persistence)
 - Character-library E2E for metadata search, cancel/confirm deletion, persisted deletion, and distinct malformed/schema-invalid import errors
+- Character copy/template unit and integration coverage for exact deep copies, reusable runtime
+  reset, collision-free naming, identity-free versioned template payloads, and template import
+  through the canonical store validation boundary.
 - Active-character spell workflow E2E (profile switching, add/remove, prepared toggle) in tests/e2e/spells-active.spec.ts
 - Startup cache-branch full coverage in tests/hooks/useDataInit.test.tsx (unconfigured, stale, fresh, offline, source-changed, direct-load)
 - Provenance reconciliation edge cases in tests/lib/provenance/reconciliation.test.ts (mixed-source retention, background choice removal, multiclass-safe class reconciliation)

@@ -1,4 +1,4 @@
-import { Trash, Upload } from '@phosphor-icons/react'
+import { CopySimple, DownloadSimple, Trash, Upload } from '@phosphor-icons/react'
 import { memo } from 'react'
 import { CharacterCardFrame } from '@/components/character/CharacterCardFrame'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
@@ -14,6 +14,8 @@ interface CharacterCardProps {
   onLoad: (id: string) => void
   onDelete: (id: string) => void
   onExport: (character: Character) => void
+  onDuplicate: (character: Character) => void
+  onExportTemplate: (character: Character) => void
   isActive?: boolean
   selectionMode?: boolean
   isSelected?: boolean
@@ -26,6 +28,8 @@ export const CharacterCard = memo(function CharacterCard({
   onLoad,
   onDelete,
   onExport,
+  onDuplicate,
+  onExportTemplate,
   isActive = false,
   selectionMode = false,
   isSelected = false,
@@ -71,6 +75,30 @@ export const CharacterCard = memo(function CharacterCard({
         actions={
           !selectionMode ? (
             <div className={cn('flex', isSmall ? 'gap-2' : 'gap-3')}>
+              <Button
+                variant="outline"
+                size="default"
+                aria-label={`Duplicate ${character.name || 'character'}`}
+                className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onDuplicate(character)
+                }}
+              >
+                <CopySimple className={actionIconClass} />
+              </Button>
+              <Button
+                variant="outline"
+                size="default"
+                aria-label={`Export ${character.name || 'character'} as template`}
+                className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onExportTemplate(character)
+                }}
+              >
+                <DownloadSimple className={actionIconClass} />
+              </Button>
               <Button
                 variant="outline"
                 size="default"

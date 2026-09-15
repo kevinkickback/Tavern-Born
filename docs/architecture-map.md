@@ -79,6 +79,9 @@ Spellcasting note:
 - Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through the same interactive path; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items. The detail metadata grid is type-aware and omits irrelevant empty fields while retaining any exceptional populated statistics.
 - Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Name-only fallback is used only when the reference has no source and is deterministic.
 - Character creation uses src/hooks/data/useWizardGameData.ts as its draft-scoped data boundary. Wizard steps receive filtered collections or resolved entities and never read the raw game-data store directly.
+- Character-library duplicate and template policy lives in
+  `src/lib/character/characterTransfer.ts`; HomePage owns only file-picker/download orchestration
+  and the mode dialog. Template import reuses the canonical character factory and store validation.
 - Recursive tooltip lookup construction lives in src/lib/renderer/recursiveTooltip.ts. Raw and filtered callers pass an explicit collection set to the same builder, including `itemsBase`.
 
 Current implementation notes:

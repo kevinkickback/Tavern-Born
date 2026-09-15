@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
+import { createCharacterTemplate } from '@/lib/character/characterTransfer'
 import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
 import { HomePage } from '@/pages/HomePage'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
@@ -29,6 +30,8 @@ interface MockCharacterCardProps {
   character: { id: string; name: string }
   onLoad: (id: string) => void
   onDelete: (id: string) => void
+  onDuplicate: (character: { id: string; name: string }) => void
+  onExportTemplate: (character: { id: string; name: string }) => void
   selectionMode?: boolean
   onToggleSelect?: (id: string) => void
 }
@@ -38,6 +41,8 @@ vi.mock('@/components/character/CharacterCard', () => ({
     character,
     onLoad,
     onDelete,
+    onDuplicate,
+    onExportTemplate,
     selectionMode,
     onToggleSelect,
   }: MockCharacterCardProps) => (
@@ -48,6 +53,12 @@ vi.mock('@/components/character/CharacterCard', () => ({
       </button>
       <button type="button" onClick={() => onDelete(character.id)}>
         delete-{character.id}
+      </button>
+      <button type="button" onClick={() => onDuplicate(character)}>
+        duplicate-{character.id}
+      </button>
+      <button type="button" onClick={() => onExportTemplate(character)}>
+        export-template-{character.id}
       </button>
       {selectionMode && (
         <button type="button" onClick={() => onToggleSelect?.(character.id)}>
@@ -205,6 +216,35 @@ describe('home page integration workflows', () => {
     expect(useCharacterStore.getState().characters.map((c) => c.id)).toEqual(['c2'])
   })
 
+  test('duplicates a reusable build with independent reset runtime state', async () => {
+    const user = userEvent.setup()
+    const source = makeCharacterFixture({
+      id: 'source',
+      name: 'Source Hero',
+      hitPoints: { max: 18, current: 4, temporary: 2 },
+      hitPointsInitialized: true,
+      conditions: ['test condition'],
+    })
+    useCharacterStore.setState({
+      characters: [source],
+      activeCharacterId: null,
+      activeCharacter: null,
+    })
+
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'duplicate-source' }))
+    expect(screen.getByRole('heading', { name: 'Duplicate character' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: /Reusable build copy/ }))
+
+    const copy = useCharacterStore
+      .getState()
+      .characters.find((character) => character.id !== source.id)
+    expect(copy?.name).toBe('Source Hero (Build Copy)')
+    expect(copy?.hitPoints).toEqual({ max: 0, current: 0, temporary: 0 })
+    expect(copy?.conditions).toEqual([])
+    expect(source.hitPoints.current).toBe(4)
+  })
+
   test('prompts before switching when active character has unsaved changes', async () => {
     const user = userEvent.setup()
     const c1 = makeCharacterFixture({ id: 'c1', name: 'Alpha' })
@@ -255,6 +295,49 @@ describe('home page integration workflows', () => {
     await fileInput.onchange?.({ target: fileInput } as unknown as Event)
 
     expect(useCharacterStore.getState().characters).toHaveLength(2)
+  })
+
+  test('imports a character template with fresh identity and reset runtime state', async () => {
+    const user = userEvent.setup()
+    const source = makeCharacterFixture({
+      id: 'template-source',
+      name: 'Template Source',
+      race: 'Test Lineage',
+      raceSource: 'TEST',
+      portrait: 'data:image/png;base64,example',
+      hitPoints: { max: 20, current: 3, temporary: 2 },
+      conditions: ['test condition'],
+    })
+    useCharacterStore.setState({
+      characters: [source],
+      activeCharacterId: null,
+      activeCharacter: null,
+    })
+    const fileInput = mockDynamicFileInput()
+
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+    const file = new File([JSON.stringify(createCharacterTemplate(source))], 'build.tbt', {
+      type: 'application/json',
+    })
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      get: () => [file],
+    })
+
+    await fileInput.onchange?.({ target: fileInput } as unknown as Event)
+
+    const imported = useCharacterStore
+      .getState()
+      .characters.find((character) => character.id !== source.id)
+    expect(imported).toMatchObject({
+      name: 'Character from Template',
+      race: 'Test Lineage',
+      raceSource: 'TEST',
+      hitPoints: { max: 0, current: 0, temporary: 0 },
+    })
+    expect(imported?.portrait).toBeUndefined()
+    expect(imported?.conditions).toBeUndefined()
   })
 
   test('rejects an oversized character before reading its contents', async () => {
@@ -398,7 +481,7 @@ describe('home page integration workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Import' }))
 
     expect(fileInput.type).toBe('file')
-    expect(fileInput.accept).toBe('.tbc,.json')
+    expect(fileInput.accept).toBe('.tbc,.tbt,.json')
     expect(typeof fileInput.onchange).toBe('function')
     expect(fileInput.click).toHaveBeenCalled()
   })

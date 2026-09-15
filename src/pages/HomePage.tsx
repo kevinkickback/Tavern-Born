@@ -1,5 +1,6 @@
 import {
   CheckSquare,
+  CopySimple,
   DotsThreeVertical,
   DownloadSimple,
   Funnel,
@@ -15,6 +16,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { CharacterCard } from '@/components/character/CharacterCard'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
+import { DuplicateCharacterDialog } from '@/components/character/DuplicateCharacterDialog'
 import { CharacterCreationWizard } from '@/components/character/wizard/CharacterCreationWizard'
 import {
   AlertDialog,
@@ -44,6 +46,14 @@ import {
 } from '@/components/ui/select'
 import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
+import {
+  type CharacterDuplicateMode,
+  createCharacterTemplate,
+  duplicateCharacter,
+  getDuplicateCharacterName,
+  instantiateCharacterTemplate,
+  isCharacterTemplate,
+} from '@/lib/character/characterTransfer'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
@@ -62,6 +72,8 @@ interface CharacterListRowProps {
   onLoad: (id: string) => void
   onToggleSelect: (id: string) => void
   onExport: (character: Character) => void
+  onDuplicate: (character: Character) => void
+  onExportTemplate: (character: Character) => void
   onDelete: (id: string) => void
 }
 
@@ -73,6 +85,8 @@ function CharacterListRow({
   onLoad,
   onToggleSelect,
   onExport,
+  onDuplicate,
+  onExportTemplate,
   onDelete,
 }: CharacterListRowProps) {
   const name = character.name || 'Unnamed Character'
@@ -143,8 +157,14 @@ function CharacterListRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => onDuplicate(character)}>
+              <CopySimple /> Duplicate
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onExport(character)}>
               <DownloadSimple /> Export
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onExportTemplate(character)}>
+              <DownloadSimple /> Export Template
             </DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onSelect={() => onDelete(character.id)}>
               <Trash /> Delete
@@ -162,6 +182,7 @@ export function HomePage() {
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const deleteCharacter = useCharacterStore((state) => state.deleteCharacter)
+  const addCharacter = useCharacterStore((state) => state.addCharacter)
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
   const setViewMode = useAppPreferencesStore((state) => state.setCharacterViewMode)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
@@ -176,6 +197,7 @@ export function HomePage() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
+  const [duplicateTarget, setDuplicateTarget] = useState<Character | null>(null)
 
   const sortedCharacters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -301,10 +323,39 @@ export function HomePage() {
     toast.success('Character exported successfully')
   }, [])
 
+  const handleExportTemplate = useCallback((character: Character) => {
+    const template = createCharacterTemplate(character)
+    const dataBlob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(dataBlob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${character.name || 'character'}-template.tbt`
+    link.click()
+    URL.revokeObjectURL(url)
+    toast.success('Character template exported successfully')
+  }, [])
+
+  const handleDuplicateCharacter = useCallback(
+    (mode: CharacterDuplicateMode) => {
+      if (!duplicateTarget) return
+      const copy = duplicateCharacter(duplicateTarget, mode, {
+        name: getDuplicateCharacterName(
+          duplicateTarget.name,
+          mode,
+          characters.map((character) => character.name),
+        ),
+      })
+      addCharacter(copy)
+      setDuplicateTarget(null)
+      toast.success(mode === 'exact' ? 'Exact copy created' : 'Reusable build copy created')
+    },
+    [addCharacter, characters, duplicateTarget],
+  )
+
   const handleImportCharacter = () => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.tbc,.json'
+    input.accept = '.tbc,.tbt,.json'
     input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0]
       if (!file) return
@@ -314,14 +365,21 @@ export function HomePage() {
           toast.error(`Character file exceeds the ${maxMB}MB safety limit.`)
           return
         }
-        const character = JSON.parse(await file.text())
+        const payload: unknown = JSON.parse(await file.text())
+        const character = isCharacterTemplate(payload)
+          ? instantiateCharacterTemplate(payload)
+          : payload
         const validationError = validateCharacterData(character)
         if (validationError) {
           toast.error(`Invalid character: ${validationError}`)
           return
         }
-        useCharacterStore.getState().addCharacter(character)
-        toast.success('Character imported successfully')
+        useCharacterStore.getState().addCharacter(character as Character)
+        toast.success(
+          isCharacterTemplate(payload)
+            ? 'Character template imported successfully'
+            : 'Character imported successfully',
+        )
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error'
         toast.error(`Failed to import character: ${message}`)
@@ -338,6 +396,8 @@ export function HomePage() {
         onLoad={handleLoadCharacter}
         onDelete={handleDeleteCharacter}
         onExport={handleExportCharacter}
+        onDuplicate={setDuplicateTarget}
+        onExportTemplate={handleExportTemplate}
         isActive={character.id === activeCharacterId}
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}
@@ -351,6 +411,8 @@ export function HomePage() {
         onLoad={handleLoadCharacter}
         onDelete={handleDeleteCharacter}
         onExport={handleExportCharacter}
+        onDuplicate={setDuplicateTarget}
+        onExportTemplate={handleExportTemplate}
         isActive={character.id === activeCharacterId}
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}
@@ -568,7 +630,7 @@ export function HomePage() {
                       <Upload className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
                       <span className="text-sm font-semibold">Import</span>
                       <span className="text-[11px] text-muted-foreground">
-                        Open a .tbc or JSON file
+                        Open a .tbc, .tbt, or JSON file
                       </span>
                     </button>
                   </div>
@@ -600,6 +662,13 @@ export function HomePage() {
       </WorkspaceBody>
 
       <CharacterCreationWizard open={showCreateWizard} onOpenChange={setShowCreateWizard} />
+      <DuplicateCharacterDialog
+        character={duplicateTarget}
+        onOpenChange={(open) => {
+          if (!open) setDuplicateTarget(null)
+        }}
+        onDuplicate={handleDuplicateCharacter}
+      />
       <AlertDialog open={confirmSwitchOpen} onOpenChange={setConfirmSwitchOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
