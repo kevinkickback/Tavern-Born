@@ -148,7 +148,7 @@ export function parseItemTypes(data: unknown): ItemType5e[] {
   return []
 }
 
-export function parseBooks(data: unknown): unknown[] {
+function parseBooks(data: unknown): unknown[] {
   const obj = asObject(data)
   if (!data) return []
   if (obj.book) return asArray(obj.book)

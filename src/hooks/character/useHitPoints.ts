@@ -15,7 +15,7 @@ import {
 import { useCharacterStore } from '@/store/characterStore'
 import type { HitPointAdjustment, HitPoints } from '@/types/character'
 
-export interface HitPointSettings {
+interface HitPointSettings {
   current: number
   temporary: number
   adjustments: HitPointAdjustment[]

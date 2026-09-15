@@ -13,7 +13,7 @@ import {
 import { useCharacterStore } from '@/store/characterStore'
 import type { SpellProfile } from '@/types/character'
 
-export interface SpellSlotInfo {
+interface SpellSlotInfo {
   level: number
   max: number
   used: number

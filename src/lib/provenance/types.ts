@@ -13,7 +13,7 @@ export type SourceType =
 
 export type GrantType = 'fixed' | 'choice' | 'placeholder'
 
-export type SpellAttributionMode = 'exact' | 'inferred-lowest-eligible'
+type SpellAttributionMode = 'exact' | 'inferred-lowest-eligible'
 
 /** SourceTag extended with spell-specific attribution metadata. Only used in ledger.spells. */
 export type SpellSourceTag = SourceTag & {

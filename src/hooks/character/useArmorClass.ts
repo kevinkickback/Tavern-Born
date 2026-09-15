@@ -9,7 +9,7 @@ import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { useCharacterStore } from '@/store/characterStore'
 import type { ArmorClassAdjustment } from '@/types/character'
 
-export interface ArmorClassSettings {
+interface ArmorClassSettings {
   adjustments: ArmorClassAdjustment[]
   override?: number
 }

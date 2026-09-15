@@ -1,7 +1,7 @@
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { OriginSystem, VariantRules } from '@/types/character'
 
-export type AbilityScoreMethod = NonNullable<VariantRules['abilityScoreMethod']>
+type AbilityScoreMethod = NonNullable<VariantRules['abilityScoreMethod']>
 
 export interface AbilityScoreMethodOption {
   value: AbilityScoreMethod

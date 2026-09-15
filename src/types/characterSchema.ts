@@ -5,7 +5,7 @@ import {
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
 
-export const sourceSchema = z
+const sourceSchema = z
   .string()
   .min(1)
   .transform((s) => s.toUpperCase())
@@ -25,15 +25,6 @@ const abilityScoresSchema = z.object({
   wisdom: abilityScoreSchema,
   charisma: abilityScoreSchema,
 })
-
-const proficiencyTypeSchema = z.enum([
-  'armor',
-  'weapons',
-  'tools',
-  'skills',
-  'languages',
-  'savingThrows',
-])
 
 const variantRulesSchema = z.object({
   optionalClassFeatures: z.boolean().default(false),
@@ -640,13 +631,3 @@ export const characterSchema = z
   })
 
 export const characterPersistenceSchema = characterSchema
-
-export type AbilityName = import('./character').AbilityName
-export type AbilityScores = z.infer<typeof abilityScoresSchema>
-export type AbilityScoreMethod = z.infer<typeof abilityScoreMethodSchema>
-export type ProficiencyType = z.infer<typeof proficiencyTypeSchema>
-export type CharacterImport = z.infer<typeof characterSchema>
-export type SpellSlotLevel = z.infer<typeof spellSlotLevelSchema>
-export type SpellSlots = z.infer<typeof spellSlotsSchema>
-export type SpellProfile = z.infer<typeof spellProfileSchema>
-export type SpellSelection = z.infer<typeof spellSelectionSchema>

@@ -43,7 +43,7 @@ export interface EffectiveAbilityScoreData {
   asiBonuses: Partial<Record<AbilityName, number>>
 }
 
-export interface CharacterEquipmentCalculationState {
+interface CharacterEquipmentCalculationState {
   all: readonly Equipment[]
   equipped: readonly Equipment[]
   attuned: readonly Equipment[]

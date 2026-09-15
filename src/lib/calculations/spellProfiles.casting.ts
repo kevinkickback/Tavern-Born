@@ -99,13 +99,13 @@ export function isLevelOnlyPreparedCaster(classData?: Class5e): boolean {
   return hasPreparedSpellsProgression(classData) && classData.preparedSpellsChange === 'level'
 }
 
-export function getCantripLimit(classData: Class5e | undefined, level: number): number | null {
+function getCantripLimit(classData: Class5e | undefined, level: number): number | null {
   const progression = getProgressionArray(classData?.cantripProgression)
   if (!progression) return null
   return progression[level - 1] ?? progression[progression.length - 1] ?? null
 }
 
-export function getKnownSpellLimit(classData: Class5e | undefined, level: number): number | null {
+function getKnownSpellLimit(classData: Class5e | undefined, level: number): number | null {
   if (!classData?.spellcastingAbility) return null
   const spellsFixed = getProgressionArray(classData.spellsKnownProgressionFixed)
   const spellsKnown = getProgressionArray(classData.spellsKnownProgression)
@@ -193,7 +193,7 @@ export function getPreparedSpellLimit(
   return evaluatePreparedSpellsFormula(classData.preparedSpells, characterLevel, abilityModifiers)
 }
 
-export function getClassMaxSpellLevel(
+function getClassMaxSpellLevel(
   classData: Class5e | undefined,
   classLevel: number,
   casterProgressionOverride?: CasterProgression,

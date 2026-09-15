@@ -26,17 +26,6 @@ const CARRY_CAPACITY_MULTIPLIER = DEFAULT_RULES.carryingCapacityMultiplier
 export const MAX_CHARACTER_SIZE = 10 * 1024 * 1024
 export const MAX_PORTRAIT_SIZE = 5 * 1024 * 1024
 
-export const PROFICIENCY_TYPES = {
-  SKILLS: 'skills',
-  SAVING_THROWS: 'savingThrows',
-  WEAPONS: 'weapons',
-  TOOLS: 'tools',
-  ARMOR: 'armor',
-  LANGUAGES: 'languages',
-} as const
-
-export type ProficiencyType = (typeof PROFICIENCY_TYPES)[keyof typeof PROFICIENCY_TYPES]
-
 /**
  * Parse a hit dice string (e.g. "1d8", "d10") into its numeric face value.
  * Returns 8 as a safe default.

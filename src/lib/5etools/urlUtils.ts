@@ -179,11 +179,6 @@ export function parseRemoteDataSourceUrl(input: string): ParsedRemoteDataSourceU
   }
 }
 
-export function normalizeGitHubUrl(inputUrl: string): string {
-  const parsed = parseRemoteDataSourceUrl(inputUrl)
-  return parsed.kind === 'invalid' ? inputUrl : parsed.normalizedUrl
-}
-
 async function testUrlWithBranch(
   owner: string,
   repo: string,

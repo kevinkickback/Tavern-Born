@@ -158,6 +158,8 @@ Primary definition: src/App.tsx.
 - Hooks should orchestrate state and derivation, not own canonical rules.
 - Character writes flow through updateCharacter(id, patch) in src/store/characterStore.ts.
 - 5etools entity list keys must use name|source.
+- `npm run check:health` enforces layer direction, production/test separation, managed-data access,
+  circular-dependency, and unused-code rules in local validation and CI.
 
 ## Where To Put New Code
 

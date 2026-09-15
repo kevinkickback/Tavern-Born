@@ -1,10 +1,5 @@
 import type { Race5e } from '@/types/5etools'
-import type {
-  Character,
-  CharacterMovement,
-  MovementAdjustment,
-  MovementMode,
-} from '@/types/character'
+import type { Character, CharacterMovement, MovementMode } from '@/types/character'
 
 const MOVEMENT_MODES: readonly MovementMode[] = ['walk', 'climb', 'swim', 'fly', 'burrow']
 
@@ -168,16 +163,4 @@ export function getAdditionalMovementSummary(movement: EffectiveMovement): strin
     speeds: Object.fromEntries(Object.entries(movement.speeds).filter(([mode]) => mode !== 'walk')),
   }
   return formatEffectiveMovement(withoutWalk)
-}
-
-export function calculateMovementAdjustmentTotal(
-  adjustments: readonly MovementAdjustment[] | undefined,
-  mode: string,
-): number {
-  const normalizedMode = mode.trim().toLowerCase()
-  return (adjustments ?? []).reduce(
-    (total, adjustment) =>
-      adjustment.mode.trim().toLowerCase() === normalizedMode ? total + adjustment.amount : total,
-    0,
-  )
 }

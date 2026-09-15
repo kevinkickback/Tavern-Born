@@ -16,8 +16,6 @@ import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 
-export type { SkillResult }
-
 export interface SkillsState {
   skills: SkillResult[]
   passivePerception: number

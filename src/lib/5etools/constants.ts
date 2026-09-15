@@ -92,8 +92,6 @@ export function validateDamageTypeCoverage(items: unknown[]): void {
  */
 export const RARITY_ORDER = ITEM_RARITY_ORDER_FALLBACK
 
-export type ItemRarity = (typeof RARITY_ORDER)[number]
-
 /**
  * Tailwind CSS badge classes per rarity tier.
  * Keys mirror RARITY_ORDER (all lowercase). Update alongside RARITY_ORDER

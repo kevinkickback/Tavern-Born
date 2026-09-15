@@ -2,7 +2,7 @@ import { getTitleBarSafeTop } from '@/lib/overlayPosition'
 import { renderEntry } from '@/lib/renderer'
 import type { Spell5e } from '@/types/5etools'
 
-export interface TooltipEntityLike {
+interface TooltipEntityLike {
   name?: string
   shortName?: string
   source?: string

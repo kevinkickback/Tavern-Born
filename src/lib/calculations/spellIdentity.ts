@@ -1,11 +1,11 @@
 import { normalizeKey } from '@/lib/provenance/normalization'
 
-export interface SpellReferenceParts {
+interface SpellReferenceParts {
   name: string
   source?: string
 }
 
-export function parseSpellReference(value: string): SpellReferenceParts {
+function parseSpellReference(value: string): SpellReferenceParts {
   const tagged = value.trim().match(/^\{@spell\s+([^}|]+)(?:\|([^}|]+))?[^}]*\}$/i)
   const raw = tagged ? [tagged[1], tagged[2]] : value.trim().split('|')
   const name = raw[0]?.trim() ?? ''

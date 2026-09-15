@@ -6,8 +6,6 @@ import { deriveAllSavingThrows, type SavingThrowResult } from '@/lib/calculation
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
 
-export type { SavingThrowResult }
-
 export interface SavingThrowsState {
   savingThrows: SavingThrowResult[]
   toggleProficiency: (ability: AbilityName) => void

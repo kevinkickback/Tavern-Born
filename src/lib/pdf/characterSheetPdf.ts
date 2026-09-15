@@ -15,7 +15,7 @@ interface CharacterSheetTemplate {
   assetPath: string
 }
 
-export const CHARACTER_SHEET_TEMPLATES: readonly CharacterSheetTemplate[] = [
+const CHARACTER_SHEET_TEMPLATES: readonly CharacterSheetTemplate[] = [
   {
     id: '2014',
     name: '2014 Character Sheet',
@@ -35,7 +35,7 @@ const TEMPLATE_BY_ID: Record<CharacterSheetTemplateId, CharacterSheetTemplate> =
   '2024': CHARACTER_SHEET_TEMPLATES[1],
 }
 
-export const DEFAULT_CHARACTER_SHEET_TEMPLATE = TEMPLATE_BY_ID['2024']
+const DEFAULT_CHARACTER_SHEET_TEMPLATE = TEMPLATE_BY_ID['2024']
 
 export function buildCharacterSheetFieldMap(
   viewModel: CharacterSheetViewModel,

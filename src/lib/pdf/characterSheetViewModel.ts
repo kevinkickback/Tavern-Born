@@ -44,7 +44,7 @@ export interface CharacterSheetLookupSet extends EntityLookupSet {
   organizations?: readonly Organization5e[]
 }
 
-export interface CharacterSheetWeaponRow {
+interface CharacterSheetWeaponRow {
   name: string
   attackBonus: string
   damage: string
@@ -54,7 +54,7 @@ export interface CharacterSheetWeaponRow {
   description: string
 }
 
-export interface CharacterSheetSpellRow {
+interface CharacterSheetSpellRow {
   name: string
   level: string
   castingTimeAndDuration: string
@@ -64,14 +64,14 @@ export interface CharacterSheetSpellRow {
   material: boolean
 }
 
-export interface CharacterSheetClassResourceRow {
+interface CharacterSheetClassResourceRow {
   label: string
   max: number
   used: number
   recovery: string
 }
 
-export interface CharacterSheetHitDieRow {
+interface CharacterSheetHitDieRow {
   level: number
   die: string
   used: number | null

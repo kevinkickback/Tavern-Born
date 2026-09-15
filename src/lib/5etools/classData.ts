@@ -1,10 +1,4 @@
-import {
-  type ClassResourceDef,
-  type ClassResourceMaxFormula,
-  type ClassResourceRecovery,
-  type ClassResourceRecoveryAmount,
-  normalizeClassRules,
-} from '@/lib/5etools/classRuleNormalization'
+import { type ClassResourceDef, normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import {
   FEAT_CATEGORY_LABEL_FALLBACKS,
   NON_STANDARD_FEAT_SELECTION_CATEGORIES,
@@ -31,7 +25,7 @@ export type { OptFeatureProg, OptionalFeatureLike }
  * defined only in the 5etools JS source. Remove and replace with a parsed
  * source if one becomes available.
  */
-export const OPT_FEATURE_TYPE_TO_FULL = OPTIONAL_FEATURE_TYPE_LABEL_FALLBACKS
+const OPT_FEATURE_TYPE_TO_FULL = OPTIONAL_FEATURE_TYPE_LABEL_FALLBACKS
 
 /** Convert a 5etools optional feature type abbreviation to its full display name. */
 export function optFeatureTypeToFull(type: string): string {
@@ -49,7 +43,7 @@ export function optFeatureTypeToFull(type: string): string {
  * defined only in the 5etools JS source. Remove and replace with a parsed
  * source if one becomes available.
  */
-export const FEAT_CATEGORY_TO_FULL = FEAT_CATEGORY_LABEL_FALLBACKS
+const FEAT_CATEGORY_TO_FULL = FEAT_CATEGORY_LABEL_FALLBACKS
 
 /** Convert a 5etools feat category abbreviation to its full display name. */
 export function featCategoryToFull(category: string): string {
@@ -159,12 +153,7 @@ export function getSubclassSelectionInfo(classData: Class5e | undefined): {
 // ── Class Resource Definitions ─────────────────────────────────────────────
 
 /** 'cha-mod' → max = character's Charisma modifier (min 1), computed at render time. */
-export type {
-  ClassResourceDef,
-  ClassResourceMaxFormula,
-  ClassResourceRecovery,
-  ClassResourceRecoveryAmount,
-}
+export type { ClassResourceDef }
 
 /**
  * Derives limited-use class resource definitions from 5etools class data.

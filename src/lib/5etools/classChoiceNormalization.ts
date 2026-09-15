@@ -1,6 +1,6 @@
 import type { Class5e, ClassFeatureReference, OptFeatureProg } from '@/types/5etools'
 
-export type NormalizedCharacterChoiceKind = 'class-feature' | 'feat' | 'item' | 'optional-feature'
+type NormalizedCharacterChoiceKind = 'class-feature' | 'feat' | 'item' | 'optional-feature'
 
 export type ChoiceOptionEntityType = 'classFeature' | 'feat' | 'item' | 'optionalFeature'
 

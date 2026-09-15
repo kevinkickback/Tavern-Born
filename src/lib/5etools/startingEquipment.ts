@@ -21,7 +21,7 @@ type EquipmentChoiceBlock = {
   [key: string]: EquipmentEntry[] | undefined
 }
 
-export interface CurrencyTotals {
+interface CurrencyTotals {
   cp: number
   sp: number
   ep: number
@@ -37,7 +37,7 @@ export interface BackgroundStartingPackage {
 
 const DEFAULT_ITEM_SOURCE = 'phb'
 
-export interface GenericEquipmentCandidate {
+interface GenericEquipmentCandidate {
   name: string
   source?: string
 }
@@ -69,7 +69,7 @@ function buildItemKey(name: string, source?: string): string {
   return `${normalizeName(name)}|${normalizeSource(source)}`
 }
 
-export function buildGenericEquipmentChoiceKey(
+function buildGenericEquipmentChoiceKey(
   blockIndex: number,
   optionKey: string,
   entryIndex: number,
@@ -107,7 +107,7 @@ function isEquipmentTypeCandidate(token: string, item: Item5e): boolean {
   return false
 }
 
-export function getGenericEquipmentCandidates(
+function getGenericEquipmentCandidates(
   token: string,
   itemLookup: Map<string, Item5e>,
 ): GenericEquipmentCandidate[] {

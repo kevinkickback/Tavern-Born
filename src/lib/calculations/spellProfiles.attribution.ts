@@ -68,7 +68,7 @@ export function buildClassSpellSelectionsByLevel(params: {
   return selections
 }
 
-export interface SpellAttribution {
+interface SpellAttribution {
   spellName: string
   grantedAtLevel: number
 }

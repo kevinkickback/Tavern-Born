@@ -5,8 +5,8 @@ import {
   normalizeClassChoices,
 } from './classChoiceNormalization'
 
-export type ClassResourceMaxFormula = 'cha-mod'
-export type ClassResourceRecoveryAmount = number | 'all'
+type ClassResourceMaxFormula = 'cha-mod'
+type ClassResourceRecoveryAmount = number | 'all'
 
 export interface ClassResourceRecovery {
   shortRest?: ClassResourceRecoveryAmount

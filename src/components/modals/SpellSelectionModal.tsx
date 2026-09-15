@@ -27,11 +27,6 @@ import {
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 
-export interface SpellLevelLimit {
-  level: number
-  max: number
-}
-
 export interface SpellSelectionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -51,7 +46,7 @@ export interface SpellSelectionModalProps {
 
 const EMPTY_SPELL_NAMES = new Set<string>()
 
-export function getSpellSelectionId(spell: Pick<Spell5e, 'name' | 'source'>): string {
+function getSpellSelectionId(spell: Pick<Spell5e, 'name' | 'source'>): string {
   return getSpellReferenceKey(spell.name, spell.source)
 }
 
@@ -78,7 +73,7 @@ export function resolveInitialSpellSelectionIds(
   )
 }
 
-export function buildSpellLevelOptions(
+function buildSpellLevelOptions(
   spells: readonly Pick<Spell5e, 'level'>[],
   allowedLevels?: ReadonlySet<string>,
 ): Array<{ value: string; label: string }> {

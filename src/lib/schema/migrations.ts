@@ -17,7 +17,7 @@ export const CURRENT_SCHEMA_VERSION = 7
 /**
  * Migration handler: transform character from version N to N+1.
  */
-export interface Migration {
+interface Migration {
   fromVersion: number
   toVersion: number
   up: (character: unknown) => Character

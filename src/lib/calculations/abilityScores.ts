@@ -144,13 +144,13 @@ export function formatModifier(mod: number): string {
   return mod >= 0 ? `+${mod}` : `${mod}`
 }
 
-export interface FixedAbilityBonus {
+interface FixedAbilityBonus {
   ability: AbilityName
   value: number
   source: 'race' | 'subrace'
 }
 
-export interface ChoosableAbilityBonus {
+interface ChoosableAbilityBonus {
   count: number
   amount: number
   from: AbilityName[]
@@ -219,7 +219,7 @@ export function normalizeAbilityName(input: string): AbilityName | null {
   return toAbilityName(input) as AbilityName | null
 }
 
-export interface BackgroundAbilityBlock {
+interface BackgroundAbilityBlock {
   from: AbilityName[]
   weights: number[]
 }

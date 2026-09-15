@@ -20,7 +20,7 @@ export function casterProgressionToFull(progression: string): string {
   return CASTER_PROGRESSION_TO_FULL[progression as CasterProgression] ?? progression
 }
 
-export interface SpellSlotLevel {
+interface SpellSlotLevel {
   max: number
   used: number
   isPactMagic?: boolean

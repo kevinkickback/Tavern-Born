@@ -3,8 +3,6 @@
  * structured catalog. Parsed records take precedence everywhere this metadata
  * is consumed, keeping these exceptions isolated at the ingestion boundary.
  */
-export const RULESET_METADATA_VERSION = '5etools-2026-09'
-
 export const ABILITY_CATALOG_FALLBACK = [
   { abbreviation: 'str', name: 'strength', title: 'Strength' },
   { abbreviation: 'dex', name: 'dexterity', title: 'Dexterity' },

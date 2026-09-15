@@ -29,7 +29,7 @@ const MODAL_ROW_ESTIMATE = 148
 const MODAL_LIST_INITIAL_RECT = { width: 800, height: 600 }
 const estimateModalRowSize = () => MODAL_ROW_ESTIMATE
 
-export interface FilterOption {
+interface FilterOption {
   value: string
   label: string
 }

@@ -1,6 +1,6 @@
-export const TITLE_BAR_BASE_HEIGHT = 32
-export const OVERLAY_VIEWPORT_MARGIN = 8
-export const OVERLAY_GAP = 4
+const TITLE_BAR_BASE_HEIGHT = 32
+const OVERLAY_VIEWPORT_MARGIN = 8
+const OVERLAY_GAP = 4
 
 export interface PreviewPosition {
   left: number

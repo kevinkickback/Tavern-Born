@@ -1,4 +1,4 @@
-import { emptyProvenance } from '@/store/characterStore'
+import { emptyProvenance } from '@/lib/character/createCharacter'
 import { normalizeKey } from './normalization'
 import type {
   AbilityBonusProvenanceRecord,

@@ -2,7 +2,6 @@ import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { FeatOptionSelections } from '@/types/feat'
 
 export type { FeatOptionSelections } from '@/types/feat'
-export type { ProvenanceLedger }
 
 export type OriginSystem = '2014' | '2024'
 
@@ -35,9 +34,9 @@ export interface HitPointGain {
   method: HitPointGainMethod
 }
 
-export type HitPointAdjustmentMode = 'flat' | 'per-level'
-export type AdjustmentSource = 'manual' | 'item' | 'feat' | 'other'
-export type HitPointAdjustmentSource = AdjustmentSource
+type HitPointAdjustmentMode = 'flat' | 'per-level'
+type AdjustmentSource = 'manual' | 'item' | 'feat' | 'other'
+type HitPointAdjustmentSource = AdjustmentSource
 
 /** A permanent additive change applied after class and Constitution HP. */
 export interface HitPointAdjustment {
@@ -85,7 +84,7 @@ export interface MovementAdjustment {
   createdAt: string
 }
 
-export type CharacterClassChoiceKind = 'class-feature' | 'feat' | 'item' | 'optional-feature'
+type CharacterClassChoiceKind = 'class-feature' | 'feat' | 'item' | 'optional-feature'
 
 export interface CharacterClassChoiceOption {
   entityType: 'classFeature' | 'feat' | 'item' | 'optionalFeature'
@@ -270,7 +269,7 @@ export interface VariantRules {
 
 export type AbilityScores = Record<AbilityName, number>
 
-export interface Proficiencies {
+interface Proficiencies {
   armor: string[]
   weapons: string[]
   tools: string[]
@@ -322,12 +321,12 @@ export interface AsiChoice {
   abilityChanges: Record<string, 1 | 2>
 }
 
-export interface SpellSelection {
+interface SpellSelection {
   spellProfiles: SpellProfile[]
   spellSlots: SpellSlots
 }
 
-export type SpellProfileType = 'class' | 'special' | 'racial'
+type SpellProfileType = 'class' | 'special' | 'racial'
 
 export interface RaceSpellChoice {
   id: string
@@ -362,7 +361,7 @@ export interface SpellProfile {
   spellSwaps?: Record<number, { removed: string; added: string }>
 }
 
-export type SpellSlots = Partial<Record<number, { max: number; used: number }>>
+type SpellSlots = Partial<Record<number, { max: number; used: number }>>
 
 export interface Equipment {
   id: string
@@ -418,7 +417,7 @@ export interface HitPoints {
   temporary: number
 }
 
-export interface SavingThrows {
+interface SavingThrows {
   strength: { proficient: boolean; bonus: number }
   dexterity: { proficient: boolean; bonus: number }
   constitution: { proficient: boolean; bonus: number }
@@ -431,7 +430,7 @@ export interface Skills {
   [key: string]: { proficient: boolean; expertise: boolean; bonus: number }
 }
 
-export interface CharacterDetails {
+interface CharacterDetails {
   playerName?: string
   gender?: string
   alignment?: string
@@ -475,7 +474,7 @@ export interface CharacterDetails {
   alliesAndOrganizations?: string
 }
 
-export interface Ally {
+interface Ally {
   id: string
   name: string
   relationship: string

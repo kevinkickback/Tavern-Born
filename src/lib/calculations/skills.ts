@@ -13,7 +13,7 @@ export { formatModifier }
  * is available, prefer skillToAbilityMap from there — it is derived directly
  * from data/skills.json and takes precedence over this constant.
  */
-export const SKILL_TO_ABILITY: Readonly<Record<string, AbilityName>> = Object.fromEntries(
+const SKILL_TO_ABILITY: Readonly<Record<string, AbilityName>> = Object.fromEntries(
   SKILL_CATALOG_FALLBACK.map((skill) => [skill.name, skill.ability]),
 ) as Readonly<Record<string, AbilityName>>
 
