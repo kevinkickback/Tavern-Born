@@ -4,9 +4,58 @@ import { mapCharacterSheet2014 } from '@/lib/pdf/characterSheetMapping2014'
 import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Background5e, Class5e, Organization5e, Race5e } from '@/types/5etools'
+import type { CharacterAction } from '@/types/actions'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('createCharacterSheetViewModel', () => {
+  test('maps active structured actions into the fixed 2014 capacities', () => {
+    const viewModel = createCharacterSheetViewModel(makeCharacterFixture(), {})
+    const action = (
+      id: string,
+      kind: CharacterAction['kind'],
+      sourceKind: CharacterAction['source']['kind'] = 'manual',
+    ): CharacterAction => ({
+      id,
+      name: `Test ${id}`,
+      kind,
+      description: `Description ${id}.`,
+      source: { kind: sourceKind, name: `Source ${id}` },
+      active: true,
+    })
+    const actions: CharacterAction[] = [
+      {
+        ...action('derived', 'action', 'spell'),
+        attackBonus: 4,
+        range: 'Test range',
+        damage: [{ dice: '1d6', bonus: 2, damageType: 'test damage' }],
+      },
+      ...Array.from({ length: 7 }, (_, index) => action(`manual-${index + 1}`, 'action')),
+      {
+        ...action('bonus', 'bonus-action'),
+        save: { ability: 'wisdom', dc: 13 },
+        resourceCost: { resourceId: 'test-resource', amount: 1 },
+        recharge: { rest: 'short', note: 'Test recharge.' },
+      },
+      action('reaction', 'reaction'),
+      action('weapon', 'attack'),
+      { ...action('inactive', 'reaction'), active: false },
+    ]
+
+    const map = mapCharacterSheet2014({ ...viewModel, actions })
+
+    expect(map.textFields['Action 1']).toBe('Test manual-1: Description manual-1')
+    expect(map.textFields['Action 6']).toBe('Test manual-6: Description manual-6')
+    expect(map.textFields['Action 7']).toBeUndefined()
+    expect(map.textFields['Bonus Action 1']).toBe(
+      'Test bonus: DC 13 Wisdom; 1 test-resource; Short rest; Test recharge',
+    )
+    expect(map.textFields['Bonus Action 2']).toBe('')
+    expect(map.textFields['Reaction 1']).toBe('Test reaction: Description reaction')
+    expect(map.textFields['Reaction 2']).toBe('')
+    expect(Object.values(map.textFields)).not.toContain('Test weapon: Description weapon.')
+    expect(Object.values(map.textFields)).not.toContain('Test inactive: Description inactive.')
+  })
+
   test('resolves source-qualified entities and merges nested subrace data before mapping', () => {
     const phbWizard = {
       name: 'Wizard',

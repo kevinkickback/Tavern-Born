@@ -5,6 +5,7 @@ import {
   usesCustomOrganization,
 } from '@/lib/pdf/characterSheetViewModel'
 import type { CharacterSheetFieldMap } from '@/lib/pdf/types'
+import type { CharacterAction } from '@/types/actions'
 
 const SKILL_FIELD_MAP: Record<string, { modifier: string; proficiency: string }> = {
   acrobatics: { modifier: 'Acr', proficiency: 'Acr Prof' },
@@ -57,6 +58,82 @@ const SIZE_CODE_TO_FULL: Record<string, string> = {
 function normalizeSize(code: string | undefined): string {
   if (!code) return ''
   return SIZE_CODE_TO_FULL[code.toUpperCase()] ?? code
+}
+
+const ACTION_FIELD_CAPACITY = 6
+const ACTION_FIELD_MAX_LENGTH = 72
+
+function titleCase(value: string): string {
+  return value.replace(/^\p{L}/u, (letter) => letter.toUpperCase())
+}
+
+function formatActionDamage(action: CharacterAction): string {
+  return (action.damage ?? [])
+    .map((damage) => {
+      const amount = [
+        damage.dice,
+        damage.bonus === 0
+          ? undefined
+          : damage.dice
+            ? formatViewModelModifier(damage.bonus)
+            : String(damage.bonus),
+      ]
+        .filter(Boolean)
+        .join(' ')
+      return [amount, damage.damageType].filter(Boolean).join(' ')
+    })
+    .filter(Boolean)
+    .join(', ')
+}
+
+function withoutTerminalPunctuation(value: string): string {
+  return value.trim().replace(/[.,;:]+$/u, '')
+}
+
+function truncateActionEntry(value: string): string {
+  if (value.length <= ACTION_FIELD_MAX_LENGTH) return value
+  return `${value.slice(0, ACTION_FIELD_MAX_LENGTH - 3).trimEnd()}...`
+}
+
+function formatActionEntry(action: CharacterAction): string {
+  const mechanics = [
+    action.attackBonus != null
+      ? `${formatViewModelModifier(action.attackBonus)} to hit`
+      : undefined,
+    action.save
+      ? `DC ${action.save.dc}${action.save.ability ? ` ${titleCase(action.save.ability)}` : ''}`
+      : undefined,
+    action.range,
+    formatActionDamage(action) || undefined,
+    action.resourceCost
+      ? `${action.resourceCost.amount} ${action.resourceCost.resourceId}`
+      : undefined,
+    action.recharge?.rest ? `${titleCase(action.recharge.rest)} rest` : undefined,
+    action.recharge?.note,
+  ]
+    .filter((detail): detail is string => Boolean(detail))
+    .map(withoutTerminalPunctuation)
+  const description = action.description ? withoutTerminalPunctuation(action.description) : ''
+  const core = mechanics.length > 0 ? `${action.name}: ${mechanics.join('; ')}` : action.name
+  if (!description) return truncateActionEntry(core)
+
+  const withDescription = `${core}: ${description}`
+  return truncateActionEntry(
+    mechanics.length > 0 && withDescription.length > ACTION_FIELD_MAX_LENGTH
+      ? core
+      : withDescription,
+  )
+}
+
+function actionsForField(
+  actions: readonly CharacterAction[],
+  kind: 'action' | 'bonus-action' | 'reaction',
+): CharacterAction[] {
+  const eligible = actions.filter((action) => action.active && action.kind === kind)
+  return [
+    ...eligible.filter((action) => action.source.kind === 'manual'),
+    ...eligible.filter((action) => action.source.kind !== 'manual'),
+  ].slice(0, ACTION_FIELD_CAPACITY)
 }
 
 export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): CharacterSheetFieldMap {
@@ -256,6 +333,19 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
       ? [row.notes, row.description].filter(Boolean).join('\n')
       : ''
   }
+
+  const actionFields = [
+    { label: 'Action', actions: actionsForField(viewModel.actions, 'action') },
+    { label: 'Bonus Action', actions: actionsForField(viewModel.actions, 'bonus-action') },
+    { label: 'Reaction', actions: actionsForField(viewModel.actions, 'reaction') },
+  ] as const
+  for (const group of actionFields) {
+    for (let index = 0; index < ACTION_FIELD_CAPACITY; index += 1) {
+      const action = group.actions[index]
+      textFields[`${group.label} ${index + 1}`] = action ? formatActionEntry(action) : ''
+    }
+  }
+
   for (const [ability, mapping] of Object.entries(ABILITY_FIELD_MAP) as Array<
     [AbilityName, { score: string; modifier: string }]
   >) {

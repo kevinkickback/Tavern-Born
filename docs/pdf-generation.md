@@ -43,6 +43,8 @@ The original 2024 mapping assumed its numeric field names followed the page's vi
 - Equipped armor/shield breakdown, two AC adjustments, carried weight, carrying/encumbrance thresholds, and encumbered speed
 - Up to three class hit-die rows, eight limited class-resource rows, and six resistance/immunity rows with overflow notes
 - Up to five weapon attacks with calculated bonuses, damage, type, range, properties, and description
+- Up to six active Actions, six Bonus Actions, and six Reactions, projected from structured source
+  data and user-authored manual actions; manual entries take precedence when a column is full
 - Class/racial/background features and four feats
 - Up to 90 inventory rows across the equipment and extra-equipment pages
 - Five magic items with description, rarity, weight, and attunement state
@@ -51,7 +53,9 @@ The original 2024 mapping assumed its numeric field names followed the page's vi
 
 ## Intentional Limits
 
-- The 2014 Actions, Bonus Actions, and Reactions columns are not auto-filled. Character features currently have prose but no reliable structured action type; guessing from text would put features in the wrong column.
+- The 2014 Actions, Bonus Actions, and Reactions columns each hold six entries. Inactive entries,
+  prose-only features without reliable timing, and weapon attacks already shown in the attack table
+  are excluded. Additional structured entries remain available in the app but cannot fit the form.
 - Multiclass characters store one aggregate `hitDiceUsed` value. The generator prints each class's die and level but leaves per-class spent values blank because the split cannot be reconstructed safely.
 - The 2024 template has one spellcasting summary, 30 spell rows, six weapon rows, and three attunement rows. Additional entries remain available in the app but cannot fit this fixed form.
 - The 2014 template has five attack rows, three hit-die rows, eight limited-resource rows, five magic-item cards, and 90 equipment rows. Additional data is limited by the template.
