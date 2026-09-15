@@ -2,12 +2,19 @@
 
 ## Pipeline
 
-Character sheet export has four boundaries:
+Character sheet export has five boundaries:
 
 1. `CharacterSheetPage` loads the selected template and supplies character plus game-data lookups.
 2. `characterSheetViewModel.ts` resolves class, race, background, spell, item-property, combat, and narrative data into a template-neutral projection.
-3. `characterSheetMapping2014.ts` or `characterSheetMapping2024.ts` maps that projection to the exact AcroForm field names in the shipped PDF.
-4. `pdfFormAdapter.ts` writes values, refreshes appearances, embeds the 2014 portrait and organization emblem, and removes unsupported MPMB controls and scripts.
+3. `exportPreflight.ts` compares that projection with readiness, content-resolution, active-effect, and fixed-template capacity contracts before every download.
+4. `characterSheetMapping2014.ts` or `characterSheetMapping2024.ts` maps that projection to the exact AcroForm field names in the shipped PDF.
+5. `pdfFormAdapter.ts` writes values, refreshes appearances, embeds the 2014 portrait and organization emblem, and removes unsupported MPMB controls and scripts.
+
+Preview generation remains available for inspection, but a download always opens the export
+preflight. Blocking readiness items and missing source dependencies are disclosed rather than
+silently discarded. Active typed mechanics with no reliable fixed-form representation are listed
+as warnings, as is every collection that exceeds a template capacity. The user can return to the
+builder or deliberately download with warnings.
 
 For the legacy 2014 template, saving also replaces mapped checkbox appearances with portable vector marks, records mapped text as both the current and reset/default value, and removes the obsolete MPMB action and calculation-order entries. This is required because some desktop PDF readers do not render the template's font-dependent checkbox glyphs and can reset MPMB-managed fields even though PDF.js displays them correctly in the app preview.
 
@@ -45,13 +52,19 @@ The original 2024 mapping assumed its numeric field names followed the page's vi
 - Up to five weapon attacks with calculated bonuses, damage, type, range, properties, and description
 - Up to six active Actions, six Bonus Actions, and six Reactions, projected from structured source
   data and user-authored manual actions; manual entries take precedence when a column is full
-- Class/racial/background features and four feats
+- Class/racial/background features and four feats, using one ordered list for regular, bonus, and
+  class-owned feat selections
 - Up to 90 inventory rows across the equipment and extra-equipment pages
 - Five magic items with description, rarity, weight, and attunement state
 - Currency, languages, tools, faith, lifestyle, faction/rank, allies/organizations with the selected or custom emblem, appearance, enemies, and expanded history/personality
 - Up to two spellcasting save-DC summaries
 
 ## Intentional Limits
+
+All numeric collection capacities live in `characterSheetCapacities.ts` and are consumed by both
+the mappings and preflight. This prevents the warning boundary from drifting away from the actual
+export boundary. Within each collection, mappings retain the view-model input order; repeated
+exports cannot silently reprioritize entries.
 
 - The 2014 Actions, Bonus Actions, and Reactions columns each hold six entries. Inactive entries,
   prose-only features without reliable timing, and weapon attacks already shown in the attack table
@@ -64,6 +77,12 @@ The original 2024 mapping assumed its numeric field names followed the page's vi
 
 ## Verification
 
-`tests/lib/characterSheetPdf.test.ts` covers semantic mapping, field-capacity boundaries, real-template field-name contracts, actual form filling, and 2014 cleanup. `tests/lib/pdfSavedOutput.test.ts` reopens an actual generated 2014 file and verifies the resistance, armor, language, and tool values plus portable checkbox appearances. When replacing either template, rerun those tests and visually inspect every generated page before changing field names.
+`tests/lib/characterSheetPdf.test.ts` covers semantic mapping, active typed defensive effects,
+unified feat projection, field-capacity boundaries, real-template field-name contracts, actual form
+filling, and 2014 cleanup. `tests/lib/exportPreflight.test.ts` locks readiness, missing-dependency,
+unsupported-effect, inactive-effect, and truncation classification. `tests/lib/pdfSavedOutput.test.ts`
+reopens an actual generated 2014 file and verifies the resistance, armor, language, and tool values
+plus portable checkbox appearances. When replacing either template, rerun those tests and visually
+inspect every generated page before changing field names.
 
 `tests/fixtures/pdf-kitchen-sink.tbc` is an importable level-20 regression character designed to populate both templates heavily. It includes three classes/subclasses, a race/subrace, class-owned and source-qualified choice feats, four spell profiles with 31 unique spells, all skills and saves, six weapons, five magic items, 90 inventory rows, multiple defenses, runtime state, provenance, a portrait, and extensive character details. Its companion test validates the schema, feat-choice ownership fields, and both mapping-capacity boundaries.

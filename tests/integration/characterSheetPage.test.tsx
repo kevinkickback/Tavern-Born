@@ -70,7 +70,7 @@ describe('CharacterSheetPage', () => {
     expect(screen.getByRole('button', { name: 'Download PDF' })).toBeTruthy()
   })
 
-  test('requires explicit acknowledgement before downloading an incomplete sheet', async () => {
+  test('runs an export preflight before downloading a sheet', async () => {
     const user = userEvent.setup()
     render(<CharacterSheetPage templateId="2014" />)
 
@@ -79,8 +79,9 @@ describe('CharacterSheetPage', () => {
     await user.click(screen.getByRole('button', { name: 'Download PDF' }))
 
     expect(screen.getByRole('alertdialog')).toBeTruthy()
-    expect(screen.getByText('Download an incomplete character sheet?')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Download Incomplete PDF' })).toBeTruthy()
+    expect(screen.getByText('PDF export preflight')).toBeTruthy()
+    expect(screen.getAllByText('Readiness').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Download with Warnings' })).toBeTruthy()
 
     await user.click(screen.getByRole('button', { name: 'Go Back' }))
     expect(screen.queryByRole('alertdialog')).toBeNull()

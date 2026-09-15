@@ -1,4 +1,5 @@
 import type { AbilityName } from '@/lib/calculations/abilityScores'
+import { CHARACTER_SHEET_CAPACITIES } from '@/lib/pdf/characterSheetCapacities'
 import {
   type CharacterSheetViewModel,
   formatViewModelModifier,
@@ -60,8 +61,8 @@ function normalizeSize(code: string | undefined): string {
   return SIZE_CODE_TO_FULL[code.toUpperCase()] ?? code
 }
 
-const ACTION_FIELD_CAPACITY = 6
 const ACTION_FIELD_MAX_LENGTH = 72
+const CAPACITY = CHARACTER_SHEET_CAPACITIES['2014']
 
 function titleCase(value: string): string {
   return value.replace(/^\p{L}/u, (letter) => letter.toUpperCase())
@@ -133,7 +134,7 @@ function actionsForField(
   return [
     ...eligible.filter((action) => action.source.kind === 'manual'),
     ...eligible.filter((action) => action.source.kind !== 'manual'),
-  ].slice(0, ACTION_FIELD_CAPACITY)
+  ].slice(0, CAPACITY.actions)
 }
 
 export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): CharacterSheetFieldMap {
@@ -262,22 +263,26 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'Tool 5': tools[4] ?? '',
     'Tool 6': tools[5] ?? '',
     'Proficiency Weapon Other Description': otherWeapons.join(', '),
-    'Feat Name 1': character.feats[0]?.name ?? '',
-    'Feat Name 2': character.feats[1]?.name ?? '',
-    'Feat Name 3': character.feats[2]?.name ?? '',
-    'Feat Name 4': character.feats[3]?.name ?? '',
-    'Feat Description 1': character.feats[0]?.description ?? '',
-    'Feat Description 2': character.feats[1]?.description ?? '',
-    'Feat Description 3': character.feats[2]?.description ?? '',
-    'Feat Description 4': character.feats[3]?.description ?? '',
-    'Feat Note 1': character.feats[0]?.prerequisites ?? '',
-    'Feat Note 2': character.feats[1]?.prerequisites ?? '',
-    'Feat Note 3': character.feats[2]?.prerequisites ?? '',
-    'Feat Note 4': character.feats[3]?.prerequisites ?? '',
+    'Feat Name 1': viewModel.feats[0]?.name ?? '',
+    'Feat Name 2': viewModel.feats[1]?.name ?? '',
+    'Feat Name 3': viewModel.feats[2]?.name ?? '',
+    'Feat Name 4': viewModel.feats[3]?.name ?? '',
+    'Feat Description 1': viewModel.feats[0]?.description ?? '',
+    'Feat Description 2': viewModel.feats[1]?.description ?? '',
+    'Feat Description 3': viewModel.feats[2]?.description ?? '',
+    'Feat Description 4': viewModel.feats[3]?.description ?? '',
+    'Feat Note 1': viewModel.feats[0]?.prerequisites ?? '',
+    'Feat Note 2': viewModel.feats[1]?.prerequisites ?? '',
+    'Feat Note 3': viewModel.feats[2]?.prerequisites ?? '',
+    'Feat Note 4': viewModel.feats[3]?.prerequisites ?? '',
     'Extra.Notes': viewModel.defensiveTraits.slice(6).join('\n'),
   }
 
-  for (let index = 0; index < Math.min(character.equipment.length, 90); index += 1) {
+  for (
+    let index = 0;
+    index < Math.min(character.equipment.length, CAPACITY.equipment);
+    index += 1
+  ) {
     const item = character.equipment[index]
     if (!item) continue
     if (index < 54) {
@@ -293,7 +298,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     }
   }
 
-  for (let index = 0; index < 5; index += 1) {
+  for (let index = 0; index < CAPACITY.magicItems; index += 1) {
     const item = viewModel.magicItems[index]
     const row = index + 1
     textFields[`Extra.Magic Item ${row}`] = item?.name ?? ''
@@ -306,14 +311,14 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     textFields[`Resistance Damage Type ${index + 1}`] = viewModel.defensiveTraits[index] ?? ''
   }
 
-  for (let index = 0; index < 3; index += 1) {
+  for (let index = 0; index < CAPACITY.hitDice; index += 1) {
     const row = viewModel.hitDiceRows[index]
     textFields[`HD${index + 1} Level`] = row ? String(row.level) : ''
     textFields[`HD${index + 1} Die`] = row?.die ?? ''
     textFields[`HD${index + 1} Used`] = row?.used != null ? String(row.used) : ''
   }
 
-  for (let index = 0; index < 8; index += 1) {
+  for (let index = 0; index < CAPACITY.classResources; index += 1) {
     const row = viewModel.classResourceRows[index]
     textFields[`Limited Feature ${index + 1}`] = row?.label ?? ''
     textFields[`Limited Feature Max Usages ${index + 1}`] = row ? String(row.max) : ''
@@ -321,7 +326,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     textFields[`Limited Feature Used ${index + 1}`] = row ? String(row.used) : ''
   }
 
-  for (let index = 0; index < 5; index += 1) {
+  for (let index = 0; index < CAPACITY.weapons; index += 1) {
     const row = viewModel.weaponRows[index]
     const fieldNumber = index + 1
     textFields[`Attack.${fieldNumber}.Weapon Selection`] = row?.name ?? ''
@@ -340,7 +345,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     { label: 'Reaction', actions: actionsForField(viewModel.actions, 'reaction') },
   ] as const
   for (const group of actionFields) {
-    for (let index = 0; index < ACTION_FIELD_CAPACITY; index += 1) {
+    for (let index = 0; index < CAPACITY.actions; index += 1) {
       const action = group.actions[index]
       textFields[`${group.label} ${index + 1}`] = action ? formatActionEntry(action) : ''
     }
@@ -369,7 +374,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'Proficiency Weapon Martial': weaponsLower.some((weapon) => weapon.includes('martial')),
     'Proficiency Weapon Other': otherWeapons.length > 0,
   }
-  for (let index = 0; index < 5; index += 1) {
+  for (let index = 0; index < CAPACITY.magicItems; index += 1) {
     checkboxFields[`Extra.Magic Item Attuned ${index + 1}`] = !!viewModel.magicItems[index]?.attuned
   }
   for (const [ability, mapping] of Object.entries(SAVE_FIELD_MAP) as Array<

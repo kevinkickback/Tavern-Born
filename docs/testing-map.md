@@ -166,7 +166,12 @@ new tests land and do not lower them to merge a change.
 - Bundled asset URL coverage in tests/lib/assetUrls.test.ts and the compiled Electron smoke test,
 	including class icons, legacy portrait and organization paths, hosted base paths, and real packaged SVG loading
 - Store-level empty background refresh guard in tests/store/gameDataStore.test.ts (prevents clobbering existing cache/state)
-- Character sheet PDF boundary coverage for lookup-enriched view-model projection, organization-emblem embedding, semantic 2014/2024 mapping, field-capacity limits, real shipped-template field-name contracts, form filling, and 2014 MPMB cleanup, plus saved-file compatibility coverage for resistance, armor, language, tool, and checkbox appearances and flat workspace-shell/preview-canvas presentation coverage
+- Character sheet PDF boundary coverage for lookup-enriched view-model projection, active typed
+  defenses, unified feat ownership, organization-emblem embedding, semantic 2014/2024 mapping,
+  shared field-capacity limits, export-preflight classification, real shipped-template field-name
+  contracts, form filling, and 2014 MPMB cleanup, plus saved-file compatibility coverage for
+  resistance, armor, language, tool, and checkbox appearances and flat
+  workspace-shell/preview-canvas presentation coverage
 - Importable PDF kitchen-sink character coverage in tests/fixtures/pdf-kitchen-sink.tbc and tests/lib/pdfKitchenSinkFixture.test.ts (multiclass/subclass, class-owned and source-qualified feat choices, spell profiles, full skills/saves, attacks, magic items, 90-row inventory, narrative/runtime state, schema validation, and both template capacity boundaries)
 
 ## High-Priority Gaps

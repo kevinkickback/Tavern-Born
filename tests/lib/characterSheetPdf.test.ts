@@ -1174,6 +1174,90 @@ describe('characterSheetPdf', () => {
     expect(map.textFields['Background_FactionRank.Text']).toBe('Watcher')
   })
 
+  test('projects active typed defensive effects without duplicating persisted traits', () => {
+    const character = makeCharacterFixture({
+      damageResistances: ['test damage'],
+      manualEffects: [
+        {
+          id: 'effect-active-duplicate',
+          label: 'Duplicate defense',
+          source: { kind: 'manual', name: 'Test adjustment' },
+          target: { kind: 'damage-resistance', damageType: 'test damage' },
+          operation: { kind: 'grant' },
+        },
+        {
+          id: 'effect-active-immunity',
+          label: 'Additional defense',
+          source: { kind: 'manual', name: 'Test adjustment' },
+          target: { kind: 'condition-immunity', condition: 'test condition' },
+          operation: { kind: 'grant' },
+        },
+        {
+          id: 'effect-suppressed',
+          label: 'Suppressed defense',
+          source: { kind: 'manual', name: 'Test adjustment' },
+          target: { kind: 'damage-immunity', damageType: 'suppressed damage' },
+          operation: { kind: 'grant' },
+        },
+      ],
+      suppressedEffectIds: ['effect-suppressed'],
+    })
+
+    const viewModel = prepareViewModel(character)
+
+    expect(viewModel.defensiveTraits).toEqual([
+      'test damage resistance',
+      'test condition condition immunity',
+    ])
+  })
+
+  test('projects regular, bonus, and class-owned feats through one ordered PDF list', () => {
+    const regularFeat = {
+      id: 'feat-regular',
+      name: 'Regular Test Feat',
+      source: 'TEST',
+      description: 'Regular selection.',
+    }
+    const bonusFeat = {
+      id: 'feat-bonus',
+      name: 'Bonus Test Feat',
+      source: 'TEST',
+      description: 'Bonus selection.',
+    }
+    const classFeat = {
+      id: 'feat-class',
+      name: 'Class Test Feat',
+      source: 'TEST',
+      description: 'Class-owned selection.',
+    }
+    const viewModel = prepareViewModel(
+      makeCharacterFixture({
+        feats: [regularFeat],
+        specialFeats: [bonusFeat],
+        classFeatChoices: [
+          {
+            id: 'class-choice',
+            className: 'Test Class',
+            classSource: 'TEST',
+            progressionName: 'Test Progression',
+            categories: [],
+            feats: [classFeat],
+          },
+        ],
+      }),
+    )
+    const map = mapCharacterSheetViewModel(viewModel, '2014')
+
+    expect(viewModel.feats.map((feat) => feat.id)).toEqual([
+      'feat-regular',
+      'feat-bonus',
+      'feat-class',
+    ])
+    expect(map.textFields['Feat Name 1']).toBe('Regular Test Feat')
+    expect(map.textFields['Feat Name 2']).toBe('Bonus Test Feat')
+    expect(map.textFields['Feat Name 3']).toBe('Class Test Feat')
+  })
+
   test.each([
     '2014',
     '2024',

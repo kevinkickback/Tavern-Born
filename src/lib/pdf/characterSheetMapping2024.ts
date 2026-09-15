@@ -1,9 +1,12 @@
 import type { AbilityName } from '@/lib/calculations/abilityScores'
+import { CHARACTER_SHEET_CAPACITIES } from '@/lib/pdf/characterSheetCapacities'
 import {
   type CharacterSheetViewModel,
   formatViewModelModifier,
 } from '@/lib/pdf/characterSheetViewModel'
 import type { CharacterSheetFieldMap } from '@/lib/pdf/types'
+
+const CAPACITY = CHARACTER_SHEET_CAPACITIES['2024']
 
 const SKILL_FIELD_MAP: Record<string, { modifier: string; proficiency: string }> = {
   acrobatics: { modifier: 'Text_48', proficiency: 'Checkbox_11' },
@@ -100,7 +103,9 @@ export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): Chara
     viewModel.classFeaturesSummary2014,
   )
   const primarySpellcasting = viewModel.spellcastingDetails[0]
-  const attunedItems = viewModel.magicItems.filter((item) => item.attuned).slice(0, 3)
+  const attunedItems = viewModel.magicItems
+    .filter((item) => item.attuned)
+    .slice(0, CAPACITY.attunements)
   const hasEquippedShield = character.equipment.some(
     (item) => item.equipped && (item.armorType === 'shield' || item.type === 'S'),
   )
@@ -199,7 +204,7 @@ export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): Chara
     checkboxFields[mapping.proficiency] = !!skill?.proficient
   }
 
-  for (let index = 0; index < 6; index += 1) {
+  for (let index = 0; index < CAPACITY.weapons; index += 1) {
     const row = viewModel.weaponRows[index]
     textFields[`Text_${61 + index}`] = row?.name ?? ''
     textFields[`Text_${67 + index}`] = row?.attackBonus ?? ''
@@ -209,7 +214,7 @@ export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): Chara
     textFields[`Text_${79 + index}`] = row?.notes ?? ''
   }
 
-  for (let index = 0; index < 30; index += 1) {
+  for (let index = 0; index < CAPACITY.spells; index += 1) {
     const row = viewModel.spellRows[index]
     textFields[`Text_${92 + index}`] = row?.level ?? ''
     textFields[`Text_${122 + index}`] = row?.name ?? ''

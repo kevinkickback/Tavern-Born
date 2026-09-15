@@ -9,19 +9,11 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { ExportPreflightDialog } from '@/components/pdf/ExportPreflightDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useCharacterReadiness } from '@/hooks/character/useCharacterReadiness'
 import {
   useBackgroundLookup,
@@ -39,6 +31,7 @@ import {
   generateFilledCharacterSheetPdf,
   getCharacterSheetTemplate,
 } from '@/lib/pdf/characterSheetPdf'
+import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { useCharacterStore } from '@/store/characterStore'
 import { NoCharCard } from './_shared'
 
@@ -63,10 +56,11 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [zoom, setZoom] = useState(100)
-  const [incompleteExportOpen, setIncompleteExportOpen] = useState(false)
+  const [exportPreflightOpen, setExportPreflightOpen] = useState(false)
   const cancelRef = useRef<{ canceled: boolean } | null>(null)
   const selectedTemplate = useMemo(() => getCharacterSheetTemplate(templateId), [templateId])
   const readiness = useCharacterReadiness(character)
+  const calculation = useCharacterCalculationContext(character)
   const viewModel = useMemo(
     () =>
       character
@@ -102,6 +96,25 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const downloadName = useMemo(
     () => `${getSafeFileName(characterName)}_${templateId}_character_sheet.pdf`,
     [characterName, templateId],
+  )
+  const exportPreflight = useMemo(
+    () =>
+      viewModel
+        ? getPdfExportPreflight(
+            templateId,
+            viewModel,
+            readiness,
+            calculation?.effects.declarations ?? [],
+            calculation?.effects.resolutionContext,
+          )
+        : { issues: [], blockingCount: 0, warningCount: 0 },
+    [
+      calculation?.effects.declarations,
+      calculation?.effects.resolutionContext,
+      readiness,
+      templateId,
+      viewModel,
+    ],
   )
 
   const handleGenerate = useCallback(async () => {
@@ -165,11 +178,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       toast.error('Generate a preview before downloading the sheet.')
       return
     }
-    if (readiness?.status === 'incomplete') {
-      setIncompleteExportOpen(true)
-      return
-    }
-    downloadPdf()
+    setExportPreflightOpen(true)
   }
 
   if (!character) {
@@ -303,29 +312,15 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
         </div>
       </WorkspaceBody>
 
-      <AlertDialog open={incompleteExportOpen} onOpenChange={setIncompleteExportOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Download an incomplete character sheet?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This draft has {readiness?.blockingIssues.length ?? 0} unresolved required{' '}
-              {(readiness?.blockingIssues.length ?? 0) === 1 ? 'choice' : 'choices'}. The PDF may be
-              missing rules or selections. You can still download it if that is intentional.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Go Back</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setIncompleteExportOpen(false)
-                downloadPdf()
-              }}
-            >
-              Download Incomplete PDF
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ExportPreflightDialog
+        open={exportPreflightOpen}
+        onOpenChange={setExportPreflightOpen}
+        result={exportPreflight}
+        onConfirm={() => {
+          setExportPreflightOpen(false)
+          downloadPdf()
+        }}
+      />
     </WorkspacePage>
   )
 }

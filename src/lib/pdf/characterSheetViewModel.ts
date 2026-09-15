@@ -10,6 +10,7 @@ import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScor
 import { deriveCharacterActions } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
   type EffectiveMovement,
@@ -37,7 +38,8 @@ import {
 import { renderEntriesToText } from '@/lib/entryText'
 import type { Background5e, Class5e, Organization5e, Race5e, Spell5e } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
-import type { AbilityScores, Character, Equipment } from '@/types/character'
+import type { AbilityScores, Character, Equipment, Feat } from '@/types/character'
+import type { CharacterEffect } from '@/types/effects'
 
 type ModifierResult = { modifier: number; proficient: boolean }
 
@@ -82,6 +84,7 @@ interface CharacterSheetHitDieRow {
 
 export interface CharacterSheetViewModel {
   character: Character
+  feats: Feat[]
   level: number
   classSummary: string
   subclassSummary: string
@@ -488,11 +491,41 @@ function buildClassResourceRows(
   })
 }
 
-function buildDefensiveTraits(character: Character): string[] {
-  return [
+function buildDefensiveTraits(
+  character: Character,
+  effects: readonly CharacterEffect[],
+  effectContext: EffectResolutionContext,
+): string[] {
+  const traits = [
     ...(character.damageResistances ?? []).map((value) => `${value} resistance`),
     ...(character.damageImmunities ?? []).map((value) => `${value} immunity`),
     ...(character.conditionImmunities ?? []).map((value) => `${value} condition immunity`),
+  ]
+  for (const effect of effects) {
+    if (effect.operation.kind !== 'grant' || !isCharacterEffectActive(effect, effectContext))
+      continue
+    if (effect.target.kind === 'damage-resistance') {
+      traits.push(`${effect.target.damageType} resistance`)
+    } else if (effect.target.kind === 'damage-immunity') {
+      traits.push(`${effect.target.damageType} immunity`)
+    } else if (effect.target.kind === 'condition-immunity') {
+      traits.push(`${effect.target.condition} condition immunity`)
+    }
+  }
+  const seen = new Set<string>()
+  return traits.filter((trait) => {
+    const key = trait.trim().toLocaleLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function getSelectedFeats(character: Character): Feat[] {
+  return [
+    ...(character.feats ?? []),
+    ...(character.specialFeats ?? []),
+    ...(character.classFeatChoices ?? []).flatMap((choice) => choice.feats),
   ]
 }
 
@@ -511,6 +544,7 @@ export function createCharacterSheetViewModel(
   rawLookups: CharacterSheetLookupSet,
 ): CharacterSheetViewModel {
   const calculationContext = createCharacterCalculationContext(character, rawLookups)
+  const feats = getSelectedFeats(character)
   const effectiveAbilityScores = calculationContext.abilityScores.total
   const level = getTotalCharacterLevel(character) || 1
   const proficiencyBonus = getProficiencyBonus(level)
@@ -561,6 +595,7 @@ export function createCharacterSheetViewModel(
 
   return {
     character,
+    feats,
     level,
     classSummary: getClassSummary(character),
     subclassSummary: getSubclassSummary(character),
@@ -613,7 +648,7 @@ export function createCharacterSheetViewModel(
       .join('\n'),
     proficienciesSummary: buildProficienciesSummary(character),
     languagesSummary: character.proficiencies.languages.join(', '),
-    featsSummary: character.feats
+    featsSummary: feats
       .map((feat) => {
         const body = feat.description?.trim()
         return body ? `${feat.name}: ${body}` : feat.name
@@ -634,7 +669,11 @@ export function createCharacterSheetViewModel(
     alliesAndOrganizationsSummary: buildAlliesAndOrganizationsSummary(character),
     organizationDetailsSummary: buildOrganizationDetailsSummary(character),
     organizationImage: resolveOrganizationImage(character, rawLookups.organizations ?? []),
-    defensiveTraits: buildDefensiveTraits(character),
+    defensiveTraits: buildDefensiveTraits(
+      character,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
+    ),
   }
 }
 
