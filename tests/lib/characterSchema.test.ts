@@ -72,4 +72,33 @@ describe('characterPersistenceSchema', () => {
     expect(result.movementOverrides).toEqual({ fly: 40 })
     expect(result.movementHoverOverride).toBe(true)
   })
+
+  test('round-trips source-qualified class choice selections and slot ownership', () => {
+    const character = makeCharacterFixture({
+      classChoiceSelections: [
+        {
+          choiceId: 'class:sorcerer|xphb|choice:metamagic|2',
+          label: 'Metamagic',
+          kind: 'metamagic',
+          className: 'Sorcerer',
+          classSource: 'XPHB',
+          classLevel: 2,
+          selected: [
+            {
+              entityType: 'optionalFeature',
+              name: 'Quickened Spell',
+              source: 'XPHB',
+              slotLevel: 2,
+            },
+          ],
+        },
+      ],
+    })
+
+    const result = characterPersistenceSchema.parse(
+      JSON.parse(JSON.stringify(character)) as unknown,
+    )
+
+    expect(result.classChoiceSelections).toEqual(character.classChoiceSelections)
+  })
 })

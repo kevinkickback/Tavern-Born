@@ -112,6 +112,29 @@ const movementAdjustmentSchema = z.object({
   createdAt: z.string(),
 })
 
+const characterClassChoiceSelectionSchema = z.object({
+  choiceId: z.string().min(1),
+  label: z.string().min(1),
+  kind: z.enum([
+    'class-feature',
+    'fighting-style',
+    'metamagic',
+    'optional-feature',
+    'weapon-mastery',
+  ]),
+  className: z.string().min(1),
+  classSource: z.string().min(1),
+  classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+  selected: z.array(
+    z.object({
+      entityType: z.enum(['classFeature', 'feat', 'item', 'optionalFeature']),
+      name: z.string().min(1),
+      source: z.string().optional(),
+      slotLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+    }),
+  ),
+})
+
 const featureSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -588,6 +611,7 @@ export const characterSchema = z
     asiChoices: z.array(asiChoiceSchema).optional(),
     specialFeats: z.array(featSchema).optional(),
     classFeatChoices: z.array(classFeatChoiceSchema).optional(),
+    classChoiceSelections: z.array(characterClassChoiceSelectionSchema).optional(),
     fixedFeatOptions: z.record(featOptionSelectionsSchema).optional(),
     provenance: provenanceLedgerSchema.optional(),
     inspiration: z.boolean().optional(),

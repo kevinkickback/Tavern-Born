@@ -85,6 +85,31 @@ export interface MovementAdjustment {
   createdAt: string
 }
 
+export type CharacterClassChoiceKind =
+  | 'class-feature'
+  | 'fighting-style'
+  | 'metamagic'
+  | 'optional-feature'
+  | 'weapon-mastery'
+
+export interface CharacterClassChoiceOption {
+  entityType: 'classFeature' | 'feat' | 'item' | 'optionalFeature'
+  name: string
+  source?: string
+  /** Class level at which this selection occupied an available choice slot. */
+  slotLevel: number
+}
+
+export interface CharacterClassChoiceSelection {
+  choiceId: string
+  label: string
+  kind: CharacterClassChoiceKind
+  className: string
+  classSource: string
+  classLevel: number
+  selected: CharacterClassChoiceOption[]
+}
+
 export interface Character {
   id: string
   version: string
@@ -201,6 +226,9 @@ export interface Character {
 
   /** Feat selections owned by a specific class progression grant. */
   classFeatChoices?: ClassFeatChoice[]
+
+  /** Structured choices owned by a source-qualified class feature or progression. */
+  classChoiceSelections?: CharacterClassChoiceSelection[]
 
   /** Follow-up selections for fixed provenance feat grants, keyed by name|source|variant. */
   fixedFeatOptions?: Record<string, FeatOptionSelections>

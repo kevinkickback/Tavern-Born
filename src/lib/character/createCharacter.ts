@@ -104,6 +104,7 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
     skills: {},
     details: {},
     portraitTransform: { ...DEFAULT_PORTRAIT_TRANSFORM },
+    classChoiceSelections: [],
     createdAt: now,
     lastModified: now,
     provenance: emptyProvenance(),

@@ -132,6 +132,10 @@ edit.
   by full class printing and progression identity. Their slot levels allow level-down and class
   removal to retract only the affected choices. `character.specialFeats` is reserved for unscoped
   bonus feats.
+- Other normalized class choices are stored in `character.classChoiceSelections`. Every selected
+  option retains its source-qualified entity identity and the class level that supplied its slot,
+  so level-down and class removal retract only unavailable slots without requiring game data during
+  the state transition.
 
 ## Spell State Model
 

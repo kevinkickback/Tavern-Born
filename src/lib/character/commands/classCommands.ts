@@ -39,6 +39,7 @@ import type {
   HitPointGainMethod,
   Skills,
 } from '@/types/character'
+import { reconcileClassChoiceSelections } from './classChoiceCommands'
 import type { CharacterCommandResult } from './commandResult'
 
 function normalizeSavingThrowName(name: string): string {
@@ -458,6 +459,10 @@ export function applyClassProgressionUpdate(
     classSource: nextProgression[0]?.source ?? character.classSource,
     hitPointGains,
     classFeatChoices: retainedClassFeatChoices,
+    classChoiceSelections: reconcileClassChoiceSelections(
+      character.classChoiceSelections,
+      nextProgression,
+    ),
     spells: workingCharacter.spells,
     proficiencies: workingCharacter.proficiencies,
     skills: workingCharacter.skills,

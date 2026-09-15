@@ -90,6 +90,9 @@ new tests land and do not lower them to merge a change.
 - Spell identity coverage includes lowercase legacy references, source-qualified catalog resolution,
   modal hiding/locking, and mixed-case command deduplication.
 - Command-layer spell and class coverage in tests/unit/spellCommands.test.ts and tests/unit/classCommands.test.ts
+- Structured class-choice command coverage in tests/unit/classChoiceCommands.test.ts includes
+  partial drafts, cardinality/source validation, deterministic slot ownership, and level/class
+  retraction.
 - Schema migrations in src/lib/schema/migrations.ts with dedicated unit coverage in tests/lib/migrations.test.ts
 - Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)
 - Current workflow coverage in tests/integration/spellOperations.test.tsx, tests/integration/multiclassUpdates.test.tsx, tests/integration/contentFiltering.test.tsx, and tests/integration/armorClass.test.tsx
