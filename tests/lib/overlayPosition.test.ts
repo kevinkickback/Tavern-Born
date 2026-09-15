@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
   clampPreviewPosition,
-  getFloatingPreviewPosition,
   getTitleBarCollisionPadding,
   getTitleBarOverlayHeight,
   getTitleBarSafeTop,
@@ -47,38 +46,5 @@ describe('title-bar-safe overlay positioning', () => {
         40,
       ),
     ).toEqual({ left: 952, top: 472 })
-  })
-
-  test('places a tall preview below a trigger when above would cross the title bar', () => {
-    expect(
-      getFloatingPreviewPosition(
-        { top: 48, right: 140, bottom: 68, left: 80 },
-        { width: 320, height: 360 },
-        { width: 1280, height: 720 },
-        40,
-      ),
-    ).toEqual({ left: 80, top: 72 })
-  })
-
-  test('never places a preview above the title-bar safe inset', () => {
-    expect(
-      getFloatingPreviewPosition(
-        { top: 0, right: 0, bottom: 0, left: 0 },
-        { width: 320, height: 240 },
-        { width: 1280, height: 720 },
-        40,
-      ),
-    ).toEqual({ left: 8, top: 40 })
-  })
-
-  test('clamps a measured preview inside the safe viewport when neither side fits', () => {
-    expect(
-      getFloatingPreviewPosition(
-        { top: 300, right: 140, bottom: 320, left: 1100 },
-        { width: 320, height: 500 },
-        { width: 1280, height: 600 },
-        46,
-      ),
-    ).toEqual({ left: 952, top: 92 })
   })
 })

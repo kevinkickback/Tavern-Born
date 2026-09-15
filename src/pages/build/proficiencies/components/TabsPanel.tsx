@@ -235,7 +235,6 @@ export function BuildProficienciesTabsPanel({
   const expertiseHintPos = useAnchoredHintPosition({
     enabled: showExpertiseHint && availableExpertiseSlots > 0,
     selector: EXPERTISE_HINT_SELECTOR,
-    width: EXPERTISE_HINT_WIDTH,
   })
 
   const handleDismissExpertiseHint = () => {

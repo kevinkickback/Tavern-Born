@@ -37,19 +37,11 @@ describe('useAnchoredHintPosition', () => {
       useAnchoredHintPosition({
         enabled: true,
         selector: '[data-hint-anchor="true"]',
-        width: 300,
       }),
     )
 
-    await waitFor(() =>
-      expect(result.current).toEqual({
-        top: 152,
-        left: 16,
-        arrowLeft: 124,
-        anchorTop: 100,
-        gap: 12,
-      }),
-    )
+    await waitFor(() => expect(result.current?.reference).toBe(anchor))
+    expect(result.current).toMatchObject({ gap: 12, placement: 'bottom' })
 
     covered = true
     act(() => window.dispatchEvent(new Event('scroll')))
@@ -57,15 +49,7 @@ describe('useAnchoredHintPosition', () => {
 
     covered = false
     act(() => window.dispatchEvent(new Event('scroll')))
-    await waitFor(() =>
-      expect(result.current).toEqual({
-        top: 152,
-        left: 16,
-        arrowLeft: 124,
-        anchorTop: 100,
-        gap: 12,
-      }),
-    )
+    await waitFor(() => expect(result.current?.reference).toBe(anchor))
 
     unmount()
   })

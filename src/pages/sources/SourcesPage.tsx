@@ -52,7 +52,6 @@ export function SourcesPage() {
   const hintPosition = useAnchoredHintPosition({
     enabled: showHint,
     selector: ALLOWED_SOURCES_HEADER_SELECTOR,
-    width: HINT_WIDTH,
     gap: 10,
   })
 

@@ -1,6 +1,5 @@
 const TITLE_BAR_BASE_HEIGHT = 32
 const OVERLAY_VIEWPORT_MARGIN = 8
-const OVERLAY_GAP = 4
 
 export interface PreviewPosition {
   left: number
@@ -10,13 +9,6 @@ export interface PreviewPosition {
 export interface PreviewBounds extends PreviewPosition {
   width: number
   height: number
-}
-
-interface RectBounds {
-  top: number
-  right: number
-  bottom: number
-  left: number
 }
 
 interface OverlaySize {
@@ -78,29 +70,4 @@ export function clampPreviewPosition(
     left: Math.max(OVERLAY_VIEWPORT_MARGIN, Math.min(position.left, maxLeft)),
     top: Math.max(safeTop, Math.min(position.top, maxTop)),
   }
-}
-
-export function getFloatingPreviewPosition(
-  trigger: RectBounds,
-  overlay: OverlaySize,
-  viewport: ViewportSize,
-  safeTop: number,
-): { left: number; top: number } {
-  const maxLeft = Math.max(
-    OVERLAY_VIEWPORT_MARGIN,
-    viewport.width - overlay.width - OVERLAY_VIEWPORT_MARGIN,
-  )
-  const left = Math.max(OVERLAY_VIEWPORT_MARGIN, Math.min(trigger.left, maxLeft))
-  const aboveTop = trigger.top - OVERLAY_GAP - overlay.height
-  const belowTop = Math.max(trigger.bottom + OVERLAY_GAP, safeTop)
-  const maxTop = Math.max(safeTop, viewport.height - overlay.height - OVERLAY_VIEWPORT_MARGIN)
-
-  if (aboveTop >= safeTop) return { left, top: aboveTop }
-  if (belowTop <= maxTop) return { left, top: belowTop }
-
-  const spaceAbove = trigger.top - OVERLAY_GAP - safeTop
-  const spaceBelow = viewport.height - OVERLAY_VIEWPORT_MARGIN - belowTop
-  const preferredTop = spaceAbove >= spaceBelow ? aboveTop : belowTop
-
-  return { left, top: Math.max(safeTop, Math.min(preferredTop, maxTop)) }
 }

@@ -240,7 +240,6 @@ export function BuildClassPage() {
   const hintPosition = useAnchoredHintPosition({
     enabled: showLevelUpHint,
     selector: LEVEL_UP_BUTTON_SELECTOR,
-    width: LEVEL_UP_HINT_WIDTH,
     horizontalAlign: 'end',
   })
 

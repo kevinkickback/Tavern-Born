@@ -64,7 +64,9 @@ new tests land and do not lower them to merge a change.
 - Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions, deterministic source-less fallback, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
 - Renderer output in src/lib/renderer.ts
-- Recursive tooltip builder, hook, and nested interaction coverage for explicit collection sets, stable source/name keys, `itemsBase`, multi-level tooltip chains, constrained-position staggering, and active-depth styling
+- Recursive tooltip builder, hook, and nested interaction coverage for explicit collection sets,
+  stable source/name keys, `itemsBase`, multi-level tooltip chains, Floating UI anchoring, and
+  active-depth styling
 - Provenance ledger/reconciliation modules
 - Provenance section row routing helper in src/lib/provenance/sectionRows.ts
 - Provenance composed hooks in src/hooks/character/useProvenance*.ts
@@ -102,7 +104,11 @@ new tests land and do not lower them to merge a change.
 - Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
 - Header HP/AC/rest launch controls and one-time anchored hint coverage in tests/integration/appHeader.test.tsx
 - Character-card action behavior and consistent accent-colored level, race, and class icons in tests/integration/characterCard.test.tsx
-- Title-bar-safe collision padding and measured floating-preview positioning across supported interface scales, plus nested-only history navigation, streamlined transient controls, selected-entry pinning without a position jump, and constrained pointer/keyboard movement
+- Title-bar-safe Floating UI collision padding and live anchoring across supported interface scales,
+  plus nested-only history navigation, streamlined transient controls, selected-entry pinning
+  without a position jump, and constrained pointer/keyboard movement. Pure positioning tests cover
+  only Tavern Born's pinned-preview clamping; Floating UI's geometry implementation is not
+  duplicated in the test suite.
 - HP and AC management modal coverage in tests/integration/hitPointsModal.test.tsx and tests/integration/armorClassModal.test.tsx
 - Rules and Sources page behavior/layout coverage in tests/integration/rulesPage.test.tsx and tests/integration/sourcesPageLayout.test.tsx
 - Ability-score method descriptors are tested for both origin systems in

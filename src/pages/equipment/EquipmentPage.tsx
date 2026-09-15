@@ -123,7 +123,6 @@ export function EquipmentPage() {
   const hintPosition = useAnchoredHintPosition({
     enabled: showEquipHint && equipment.length > 0,
     selector: EQUIP_AC_TOGGLE_SELECTOR,
-    width: EQUIP_HINT_WIDTH,
   })
 
   const handleDismissEquipHint = () => {

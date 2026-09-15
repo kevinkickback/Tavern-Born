@@ -113,7 +113,14 @@ Current implementation notes:
   Class records expose no equivalent top-level lasting-effect fields in the supported corpus, and
   known/prepared spell effects are not treated as active without an active-effect lifecycle.
 - The header heart and shield open the HP and AC management modals. A one-time anchored hint advertises these controls from the first Builder page.
-- Portaled tooltips and recursive rules previews share the scale-aware native title-bar safe inset in `src/lib/overlayPosition.ts`; measured preview cards are repositioned after layout so they cannot sit beneath Electron window controls. Root previews keep only their Pin action, nested previews add direct-history navigation, and pinning freezes the selected entry at its current viewport position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and keyboard repositioning while History and Unpin remain independent controls.
+- Unpinned portaled hints and recursive rules previews use `@floating-ui/react-dom` for measured
+  anchoring, offsets, collision-aware flipping/shifting, and live viewport updates. The shared
+  scale-aware native title-bar inset in `src/lib/overlayPosition.ts` supplies Floating UI's top
+  collision boundary; that module retains only the application-specific clamping used after a
+  preview is pinned and dragged. Root previews keep only their Pin action, nested previews add
+  direct-history navigation, and pinning freezes the selected entry at its current viewport
+  position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and
+  keyboard repositioning while History and Unpin remain independent controls.
 - Per-character Rules and Sources live in the Builder workspace's Options group. Rules are tabbed by Ruleset, Advancement, and Character Options; the selected ruleset itself remains fixed after creation.
 - Conditions is tabbed by Combat State, Exhaustion, Conditions, and Class Resources. Condition names and descriptions, including exhaustion rules, come from the loaded PHB/XPHB condition records selected for the character ruleset.
 

@@ -18,7 +18,6 @@ import {
 import { getTitleBarSafeTop } from '@/lib/overlayPosition'
 import {
   getEntryWithHoverTitles,
-  getRecursiveHintPosition,
   getRecursiveTooltipData,
   parseRecursiveReference,
   type RecursiveLookup,
@@ -220,9 +219,7 @@ export function SpellNameTooltip({
       formatSpellLevel,
       getSchoolName,
     )
-    const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html, safeTop)
-
-    appendRecursiveHint(depth, { ...resolved, x, y, triggerElement: withTitle })
+    appendRecursiveHint(depth, { ...resolved, triggerElement: withTitle })
   }
 
   const historyTitles = [spell?.name ?? displayName, ...recursiveHints.map((hint) => hint.title)]

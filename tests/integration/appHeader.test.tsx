@@ -59,7 +59,7 @@ vi.mock('@/hooks/character/useHitPoints', () => ({
 
 vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
   useAnchoredHintPosition: ({ enabled }: { enabled: boolean }) =>
-    enabled ? { top: 40, left: 40, arrowLeft: 20, anchorTop: 20, gap: 12 } : null,
+    enabled ? { reference: document.body, gap: 12, placement: 'bottom' } : null,
 }))
 
 describe('app header character summary', () => {

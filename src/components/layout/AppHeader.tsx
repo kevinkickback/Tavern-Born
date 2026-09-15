@@ -106,7 +106,6 @@ export function AppHeader() {
   const statMenusHintPosition = useAnchoredHintPosition({
     enabled: showStatMenusHint && showStatMenusHintOnPage && !!activeCharacter,
     selector: STAT_MENUS_HINT_SELECTOR,
-    width: STAT_MENUS_HINT_WIDTH,
     horizontalAlign: 'end',
   })
   const showLevelUp = [

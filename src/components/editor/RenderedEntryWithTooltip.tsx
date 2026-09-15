@@ -1,3 +1,4 @@
+import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/react-dom'
 import {
   memo,
   useCallback,
@@ -23,10 +24,9 @@ import {
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
 import { renderEntryCached } from '@/lib/entryRenderCache'
-import { getFloatingPreviewPosition, getTitleBarSafeTop } from '@/lib/overlayPosition'
+import { getTitleBarSafeTop } from '@/lib/overlayPosition'
 import {
   getEntryWithHoverTitles,
-  getRecursiveHintPosition,
   getRecursiveTooltipData,
   markRecursiveTooltipReferences,
   normalizeKind,
@@ -38,18 +38,13 @@ import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import type { Spell5e } from '@/types/5etools'
 
-const TOOLTIP_WIDTH = 320
-const EST_HEIGHT = 240
-
 type HintState =
-  | { kind: 'spell'; spell: Spell5e; left: number; top: number; triggerElement: HTMLElement }
+  | { kind: 'spell'; spell: Spell5e; triggerElement: HTMLElement }
   | {
       kind: 'generic'
       title: string
       subtitle?: string
       html?: string
-      left: number
-      top: number
       triggerElement: HTMLElement
     }
 
@@ -142,26 +137,25 @@ export function RenderedEntryWithTooltip({
     const trigger = hint?.triggerElement
     if (!tooltip || !trigger || pinnedDepth !== null) return
 
-    const updatePosition = () => {
-      const position = getFloatingPreviewPosition(
-        trigger.getBoundingClientRect(),
-        { width: tooltip.offsetWidth || TOOLTIP_WIDTH, height: tooltip.offsetHeight || EST_HEIGHT },
-        { width: window.innerWidth, height: window.innerHeight },
-        safeTop,
-      )
-      tooltip.style.left = `${position.left}px`
-      tooltip.style.top = `${position.top}px`
-    }
-
-    updatePosition()
-    window.addEventListener('resize', updatePosition)
-    const resizeObserver =
-      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updatePosition)
-    resizeObserver?.observe(tooltip)
-
+    let active = true
+    const cleanup = autoUpdate(trigger, tooltip, () => {
+      void computePosition(trigger, tooltip, {
+        placement: 'top-start',
+        strategy: 'fixed',
+        middleware: [
+          offset(4),
+          flip({ padding: { top: safeTop, right: 8, bottom: 8, left: 8 } }),
+          shift({ padding: { top: safeTop, right: 8, bottom: 8, left: 8 } }),
+        ],
+      }).then(({ x, y }) => {
+        if (!active || !tooltip.isConnected) return
+        tooltip.style.left = `${x}px`
+        tooltip.style.top = `${y}px`
+      })
+    })
     return () => {
-      window.removeEventListener('resize', updatePosition)
-      resizeObserver?.disconnect()
+      active = false
+      cleanup()
     }
   }, [hint, pinnedDepth, safeTop])
 
@@ -211,12 +205,6 @@ export function RenderedEntryWithTooltip({
         el.getAttribute('data-hover-subclass-name') ?? undefined,
         el.getAttribute('data-hover-subclass-source') ?? undefined,
       )
-      const { left, top } = getFloatingPreviewPosition(
-        el.getBoundingClientRect(),
-        { width: TOOLTIP_WIDTH, height: EST_HEIGHT },
-        { width: window.innerWidth, height: window.innerHeight },
-        safeTop,
-      )
       setRecursiveHints([])
 
       if (normalizeKind(scopedReference.kind) === 'spell') {
@@ -226,8 +214,8 @@ export function RenderedEntryWithTooltip({
           scopedReference.source,
         )
         if (spell) {
-          setHint({ kind: 'spell', spell, left, top, triggerElement: el })
-          return { left, top }
+          setHint({ kind: 'spell', spell, triggerElement: el })
+          return
         }
       }
 
@@ -238,10 +226,47 @@ export function RenderedEntryWithTooltip({
         formatSpellLevel,
         getSchoolName,
       )
-      setHint({ kind: 'generic', ...resolved, left, top, triggerElement: el })
-      return { left, top }
+      setHint({ kind: 'generic', ...resolved, triggerElement: el })
     },
-    [recursiveLookup, clearHide, safeTop, setRecursiveHints],
+    [recursiveLookup, clearHide, setRecursiveHints],
+  )
+
+  const pinRootPreview = useCallback(
+    (trigger: HTMLElement, focusOnOpen = false) => {
+      const visibleBounds =
+        hint?.triggerElement === trigger ? tooltipRef.current?.getBoundingClientRect() : null
+      if (focusOnOpen) focusPreviewOnOpenRef.current = true
+      showPreview(trigger)
+      const pinBounds = (bounds: DOMRect | null | undefined) => {
+        if (!bounds) return
+        pinAtPosition(0, { left: bounds.left, top: bounds.top }, bounds)
+      }
+      if (visibleBounds) {
+        pinBounds(visibleBounds)
+      } else {
+        window.requestAnimationFrame(() => {
+          const tooltip = tooltipRef.current
+          if (!tooltip) return
+          void computePosition(trigger, tooltip, {
+            placement: 'top-start',
+            strategy: 'fixed',
+            middleware: [
+              offset(4),
+              flip({ padding: { top: safeTop, right: 8, bottom: 8, left: 8 } }),
+              shift({ padding: { top: safeTop, right: 8, bottom: 8, left: 8 } }),
+            ],
+          }).then(({ x, y }) => {
+            const bounds = tooltip.getBoundingClientRect()
+            pinAtPosition(
+              0,
+              { left: x, top: y },
+              { left: x, top: y, width: bounds.width, height: bounds.height },
+            )
+          })
+        })
+      }
+    },
+    [hint?.triggerElement, pinAtPosition, safeTop, showPreview],
   )
 
   const handleMouseMove = useCallback(
@@ -274,11 +299,9 @@ export function RenderedEntryWithTooltip({
       if (!el) return
       event.preventDefault()
       event.stopPropagation()
-      const visibleBounds =
-        hint?.triggerElement === el ? tooltipRef.current?.getBoundingClientRect() : null
-      pinAtPosition(0, showPreview(el), visibleBounds)
+      pinRootPreview(el)
     },
-    [hint?.triggerElement, pinAtPosition, showPreview],
+    [pinRootPreview],
   )
 
   const showRecursivePreview = useCallback(
@@ -312,11 +335,9 @@ export function RenderedEntryWithTooltip({
         formatSpellLevel,
         getSchoolName,
       )
-      const { x, y } = getRecursiveHintPosition(withTitle, !!resolved.html, safeTop)
-
-      appendRecursiveHint(depth, { ...resolved, x, y, triggerElement: withTitle })
+      appendRecursiveHint(depth, { ...resolved, triggerElement: withTitle })
     },
-    [appendRecursiveHint, clearHide, recursiveLookup, safeTop],
+    [appendRecursiveHint, clearHide, recursiveLookup],
   )
 
   const handleRecursiveMouseMove = useCallback(
@@ -355,12 +376,9 @@ export function RenderedEntryWithTooltip({
       if (!el || (event.key !== 'Enter' && event.key !== ' ')) return
 
       event.preventDefault()
-      focusPreviewOnOpenRef.current = true
-      const visibleBounds =
-        hint?.triggerElement === el ? tooltipRef.current?.getBoundingClientRect() : null
-      pinAtPosition(0, showPreview(el), visibleBounds)
+      pinRootPreview(el, true)
     },
-    [handlePreviewKeyDown, hint, pinAtPosition, showPreview],
+    [handlePreviewKeyDown, hint, pinRootPreview],
   )
 
   const handleBlur = useCallback(
@@ -436,11 +454,7 @@ export function RenderedEntryWithTooltip({
                 label={hint.kind === 'spell' ? hint.spell.name : hint.title}
                 pinned={rootPinned}
                 emphasized={rootPinned || recursiveHints.length === 0}
-                position={
-                  rootPinned && pinnedPreview
-                    ? pinnedPreview.position
-                    : { left: hint.left, top: hint.top }
-                }
+                position={rootPinned && pinnedPreview ? pinnedPreview.position : undefined}
                 onMouseMove={handleRecursiveMouseMove}
                 onFocus={handleRecursiveFocus}
                 onBlur={handleBlur}

@@ -392,7 +392,6 @@ export function useFeatsPageController() {
   const hintPosition = useAnchoredHintPosition({
     enabled: showEditHint && configuredOptionFeatCount > 0,
     selector: FEATS_EDIT_BTN_SELECTOR,
-    width: FEATS_HINT_WIDTH,
   })
   const handleDismissEditHint = useCallback(() => {
     setShowEditHint(false)

@@ -1,17 +1,15 @@
+import type { Placement } from '@floating-ui/react-dom'
 import { useEffect, useState } from 'react'
 
 export interface AnchoredHintPosition {
-  top: number
-  left: number
-  arrowLeft: number
-  anchorTop: number
+  reference: HTMLElement
   gap: number
+  placement: Placement
 }
 
 interface UseAnchoredHintPositionOptions {
   enabled: boolean
   selector: string
-  width: number
   gap?: number
   horizontalAlign?: 'center' | 'end'
 }
@@ -22,7 +20,6 @@ function clipsAxis(value: string) {
 
 export function isHintAnchorVisible(element: HTMLElement): boolean {
   if (!element.isConnected || element.hidden) return false
-
   const rect = element.getBoundingClientRect()
   if (rect.width <= 0 || rect.height <= 0) return false
 
@@ -44,7 +41,6 @@ export function isHintAnchorVisible(element: HTMLElement): boolean {
     ) {
       return false
     }
-
     if (current !== element) {
       const currentRect = current.getBoundingClientRect()
       const clipsX = clipsAxis(style.overflowX) || clipsAxis(style.overflow)
@@ -52,110 +48,51 @@ export function isHintAnchorVisible(element: HTMLElement): boolean {
       if (clipsX && (centerX < currentRect.left || centerX > currentRect.right)) return false
       if (clipsY && (centerY < currentRect.top || centerY > currentRect.bottom)) return false
     }
-
     current = current.parentElement
   }
 
   const elementsAtAnchor = document.elementsFromPoint?.(centerX, centerY)
   if (!elementsAtAnchor || elementsAtAnchor.length === 0) return true
-
   const topmostElement = elementsAtAnchor[0]
   return element === topmostElement || element.contains(topmostElement)
-}
-
-function positionsMatch(current: AnchoredHintPosition | null, next: AnchoredHintPosition | null) {
-  if (current === next) return true
-  if (!current || !next) return false
-  return (
-    current.top === next.top &&
-    current.left === next.left &&
-    current.arrowLeft === next.arrowLeft &&
-    current.anchorTop === next.anchorTop &&
-    current.gap === next.gap
-  )
 }
 
 export function useAnchoredHintPosition({
   enabled,
   selector,
-  width,
   gap = 12,
   horizontalAlign = 'center',
 }: UseAnchoredHintPositionOptions): AnchoredHintPosition | null {
-  const [position, setPosition] = useState<AnchoredHintPosition | null>(null)
+  const [reference, setReference] = useState<HTMLElement | null>(null)
 
   useEffect(() => {
     if (!enabled) {
-      setPosition(null)
+      setReference(null)
       return
     }
 
     let animationFrame: number | null = null
-    let resizeObserver: ResizeObserver | null = null
-    const observedAnchors = new Set<HTMLElement>()
-
-    const updatePosition = () => {
+    const updateReference = () => {
       animationFrame = null
-      const anchors = Array.from(document.querySelectorAll<HTMLElement>(selector))
-      if (resizeObserver) {
-        for (const observedAnchor of observedAnchors) {
-          if (!anchors.includes(observedAnchor)) {
-            resizeObserver.unobserve(observedAnchor)
-            observedAnchors.delete(observedAnchor)
-          }
-        }
-        for (const currentAnchor of anchors) {
-          if (!observedAnchors.has(currentAnchor)) {
-            resizeObserver.observe(currentAnchor)
-            observedAnchors.add(currentAnchor)
-          }
-        }
-      }
-      const anchor = anchors.find(isHintAnchorVisible)
-
-      let nextPosition: AnchoredHintPosition | null = null
-      if (anchor) {
-        const rect = anchor.getBoundingClientRect()
-        const centerX = rect.left + rect.width / 2
-        const rootFontSize = Number.parseFloat(
-          window.getComputedStyle(document.documentElement).fontSize,
-        )
-        const scaledWidth = width * ((Number.isFinite(rootFontSize) ? rootFontSize : 16) / 16)
-        const maxLeft = Math.max(16, window.innerWidth - scaledWidth - 16)
-        const preferredLeft =
-          horizontalAlign === 'end' ? rect.right - scaledWidth : centerX - scaledWidth / 2
-        const left = Math.min(Math.max(preferredLeft, 16), maxLeft)
-        const arrowLeft = Math.min(Math.max(centerX - left, 18), scaledWidth - 18)
-        nextPosition = {
-          top: rect.bottom + gap,
-          left,
-          arrowLeft,
-          anchorTop: rect.top,
-          gap,
-        }
-      }
-
-      setPosition((currentPosition) =>
-        positionsMatch(currentPosition, nextPosition) ? currentPosition : nextPosition,
+      const nextReference = Array.from(document.querySelectorAll<HTMLElement>(selector)).find(
+        isHintAnchorVisible,
       )
+      setReference((current) => (current === nextReference ? current : (nextReference ?? null)))
     }
-
     const scheduleUpdate = () => {
       if (typeof window.requestAnimationFrame !== 'function') {
-        updatePosition()
+        updateReference()
         return
       }
       if (animationFrame !== null) window.cancelAnimationFrame(animationFrame)
-      animationFrame = window.requestAnimationFrame(updatePosition)
+      animationFrame = window.requestAnimationFrame(updateReference)
     }
 
-    updatePosition()
-    window.addEventListener('resize', scheduleUpdate)
+    updateReference()
     window.addEventListener('scroll', scheduleUpdate, true)
     document.addEventListener('transitionend', scheduleUpdate, true)
     document.addEventListener('animationend', scheduleUpdate, true)
     document.addEventListener('visibilitychange', scheduleUpdate)
-
     const mutationObserver = new MutationObserver(scheduleUpdate)
     mutationObserver.observe(document.body, {
       attributes: true,
@@ -164,25 +101,21 @@ export function useAnchoredHintPosition({
       subtree: true,
     })
 
-    resizeObserver =
-      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleUpdate)
-    if (resizeObserver) {
-      for (const anchor of document.querySelectorAll<HTMLElement>(selector)) {
-        resizeObserver.observe(anchor)
-      }
-    }
-
     return () => {
       if (animationFrame !== null) window.cancelAnimationFrame(animationFrame)
-      window.removeEventListener('resize', scheduleUpdate)
       window.removeEventListener('scroll', scheduleUpdate, true)
       document.removeEventListener('transitionend', scheduleUpdate, true)
       document.removeEventListener('animationend', scheduleUpdate, true)
       document.removeEventListener('visibilitychange', scheduleUpdate)
       mutationObserver.disconnect()
-      resizeObserver?.disconnect()
     }
-  }, [enabled, gap, horizontalAlign, selector, width])
+  }, [enabled, selector])
 
-  return position
+  return reference
+    ? {
+        reference,
+        gap,
+        placement: horizontalAlign === 'end' ? 'bottom-end' : 'bottom',
+      }
+    : null
 }

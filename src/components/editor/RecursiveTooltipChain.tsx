@@ -1,8 +1,9 @@
+import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/react-dom'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { PreviewNavigationControls } from '@/components/editor/PreviewNavigationControls'
 import { useDraggablePreview } from '@/hooks/ui/useDraggablePreview'
 import { getTitleBarSafeTop, type PreviewBounds, type PreviewPosition } from '@/lib/overlayPosition'
-import { getRecursiveHintPosition, type RecursiveHintState } from '@/lib/renderer/recursiveTooltip'
+import type { RecursiveHintState } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
@@ -59,24 +60,25 @@ export function RecursiveTooltipChain({
     const tooltip = tooltipRef.current
     if (!tooltip || !triggerElement || !hint || mode === 'pinned') return
 
-    const updatePosition = () => {
-      const { x, y } = getRecursiveHintPosition(triggerElement, !!hint.html, safeTop, {
-        width: tooltip.offsetWidth || 320,
-        height: tooltip.offsetHeight || (hint.html ? 220 : 88),
+    let active = true
+    const cleanup = autoUpdate(triggerElement, tooltip, () => {
+      void computePosition(triggerElement, tooltip, {
+        placement: 'right-start',
+        strategy: 'fixed',
+        middleware: [
+          offset(8),
+          flip({ padding: { top: safeTop, right: 8, bottom: 8, left: 8 } }),
+          shift({ padding: { top: safeTop, right: 8, bottom: 8, left: 8 } }),
+        ],
+      }).then(({ x, y }) => {
+        if (!active || !tooltip.isConnected) return
+        tooltip.style.left = `${x}px`
+        tooltip.style.top = `${y}px`
       })
-      tooltip.style.left = `${x}px`
-      tooltip.style.top = `${y}px`
-    }
-
-    updatePosition()
-    window.addEventListener('resize', updatePosition)
-    const resizeObserver =
-      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updatePosition)
-    resizeObserver?.observe(tooltip)
-
+    })
     return () => {
-      window.removeEventListener('resize', updatePosition)
-      resizeObserver?.disconnect()
+      active = false
+      cleanup()
     }
   }, [hint, mode, safeTop, triggerElement])
 
@@ -91,16 +93,13 @@ export function RecursiveTooltipChain({
       data-recursive-tooltip-depth={index + 1}
       className={cn(
         'w-[320px] max-w-[calc(100vw-1rem)] rounded border bg-card text-card-foreground transition-[box-shadow,border-color] duration-100',
-        mode === 'pinned' ? 'fixed z-[9999]' : 'absolute',
+        'fixed',
+        mode === 'pinned' ? 'z-[9999]' : '',
         isNewest || isPinned
           ? 'border-accent/70 ring-1 ring-accent/45 shadow-xl'
           : 'border-border/80 shadow-md',
       )}
-      style={
-        mode === 'pinned' && pinnedPosition
-          ? pinnedPosition
-          : { left: hint.x, top: hint.y, zIndex: 100 + index }
-      }
+      style={mode === 'pinned' && pinnedPosition ? pinnedPosition : { zIndex: 100 + index }}
     >
       <div className="border-b border-border px-3 py-2">
         <div className="flex items-start justify-between gap-2">

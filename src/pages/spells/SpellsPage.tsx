@@ -410,7 +410,6 @@ export function SpellsPage() {
   const hintPosition = useAnchoredHintPosition({
     enabled: showPreparedHint && hasTruePreparedCaster,
     selector: SPELLS_PREPARE_SELECTOR,
-    width: SPELLS_HINT_WIDTH,
   })
 
   const handleDismissPreparedHint = () => {
