@@ -54,6 +54,7 @@ describe('desktop workspace navigation', () => {
 
     expect(screen.getByText('Core')).toBeTruthy()
     expect(screen.getByText('Details')).toBeTruthy()
+    expect(screen.getByText('Finish')).toBeTruthy()
     expect(screen.queryByText('Options')).toBeNull()
     expect(screen.queryByText('Character Core')).toBeNull()
     expect(screen.queryByText('Character Details')).toBeNull()
@@ -64,6 +65,16 @@ describe('desktop workspace navigation', () => {
     expect(screen.queryByRole('link', { name: 'Sources' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Rules' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Sources' })).toBeNull()
+  })
+
+  test('places Review in a final section after Core and Details', () => {
+    renderSidebar('/build/review')
+
+    const navigation = screen.getByRole('navigation', { name: 'Workspace pages' })
+    const text = navigation.textContent ?? ''
+    expect(text.indexOf('Core')).toBeLessThan(text.indexOf('Details'))
+    expect(text.indexOf('Details')).toBeLessThan(text.indexOf('Finish'))
+    expect(screen.getByRole('link', { name: /^Review/ }).getAttribute('aria-current')).toBe('page')
   })
 
   test('keeps application settings as a primary-rail utility', async () => {

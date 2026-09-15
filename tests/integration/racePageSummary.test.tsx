@@ -26,6 +26,7 @@ describe('Race page summary', () => {
       raceSource: 'TEST',
       allowedSources: ['TEST'],
       raceAsiChoices: [],
+      variantRules: { abilityScoreMethod: 'custom' },
     })
     useCharacterStore.setState({
       characters: [character],
@@ -52,7 +53,7 @@ describe('Race page summary', () => {
     vi.clearAllMocks()
   })
 
-  test('shows unresolved parsed bonus options and keeps related actions in their cells', () => {
+  test('shows unresolved parsed bonus options under the custom score method', () => {
     render(
       <TooltipProvider>
         <MemoryRouter>
@@ -74,6 +75,72 @@ describe('Race page summary', () => {
     expect(screen.getByRole('button', { name: 'Edit movement' }).className).toContain(
       'border-accent',
     )
+  })
+
+  test('hides bonus editing after a parsed race choice is complete', () => {
+    const character = makeCharacterFixture({
+      originSystem: '2014',
+      race: 'Choice Lineage',
+      raceSource: 'TEST',
+      allowedSources: ['TEST'],
+      raceAsiChoices: [['strength']],
+      variantRules: { abilityScoreMethod: 'custom' },
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildRacePage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+
+    expect(screen.getByText('STR +2')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Choose bonuses' })).toBeNull()
+  })
+
+  test('does not offer editing for fixed race bonuses', () => {
+    const character = makeCharacterFixture({
+      originSystem: '2014',
+      race: 'Fixed Lineage',
+      raceSource: 'TEST',
+      allowedSources: ['TEST'],
+      raceAsiChoices: [],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        races: [
+          makeRaceFixture({
+            name: 'Fixed Lineage',
+            source: 'TEST',
+            ability: [{ str: 2 }],
+            size: ['M'],
+            speed: 30,
+          }),
+        ],
+      }),
+    })
+
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildRacePage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+
+    expect(screen.getByText('STR +2')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Choose bonuses' })).toBeNull()
   })
 
   test('does not offer race bonus editing when revised bonuses come from the background', () => {

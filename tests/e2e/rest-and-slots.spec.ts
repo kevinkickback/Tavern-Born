@@ -3,7 +3,6 @@ import { characterPersistenceSchema } from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import {
   ensureStartupPromptResolved,
-  readPersistedCharacters,
   seedAppState,
   selectCharacterFromHome,
 } from './helpers/startup'
@@ -103,22 +102,7 @@ async function openCharacterSpells(page: import('@playwright/test').Page) {
   await expect(page).toHaveURL(/\/spells$/)
 }
 
-async function waitForPersistedSharedSlotUsage(
-  page: import('@playwright/test').Page,
-  used: number,
-) {
-  await expect
-    .poll(async () => {
-      const characters = (await readPersistedCharacters(page)) as Array<{
-        id?: string
-        spells?: { spellSlots?: Record<string, { used?: number }> }
-      }>
-      return characters.find((entry) => entry.id === character.id)?.spells?.spellSlots?.['1']?.used
-    })
-    .toBe(used)
-}
-
-test('spell-slot use and long-rest recovery survive save and reload', async ({ page }) => {
+test('spell-slot capacity is display-only in the Builder', async ({ page }) => {
   await page.goto('/')
   await ensureStartupPromptResolved(page, SOURCE_PATH, gameData)
   await seedAppState(page, {
@@ -130,25 +114,9 @@ test('spell-slot use and long-rest recovery survive save and reload', async ({ p
   await page.reload()
   await openCharacterSpells(page)
 
-  await expect(page.getByText('3/3')).toBeVisible()
-  await page.getByRole('button', { name: 'Spend one level 1 shared spell slot' }).click()
-  await expect(page.getByText('2/3')).toBeVisible()
-  await page.getByRole('button', { name: 'Save character' }).click()
-  await waitForPersistedSharedSlotUsage(page, 1)
-
-  await page.reload()
-  await openCharacterSpells(page)
-  await expect(page.getByText('2/3')).toBeVisible()
-
-  await page.getByRole('button', { name: 'Preview a rest' }).click()
-  await page.getByText('Long rest').click()
-  await expect(page.getByText('Level 1 spell slots used')).toBeVisible()
-  await page.getByRole('button', { name: 'Apply long rest' }).click()
-  await expect(page.getByText('3/3')).toBeVisible()
-  await page.getByRole('button', { name: 'Save character' }).click()
-  await waitForPersistedSharedSlotUsage(page, 0)
-
-  await page.reload()
-  await openCharacterSpells(page)
-  await expect(page.getByText('3/3')).toBeVisible()
+  await expect(page.getByText('Spell Slots')).toBeVisible()
+  await expect(page.getByText('Level 1 slots')).toBeVisible()
+  await expect(page.getByRole('button', { name: /spend one .* spell slot/i })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /restore one .* spell slot/i })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Preview a rest' })).toHaveCount(0)
 })

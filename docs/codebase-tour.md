@@ -121,6 +121,8 @@ Spells page UI orchestration:
 - src/hooks/character/useSpellProfileMutations.ts — all spell mutation callbacks (add/remove/prepare/racial spells)
 - src/lib/character/commands/spellSlotCommands.ts — shared/Pact slot spend, restore, correction, and maxima reconciliation
 - src/hooks/character/useSpellSlotMutations.ts — thin active-character adapter for slot-use commands
+- src/pages/spells/components/SpellcastingDetailsCard.tsx — read-only class/racial spellcasting
+  statistics and shared/Pact slot capacities; live slot-use controls are intentionally absent
 - src/lib/character/commands/restCommands.ts — pure atomic rest patch and change-preview construction
 - src/hooks/character/useRestPreview.ts and src/components/modals/RestPreviewDialog.tsx — retained
   derived rest context, preview, and one-patch commit for the deferred local-play workspace; there
@@ -140,7 +142,8 @@ Combat stats and advancement:
 
 Rules, sources, and condition tracking:
 - src/components/layout/AppSidebar.tsx — Rules is the character-configuration workspace between
-  Builder and Character Sheet; manual Actions & Effects is in Builder Details
+  Builder and Character Sheet; manual Actions & Effects is in Builder Details and Review is in the
+  final Builder Finish group
 - src/pages/rules/RulesPage.tsx — post-creation configuration split into Ruleset, Advancement,
   Character Options, and Sources tabs
 - src/pages/rules/SourcesPanel.tsx — reusable Sources-tab panel for per-character allowed sources

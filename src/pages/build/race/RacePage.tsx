@@ -39,6 +39,10 @@ import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceM
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import {
+  getRaceAbilityData,
+  hasUnresolvedRaceAbilityChoices,
+} from '@/lib/calculations/abilityScores'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { formatEffectiveMovement } from '@/lib/calculations/movement'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
@@ -108,6 +112,16 @@ export function BuildRacePage() {
     normalizedSelection.race && normalizedSelection.subrace
       ? mergeRaceWithSubrace(normalizedSelection.race, normalizedSelection.subrace)
       : (normalizedSelection.subrace ?? normalizedSelection.race)
+  const hasUnresolvedRaceBonuses =
+    character?.originSystem === '2014' &&
+    hasUnresolvedRaceAbilityChoices(
+      getRaceAbilityData(
+        normalizedSelection.race,
+        normalizedSelection.subrace,
+        (character.raceAsiBlockIndex ?? 0) as 0 | 1,
+      ),
+      character.raceAsiChoices ?? [],
+    )
   const selectedRaceKey = selectedRace ? `${selectedRace.name}|${selectedRace.source ?? ''}` : null
 
   // Refs let the effect read the latest values without making them dependencies,
@@ -450,20 +464,19 @@ export function BuildRacePage() {
                                 ? 'Provided by background'
                                 : 'No racial bonus'
                             })(),
-                            action:
-                              character.originSystem === '2014' ? (
-                                <Button
-                                  asChild
-                                  size="sm"
-                                  variant="accentOutline"
-                                  className="h-7 px-2 text-xs"
-                                >
-                                  <Link to="/build/ability-scores">
-                                    <PencilSimple className="size-3" />
-                                    Choose bonuses
-                                  </Link>
-                                </Button>
-                              ) : undefined,
+                            action: hasUnresolvedRaceBonuses ? (
+                              <Button
+                                asChild
+                                size="sm"
+                                variant="accentOutline"
+                                className="h-7 px-2 text-xs"
+                              >
+                                <Link to="/build/ability-scores">
+                                  <PencilSimple className="size-3" />
+                                  Choose bonuses
+                                </Link>
+                              </Button>
+                            ) : undefined,
                           },
                           {
                             icon: (

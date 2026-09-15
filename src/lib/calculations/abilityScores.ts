@@ -162,6 +162,36 @@ export interface RaceAbilityData {
   choices: ChoosableAbilityBonus[]
 }
 
+export function hasUnresolvedRaceAbilityChoices(
+  data: RaceAbilityData,
+  selections: string[][],
+): boolean {
+  const selectedAcrossBlocks = new Set<AbilityName>()
+
+  return data.choices.some((block, blockIndex) => {
+    let validSelectionCount = 0
+    const selectedInBlock = new Set<AbilityName>()
+
+    for (const rawSelection of selections[blockIndex] ?? []) {
+      const ability = normalizeAbilityName(rawSelection)
+      if (
+        !ability ||
+        !block.from.includes(ability) ||
+        selectedInBlock.has(ability) ||
+        selectedAcrossBlocks.has(ability)
+      ) {
+        continue
+      }
+      selectedInBlock.add(ability)
+      selectedAcrossBlocks.add(ability)
+      validSelectionCount += 1
+      if (validSelectionCount === block.count) break
+    }
+
+    return validSelectionCount < block.count
+  })
+}
+
 export function buildRacialBonuses(
   raceAsiData: {
     fixed: Array<{ ability: AbilityName; value: number }>

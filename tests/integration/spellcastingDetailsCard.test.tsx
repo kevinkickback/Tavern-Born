@@ -1,67 +1,38 @@
 import { cleanup, render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
 
-describe('SpellcastingDetailsCard slot controls', () => {
+describe('SpellcastingDetailsCard slot capacities', () => {
   afterEach(() => cleanup())
 
-  test('spends and manually restores shared slots with clear availability', async () => {
-    const user = userEvent.setup()
-    const onSpendSlot = vi.fn()
-    const onRestoreSlot = vi.fn()
-
+  test('shows shared slot capacity without live-session controls', () => {
     render(
       <SpellcastingDetailsCard
         isSpellcaster
         spellcastingDetails={[]}
         hasMultipleSpellcastingClasses={false}
-        sharedSlots={[{ level: 2, max: 3, used: 1, available: 2 }]}
+        sharedSlots={[{ level: 2, max: 3 }]}
         pactSlots={[]}
-        onSpendSlot={onSpendSlot}
-        onRestoreSlot={onRestoreSlot}
       />,
     )
 
-    expect(screen.getByText('2/3')).toBeTruthy()
-    expect(screen.getByText('Lvl 2 available')).toBeTruthy()
-
-    await user.click(screen.getByRole('button', { name: 'Spend one level 2 shared spell slot' }))
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Manually restore one level 2 shared spell slot',
-      }),
-    )
-
-    expect(onSpendSlot).toHaveBeenCalledWith('shared', 2, 3)
-    expect(onRestoreSlot).toHaveBeenCalledWith('shared', 2, 3)
+    expect(screen.getByText('Level 2 slots').parentElement?.textContent).toBe('3Level 2 slots')
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
-  test('shows pact controls from derived pool data without checking a class name', async () => {
-    const user = userEvent.setup()
-    const onSpendSlot = vi.fn()
-
+  test('shows Pact Magic capacity without checking a class name', () => {
     render(
       <SpellcastingDetailsCard
         isSpellcaster
         spellcastingDetails={[]}
         hasMultipleSpellcastingClasses
         sharedSlots={[]}
-        pactSlots={[{ level: 3, max: 2, used: 0, available: 2 }]}
-        onSpendSlot={onSpendSlot}
+        pactSlots={[{ level: 3, max: 2 }]}
       />,
     )
 
     expect(screen.getByText('Pact Magic Slots')).toBeTruthy()
-    expect(
-      screen
-        .getByRole('button', { name: 'Manually restore one level 3 Pact Magic spell slot' })
-        .hasAttribute('disabled'),
-    ).toBe(true)
-
-    await user.click(
-      screen.getByRole('button', { name: 'Spend one level 3 Pact Magic spell slot' }),
-    )
-    expect(onSpendSlot).toHaveBeenCalledWith('pact', 3, 2)
+    expect(screen.getByText('Level 3 slots').parentElement?.textContent).toBe('2Level 3 slots')
+    expect(screen.queryByRole('button')).toBeNull()
   })
 })

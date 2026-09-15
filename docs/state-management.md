@@ -326,6 +326,9 @@ factory in `src/lib/character/createCharacter.ts`.
 - `useSpellSlots()` is read-only and derives slots, profiles, and spellcasting detail.
 - `useSpellProfileMutations()` provides all spell mutation callbacks (add/remove/prepare/racial spells) for components that need spell writes outside the spell slot derivation hook.
 - `useSpellSlotMutations()` adapts the pure slot-use commands to the active-character draft.
+- The Builder's Spellcasting details pane reads only derived slot capacity and exposes no slot-use
+  controls. Persisted slot usage and its mutation adapter remain intentional runtime state for the
+  deferred live-play workspace.
 - `useRestPreview()` builds and commits the one-patch result from `applyRest()`; UI code never
   sequences individual recovery writes.
 

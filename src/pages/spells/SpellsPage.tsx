@@ -14,7 +14,6 @@ import {
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
-import { useSpellSlotMutations } from '@/hooks/character/useSpellSlotMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
@@ -101,7 +100,6 @@ export function SpellsPage() {
     removeRacialSpell,
     setRacialCastingAbility,
   } = useSpellProfileMutations(spellProfiles, spellcastingDetailByProfileId)
-  const { spend: spendSpellSlot, restoreOne: restoreOneSpellSlot } = useSpellSlotMutations()
 
   const [racialChoiceModalOpen, setRacialChoiceModalOpen] = useState(false)
   const [bonusSpellModalOpen, setBonusSpellModalOpen] = useState(false)
@@ -728,8 +726,6 @@ export function SpellsPage() {
                     hasMultipleSpellcastingClasses={hasMultipleSpellcastingClasses}
                     sharedSlots={sharedSlots}
                     pactSlots={pactSlots}
-                    onSpendSlot={spendSpellSlot}
-                    onRestoreSlot={restoreOneSpellSlot}
                   />
                 </WorkspaceDetailContent>
               </ScrollArea>

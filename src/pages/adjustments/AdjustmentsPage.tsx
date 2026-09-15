@@ -8,13 +8,13 @@ import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { cn } from '@/lib/utils'
 
-type AdjustmentSection = 'effects' | 'actions'
+type AdjustmentSection = 'actions' | 'effects'
 
 export function AdjustmentsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tabIdPrefix = useId()
   const section: AdjustmentSection =
-    searchParams.get('section') === 'actions' ? 'actions' : 'effects'
+    searchParams.get('section') === 'effects' ? 'effects' : 'actions'
 
   const selectSection = (nextSection: string) => {
     const nextParams = new URLSearchParams(searchParams)
@@ -32,8 +32,8 @@ export function AdjustmentsPage() {
             aria-label="Adjustment type"
           >
             {[
-              { value: 'effects' as const, label: 'Effects', icon: SlidersHorizontal },
               { value: 'actions' as const, label: 'Actions', icon: Sword },
+              { value: 'effects' as const, label: 'Effects', icon: SlidersHorizontal },
             ].map(({ value, label, icon: Icon }) => {
               const active = section === value
               return (
@@ -74,21 +74,21 @@ export function AdjustmentsPage() {
           </div>
           <Tabs value={section} onValueChange={selectSection}>
             <TabsContent
-              id={`${tabIdPrefix}-panel-effects`}
-              value="effects"
-              aria-labelledby={`${tabIdPrefix}-tab-effects`}
-            >
-              <Card className="p-5">
-                <ManualEffectsEditor />
-              </Card>
-            </TabsContent>
-            <TabsContent
               id={`${tabIdPrefix}-panel-actions`}
               value="actions"
               aria-labelledby={`${tabIdPrefix}-tab-actions`}
             >
               <Card className="p-5">
                 <ManualActionsEditor />
+              </Card>
+            </TabsContent>
+            <TabsContent
+              id={`${tabIdPrefix}-panel-effects`}
+              value="effects"
+              aria-labelledby={`${tabIdPrefix}-tab-effects`}
+            >
+              <Card className="p-5">
+                <ManualEffectsEditor />
               </Card>
             </TabsContent>
           </Tabs>

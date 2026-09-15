@@ -124,9 +124,11 @@ new tests land and do not lower them to merge a change.
 - HP and AC Overview/Manual changes modal coverage in tests/integration/hitPointsModal.test.tsx and
   tests/integration/armorClassModal.test.tsx
 - Builder Actions & Effects page/editor coverage in tests/integration/adjustmentsPage.test.tsx,
-  tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx
-- Race summary coverage for parsed unresolved ability choices, shared accent-outline actions, and
-  omission of the race-bonus action under 2024 rules in tests/integration/racePageSummary.test.tsx
+  tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx,
+  including Actions-first ordering/default and Effects deep links
+- Race summary coverage for parsed unresolved, completed, and fixed ability bonuses; the custom
+  base-score method; shared accent-outline actions; and omission of race-bonus editing under 2024
+  rules in tests/integration/racePageSummary.test.tsx
 - Race-command coverage verifies that 2024 lineage selection is independent of unfinished
   background choices; the corpus-backed kitchen-sink test requires a valid selected lineage when
   the resolved race exposes lineages.
@@ -179,8 +181,8 @@ new tests land and do not lower them to merge a change.
 - Compendium edition selector coverage in tests/integration/compendiumPage.test.tsx (Both default, rendered filtering, and isolation from active-character ruleset/source restrictions)
 - SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
 - Shared/Pact slot command and hook coverage in tests/lib/spellSlotCommands.test.ts and
-  tests/hooks/useSpellSlotMutations.test.tsx; compact availability controls in
-  tests/integration/spellcastingDetailsCard.test.tsx.
+  tests/hooks/useSpellSlotMutations.test.tsx; read-only Builder capacity display in
+  tests/integration/spellcastingDetailsCard.test.tsx and tests/e2e/rest-and-slots.spec.ts.
 - Atomic rest calculation, hook commit, and preview-dialog choice coverage in
   tests/lib/restCommands.test.ts, tests/hooks/useRestPreview.test.tsx, and
   tests/integration/restPreviewDialog.test.tsx.

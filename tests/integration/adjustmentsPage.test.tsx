@@ -29,7 +29,20 @@ describe('AdjustmentsPage', () => {
     vi.clearAllMocks()
   })
 
-  test('hosts manual effects and actions as page tabs instead of dialogs', async () => {
+  test('orders Actions first and uses it as the default section', () => {
+    render(
+      <MemoryRouter initialEntries={['/build/adjustments']}>
+        <AdjustmentsPage />
+      </MemoryRouter>,
+    )
+
+    const tabs = screen.getAllByRole('tab')
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Actions', 'Effects'])
+    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByRole('heading', { name: 'Manual Actions' })).toBeTruthy()
+  })
+
+  test('preserves an explicit Effects deep link and can switch to Actions', async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={['/build/adjustments?section=effects']}>

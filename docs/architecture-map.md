@@ -66,6 +66,8 @@ Spellcasting note:
 - `src/hooks/character/useSpellSlotMutations.ts` is the thin store adapter for shared/Pact slot use
   and explicit manual corrections. `src/hooks/character/useRestPreview.ts` composes current derived
   maxima/resources/HP into `applyRest()` and commits its reviewed result as one draft patch.
+- The Spells Builder page displays shared and Pact slot capacity without spend/restore controls.
+  Slot-use mutations are retained behind the UI boundary for the deferred live-play workspace.
 - `src/components/modals/RestPreviewDialog.tsx` remains the tested short/long-rest preview surface
   for the deferred local-play workspace. It is deliberately not launched from the shared builder
   header; the pure rest command and hook remain available without presenting a live-play control in
@@ -134,15 +136,19 @@ Current implementation notes:
   position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and
   keyboard repositioning while History and Unpin remain independent controls.
 - Manual Actions & Effects lives in Builder's Details group and owns both editors through its
-  functional page header; Builder has no one-item Options group. Rules is a character-scoped
+  functional page header, ordered Actions then Effects with Actions as the default. Review is the
+  sole destination in Builder's final Finish group after Core and Details; Builder has no one-item
+  Options group. Rules is a character-scoped
   top-level workspace because it configures the whole build and loaded catalog. Its Ruleset,
   Advancement, Character Options, and Sources tabs remain protected until a character is active;
   `/sources` redirects to the Sources tab for compatibility. The selected ruleset remains fixed
   after creation.
 - Ability Scores is the canonical editor for origin ability bonuses in both rulesets: 2014 race
   bonuses and 2024 background bonuses are persisted through their existing provenance commands.
-  Race and Background show source context and link to that editor instead of maintaining duplicate
-  controls. Readiness issues for either origin route to `/build/ability-scores`.
+  Race shows that link only while a parsed 2014 race choice remains unresolved; fixed and completed
+  bonuses are display-only. The selected base-score method, including Custom, does not replace
+  origin-bonus requirements. Background shows source context instead of maintaining a duplicate
+  editor. Readiness issues for either origin route to `/build/ability-scores`.
 - Movement remains a focused modal because it combines source-derived walking and alternate modes,
   hover, labeled table rulings, and exact per-mode overrides in one compact correction workflow.
   It is not a live-play surface, and removing it would leave alternate or unsupported structured

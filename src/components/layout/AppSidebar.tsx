@@ -103,7 +103,6 @@ const workspaces: Workspace[] = [
           { label: 'Feats', path: '/feats', icon: Star },
           { label: 'Spells', path: '/spells', icon: MagicWand },
           { label: 'Equipment', path: '/equipment', icon: Backpack },
-          { label: 'Review', path: '/build/review', icon: ClipboardText },
         ],
       },
       {
@@ -114,6 +113,10 @@ const workspaces: Workspace[] = [
           { label: 'Conditions', path: '/details/conditions', icon: Lightning },
           { label: 'Actions & Effects', path: '/build/adjustments', icon: PencilSimple },
         ],
+      },
+      {
+        label: 'Finish',
+        items: [{ label: 'Review', path: '/build/review', icon: ClipboardText }],
       },
     ],
   },

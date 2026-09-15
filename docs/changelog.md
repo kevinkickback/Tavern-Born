@@ -36,6 +36,9 @@
 * Built-in organization cards now use a neutral background so their artwork is not paired with arbitrary colors
 * PDF regression coverage now uses separate 2014 and 2024 kitchen-sink characters generated and audited against the configured 5etools corpus
 * Opening an incomplete 2024 character no longer crashes when its species lineage is selected before background setup is complete
+* Actions now opens first on Actions & Effects, while Review has a dedicated final section in Builder navigation
+* Race details only offer bonus setup when a 2014 race choice is still incomplete
+* Spellcasting details show spell-slot capacity without live-session spend and restore controls
 
 </details>
 

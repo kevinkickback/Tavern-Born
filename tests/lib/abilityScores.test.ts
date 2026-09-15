@@ -9,6 +9,7 @@ import {
   getRemainingPointBuy,
   getTotalAbilityScore,
   getValidPointBuyScores,
+  hasUnresolvedRaceAbilityChoices,
   isValidPointBuyScore,
   isValidStandardArrayAssignment,
   makeDefaultAbilityScores,
@@ -147,6 +148,19 @@ describe('abilityScores', () => {
     })
     expect(data.choices[1]?.count).toBe(1)
     expect(data.choices[1]?.source).toBe('subrace')
+  })
+
+  test('reports only incomplete valid race ability choices as unresolved', () => {
+    const data = getRaceAbilityData({
+      ability: [{ str: 2 }, { choose: { count: 1, amount: 1, from: ['dex', 'con'] } }],
+    })
+
+    expect(hasUnresolvedRaceAbilityChoices(data, [])).toBe(true)
+    expect(hasUnresolvedRaceAbilityChoices(data, [['wisdom']])).toBe(true)
+    expect(hasUnresolvedRaceAbilityChoices(data, [['dexterity']])).toBe(false)
+    expect(hasUnresolvedRaceAbilityChoices(getRaceAbilityData({ ability: [{ str: 2 }] }), [])).toBe(
+      false,
+    )
   })
 
   test('getRaceAbilityData synthesizes lineage ASI blocks from selected mode', () => {
