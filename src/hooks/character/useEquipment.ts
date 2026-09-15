@@ -2,7 +2,8 @@ import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { getArmorCategory } from '@/lib/calculations/armorClass'
-import { getCarryCapacity, MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
+import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
+import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { hasArmorProficiency } from '@/lib/calculations/itemEquippable'
 import {
   addManualEquipmentCommand,
@@ -53,8 +54,15 @@ export function useEquipment(): EquipmentState {
   )
 
   const carryCapacity = useMemo(
-    () => getCarryCapacity(calculationContext?.abilityScores.total.strength ?? 10),
-    [calculationContext?.abilityScores.total.strength],
+    () =>
+      calculationContext
+        ? getEffectiveCarryCapacity(
+            calculationContext.abilityScores.total.strength,
+            calculationContext.effects.declarations,
+            calculationContext.effects.resolutionContext,
+          )
+        : 0,
+    [calculationContext],
   )
 
   const attunedCount = useMemo(() => equipment.filter((e) => e.attuned).length, [equipment])

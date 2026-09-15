@@ -359,7 +359,11 @@ persisted identity.
 
 `useHitPoints()` is the UI boundary for these views and for current/temp HP mutations. `HitPointsModal` saves current HP, temporary HP, adjustments, and an optional override atomically. When the maximum changes and the player has not manually edited Current HP in the open modal, the preview moves Current HP by the same delta before saving.
 
-`applyLevelUp()` in `classCommands.ts` commits progression and the raw hit-die choice together. Removing levels prunes gain records that no longer belong to the retained progression. `averageHitPoints !== false` records the fixed average automatically; when false, `LevelUpModal` requires either a die roll or a valid manual die result.
+`applyLevelUp()` in `classCommands.ts` commits progression and the raw hit-die choice together.
+Removing levels prunes gain records and class-owned ASI choices that no longer belong to the
+retained progression, rebuilding ASI provenance in the same command result. Average Hit Points
+records the fixed average automatically unless explicitly disabled; when disabled, `LevelUpModal`
+requires either a die roll or a valid manual die result.
 
 Consumers should read maximum HP through `getEffectiveMaxHP()` or `useHitPoints()` rather than `hitPoints.max`.
 

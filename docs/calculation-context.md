@@ -54,6 +54,11 @@ preserved unknown movement keys; and never stores those source declarations in a
 Only unconditional scalar/list fields are automated. Choice objects and prose remain visible rules
 text and can be represented with a labeled manual effect after the player resolves the choice.
 
+Carrying capacity is resolved by `getEffectiveCarryCapacity()` from the effective Strength score
+and the same active typed-effect set. The Equipment hook and PDF view model consume that result;
+PDF templates must not repeat the capacity formula. Class progression commands likewise retract
+class-owned ASIs that are no longer earned before the context performs a level-change recalculation.
+
 `getCharacterReadiness()` consumes this context with optional feat and spell lookups. Its focused
 validators return stable issue IDs, blocking/recommendation severity, an owning Builder section, and
 a navigation target; they never repair or delete unresolved state. `deriveCharacterActions()` is

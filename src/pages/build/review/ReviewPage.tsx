@@ -178,6 +178,7 @@ export function BuildReviewPage() {
                     <div
                       key={ability}
                       className="rounded-lg border border-border px-2 py-2 text-center"
+                      data-testid={`review-ability-${ability}`}
                     >
                       <div className="text-[10px] font-semibold text-muted-foreground">
                         {ABILITY_ABBREVIATIONS[ability]}
@@ -193,7 +194,12 @@ export function BuildReviewPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(effectiveMovement.speeds).map(([mode, speed]) => (
-                    <Badge key={mode} variant="outline" className="capitalize">
+                    <Badge
+                      key={mode}
+                      variant="outline"
+                      className="capitalize"
+                      data-testid={`review-movement-${mode}`}
+                    >
                       {mode} {speed} ft.
                     </Badge>
                   ))}

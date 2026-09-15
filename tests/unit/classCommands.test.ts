@@ -292,6 +292,53 @@ describe('Class Commands', () => {
     expect(result.characterPatch.hitPointGains).toEqual([])
   })
 
+  test('level removal retracts ASIs that are no longer earned', () => {
+    const character = makeCharacterFixture({
+      level: 4,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
+      asiChoices: [
+        {
+          id: 'wizard|PHB|4',
+          level: 4,
+          className: 'Wizard',
+          classSource: 'PHB',
+          abilityChanges: { intelligence: 2 },
+        },
+      ],
+    })
+    const result = applyClassProgressionUpdate(
+      character,
+      character.provenance ?? emptyProvenance(),
+      [{ name: 'Wizard', source: 'PHB', levels: 3 }],
+    )
+
+    expect(result.characterPatch.asiChoices).toEqual([])
+    expect(result.provenanceUpdate.abilityBonuses).toEqual([])
+  })
+
+  test('level changes retain earned legacy ASIs without a class source', () => {
+    const character = makeCharacterFixture({
+      level: 4,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
+      asiChoices: [
+        {
+          id: 'wizard|4',
+          level: 2,
+          className: 'wizard',
+          abilityChanges: { intelligence: 2 },
+        },
+      ],
+    })
+    const result = applyClassProgressionUpdate(
+      character,
+      character.provenance ?? emptyProvenance(),
+      [{ name: 'Wizard', source: 'PHB', levels: 3 }],
+    )
+
+    expect(result.characterPatch.asiChoices).toEqual(character.asiChoices)
+    expect(result.provenanceUpdate.abilityBonuses).toHaveLength(1)
+  })
+
   test('level removal retracts class-owned feat choices and their effects', () => {
     const choiceId = 'fighter|phb|epic boon|eb'
     const optionTag = {

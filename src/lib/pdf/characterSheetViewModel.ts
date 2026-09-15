@@ -9,6 +9,7 @@ import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
 import { deriveCharacterActions } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
+import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -123,6 +124,7 @@ export interface CharacterSheetViewModel {
   featsSummary: string
   customOrganizationSummary: string
   carriedWeight: string
+  carryingCapacity: number
   sizeSummary: string
   appearanceSummary: string
   historyAndPersonalitySummary: string
@@ -663,6 +665,11 @@ export function createCharacterSheetViewModel(
     carriedWeight: character.equipment
       .reduce((sum, item) => sum + (item.weight ?? 0) * (item.quantity ?? 1), 0)
       .toFixed(1),
+    carryingCapacity: getEffectiveCarryCapacity(
+      effectiveAbilityScores.strength,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
+    ),
     sizeSummary: raceResolution.mergedRace?.size?.[0] ?? '',
     appearanceSummary: buildAppearanceSummary(character),
     historyAndPersonalitySummary: buildHistoryAndPersonalitySummary(character),

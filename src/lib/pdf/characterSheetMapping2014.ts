@@ -231,7 +231,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
         ? formatViewModelModifier(armorAdjustments[1].amount)
         : '',
     'AC Misc Mod 2 Description': armorAdjustments[1]?.label ?? '',
-    'Weight Carrying Capacity.Field': String(strengthScore * 15),
+    'Weight Carrying Capacity.Field': String(viewModel.carryingCapacity),
     'Weight Encumbered': String(strengthScore * 5),
     'Weight Heavily Encumbered': String(strengthScore * 10),
     'Weight Push/Drag/Lift': String(strengthScore * 30),

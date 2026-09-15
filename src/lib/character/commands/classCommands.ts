@@ -27,6 +27,7 @@ import {
   removeGrantsBySourceRef,
   stripItemTag,
 } from '@/lib/provenance'
+import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Class5e, Item5e } from '@/types/5etools'
@@ -397,6 +398,17 @@ export function applyClassProgressionUpdate(
     classChoiceSelections,
   )
   provenanceUpdate = classChoiceGrants.provenanceUpdate
+  const asiChoices = (character.asiChoices ?? []).filter((choice) => {
+    const matchingEntry = nextProgression.find(
+      (entry) =>
+        normalizeKey(entry.name) === normalizeKey(choice.className) &&
+        (choice.classSource == null ||
+          entry.source == null ||
+          normalizeKey(entry.source) === normalizeKey(choice.classSource)),
+    )
+    return matchingEntry != null && choice.level <= matchingEntry.levels
+  })
+  provenanceUpdate = applyAsiChoices(provenanceUpdate, asiChoices)
 
   const characterPatch: Partial<Character> = {
     classProgression: nextProgression,
@@ -406,6 +418,7 @@ export function applyClassProgressionUpdate(
     hitPointGains,
     classFeatChoices: retainedClassFeatChoices,
     classChoiceSelections,
+    asiChoices,
     features: classChoiceGrants.features,
     spells: workingCharacter.spells,
     proficiencies: workingCharacter.proficiencies,

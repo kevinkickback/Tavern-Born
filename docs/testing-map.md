@@ -40,6 +40,14 @@ new tests land and do not lower them to merge a change.
 - Core calculations in src/lib/calculations/* (including spellUtils)
 - Character calculation-context coverage for source-qualified resolution, ruleset normalization,
   origin/ASI score composition, equipment state, and cross-surface effective-score agreement.
+- The six-fixture representative matrix in
+  `tests/fixtures/representativeCharacters.ts` and
+  `tests/integration/representativeCharacters.test.tsx` covers a 2014 dwarf martial, 2014 elf
+  wizard, 2024 cleric choices, 2024 druid choices, 2024 weapon mastery, and a level-changing
+  multiclass spellcaster. Every case crosses the real Builder review and header displays,
+  prerequisite checks, equipment/carrying calculations, spell profiles and slot pools, readiness,
+  and both PDF mappings from source-qualified lookups. The multiclass case also verifies active
+  item effects and class-owned ASI retraction on level-down.
 - Structured movement coverage for race/subrace inheritance, alternate and unknown modes, hover,
   legacy migration/downgrade, manual adjustments, exact overrides, and both PDF templates.
 - A focused source-ownership test prevents Builder, header-stat, prerequisite, spellcasting, and PDF
