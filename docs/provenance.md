@@ -84,7 +84,12 @@ stays in the draft and the dirty state is preserved until the user explicitly sa
 
 When a background is swapped, `reconcileBackgroundChange` → `removeGrantsBySource('background', ...)` clears all background ability bonuses and resets `backgroundAsiBlockIndex`/`backgroundAsiChoices`.
 
-The UI for choosing ability blocks and slots lives in `src/pages/build/background/BackgroundPage.tsx`. The bonuses are included in `displayBonuses` on `AbilityScoresPage` via `buildBackgroundBonuses` from `src/lib/calculations/abilityScores.ts`.
+Ability Scores is the canonical UI for choosing background ability blocks and slots. The Background
+page derives a read-only current selection and every available assignment pattern from the parsed
+blocks, then links to that editor. The bonuses are included in `displayBonuses` on
+`AbilityScoresPage` via `buildBackgroundBonuses` from `src/lib/calculations/abilityScores.ts`.
+Selecting a background applies its fixed origin-feat grant but does not automatically open the feat
+options wizard; any required follow-up remains visible and editable through the owning feat flow.
 
 ## Grant Application Pattern
 

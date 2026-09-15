@@ -3,14 +3,23 @@ import { useId } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ManualActionsEditor } from '@/components/character/ManualActionsEditor'
 import { ManualEffectsEditor } from '@/components/character/ManualEffectsEditor'
-import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { useCharacterActions } from '@/hooks/character/useCharacterActions'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { cn } from '@/lib/utils'
+import {
+  SourceDerivedActions,
+  SourceDerivedEffects,
+} from '@/pages/adjustments/components/DerivedMechanicsOverview'
+import { useCharacterStore } from '@/store/characterStore'
 
 type AdjustmentSection = 'actions' | 'effects'
 
 export function AdjustmentsPage() {
+  const character = useCharacterStore((state) => state.activeCharacter)
+  const calculation = useCharacterCalculationContext(character)
+  const actions = useCharacterActions(character)
   const [searchParams, setSearchParams] = useSearchParams()
   const tabIdPrefix = useId()
   const section: AdjustmentSection =
@@ -66,10 +75,10 @@ export function AdjustmentsPage() {
       <WorkspaceBody className="overflow-y-auto bg-workspace-pane p-4">
         <div className="mx-auto w-full max-w-5xl space-y-4">
           <div>
-            <h2 className="font-semibold">Manual actions and effects</h2>
+            <h2 className="font-semibold">Actions and effects</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Add only mechanics that cannot be represented safely by the configured source data.
-              These changes are included in Builder calculations and character-sheet exports.
+              Review mechanics derived from the character, then add only what the configured source
+              data cannot represent safely.
             </p>
           </div>
           <Tabs value={section} onValueChange={selectSection}>
@@ -78,18 +87,23 @@ export function AdjustmentsPage() {
               value="actions"
               aria-labelledby={`${tabIdPrefix}-tab-actions`}
             >
-              <Card className="p-5">
+              <div className="space-y-8 py-1">
+                <SourceDerivedActions actions={actions} />
                 <ManualActionsEditor />
-              </Card>
+              </div>
             </TabsContent>
             <TabsContent
               id={`${tabIdPrefix}-panel-effects`}
               value="effects"
               aria-labelledby={`${tabIdPrefix}-tab-effects`}
             >
-              <Card className="p-5">
+              <div className="space-y-8 py-1">
+                <SourceDerivedEffects
+                  effects={calculation?.effects.declarations ?? []}
+                  resolutionContext={calculation?.effects.resolutionContext ?? {}}
+                />
                 <ManualEffectsEditor />
-              </Card>
+              </div>
             </TabsContent>
           </Tabs>
         </div>

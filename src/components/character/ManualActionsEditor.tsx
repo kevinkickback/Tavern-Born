@@ -171,7 +171,7 @@ export function ManualActionsEditor() {
       </header>
 
       <div className="space-y-5">
-        <section className="grid gap-3 rounded-lg border border-border bg-workspace-pane p-4 sm:grid-cols-2">
+        <section className="grid gap-3 border-y border-border py-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor={nameId}>Name</Label>
             <Input id={nameId} value={name} onChange={(event) => setName(event.target.value)} />
@@ -335,40 +335,39 @@ export function ManualActionsEditor() {
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">Saved manual actions</h3>
           {(character.manualActions ?? []).length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+            <p className="border-y border-border py-4 text-sm text-muted-foreground">
               No manual actions have been added.
             </p>
           ) : (
-            (character.manualActions ?? []).map((action) => (
-              <div
-                key={action.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-workspace-pane p-3"
-              >
-                <Switch
-                  checked={action.active}
-                  aria-label={`${action.active ? 'Disable' : 'Enable'} ${action.name}`}
-                  onCheckedChange={(active) =>
-                    update(upsertManualActionCommand(character, { ...action, active }))
-                  }
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{action.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {ACTION_KINDS.find((option) => option.value === action.kind)?.label}
-                    {action.range ? ` · ${action.range}` : ''}
-                  </p>
+            <div className="divide-y divide-border border-y border-border">
+              {(character.manualActions ?? []).map((action) => (
+                <div key={action.id} className="flex items-center gap-3 py-3">
+                  <Switch
+                    checked={action.active}
+                    aria-label={`${action.active ? 'Disable' : 'Enable'} ${action.name}`}
+                    onCheckedChange={(active) =>
+                      update(upsertManualActionCommand(character, { ...action, active }))
+                    }
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{action.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {ACTION_KINDS.find((option) => option.value === action.kind)?.label}
+                      {action.range ? ` · ${action.range}` : ''}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Remove ${action.name}`}
+                    onClick={() => update(removeManualActionCommand(character, action.id))}
+                  >
+                    <Trash />
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  aria-label={`Remove ${action.name}`}
-                  onClick={() => update(removeManualActionCommand(character, action.id))}
-                >
-                  <Trash />
-                </Button>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </section>
       </div>

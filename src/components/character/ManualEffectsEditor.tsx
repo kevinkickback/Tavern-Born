@@ -174,7 +174,7 @@ export function ManualEffectsEditor() {
       </header>
 
       <div className="space-y-5">
-        <section className="grid gap-3 rounded-lg border border-border bg-workspace-pane p-4 sm:grid-cols-2">
+        <section className="grid gap-3 border-y border-border py-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor={labelId}>What caused it?</Label>
             <Input
@@ -304,45 +304,44 @@ export function ManualEffectsEditor() {
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">Saved manual effects</h3>
           {manualEffects.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+            <p className="border-y border-border py-4 text-sm text-muted-foreground">
               No manual effects have been added.
             </p>
           ) : (
-            manualEffects.map((effect) => {
-              const enabled = !suppressed.has(effect.id)
-              return (
-                <div
-                  key={effect.id}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-workspace-pane p-3"
-                >
-                  <Switch
-                    checked={enabled}
-                    aria-label={`${enabled ? 'Disable' : 'Enable'} ${effect.label}`}
-                    onCheckedChange={(checked) =>
-                      update(setEffectSuppressedCommand(character, effect.id, !checked))
-                    }
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{effect.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatTarget(effect.target)} · {formatOperation(effect.operation)}
-                    </p>
-                    {effect.condition && (
-                      <p className="mt-1 text-xs text-muted-foreground">{effect.condition}</p>
-                    )}
+            <div className="divide-y divide-border border-y border-border">
+              {manualEffects.map((effect) => {
+                const enabled = !suppressed.has(effect.id)
+                return (
+                  <div key={effect.id} className="flex items-center gap-3 py-3">
+                    <Switch
+                      checked={enabled}
+                      aria-label={`${enabled ? 'Disable' : 'Enable'} ${effect.label}`}
+                      onCheckedChange={(checked) =>
+                        update(setEffectSuppressedCommand(character, effect.id, !checked))
+                      }
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{effect.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatTarget(effect.target)} · {formatOperation(effect.operation)}
+                      </p>
+                      {effect.condition && (
+                        <p className="mt-1 text-xs text-muted-foreground">{effect.condition}</p>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Remove ${effect.label}`}
+                      onClick={() => update(removeManualEffectCommand(character, effect.id))}
+                    >
+                      <Trash />
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`Remove ${effect.label}`}
-                    onClick={() => update(removeManualEffectCommand(character, effect.id))}
-                  >
-                    <Trash />
-                  </Button>
-                </div>
-              )
-            })
+                )
+              })}
+            </div>
           )}
         </section>
       </div>

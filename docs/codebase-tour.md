@@ -139,6 +139,10 @@ Combat stats and advancement:
   changes/overrides
 - src/components/layout/AppHeader.tsx — heart/shield launch controls and the one-time anchored
   management hint
+- src/hooks/ui/useAnchoredHintPosition.ts — Floating UI anchor selection plus lifecycle recovery for
+  persistent and responsive controls
+- src/pages/adjustments/components/DerivedMechanicsOverview.tsx — flat, read-only projections of
+  source-derived character actions and typed effects; manual editors remain separate
 
 Rules, sources, and condition tracking:
 - src/components/layout/AppSidebar.tsx — Rules is the character-configuration workspace between

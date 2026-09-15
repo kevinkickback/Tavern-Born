@@ -375,6 +375,15 @@ requires either a die roll or a valid manual die result.
 
 Consumers should read maximum HP through `getEffectiveMaxHP()` or `useHitPoints()` rather than `hitPoints.max`.
 
+### Actions and Effects Overview Ownership
+
+The Actions & Effects page is a projection, not a second owner of source data. It combines
+`useCharacterActions()` output and the calculation context's typed effect declarations into
+read-only source rows. Equipment state determines whether weapon actions and item effects are
+active; race, class, feat, and spell actions remain owned by their respective builder workflows.
+Only `character.manualActions[]` and `character.manualEffects[]` can be created, edited, or removed
+from this page. This keeps the overview complete without introducing a parallel mutation path.
+
 ### Armor Class Ownership Model
 
 **Current State:**

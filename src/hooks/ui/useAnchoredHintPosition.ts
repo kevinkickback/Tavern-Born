@@ -88,12 +88,25 @@ export function useAnchoredHintPosition({
       animationFrame = window.requestAnimationFrame(updateReference)
     }
 
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleUpdate)
+    const observeMatchingElements = () => {
+      resizeObserver?.disconnect()
+      for (const element of document.querySelectorAll<HTMLElement>(selector)) {
+        resizeObserver?.observe(element)
+      }
+      scheduleUpdate()
+    }
+
     updateReference()
+    observeMatchingElements()
     window.addEventListener('scroll', scheduleUpdate, true)
+    window.addEventListener('resize', scheduleUpdate)
+    window.addEventListener('load', scheduleUpdate)
     document.addEventListener('transitionend', scheduleUpdate, true)
     document.addEventListener('animationend', scheduleUpdate, true)
     document.addEventListener('visibilitychange', scheduleUpdate)
-    const mutationObserver = new MutationObserver(scheduleUpdate)
+    const mutationObserver = new MutationObserver(observeMatchingElements)
     mutationObserver.observe(document.body, {
       attributes: true,
       attributeFilter: ['aria-hidden', 'class', 'hidden', 'open', 'style'],
@@ -104,10 +117,13 @@ export function useAnchoredHintPosition({
     return () => {
       if (animationFrame !== null) window.cancelAnimationFrame(animationFrame)
       window.removeEventListener('scroll', scheduleUpdate, true)
+      window.removeEventListener('resize', scheduleUpdate)
+      window.removeEventListener('load', scheduleUpdate)
       document.removeEventListener('transitionend', scheduleUpdate, true)
       document.removeEventListener('animationend', scheduleUpdate, true)
       document.removeEventListener('visibilitychange', scheduleUpdate)
       mutationObserver.disconnect()
+      resizeObserver?.disconnect()
     }
   }, [enabled, selector])
 

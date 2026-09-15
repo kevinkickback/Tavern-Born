@@ -39,6 +39,10 @@
 * Actions now opens first on Actions & Effects, while Review has a dedicated final section in Builder navigation
 * Race details only offer bonus setup when a 2014 race choice is still incomplete
 * Spellcasting details show spell-slot capacity without live-session spend and restore controls
+* Actions & Effects now includes read-only actions and modifiers derived from equipment, spells, ancestry, feats, and classes while keeping manual entries clearly separate
+* Simplified Actions & Effects layouts by removing repeated nested cards
+* 2024 background selection no longer interrupts the workflow with an automatic feat setup window, and its ability-bonus summary now shows every available assignment pattern
+* Fixed the Armor Class and Hit Point hint failing to appear when its responsive header controls became available after initial layout
 
 </details>
 

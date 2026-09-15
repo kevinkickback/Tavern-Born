@@ -113,8 +113,9 @@ new tests land and do not lower them to merge a change.
   source-qualified race/background choices, option retraction, and class level-down cleanup.
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
-- Header HP/AC launch controls, deliberate Rest-action absence, and immediate in-session one-time-hint reset coverage in
-  tests/integration/appHeader.test.tsx
+- Header HP/AC launch controls, deliberate Rest-action absence, immediate in-session one-time-hint
+  reset coverage, and responsive persistent-anchor recovery in
+  tests/integration/appHeader.test.tsx and tests/hooks/useAnchoredHintPosition.test.tsx
 - Character-card action behavior and consistent accent-colored level, race, and class icons in tests/integration/characterCard.test.tsx
 - Title-bar-safe Floating UI collision padding and live anchoring across supported interface scales,
   plus nested-only history navigation, streamlined transient controls, selected-entry pinning
@@ -124,8 +125,10 @@ new tests land and do not lower them to merge a change.
 - HP and AC Overview/Manual changes modal coverage in tests/integration/hitPointsModal.test.tsx and
   tests/integration/armorClassModal.test.tsx
 - Builder Actions & Effects page/editor coverage in tests/integration/adjustmentsPage.test.tsx,
+  tests/integration/derivedMechanicsOverview.test.tsx,
   tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx,
-  including Actions-first ordering/default and Effects deep links
+  including Actions-first ordering/default, Effects deep links, read-only source-owned rows, active
+  equipment requirements, manual-entry separation, and the flat presentation
 - Race summary coverage for parsed unresolved, completed, and fixed ability bonuses; the custom
   base-score method; shared accent-outline actions; and omission of race-bonus editing under 2024
   rules in tests/integration/racePageSummary.test.tsx
@@ -133,7 +136,11 @@ new tests land and do not lower them to merge a change.
   background choices; the corpus-backed kitchen-sink test requires a valid selected lineage when
   the resolved race exposes lineages.
 - Canonical 2014 race/2024 background readiness routing and revised background-bonus editing in
-  tests/lib/characterReadiness.test.ts and tests/integration/abilityScoresPage.test.tsx
+  tests/lib/characterReadiness.test.ts and tests/integration/abilityScoresPage.test.tsx. The 2024
+  Background page regression in tests/integration/backgroundPage.test.tsx verifies selection does
+  not force fixed-feat configuration, the proficiency grid is not duplicated with origin fields,
+  and all parsed ability-assignment patterns appear in the setup summary; pure summary formatting
+  is covered by tests/unit/backgroundPageData.test.ts.
 - Warning/destructive palette import regression coverage in tests/lib/themeColors.test.ts
 - Combined Rules/Sources tab behavior and source-panel layout coverage in
   tests/integration/rulesPage.test.tsx and tests/integration/sourcesPanelLayout.test.tsx

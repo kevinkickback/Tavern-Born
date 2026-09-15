@@ -39,12 +39,12 @@ import { getBackgroundAbilityData } from '@/lib/calculations/abilityScores'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
-import { getFixedFeatOptionKey, resolveFixedFeatGrant } from '@/lib/featGrants'
-import { parseFeatGrantBlocks } from '@/lib/provenance/applyFeatAndOptionalFeatureGrants'
+import { resolveFixedFeatGrant } from '@/lib/featGrants'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel'
 import {
+  getBackgroundAbilitySummary,
   getBackgroundLanguageNames,
   getBackgroundSkillNames,
   getBackgroundToolNames,
@@ -215,33 +215,6 @@ export function BuildBackgroundPage() {
     )
     if (!bg) return
     applyBackgroundSelection(bg)
-    const normalizedBackground = normalizeBackgroundForOriginSystem(bg, character.originSystem)
-    const fixedGrant = parseFeatGrantBlocks(
-      normalizedBackground?.feats as unknown[] | undefined,
-    ).find((grant) => grant.type === 'fixed')
-    if (fixedGrant?.type === 'fixed') {
-      const tag = {
-        sourceType: 'background' as const,
-        sourceName: bg.name,
-        sourceRef: fixedGrant.source || bg.source,
-        grantType: 'fixed' as const,
-        grantVariant: fixedGrant.variant,
-        label: bg.name,
-      }
-      const resolved = resolveFixedFeatGrant(feats as Feat5e[], fixedGrant.name, tag)
-      const optionKey = getFixedFeatOptionKey(resolved.name, resolved.source, resolved.variant)
-      if (
-        resolved.feat &&
-        hasFeatOptions(resolved.feat) &&
-        !character.fixedFeatOptions?.[optionKey]
-      ) {
-        setOptionsPendingFeat({
-          ...resolved.feat,
-          grantVariant: resolved.variant,
-          fixedSpellcastingClass: resolved.fixedSpellcastingClass,
-        })
-      }
-    }
     if (detailCollapsed) setDetailCollapsed(false)
     setCompactPane('right')
   }
@@ -249,11 +222,11 @@ export function BuildBackgroundPage() {
   const skills = getBackgroundSkillNames(selectedBg)
   const langs = getBackgroundLanguageNames(selectedBg)
   const tools = getBackgroundToolNames(selectedBg)
-  const chosenOriginFeat = originFeatChoices.find((c) => c.selected.length > 0)?.selected[0] ?? null
   const showBackgroundAsiPanel = character.originSystem === '2024'
   const bgAsiData = getBackgroundAbilityData(normalizedSelectedBg)
   const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0
   const bgChoices = character.backgroundAsiChoices ?? []
+  const backgroundAbilitySummary = getBackgroundAbilitySummary(bgAsiData, bgBlockIndex, bgChoices)
 
   const backgroundConfigurationPanel = showBackgroundAsiPanel ? (
     <div className="mt-4 border-t border-border pt-3">
@@ -263,8 +236,17 @@ export function BuildBackgroundPage() {
             Ability Bonuses
           </div>
           {selectedBg ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-muted-foreground">Set on Ability Scores.</span>
+            <div className="mt-2 space-y-2">
+              <div className="text-xs text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">Current:</span>{' '}
+                  {backgroundAbilitySummary.current}
+                </p>
+                <p className="mt-1">
+                  <span className="font-medium text-foreground">Options:</span>{' '}
+                  {backgroundAbilitySummary.options}
+                </p>
+              </div>
               <Button asChild size="sm" variant="accentOutline" className="h-8 text-xs">
                 <Link to="/build/ability-scores">
                   <PencilSimple className="size-3" />
@@ -553,11 +535,6 @@ export function BuildBackgroundPage() {
                 toolNames={tools}
                 equipmentBlocks={equipmentBlocks}
                 bgEquipmentChoices={bgEquipmentChoices}
-                fixedBgFeats={fixedBgFeats}
-                chosenOriginFeat={chosenOriginFeat}
-                bgAsiData={bgAsiData}
-                bgBlockIndex={bgBlockIndex}
-                bgChoices={bgChoices}
               />
             </div>
           }

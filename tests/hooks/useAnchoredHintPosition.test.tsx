@@ -71,4 +71,28 @@ describe('useAnchoredHintPosition', () => {
     anchor.getBoundingClientRect = () => ({ ...anchorRect, top: -60, bottom: -20 }) as DOMRect
     expect(isHintAnchorVisible(anchor)).toBe(false)
   })
+
+  test('rechecks a responsive anchor when the window resizes', async () => {
+    const anchor = document.createElement('button')
+    anchor.dataset.hintAnchor = 'true'
+    anchor.style.display = 'none'
+    anchor.getBoundingClientRect = () => anchorRect
+    document.body.append(anchor)
+    Object.defineProperty(document, 'elementsFromPoint', {
+      configurable: true,
+      value: vi.fn(() => [anchor]),
+    })
+
+    const { result } = renderHook(() =>
+      useAnchoredHintPosition({
+        enabled: true,
+        selector: '[data-hint-anchor="true"]',
+      }),
+    )
+
+    await waitFor(() => expect(result.current).toBeNull())
+    anchor.style.display = 'block'
+    act(() => window.dispatchEvent(new Event('resize')))
+    await waitFor(() => expect(result.current?.reference).toBe(anchor))
+  })
 })
