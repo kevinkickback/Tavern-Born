@@ -3,6 +3,11 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createCorpusCapabilityReport } from '@/lib/5etools/capabilityReport'
 import {
+  createClassChoiceCoverageMatrix,
+  findClassChoiceCoverageGaps,
+  getPrimaryClassSourceForEdition,
+} from '@/lib/5etools/classChoiceCoverage'
+import {
   parseBackgrounds,
   parseClasses,
   parseFeats,
@@ -10,6 +15,7 @@ import {
   parseOptionalFeatures,
   parseRaces,
 } from '@/lib/5etools/parsers'
+import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { Background5e, Class5e, ClassFeature, Feat5e, Item5e, Race5e } from '@/types/5etools'
 import { makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -58,6 +64,17 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
         optionalfeatures,
       }),
     )
+    const primaryEditionSource = getPrimaryClassSourceForEdition(classes, 'one')
+    const primaryEditionClasses = classes.filter(
+      (classData) => classData.source === primaryEditionSource,
+    )
+    const maximumLevel = CORE_RULES_METADATA['2024'].maxCharacterLevel
+    const choiceCoverage = createClassChoiceCoverageMatrix(primaryEditionClasses, maximumLevel)
+    const choiceCoverageGaps = findClassChoiceCoverageGaps(
+      primaryEditionClasses,
+      choiceCoverage,
+      maximumLevel,
+    )
     const issuesByCode = Object.fromEntries(
       Array.from(
         report.issues.reduce((counts, issue) => {
@@ -73,6 +90,12 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
         {
           entities: report.entities,
           classChoices: report.classChoices,
+          primaryEditionChoiceCoverage: {
+            source: primaryEditionSource,
+            classes: choiceCoverage.length,
+            levelsPerClass: maximumLevel,
+            gaps: choiceCoverageGaps,
+          },
           movement: report.movement,
           fieldCount: report.fields.length,
           issuesByCode,
@@ -93,6 +116,9 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(report.entities.races).toBeGreaterThan(0)
     expect(report.fields.length).toBeGreaterThan(0)
     expect(report.issues.filter((issue) => issue.code === 'unresolved-reference')).toEqual([])
+    expect(primaryEditionClasses.length).toBeGreaterThan(0)
+    expect(choiceCoverage.every((row) => row.levels.length === maximumLevel)).toBe(true)
+    expect(choiceCoverageGaps).toEqual([])
     expect(
       report.movement.absent +
         report.movement.numeric +

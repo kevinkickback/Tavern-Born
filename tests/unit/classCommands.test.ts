@@ -4,13 +4,14 @@ import {
   addMulticlass,
   applyClassEquipmentChoiceCommand,
   applyClassProgressionUpdate,
+  applyClassSelectionCommand,
   applyLevelUp,
   removeMulticlass,
   selectBaseClass,
   selectSubclass,
   updateCharacterLevel,
 } from '@/lib/character/commands/classCommands'
-import { makeSourceTag } from '@/lib/provenance'
+import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -304,6 +305,24 @@ describe('Class Commands', () => {
     const character = makeCharacterFixture({
       level: 4,
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 4 }],
+      classChoiceSelections: [
+        {
+          choiceId,
+          label: 'Epic Boon',
+          kind: 'feat',
+          className: 'Fighter',
+          classSource: 'PHB',
+          classLevel: 4,
+          selected: [
+            {
+              entityType: 'feat',
+              name: 'Skill Expert',
+              source: 'PHB',
+              slotLevel: 4,
+            },
+          ],
+        },
+      ],
       classFeatChoices: [
         {
           id: choiceId,
@@ -349,6 +368,7 @@ describe('Class Commands', () => {
     ])
 
     expect(result.characterPatch.classFeatChoices).toEqual([])
+    expect(result.characterPatch.classChoiceSelections).toEqual([])
     expect(result.characterPatch.proficiencies?.skills).toEqual([])
     expect(result.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
     expect(result.provenanceUpdate.feats['skill expert']).toBeUndefined()
@@ -377,6 +397,77 @@ describe('Class Commands', () => {
     ])
 
     expect(result.provenanceUpdate.proficiencies.armor.shield).toBeUndefined()
+  })
+
+  test('changing a class source retracts only choices owned by the replaced printing', () => {
+    const replacedChoiceId = 'class:test-class|old|choice:path|1'
+    const retainedChoiceId = 'class:other-class|same|choice:path|1'
+    const character = makeCharacterFixture({
+      level: 2,
+      classProgression: [
+        { name: 'Test Class', source: 'OLD', levels: 1 },
+        { name: 'Other Class', source: 'SAME', levels: 1 },
+      ],
+      classChoiceSelections: [
+        {
+          choiceId: replacedChoiceId,
+          label: 'Path',
+          kind: 'class-feature',
+          className: 'Test Class',
+          classSource: 'OLD',
+          classLevel: 1,
+          selected: [{ entityType: 'classFeature', name: 'Old Path', source: 'OLD', slotLevel: 1 }],
+        },
+        {
+          choiceId: retainedChoiceId,
+          label: 'Path',
+          kind: 'class-feature',
+          className: 'Other Class',
+          classSource: 'SAME',
+          classLevel: 1,
+          selected: [
+            { entityType: 'classFeature', name: 'Kept Path', source: 'SAME', slotLevel: 1 },
+          ],
+        },
+      ],
+      features: [
+        {
+          id: `class-choice:${encodeURIComponent(replacedChoiceId)}:old`,
+          name: 'Old Path',
+          source: 'OLD',
+          description: '',
+        },
+        {
+          id: `class-choice:${encodeURIComponent(retainedChoiceId)}:kept`,
+          name: 'Kept Path',
+          source: 'SAME',
+          description: '',
+        },
+      ],
+    })
+    let ledger = addGrant(emptyProvenance(), 'features', 'Old Path', {
+      ...makeSourceTag('class', 'Test Class', 'choice', 'OLD'),
+      grantVariant: replacedChoiceId,
+    })
+    ledger = addGrant(ledger, 'features', 'Kept Path', {
+      ...makeSourceTag('class', 'Other Class', 'choice', 'SAME'),
+      grantVariant: retainedChoiceId,
+    })
+
+    const result = applyClassSelectionCommand(
+      character,
+      ledger,
+      { name: 'Test Class', source: 'NEW' },
+      undefined,
+      new Map(),
+    )
+
+    expect(result.characterPatch.classChoiceSelections).toEqual([
+      expect.objectContaining({ choiceId: retainedChoiceId }),
+    ])
+    expect(result.characterPatch.features?.map((feature) => feature.name)).toEqual(['Kept Path'])
+    expect(result.provenanceUpdate.features['old path']).toBeUndefined()
+    expect(result.provenanceUpdate.features['kept path']).toHaveLength(1)
   })
 
   test('applies a class equipment choice as one character and provenance result', () => {

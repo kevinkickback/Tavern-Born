@@ -693,23 +693,42 @@ export function applyClassSelectionCommand(
     : selectBaseClass(character, ledger, cls.name, cls as Class5e, cls.source)
   const identityProficiencies = identity.characterPatch.proficiencies
   const effectProficiencies = effects.characterPatch.proficiencies ?? character.proficiencies
+  const selectionPatch: Partial<Character> = {
+    ...effects.characterPatch,
+    ...identity.characterPatch,
+    ...(identityProficiencies
+      ? {
+          proficiencies: {
+            ...effectProficiencies,
+            skills: identityProficiencies.skills,
+          },
+          skills: identity.characterPatch.skills,
+        }
+      : {}),
+  }
+  const nextProgression = identity.characterPatch.classProgression
+  if (subclass || !nextProgression) {
+    return {
+      classEntity: cls as Class5e,
+      characterPatch: selectionPatch,
+      provenanceUpdate: effects.provenanceUpdate,
+    }
+  }
 
+  const progressionResult = applyClassProgressionUpdate(
+    {
+      ...character,
+      ...selectionPatch,
+      classProgression: character.classProgression,
+      provenance: effects.provenanceUpdate,
+    },
+    effects.provenanceUpdate,
+    nextProgression,
+  )
   return {
     classEntity: cls as Class5e,
-    characterPatch: {
-      ...effects.characterPatch,
-      ...identity.characterPatch,
-      ...(identityProficiencies
-        ? {
-            proficiencies: {
-              ...effectProficiencies,
-              skills: identityProficiencies.skills,
-            },
-            skills: identity.characterPatch.skills,
-          }
-        : {}),
-    },
-    provenanceUpdate: effects.provenanceUpdate,
+    characterPatch: { ...selectionPatch, ...progressionResult.characterPatch },
+    provenanceUpdate: progressionResult.provenanceUpdate,
   }
 }
 
