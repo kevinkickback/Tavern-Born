@@ -1,10 +1,11 @@
-import { CopySimple, DownloadSimple, Trash, Upload } from '@phosphor-icons/react'
+import { CopySimple, DownloadSimple, FileCode, Trash } from '@phosphor-icons/react'
 import { memo } from 'react'
 import { CharacterCardFrame } from '@/components/character/CharacterCardFrame'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import type { Character } from '@/types/character'
@@ -74,56 +75,78 @@ export const CharacterCard = memo(function CharacterCard({
         cardSize={cardSize}
         actions={
           !selectionMode ? (
-            <div className={cn('flex', isSmall ? 'gap-2' : 'gap-3')}>
-              <Button
-                variant="outline"
-                size="default"
-                aria-label={`Duplicate ${character.name || 'character'}`}
-                className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onDuplicate(character)
-                }}
-              >
-                <CopySimple className={actionIconClass} />
-              </Button>
-              <Button
-                variant="outline"
-                size="default"
-                aria-label={`Export ${character.name || 'character'} as template`}
-                className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onExportTemplate(character)
-                }}
-              >
-                <DownloadSimple className={actionIconClass} />
-              </Button>
-              <Button
-                variant="outline"
-                size="default"
-                aria-label={`Export ${character.name || 'character'}`}
-                className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onExport(character)
-                }}
-              >
-                <Upload className={actionIconClass} />
-              </Button>
-              <Button
-                variant="destructive"
-                size="default"
-                aria-label={`Delete ${character.name || 'character'}`}
-                className={actionButtonClass}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onDelete(character.id)
-                }}
-              >
-                <Trash className={actionIconClass} />
-              </Button>
-            </div>
+            <TooltipProvider delayDuration={300}>
+              <div className={cn('flex', isSmall ? 'gap-2' : 'gap-3')}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="default"
+                      aria-label={`Duplicate ${character.name || 'character'}`}
+                      className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onDuplicate(character)
+                      }}
+                    >
+                      <CopySimple className={actionIconClass} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Duplicate character</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="default"
+                      aria-label={`Export ${character.name || 'character'} as template`}
+                      className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onExportTemplate(character)
+                      }}
+                    >
+                      <FileCode className={actionIconClass} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Export reusable template</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="default"
+                      aria-label={`Export ${character.name || 'character'}`}
+                      className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onExport(character)
+                      }}
+                    >
+                      <DownloadSimple className={actionIconClass} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Export character</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="default"
+                      aria-label={`Delete ${character.name || 'character'}`}
+                      className={actionButtonClass}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        onDelete(character.id)
+                      }}
+                    >
+                      <Trash className={actionIconClass} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete character</TooltipContent>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           ) : undefined
         }
       />

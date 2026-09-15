@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils'
 import { getInitials } from './model'
 
 interface OrganizationPreviewProps {
@@ -21,11 +22,14 @@ function PreviewCard({
 }: Omit<OrganizationPreviewProps, 'custom' | 'hasSelection'>) {
   return (
     <div
-      className={`relative overflow-hidden rounded-md border border-border/60 bg-gradient-to-br ${gradient}`}
+      className={cn(
+        'relative overflow-hidden rounded-md border border-border/60',
+        gradient ? `bg-gradient-to-br ${gradient}` : 'bg-surface-raised',
+      )}
     >
       {showImage ? (
         <>
-          <div className="pointer-events-none absolute inset-0 bg-black/15" />
+          {gradient ? <div className="pointer-events-none absolute inset-0 bg-black/15" /> : null}
           <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 overflow-hidden">
             <img
               src={image}
@@ -37,16 +41,28 @@ function PreviewCard({
         </>
       ) : (
         <div className="pointer-events-none absolute inset-y-0 right-0 flex w-1/3 items-center justify-center">
-          <span className="font-display text-4xl font-bold tracking-widest text-white/90">
+          <span
+            className={cn(
+              'font-display text-4xl font-bold tracking-widest',
+              gradient ? 'text-white/90' : 'text-muted-foreground/40',
+            )}
+          >
             {getInitials(title || 'Organization')}
           </span>
         </div>
       )}
       <div className="relative z-10 min-h-44 space-y-2 p-4 pr-28 sm:pr-40">
-        <h4 className="text-sm font-semibold text-white">
+        <h4 className={cn('text-sm font-semibold', gradient ? 'text-white' : 'text-foreground')}>
           {title || <span className="italic opacity-40">Organization name</span>}
         </h4>
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/85">{description}</p>
+        <p
+          className={cn(
+            'whitespace-pre-wrap text-sm leading-relaxed',
+            gradient ? 'text-white/85' : 'text-muted-foreground',
+          )}
+        >
+          {description}
+        </p>
       </div>
     </div>
   )

@@ -444,8 +444,21 @@ export function BuildRacePage() {
                                 (character.raceAsiBlockIndex ?? 0) as 0 | 1,
                                 character.raceAsiChoices,
                               )
-                              return asi.length > 0 ? asi.join(' · ') : '—'
+                              if (asi.length > 0) return asi.join(' · ')
+                              return character.originSystem === '2024'
+                                ? 'Provided by background'
+                                : 'No racial bonus'
                             })(),
+                            action: (
+                              <Button
+                                asChild
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                              >
+                                <Link to="/build/ability-scores">Choose bonuses</Link>
+                              </Button>
+                            ),
                           },
                           {
                             icon: (
@@ -453,6 +466,7 @@ export function BuildRacePage() {
                             ),
                             label: 'Size',
                             value: displayRace.size?.join(', ') ?? '—',
+                            action: undefined,
                           },
                           {
                             icon: <Lightning className="size-4 text-primary" weight="fill" />,
@@ -460,13 +474,25 @@ export function BuildRacePage() {
                             value: calculationContext
                               ? formatEffectiveMovement(calculationContext.movement)
                               : getSpeedDisplay(displayRace),
+                            action: (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => setMovementModalOpen(true)}
+                              >
+                                Edit movement
+                              </Button>
+                            ),
                           },
                           {
                             icon: <Eye className="size-4 text-primary" weight="fill" />,
                             label: 'Darkvision',
                             value: getDarkvisionDisplay(displayRace),
+                            action: undefined,
                           },
-                        ].map(({ icon, label, value }, index) => (
+                        ].map(({ icon, label, value, action }, index) => (
                           <div
                             key={label}
                             className={cn(
@@ -476,31 +502,17 @@ export function BuildRacePage() {
                             )}
                           >
                             {icon}
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                                 {label}
                               </p>
-                              <p className="mt-0.5 truncate text-sm font-semibold tabular-nums">
+                              <p className="mt-0.5 line-clamp-2 text-sm font-semibold tabular-nums">
                                 {value}
                               </p>
                             </div>
+                            {action ? <div className="ml-auto shrink-0">{action}</div> : null}
                           </div>
                         ))}
-                      </div>
-
-                      <div className="flex flex-wrap justify-end gap-2 px-1">
-                        <Button asChild size="sm" variant="outline">
-                          <Link to="/build/ability-scores">Manage ability bonuses</Link>
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setMovementModalOpen(true)}
-                        >
-                          <Lightning />
-                          Manage movement
-                        </Button>
                       </div>
 
                       <div className="border-y border-border">

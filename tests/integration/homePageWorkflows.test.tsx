@@ -317,7 +317,7 @@ describe('home page integration workflows', () => {
 
     render(<HomePage />)
     await user.click(screen.getByRole('button', { name: 'Import' }))
-    const file = new File([JSON.stringify(createCharacterTemplate(source))], 'build.tbt', {
+    const file = new File([JSON.stringify(createCharacterTemplate(source))], 'build.tbc', {
       type: 'application/json',
     })
     Object.defineProperty(fileInput, 'files', {
@@ -481,7 +481,7 @@ describe('home page integration workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Import' }))
 
     expect(fileInput.type).toBe('file')
-    expect(fileInput.accept).toBe('.tbc,.tbt,.json')
+    expect(fileInput.accept).toBe('.tbc,.json')
     expect(typeof fileInput.onchange).toBe('function')
     expect(fileInput.click).toHaveBeenCalled()
   })

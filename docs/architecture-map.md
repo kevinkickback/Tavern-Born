@@ -66,8 +66,10 @@ Spellcasting note:
 - `src/hooks/character/useSpellSlotMutations.ts` is the thin store adapter for shared/Pact slot use
   and explicit manual corrections. `src/hooks/character/useRestPreview.ts` composes current derived
   maxima/resources/HP into `applyRest()` and commits its reviewed result as one draft patch.
-- `src/components/modals/RestPreviewDialog.tsx` is the single short/long-rest preview surface. It
-  keeps HP recovery and hit-die recovery as explicit choices when they are not automatic.
+- `src/components/modals/RestPreviewDialog.tsx` remains the tested short/long-rest preview surface
+  for the deferred local-play workspace. It is deliberately not launched from the shared builder
+  header; the pure rest command and hook remain available without presenting a live-play control in
+  the current product scope.
 
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.
@@ -86,7 +88,8 @@ Spellcasting note:
   route-local state/derived orchestration, while `src/pages/feats/components/FeatCards.tsx` owns
   cards and the inspector. Canonical mutations remain in the feat command/provenance layers.
 - Characteristics keeps its data-agnostic draft and organization presentation helpers under
-  `src/pages/details/characteristics/`; loaded organization names never select hardcoded styling.
+  `src/pages/details/characteristics/`. Built-in organizations use a neutral app surface behind
+  their supplied artwork; only custom organizations expose a user-selected fallback gradient.
 - Large class/feat command modules delegate reusable proficiency, identity, and command-result
   helpers to focused sibling modules without changing their public command entry points.
 - Recursive tooltip lookup construction lives in src/lib/renderer/recursiveTooltip.ts. Raw and filtered callers pass an explicit collection set to the same builder, including `itemsBase`.
@@ -103,12 +106,13 @@ Current implementation notes:
 - Character creation composes the same origin commands through `buildInitialCharacter`; pages and hooks do not reconstruct grant pipelines.
 - Level-up HP choices are committed with class progression through `applyLevelUp`; the stored gain is the raw hit-die result so Constitution changes remain live.
 - HP reads resolve class/Constitution HP, per-level gain records, manual adjustments, active typed
-  effects, and an optional exact override in that order. The management modal shows the base and
-  every active typed source as read-only calculation rows; current and temporary HP remain mutable
-  session values.
+  effects, and an optional exact override in that order. The management modal's default Overview
+  shows the base and every active typed source as read-only calculation rows plus current and
+  temporary HP; its separate Manual changes view owns adjustments and exact overrides.
 - AC reads across UI and PDF surfaces resolve equipped armor and Dexterity, then manual and active
-  typed adjustments, then an optional exact override. The management modal exposes equipped armor
-  and shields as read-only calculation rows so equipment ownership remains on the Equipment route.
+  typed adjustments, then an optional exact override. The management modal's default Overview
+  exposes equipped armor and shields as read-only calculation rows so equipment ownership remains
+  on the Equipment route; its separate Manual changes view owns adjustments and exact overrides.
   The legacy `character.armorClass` field is not a display source.
 - Movement reads across Builder and PDF surfaces resolve the race/subrace-owned structured base,
   then labeled per-mode adjustments, then exact overrides. `character.speed` is only a walking-speed
@@ -129,11 +133,11 @@ Current implementation notes:
   direct-history navigation, and pinning freezes the selected entry at its current viewport
   position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and
   keyboard repositioning while History and Unpin remain independent controls.
-- Per-character Adjustments, Rules, and Sources live in the Builder workspace's Options group.
-  Adjustments owns the manual Effects and Actions editors as page tabs; these are character-scoped
-  build corrections, not global app destinations or transient header dialogs. Rules are tabbed by
-  Ruleset, Advancement, and Character Options; the selected ruleset itself remains fixed after
-  creation.
+- Per-character Adjustments remains in the Builder workspace's Options group and owns the manual
+  Effects and Actions editors through its functional page header. Rules and Sources are separate
+  character-scoped top-level workspaces because they configure the whole build and loaded catalog;
+  both remain protected until a character is active. Rules are tabbed by Ruleset, Advancement, and
+  Character Options; the selected ruleset itself remains fixed after creation.
 - Ability Scores is the canonical editor for origin ability bonuses in both rulesets: 2014 race
   bonuses and 2024 background bonuses are persisted through their existing provenance commands.
   Race and Background show source context and link to that editor instead of maintaining duplicate

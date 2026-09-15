@@ -110,6 +110,9 @@ portrait/transform, narrative details, timestamps, and live session fields; spel
 build decisions remain, with slot usage zeroed. Import materializes the payload through
 `createEmptyCharacter()` before the existing character validation/store boundary accepts it. Copy
 and template records are independent structured clones and never share mutable nested objects.
+Full characters and reusable template envelopes both use the `.tbc` extension; import identifies
+their payload kind from the versioned schema and also permits generic `.json` files. `.tbt` is not a
+supported file type.
 
 ## Dirty State and lastModified Timestamps
 

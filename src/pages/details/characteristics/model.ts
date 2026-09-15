@@ -86,27 +86,9 @@ export function createCharacteristicsDraft(character?: Character | null): Charac
   }
 }
 
-const ORGANIZATION_IMAGE_STYLES = [
-  'from-cyan-500/80 to-cyan-700/80',
-  'from-emerald-500/80 to-emerald-700/80',
-  'from-amber-500/80 to-amber-700/80',
-  'from-rose-500/80 to-rose-700/80',
-  'from-sky-500/80 to-sky-700/80',
-] as const
-
 export function getInitials(label: string): string {
   const parts = label.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return 'ORG'
   if (parts.length === 1) return parts[0].slice(0, 3).toUpperCase()
   return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase()
-}
-
-export function getOrganizationImageStyle(label: string): string {
-  const normalized = label
-    .toLowerCase()
-    .replace(/^the\s+/, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-  const sum = [...normalized].reduce((total, character) => total + character.charCodeAt(0), 0)
-  return ORGANIZATION_IMAGE_STYLES[sum % ORGANIZATION_IMAGE_STYLES.length]
 }

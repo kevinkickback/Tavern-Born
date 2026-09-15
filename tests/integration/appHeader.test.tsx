@@ -29,11 +29,6 @@ vi.mock('@/components/modals/HitPointsModal', () => ({
     open ? <div data-testid="hit-points-modal-mock" /> : null,
 }))
 
-vi.mock('@/components/modals/RestPreviewDialog', () => ({
-  RestPreviewDialog: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="rest-preview-dialog-mock" /> : null,
-}))
-
 vi.mock('@/hooks/character/useArmorClass', () => ({
   useArmorClass: () => ({
     calculatedAC: 17,
@@ -172,16 +167,14 @@ describe('app header character summary', () => {
     expect(screen.getByTestId('armor-class-modal-mock')).toBeTruthy()
   })
 
-  test('opens the rest preview from the shared header action', async () => {
-    const user = userEvent.setup()
+  test('keeps rest controls out of the builder header', () => {
     render(
       <MemoryRouter>
         <AppHeader />
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: 'Preview a rest' }))
-    expect(await screen.findByTestId('rest-preview-dialog-mock')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Preview a rest' })).toBeNull()
   })
 
   test('introduces the shield and heart menus once on the Race page', async () => {
@@ -193,7 +186,7 @@ describe('app header character summary', () => {
     )
 
     expect(screen.getByRole('status').textContent).toContain(
-      'Click the shield or heart to manage Armor Class and Hit Points',
+      'Click the shield or heart to review Armor Class and Hit Point sources',
     )
     await user.click(
       screen.getByRole('button', { name: 'Dismiss Armor Class and Hit Points hint' }),
@@ -215,7 +208,7 @@ describe('app header character summary', () => {
     act(() => resetAllHints())
 
     expect(screen.getByRole('status').textContent).toContain(
-      'Click the shield or heart to manage Armor Class and Hit Points',
+      'Click the shield or heart to review Armor Class and Hit Point sources',
     )
   })
 
@@ -260,14 +253,14 @@ describe('app header character summary', () => {
     expect(screen.getByText('Portrait')).toBeTruthy()
   })
 
-  test('treats Character Rules as part of the Builder workspace', () => {
+  test('keeps Character Rules outside Builder-only level-up actions', () => {
     render(
       <MemoryRouter initialEntries={['/rules']}>
         <AppHeader />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('button', { name: 'Level up character' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Level up character' })).toBeNull()
     expect(screen.getByText('Character Rules')).toBeTruthy()
   })
 

@@ -57,12 +57,14 @@ describe('HitPointsModal', () => {
     expect(screen.getByLabelText('Current HP').closest('details')).toBeNull()
     expect(screen.getByLabelText('Temporary HP').closest('details')).toBeNull()
 
+    await user.click(screen.getByRole('tab', { name: 'Manual changes' }))
     await user.type(screen.getByLabelText('What caused it?'), 'Divine blessing')
     await user.type(screen.getByLabelText('HP change'), '5')
     await user.click(screen.getByRole('button', { name: 'Add' }))
 
     expect(screen.getByText('Divine blessing')).toBeTruthy()
     expect(screen.getByText('+5 HP')).toBeTruthy()
+    await user.click(screen.getByRole('tab', { name: 'Overview' }))
     expect((screen.getByLabelText('Current HP') as HTMLInputElement).value).toBe('13')
 
     await user.click(screen.getByRole('button', { name: 'Save' }))
@@ -103,9 +105,11 @@ describe('HitPointsModal', () => {
     const user = userEvent.setup()
     render(<HitPointsModal open={true} onOpenChange={() => {}} />)
 
+    await user.click(screen.getByRole('tab', { name: 'Manual changes' }))
     await user.type(screen.getByLabelText('What caused it?'), 'Divine blessing')
     await user.type(screen.getByLabelText('HP change'), '5')
     await user.click(screen.getByRole('button', { name: 'Add' }))
+    await user.click(screen.getByRole('tab', { name: 'Overview' }))
     const currentHP = screen.getByLabelText('Current HP')
     await user.clear(currentHP)
     await user.type(currentHP, '8')
@@ -118,6 +122,7 @@ describe('HitPointsModal', () => {
     const user = userEvent.setup()
     render(<HitPointsModal open={true} onOpenChange={() => {}} />)
 
+    await user.click(screen.getByRole('tab', { name: 'Manual changes' }))
     await user.type(screen.getByLabelText('What caused it?'), 'Lingering curse')
     await user.type(screen.getByLabelText('HP change'), '-3')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -132,6 +137,7 @@ describe('HitPointsModal', () => {
     const user = userEvent.setup()
     render(<HitPointsModal open={true} onOpenChange={() => {}} />)
 
+    await user.click(screen.getByRole('tab', { name: 'Manual changes' }))
     await user.click(screen.getByText('More HP options'))
     const desiredMaximum = screen.getByLabelText('Set maximum HP directly')
     await user.clear(desiredMaximum)
@@ -177,5 +183,6 @@ describe('HitPointsModal', () => {
     expect(screen.getByText('Test maximum HP effect')).toBeTruthy()
     expect(screen.getByText('Test Vitality Item', { exact: false })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Remove Test Vitality Item' })).toBeNull()
+    expect(screen.queryByLabelText('What caused it?')).toBeNull()
   })
 })

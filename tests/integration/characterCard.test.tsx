@@ -40,6 +40,9 @@ describe('CharacterCard', () => {
       expect(icon.getAttribute('class')).not.toContain('dark:text-accent-foreground')
     }
 
+    await user.hover(screen.getByRole('button', { name: 'Export Accessible Hero' }))
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Export character')
+
     await user.click(screen.getByRole('button', { name: 'Export Accessible Hero' }))
     expect(onExport).toHaveBeenCalledWith(character)
     expect(onLoad).not.toHaveBeenCalled()

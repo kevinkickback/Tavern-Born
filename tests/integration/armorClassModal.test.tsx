@@ -47,6 +47,7 @@ describe('ArmorClassModal', () => {
     render(<ArmorClassModal open={true} onOpenChange={() => {}} />)
 
     expect(screen.getByText('Armor Class')).toBeTruthy()
+    await user.click(screen.getByRole('tab', { name: 'Manual changes' }))
     await user.type(screen.getByLabelText('What caused it?'), 'Ring of protection')
     await user.type(screen.getByLabelText('AC change'), '1')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -65,6 +66,7 @@ describe('ArmorClassModal', () => {
     const user = userEvent.setup()
     render(<ArmorClassModal open={true} onOpenChange={() => {}} />)
 
+    await user.click(screen.getByRole('tab', { name: 'Manual changes' }))
     await user.type(screen.getByLabelText('What caused it?'), 'Lingering curse')
     await user.type(screen.getByLabelText('AC change'), '-2')
     await user.click(screen.getByRole('button', { name: 'Add' }))
@@ -79,6 +81,7 @@ describe('ArmorClassModal', () => {
     const user = userEvent.setup()
     render(<ArmorClassModal open={true} onOpenChange={() => {}} />)
 
+    await user.click(screen.getByRole('tab', { name: 'Manual changes' }))
     await user.click(screen.getByText('More AC options'))
     const directAC = screen.getByLabelText('Set Armor Class directly')
     await user.clear(directAC)
@@ -95,6 +98,7 @@ describe('ArmorClassModal', () => {
     const user = userEvent.setup()
     render(<ArmorClassModal open={true} onOpenChange={() => {}} />)
 
+    await user.click(screen.getByRole('tab', { name: 'Manual changes' }))
     await user.click(screen.getByText('More AC options'))
     await user.click(screen.getByLabelText('Keep Armor Class fixed'))
     await user.type(screen.getByLabelText('Fixed Armor Class'), '20')
@@ -147,6 +151,7 @@ describe('ArmorClassModal', () => {
     expect(screen.getByText('Test Shield')).toBeTruthy()
     expect(screen.getByText('Equipped shield', { exact: false })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Remove Test Shield' })).toBeNull()
+    expect(screen.queryByLabelText('What caused it?')).toBeNull()
   })
 
   test('shows the resolver trace for active and inactive adjustments', () => {

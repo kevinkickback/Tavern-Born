@@ -122,18 +122,25 @@ Spells page UI orchestration:
 - src/lib/character/commands/spellSlotCommands.ts — shared/Pact slot spend, restore, correction, and maxima reconciliation
 - src/hooks/character/useSpellSlotMutations.ts — thin active-character adapter for slot-use commands
 - src/lib/character/commands/restCommands.ts — pure atomic rest patch and change-preview construction
-- src/hooks/character/useRestPreview.ts and src/components/modals/RestPreviewDialog.tsx — derived rest context, preview, and one-patch commit
+- src/hooks/character/useRestPreview.ts and src/components/modals/RestPreviewDialog.tsx — retained
+  derived rest context, preview, and one-patch commit for the deferred local-play workspace; there
+  is intentionally no shared-header launcher
 
 Combat stats and advancement:
 - src/components/modals/LevelUpModal.tsx — class-level changes and average/rolled/manual hit-die result collection
 - src/lib/character/commands/classCommands.ts — atomic progression updates and durable per-level HP gain records
 - src/hooks/character/useHitPoints.ts — calculated, adjusted, overridden, current, and temporary HP views plus atomic modal save
-- src/components/modals/HitPointsModal.tsx — player-facing current/temp HP and lasting maximum-HP management
+- src/components/modals/HitPointsModal.tsx — player-facing HP Overview and separate manual
+  maximum-HP changes/overrides
 - src/hooks/character/useArmorClass.ts — calculated, adjusted, overridden, and effective AC views plus atomic modal save
-- src/components/modals/ArmorClassModal.tsx — player-facing lasting AC changes and fixed AC management
-- src/components/layout/AppHeader.tsx — heart/shield/rest launch controls and the one-time anchored management hint
+- src/components/modals/ArmorClassModal.tsx — player-facing AC Overview and separate manual
+  changes/overrides
+- src/components/layout/AppHeader.tsx — heart/shield launch controls and the one-time anchored
+  management hint
 
 Rules, sources, and condition tracking:
+- src/components/layout/AppSidebar.tsx — Rules and Sources are character-scoped top-level
+  workspaces ordered between Builder and Character Sheet; Adjustments remains in Builder Options
 - src/pages/rules/RulesPage.tsx — post-creation rules review and edits, split into Ruleset, Advancement, and Character Options tabs
 - src/pages/sources/SourcesPage.tsx — per-character allowed sources and newer-printing preference
 - src/pages/details/ConditionsPage.tsx — Combat State, Exhaustion, Conditions, and Class Resources tabs

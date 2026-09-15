@@ -43,7 +43,6 @@ import {
   CUSTOM_GRADIENT_PRESETS,
   createCharacteristicsDraft,
   DEFAULT_CUSTOM_GRADIENT,
-  getOrganizationImageStyle,
 } from './characteristics/model'
 import { OrganizationPreview } from './characteristics/OrganizationPreview'
 
@@ -235,7 +234,7 @@ export function CharacteristicsPage() {
     organizationSelectionKey === CUSTOM_ORGANIZATION_KEY
       ? (CUSTOM_GRADIENT_PRESETS.find((p) => p.key === organizationCustomGradient)?.className ??
         CUSTOM_GRADIENT_PRESETS[0].className)
-      : getOrganizationImageStyle(previewTitle || 'Organization')
+      : ''
 
   const showPreviewImage =
     Boolean(previewImage) && failedOrganizationPreviewImagePath !== previewImage

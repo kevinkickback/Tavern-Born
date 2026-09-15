@@ -13,7 +13,6 @@ import {
   Image,
   Lightning,
   MagicWand,
-  MoonStars,
   PencilSimple,
   PersonSimple,
   Scroll,
@@ -25,7 +24,7 @@ import {
   TrendUp,
   Users,
 } from '@phosphor-icons/react'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArmorClassModal } from '@/components/modals/ArmorClassModal'
@@ -44,12 +43,6 @@ import { useCharacterStore } from '@/store/characterStore'
 const STAT_MENUS_HINT_ID = 'header-stat-management-menus'
 const STAT_MENUS_HINT_SELECTOR = '[data-character-stat-menus]'
 const STAT_MENUS_HINT_WIDTH = 340
-
-const RestPreviewDialog = lazy(() =>
-  import('@/components/modals/RestPreviewDialog').then((module) => ({
-    default: module.RestPreviewDialog,
-  })),
-)
 
 const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
   ['/build/review', 'Character Review', ClipboardText],
@@ -87,7 +80,6 @@ export function AppHeader() {
   const [levelUpOpen, setLevelUpOpen] = useState(false)
   const [armorClassOpen, setArmorClassOpen] = useState(false)
   const [hitPointsOpen, setHitPointsOpen] = useState(false)
-  const [restPreviewOpen, setRestPreviewOpen] = useState(false)
   const [showStatMenusHint, setShowStatMenusHint] = useState(
     () => !isHintDismissed(STAT_MENUS_HINT_ID),
   )
@@ -101,15 +93,9 @@ export function AppHeader() {
     selector: STAT_MENUS_HINT_SELECTOR,
     horizontalAlign: 'end',
   })
-  const showLevelUp = [
-    '/build',
-    '/feats',
-    '/spells',
-    '/equipment',
-    '/details',
-    '/rules',
-    '/sources',
-  ].some((prefix) => location.pathname.startsWith(prefix))
+  const showLevelUp = ['/build', '/feats', '/spells', '/equipment', '/details'].some((prefix) =>
+    location.pathname.startsWith(prefix),
+  )
 
   useEffect(() => subscribeToHintReset(() => setShowStatMenusHint(true)), [])
 
@@ -265,23 +251,6 @@ export function AppHeader() {
         </div>
 
         <div className="app-no-drag flex h-full min-w-0 items-center justify-end gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 px-3"
-                aria-label="Preview a rest"
-                disabled={!activeCharacter}
-                onClick={() => setRestPreviewOpen(true)}
-              >
-                <MoonStars />
-                <span className="hidden 2xl:inline">Rest</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Preview short- or long-rest recovery</TooltipContent>
-          </Tooltip>
-
           {showLevelUp && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -333,11 +302,6 @@ export function AppHeader() {
       />
       <ArmorClassModal open={armorClassOpen} onOpenChange={setArmorClassOpen} />
       <HitPointsModal open={hitPointsOpen} onOpenChange={setHitPointsOpen} />
-      {restPreviewOpen && (
-        <Suspense fallback={null}>
-          <RestPreviewDialog open={restPreviewOpen} onOpenChange={setRestPreviewOpen} />
-        </Suspense>
-      )}
     </TooltipProvider>
   )
 }

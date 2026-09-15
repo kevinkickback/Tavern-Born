@@ -58,7 +58,7 @@ interface ContextGroup {
 }
 
 interface Workspace {
-  id: 'start' | 'build' | 'sheet' | 'compendium'
+  id: 'start' | 'build' | 'rules' | 'sources' | 'sheet' | 'compendium'
   label: string
   path: string
   icon: Icon
@@ -88,8 +88,8 @@ const workspaces: Workspace[] = [
     icon: Wrench,
     requiresCharacter: true,
     matches: (pathname) =>
-      ['/build', '/feats', '/spells', '/equipment', '/details', '/rules', '/sources'].some(
-        (prefix) => pathname.startsWith(prefix),
+      ['/build', '/feats', '/spells', '/equipment', '/details'].some((prefix) =>
+        pathname.startsWith(prefix),
       ),
     groups: [
       {
@@ -116,11 +116,35 @@ const workspaces: Workspace[] = [
       },
       {
         label: 'Options',
-        items: [
-          { label: 'Adjustments', path: '/build/adjustments', icon: PencilSimple },
-          { label: 'Rules', path: '/rules', icon: SlidersHorizontal },
-          { label: 'Sources', path: '/sources', icon: Books },
-        ],
+        items: [{ label: 'Adjustments', path: '/build/adjustments', icon: PencilSimple }],
+      },
+    ],
+  },
+  {
+    id: 'rules',
+    label: 'Rules',
+    path: '/rules',
+    icon: SlidersHorizontal,
+    requiresCharacter: true,
+    matches: (pathname) => pathname.startsWith('/rules'),
+    groups: [
+      {
+        label: 'Character Configuration',
+        items: [{ label: 'Rules', path: '/rules', icon: SlidersHorizontal }],
+      },
+    ],
+  },
+  {
+    id: 'sources',
+    label: 'Sources',
+    path: '/sources',
+    icon: Books,
+    requiresCharacter: true,
+    matches: (pathname) => pathname.startsWith('/sources'),
+    groups: [
+      {
+        label: 'Content Configuration',
+        items: [{ label: 'Sources', path: '/sources', icon: Books }],
       },
     ],
   },

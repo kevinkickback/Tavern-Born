@@ -329,7 +329,7 @@ export function HomePage() {
     const url = URL.createObjectURL(dataBlob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${character.name || 'character'}-template.tbt`
+    link.download = `${character.name || 'character'}-template.tbc`
     link.click()
     URL.revokeObjectURL(url)
     toast.success('Character template exported successfully')
@@ -355,7 +355,7 @@ export function HomePage() {
   const handleImportCharacter = () => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.tbc,.tbt,.json'
+    input.accept = '.tbc,.json'
     input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0]
       if (!file) return
@@ -630,7 +630,7 @@ export function HomePage() {
                       <Upload className="size-5 text-muted-foreground transition-colors group-hover:text-primary" />
                       <span className="text-sm font-semibold">Import</span>
                       <span className="text-[11px] text-muted-foreground">
-                        Open a .tbc, .tbt, or JSON file
+                        Open a .tbc or JSON file
                       </span>
                     </button>
                   </div>

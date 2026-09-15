@@ -127,7 +127,9 @@ Entry points:
 - src/hooks/data/useFilteredGameData.ts
 
 Flow:
-1. The Builder sidebar's Options group exposes Rules and Sources after character creation.
+1. Character-scoped Rules and Sources are top-level workspaces after Builder and before Character
+   Sheet. They remain protected until a character is active; Builder's Options group contains only
+   character adjustments.
 2. Rules edits patch `character.variantRules`; the selected `originSystem` is displayed but cannot be changed because switching it would require rebuilding origin and progression choices.
 3. Source edits patch `character.allowedSources`. The character's implicit PHB/XPHB ruleset source remains included in the effective filter.
 4. The Prefer Newer Printings control patches `variantRules.preferNewerPrintings` and changes the source-page warning to explain the active filtering behavior.
