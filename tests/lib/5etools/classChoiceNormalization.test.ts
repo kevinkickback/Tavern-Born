@@ -86,6 +86,73 @@ describe('class choice normalization', () => {
     ])
   })
 
+  test('normalizes typed entity references in direct option blocks', () => {
+    const result = normalizeClassChoices({ name: 'Test Class', source: 'TST' }, [
+      featureRef(
+        'Optional Paths',
+        2,
+        [
+          {
+            type: 'options',
+            count: 1,
+            entries: [
+              { type: 'refOptionalfeature', optionalfeature: 'First Path|ALT' },
+              { type: 'refOptionalfeature', optionalfeature: 'Second Path|TST' },
+            ],
+          },
+        ],
+        'TST',
+      ),
+    ])
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.choices[0]).toMatchObject({
+      kind: 'optional-feature',
+      options: [
+        { entityType: 'optionalFeature', name: 'First Path', source: 'ALT' },
+        { entityType: 'optionalFeature', name: 'Second Path', source: 'TST' },
+      ],
+    })
+  })
+
+  test('uses an optional-feature progression as the single choice-count owner', () => {
+    const result = normalizeClassChoices(
+      {
+        name: 'Test Class',
+        source: 'TST',
+        optionalfeatureProgression: [
+          { name: 'Mystic Techniques', featureType: ['MT'], progression: { '2': 2, '8': 3 } },
+        ],
+      },
+      [
+        featureRef(
+          'Mystic Technique Options',
+          2,
+          [
+            {
+              type: 'options',
+              entries: [
+                { type: 'refOptionalfeature', optionalfeature: 'First Technique|TST' },
+                { type: 'refOptionalfeature', optionalfeature: 'Second Technique|TST' },
+              ],
+            },
+          ],
+          'TST',
+        ),
+      ],
+    )
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.choices).toHaveLength(1)
+    expect(result.choices[0]).toMatchObject({
+      label: 'Mystic Techniques',
+      kind: 'optional-feature',
+      optionFilter: { entityType: 'optionalFeature', featureTypes: ['MT'] },
+    })
+    expect(getRequiredChoiceSelectionCount(result.choices[0]!, 2)).toBe(2)
+    expect(getRequiredChoiceSelectionCount(result.choices[0]!, 8)).toBe(3)
+  })
+
   test('normalizes cumulative optional-feature progression and replacement rules', () => {
     const [metamagic] = normalizeClassChoices(
       {
@@ -177,12 +244,43 @@ describe('class choice normalization', () => {
     })
   })
 
+  test('normalizes a source-filtered plural choice count without a class table', () => {
+    const [choice] = normalizeClassChoices({ name: 'Test Class', source: 'TST' }, [
+      featureRef(
+        'Practiced Items',
+        2,
+        [
+          'Your training lets you use two kinds of {@filter implements|items|type=tool} of your choice with which you have proficiency. Whenever you finish a Long Rest, you can change those choices.',
+        ],
+        'TST',
+      ),
+    ]).choices
+
+    expect(choice).toMatchObject({
+      label: 'Practiced Items',
+      kind: 'item',
+      minimumSelections: 2,
+      maximumSelections: 2,
+      optionFilter: {
+        entityType: 'item',
+        itemTypes: ['tool'],
+        requiresProficiency: true,
+      },
+      replacement: { cadence: 'long-rest', maximumPerEvent: 'all' },
+    })
+    expect(getRequiredChoiceSelectionCount(choice!, 1)).toBe(0)
+    expect(getRequiredChoiceSelectionCount(choice!, 2)).toBe(2)
+  })
+
   test('covers the required 2024 core choice families in the configured corpus', () => {
     const cleric = loadParsedClass('class-cleric.json', 'Cleric')
     const druid = loadParsedClass('class-druid.json', 'Druid')
     const sorcerer = loadParsedClass('class-sorcerer.json', 'Sorcerer')
     const warlock = loadParsedClass('class-warlock.json', 'Warlock')
     const fighter = loadParsedClass('class-fighter.json', 'Fighter')
+    const paladin = loadParsedClass('class-paladin.json', 'Paladin')
+    const ranger = loadParsedClass('class-ranger.json', 'Ranger')
+    const rogue = loadParsedClass('class-rogue.json', 'Rogue')
 
     expect(cleric.normalizedRules?.choices).toEqual(
       expect.arrayContaining([
@@ -214,6 +312,19 @@ describe('class choice normalization', () => {
         expect.objectContaining({ label: 'Fighting Style', kind: 'feat' }),
       ]),
     )
+    for (const classData of [paladin, ranger, rogue]) {
+      expect(classData.normalizedRules?.choices).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: 'Weapon Mastery',
+            kind: 'item',
+            maximumSelections: 2,
+            optionFilter: expect.objectContaining({ requiresProficiency: true }),
+            replacement: { cadence: 'long-rest', maximumPerEvent: 'all' },
+          }),
+        ]),
+      )
+    }
   })
 
   test('does not classify choices from feature or class names', () => {

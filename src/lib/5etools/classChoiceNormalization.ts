@@ -20,6 +20,28 @@ interface ChoiceNormalizationResult {
 }
 
 const LEVEL_COUNT = 20
+const COUNT_WORDS: Readonly<Record<string, number>> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+  twenty: 20,
+}
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null
@@ -83,6 +105,21 @@ function parseClassFeatureReference(
   }
 }
 
+function parseNamedEntityReference(
+  value: string,
+  entityType: Exclude<ChoiceOptionEntityType, 'classFeature'>,
+  fallbackSource: string,
+): NormalizedChoiceOptionReference | undefined {
+  const [rawName, rawSource] = value.split('|')
+  const name = rawName?.trim()
+  if (!name) return undefined
+  return {
+    entityType,
+    name,
+    source: rawSource?.trim() || fallbackSource,
+  }
+}
+
 function getOptionReference(
   value: unknown,
   fallbackSource: string,
@@ -91,6 +128,15 @@ function getOptionReference(
   if (!entry) return undefined
   if (typeof entry.classFeature === 'string') {
     return parseClassFeatureReference(entry.classFeature, fallbackSource)
+  }
+  if (typeof entry.optionalfeature === 'string') {
+    return parseNamedEntityReference(entry.optionalfeature, 'optionalFeature', fallbackSource)
+  }
+  if (typeof entry.feat === 'string') {
+    return parseNamedEntityReference(entry.feat, 'feat', fallbackSource)
+  }
+  if (typeof entry.item === 'string') {
+    return parseNamedEntityReference(entry.item, 'item', fallbackSource)
   }
   if (typeof entry.name === 'string' && entry.name.trim()) {
     return {
@@ -111,6 +157,33 @@ function collectOptionBlocks(value: unknown, blocks: Record<string, unknown>[]):
   if (!object) return
   if (object.type === 'options') blocks.push(object)
   if (Array.isArray(object.entries)) collectOptionBlocks(object.entries, blocks)
+}
+
+function choiceNameStem(value: string): string {
+  return normalizedIdPart(value)
+    .replace(/-options?$/, '')
+    .replace(/s$/, '')
+}
+
+function isProgressionBackedOptionBlock(
+  featureName: string,
+  level: number,
+  options: readonly NormalizedChoiceOptionReference[],
+  progressions: readonly OptFeatureProg[],
+): boolean {
+  if (options.length === 0 || options.some((option) => option.entityType !== 'optionalFeature')) {
+    return false
+  }
+  const featureStem = choiceNameStem(featureName)
+  const nameMatches = progressions.filter(
+    (progression) => choiceNameStem(progression.name) === featureStem,
+  )
+  if (nameMatches.length === 1) return true
+  const levelMatches = progressions.filter(
+    (progression) =>
+      normalizeProgression(progression.progression).findIndex((count) => count > 0) + 1 === level,
+  )
+  return levelMatches.length === 1
 }
 
 function getFeatureText(ref: ClassFeatureReference): string {
@@ -158,13 +231,29 @@ function choiceKindForEntity(entityType: ChoiceOptionEntityType): NormalizedChar
   return entityType
 }
 
-function inferSingleFilteredChoice(text: string, label: string): boolean {
+function parsePositiveCount(value: string): number | undefined {
+  const numeric = Number.parseInt(value, 10)
+  const count = Number.isNaN(numeric) ? COUNT_WORDS[value.toLowerCase()] : numeric
+  return count && count > 0 ? count : undefined
+}
+
+function inferFilteredChoiceCount(text: string, label: string): number | undefined {
   const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const searchableText = toSearchableText(text)
-  return new RegExp(
-    `\\b(?:gain|choose|select|learn|pick)\\s+(?:a|an|one)\\s+${escapedLabel}\\b`,
+  if (
+    new RegExp(
+      `\\b(?:gain|choose|select|learn|pick)\\s+(?:a|an|one)\\s+${escapedLabel}\\b`,
+      'i',
+    ).test(searchableText)
+  ) {
+    return 1
+  }
+  const countWords = Object.keys(COUNT_WORDS).join('|')
+  const match = new RegExp(
+    `\\b(\\d+|${countWords})\\s+(?:kinds?\\s+of\\s+)?${escapedLabel}\\b[^.]{0,160}\\bof your choice\\b`,
     'i',
-  ).test(searchableText)
+  ).exec(searchableText)
+  return match?.[1] ? parsePositiveCount(match[1]) : undefined
 }
 
 function mergeFilters(tags: readonly ParsedFilterTag[]): NormalizedChoiceOptionFilter | undefined {
@@ -184,6 +273,19 @@ function mergeFilters(tags: readonly ParsedFilterTag[]): NormalizedChoiceOptionF
     ...(itemTypes.length > 0 ? { itemTypes } : {}),
     ...(sources.length === 1 ? { source: sources[0] } : {}),
   }
+}
+
+function addChoiceContext(
+  filter: NormalizedChoiceOptionFilter,
+  text: string,
+): NormalizedChoiceOptionFilter {
+  if (
+    filter.entityType === 'item' &&
+    /\bwith which you (?:have|gain) proficiency\b/i.test(toSearchableText(text))
+  ) {
+    return { ...filter, requiresProficiency: true }
+  }
+  return filter
 }
 
 function parseFilterTags(text: string): ParsedFilterTag[] {
@@ -224,7 +326,7 @@ function parseFilterTags(text: string): ParsedFilterTag[] {
 }
 
 function normalizeFeatureOptionChoices(
-  classData: Pick<Class5e, 'name' | 'source'>,
+  classData: Pick<Class5e, 'name' | 'source' | 'optionalfeatureProgression'>,
   refs: readonly ClassFeatureReference[],
 ): ChoiceNormalizationResult {
   const choices: NormalizedCharacterChoice[] = []
@@ -238,6 +340,22 @@ function normalizeFeatureOptionChoices(
     collectOptionBlocks(feature.entries ?? [], blocks)
 
     blocks.forEach((block, blockIndex) => {
+      const options = Array.isArray(block.entries)
+        ? block.entries.flatMap((entry) => {
+            const option = getOptionReference(entry, feature.source || classData.source)
+            return option ? [option] : []
+          })
+        : []
+      if (
+        isProgressionBackedOptionBlock(
+          ref.name,
+          level,
+          options,
+          classData.optionalfeatureProgression ?? [],
+        )
+      ) {
+        return
+      }
       const rawCount = block.count
       const count =
         typeof rawCount === 'number' && Number.isFinite(rawCount) && rawCount > 0
@@ -254,12 +372,6 @@ function normalizeFeatureOptionChoices(
         })
         return
       }
-      const options = Array.isArray(block.entries)
-        ? block.entries.flatMap((entry) => {
-            const option = getOptionReference(entry, feature.source || classData.source)
-            return option ? [option] : []
-          })
-        : []
       if (options.length === 0) {
         diagnostics.push({
           code: 'unresolved-options',
@@ -271,12 +383,24 @@ function normalizeFeatureOptionChoices(
         })
         return
       }
+      const entityType = options[0]?.entityType
+      if (!entityType || options.some((option) => option.entityType !== entityType)) {
+        diagnostics.push({
+          code: 'unresolved-options',
+          className: classData.name,
+          classSource: classData.source,
+          featureName: ref.name,
+          level,
+          message: `Option block ${blockIndex + 1} mixes entity types and cannot form one choice.`,
+        })
+        return
+      }
 
       const label = blocks.length > 1 ? `${ref.name} ${blockIndex + 1}` : ref.name
       choices.push({
         id: buildChoiceId(classData, label, level),
         label,
-        kind: 'class-feature',
+        kind: choiceKindForEntity(entityType),
         owner: {
           type: 'class',
           name: classData.name,
@@ -356,8 +480,9 @@ function normalizeTableBackedFilterChoices(
   return refs.flatMap((featureRef) => {
     const text = getFeatureText(featureRef)
     const tags = parseFilterTags(text)
-    const filter = mergeFilters(tags)
-    if (!filter) return []
+    const mergedFilter = mergeFilters(tags)
+    if (!mergedFilter) return []
+    const filter = addChoiceContext(mergedFilter, text)
 
     for (const [groupIndex, rawGroup] of (classData.classTableGroups ?? []).entries()) {
       const group = asRecord(rawGroup)
@@ -426,10 +551,25 @@ function normalizeSingleFilterChoices(
     }
     const text = getFeatureText(ref)
     const tags = parseFilterTags(text)
-    const filter = mergeFilters(tags)
-    if (!filter) continue
+    const mergedFilter = mergeFilters(tags)
+    if (!mergedFilter) continue
+    const filter = addChoiceContext(mergedFilter, text)
+    if (
+      filter.entityType === 'optionalFeature' &&
+      existing.some(
+        (choice) =>
+          choice.source.kind === 'optional-feature-progression' &&
+          choiceNameStem(choice.label) === choiceNameStem(ref.name),
+      )
+    ) {
+      continue
+    }
     const labels = [...new Set(tags.map((tag) => tag.label))]
-    if (!labels.some((label) => inferSingleFilteredChoice(text, label))) {
+    const count = labels.reduce<number | undefined>(
+      (found, label) => found ?? inferFilteredChoiceCount(text, label),
+      undefined,
+    )
+    if (!count) {
       diagnostics.push({
         code: 'invalid-count',
         className: classData.name,
@@ -452,9 +592,9 @@ function normalizeSingleFilterChoices(
         featureSource: ref.source ?? classData.source,
       },
       level,
-      minimumSelections: 1,
-      maximumSelections: 1,
-      selectionCountByLevel: countsFromLevel(level, 1),
+      minimumSelections: count,
+      maximumSelections: count,
+      selectionCountByLevel: countsFromLevel(level, count),
       options: [],
       optionFilter: filter,
       repeatable: false,

@@ -51,7 +51,8 @@ new tests land and do not lower them to merge a change.
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
 - Class-choice normalization coverage for source-qualified feature options, optional-feature
   progressions, generic table-backed capacity, tagged filters, replacement rules, name-independent
-  classification, and unsafe-shape diagnostics, including the configured 2024 core corpus.
+  classification, bounded singular/plural counts, proficiency-constrained item choices, and
+  unsafe-shape diagnostics, including the configured 2024 core corpus.
 - Corpus capability coverage inventories class choices, movement forms, top-level structured field
   shapes, and unresolved source-qualified references without making the external `data/` directory
   a CI prerequisite. Copied-subclass tests cover both unique source-safe resolution and ambiguous

@@ -1,3 +1,4 @@
+import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import type { ClassFeature, Feat5e, Item5e, OptionalFeatureLike } from '@/types/5etools'
 import type { CharacterClassChoiceOption } from '@/types/character'
 import type {
@@ -18,6 +19,7 @@ export interface ClassChoiceCatalogs {
   items: readonly Item5e[]
   optionalFeatures: readonly OptionalFeatureLike[]
   itemTypeByAbbr: Readonly<Record<string, string>>
+  weaponProficiencies: readonly string[]
 }
 
 type ChoiceCatalogEntity = ClassFeature | Feat5e | Item5e | OptionalFeatureLike
@@ -79,6 +81,7 @@ function matchesFilter(
   entity: ChoiceCatalogEntity,
   filter: NormalizedChoiceOptionFilter,
   itemTypeByAbbr: Readonly<Record<string, string>>,
+  weaponProficiencies: readonly string[],
 ): boolean {
   if (filter.source && normalized(entity.source) !== normalized(filter.source)) return false
   if (
@@ -96,6 +99,13 @@ function matchesFilter(
   if (
     filter.entityType === 'item' &&
     !matchesAny(getItemTypeLabels(entity as Item5e, itemTypeByAbbr), filter.itemTypes)
+  ) {
+    return false
+  }
+  if (
+    filter.entityType === 'item' &&
+    filter.requiresProficiency &&
+    !isProficientWithWeapon(weaponProficiencies, entity as Item5e)
   ) {
     return false
   }
@@ -140,7 +150,9 @@ export function resolveClassChoiceOptions(
     resolved = choice.options.map((option) => resolveExplicitOption(option, catalogs))
   } else if (filter) {
     resolved = getCatalog(filter.entityType, catalogs)
-      .filter((entity) => matchesFilter(entity, filter, catalogs.itemTypeByAbbr))
+      .filter((entity) =>
+        matchesFilter(entity, filter, catalogs.itemTypeByAbbr, catalogs.weaponProficiencies),
+      )
       .map((entity) => toView(filter.entityType, entity))
   }
 

@@ -68,7 +68,18 @@ describe('createCorpusCapabilityReport', () => {
       }),
     )
 
-    expect(report.classChoices).toMatchObject({ total: 1, byKind: { feat: 1 } })
+    expect(report.classChoices).toMatchObject({
+      total: 1,
+      byKind: { feat: 1 },
+      inventory: [
+        expect.objectContaining({
+          owner: 'Test Adept|TST',
+          label: 'Test Choice',
+          kind: 'feat',
+          level: 1,
+        }),
+      ],
+    })
     expect(report.movement).toMatchObject({
       numeric: 1,
       structured: 1,

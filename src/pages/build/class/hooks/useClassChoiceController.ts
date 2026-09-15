@@ -17,8 +17,10 @@ interface ClassChoiceControllerParams {
   character: Character | null
   viewingClassData?: Class5e
   viewingClassLevel: number
-  catalogs: Omit<ClassChoiceCatalogs, 'itemTypeByAbbr'>
+  catalogs: Omit<ClassChoiceCatalogs, 'itemTypeByAbbr' | 'weaponProficiencies'>
 }
+
+const EMPTY_WEAPON_PROFICIENCIES: readonly string[] = []
 
 export function useClassChoiceController({
   character,
@@ -28,6 +30,7 @@ export function useClassChoiceController({
 }: ClassChoiceControllerParams) {
   const { applyClassChoiceSelection } = useClassProvenanceMutations()
   const itemTypeByAbbr = useItemTypeLookup()
+  const weaponProficiencies = character?.proficiencies.weapons ?? EMPTY_WEAPON_PROFICIENCIES
   const [activeChoice, setActiveChoice] = useState<NormalizedCharacterChoice | null>(null)
   const choices = useMemo(
     () =>
@@ -43,8 +46,8 @@ export function useClassChoiceController({
     [character?.classChoiceSelections],
   )
   const resolvedCatalogs = useMemo<ClassChoiceCatalogs>(
-    () => ({ ...catalogs, itemTypeByAbbr }),
-    [catalogs, itemTypeByAbbr],
+    () => ({ ...catalogs, itemTypeByAbbr, weaponProficiencies }),
+    [catalogs, itemTypeByAbbr, weaponProficiencies],
   )
   const optionViewsByChoiceId = useMemo(
     () =>

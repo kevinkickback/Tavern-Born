@@ -66,7 +66,12 @@ source content.
   and table-backed choices are joined by source-provided feature and column labels; runtime code
   contains no class names, feature names, option catalogs, or assumed selection/replacement values.
   Narrow replacement and singular-choice phrases are parsed only when an entity filter provides
-  the choice boundary; ambiguous prose produces a diagnostic instead of an invented rule. Only
+  the choice boundary. A bounded number-word parser also accepts plural counts only when a tagged
+  entity filter and nearby "of your choice" phrase define the boundary. Optional-feature
+  progressions remain the single count owner when their feature body also contains an option block,
+  avoiding duplicate fighting-style, Metamagic, pact, and invocation choices. Item choices that
+  explicitly require proficiency retain that constraint for catalog resolution. Ambiguous prose
+  produces a diagnostic instead of an invented rule. Only
   known spendable resource columns are accepted from class tables, so numeric choice capacities do
   not become counters. Source-qualified adapters cover rules that upstream exposes only through
   prose. Encoded reference levels take precedence when repeated feature names occur at more than

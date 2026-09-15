@@ -14,6 +14,7 @@ export interface NormalizedChoiceOptionFilter {
   featureTypes?: string[]
   itemTypes?: string[]
   source?: string
+  requiresProficiency?: boolean
 }
 
 export interface NormalizedCharacterChoice {

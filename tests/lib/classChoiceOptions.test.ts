@@ -29,6 +29,7 @@ const emptyCatalogs = {
   items: [],
   optionalFeatures: [],
   itemTypeByAbbr: {},
+  weaponProficiencies: [],
 }
 
 describe('class choice option resolution', () => {
@@ -70,6 +71,29 @@ describe('class choice option resolution', () => {
     )
 
     expect(result.map((option) => option.reference.name)).toEqual(['Craft Kit', 'Training Blade'])
+  })
+
+  test('limits proficiency-bound item choices to current weapon proficiencies', () => {
+    const result = resolveClassChoiceOptions(
+      choice({
+        kind: 'item',
+        optionFilter: {
+          entityType: 'item',
+          itemTypes: ['simple weapon', 'martial weapon'],
+          requiresProficiency: true,
+        },
+      }),
+      {
+        ...emptyCatalogs,
+        items: [
+          { name: 'Training Blade', source: 'HB', type: 'M', weaponCategory: 'simple' },
+          { name: 'Heavy Blade', source: 'HB', type: 'M', weaponCategory: 'martial' },
+        ],
+        weaponProficiencies: ['simple weapons'],
+      },
+    )
+
+    expect(result.map((option) => option.reference.name)).toEqual(['Training Blade'])
   })
 
   test('matches feat and optional-feature filters without name-based rules', () => {

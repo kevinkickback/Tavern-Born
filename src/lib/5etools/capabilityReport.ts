@@ -36,6 +36,15 @@ export interface CorpusCapabilityReport {
     total: number
     byKind: Record<string, number>
     diagnostics: number
+    inventory: Array<{
+      owner: string
+      id: string
+      label: string
+      kind: string
+      level: number
+      maximumSelections: number
+      sourceField: string
+    }>
   }
   movement: {
     absent: number
@@ -212,7 +221,7 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
     entities: Object.fromEntries(
       FIELD_COLLECTIONS.map((collection) => [collection, gameData[collection].length]),
     ) as Record<CapabilityCollection, number>,
-    classChoices: { total: 0, byKind: {}, diagnostics: 0 },
+    classChoices: { total: 0, byKind: {}, diagnostics: 0, inventory: [] },
     movement: {
       absent: 0,
       numeric: 0,
@@ -277,6 +286,15 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
     report.classChoices.total += classData.normalizedRules.choices.length
     for (const [choiceIndex, choice] of classData.normalizedRules.choices.entries()) {
       increment(report.classChoices.byKind, choice.kind)
+      report.classChoices.inventory.push({
+        owner,
+        id: choice.id,
+        label: choice.label,
+        kind: choice.kind,
+        level: choice.level,
+        maximumSelections: choice.maximumSelections,
+        sourceField: choice.source.field,
+      })
       for (const [optionIndex, option] of choice.options.entries()) {
         inspectReference(
           option,
@@ -301,6 +319,13 @@ export function createCorpusCapabilityReport(gameData: GameData): CorpusCapabili
       })
     }
   }
+
+  report.classChoices.inventory.sort(
+    (left, right) =>
+      left.owner.localeCompare(right.owner) ||
+      left.level - right.level ||
+      left.id.localeCompare(right.id),
+  )
 
   report.issues.sort(
     (left, right) =>

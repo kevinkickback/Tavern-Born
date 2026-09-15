@@ -26,6 +26,7 @@ import {
   formatRange,
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
+import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import {
   getCharacterClassEntries,
@@ -398,18 +399,6 @@ function isWeapon(item: Equipment): boolean {
   return !!item.dmg1 || !!item.weaponCategory || item.type === 'M' || item.type === 'R'
 }
 
-function isProficientWithWeapon(character: Character, item: Equipment): boolean {
-  const proficiencies = character.proficiencies.weapons.map((value) => value.toLowerCase())
-  const name = item.name.toLowerCase()
-  const category = item.weaponCategory?.toLowerCase()
-  return proficiencies.some(
-    (proficiency) =>
-      proficiency === name ||
-      (category != null &&
-        (proficiency === category || proficiency.includes(`${category} weapon`))),
-  )
-}
-
 function buildWeaponRows(
   character: Character,
   abilityModifiers: Record<AbilityName, number>,
@@ -428,7 +417,8 @@ function buildWeaponRows(
           ? abilityModifiers.dexterity
           : abilityModifiers.strength
       const attackBonus =
-        abilityModifier + (isProficientWithWeapon(character, item) ? proficiencyBonus : 0)
+        abilityModifier +
+        (isProficientWithWeapon(character.proficiencies.weapons, item) ? proficiencyBonus : 0)
       const damageBonus =
         abilityModifier > 0
           ? ` + ${abilityModifier}`
