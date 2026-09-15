@@ -136,4 +136,26 @@ describe('characterUtils', () => {
       ),
     ).toBe(20)
   })
+
+  test('applies typed maximum-HP effects after the derived class total', () => {
+    const testClass = makeClassFixture({ name: 'Test Class', source: 'TEST', hd: { faces: 8 } })
+    const character = makeCharacterFixture({
+      class: 'Test Class',
+      classSource: 'TEST',
+      classProgression: [{ name: 'Test Class', source: 'TEST', levels: 1 }],
+      abilityScores: { ...makeCharacterFixture().abilityScores, constitution: 10 },
+      hitPoints: { max: 0, current: 8, temporary: 0 },
+      manualEffects: [
+        {
+          id: 'maximum-hp-adjustment',
+          label: 'Maximum HP adjustment',
+          target: { kind: 'hit-point-maximum' },
+          operation: { kind: 'add', value: 3 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        },
+      ],
+    })
+
+    expect(getEffectiveMaxHP(character, [testClass], character.abilityScores)).toBe(11)
+  })
 })

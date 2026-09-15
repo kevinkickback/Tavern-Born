@@ -1,4 +1,6 @@
-import type { ArmorClassAdjustment, Equipment } from '@/types/character'
+import type { ArmorClassAdjustment, Character, Equipment } from '@/types/character'
+import { getCharacterEffectResolutionContext, getCharacterEffects } from './characterEffects'
+import { resolveNumericEffect } from './effects'
 import { getAbilityModifier } from './gameRules'
 import {
   type ArmorCategory,
@@ -108,24 +110,27 @@ export function calculateArmorClassAdjustmentTotal(
  * ignored — it exists only for migration compatibility and is never written to.
  */
 export function computeEffectiveCharacterArmorClass(
-  character: {
-    equipment?: Equipment[]
-    abilityScores?: { dexterity?: number; dex?: number }
-    armorClass?: number
-    armorClassOverride?: number
-    armorClassAdjustments?: ArmorClassAdjustment[]
-  },
+  character: Partial<
+    Pick<
+      Character,
+      | 'armorClass'
+      | 'armorClassAdjustments'
+      | 'armorClassOverride'
+      | 'effectFlags'
+      | 'equipment'
+      | 'manualEffects'
+      | 'suppressedEffectIds'
+    >
+  > & { abilityScores?: { dexterity?: number; dex?: number } },
   effectiveAbilityScores: { dexterity?: number; dex?: number } | undefined,
 ): number {
-  if (typeof character.armorClassOverride === 'number') {
-    return Math.max(0, Math.trunc(character.armorClassOverride))
-  }
-
   const dexScore = effectiveAbilityScores?.dexterity ?? effectiveAbilityScores?.dex ?? 10
   const dexModifier = getAbilityModifier(dexScore)
-  return Math.max(
-    0,
-    computeArmorClass(character.equipment ?? [], dexModifier) +
-      calculateArmorClassAdjustmentTotal(character.armorClassAdjustments),
+  const resolved = resolveNumericEffect(
+    computeArmorClass(character.equipment ?? [], dexModifier),
+    { kind: 'armor-class' },
+    getCharacterEffects(character),
+    getCharacterEffectResolutionContext(character),
   )
+  return Math.max(0, Math.trunc(resolved.value))
 }

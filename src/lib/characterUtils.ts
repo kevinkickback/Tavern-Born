@@ -6,6 +6,11 @@ import type {
   HitPointAdjustment,
   HitPointGain,
 } from '@/types/character'
+import {
+  getCharacterEffectResolutionContext,
+  getCharacterEffects,
+} from './calculations/characterEffects'
+import { resolveNumericEffect } from './calculations/effects'
 import { getAbilityModifier, getHitDiceFromClass } from './calculations/gameRules'
 
 export interface HitPointCalculationOptions {
@@ -180,15 +185,14 @@ export function getEffectiveMaxHP(
     classesData,
     hitPointGains: character.hitPointGains,
   })
-  const adjustedMaxHP = Math.max(
-    1,
-    calculatedMaxHP +
-      calculateHitPointAdjustmentTotal(
-        character.hitPointAdjustments,
-        getTotalCharacterLevel(character),
-      ),
+  const characterLevel = getTotalCharacterLevel(character)
+  const resolved = resolveNumericEffect(
+    calculatedMaxHP,
+    { kind: 'hit-point-maximum' },
+    getCharacterEffects(character, characterLevel),
+    getCharacterEffectResolutionContext(character),
   )
-  return getMaxHitPointsOverride(character) ?? adjustedMaxHP
+  return Math.max(1, Math.trunc(resolved.value))
 }
 
 /**

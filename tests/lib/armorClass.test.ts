@@ -135,4 +135,33 @@ describe('armorClass', () => {
     expect(calculateArmorClassAdjustmentTotal([])).toBe(0)
     expect(effective).toBe(11)
   })
+
+  test('applies active typed effects and exposes equipment-gated behavior', () => {
+    const effect = {
+      id: 'item-effect',
+      label: 'Test item effect',
+      target: { kind: 'armor-class' as const },
+      operation: { kind: 'add' as const, value: 2 },
+      source: { kind: 'item' as const, name: 'Test Item', entityId: 'item' },
+      requirements: [
+        { kind: 'equipment' as const, itemId: 'item', state: 'equipped-and-attuned' as const },
+      ],
+    }
+    const base = {
+      speed: 0,
+      abilityScores: { dexterity: 10 },
+      equipment: [
+        { id: 'item', name: 'Test Item', type: 'G', quantity: 1, equipped: true, attuned: true },
+      ],
+      manualEffects: [effect],
+    }
+
+    expect(computeEffectiveCharacterArmorClass(base, base.abilityScores)).toBe(12)
+    expect(
+      computeEffectiveCharacterArmorClass(
+        { ...base, equipment: [{ ...base.equipment[0], attuned: false }] },
+        base.abilityScores,
+      ),
+    ).toBe(10)
+  })
 })

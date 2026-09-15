@@ -9,6 +9,7 @@ import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import type { Background5e, Class5e, Race5e } from '@/types/5etools'
 import type { AbilityName, AbilityScores, Character, Equipment } from '@/types/character'
+import type { CharacterEffect } from '@/types/effects'
 import {
   type BackgroundAbilityData,
   buildBackgroundBonuses,
@@ -18,6 +19,12 @@ import {
   makeDefaultAbilityScores,
   type RaceAbilityData,
 } from './abilityScores'
+import {
+  deriveStructuredRaceEffects,
+  getCharacterEffectResolutionContext,
+  getCharacterEffects,
+} from './characterEffects'
+import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { getAbilityModifier } from './gameRules'
 import { type EffectiveMovement, getEffectiveCharacterMovement } from './movement'
 import {
@@ -58,6 +65,10 @@ export interface CharacterCalculationContext {
   abilityScores: EffectiveAbilityScoreData
   equipment: CharacterEquipmentCalculationState
   movement: EffectiveMovement
+  effects: {
+    declarations: readonly CharacterEffect[]
+    resolutionContext: EffectResolutionContext
+  }
 }
 
 function getProvenanceRacialBonuses(
@@ -132,6 +143,27 @@ export function deriveEffectiveAbilityScores(
   addBonuses(total, backgroundBonuses)
   addBonuses(total, asiBonuses)
 
+  if (character) {
+    const effects = getCharacterEffects(character, character.level)
+    const effectContext = getCharacterEffectResolutionContext(character)
+    for (const ability of Object.keys(total) as AbilityName[]) {
+      total[ability] = Math.max(
+        1,
+        Math.min(
+          CORE_RULES_METADATA[character.originSystem].abilityScoreAbsoluteMaximum,
+          Math.trunc(
+            resolveNumericEffect(
+              total[ability],
+              { kind: 'ability-score', ability },
+              effects,
+              effectContext,
+            ).value,
+          ),
+        ),
+      )
+    }
+  }
+
   return {
     base,
     total,
@@ -174,6 +206,12 @@ export function createCharacterCalculationContext(
     return resolved ? [resolved] : []
   })
   const allEquipment = character.equipment ?? []
+  const effectResolutionContext = getCharacterEffectResolutionContext(character)
+  const effects = getCharacterEffects(
+    character,
+    character.level,
+    deriveStructuredRaceEffects(raceResolution.mergedRace),
+  )
 
   return {
     character,
@@ -196,5 +234,9 @@ export function createCharacterCalculationContext(
       attuned: allEquipment.filter((item) => item.attuned),
     },
     movement: getEffectiveCharacterMovement(character),
+    effects: {
+      declarations: effects,
+      resolutionContext: effectResolutionContext,
+    },
   }
 }

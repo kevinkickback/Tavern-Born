@@ -121,4 +121,38 @@ describe('character calculation context', () => {
     expect(context.equipment.equipped.map((item) => item.id)).toEqual(['armor', 'ring'])
     expect(context.equipment.attuned.map((item) => item.id)).toEqual(['ring'])
   })
+
+  test('applies manual ability effects and exposes structured source effects', () => {
+    const race = {
+      name: 'Test Ancestry',
+      source: 'TEST',
+      darkvision: 45,
+      resist: ['test damage'],
+    } as Race5e
+    const character = makeCharacterFixture({
+      race: race.name,
+      raceSource: race.source,
+      manualEffects: [
+        {
+          id: 'ability-adjustment',
+          label: 'Ability adjustment',
+          target: { kind: 'ability-score', ability: 'wisdom' },
+          operation: { kind: 'add', value: 2 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        },
+      ],
+    })
+    const context = createCharacterCalculationContext(character, {
+      racesByKey: buildRaceLookup([race]),
+    })
+
+    expect(context.abilityScores.total.wisdom).toBe(character.abilityScores.wisdom + 2)
+    expect(context.effects.declarations.map((effect) => effect.target)).toEqual(
+      expect.arrayContaining([
+        { kind: 'ability-score', ability: 'wisdom' },
+        { kind: 'sense', sense: 'darkvision' },
+        { kind: 'damage-resistance', damageType: 'test damage' },
+      ]),
+    )
+  })
 })

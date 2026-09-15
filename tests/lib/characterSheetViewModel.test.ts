@@ -130,4 +130,75 @@ describe('createCharacterSheetViewModel', () => {
       'Additional movement: swim 30 ft., fly 40 ft. (hover)',
     )
   })
+
+  test('uses the shared effect totals in both fixed PDF templates', () => {
+    const testClass = {
+      name: 'Test Class',
+      source: 'TEST',
+      hd: { faces: 8 },
+    } as Class5e
+    const character = makeCharacterFixture({
+      class: testClass.name,
+      classSource: testClass.source,
+      classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
+      abilityScores: {
+        strength: 10,
+        dexterity: 14,
+        constitution: 12,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      hitPoints: { max: 0, current: 0, temporary: 0 },
+      manualEffects: [
+        {
+          id: 'test-strength',
+          label: 'Test strength adjustment',
+          target: { kind: 'ability-score', ability: 'strength' },
+          operation: { kind: 'add', value: 2 },
+          source: { kind: 'manual', name: 'Test strength adjustment' },
+        },
+        {
+          id: 'test-armor-class',
+          label: 'Test armor class adjustment',
+          target: { kind: 'armor-class' },
+          operation: { kind: 'add', value: 2 },
+          source: { kind: 'manual', name: 'Test armor class adjustment' },
+        },
+        {
+          id: 'test-hit-points',
+          label: 'Test hit point adjustment',
+          target: { kind: 'hit-point-maximum' },
+          operation: { kind: 'add', value: 3 },
+          source: { kind: 'manual', name: 'Test hit point adjustment' },
+        },
+        {
+          id: 'test-speed',
+          label: 'Test speed adjustment',
+          target: { kind: 'speed', mode: 'walk' },
+          operation: { kind: 'add', value: 5 },
+          source: { kind: 'manual', name: 'Test speed adjustment' },
+        },
+      ],
+    })
+
+    const viewModel = createCharacterSheetViewModel(character, {
+      classesByKey: buildClassLookup([testClass]),
+    })
+    const map2014 = mapCharacterSheet2014(viewModel)
+    const map2024 = mapCharacterSheet2024(viewModel)
+
+    expect(viewModel.effectiveAbilityScores.strength).toBe(12)
+    expect(viewModel.effectiveArmorClass).toBe(14)
+    expect(viewModel.maxHP).toBe(12)
+    expect(viewModel.walkingSpeed).toBe(35)
+    expect(map2014.textFields.Str).toBe('12')
+    expect(map2014.textFields.AC).toBe('14')
+    expect(map2014.textFields['HP Max']).toBe('12')
+    expect(map2014.textFields.Speed).toBe('35 ft')
+    expect(map2024.textFields.Text_25).toBe('12')
+    expect(map2024.textFields.Text_8).toBe('14')
+    expect(map2024.textFields.Text_11).toBe('12')
+    expect(map2024.textFields.Text_17).toBe('35 ft')
+  })
 })

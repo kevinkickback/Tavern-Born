@@ -1,5 +1,7 @@
 import type { Race5e } from '@/types/5etools'
 import type { Character, CharacterMovement, MovementMode } from '@/types/character'
+import { getCharacterEffectResolutionContext, getCharacterEffects } from './characterEffects'
+import { resolveNumericEffect } from './effects'
 
 const MOVEMENT_MODES: readonly MovementMode[] = ['walk', 'climb', 'swim', 'fly', 'burrow']
 
@@ -90,10 +92,20 @@ export function getBaseCharacterMovement(
 
 /** Applies labeled adjustments and then exact overrides to the character's base movement. */
 export function getEffectiveCharacterMovement(
-  character: Pick<
-    Character,
-    'movement' | 'speed' | 'movementAdjustments' | 'movementOverrides' | 'movementHoverOverride'
-  >,
+  character: Pick<Character, 'speed'> &
+    Partial<
+      Pick<
+        Character,
+        | 'effectFlags'
+        | 'equipment'
+        | 'manualEffects'
+        | 'movement'
+        | 'movementAdjustments'
+        | 'movementHoverOverride'
+        | 'movementOverrides'
+        | 'suppressedEffectIds'
+      >
+    >,
 ): EffectiveMovement {
   const base = getBaseCharacterMovement(character)
   const speeds: Record<string, number> = { ...base.speeds }
@@ -101,15 +113,22 @@ export function getEffectiveCharacterMovement(
     if (typeof value === 'number') speeds[mode] = value
   }
 
-  for (const adjustment of character.movementAdjustments ?? []) {
-    const mode = adjustment.mode.trim().toLowerCase()
+  const effects = getCharacterEffects(character)
+  const modes = new Set([
+    ...Object.keys(speeds),
+    ...effects.flatMap((effect) =>
+      effect.target.kind === 'speed' ? [effect.target.mode.trim().toLowerCase()] : [],
+    ),
+  ])
+  const context = getCharacterEffectResolutionContext(character)
+  for (const mode of modes) {
     if (!mode) continue
-    speeds[mode] = Math.max(0, (speeds[mode] ?? 0) + adjustment.amount)
-  }
-  for (const [rawMode, rawValue] of Object.entries(character.movementOverrides ?? {})) {
-    const mode = rawMode.trim().toLowerCase()
-    const value = normalizeDistance(rawValue)
-    if (mode && value !== undefined) speeds[mode] = value
+    speeds[mode] = Math.max(
+      0,
+      Math.trunc(
+        resolveNumericEffect(speeds[mode] ?? 0, { kind: 'speed', mode }, effects, context).value,
+      ),
+    )
   }
 
   return {

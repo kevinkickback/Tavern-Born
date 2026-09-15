@@ -96,4 +96,28 @@ describe('movement calculations', () => {
     expect(effective.speeds).toEqual({})
     expect(getWalkingSpeed(effective)).toBe(0)
   })
+
+  test('routes typed speed effects through the same adjustment and override stack', () => {
+    const effective = getEffectiveCharacterMovement({
+      speed: 20,
+      manualEffects: [
+        {
+          id: 'walk-addition',
+          label: 'Walk addition',
+          target: { kind: 'speed', mode: 'walk' },
+          operation: { kind: 'add', value: 5 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        },
+        {
+          id: 'custom-mode',
+          label: 'Custom mode',
+          target: { kind: 'speed', mode: 'phase' },
+          operation: { kind: 'override', value: 15 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        },
+      ],
+    })
+
+    expect(effective.speeds).toEqual({ walk: 25, phase: 15 })
+  })
 })
