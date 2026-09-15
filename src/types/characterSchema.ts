@@ -104,6 +104,162 @@ const movementAdjustmentSchema = z.object({
   createdAt: z.string(),
 })
 
+const numericEffectTargetSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('ability-score'),
+    ability: z.enum([
+      'strength',
+      'dexterity',
+      'constitution',
+      'intelligence',
+      'wisdom',
+      'charisma',
+    ]),
+  }),
+  z.object({ kind: z.literal('skill-modifier'), skill: z.string().min(1) }),
+  z.object({
+    kind: z.literal('saving-throw-modifier'),
+    ability: z.enum([
+      'strength',
+      'dexterity',
+      'constitution',
+      'intelligence',
+      'wisdom',
+      'charisma',
+    ]),
+  }),
+  z.object({ kind: z.literal('initiative') }),
+  z.object({ kind: z.literal('armor-class') }),
+  z.object({ kind: z.literal('hit-point-maximum') }),
+  z.object({ kind: z.literal('speed'), mode: z.string().min(1) }),
+  z.object({ kind: z.literal('carrying-capacity') }),
+  z.object({ kind: z.literal('attack-roll'), attackId: z.string().min(1).optional() }),
+  z.object({
+    kind: z.literal('damage'),
+    attackId: z.string().min(1).optional(),
+    damageType: z.string().min(1).optional(),
+  }),
+  z.object({ kind: z.literal('spell-attack'), profileId: z.string().min(1).optional() }),
+  z.object({ kind: z.literal('spell-save-dc'), profileId: z.string().min(1).optional() }),
+  z.object({ kind: z.literal('sense'), sense: z.string().min(1) }),
+  z.object({ kind: z.literal('resource-maximum'), resourceId: z.string().min(1) }),
+])
+
+const rollEffectTargetSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('ability-check'),
+    ability: z.enum([
+      'strength',
+      'dexterity',
+      'constitution',
+      'intelligence',
+      'wisdom',
+      'charisma',
+    ]),
+  }),
+  z.object({ kind: z.literal('skill-check'), skill: z.string().min(1) }),
+  z.object({
+    kind: z.literal('saving-throw'),
+    ability: z.enum([
+      'strength',
+      'dexterity',
+      'constitution',
+      'intelligence',
+      'wisdom',
+      'charisma',
+    ]),
+  }),
+  z.object({ kind: z.literal('initiative-roll') }),
+  z.object({ kind: z.literal('attack-roll'), attackId: z.string().min(1).optional() }),
+  z.object({ kind: z.literal('spell-attack'), profileId: z.string().min(1).optional() }),
+])
+
+const traitEffectTargetSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('damage-resistance'), damageType: z.string().min(1) }),
+  z.object({ kind: z.literal('damage-immunity'), damageType: z.string().min(1) }),
+  z.object({ kind: z.literal('condition-immunity'), condition: z.string().min(1) }),
+])
+
+const numericEffectOperationSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('base'), value: z.number().finite() }),
+  z.object({ kind: z.literal('set'), value: z.number().finite() }),
+  z.object({ kind: z.literal('add'), value: z.number().finite() }),
+  z.object({ kind: z.literal('multiply'), value: z.number().finite() }),
+  z.object({ kind: z.literal('minimum'), value: z.number().finite() }),
+  z.object({ kind: z.literal('maximum'), value: z.number().finite() }),
+  z.object({ kind: z.literal('override'), value: z.number().finite() }),
+])
+
+const conditionalNoteOperationSchema = z.object({
+  kind: z.literal('conditional-note'),
+  note: z.string().min(1),
+})
+
+const characterEffectSourceSchema = z.object({
+  kind: z.enum([
+    'race',
+    'subrace',
+    'class',
+    'subclass',
+    'background',
+    'feat',
+    'spell',
+    'item',
+    'condition',
+    'manual',
+    'other',
+  ]),
+  name: z.string().min(1),
+  source: z.string().min(1).optional(),
+  entityId: z.string().min(1).optional(),
+  provenance: z
+    .object({
+      choiceId: z.string().min(1).optional(),
+      grantVariant: z.string().min(1).optional(),
+    })
+    .optional(),
+})
+
+const characterEffectRequirementSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('equipment'),
+    itemId: z.string().min(1),
+    state: z.enum(['equipped', 'attuned', 'equipped-and-attuned']),
+  }),
+  z.object({ kind: z.literal('flag'), key: z.string().min(1), expected: z.boolean() }),
+])
+
+const characterEffectBaseSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  source: characterEffectSourceSchema,
+  priority: z.number().int().optional(),
+  requirements: z.array(characterEffectRequirementSchema).optional(),
+  condition: z.string().min(1).optional(),
+})
+
+const characterEffectSchema = z.union([
+  characterEffectBaseSchema.extend({
+    target: numericEffectTargetSchema,
+    operation: z.union([numericEffectOperationSchema, conditionalNoteOperationSchema]),
+  }),
+  characterEffectBaseSchema.extend({
+    target: rollEffectTargetSchema,
+    operation: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('advantage') }),
+      z.object({ kind: z.literal('disadvantage') }),
+      conditionalNoteOperationSchema,
+    ]),
+  }),
+  characterEffectBaseSchema.extend({
+    target: traitEffectTargetSchema,
+    operation: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('grant') }),
+      conditionalNoteOperationSchema,
+    ]),
+  }),
+])
+
 const characterClassChoiceSelectionSchema = z.object({
   choiceId: z.string().min(1),
   label: z.string().min(1),
@@ -612,6 +768,9 @@ export const characterSchema = z
     hitDiceUsed: z.number().int().min(0).optional(),
     ritualCasting: z.boolean().optional(),
     classResources: z.record(z.number().int().min(0)).optional(),
+    manualEffects: z.array(characterEffectSchema).optional(),
+    suppressedEffectIds: z.array(z.string().min(1)).optional(),
+    effectFlags: z.record(z.boolean()).optional(),
     createdAt: z.string(),
     lastModified: z.string(),
   })

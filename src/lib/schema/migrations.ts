@@ -12,7 +12,7 @@ import type { Character } from '@/types/character'
  * Current character schema version.
  * Increment when making breaking changes to the character format.
  */
-export const CURRENT_SCHEMA_VERSION = 7
+export const CURRENT_SCHEMA_VERSION = 8
 
 /**
  * Migration handler: transform character from version N to N+1.
@@ -183,6 +183,32 @@ registerMigration({
     const c = character as unknown as Record<string, unknown>
     const { version: _v, ...rest } = c
     return rest
+  },
+})
+
+registerMigration({
+  fromVersion: 7,
+  toVersion: 8,
+  description: 'Add persisted manual effects, suppression state, and typed activation flags.',
+  up: (character) => {
+    const c = character as Record<string, unknown>
+    return {
+      ...c,
+      manualEffects: Array.isArray(c.manualEffects) ? c.manualEffects : [],
+      suppressedEffectIds: Array.isArray(c.suppressedEffectIds) ? c.suppressedEffectIds : [],
+      effectFlags: c.effectFlags && typeof c.effectFlags === 'object' ? c.effectFlags : {},
+      version: '8.0.0',
+    } as Character
+  },
+  down: (character) => {
+    const c = character as unknown as Record<string, unknown>
+    const {
+      effectFlags: _effectFlags,
+      manualEffects: _manualEffects,
+      suppressedEffectIds: _suppressedEffectIds,
+      ...rest
+    } = c
+    return { ...rest, version: '7.0.0' }
   },
 })
 

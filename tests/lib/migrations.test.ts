@@ -177,7 +177,37 @@ describe('migrateCharacter', () => {
     })
     expect(result.movementAdjustments).toEqual([])
     expect(result.movementOverrides).toEqual({})
-    expect(result.version).toBe('7.0.0')
+    expect(result.manualEffects).toEqual([])
+    expect(result.suppressedEffectIds).toEqual([])
+    expect(result.effectFlags).toEqual({})
+    expect(result.version).toBe('8.0.0')
+  })
+
+  it('preserves existing typed effect state when migrating from version 7', () => {
+    const manualEffects = [
+      {
+        id: 'manual-initiative',
+        label: 'Manual initiative adjustment',
+        target: { kind: 'initiative' },
+        operation: { kind: 'add', value: 1 },
+        source: { kind: 'manual', name: 'User adjustment' },
+      },
+    ]
+    const result = migrateCharacter(
+      {
+        ...baseCharacter,
+        version: '7.0.0',
+        manualEffects,
+        suppressedEffectIds: ['source-effect'],
+        effectFlags: { situational: true },
+      },
+      7,
+    )
+
+    expect(result.manualEffects).toEqual(manualEffects)
+    expect(result.suppressedEffectIds).toEqual(['source-effect'])
+    expect(result.effectFlags).toEqual({ situational: true })
+    expect(result.version).toBe('8.0.0')
   })
 
   it('does not invent a rules value when legacy walking speed is missing', () => {

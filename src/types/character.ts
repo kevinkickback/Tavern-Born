@@ -1,5 +1,6 @@
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { FeatOptionSelections } from '@/types/feat'
+import type { CharacterEffect } from './effects'
 
 export type { FeatOptionSelections } from '@/types/feat'
 
@@ -245,6 +246,13 @@ export interface Character {
   ritualCasting?: boolean
   /** Current usage counts for class resources, keyed by stable ID. Label/max are derived. */
   classResources?: Record<string, number>
+
+  /** User-authored typed effects; source-derived effects are projected from game data at runtime. */
+  manualEffects?: CharacterEffect[]
+  /** Effect IDs deliberately disabled by the user without deleting their source declarations. */
+  suppressedEffectIds?: string[]
+  /** Explicit boolean switches used by typed effect activation requirements. */
+  effectFlags?: Record<string, boolean>
 
   createdAt: string
   lastModified: string

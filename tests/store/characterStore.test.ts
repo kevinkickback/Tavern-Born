@@ -8,6 +8,7 @@ vi.mock('@/lib/storage/idb-storage', () => ({
   }),
 }))
 
+import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
 import {
   emptyProvenance,
   normalizeCharacterProvenance,
@@ -45,14 +46,15 @@ describe('characterStore', () => {
   })
 
   test('validateCharacterData rejects characters from a newer schema without stripping data', () => {
+    const futureVersion = CURRENT_SCHEMA_VERSION + 1
     const futureCharacter = {
       ...makeCharacterFixture(),
-      version: '8.0.0',
+      version: `${futureVersion}.0.0`,
       campaignState: { renown: 4 },
     }
 
     expect(validateCharacterData(futureCharacter)).toContain(
-      'schema version 8 is newer than supported version 7',
+      `schema version ${futureVersion} is newer than supported version ${CURRENT_SCHEMA_VERSION}`,
     )
   })
 

@@ -108,4 +108,50 @@ describe('characterPersistenceSchema', () => {
 
     expect(result.classChoiceSelections).toEqual(character.classChoiceSelections)
   })
+
+  test('round-trips typed manual effects and their activation state', () => {
+    const character = makeCharacterFixture({
+      manualEffects: [
+        {
+          id: 'manual-speed',
+          label: 'Situational speed adjustment',
+          target: { kind: 'speed', mode: 'walk' },
+          operation: { kind: 'add', value: 5 },
+          source: {
+            kind: 'manual',
+            name: 'User adjustment',
+            provenance: { choiceId: 'manual-choice' },
+          },
+          requirements: [{ kind: 'flag', key: 'active', expected: true }],
+          condition: 'Applies while the declared condition is met.',
+        },
+      ],
+      suppressedEffectIds: ['source-effect'],
+      effectFlags: { active: true },
+    })
+
+    const result = characterPersistenceSchema.parse(
+      JSON.parse(JSON.stringify(character)) as unknown,
+    )
+
+    expect(result.manualEffects).toEqual(character.manualEffects)
+    expect(result.suppressedEffectIds).toEqual(['source-effect'])
+    expect(result.effectFlags).toEqual({ active: true })
+  })
+
+  test('rejects an operation that does not match its typed effect target', () => {
+    const character = makeCharacterFixture({
+      manualEffects: [
+        {
+          id: 'invalid-effect',
+          label: 'Invalid effect',
+          target: { kind: 'damage-resistance', damageType: 'test' },
+          operation: { kind: 'add', value: 1 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        } as never,
+      ],
+    })
+
+    expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
+  })
 })
