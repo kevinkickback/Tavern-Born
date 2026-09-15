@@ -178,7 +178,7 @@ export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): Chara
     [AbilityName, { modifier: string; score: string }]
   >) {
     textFields[mapping.modifier] = formatViewModelModifier(viewModel.abilityModifiers[ability])
-    textFields[mapping.score] = String(character.abilityScores[ability])
+    textFields[mapping.score] = String(viewModel.effectiveAbilityScores[ability])
   }
 
   for (const [ability, mapping] of Object.entries(SAVE_FIELD_MAP) as Array<

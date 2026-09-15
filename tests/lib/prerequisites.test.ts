@@ -36,7 +36,11 @@ describe('prerequisites', () => {
       },
     })
 
-    const snapshot = buildPrerequisiteSnapshot({ character, viewingClass: 'Fighter' })
+    const snapshot = buildPrerequisiteSnapshot({
+      character,
+      viewingClass: 'Fighter',
+      effectiveAbilityScores: character.abilityScores,
+    })
 
     expect(snapshot.level).toBe(5)
     expect(snapshot.class).toBe('Fighter')

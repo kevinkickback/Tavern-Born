@@ -24,12 +24,14 @@ interface BuildPrerequisiteSnapshotParams {
   character: Character | null
   classProgression?: CharacterClassEntry[]
   viewingClass?: string
+  effectiveAbilityScores?: Partial<Record<AbilityName, number>>
 }
 
 export function buildPrerequisiteSnapshot({
   character,
   classProgression = getCharacterClassEntries(character),
   viewingClass,
+  effectiveAbilityScores,
 }: BuildPrerequisiteSnapshotParams): PrereqCharacterSnapshot {
   const profileSpells = character ? collectKnownSpells(ensureSpellProfiles(character)) : null
   const progressionLevel = classProgression.reduce((sum, entry) => sum + (entry.levels ?? 0), 0)
@@ -38,7 +40,7 @@ export function buildPrerequisiteSnapshot({
     level: progressionLevel > 0 ? progressionLevel : (character?.level ?? 0),
     class: viewingClass ?? character?.class,
     race: character?.race,
-    abilityScores: character?.abilityScores,
+    abilityScores: effectiveAbilityScores ?? {},
     features: character?.features ?? [],
     spells: {
       cantrips: profileSpells?.cantrips ?? [],

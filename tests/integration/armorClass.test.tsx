@@ -234,7 +234,7 @@ describe('Armor Class Behavior', () => {
       })
 
       // When armorClassOverride is set it takes precedence over calculated AC
-      expect(computeEffectiveCharacterArmorClass(character)).toBe(17)
+      expect(computeEffectiveCharacterArmorClass(character, character.abilityScores)).toBe(17)
     })
   })
 

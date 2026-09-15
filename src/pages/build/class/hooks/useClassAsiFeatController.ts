@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { isNormallySelectableFeat } from '@/lib/5etools/classData'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
@@ -47,6 +48,7 @@ export function useClassAsiFeatController({
   fallbackClassByName,
   feats,
 }: ClassAsiFeatControllerParams) {
+  const calculationContext = useCharacterCalculationContext(character)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const { replaceFeatSelections, replaceClassFeatSelections, commitFeatWithOptions } =
     useFeatProvenanceMutations()
@@ -116,8 +118,14 @@ export function useClassAsiFeatController({
     [effectiveFeats, viewingClass, viewingClassSource],
   )
   const characterSnapshot = useMemo(
-    () => buildPrerequisiteSnapshot({ character, classProgression, viewingClass }),
-    [character, classProgression, viewingClass],
+    () =>
+      buildPrerequisiteSnapshot({
+        character,
+        classProgression,
+        viewingClass,
+        effectiveAbilityScores: calculationContext?.abilityScores.total,
+      }),
+    [character, calculationContext, classProgression, viewingClass],
   )
   const totalAsi = useMemo(
     () =>

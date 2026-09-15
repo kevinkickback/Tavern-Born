@@ -162,6 +162,31 @@ export interface RaceAbilityData {
   choices: ChoosableAbilityBonus[]
 }
 
+export function buildRacialBonuses(
+  raceAsiData: {
+    fixed: Array<{ ability: AbilityName; value: number }>
+    choices: Array<{ amount: number; count?: number; from?: AbilityName[] }>
+  },
+  raceAsiChoices: string[][],
+): Partial<Record<AbilityName, number>> {
+  const racialBonuses: Partial<Record<AbilityName, number>> = {}
+
+  for (const fixedBonus of raceAsiData.fixed) {
+    racialBonuses[fixedBonus.ability] = (racialBonuses[fixedBonus.ability] ?? 0) + fixedBonus.value
+  }
+
+  for (const [blockIndex, block] of raceAsiData.choices.entries()) {
+    for (const rawChoice of raceAsiChoices[blockIndex] ?? []) {
+      const ability = normalizeAbilityName(rawChoice)
+      if (ability) {
+        racialBonuses[ability] = (racialBonuses[ability] ?? 0) + block.amount
+      }
+    }
+  }
+
+  return racialBonuses
+}
+
 type FlexibleRaceAbilitySource = {
   lineage?: string | boolean
   _tavernBornFlexibleAsi?: boolean

@@ -21,6 +21,7 @@ import {
   WorkspacePaneSearch,
 } from '@/components/workspace'
 import { useBackgroundProvenanceMutations } from '@/hooks/character/useBackgroundProvenanceMutations'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -62,6 +63,7 @@ type FeatOptionsTarget = Feat5e & {
 
 export function BuildBackgroundPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const { backgrounds, feats, spells } = useFilteredGameData()
   const itemLookup = useItemLookup()
   const rawBackgroundLookup = useBackgroundLookup()
@@ -180,7 +182,14 @@ export function BuildBackgroundPage() {
     if (!activeFeatChoice) return { eligibleFeats: [], initialFilters: undefined }
     return resolveFeatChoicePool(feats as Feat5e[], activeFeatChoice.optionPool)
   }, [activeFeatChoice, feats])
-  const characterSnapshot = useMemo(() => buildPrerequisiteSnapshot({ character }), [character])
+  const characterSnapshot = useMemo(
+    () =>
+      buildPrerequisiteSnapshot({
+        character,
+        effectiveAbilityScores: calculationContext?.abilityScores.total,
+      }),
+    [character, calculationContext?.abilityScores.total],
+  )
 
   const handleOpenFeatModal = useCallback((choiceId: string) => {
     setActiveFeatChoiceId(choiceId)

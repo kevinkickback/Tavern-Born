@@ -229,6 +229,7 @@ export function getClassMaxSpellLevel(
 export function buildSpellcastingClassDetails(
   character: Character,
   classesById: Map<string, Class5e>,
+  effectiveAbilityScores: AbilityScores,
 ): SpellcastingClassDetail[] {
   const entries = getCharacterClassEntries(character)
   const totalLevel = getTotalClassLevels(entries)
@@ -242,7 +243,7 @@ export function buildSpellcastingClassDetails(
       const effectiveAbility = getEffectiveSpellcastingAbility(classData, subclassData)
       const ability = effectiveAbility ? normalizeAbilityName(effectiveAbility) : null
       const mod = ability
-        ? getAbilityModifier((character.abilityScores as AbilityScores)[ability] ?? 10)
+        ? getAbilityModifier((effectiveAbilityScores as AbilityScores)[ability] ?? 10)
         : null
       const saveDc = mod !== null ? 8 + proficiency + mod : null
       const attack = mod !== null ? proficiency + mod : null

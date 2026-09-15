@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useClassLookup, useSkillList, useSkillToAbilityMap } from '@/hooks/data/useGameData'
 import { ABILITY_NAMES, type AbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -40,16 +41,15 @@ export function useSkills(): SkillsState {
   const resolvedSkillList = parsedSkillList ?? ALL_SKILLS
 
   const level = useMemo(() => getTotalCharacterLevel(activeCharacter), [activeCharacter])
-  const abilityScores = activeCharacter?.abilityScores
+  const calculationContext = useCharacterCalculationContext(activeCharacter)
   const storedSkills = activeCharacter?.skills ?? {}
 
-  const abilityModifiers = useMemo(
-    () =>
-      Object.fromEntries(
-        ABILITY_NAMES.map((a) => [a, getAbilityModifier(abilityScores?.[a] ?? 10)]),
-      ) as Record<AbilityName, number>,
-    [abilityScores],
-  )
+  const abilityModifiers = useMemo(() => {
+    if (calculationContext) return calculationContext.abilityScores.modifiers
+    return Object.fromEntries(
+      ABILITY_NAMES.map((ability) => [ability, getAbilityModifier(10)]),
+    ) as Record<AbilityName, number>
+  }, [calculationContext])
 
   const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level])
 

@@ -481,7 +481,7 @@ describe('spellProfiles', () => {
       ],
     ])
 
-    const details = buildSpellcastingClassDetails(character, classesById)
+    const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
     expect(details).toHaveLength(1)
     expect(details[0].spellSaveDC).toBe(14)
     expect(details[0].spellAttackBonus).toBe(6)
@@ -1115,7 +1115,7 @@ describe('spellProfiles', () => {
       ],
     ])
 
-    const details = buildSpellcastingClassDetails(character, classesById)
+    const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
     expect(details).toHaveLength(1)
     expect(details[0].isPreparedCaster).toBe(true)
     expect(details[0].knownSpellLimit).toBe(9)
@@ -1231,7 +1231,7 @@ describe('spellProfiles', () => {
         }),
       )
       const classesById = new Map([['class:Sorcerer|XPHB', makeXphbSorcererFixture()]])
-      const details = buildSpellcastingClassDetails(character, classesById)
+      const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
       expect(details).toHaveLength(1)
       expect(details[0].isLevelOnlyPreparedCaster).toBe(true)
       expect(details[0].isTruePreparedCaster).toBe(false)
@@ -1254,7 +1254,7 @@ describe('spellProfiles', () => {
         }),
       )
       const classesById = new Map([['class:Cleric|XPHB', makeXphbClericFixture()]])
-      const details = buildSpellcastingClassDetails(character, classesById)
+      const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
       expect(details).toHaveLength(1)
       expect(details[0].isTruePreparedCaster).toBe(true)
       expect(details[0].isLevelOnlyPreparedCaster).toBe(false)
@@ -1277,7 +1277,7 @@ describe('spellProfiles', () => {
         }),
       )
       const classesById = new Map([['class:Warlock|XPHB', makeXphbWarlockFixture()]])
-      const details = buildSpellcastingClassDetails(character, classesById)
+      const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
       expect(details).toHaveLength(1)
       expect(details[0].isLevelOnlyPreparedCaster).toBe(true)
       expect(details[0].casterProgression).toBe('pact')
@@ -1308,7 +1308,7 @@ describe('spellProfiles', () => {
         spellsKnownProgression: [6, 8, 10, 12, 14],
       })
       const classesById = new Map([['class:Wizard|PHB', phbWizard]])
-      const details = buildSpellcastingClassDetails(character, classesById)
+      const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
       expect(details).toHaveLength(1)
       expect(details[0].isLevelOnlyPreparedCaster).toBe(false)
       expect(details[0].isPreparedCaster).toBe(true)

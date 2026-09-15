@@ -30,7 +30,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 5. Domain logic
 - Purpose: pure calculations and game rules.
-- Key files: src/lib/characterUtils.ts, src/lib/character/ids.ts, src/lib/character/equipmentHelpers.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellIdentity.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/featChoices.ts, src/lib/calculations/subclassEligibility.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
+- Key files: src/lib/characterUtils.ts, src/lib/character/ids.ts, src/lib/character/equipmentHelpers.ts, src/lib/calculations/characterCalculationContext.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellIdentity.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/featChoices.ts, src/lib/calculations/subclassEligibility.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
 
 6. Provenance system
 - Purpose: track source of grants and reconcile when race/class/features change.
@@ -46,6 +46,10 @@ This document describes the current Tavern-Born runtime architecture and where r
 7. Hooks and view derivations
 - Purpose: thin wrappers from store state to UI-facing derived values.
 - Key files: src/hooks/character/*, src/hooks/data/*.
+- `useCharacterCalculationContext` is the canonical adapter for effective scores, resolved
+  source-qualified entities, rules metadata, and equipment state. Consumers must not rebuild its
+  score composition or read persisted raw scores as final values. See
+  [Character Calculation Context](calculation-context.md).
 - Shared lookup consumption uses the stable named hooks in src/hooks/data/useGameData.ts. Direct gameDataStore selectors are reserved for lifecycle state or callers that explicitly own raw collection sets.
 - Combat-stat ownership is exposed through `src/hooks/character/useHitPoints.ts` and `src/hooks/character/useArmorClass.ts`. These hooks combine persisted player state with live class, ability, and equipment derivations and provide the modal-facing atomic save operations.
 - Condition rule records are exposed by `useConditions()` in `src/hooks/data/useGameData.ts`; pages should not reconstruct condition names or rules text locally.

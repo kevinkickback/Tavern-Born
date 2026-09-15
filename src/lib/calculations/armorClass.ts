@@ -107,18 +107,21 @@ export function calculateArmorClassAdjustmentTotal(
  * `character.armorClass` field is intentionally
  * ignored — it exists only for migration compatibility and is never written to.
  */
-export function computeEffectiveCharacterArmorClass(character: {
-  equipment?: Equipment[]
-  abilityScores?: { dexterity?: number; dex?: number }
-  armorClass?: number
-  armorClassOverride?: number
-  armorClassAdjustments?: ArmorClassAdjustment[]
-}): number {
+export function computeEffectiveCharacterArmorClass(
+  character: {
+    equipment?: Equipment[]
+    abilityScores?: { dexterity?: number; dex?: number }
+    armorClass?: number
+    armorClassOverride?: number
+    armorClassAdjustments?: ArmorClassAdjustment[]
+  },
+  effectiveAbilityScores: { dexterity?: number; dex?: number } | undefined,
+): number {
   if (typeof character.armorClassOverride === 'number') {
     return Math.max(0, Math.trunc(character.armorClassOverride))
   }
 
-  const dexScore = character.abilityScores?.dexterity ?? character.abilityScores?.dex ?? 10
+  const dexScore = effectiveAbilityScores?.dexterity ?? effectiveAbilityScores?.dex ?? 10
   const dexModifier = getAbilityModifier(dexScore)
   return Math.max(
     0,

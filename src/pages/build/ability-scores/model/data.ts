@@ -1,8 +1,9 @@
 import {
   type AbilityName,
   makeDefaultStandardArrayAssignment,
-  normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
+
+export { buildRacialBonuses } from '@/lib/calculations/abilityScores'
 
 export interface SkillDetail {
   name: string
@@ -16,31 +17,6 @@ export const DEFAULT_STANDARD_ARRAY_ASSIGNMENT: Partial<Record<AbilityName, numb
 
 export function formatTitleCase(input: string): string {
   return input.replace(/\b\w/g, (match) => match.toUpperCase())
-}
-
-export function buildRacialBonuses(
-  raceAsiData: {
-    fixed: Array<{ ability: AbilityName; value: number }>
-    choices: Array<{ count: number; amount: number; from: AbilityName[] }>
-  },
-  raceAsiChoices: string[][],
-): Partial<Record<AbilityName, number>> {
-  const racialBonuses: Partial<Record<AbilityName, number>> = {}
-
-  for (const fixedBonus of raceAsiData.fixed) {
-    racialBonuses[fixedBonus.ability] = (racialBonuses[fixedBonus.ability] ?? 0) + fixedBonus.value
-  }
-
-  for (const [blockIdx, block] of raceAsiData.choices.entries()) {
-    for (const rawChoice of raceAsiChoices[blockIdx] ?? []) {
-      const ability = normalizeAbilityName(rawChoice)
-      if (ability) {
-        racialBonuses[ability] = (racialBonuses[ability] ?? 0) + block.amount
-      }
-    }
-  }
-
-  return racialBonuses
 }
 
 export function buildSkillDetailsMap(rawSkills: unknown): Record<string, SkillDetail> {

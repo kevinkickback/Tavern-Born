@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { ABILITY_NAMES, type AbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { deriveAllSavingThrows, type SavingThrowResult } from '@/lib/calculations/skills'
@@ -17,14 +18,15 @@ export function useSavingThrows(): SavingThrowsState {
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
   const level = useMemo(() => getTotalCharacterLevel(activeCharacter), [activeCharacter])
-  const abilityScores = activeCharacter?.abilityScores
+  const calculationContext = useCharacterCalculationContext(activeCharacter)
   const proficientSavingThrows = activeCharacter?.proficiencies?.savingThrows ?? []
 
   const abilityModifiers = useMemo(() => {
+    if (calculationContext) return calculationContext.abilityScores.modifiers
     return Object.fromEntries(
-      ABILITY_NAMES.map((a) => [a, getAbilityModifier(abilityScores?.[a] ?? 10)]),
+      ABILITY_NAMES.map((ability) => [ability, getAbilityModifier(10)]),
     ) as Record<AbilityName, number>
-  }, [abilityScores])
+  }, [calculationContext])
 
   const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level])
 

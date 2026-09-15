@@ -1,5 +1,6 @@
 import type { Class5e } from '@/types/5etools'
 import type {
+  AbilityScores,
   Character,
   CharacterClassEntry,
   HitPointAdjustment,
@@ -9,7 +10,7 @@ import { getAbilityModifier, getHitDiceFromClass } from './calculations/gameRule
 
 export interface HitPointCalculationOptions {
   averageHp?: boolean
-  classesData?: Class5e[]
+  classesData?: readonly Class5e[]
   hitPointGains?: HitPointGain[]
 }
 
@@ -166,9 +167,13 @@ export function getMaxHitPointsOverride(character: Character): number | undefine
  * CON modifier.  Pass `classesData` for accurate per-class hit dice; without
  * it the calculation falls back to d8 per level.
  */
-export function getEffectiveMaxHP(character: Character, classesData?: Class5e[]): number {
+export function getEffectiveMaxHP(
+  character: Character,
+  classesData: readonly Class5e[] | undefined,
+  effectiveAbilityScores: AbilityScores,
+): number {
   const entries = getCharacterClassEntries(character)
-  const conMod = getAbilityModifier(character.abilityScores.constitution)
+  const conMod = getAbilityModifier(effectiveAbilityScores.constitution)
   const averageHp = character.variantRules?.averageHitPoints !== false
   const calculatedMaxHP = calculateMaxHP(entries, conMod, {
     averageHp,

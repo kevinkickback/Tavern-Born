@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
@@ -41,6 +42,7 @@ export interface HitPointsState {
 export function useHitPoints(): HitPointsState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const { classes } = useFilteredGameData()
   const rawClassLookup = useClassLookup()
   const filteredClassLookup = useMemo(() => buildClassLookup(classes), [classes])
@@ -68,8 +70,8 @@ export function useHitPoints(): HitPointsState {
   ])
 
   const conMod = useMemo(
-    () => getAbilityModifier(character?.abilityScores.constitution ?? 10),
-    [character?.abilityScores.constitution],
+    () => getAbilityModifier(calculationContext?.abilityScores.total.constitution ?? 10),
+    [calculationContext?.abilityScores.total.constitution],
   )
 
   const useAverage = character?.variantRules?.averageHitPoints !== false

@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
@@ -31,6 +32,7 @@ export function useClassResources(): {
 } {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const { classes } = useFilteredGameData()
   const rawClassLookup = useClassLookup()
   const filteredClassLookup = useMemo(() => buildClassLookup(classes), [classes])
@@ -39,7 +41,7 @@ export function useClassResources(): {
     if (!character) return []
     const stored = character.classResources ?? {}
     const progression = getCharacterClassEntries(character)
-    const chaScore = character.abilityScores?.charisma ?? 10
+    const chaScore = calculationContext?.abilityScores.total.charisma ?? 10
     const chaMod = Math.max(1, Math.floor((chaScore - 10) / 2))
 
     return progression.flatMap((entry) => {
@@ -65,7 +67,7 @@ export function useClassResources(): {
         }
       })
     })
-  }, [character, filteredClassLookup, rawClassLookup])
+  }, [character, calculationContext, filteredClassLookup, rawClassLookup])
 
   const updateCurrent = useCallback(
     (id: string, value: number) => {

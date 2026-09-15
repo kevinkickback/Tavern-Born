@@ -78,7 +78,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
   const armorAdjustments = character.armorClassAdjustments ?? []
   const spellcastingOne = viewModel.spellcastingDetails[0]
   const spellcastingTwo = viewModel.spellcastingDetails[1]
-  const strengthScore = character.abilityScores.strength
+  const strengthScore = viewModel.effectiveAbilityScores.strength
   const textFields: Record<string, string> = {
     'PC Name': character.name || '',
     'Player Name': character.details.playerName || '',
@@ -255,7 +255,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
   for (const [ability, mapping] of Object.entries(ABILITY_FIELD_MAP) as Array<
     [AbilityName, { score: string; modifier: string }]
   >) {
-    textFields[mapping.score] = String(character.abilityScores[ability])
+    textFields[mapping.score] = String(viewModel.effectiveAbilityScores[ability])
     textFields[mapping.modifier] = formatViewModelModifier(viewModel.abilityModifiers[ability])
   }
 

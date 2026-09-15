@@ -123,7 +123,7 @@ describe('characterUtils', () => {
       }),
     }
 
-    expect(getEffectiveMaxHP(character, [fighter])).toBe(12)
+    expect(getEffectiveMaxHP(character, [fighter], character.abilityScores)).toBe(12)
     expect(
       getEffectiveMaxHP(
         {
@@ -132,6 +132,7 @@ describe('characterUtils', () => {
           classProgression: [{ name: 'Fighter', source: 'PHB', levels: 2 }],
         },
         [fighter],
+        character.abilityScores,
       ),
     ).toBe(20)
   })

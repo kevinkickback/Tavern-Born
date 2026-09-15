@@ -29,6 +29,7 @@ import {
   WorkspacePaneHeader,
   WorkspacePaneSearch,
 } from '@/components/workspace'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
@@ -58,6 +59,7 @@ type FeatOptionsTarget = Feat5e & { provenanceChoiceId?: string }
 
 export function BuildRacePage() {
   const character = useCharacterStore((s) => s.activeCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const { races, feats, spells } = useFilteredGameData()
   const { applyRaceSelection, applySubraceChange } = useRaceProvenanceMutations()
   const { resolveFeatChoiceSelection, commitFeatWithOptions } = useFeatProvenanceMutations()
@@ -158,7 +160,14 @@ export function BuildRacePage() {
     if (!activeFeatChoice) return { eligibleFeats: [], initialFilters: undefined }
     return resolveFeatChoicePool(feats as Feat5e[], activeFeatChoice.optionPool)
   }, [activeFeatChoice, feats])
-  const characterSnapshot = useMemo(() => buildPrerequisiteSnapshot({ character }), [character])
+  const characterSnapshot = useMemo(
+    () =>
+      buildPrerequisiteSnapshot({
+        character,
+        effectiveAbilityScores: calculationContext?.abilityScores.total,
+      }),
+    [character, calculationContext?.abilityScores.total],
+  )
 
   const handleOpenFeatModal = useCallback((choiceId: string) => {
     setActiveFeatChoiceId(choiceId)

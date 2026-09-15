@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
 import { useSubclass } from '@/hooks/data/useGameData'
 import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
@@ -28,6 +29,7 @@ export function useSubclassSelectionController({
   onSelectionApplied,
 }: SubclassSelectionControllerParams) {
   const { selectSubclass } = useUnifiedClassSelection()
+  const calculationContext = useCharacterCalculationContext(character)
   const [pickerOpen, setPickerOpen] = useState(false)
   const subclasses = useMemo(() => {
     if (!character || !viewingClass) return []
@@ -43,9 +45,14 @@ export function useSubclassSelectionController({
     return (viewingClassData?.subclasses ?? []).filter(
       (subclass) =>
         (!effectiveSources || effectiveSources.includes(subclass.source)) &&
-        isSubclassEligible({ subclass, className: viewingClass, character }),
+        isSubclassEligible({
+          subclass,
+          className: viewingClass,
+          character,
+          effectiveAbilityScores: calculationContext?.abilityScores.total,
+        }),
     )
-  }, [character, viewingClass, viewingClassData?.subclasses])
+  }, [character, calculationContext, viewingClass, viewingClassData?.subclasses])
   const subclassTitle =
     typeof viewingClassData?.subclassTitle === 'string'
       ? viewingClassData.subclassTitle

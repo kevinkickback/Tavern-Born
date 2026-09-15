@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import {
   calculateArmorClassAdjustmentTotal,
   computeArmorClass,
@@ -27,10 +28,12 @@ export interface ArmorClassState {
 export function useArmorClass(): ArmorClassState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
+  const effectiveAbilityScores = calculationContext?.abilityScores.total
 
   const dexMod = useMemo(
-    () => getAbilityModifier(character?.abilityScores.dexterity ?? 10),
-    [character?.abilityScores.dexterity],
+    () => getAbilityModifier(effectiveAbilityScores?.dexterity ?? 10),
+    [effectiveAbilityScores?.dexterity],
   )
 
   const calculatedAC = useMemo(
@@ -45,7 +48,7 @@ export function useArmorClass(): ArmorClassState {
     adjustmentTotal,
     adjustedAC,
     overrideAC: character?.armorClassOverride,
-    effectiveAC: computeEffectiveCharacterArmorClass(character ?? {}),
+    effectiveAC: computeEffectiveCharacterArmorClass(character ?? {}, effectiveAbilityScores),
     setAC: (ac) => {
       if (!character) return
       updateCharacter(character.id, { armorClassOverride: Math.max(0, ac) })

@@ -35,6 +35,7 @@ import {
   WorkspacePage,
   WorkspacePaneHeader,
 } from '@/components/workspace'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
@@ -420,6 +421,7 @@ function FeatDetailsInspector({
 
 export function FeatsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const { feats, spells, classes } = useFilteredGameData()
   const {
     replaceFeatSelections,
@@ -473,8 +475,13 @@ export function FeatsPage() {
   )
 
   const characterSnapshot = useMemo<PrereqCharacterSnapshot>(
-    () => buildPrerequisiteSnapshot({ character, classProgression }),
-    [character, classProgression],
+    () =>
+      buildPrerequisiteSnapshot({
+        character,
+        classProgression,
+        effectiveAbilityScores: calculationContext?.abilityScores.total,
+      }),
+    [character, classProgression, calculationContext?.abilityScores.total],
   )
 
   // Feat choices from provenance and partitioned by source type and selection status

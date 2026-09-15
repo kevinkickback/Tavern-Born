@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useCharacterRaceData } from '@/hooks/character/useCharacterRaceData'
 import { useClassesById } from '@/hooks/character/useClassesById'
+import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import {
   buildSpellcastingClassDetails,
   calculateCharacterSpellSlots,
@@ -50,6 +52,7 @@ function toSlotRows(
 export function useSpellSlots(): SpellSlotsState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const classesById = useClassesById()
+  const calculationContext = useCharacterCalculationContext(character)
   const {
     mergedAdditionalSpells: raceAdditionalSpells,
     displayName: raceDisplayName,
@@ -101,8 +104,12 @@ export function useSpellSlots(): SpellSlotsState {
 
   const spellcastingDetails = useMemo(() => {
     if (!character) return []
-    return buildSpellcastingClassDetails(character, classesById)
-  }, [character, classesById])
+    return buildSpellcastingClassDetails(
+      character,
+      classesById,
+      calculationContext?.abilityScores.total ?? deriveEffectiveAbilityScores(character).total,
+    )
+  }, [character, classesById, calculationContext])
 
   const spellcastingDetailByProfileId = useMemo(
     () => new Map(spellcastingDetails.map((detail) => [detail.profileId, detail] as const)),

@@ -31,7 +31,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import {
   checkMulticlassRequirements,
   getAbilityModifier,
@@ -85,6 +87,7 @@ const EMPTY_CLASSES: Class5e[] = []
 
 export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const character = useCharacterStore((s) => s.activeCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { classes } = useFilteredGameData()
   const rawClasses = useGameDataStore((state) => state.gameData?.classes ?? EMPTY_CLASSES)
@@ -104,6 +107,9 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
 
   if (!character) return null
 
+  const effectiveAbilityScores =
+    calculationContext?.abilityScores.total ?? deriveEffectiveAbilityScores(character).total
+
   const classProgression: CharacterClassEntry[] = getCharacterClassEntries(character)
 
   const totalLevel = getTotalCharacterLevel(character)
@@ -121,7 +127,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     .map((cls) => {
       const { meetsRequirements, requirementText } = checkMulticlassRequirements(
         cls,
-        character.abilityScores,
+        effectiveAbilityScores,
       )
       return {
         cls,
@@ -269,10 +275,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       toast.error('Could not find the selected class.')
       return
     }
-    const { meetsRequirements } = checkMulticlassRequirements(
-      selectedClass,
-      character.abilityScores,
-    )
+    const { meetsRequirements } = checkMulticlassRequirements(selectedClass, effectiveAbilityScores)
     if (!ignoreRestrictions && !meetsRequirements) {
       toast.warning(`You don't meet the ability score requirements for ${selectedClass.name}.`)
       return
@@ -391,7 +394,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     Number.isInteger(parsedHpDieResult) &&
     parsedHpDieResult >= 1 &&
     parsedHpDieResult <= pendingLevelUp.hitDie
-  const conModifier = getAbilityModifier(character.abilityScores.constitution)
+  const conModifier = getAbilityModifier(effectiveAbilityScores.constitution)
   const hpIncrease = validHpDieResult ? Math.max(1, parsedHpDieResult + conModifier) : null
   const calculatedMaxHp = calculateMaxHP(classProgression, conModifier, {
     averageHp: character.variantRules?.averageHitPoints !== false,

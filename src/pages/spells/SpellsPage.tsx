@@ -11,6 +11,7 @@ import {
   WorkspacePage,
   WorkspacePaneHeader,
 } from '@/components/workspace'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useSpellProfileMutations } from '@/hooks/character/useSpellProfileMutations'
 import { useSpellSlots } from '@/hooks/character/useSpellSlots'
@@ -60,6 +61,7 @@ type SpellView = 'all' | 'racial' | 'bonus' | ClassSpellView
 
 export function SpellsPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const {
     spells,
@@ -430,12 +432,12 @@ export function SpellsPage() {
   )
 
   const abilityModifiers = useMemo(() => {
-    const scores = character?.abilityScores
+    const scores = calculationContext?.abilityScores.total
     if (!scores) return {} as Record<string, number>
     return Object.fromEntries(
       Object.entries(scores).map(([key, val]) => [key, getAbilityModifier(val as number)]),
     ) as Record<string, number>
-  }, [character])
+  }, [calculationContext])
 
   const characterSpellNames = useMemo(() => {
     const names = new Set<string>()

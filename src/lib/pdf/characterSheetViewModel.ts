@@ -4,14 +4,10 @@ import {
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
-import {
-  type EntityLookupSet,
-  resolveBackgroundReference,
-  resolveClassReference,
-  resolveRaceReference,
-} from '@/lib/5etools/entityResolvers'
+import { type EntityLookupSet, resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
@@ -32,7 +28,7 @@ import {
 } from '@/lib/characterUtils'
 import { renderEntry } from '@/lib/renderer'
 import type { Background5e, Class5e, Organization5e, Race5e, Spell5e } from '@/types/5etools'
-import type { Character, Equipment } from '@/types/character'
+import type { AbilityScores, Character, Equipment } from '@/types/character'
 
 type ModifierResult = { modifier: number; proficient: boolean }
 
@@ -83,6 +79,7 @@ export interface CharacterSheetViewModel {
   classLevelSummary: string
   raceSummary: string
   proficiencyBonus: number
+  effectiveAbilityScores: AbilityScores
   abilityModifiers: Record<AbilityName, number>
   skillByName: ReadonlyMap<string, ModifierResult>
   savingThrowByAbility: ReadonlyMap<AbilityName, ModifierResult>
@@ -521,9 +518,10 @@ function buildHitDiceRows(
 function buildClassResourceRows(
   character: Character,
   rawLookups: CharacterSheetLookupSet,
+  effectiveAbilityScores: AbilityScores,
 ): CharacterSheetClassResourceRow[] {
   const stored = character.classResources ?? {}
-  const charismaModifier = Math.max(1, getAbilityModifier(character.abilityScores.charisma))
+  const charismaModifier = Math.max(1, getAbilityModifier(effectiveAbilityScores.charisma))
   return getCharacterClassEntries(character).flatMap((entry) => {
     const classData = resolveClassReference(entry, rawLookups)
     const levelIndex = Math.max(0, Math.min(19, entry.levels - 1))
@@ -566,13 +564,11 @@ export function createCharacterSheetViewModel(
   character: Character,
   rawLookups: CharacterSheetLookupSet,
 ): CharacterSheetViewModel {
+  const calculationContext = createCharacterCalculationContext(character, rawLookups)
+  const effectiveAbilityScores = calculationContext.abilityScores.total
   const level = getTotalCharacterLevel(character) || 1
   const proficiencyBonus = getProficiencyBonus(level)
-  const abilityModifiers = Object.fromEntries(
-    (['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const).map(
-      (ability) => [ability, getAbilityModifier(character.abilityScores[ability])],
-    ),
-  ) as Record<AbilityName, number>
+  const abilityModifiers = calculationContext.abilityScores.modifiers
   const expertiseSkills = Object.entries(character.skills)
     .filter(([, value]) => value?.expertise)
     .map(([name]) => name.toLowerCase())
@@ -591,23 +587,9 @@ export function createCharacterSheetViewModel(
       proficiencyBonus,
     ).map((save) => [save.ability, save] as const),
   )
-  const resolvedClasses = getCharacterClassEntries(character).flatMap((entry) => {
-    const resolved = resolveClassReference(entry, rawLookups)
-    return resolved ? [resolved] : []
-  })
-  const raceResolution = resolveRaceReference(
-    {
-      name: character.race,
-      source: character.raceSource,
-      subraceName: character.subrace,
-      subraceSource: character.subraceSource,
-    },
-    rawLookups,
-  )
-  const background = resolveBackgroundReference(
-    { name: character.background, source: character.backgroundSource },
-    rawLookups,
-  )
+  const resolvedClasses = calculationContext.classes
+  const raceResolution = calculationContext.raceResolution
+  const background = calculationContext.background
   const classesById = new Map(
     resolvedClasses.map((classData) => [
       toClassProfileId(classData.name, classData.source),
@@ -623,14 +605,15 @@ export function createCharacterSheetViewModel(
     classLevelSummary: getClassLevelSummary(character),
     raceSummary: getRaceSummary(character),
     proficiencyBonus,
+    effectiveAbilityScores,
     abilityModifiers,
     skillByName,
     savingThrowByAbility,
-    effectiveArmorClass: computeEffectiveCharacterArmorClass(character),
-    maxHP: getEffectiveMaxHP(character, resolvedClasses),
+    effectiveArmorClass: computeEffectiveCharacterArmorClass(character, effectiveAbilityScores),
+    maxHP: getEffectiveMaxHP(character, resolvedClasses, effectiveAbilityScores),
     remainingHitDice: Math.max(0, level - Math.max(0, character.hitDiceUsed ?? 0)),
     hitDiceRows: buildHitDiceRows(character, rawLookups),
-    classResourceRows: buildClassResourceRows(character, rawLookups),
+    classResourceRows: buildClassResourceRows(character, rawLookups, effectiveAbilityScores),
     weaponRows: buildWeaponRows(
       character,
       abilityModifiers,
@@ -642,7 +625,11 @@ export function createCharacterSheetViewModel(
     resolvedClasses,
     mergedRace: raceResolution.mergedRace,
     background,
-    spellcastingDetails: buildSpellcastingClassDetails(character, classesById),
+    spellcastingDetails: buildSpellcastingClassDetails(
+      character,
+      classesById,
+      effectiveAbilityScores,
+    ),
     visionSummary: buildVisionSummary(character, raceResolution.mergedRace),
     racialTraitsSummary: buildRacialTraitsSummary(character, raceResolution.mergedRace),
     backgroundFeature: getBackgroundFeature(character, background),

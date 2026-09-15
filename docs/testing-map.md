@@ -23,6 +23,10 @@ new tests land and do not lower them to merge a change.
 ## Current Coverage Areas
 
 - Core calculations in src/lib/calculations/* (including spellUtils)
+- Character calculation-context coverage for source-qualified resolution, ruleset normalization,
+  origin/ASI score composition, equipment state, and cross-surface effective-score agreement.
+- A focused source-ownership test prevents Builder, header-stat, prerequisite, spellcasting, and PDF
+  consumers from bypassing the effective-score boundary.
 - Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
 - HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution recalculation, lasting flat/per-level adjustments, exact overrides, legacy initialization, and current/temp HP saves
