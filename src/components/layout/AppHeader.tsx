@@ -28,6 +28,7 @@ import { toast } from 'sonner'
 import { ArmorClassModal } from '@/components/modals/ArmorClassModal'
 import { HitPointsModal } from '@/components/modals/HitPointsModal'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
+import { ManualEffectsModal } from '@/components/modals/ManualEffectsModal'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { AnchoredHint } from '@/components/workspace'
@@ -76,6 +77,7 @@ export function AppHeader() {
   const [levelUpOpen, setLevelUpOpen] = useState(false)
   const [armorClassOpen, setArmorClassOpen] = useState(false)
   const [hitPointsOpen, setHitPointsOpen] = useState(false)
+  const [manualEffectsOpen, setManualEffectsOpen] = useState(false)
   const [showStatMenusHint, setShowStatMenusHint] = useState(
     () => !isHintDismissed(STAT_MENUS_HINT_ID),
   )
@@ -252,6 +254,23 @@ export function AppHeader() {
         </div>
 
         <div className="app-no-drag flex h-full min-w-0 items-center justify-end gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3"
+                aria-label="Manage manual effects"
+                disabled={!activeCharacter}
+                onClick={() => setManualEffectsOpen(true)}
+              >
+                <SlidersHorizontal />
+                <span className="hidden 2xl:inline">Effects</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Manual effects and overrides</TooltipContent>
+          </Tooltip>
+
           {showLevelUp && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -303,6 +322,7 @@ export function AppHeader() {
       />
       <ArmorClassModal open={armorClassOpen} onOpenChange={setArmorClassOpen} />
       <HitPointsModal open={hitPointsOpen} onOpenChange={setHitPointsOpen} />
+      <ManualEffectsModal open={manualEffectsOpen} onOpenChange={setManualEffectsOpen} />
     </TooltipProvider>
   )
 }
