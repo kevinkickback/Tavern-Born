@@ -149,6 +149,9 @@ Race trait application behavior:
 - `applyRaceSelection(race, subrace)` and `applySubraceChange(race, subrace)` apply and reconcile `darkvision`, `resist`, `immune`, and `conditionImmune`.
 - Applied race traits are persisted on the character as `visions`, `damageResistances`, `damageImmunities`, and `conditionImmunities`.
 - Subrace values are merged with race values, and subrace darkvision overrides base race darkvision when present.
+- Race/subrace commands validate only race-owned origin invariants. This allows an incomplete 2024
+  character to choose a lineage before its background feat and origin-language choices are
+  complete; background/full-origin commands retain the complete cross-domain invariant check.
 
 Lineage race ASI behavior:
 - Some lineage races (for example VRGR-style entries) omit an explicit `ability` block in 5etools data.

@@ -5,6 +5,8 @@
   "originSystem": "2024",
   "race": "Elf",
   "raceSource": "XPHB",
+  "subrace": "Drow Lineage",
+  "subraceSource": "XPHB",
   "class": "Wizard",
   "classSource": "XPHB",
   "subclass": "Evoker",

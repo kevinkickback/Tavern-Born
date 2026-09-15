@@ -111,6 +111,14 @@ describe('PDF kitchen sink character fixtures', () => {
     expect(character.hitPointGains).toHaveLength(19)
 
     expectCorpusReference(lookups.racesByKey, character.race, character.raceSource)
+    const resolvedRace =
+      lookups.racesByKey[getEntityLookupKey(character.race, character.raceSource)]
+    if ((resolvedRace?.subraces?.length ?? 0) > 0) {
+      expect(
+        character.subrace,
+        "Fixture must select one of the race's available subraces",
+      ).toBeTruthy()
+    }
     expectCorpusReference(
       lookups.backgroundsByKey,
       character.background,
@@ -129,8 +137,6 @@ describe('PDF kitchen sink character fixtures', () => {
       ).toBe(true)
     }
     if (character.subrace) {
-      const resolvedRace =
-        lookups.racesByKey[getEntityLookupKey(character.race, character.raceSource)]
       expect(
         resolvedRace?.subraces?.some(
           (subrace) =>

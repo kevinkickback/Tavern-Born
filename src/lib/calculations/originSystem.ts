@@ -133,34 +133,32 @@ export function countOriginFeatUnits(
   return fixedBackgroundFeats + backgroundFeatChoices
 }
 
-export function ensureOriginSystemInvariants(
-  ledger: {
-    proficiencies: {
-      languages: Record<string, Array<{ sourceType?: string; sourceName?: string }>>
-    }
-    abilityBonuses: Array<{ sourceTag: { sourceType?: string } }>
-    feats: Record<string, Array<{ sourceType?: string; grantType?: string }>>
-    choices: Array<{
-      domain: string
-      chooseCount: number
-      sourceTag: { sourceType?: string; sourceName?: string }
-    }>
-  },
+type OriginInvariantLedger = {
+  proficiencies: {
+    languages: Record<string, Array<{ sourceType?: string; sourceName?: string }>>
+  }
+  abilityBonuses: Array<{ sourceTag: { sourceType?: string } }>
+  feats: Record<string, Array<{ sourceType?: string; grantType?: string }>>
+  choices: Array<{
+    domain: string
+    chooseCount: number
+    sourceTag: { sourceType?: string; sourceName?: string }
+  }>
+}
+
+export function ensureRaceOriginInvariants(
+  ledger: OriginInvariantLedger,
   originSystem: OriginSystem,
 ): void {
+  if (originSystem !== '2024') return
+
   const hasRaceAbilityBonuses = ledger.abilityBonuses.some(
     (record) => record.sourceTag.sourceType === 'race' || record.sourceTag.sourceType === 'subrace',
-  )
-  const hasBackgroundAbilityBonuses = ledger.abilityBonuses.some(
-    (record) => record.sourceTag.sourceType === 'background',
   )
   const hasRaceAbilityChoices = ledger.choices.some(
     (choice) =>
       choice.domain === 'abilityBonuses' &&
       (choice.sourceTag.sourceType === 'race' || choice.sourceTag.sourceType === 'subrace'),
-  )
-  const hasBackgroundAbilityChoices = ledger.choices.some(
-    (choice) => choice.domain === 'abilityBonuses' && choice.sourceTag.sourceType === 'background',
   )
   const hasRaceFeatBenefits =
     Object.values(ledger.feats).some((tags) =>
@@ -171,6 +169,33 @@ export function ensureOriginSystemInvariants(
         choice.domain === 'feats' &&
         (choice.sourceTag.sourceType === 'race' || choice.sourceTag.sourceType === 'subrace'),
     )
+  const hasRaceLanguageBenefits = Object.values(ledger.proficiencies.languages)
+    .flat()
+    .some((tag) => tag.sourceType === 'race' || tag.sourceType === 'subrace')
+
+  if (hasRaceAbilityBonuses || hasRaceAbilityChoices) {
+    throw new Error('2024 origin system cannot retain race or subrace ability-score origin grants.')
+  }
+  if (hasRaceFeatBenefits) {
+    throw new Error('2024 origin system cannot retain race or subrace origin feats.')
+  }
+  if (hasRaceLanguageBenefits) {
+    throw new Error('2024 origin system cannot retain race or subrace language grants.')
+  }
+}
+
+export function ensureOriginSystemInvariants(
+  ledger: OriginInvariantLedger,
+  originSystem: OriginSystem,
+): void {
+  ensureRaceOriginInvariants(ledger, originSystem)
+
+  const hasBackgroundAbilityBonuses = ledger.abilityBonuses.some(
+    (record) => record.sourceTag.sourceType === 'background',
+  )
+  const hasBackgroundAbilityChoices = ledger.choices.some(
+    (choice) => choice.domain === 'abilityBonuses' && choice.sourceTag.sourceType === 'background',
+  )
   const hasBackgroundFeatBenefits =
     Object.values(ledger.feats).some((tags) =>
       tags.some((tag) => tag.sourceType === 'background'),
@@ -179,27 +204,13 @@ export function ensureOriginSystemInvariants(
       (choice) => choice.domain === 'feats' && choice.sourceTag.sourceType === 'background',
     )
   const languageTags = Object.values(ledger.proficiencies.languages).flat()
-  const hasRaceLanguageBenefits = languageTags.some(
-    (tag) => tag.sourceType === 'race' || tag.sourceType === 'subrace',
-  )
   const hasBackgroundLanguageBenefits = languageTags.some((tag) => tag.sourceType === 'background')
   const hasCommonLanguage = (ledger.proficiencies.languages.common ?? []).length > 0
   const originLanguageChoiceUnits = count2024OriginLanguageChoiceUnits(ledger.choices)
 
   if (originSystem === '2024') {
-    if (hasRaceAbilityBonuses || hasRaceAbilityChoices) {
-      throw new Error(
-        '2024 origin system cannot retain race or subrace ability-score origin grants.',
-      )
-    }
-    if (hasRaceFeatBenefits) {
-      throw new Error('2024 origin system cannot retain race or subrace origin feats.')
-    }
     if (countOriginFeatUnits(ledger, originSystem) !== 1) {
       throw new Error('2024 origin system must provide exactly one background origin feat.')
-    }
-    if (hasRaceLanguageBenefits) {
-      throw new Error('2024 origin system cannot retain race or subrace language grants.')
     }
     if (hasBackgroundLanguageBenefits) {
       throw new Error('2024 origin system cannot retain background language grants.')

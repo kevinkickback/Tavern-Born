@@ -9,7 +9,7 @@ import {
   normalizeRaceMovement,
 } from '@/lib/calculations/movement'
 import {
-  ensureOriginSystemInvariants,
+  ensureRaceOriginInvariants,
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
 import { mergeSkillState } from '@/lib/calculations/skills'
@@ -170,7 +170,7 @@ export function applyRaceSelectionCommand(
     { suppressLanguageGrants: character.originSystem === '2024' },
   )
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
-  ensureOriginSystemInvariants(provenanceUpdate, character.originSystem)
+  ensureRaceOriginInvariants(provenanceUpdate, character.originSystem)
   const movement = normalizeRaceMovement(normalized.race, normalized.subrace)
 
   return {
@@ -236,7 +236,7 @@ export function applySubraceSelectionCommand(
     )
   }
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
-  ensureOriginSystemInvariants(provenanceUpdate, character.originSystem)
+  ensureRaceOriginInvariants(provenanceUpdate, character.originSystem)
   const movement = normalizeRaceMovement(normalized.race, normalized.subrace)
 
   return {

@@ -77,6 +77,37 @@ describe('race commands', () => {
     })
   })
 
+  test('allows a 2024 lineage selection before unrelated background choices are complete', () => {
+    const character = makeCharacterFixture({
+      originSystem: '2024',
+      race: 'Elf',
+      raceSource: 'XPHB',
+      background: 'Sage',
+      backgroundSource: 'XPHB',
+    })
+    const race = { name: 'Elf', source: 'XPHB' } as Race5e
+    const lineage = {
+      name: 'Drow Lineage',
+      source: 'XPHB',
+      ability: [{ dex: 2 }],
+      feats: [{ any: 1 }],
+      languageProficiencies: [{ elvish: true }],
+    } as Race5e
+
+    const result = applySubraceSelectionCommand(
+      character,
+      emptyProvenance(),
+      race,
+      lineage,
+      resolveNoChoices,
+    )
+
+    expect(result.characterPatch.subrace).toBe('Drow Lineage')
+    expect(result.provenanceUpdate.abilityBonuses).toEqual([])
+    expect(result.provenanceUpdate.feats).toEqual({})
+    expect(result.provenanceUpdate.proficiencies.languages.elvish).toBeUndefined()
+  })
+
   test('race changes replace only racial base movement and preserve manual settings', () => {
     const character = makeCharacterFixture({
       race: 'Dwarf',

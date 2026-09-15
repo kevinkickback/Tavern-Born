@@ -253,7 +253,16 @@ function buildFixture(seed, edition) {
             subrace.raceSource === race.source &&
             subrace.name === seed.subrace,
         )
-      : undefined
+      : asArray(race._versions)
+          .map((version) => ({
+            ...version,
+            name:
+              typeof version.name === 'string'
+                ? (version.name.split(';').at(-1)?.trim() ?? version.name)
+                : undefined,
+            source: version.source ?? race.source,
+          }))
+          .find((version) => version.name)
 
   const mappedProfiles = seed.spells.spellProfiles.map((profile) => ({
     ...profile,

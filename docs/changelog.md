@@ -35,6 +35,7 @@
 * Rest controls are reserved for a future live-play experience instead of appearing in the builder header
 * Built-in organization cards now use a neutral background so their artwork is not paired with arbitrary colors
 * PDF regression coverage now uses separate 2014 and 2024 kitchen-sink characters generated and audited against the configured 5etools corpus
+* Opening an incomplete 2024 character no longer crashes when its species lineage is selected before background setup is complete
 
 </details>
 

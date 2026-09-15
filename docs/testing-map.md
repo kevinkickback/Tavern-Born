@@ -127,6 +127,9 @@ new tests land and do not lower them to merge a change.
   tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx
 - Race summary coverage for parsed unresolved ability choices, shared accent-outline actions, and
   omission of the race-bonus action under 2024 rules in tests/integration/racePageSummary.test.tsx
+- Race-command coverage verifies that 2024 lineage selection is independent of unfinished
+  background choices; the corpus-backed kitchen-sink test requires a valid selected lineage when
+  the resolved race exposes lineages.
 - Canonical 2014 race/2024 background readiness routing and revised background-bonus editing in
   tests/lib/characterReadiness.test.ts and tests/integration/abilityScoresPage.test.tsx
 - Warning/destructive palette import regression coverage in tests/lib/themeColors.test.ts
