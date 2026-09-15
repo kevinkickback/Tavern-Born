@@ -1,6 +1,7 @@
 import { Plus, Shield, Trash } from '@phosphor-icons/react'
 import { useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
+import { NumericEffectBreakdown } from '@/components/effects/NumericEffectBreakdown'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -38,7 +39,7 @@ function formatSigned(value: number): string {
 
 export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
   const character = useCharacterStore((state) => state.activeCharacter)
-  const { calculatedAC, effectiveAC, saveArmorClassSettings } = useArmorClass()
+  const { calculatedAC, effectiveAC, resolution, saveArmorClassSettings } = useArmorClass()
   const [adjustments, setAdjustments] = useState<ArmorClassAdjustmentDraft[]>([])
   const [newLabel, setNewLabel] = useState('')
   const [newAmount, setNewAmount] = useState('')
@@ -183,6 +184,8 @@ export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
               </p>
             )}
           </section>
+
+          <NumericEffectBreakdown title="Current saved calculation" resolution={resolution} />
 
           <section className="space-y-3">
             <div>

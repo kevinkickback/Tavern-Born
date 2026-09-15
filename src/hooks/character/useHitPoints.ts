@@ -4,7 +4,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { buildClassLookup } from '@/lib/5etools/lookups'
-import { resolveNumericEffect } from '@/lib/calculations/effects'
+import { type ResolvedNumericEffect, resolveNumericEffect } from '@/lib/calculations/effects'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
 import {
   calculateHitPointAdjustmentTotal,
@@ -30,6 +30,7 @@ export interface HitPointsState {
   adjustedMaxHP: number
   overrideMaxHP?: number
   effectiveMaxHP: number
+  resolution: ResolvedNumericEffect
   hitDie: number
   conMod: number
   levelsHPBreakdown: number[]
@@ -116,18 +117,18 @@ export function useHitPoints(): HitPointsState {
   )
   const adjustedMaxHP = Math.max(1, calculatedMaxHP + adjustmentTotal)
   const overrideMaxHP = character ? getMaxHitPointsOverride(character) : undefined
+  const resolution = useMemo(
+    () =>
+      resolveNumericEffect(
+        calculatedMaxHP,
+        { kind: 'hit-point-maximum' },
+        calculationContext?.effects.declarations ?? [],
+        calculationContext?.effects.resolutionContext,
+      ),
+    [calculatedMaxHP, calculationContext],
+  )
   const effectiveMaxHP = calculationContext
-    ? Math.max(
-        1,
-        Math.trunc(
-          resolveNumericEffect(
-            calculatedMaxHP,
-            { kind: 'hit-point-maximum' },
-            calculationContext.effects.declarations,
-            calculationContext.effects.resolutionContext,
-          ).value,
-        ),
-      )
+    ? Math.max(1, Math.trunc(resolution.value))
     : (overrideMaxHP ?? adjustedMaxHP)
 
   const update = (patch: Partial<HitPoints>) => {
@@ -146,6 +147,7 @@ export function useHitPoints(): HitPointsState {
     adjustedMaxHP,
     overrideMaxHP,
     effectiveMaxHP,
+    resolution,
     hitDie,
     conMod,
     levelsHPBreakdown,

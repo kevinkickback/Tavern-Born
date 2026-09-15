@@ -3,8 +3,8 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 import {
   calculateArmorClassAdjustmentTotal,
   computeArmorClass,
-  computeEffectiveCharacterArmorClass,
 } from '@/lib/calculations/armorClass'
+import { type ResolvedNumericEffect, resolveNumericEffect } from '@/lib/calculations/effects'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
 import { useCharacterStore } from '@/store/characterStore'
 import type { ArmorClassAdjustment } from '@/types/character'
@@ -20,6 +20,7 @@ export interface ArmorClassState {
   adjustedAC: number
   overrideAC?: number
   effectiveAC: number
+  resolution: ResolvedNumericEffect
   setAC: (ac: number) => void
   clearOverride: () => void
   saveArmorClassSettings: (settings: ArmorClassSettings) => void
@@ -42,17 +43,24 @@ export function useArmorClass(): ArmorClassState {
   )
   const adjustmentTotal = calculateArmorClassAdjustmentTotal(character?.armorClassAdjustments)
   const adjustedAC = Math.max(0, calculatedAC + adjustmentTotal)
+  const resolution = useMemo(
+    () =>
+      resolveNumericEffect(
+        calculatedAC,
+        { kind: 'armor-class' },
+        calculationContext?.effects.declarations ?? [],
+        calculationContext?.effects.resolutionContext,
+      ),
+    [calculatedAC, calculationContext],
+  )
 
   return {
     calculatedAC,
     adjustmentTotal,
     adjustedAC,
     overrideAC: character?.armorClassOverride,
-    effectiveAC: computeEffectiveCharacterArmorClass(
-      character ?? {},
-      effectiveAbilityScores,
-      calculationContext?.effects.declarations,
-    ),
+    effectiveAC: Math.max(0, Math.trunc(resolution.value)),
+    resolution,
     setAC: (ac) => {
       if (!character) return
       updateCharacter(character.id, { armorClassOverride: Math.max(0, ac) })

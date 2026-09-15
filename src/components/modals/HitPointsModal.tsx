@@ -1,6 +1,7 @@
 import { Heart, Plus, Trash } from '@phosphor-icons/react'
 import { useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
+import { NumericEffectBreakdown } from '@/components/effects/NumericEffectBreakdown'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -38,7 +39,8 @@ function formatSigned(value: number): string {
 
 export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
   const character = useCharacterStore((state) => state.activeCharacter)
-  const { hitPoints, calculatedMaxHP, effectiveMaxHP, saveHitPointSettings } = useHitPoints()
+  const { hitPoints, calculatedMaxHP, effectiveMaxHP, resolution, saveHitPointSettings } =
+    useHitPoints()
   const [current, setCurrent] = useState('0')
   const [temporary, setTemporary] = useState('0')
   const [adjustments, setAdjustments] = useState<HitPointAdjustmentDraft[]>([])
@@ -268,6 +270,8 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
               )}
             </div>
           </section>
+
+          <NumericEffectBreakdown title="Current saved maximum" resolution={resolution} />
 
           <section className="space-y-3">
             <div>

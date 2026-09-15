@@ -102,4 +102,47 @@ describe('ArmorClassModal', () => {
 
     expect(useCharacterStore.getState().activeCharacter?.armorClassOverride).toBe(20)
   })
+
+  test('shows the resolver trace for active and inactive adjustments', () => {
+    const character = makeCharacterFixture({
+      abilityScores: {
+        strength: 10,
+        dexterity: 14,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      hitPoints: { max: 0, current: 0, temporary: 0 },
+      manualEffects: [
+        {
+          id: 'active-test-effect',
+          label: 'Active test adjustment',
+          target: { kind: 'armor-class' },
+          operation: { kind: 'add', value: 2 },
+          source: { kind: 'manual', name: 'Test source' },
+        },
+        {
+          id: 'inactive-test-effect',
+          label: 'Inactive test adjustment',
+          target: { kind: 'armor-class' },
+          operation: { kind: 'add', value: 4 },
+          source: { kind: 'manual', name: 'Other test source' },
+          requirements: [{ kind: 'flag', key: 'inactive-test', expected: true }],
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    render(<ArmorClassModal open={true} onOpenChange={() => {}} />)
+
+    expect(screen.getByText('Current saved calculation')).toBeTruthy()
+    expect(screen.getByText('Active test adjustment')).toBeTruthy()
+    expect(screen.getByText('+2 → 14')).toBeTruthy()
+    expect(screen.getByText('1 inactive adjustment')).toBeTruthy()
+  })
 })
