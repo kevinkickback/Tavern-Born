@@ -16,9 +16,13 @@ This document describes the current Tavern-Born runtime architecture and where r
 - Shared `SplitPane` workspaces switch from side-by-side panes to a labeled, one-pane-at-a-time view
   when their own container is narrower than 840px; compact pane state is separate from the user's
   desktop collapse choices. The secondary workspace navigation remains permanently visible.
-- Bundled files from `public/` resolve through `src/lib/assetUrls.ts`; this preserves Vite dev-server
-  URLs while producing relative URLs for packaged Electron's `file://` renderer. Class icons,
-  placeholder portraits, organization artwork, the About logo, and PDF templates share this path.
+- Bundled runtime files from `public/` resolve through `src/lib/assetUrls.ts`; this preserves Vite
+  dev-server URLs while producing relative URLs for packaged Electron's `file://` renderer. Class
+  icons, placeholder portraits, organization artwork, the About logo, and PDF templates share this
+  path. Documentation-only artwork belongs under `docs/assets/` so it is not copied into releases.
+- Renderer styles compile through `@tailwindcss/vite`. `src/styles/theme.css` imports only the
+  Radix scales reachable through the supported accent and neutral theme preferences; there is no
+  second PostCSS/Autoprefixer processing path.
 
 3. State and persistence
 - Purpose: app state ownership and IndexedDB persistence.

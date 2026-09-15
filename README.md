@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="public/assets/images/ui/logo_name.png" alt="Tavern Born Logo" width="250"/>
+<img src="docs/assets/logo_name.png" alt="Tavern Born Logo" width="250"/>
 
 **A desktop Dungeons & Dragons 5th Edition character creator**
 
