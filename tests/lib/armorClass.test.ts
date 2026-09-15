@@ -4,6 +4,7 @@ import {
   computeArmorClass,
   computeEffectiveCharacterArmorClass,
   getArmorCategory,
+  getArmorClassBaseBreakdown,
   isArmorOrShield,
   resolveArmorType,
 } from '@/lib/calculations/armorClass'
@@ -57,6 +58,37 @@ describe('armorClass', () => {
     ]
 
     expect(computeArmorClass(equipment, 5)).toBe(21)
+  })
+
+  test('exposes each equipped source used by the base calculation', () => {
+    const equipment = [
+      makeItem({ id: 'armor', name: 'Test Armor', type: 'MA', ac: 14, equipped: true }),
+      makeItem({ id: 'shield', name: 'Test Shield', type: 'S', equipped: true }),
+    ]
+
+    expect(getArmorClassBaseBreakdown(equipment, 4)).toEqual({
+      total: 18,
+      components: [
+        {
+          id: 'equipment:armor',
+          label: 'Test Armor',
+          detail: 'Equipped medium armor',
+          value: 14,
+        },
+        {
+          id: 'dexterity',
+          label: 'Dexterity modifier',
+          detail: 'Applied with the armor limit',
+          value: 2,
+        },
+        {
+          id: 'equipment:shield',
+          label: 'Test Shield',
+          detail: 'Equipped shield',
+          value: 2,
+        },
+      ],
+    })
   })
 
   test('resolveArmorType maps 5etools item type codes', () => {

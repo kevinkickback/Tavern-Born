@@ -32,7 +32,7 @@ typed contributions after defining stacking, migration, and exact-override seman
 | Source references | race, subrace, background, class progression and their sources | Persisted identities; resolved entities are derived in the context. |
 | Derived compatibility mirrors | legacy `armorClass`, flat class/level fields | Kept for migration/import compatibility; never treated as canonical calculated output. |
 | Mutable runtime state | current/temporary HP, used spell slots, class-resource uses, conditions | Persisted because play changes it; maxima and modifiers remain derived. |
-| Lasting adjustments | HP and AC adjustment records | Persisted, labeled contributions applied after ordinary derivation. |
+| Manual adjustments | HP and AC adjustment records | Persisted, labeled contributions applied after ordinary derivation. |
 | Exact overrides | maximum HP and AC overrides | Persisted only when explicitly set; applied last and visibly distinguished from derived values. |
 | Pure projections | effective scores/modifiers, maximum HP, AC, skills, saves, carrying capacity, spell DCs | Never persisted; recomputed from the context and domain calculators. |
 
@@ -53,6 +53,11 @@ projects structured base movement, labeled per-mode adjustments, exact overrides
 preserved unknown movement keys; and never stores those source declarations in a character save.
 Only unconditional scalar/list fields are automated. Choice objects and prose remain visible rules
 text and can be represented with a labeled manual effect after the player resolves the choice.
+
+HP and AC management present the resolver trace together with explicit base components. Equipped
+armor and shields, class/level/Constitution HP, and active typed effects are informational rows;
+their owning workflows remain Equipment, class progression, and Adjustments. This keeps the modal's
+manual delete controls from performing surprising cross-domain mutations.
 
 Carrying capacity is resolved by `getEffectiveCarryCapacity()` from the effective Strength score
 and the same active typed-effect set. The Equipment hook and PDF view model consume that result;

@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { ManualActionsModal } from '@/components/modals/ManualActionsModal'
+import { ManualActionsEditor } from '@/components/character/ManualActionsEditor'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -27,7 +27,7 @@ function resetCharacter() {
   })
 }
 
-describe('ManualActionsModal', () => {
+describe('ManualActionsEditor', () => {
   beforeEach(resetCharacter)
 
   afterEach(() => {
@@ -37,7 +37,7 @@ describe('ManualActionsModal', () => {
 
   test('creates, disables, re-enables, and removes a fully described action', async () => {
     const user = userEvent.setup()
-    render(<ManualActionsModal open={true} onOpenChange={() => {}} />)
+    render(<ManualActionsEditor />)
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Test maneuver' } })
     await user.click(screen.getByRole('combobox', { name: 'Attack or save behavior' }))

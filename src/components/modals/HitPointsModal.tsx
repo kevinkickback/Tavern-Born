@@ -15,7 +15,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
-import { calculateHitPointAdjustmentTotal, getTotalCharacterLevel } from '@/lib/characterUtils'
+import {
+  calculateHitPointAdjustmentTotal,
+  getCharacterClassEntries,
+  getTotalCharacterLevel,
+} from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { HitPointAdjustment } from '@/types/character'
@@ -97,6 +101,9 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
   if (!character) return null
 
   const characterLevel = getTotalCharacterLevel(character)
+  const classSummary = getCharacterClassEntries(character)
+    .map((entry) => `${entry.name} ${entry.levels}`)
+    .join(' · ')
   const resolvedAdjustments: HitPointAdjustment[] = adjustments.map((adjustment) => ({
     ...adjustment,
     amount: parseInteger(adjustment.amount),
@@ -197,7 +204,8 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
             Manage Hit Points
           </DialogTitle>
           <DialogDescription>
-            Track your health and add lasting bonuses or penalties to your maximum HP.
+            Track your health, review every active maximum-HP source, and add manual bonuses or
+            penalties.
           </DialogDescription>
         </DialogHeader>
 
@@ -259,23 +267,37 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
             <div className="border-t border-border px-4 py-2 text-center">
               {overrideEnabled ? (
                 <p className="text-xs text-muted-foreground">
-                  Using a fixed maximum; lasting changes are saved but do not change this number.
+                  Using a fixed maximum; manual changes are saved but do not change this number.
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">
                   {calculatedMaxHP} from class, level, and Constitution
-                  {adjustmentTotal !== 0 &&
-                    ` ${formatSigned(adjustmentTotal)} from lasting changes`}
+                  {adjustmentTotal !== 0 && ` ${formatSigned(adjustmentTotal)} from manual changes`}
                 </p>
               )}
             </div>
           </section>
 
-          <NumericEffectBreakdown title="Current saved maximum" resolution={resolution} />
+          <NumericEffectBreakdown
+            title="Current maximum-HP sources"
+            resolution={resolution}
+            baseComponents={[
+              {
+                id: 'class-levels-and-constitution',
+                label: 'Class levels and Constitution',
+                detail: classSummary || 'No class progression',
+                value: calculatedMaxHP,
+              },
+            ]}
+          />
+          <p className="-mt-3 text-xs text-muted-foreground">
+            Active item, spell, feat, and other typed effects appear above when their source data
+            declares a maximum-HP effect. Rules prose is never guessed.
+          </p>
 
           <section className="space-y-3">
             <div>
-              <h3 className="text-sm font-semibold">Add a lasting HP change</h3>
+              <h3 className="text-sm font-semibold">Add a manual HP change</h3>
               <p className="text-xs text-muted-foreground">
                 Use a positive number for a bonus or a negative number for a penalty.
               </p>
@@ -339,7 +361,7 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Lasting changes</h3>
+            <h3 className="text-sm font-semibold">Manual changes</h3>
             {adjustments.length === 0 ? (
               <p className="rounded-md border border-dashed border-border p-3 text-center text-sm text-muted-foreground">
                 None yet.

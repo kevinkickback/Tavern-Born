@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
-import type { Class5e, Feat5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('getCharacterReadiness', () => {
@@ -127,6 +127,42 @@ describe('getCharacterReadiness', () => {
         'class:asi:Test Class|TEST:1',
       ]),
     )
+    expect(
+      result.issues.find((entry) => entry.id === 'race:ability-choice:0')?.navigationTarget,
+    ).toBe('/build/ability-scores')
+  })
+
+  test('routes revised background ability choices to the canonical ability-score editor', () => {
+    const testRace = { name: 'Test Race', source: 'TEST' } as Race5e
+    const testBackground = {
+      name: 'Test Background',
+      source: 'TEST',
+      ability: [
+        {
+          choose: {
+            weighted: { from: ['str', 'dex', 'con'], weights: [2, 1] },
+          },
+        },
+      ],
+    } as Background5e
+    const character = makeCharacterFixture({
+      originSystem: '2024',
+      race: testRace.name,
+      raceSource: testRace.source,
+      background: testBackground.name,
+      backgroundSource: testBackground.source,
+      backgroundAsiChoices: [],
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      racesByKey: { 'Test Race|TEST': testRace },
+      backgroundsByKey: { 'Test Background|TEST': testBackground },
+    })
+
+    const result = getCharacterReadiness(character, { calculation })
+
+    expect(
+      result.issues.find((entry) => entry.id === 'background:ability-choices')?.navigationTarget,
+    ).toBe('/build/ability-scores')
   })
 
   test('distinguishes optional recommendations from blockers for a complete data-driven character', () => {

@@ -48,6 +48,11 @@ const BuildReviewPage = lazy(() =>
     default: module.BuildReviewPage,
   })),
 )
+const AdjustmentsPage = lazy(() =>
+  import('@/pages/adjustments/AdjustmentsPage').then((module) => ({
+    default: module.AdjustmentsPage,
+  })),
+)
 const CharacterSheetPage = lazy(() =>
   import('@/pages/CharacterSheetPage').then((module) => ({ default: module.CharacterSheetPage })),
 )
@@ -205,6 +210,7 @@ function App() {
                 <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
                 <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
                 <Route path="/build/review" element={<BuildReviewPage />} />
+                <Route path="/build/adjustments" element={<AdjustmentsPage />} />
                 <Route path="/feats" element={<FeatsPage />} />
                 <Route path="/spells" element={<SpellsPage />} />
                 <Route path="/equipment" element={<EquipmentPage />} />

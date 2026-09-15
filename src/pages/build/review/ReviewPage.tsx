@@ -117,17 +117,19 @@ export function BuildReviewPage() {
                 )}
                 <div>
                   <h2 className="font-semibold">
-                    {readiness.status === 'ready' ? 'Character is ready' : 'Draft needs attention'}
+                    {readiness.status === 'ready'
+                      ? 'Character is ready'
+                      : 'Character needs attention'}
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     {readiness.status === 'ready'
                       ? 'All required stored choices are complete.'
-                      : `${readiness.blockingIssues.length} required ${readiness.blockingIssues.length === 1 ? 'choice remains' : 'choices remain'}. You can continue saving this draft.`}
+                      : `${readiness.blockingIssues.length} required ${readiness.blockingIssues.length === 1 ? 'choice remains' : 'choices remain'}. You can continue saving this character.`}
                   </p>
                 </div>
               </div>
               <Badge variant={readiness.status === 'ready' ? 'default' : 'outline'}>
-                {readiness.status === 'ready' ? 'Ready for PDF' : 'PDF incomplete'}
+                {readiness.status === 'ready' ? 'Complete' : 'Needs attention'}
               </Badge>
             </div>
 
@@ -323,7 +325,7 @@ export function BuildReviewPage() {
                 <p className="text-sm text-muted-foreground">
                   {readiness.status === 'ready'
                     ? 'Required choices are complete. The sheet can be exported without an incomplete marker.'
-                    : 'The draft can be saved, but its PDF should be treated as incomplete until the required issues above are resolved.'}
+                    : 'The character can be saved, but required choices should be resolved before relying on an exported sheet.'}
                 </p>
                 <Button
                   size="sm"

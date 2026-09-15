@@ -11,6 +11,7 @@ import {
   Image,
   Lightning,
   MagicWand,
+  PencilSimple,
   PersonSimple,
   Scroll,
   SlidersHorizontal,
@@ -116,6 +117,7 @@ const workspaces: Workspace[] = [
       {
         label: 'Options',
         items: [
+          { label: 'Adjustments', path: '/build/adjustments', icon: PencilSimple },
           { label: 'Rules', path: '/rules', icon: SlidersHorizontal },
           { label: 'Sources', path: '/sources', icon: Books },
         ],

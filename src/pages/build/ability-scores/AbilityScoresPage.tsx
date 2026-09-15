@@ -1,5 +1,5 @@
 import { Barbell, Coins, ListNumbers, PencilSimple } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Progress } from '@/components/ui/progress'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useAbilityScores } from '@/hooks/character/useAbilityScores'
+import { useBackgroundProvenanceMutations } from '@/hooks/character/useBackgroundProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
 import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
@@ -41,6 +42,7 @@ import {
 import { useCharacterStore } from '@/store/characterStore'
 
 const EMPTY_RACE_ASI_CHOICES: string[][] = []
+const EMPTY_BACKGROUND_ASI_CHOICES: string[] = []
 
 export function BuildAbilityScoresPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -51,6 +53,8 @@ export function BuildAbilityScoresPage() {
   const { scores, setScore, setAllScores, pointBuyTotal, pointBuyRemaining } = useAbilityScores()
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const { applyRaceSelection, applyRaceAsiChoices } = useRaceProvenanceMutations()
+  const { applyBackgroundAbilityChoices, reconcileBackgroundAbilityChoices } =
+    useBackgroundProvenanceMutations()
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [compactPane, setCompactPane] = useState<CompactPane>('left')
@@ -68,6 +72,8 @@ export function BuildAbilityScoresPage() {
     raceAsiData,
     racialBonuses,
     backgroundBonuses,
+    bgAsiData,
+    normalizedBackground,
     selectedRace,
     subraceData,
     raceAsiBlockIndex,
@@ -75,6 +81,44 @@ export function BuildAbilityScoresPage() {
 
   const raceAsiChoices: string[][] = character?.raceAsiChoices ?? EMPTY_RACE_ASI_CHOICES
   const isLineageRaceAsiFallback = hasFlexibleRaceOriginAsi(normalizedRaceSelection.race)
+  const backgroundAbilityEntity = useMemo(
+    () =>
+      character && normalizedBackground
+        ? {
+            name: character.background,
+            source: character.backgroundSource,
+            ability: normalizedBackground.ability,
+          }
+        : null,
+    [character, normalizedBackground],
+  )
+  const backgroundBlockIndex = character?.backgroundAsiBlockIndex ?? 0
+  const backgroundChoices = character?.backgroundAsiChoices ?? EMPTY_BACKGROUND_ASI_CHOICES
+  const currentBackgroundBlock = bgAsiData.blocks[backgroundBlockIndex] ?? bgAsiData.blocks[0]
+  const hasFixedBackgroundAssignment =
+    !!currentBackgroundBlock &&
+    currentBackgroundBlock.from.length === currentBackgroundBlock.weights.length
+
+  useEffect(() => {
+    if (!backgroundAbilityEntity || !currentBackgroundBlock || !hasFixedBackgroundAssignment) {
+      return
+    }
+    const alreadySet = currentBackgroundBlock.from.every(
+      (ability, index) => backgroundChoices[index] === ability,
+    )
+    if (!alreadySet) {
+      reconcileBackgroundAbilityChoices(backgroundAbilityEntity, backgroundBlockIndex, [
+        ...currentBackgroundBlock.from,
+      ])
+    }
+  }, [
+    backgroundAbilityEntity,
+    backgroundBlockIndex,
+    backgroundChoices,
+    currentBackgroundBlock,
+    hasFixedBackgroundAssignment,
+    reconcileBackgroundAbilityChoices,
+  ])
 
   const asiBonuses = useMemo(() => {
     const bonuses: Partial<Record<AbilityName, number>> = {}
@@ -389,6 +433,113 @@ export function BuildAbilityScoresPage() {
                             })
                           })}
                         </div>
+                      </section>
+                    )}
+                    {backgroundAbilityEntity && bgAsiData.blocks.length > 0 && (
+                      <section
+                        className="mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4"
+                        data-testid="background-ability-choices"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              Background bonuses
+                            </h3>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Assign the origin ability increases supplied by the selected
+                              background.
+                            </p>
+                          </div>
+                          {bgAsiData.blocks.length > 1 && (
+                            <fieldset
+                              className="inline-flex w-fit shrink-0 gap-1 rounded-md border border-border bg-background/45 p-1"
+                              aria-label="Background bonus distribution"
+                            >
+                              {bgAsiData.blocks.map((block, blockIndex) => {
+                                const active = backgroundBlockIndex === blockIndex
+                                return (
+                                  <button
+                                    // biome-ignore lint/suspicious/noArrayIndexKey: source ability blocks are positional alternatives
+                                    key={`${block.weights.join('|')}|${blockIndex}`}
+                                    type="button"
+                                    onClick={() =>
+                                      applyBackgroundAbilityChoices(
+                                        backgroundAbilityEntity,
+                                        blockIndex,
+                                        block.from.length === block.weights.length
+                                          ? [...block.from]
+                                          : [],
+                                      )
+                                    }
+                                    className={cn(
+                                      'flex h-8 items-center rounded px-3 text-xs font-semibold transition-colors',
+                                      active
+                                        ? 'bg-secondary text-foreground'
+                                        : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                                    )}
+                                  >
+                                    {block.weights.map((weight) => `+${weight}`).join(' / ')}
+                                  </button>
+                                )
+                              })}
+                            </fieldset>
+                          )}
+                        </div>
+                        {currentBackgroundBlock && (
+                          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                            {currentBackgroundBlock.weights.map((weight, slotIndex) => {
+                              const selected = backgroundChoices[slotIndex] ?? ''
+                              return (
+                                <div
+                                  // biome-ignore lint/suspicious/noArrayIndexKey: duplicate bonus weights are distinct positional slots
+                                  key={`${weight}|${slotIndex}`}
+                                  className="flex min-w-44 items-center gap-2 rounded-md border border-border bg-background/35 p-1 pl-3"
+                                >
+                                  <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                                    +{weight}
+                                  </span>
+                                  <Select
+                                    value={selected}
+                                    disabled={hasFixedBackgroundAssignment}
+                                    onValueChange={(ability) => {
+                                      const nextChoices = Array.from<string>({
+                                        length: currentBackgroundBlock.weights.length,
+                                      }).map((_, index) => backgroundChoices[index] ?? '')
+                                      nextChoices[slotIndex] = ability
+                                      applyBackgroundAbilityChoices(
+                                        backgroundAbilityEntity,
+                                        backgroundBlockIndex,
+                                        nextChoices,
+                                      )
+                                    }}
+                                  >
+                                    <SelectTrigger
+                                      className="h-8 flex-1 border-0 bg-transparent px-2 text-xs shadow-none focus:ring-0"
+                                      aria-label={`Background ability bonus +${weight}`}
+                                    >
+                                      <SelectValue placeholder="Ability…" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {currentBackgroundBlock.from.map((ability) => (
+                                        <SelectItem
+                                          key={ability}
+                                          value={ability}
+                                          disabled={
+                                            backgroundChoices.includes(ability) &&
+                                            selected !== ability
+                                          }
+                                          className="text-xs"
+                                        >
+                                          {ABILITY_ABBREVIATIONS[ability]}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
                       </section>
                     )}
                   </div>

@@ -1,5 +1,6 @@
 import { Scroll, Star } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { GenericEquipmentSelect } from '@/components/character/GenericEquipmentSelect'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
@@ -34,11 +35,7 @@ import {
   formatEquipmentOptionEntries,
   resolveBackgroundEquipmentBlocks,
 } from '@/lib/5etools/startingEquipment'
-import {
-  ABILITY_ABBREVIATIONS,
-  type AbilityName,
-  getBackgroundAbilityData,
-} from '@/lib/calculations/abilityScores'
+import { getBackgroundAbilityData } from '@/lib/calculations/abilityScores'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
@@ -72,11 +69,7 @@ export function BuildBackgroundPage() {
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [bgSearch, setBgSearch] = useState('')
-  const {
-    applyBackgroundSelection,
-    applyBackgroundAbilityChoices,
-    reconcileBackgroundAbilityChoices,
-  } = useBackgroundProvenanceMutations()
+  const { applyBackgroundSelection } = useBackgroundProvenanceMutations()
   const { resolveFeatChoiceSelection, commitFeatWithOptions } = useFeatProvenanceMutations()
   const { ledger } = useProvenanceLedger()
   const selectedBackgroundRef = useRef<HTMLDivElement | null>(null)
@@ -210,24 +203,6 @@ export function BuildBackgroundPage() {
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
 
-  const bgAsiData = getBackgroundAbilityData(normalizedSelectedBg)
-
-  const currentAsiBlock =
-    bgAsiData.blocks[character?.backgroundAsiBlockIndex ?? 0] ?? bgAsiData.blocks[0]
-  const isXphbAutoAssign =
-    selectedBg?.source === 'XPHB' &&
-    !!currentAsiBlock &&
-    currentAsiBlock.from.length === currentAsiBlock.weights.length
-
-  useEffect(() => {
-    if (!isXphbAutoAssign || !character || !selectedBg || !currentAsiBlock) return
-    const blockIndex = character.backgroundAsiBlockIndex ?? 0
-    const choices = character.backgroundAsiChoices ?? []
-    const alreadySet = currentAsiBlock.from.every((a, i) => choices[i] === a)
-    if (alreadySet) return
-    reconcileBackgroundAbilityChoices(selectedBg, blockIndex, [...currentAsiBlock.from])
-  }, [isXphbAutoAssign, character, selectedBg, currentAsiBlock, reconcileBackgroundAbilityChoices])
-
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
   }
@@ -274,11 +249,11 @@ export function BuildBackgroundPage() {
   const skills = getBackgroundSkillNames(selectedBg)
   const langs = getBackgroundLanguageNames(selectedBg)
   const tools = getBackgroundToolNames(selectedBg)
-  const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0
-  const bgChoices = character.backgroundAsiChoices ?? []
   const chosenOriginFeat = originFeatChoices.find((c) => c.selected.length > 0)?.selected[0] ?? null
   const showBackgroundAsiPanel = character.originSystem === '2024'
-  const showBackgroundAsiCard = !!selectedBg && bgAsiData.blocks.length > 0
+  const bgAsiData = getBackgroundAbilityData(normalizedSelectedBg)
+  const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0
+  const bgChoices = character.backgroundAsiChoices ?? []
 
   const backgroundConfigurationPanel = showBackgroundAsiPanel ? (
     <div className="mt-4 border-t border-border pt-3">
@@ -287,97 +262,19 @@ export function BuildBackgroundPage() {
           <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Ability Score Improvements
           </div>
-          {showBackgroundAsiCard ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {bgAsiData.blocks.length > 1 && (
-                <div className="inline-flex shrink-0 rounded-md border border-border overflow-hidden text-xs h-8">
-                  <button
-                    type="button"
-                    onClick={() => applyBackgroundAbilityChoices(selectedBg, 0, [])}
-                    className={cn(
-                      'px-3 h-full transition-colors',
-                      bgBlockIndex === 0
-                        ? 'bg-accent text-accent-foreground'
-                        : 'bg-card hover:bg-muted',
-                    )}
-                  >
-                    +2 / +1
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const block1 = bgAsiData.blocks[1]
-                      const autoChoices =
-                        selectedBg?.source === 'XPHB' &&
-                        block1 &&
-                        block1.from.length === block1.weights.length
-                          ? [...block1.from]
-                          : []
-                      applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
-                    }}
-                    className={cn(
-                      'px-3 h-full border-l border-border transition-colors',
-                      bgBlockIndex === 1
-                        ? 'bg-accent text-accent-foreground'
-                        : 'bg-card hover:bg-muted',
-                    )}
-                  >
-                    +1 / +1 / +1
-                  </button>
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {(() => {
-                  const block = bgAsiData.blocks[bgBlockIndex] ?? bgAsiData.blocks[0]
-                  const slotLabels = ['first', 'second', 'third']
-                  const slots = block.weights.map((weight, i) => ({
-                    weight,
-                    key: slotLabels[i] ?? `slot${i + 1}`,
-                    index: i,
-                  }))
-                  return slots.map(({ weight, key, index: slotIndex }) => {
-                    const currentChoice = (bgChoices[slotIndex] as AbilityName | undefined) ?? ''
-                    return (
-                      <div key={key} className="flex items-center gap-2 h-8 w-44">
-                        <span className="text-xs font-semibold text-primary w-6 text-right shrink-0">
-                          +{weight}
-                        </span>
-                        <Select
-                          value={currentChoice}
-                          disabled={isXphbAutoAssign}
-                          onValueChange={(val) => {
-                            const newChoices = Array.from<string>({
-                              length: block.weights.length,
-                            }).map((_, i) => bgChoices[i] ?? '')
-                            newChoices[slotIndex] = val
-                            applyBackgroundAbilityChoices(selectedBg, bgBlockIndex, newChoices)
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs flex-1 bg-background">
-                            <SelectValue placeholder="Choose ability…" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {block.from.map((ability) => (
-                              <SelectItem
-                                key={ability}
-                                value={ability}
-                                disabled={bgChoices.includes(ability) && currentChoice !== ability}
-                              >
-                                {ABILITY_ABBREVIATIONS[ability]} -{' '}
-                                {ability.charAt(0).toUpperCase() + ability.slice(1)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )
-                  })
-                })()}
-              </div>
+          {selectedBg ? (
+            <div className="mt-2 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                This background supplies origin bonuses. All ability bonus choices are managed in
+                one place so displayed scores and stored selections cannot diverge.
+              </p>
+              <Button asChild size="sm" variant="outline" className="h-8 text-xs">
+                <Link to="/build/ability-scores">Manage ability bonuses</Link>
+              </Button>
             </div>
           ) : (
             <div className="mt-2 text-sm text-muted-foreground">
-              Select a background to assign origin ability scores here.
+              Select a background before assigning origin ability scores.
             </div>
           )}
         </div>

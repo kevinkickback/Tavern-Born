@@ -8,6 +8,7 @@ import {
   Star,
 } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { GameContent } from '@/components/editor/GameContent'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
@@ -487,7 +488,10 @@ export function BuildRacePage() {
                         ))}
                       </div>
 
-                      <div className="flex justify-end px-1">
+                      <div className="flex flex-wrap justify-end gap-2 px-1">
+                        <Button asChild size="sm" variant="outline">
+                          <Link to="/build/ability-scores">Manage ability bonuses</Link>
+                        </Button>
                         <Button
                           type="button"
                           size="sm"

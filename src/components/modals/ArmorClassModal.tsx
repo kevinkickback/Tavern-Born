@@ -39,7 +39,8 @@ function formatSigned(value: number): string {
 
 export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
   const character = useCharacterStore((state) => state.activeCharacter)
-  const { calculatedAC, effectiveAC, resolution, saveArmorClassSettings } = useArmorClass()
+  const { baseBreakdown, calculatedAC, effectiveAC, resolution, saveArmorClassSettings } =
+    useArmorClass()
   const [adjustments, setAdjustments] = useState<ArmorClassAdjustmentDraft[]>([])
   const [newLabel, setNewLabel] = useState('')
   const [newAmount, setNewAmount] = useState('')
@@ -165,7 +166,8 @@ export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
             Manage Armor Class
           </DialogTitle>
           <DialogDescription>
-            Add lasting bonuses or penalties without losing equipment and Dexterity calculations.
+            Review every active source and add manual bonuses or penalties without losing equipment
+            and Dexterity calculations.
           </DialogDescription>
         </DialogHeader>
 
@@ -175,21 +177,29 @@ export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
             <p className="mt-1 text-4xl font-semibold tabular-nums text-primary">{previewAC}</p>
             {overrideEnabled ? (
               <p className="mt-1 text-xs text-muted-foreground">
-                Using a fixed Armor Class; lasting changes are saved but do not change this number.
+                Using a fixed Armor Class; manual changes are saved but do not change this number.
               </p>
             ) : (
               <p className="mt-1 text-xs text-muted-foreground">
                 {calculatedAC} from equipment and Dexterity
-                {adjustmentTotal !== 0 && ` ${formatSigned(adjustmentTotal)} from lasting changes`}
+                {adjustmentTotal !== 0 && ` ${formatSigned(adjustmentTotal)} from manual changes`}
               </p>
             )}
           </section>
 
-          <NumericEffectBreakdown title="Current saved calculation" resolution={resolution} />
+          <NumericEffectBreakdown
+            title="Current calculation sources"
+            resolution={resolution}
+            baseComponents={baseBreakdown.components}
+          />
+          <p className="-mt-3 text-xs text-muted-foreground">
+            Equipment sources are read-only here. Equip or unequip armor and shields on the
+            Equipment page.
+          </p>
 
           <section className="space-y-3">
             <div>
-              <h3 className="text-sm font-semibold">Add a lasting AC change</h3>
+              <h3 className="text-sm font-semibold">Add a manual AC change</h3>
               <p className="text-xs text-muted-foreground">
                 Use a positive number for a bonus or a negative number for a penalty.
               </p>
@@ -235,7 +245,7 @@ export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Lasting changes</h3>
+            <h3 className="text-sm font-semibold">Manual changes</h3>
             {adjustments.length === 0 ? (
               <p className="rounded-md border border-dashed border-border p-3 text-center text-sm text-muted-foreground">
                 None yet.

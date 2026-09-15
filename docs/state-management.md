@@ -348,16 +348,21 @@ persisted identity.
 **Persisted state:**
 - `character.hitPoints.current` and `character.hitPoints.temporary` are mutable play state. `hitPoints.max` is retained as a zeroed legacy container field.
 - `character.hitPointGains[]` stores the raw hit-die result and method for each character level after level 1. Constitution is applied when HP is calculated, not frozen into the record.
-- `character.hitPointAdjustments[]` stores labeled, lasting flat or per-character-level bonuses and penalties.
+- `character.hitPointAdjustments[]` stores labeled, manual flat or per-character-level bonuses and penalties.
 - `character.maxHitPointsOverride` optionally replaces the calculated maximum exactly.
 - `character.hitPointsInitialized` distinguishes a deliberate current HP value of 0 from an old character whose current HP was never initialized.
 
 **Resolution order:**
 1. Calculate class HP from the full first-level hit die and each later average or recorded die result, adding the current Constitution modifier per level and enforcing a minimum gain of 1 per level.
-2. Apply lasting flat and per-level adjustments; clamp the adjusted maximum to at least 1.
+2. Apply manual flat/per-level adjustments and active typed effects; clamp the adjusted maximum to at least 1.
 3. Use `maxHitPointsOverride` when present.
 
-`useHitPoints()` is the UI boundary for these views and for current/temp HP mutations. `HitPointsModal` saves current HP, temporary HP, adjustments, and an optional override atomically. When the maximum changes and the player has not manually edited Current HP in the open modal, the preview moves Current HP by the same delta before saving.
+`useHitPoints()` is the UI boundary for these views and for current/temp HP mutations.
+`HitPointsModal` shows the class/level/Constitution base and active typed item, feat, spell, or manual
+effects without duplicating their ownership controls. It saves current HP, temporary HP, manual
+adjustments, and an optional override atomically. When the maximum changes and the player has not
+manually edited Current HP in the open modal, the preview moves Current HP by the same delta before
+saving.
 
 `applyLevelUp()` in `classCommands.ts` commits progression and the raw hit-die choice together.
 Removing levels prunes gain records and class-owned ASI choices that no longer belong to the
@@ -371,17 +376,21 @@ Consumers should read maximum HP through `getEffectiveMaxHP()` or `useHitPoints(
 
 **Current State:**
 - `character.armorClass` — legacy migration compatibility only; it is not read for display or written by current flows.
-- `character.armorClassAdjustments[]` — labeled, lasting bonuses or penalties applied after equipment/Dexterity calculation.
+- `character.armorClassAdjustments[]` — labeled, manual bonuses or penalties applied after equipment/Dexterity calculation.
 - `character.armorClassOverride` — optional exact manual value.
 - `useArmorClass()` exposes calculated, adjustment, adjusted, override, and effective AC views.
 
 **Current Rules:**
 1. Calculate AC live from equipped armor/shields and Dexterity.
-2. Apply all lasting adjustments and clamp the result to at least 0.
+2. Apply all manual and active typed adjustments and clamp the result to at least 0.
 3. Prefer the exact override when present.
 4. Consumers should read AC through `computeEffectiveCharacterArmorClass()` or `useArmorClass()`.
 
-**Current Behavior:** Equipment and Dexterity changes flow through automatically. `ArmorClassModal` saves adjustments and the optional override atomically; both adjustment amounts and labels remain editable/removable without discarding the calculated base.
+**Current Behavior:** Equipment and Dexterity changes flow through automatically. `ArmorClassModal`
+shows equipped armor and shields as read-only calculation sources; equipping and unequipping remain
+Equipment-route operations so one stat dialog cannot silently alter the inventory workflow. The
+modal saves manual adjustments and the optional override atomically; manual amounts and labels
+remain editable/removable without discarding the calculated base.
 
 **Schema:** Adjustment amounts may be negative. Exact AC overrides must be whole numbers at least 0.
 

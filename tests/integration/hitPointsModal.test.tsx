@@ -147,4 +147,35 @@ describe('HitPointsModal', () => {
       }),
     ])
   })
+
+  test('shows active typed HP effects with their source', () => {
+    const character = makeCharacterFixture({
+      class: 'Fighter',
+      classSource: 'PHB',
+      level: 1,
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+      hitPoints: { max: 0, current: 10, temporary: 0 },
+      manualEffects: [
+        {
+          id: 'test-hp-source',
+          label: 'Test maximum HP effect',
+          target: { kind: 'hit-point-maximum' },
+          operation: { kind: 'add', value: 3 },
+          source: { kind: 'item', name: 'Test Vitality Item', entityId: 'test-item' },
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    render(<HitPointsModal open={true} onOpenChange={() => {}} />)
+
+    expect(screen.getByText('Current maximum-HP sources')).toBeTruthy()
+    expect(screen.getByText('Test maximum HP effect')).toBeTruthy()
+    expect(screen.getByText('Test Vitality Item', { exact: false })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Remove Test Vitality Item' })).toBeNull()
+  })
 })

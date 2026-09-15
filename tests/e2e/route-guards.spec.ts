@@ -8,6 +8,7 @@ const CHARACTER_ROUTES = [
   '/build/background',
   '/build/proficiencies',
   '/build/ability-scores',
+  '/build/adjustments',
   '/feats',
   '/spells',
   '/equipment',

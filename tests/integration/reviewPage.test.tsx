@@ -122,11 +122,11 @@ describe('BuildReviewPage', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Draft needs attention')).toBeTruthy()
+    expect(screen.getByText('Character needs attention')).toBeTruthy()
     expect(screen.getAllByText('Test Manual Action')).toHaveLength(2)
     expect(screen.getByText('+4 to hit')).toBeTruthy()
     expect(screen.getByText('Test Source')).toBeTruthy()
-    expect(screen.getByText('PDF incomplete')).toBeTruthy()
+    expect(screen.getByText('Needs attention')).toBeTruthy()
     expect(screen.getByText('walk 35 ft.')).toBeTruthy()
 
     await user.click(screen.getByRole('button', { name: /Finish Test language choice/i }))

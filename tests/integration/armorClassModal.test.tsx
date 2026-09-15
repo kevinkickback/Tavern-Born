@@ -103,6 +103,52 @@ describe('ArmorClassModal', () => {
     expect(useCharacterStore.getState().activeCharacter?.armorClassOverride).toBe(20)
   })
 
+  test('shows equipped armor sources as read-only calculation entries', () => {
+    const character = makeCharacterFixture({
+      abilityScores: {
+        strength: 10,
+        dexterity: 14,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      equipment: [
+        {
+          id: 'test-armor',
+          name: 'Test Armor',
+          type: 'MA',
+          armorType: 'medium',
+          ac: 14,
+          quantity: 1,
+          equipped: true,
+        },
+        {
+          id: 'test-shield',
+          name: 'Test Shield',
+          type: 'S',
+          armorType: 'shield',
+          quantity: 1,
+          equipped: true,
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    render(<ArmorClassModal open={true} onOpenChange={() => {}} />)
+
+    expect(screen.getByText('Current calculation sources')).toBeTruthy()
+    expect(screen.getByText('Test Armor')).toBeTruthy()
+    expect(screen.getByText('Equipped medium armor', { exact: false })).toBeTruthy()
+    expect(screen.getByText('Test Shield')).toBeTruthy()
+    expect(screen.getByText('Equipped shield', { exact: false })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Remove Test Shield' })).toBeNull()
+  })
+
   test('shows the resolver trace for active and inactive adjustments', () => {
     const character = makeCharacterFixture({
       abilityScores: {
@@ -140,7 +186,7 @@ describe('ArmorClassModal', () => {
 
     render(<ArmorClassModal open={true} onOpenChange={() => {}} />)
 
-    expect(screen.getByText('Current saved calculation')).toBeTruthy()
+    expect(screen.getByText('Current calculation sources')).toBeTruthy()
     expect(screen.getByText('Active test adjustment')).toBeTruthy()
     expect(screen.getByText('+2 → 14')).toBeTruthy()
     expect(screen.getByText('1 inactive adjustment')).toBeTruthy()

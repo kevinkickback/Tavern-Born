@@ -29,6 +29,18 @@ export function isArmorOrShield(item: Equipment): boolean {
   return getArmorCategory(item) !== 'none'
 }
 
+interface ArmorClassBaseComponent {
+  id: string
+  label: string
+  detail: string
+  value: number
+}
+
+export interface ArmorClassBaseBreakdown {
+  total: number
+  components: ArmorClassBaseComponent[]
+}
+
 /**
  * Calculate Armour Class from equipped items and the character's DEX modifier.
  *
@@ -42,7 +54,10 @@ export function isArmorOrShield(item: Equipment): boolean {
  * If multiple armour pieces are equipped, the first one found is used (no stack).
  * If no `ac` field is present on an armour item, we treat it as 10.
  */
-export function computeArmorClass(equipment: Equipment[], dexModifier: number): number {
+export function getArmorClassBaseBreakdown(
+  equipment: readonly Equipment[],
+  dexModifier: number,
+): ArmorClassBaseBreakdown {
   const equipped = equipment.filter((e) => e.equipped)
 
   const bodyArmor = equipped.find((e) => {
@@ -53,22 +68,61 @@ export function computeArmorClass(equipment: Equipment[], dexModifier: number): 
   const shieldBonus = shield ? (shield.ac ?? 2) : 0
 
   if (!bodyArmor) {
-    return 10 + dexModifier + shieldBonus
+    const components: ArmorClassBaseComponent[] = [
+      { id: 'unarmored-base', label: 'Unarmored base', detail: 'Calculated base', value: 10 },
+      {
+        id: 'dexterity',
+        label: 'Dexterity modifier',
+        detail: 'Ability score contribution',
+        value: dexModifier,
+      },
+    ]
+    if (shield) {
+      components.push({
+        id: `equipment:${shield.id}`,
+        label: shield.name,
+        detail: 'Equipped shield',
+        value: shieldBonus,
+      })
+    }
+    return { total: 10 + dexModifier + shieldBonus, components }
   }
 
   const baseAC = bodyArmor.ac ?? 10
   const category = getArmorCategory(bodyArmor)
 
-  let ac: number
-  if (category === 'light') {
-    ac = baseAC + dexModifier
-  } else if (category === 'medium') {
-    ac = baseAC + Math.min(dexModifier, 2)
-  } else {
-    ac = baseAC
+  const appliedDexterity =
+    category === 'light' ? dexModifier : category === 'medium' ? Math.min(dexModifier, 2) : 0
+  const components: ArmorClassBaseComponent[] = [
+    {
+      id: `equipment:${bodyArmor.id}`,
+      label: bodyArmor.name,
+      detail: `Equipped ${category} armor`,
+      value: baseAC,
+    },
+  ]
+  if (category !== 'heavy') {
+    components.push({
+      id: 'dexterity',
+      label: 'Dexterity modifier',
+      detail: category === 'medium' ? 'Applied with the armor limit' : 'Ability score contribution',
+      value: appliedDexterity,
+    })
+  }
+  if (shield) {
+    components.push({
+      id: `equipment:${shield.id}`,
+      label: shield.name,
+      detail: 'Equipped shield',
+      value: shieldBonus,
+    })
   }
 
-  return ac + shieldBonus
+  return { total: baseAC + appliedDexterity + shieldBonus, components }
+}
+
+export function computeArmorClass(equipment: Equipment[], dexModifier: number): number {
+  return getArmorClassBaseBreakdown(equipment, dexModifier).total
 }
 
 /**

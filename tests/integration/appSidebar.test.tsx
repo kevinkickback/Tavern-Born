@@ -57,6 +57,7 @@ describe('desktop workspace navigation', () => {
     expect(screen.getByText('Options')).toBeTruthy()
     expect(screen.queryByText('Character Core')).toBeNull()
     expect(screen.queryByText('Character Details')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Adjustments' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Rules' }).getAttribute('aria-current')).toBe('page')
     expect(screen.getByRole('link', { name: 'Sources' })).toBeTruthy()
   })

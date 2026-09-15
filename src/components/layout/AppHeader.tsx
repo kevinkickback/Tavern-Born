@@ -14,6 +14,7 @@ import {
   Lightning,
   MagicWand,
   MoonStars,
+  PencilSimple,
   PersonSimple,
   Scroll,
   Shield,
@@ -24,13 +25,12 @@ import {
   TrendUp,
   Users,
 } from '@phosphor-icons/react'
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArmorClassModal } from '@/components/modals/ArmorClassModal'
 import { HitPointsModal } from '@/components/modals/HitPointsModal'
 import { LevelUpModal } from '@/components/modals/LevelUpModal'
-import { ManualEffectsModal } from '@/components/modals/ManualEffectsModal'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { AnchoredHint } from '@/components/workspace'
@@ -38,18 +38,12 @@ import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
-import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
+import { isHintDismissed, setHintDismissed, subscribeToHintReset } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
 
 const STAT_MENUS_HINT_ID = 'header-stat-management-menus'
 const STAT_MENUS_HINT_SELECTOR = '[data-character-stat-menus]'
 const STAT_MENUS_HINT_WIDTH = 340
-
-const ManualActionsModal = lazy(() =>
-  import('@/components/modals/ManualActionsModal').then((module) => ({
-    default: module.ManualActionsModal,
-  })),
-)
 
 const RestPreviewDialog = lazy(() =>
   import('@/components/modals/RestPreviewDialog').then((module) => ({
@@ -59,6 +53,7 @@ const RestPreviewDialog = lazy(() =>
 
 const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
   ['/build/review', 'Character Review', ClipboardText],
+  ['/build/adjustments', 'Adjustments', PencilSimple],
   ['/build/ability-scores', 'Ability Scores', Barbell],
   ['/build/proficiencies', 'Proficiencies', Certificate],
   ['/build/background', 'Background', Scroll],
@@ -92,8 +87,6 @@ export function AppHeader() {
   const [levelUpOpen, setLevelUpOpen] = useState(false)
   const [armorClassOpen, setArmorClassOpen] = useState(false)
   const [hitPointsOpen, setHitPointsOpen] = useState(false)
-  const [manualEffectsOpen, setManualEffectsOpen] = useState(false)
-  const [manualActionsOpen, setManualActionsOpen] = useState(false)
   const [restPreviewOpen, setRestPreviewOpen] = useState(false)
   const [showStatMenusHint, setShowStatMenusHint] = useState(
     () => !isHintDismissed(STAT_MENUS_HINT_ID),
@@ -117,6 +110,8 @@ export function AppHeader() {
     '/rules',
     '/sources',
   ].some((prefix) => location.pathname.startsWith(prefix))
+
+  useEffect(() => subscribeToHintReset(() => setShowStatMenusHint(true)), [])
 
   const characterSummary = useMemo(() => {
     if (!activeCharacter) return { visible: '', classBreakdown: '', isCondensed: false }
@@ -171,8 +166,8 @@ export function AppHeader() {
         onDismiss={dismissStatMenusHint}
         dismissLabel="Dismiss Armor Class and Hit Points hint"
       >
-        Click the shield or heart to manage Armor Class and Hit Points, including lasting bonuses or
-        penalties.
+        Click the shield or heart to review Armor Class and Hit Point sources or add manual bonuses
+        and penalties.
       </AnchoredHint>
 
       <header className="app-drag grid h-16 shrink-0 grid-cols-[minmax(12rem,1fr)_auto_minmax(12rem,1fr)] items-center bg-workspace-canvas px-5">
@@ -276,23 +271,6 @@ export function AppHeader() {
                 variant="outline"
                 size="sm"
                 className="h-9 px-3"
-                aria-label="Manage manual effects"
-                disabled={!activeCharacter}
-                onClick={() => setManualEffectsOpen(true)}
-              >
-                <SlidersHorizontal />
-                <span className="hidden 2xl:inline">Effects</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Manual effects and overrides</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 px-3"
                 aria-label="Preview a rest"
                 disabled={!activeCharacter}
                 onClick={() => setRestPreviewOpen(true)}
@@ -302,23 +280,6 @@ export function AppHeader() {
               </Button>
             </TooltipTrigger>
             <TooltipContent>Preview short- or long-rest recovery</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 px-3"
-                aria-label="Manage manual actions"
-                disabled={!activeCharacter}
-                onClick={() => setManualActionsOpen(true)}
-              >
-                <Sword />
-                <span className="hidden 2xl:inline">Actions</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Manual actions</TooltipContent>
           </Tooltip>
 
           {showLevelUp && (
@@ -372,12 +333,6 @@ export function AppHeader() {
       />
       <ArmorClassModal open={armorClassOpen} onOpenChange={setArmorClassOpen} />
       <HitPointsModal open={hitPointsOpen} onOpenChange={setHitPointsOpen} />
-      <ManualEffectsModal open={manualEffectsOpen} onOpenChange={setManualEffectsOpen} />
-      {manualActionsOpen && (
-        <Suspense fallback={null}>
-          <ManualActionsModal open={manualActionsOpen} onOpenChange={setManualActionsOpen} />
-        </Suspense>
-      )}
       {restPreviewOpen && (
         <Suspense fallback={null}>
           <RestPreviewDialog open={restPreviewOpen} onOpenChange={setRestPreviewOpen} />

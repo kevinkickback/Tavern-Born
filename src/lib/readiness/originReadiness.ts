@@ -18,7 +18,7 @@ export function validateOriginAbilityChoices(
         readinessIssue(
           `race:ability-choice:${index}`,
           'blocking',
-          'race',
+          'ability-scores',
           'Finish race ability choices',
           `Choose ${choice.count} valid ${choice.count === 1 ? 'ability' : 'abilities'} for this race benefit.`,
         ),
@@ -38,7 +38,7 @@ export function validateOriginAbilityChoices(
         readinessIssue(
           'background:ability-choices',
           'blocking',
-          'background',
+          'ability-scores',
           'Finish background ability choices',
           `Choose ${backgroundBlock.weights.length} different abilities from the selected background method.`,
         ),

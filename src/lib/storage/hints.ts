@@ -1,4 +1,5 @@
 const KEY_PREFIX = 'tb:hint-dismissed:'
+const HINTS_RESET_EVENT = 'tb:hints-reset'
 
 function storageKey(hintId: string): string {
   return `${KEY_PREFIX}${hintId}`
@@ -31,4 +32,11 @@ export function resetAllHints(): void {
     }
     for (const key of keysToRemove) localStorage.removeItem(key)
   } catch {}
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(HINTS_RESET_EVENT))
+}
+
+export function subscribeToHintReset(listener: () => void): () => void {
+  if (typeof window === 'undefined') return () => {}
+  window.addEventListener(HINTS_RESET_EVENT, listener)
+  return () => window.removeEventListener(HINTS_RESET_EVENT, listener)
 }

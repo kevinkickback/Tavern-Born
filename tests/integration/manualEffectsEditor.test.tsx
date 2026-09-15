@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { ManualEffectsModal } from '@/components/modals/ManualEffectsModal'
+import { ManualEffectsEditor } from '@/components/character/ManualEffectsEditor'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -22,7 +22,7 @@ function resetCharacter() {
   })
 }
 
-describe('ManualEffectsModal', () => {
+describe('ManualEffectsEditor', () => {
   beforeEach(resetCharacter)
 
   afterEach(() => {
@@ -32,7 +32,7 @@ describe('ManualEffectsModal', () => {
 
   test('adds, suppresses, re-enables, and removes a typed manual adjustment', async () => {
     const user = userEvent.setup()
-    render(<ManualEffectsModal open={true} onOpenChange={() => {}} />)
+    render(<ManualEffectsEditor />)
 
     await user.type(screen.getByLabelText('What caused it?'), 'Table ruling')
     await user.type(screen.getByLabelText('Value'), '2')

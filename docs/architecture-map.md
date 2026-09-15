@@ -21,8 +21,8 @@ This document describes the current Tavern-Born runtime architecture and where r
   icons, placeholder portraits, organization artwork, the About logo, and PDF templates share this
   path. Documentation-only artwork belongs under `docs/assets/` so it is not copied into releases.
 - Renderer styles compile through `@tailwindcss/vite`. `src/styles/theme.css` imports only the
-  Radix scales reachable through the supported accent and neutral theme preferences; there is no
-  second PostCSS/Autoprefixer processing path.
+  Radix scales reachable through the supported accent, neutral, warning, and destructive semantic
+  tokens; there is no second PostCSS/Autoprefixer processing path.
 
 3. State and persistence
 - Purpose: app state ownership and IndexedDB persistence.
@@ -102,8 +102,14 @@ Current implementation notes:
   them. Subclass eligibility is a pure parsed-first calculation with isolated legacy fallbacks.
 - Character creation composes the same origin commands through `buildInitialCharacter`; pages and hooks do not reconstruct grant pipelines.
 - Level-up HP choices are committed with class progression through `applyLevelUp`; the stored gain is the raw hit-die result so Constitution changes remain live.
-- HP reads resolve class/Constitution HP, per-level gain records, lasting adjustments, and an optional exact override in that order. Current and temporary HP remain mutable session values.
-- AC reads across UI and PDF surfaces resolve equipped armor and Dexterity, then lasting adjustments, then an optional exact override. The legacy `character.armorClass` field is not a display source.
+- HP reads resolve class/Constitution HP, per-level gain records, manual adjustments, active typed
+  effects, and an optional exact override in that order. The management modal shows the base and
+  every active typed source as read-only calculation rows; current and temporary HP remain mutable
+  session values.
+- AC reads across UI and PDF surfaces resolve equipped armor and Dexterity, then manual and active
+  typed adjustments, then an optional exact override. The management modal exposes equipped armor
+  and shields as read-only calculation rows so equipment ownership remains on the Equipment route.
+  The legacy `character.armorClass` field is not a display source.
 - Movement reads across Builder and PDF surfaces resolve the race/subrace-owned structured base,
   then labeled per-mode adjustments, then exact overrides. `character.speed` is only a walking-speed
   compatibility mirror for legacy import/export.
@@ -112,7 +118,9 @@ Current implementation notes:
   their rules prose remains visible and the global manual-effects editor covers the resolved choice.
   Class records expose no equivalent top-level lasting-effect fields in the supported corpus, and
   known/prepared spell effects are not treated as active without an active-effect lifecycle.
-- The header heart and shield open the HP and AC management modals. A one-time anchored hint advertises these controls from the first Builder page.
+- The header heart and shield open the HP and AC management modals. A one-time anchored hint
+  advertises these controls from the first Builder page; resetting hints publishes an in-session
+  reset event so mounted hints return without an application reload.
 - Unpinned portaled hints and recursive rules previews use `@floating-ui/react-dom` for measured
   anchoring, offsets, collision-aware flipping/shifting, and live viewport updates. The shared
   scale-aware native title-bar inset in `src/lib/overlayPosition.ts` supplies Floating UI's top
@@ -121,7 +129,19 @@ Current implementation notes:
   direct-history navigation, and pinning freezes the selected entry at its current viewport
   position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and
   keyboard repositioning while History and Unpin remain independent controls.
-- Per-character Rules and Sources live in the Builder workspace's Options group. Rules are tabbed by Ruleset, Advancement, and Character Options; the selected ruleset itself remains fixed after creation.
+- Per-character Adjustments, Rules, and Sources live in the Builder workspace's Options group.
+  Adjustments owns the manual Effects and Actions editors as page tabs; these are character-scoped
+  build corrections, not global app destinations or transient header dialogs. Rules are tabbed by
+  Ruleset, Advancement, and Character Options; the selected ruleset itself remains fixed after
+  creation.
+- Ability Scores is the canonical editor for origin ability bonuses in both rulesets: 2014 race
+  bonuses and 2024 background bonuses are persisted through their existing provenance commands.
+  Race and Background show source context and link to that editor instead of maintaining duplicate
+  controls. Readiness issues for either origin route to `/build/ability-scores`.
+- Movement remains a focused modal because it combines source-derived walking and alternate modes,
+  hover, labeled table rulings, and exact per-mode overrides in one compact correction workflow.
+  It is not a live-play surface, and removing it would leave alternate or unsupported structured
+  movement without an understandable correction path.
 - Conditions is tabbed by Combat State, Exhaustion, Conditions, and Class Resources. Condition names and descriptions, including exhaustion rules, come from the loaded PHB/XPHB condition records selected for the character ruleset.
 
 Auto-update note:

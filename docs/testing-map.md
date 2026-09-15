@@ -54,8 +54,11 @@ new tests land and do not lower them to merge a change.
   consumers from bypassing the effective-score boundary.
 - Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
-- HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution recalculation, lasting flat/per-level adjustments, exact overrides, legacy initialization, and current/temp HP saves
-- AC calculation and state coverage for equipment/Dexterity derivation, positive and negative lasting adjustments, exact overrides, and canonical effective reads
+- HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution
+  recalculation, manual flat/per-level adjustments, active typed-source display, exact overrides,
+  legacy initialization, and current/temp HP saves
+- AC calculation and state coverage for equipment/Dexterity derivation, read-only equipped-source
+  breakdowns, positive and negative manual adjustments, exact overrides, and canonical effective reads
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
 - Class-choice normalization coverage for source-qualified feature options, optional-feature
   progressions, generic table-backed capacity, tagged filters, replacement rules, name-independent
@@ -110,14 +113,21 @@ new tests land and do not lower them to merge a change.
   source-qualified race/background choices, option retraction, and class level-down cleanup.
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
-- Header HP/AC/rest launch controls and one-time anchored hint coverage in tests/integration/appHeader.test.tsx
+- Header HP/AC/rest launch controls and immediate in-session one-time-hint reset coverage in
+  tests/integration/appHeader.test.tsx
 - Character-card action behavior and consistent accent-colored level, race, and class icons in tests/integration/characterCard.test.tsx
 - Title-bar-safe Floating UI collision padding and live anchoring across supported interface scales,
   plus nested-only history navigation, streamlined transient controls, selected-entry pinning
   without a position jump, and constrained pointer/keyboard movement. Pure positioning tests cover
   only Tavern Born's pinned-preview clamping; Floating UI's geometry implementation is not
   duplicated in the test suite.
-- HP and AC management modal coverage in tests/integration/hitPointsModal.test.tsx and tests/integration/armorClassModal.test.tsx
+- HP and AC management modal coverage in tests/integration/hitPointsModal.test.tsx and
+  tests/integration/armorClassModal.test.tsx
+- Builder Adjustments page/editor coverage in tests/integration/adjustmentsPage.test.tsx,
+  tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx
+- Canonical 2014 race/2024 background readiness routing and revised background-bonus editing in
+  tests/lib/characterReadiness.test.ts and tests/integration/abilityScoresPage.test.tsx
+- Warning/destructive palette import regression coverage in tests/lib/themeColors.test.ts
 - Rules and Sources page behavior/layout coverage in tests/integration/rulesPage.test.tsx and tests/integration/sourcesPageLayout.test.tsx
 - Ability-score method descriptors are tested for both origin systems in
   tests/unit/abilityScoreMethods.test.ts.

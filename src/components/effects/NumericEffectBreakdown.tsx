@@ -3,6 +3,12 @@ import type { ResolvedNumericEffect } from '@/lib/calculations/effects'
 interface NumericEffectBreakdownProps {
   title?: string
   resolution: ResolvedNumericEffect
+  baseComponents?: ReadonlyArray<{
+    id: string
+    label: string
+    detail?: string
+    value: number
+  }>
 }
 
 function formatOperation(kind: string, value: number): string {
@@ -18,6 +24,7 @@ function formatOperation(kind: string, value: number): string {
 export function NumericEffectBreakdown({
   title = 'Saved calculation',
   resolution,
+  baseComponents,
 }: NumericEffectBreakdownProps) {
   return (
     <section className="space-y-2 rounded-lg border border-border bg-workspace-pane p-3">
@@ -26,10 +33,31 @@ export function NumericEffectBreakdown({
         <span className="text-sm font-semibold tabular-nums">{resolution.value}</span>
       </div>
       <div className="space-y-1 text-xs">
-        <div className="flex items-center justify-between gap-3 text-muted-foreground">
-          <span>Calculated base</span>
-          <span className="tabular-nums">{resolution.baseValue}</span>
-        </div>
+        {baseComponents?.map((component) => (
+          <div key={component.id} className="flex items-start justify-between gap-3">
+            <span className="min-w-0">
+              <span className="font-medium">{component.label}</span>
+              {component.detail && (
+                <span className="text-muted-foreground"> · {component.detail}</span>
+              )}
+            </span>
+            <span className="shrink-0 tabular-nums text-muted-foreground">
+              {component.value >= 0 ? '+' : ''}
+              {component.value}
+            </span>
+          </div>
+        )) ?? (
+          <div className="flex items-center justify-between gap-3 text-muted-foreground">
+            <span>Calculated base</span>
+            <span className="tabular-nums">{resolution.baseValue}</span>
+          </div>
+        )}
+        {baseComponents && (
+          <div className="flex items-center justify-between gap-3 border-t border-border pt-1 text-muted-foreground">
+            <span>Calculated base</span>
+            <span className="tabular-nums">{resolution.baseValue}</span>
+          </div>
+        )}
         {resolution.steps.map((step) => (
           <div key={step.effectId} className="flex items-start justify-between gap-3">
             <span className="min-w-0">

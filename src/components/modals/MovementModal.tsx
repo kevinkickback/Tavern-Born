@@ -155,8 +155,8 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
             Manage Movement
           </DialogTitle>
           <DialogDescription>
-            Race movement remains the base. Add labeled changes or fixed values for homebrew and
-            unusual effects.
+            Source-derived movement remains the base. Use this focused editor for multiple movement
+            modes, hover, table rulings, and exact overrides that source data cannot express.
           </DialogDescription>
         </DialogHeader>
 
@@ -174,7 +174,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
 
           <section className="space-y-3">
             <div>
-              <h3 className="text-sm font-semibold">Add a lasting movement change</h3>
+              <h3 className="text-sm font-semibold">Add a manual movement change</h3>
               <p className="text-xs text-muted-foreground">
                 The mode may be a standard mode or a custom homebrew movement name.
               </p>
@@ -221,7 +221,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
           </section>
 
           <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Lasting changes</h3>
+            <h3 className="text-sm font-semibold">Manual changes</h3>
             {adjustments.length === 0 ? (
               <p className="rounded-md border border-dashed border-border p-3 text-center text-sm text-muted-foreground">
                 None yet.

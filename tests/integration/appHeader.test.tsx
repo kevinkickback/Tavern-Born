@@ -1,9 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppHeader } from '@/components/layout/AppHeader'
-import { setHintDismissed } from '@/lib/storage/hints'
+import { resetAllHints, setHintDismissed } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -201,6 +201,24 @@ describe('app header character summary', () => {
     expect(screen.queryByRole('status')).toBeNull()
   })
 
+  test('shows the persistent header hint again immediately after hints are reset', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/build/race']}>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Dismiss Armor Class and Hit Points hint' }),
+    )
+    act(() => resetAllHints())
+
+    expect(screen.getByRole('status').textContent).toContain(
+      'Click the shield or heart to manage Armor Class and Hit Points',
+    )
+  })
+
   test('keeps level up contextual while leaving save persistently visible', () => {
     render(
       <MemoryRouter initialEntries={['/compendium']}>
@@ -212,6 +230,8 @@ describe('app header character summary', () => {
     expect(screen.getByRole('button', { name: 'Save character' }).hasAttribute('disabled')).toBe(
       true,
     )
+    expect(screen.queryByRole('button', { name: 'Manage manual effects' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Manage manual actions' })).toBeNull()
   })
 
   test('shows level up in the build workspace', () => {

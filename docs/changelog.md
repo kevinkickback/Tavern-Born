@@ -22,6 +22,11 @@
 * Equipment summaries and PDFs now share carrying-capacity effects, and lowering a class level cleanly removes ASIs that are no longer earned
 * 2014 character sheets now place the selected or custom organization emblem in the organization section
 * Polished several builder screens by simplifying Race and Background entries, removing unused Class artwork information, and improving the Bonus Feat action
+* Armor Class and Hit Point management now show their full calculation sources, including equipped armor and active typed effects
+* Manual effects and actions now live on a dedicated Builder Adjustments page instead of header dialogs
+* Origin ability bonuses now share one editor on Ability Scores, with corrected Review links for both rulesets
+* Resetting one-time hints now takes effect immediately, and warning/destructive banner colors are restored
+* Character creation stays on the Characters page after Create, while Review uses character-focused completion wording
 
 </details>
 
