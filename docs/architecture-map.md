@@ -82,6 +82,13 @@ Spellcasting note:
 - Character-library duplicate and template policy lives in
   `src/lib/character/characterTransfer.ts`; HomePage owns only file-picker/download orchestration
   and the mode dialog. Template import reuses the canonical character factory and store validation.
+- The Feats route is a composition shell. `src/pages/feats/hooks/useFeatsPageController.ts` owns
+  route-local state/derived orchestration, while `src/pages/feats/components/FeatCards.tsx` owns
+  cards and the inspector. Canonical mutations remain in the feat command/provenance layers.
+- Characteristics keeps its data-agnostic draft and organization presentation helpers under
+  `src/pages/details/characteristics/`; loaded organization names never select hardcoded styling.
+- Large class/feat command modules delegate reusable proficiency, identity, and command-result
+  helpers to focused sibling modules without changing their public command entry points.
 - Recursive tooltip lookup construction lives in src/lib/renderer/recursiveTooltip.ts. Raw and filtered callers pass an explicit collection set to the same builder, including `itemsBase`.
 
 Current implementation notes:

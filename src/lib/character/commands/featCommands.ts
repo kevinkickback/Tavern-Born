@@ -13,74 +13,26 @@ import {
   resolveChoice,
 } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
-import type {
-  ChoiceDomain,
-  ChoiceRecord,
-  ProvenanceLedger,
-  SourceTag,
-} from '@/lib/provenance/types'
+import type { ChoiceDomain, ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, Feat, FeatOptionSelections } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
+import {
+  type FeatOptionTarget,
+  getFeatOptionOwnerKey,
+  getFeatOptionSourceName,
+  getFeatOptionSourceTag,
+  getFeatSelectionKey,
+  isSameGrantSource,
+  type SelectedFeat,
+} from './featCommandIdentity'
+import {
+  applyCharacterCommandResult as applyResult,
+  getFeatChoiceSelectedRefs,
+  removeChoiceGrant,
+} from './featCommandSupport'
 
-export type FeatOptionTarget = {
-  name: string
-  source?: string
-  grantVariant?: string
-  provenanceChoiceId?: string
-  classFeatChoiceId?: string
-}
-
-export interface SelectedFeat {
-  name: string
-  source?: string
-  className?: string
-  classSource?: string
-  classLevel?: number
-}
-
-function getFeatOptionSourceName(feat: FeatOptionTarget): string {
-  return feat.grantVariant ? `${feat.name}; ${feat.grantVariant}` : feat.name
-}
-
-function getFeatOptionOwnerKey(feat: FeatOptionTarget): string | undefined {
-  if (feat.provenanceChoiceId) return `choice:${feat.provenanceChoiceId}`
-  if (feat.classFeatChoiceId) return `class:${feat.classFeatChoiceId}`
-  return feat.grantVariant ? `fixed:${feat.grantVariant}` : undefined
-}
-
-function getFeatOptionSourceTag(feat: FeatOptionTarget): SourceTag {
-  return {
-    ...makeSourceTag('feat', getFeatOptionSourceName(feat), 'choice', feat.source),
-    grantVariant: getFeatOptionOwnerKey(feat),
-  }
-}
-
-function getFeatSelectionKey(feat: { name: string; source?: string }): string {
-  return `${normalizeKey(feat.name)}|${normalizeKey(feat.source ?? '')}`
-}
-
-function isSameGrantSource(tag: SourceTag, sourceTag: SourceTag): boolean {
-  return (
-    tag.sourceType === sourceTag.sourceType &&
-    tag.sourceName === sourceTag.sourceName &&
-    (tag.sourceRef ?? '') === (sourceTag.sourceRef ?? '')
-  )
-}
-
-function applyResult(character: Character, result: CharacterCommandResult): Character {
-  return {
-    ...character,
-    ...result.characterPatch,
-    provenance: result.provenanceUpdate,
-  }
-}
-
-function getFeatChoiceSelectedRefs(
-  choice: ChoiceRecord,
-): NonNullable<ChoiceRecord['selectedRefs']> {
-  return choice.selectedRefs ?? choice.selected.map((name) => ({ name }))
-}
+export type { FeatOptionTarget, SelectedFeat } from './featCommandIdentity'
 
 export function retractFeatChoiceOptionsForSources(
   character: Character,
@@ -124,30 +76,6 @@ export function retractFeatChoiceOptionsForSources(
       abilityScores: workingCharacter.abilityScores,
     },
     provenanceUpdate,
-  }
-}
-
-function removeChoiceGrant(
-  ledger: ProvenanceLedger,
-  domain: ChoiceDomain,
-  itemName: string,
-  sourceTag: SourceTag,
-): ProvenanceLedger {
-  const normalized = normalizeKey(itemName)
-  const map = ledger.proficiencies[domain as keyof typeof ledger.proficiencies] as
-    | Record<string, SourceTag[]>
-    | undefined
-  if (!map) return ledger
-  const retained = (map[normalized] ?? []).filter(
-    (tag) => !(tag.grantType === 'choice' && isSameGrantSource(tag, sourceTag)),
-  )
-  const nextMap =
-    retained.length > 0
-      ? { ...map, [normalized]: retained }
-      : Object.fromEntries(Object.entries(map).filter(([key]) => key !== normalized))
-  return {
-    ...ledger,
-    proficiencies: { ...ledger.proficiencies, [domain]: nextMap },
   }
 }
 

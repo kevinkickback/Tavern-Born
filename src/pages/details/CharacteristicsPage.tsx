@@ -8,15 +8,7 @@ import {
   Upload,
   Users,
 } from '@phosphor-icons/react'
-import {
-  type ChangeEvent,
-  type ReactNode,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { type ChangeEvent, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { RichTextArea } from '@/components/editor/RichTextArea'
 import { Button } from '@/components/ui/button'
@@ -30,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { WorkspaceBody, WorkspacePage } from '@/components/workspace'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { ALIGNMENTS, LIFESTYLES } from '@/lib/5etools/constants'
 import { MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
@@ -41,145 +33,21 @@ import {
 } from '@/lib/character/organizationConstants'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Character } from '@/types/character'
 import { NoCharCard } from '../_shared'
+import { CharacteristicsField as Field } from './characteristics/CharacteristicsField'
+import { CharacteristicsSectionHeader } from './characteristics/CharacteristicsSectionHeader'
+import { CharacteristicsTabs } from './characteristics/CharacteristicsTabs'
+import {
+  type CharacteristicsDraft,
+  type CharacteristicsSection,
+  CUSTOM_GRADIENT_PRESETS,
+  createCharacteristicsDraft,
+  DEFAULT_CUSTOM_GRADIENT,
+  getOrganizationImageStyle,
+} from './characteristics/model'
+import { OrganizationPreview } from './characteristics/OrganizationPreview'
 
 const EMPTY_ORGANIZATIONS: [] = []
-
-type CharacteristicsSection = 'identity' | 'personality' | 'story' | 'connections'
-
-const CUSTOM_GRADIENT_PRESETS = [
-  { key: 'indigo', className: 'from-indigo-500/80 to-indigo-700/80' },
-  { key: 'emerald', className: 'from-emerald-500/80 to-emerald-700/80' },
-  { key: 'rose', className: 'from-rose-500/80 to-rose-700/80' },
-  { key: 'amber', className: 'from-amber-500/80 to-amber-700/80' },
-  { key: 'sky', className: 'from-sky-500/80 to-sky-700/80' },
-  { key: 'violet', className: 'from-violet-500/80 to-violet-700/80' },
-] as const
-
-const DEFAULT_CUSTOM_GRADIENT = CUSTOM_GRADIENT_PRESETS[0].key
-
-interface CharacteristicsDraft {
-  playerName: string
-  gender: string
-  faith: string
-  alignment: string
-  lifestyle: string
-  age: string
-  height: string
-  weight: string
-  eyes: string
-  hair: string
-  skin: string
-  personalityTraits: string
-  ideals: string
-  bonds: string
-  flaws: string
-  goals: string
-  fears: string
-  backstory: string
-  appearance: string
-  organizationSelectionKey: string
-  organizationCustomName: string
-  organizationCustomDescription: string
-  organizationCustomImage: string
-  organizationCustomGradient: string
-}
-
-function createCharacteristicsDraft(character?: Character | null): CharacteristicsDraft {
-  const details = character?.details
-  const hasOrganizationState = Boolean(
-    details?.organizationSelectionKey ||
-      details?.organizationCustomName ||
-      details?.organizationCustomDescription ||
-      details?.organizationCustomImage,
-  )
-
-  return {
-    playerName: details?.playerName || '',
-    gender: details?.gender || '',
-    faith: details?.faith || '',
-    alignment: details?.alignment || '',
-    lifestyle: details?.lifestyle || '',
-    age: details?.age?.toString() || '',
-    height: details?.height || '',
-    weight: details?.weight || '',
-    eyes: details?.eyes || '',
-    hair: details?.hair || '',
-    skin: details?.skin || '',
-    personalityTraits: details?.personalityTraits || '',
-    ideals: details?.ideals || '',
-    bonds: details?.bonds || '',
-    flaws: details?.flaws || '',
-    goals: details?.goals || '',
-    fears: details?.fears || '',
-    backstory: details?.backstory || '',
-    appearance: details?.appearance || '',
-    organizationSelectionKey: hasOrganizationState
-      ? details?.organizationSelectionKey || ''
-      : details?.alliesAndOrganizations
-        ? CUSTOM_ORGANIZATION_KEY
-        : '',
-    organizationCustomName: hasOrganizationState ? details?.organizationCustomName || '' : '',
-    organizationCustomDescription: hasOrganizationState
-      ? details?.organizationCustomDescription || ''
-      : details?.alliesAndOrganizations || '',
-    organizationCustomImage: hasOrganizationState ? details?.organizationCustomImage || '' : '',
-    organizationCustomGradient: hasOrganizationState
-      ? details?.organizationCustomGradient || DEFAULT_CUSTOM_GRADIENT
-      : DEFAULT_CUSTOM_GRADIENT,
-  }
-}
-
-const ORGANIZATION_IMAGE_STYLES = [
-  'from-cyan-500/80 to-cyan-700/80',
-  'from-emerald-500/80 to-emerald-700/80',
-  'from-amber-500/80 to-amber-700/80',
-  'from-rose-500/80 to-rose-700/80',
-  'from-sky-500/80 to-sky-700/80',
-]
-
-const ORGANIZATION_THEMES: Record<string, string> = {
-  'emerald enclave': 'from-lime-900 via-yellow-700/95 to-emerald-900',
-  harpers: 'from-blue-950 via-slate-900 to-zinc-100',
-  'lords alliance': 'from-red-950 via-red-900 to-yellow-600',
-  'order of the gauntlet': 'from-zinc-900 via-neutral-800 to-stone-700',
-  zhentarim: 'from-black via-zinc-950 to-amber-300',
-}
-
-function getInitials(label: string) {
-  const parts = label.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return 'ORG'
-  if (parts.length === 1) return parts[0].slice(0, 3).toUpperCase()
-  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase()
-}
-
-function getOrganizationImageStyle(label: string) {
-  const normalized = label
-    .toLowerCase()
-    .replace(/^the\s+/, '')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim()
-  const themedStyle = ORGANIZATION_THEMES[normalized]
-  if (themedStyle) return themedStyle
-
-  const sum = [...label].reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  return ORGANIZATION_IMAGE_STYLES[sum % ORGANIZATION_IMAGE_STYLES.length]
-}
-
-function Field({ id, label, children }: { id: string; label: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label
-        htmlFor={id}
-        className="text-xs font-medium text-muted-foreground uppercase tracking-wide"
-      >
-        {label}
-      </Label>
-      {children}
-    </div>
-  )
-}
 
 export function CharacteristicsPage() {
   const [activeSection, setActiveSection] = useState<CharacteristicsSection>('identity')
@@ -379,38 +247,7 @@ export function CharacteristicsPage() {
   return (
     <WorkspacePage>
       <WorkspaceBody className="flex flex-col overflow-hidden bg-workspace-pane">
-        <WorkspacePaneHeader ariaLabel="Characteristic sections" className="overflow-x-auto">
-          <div className="flex h-full min-w-max items-stretch gap-5" role="tablist">
-            {(
-              [
-                ['identity', 'Identity', IdentificationCard],
-                ['personality', 'Personality', Brain],
-                ['story', 'Story', Scroll],
-                ['connections', 'Connections', Users],
-              ] as const
-            ).map(([value, label, Icon]) => {
-              const selected = activeSection === value
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  onClick={() => setActiveSection(value)}
-                  className={cn(
-                    'relative flex cursor-pointer items-center gap-2 border-b-2 px-0.5 text-sm font-semibold transition-colors',
-                    selected
-                      ? 'border-primary text-foreground'
-                      : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
-                  )}
-                >
-                  <Icon className="size-4" weight={selected ? 'fill' : 'regular'} />
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </WorkspacePaneHeader>
+        <CharacteristicsTabs activeSection={activeSection} onChange={setActiveSection} />
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[var(--workspace-form-max-width)] p-4">
@@ -515,15 +352,11 @@ export function CharacteristicsPage() {
                   activeSection !== 'identity' && 'hidden',
                 )}
               >
-                <div className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
-                  <IdentificationCard
-                    className="h-4 w-4 text-indigo-600 dark:text-indigo-400"
-                    weight="duotone"
-                  />
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Identity
-                  </span>
-                </div>
+                <CharacteristicsSectionHeader
+                  icon={IdentificationCard}
+                  iconClassName="text-indigo-600 dark:text-indigo-400"
+                  title="Identity"
+                />
                 <div className="p-4 space-y-4">
                   {/* Dropdowns + deity */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -702,12 +535,11 @@ export function CharacteristicsPage() {
                   activeSection !== 'personality' && 'hidden',
                 )}
               >
-                <div className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
-                  <Brain className="h-4 w-4 text-violet-400" weight="duotone" />
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Personality
-                  </span>
-                </div>
+                <CharacteristicsSectionHeader
+                  icon={Brain}
+                  iconClassName="text-violet-400"
+                  title="Personality"
+                />
                 <div className="p-4 space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <RichTextArea
@@ -790,12 +622,11 @@ export function CharacteristicsPage() {
                   activeSection !== 'story' && 'hidden',
                 )}
               >
-                <div className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
-                  <Scroll className="h-4 w-4 text-amber-400" weight="duotone" />
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Story
-                  </span>
-                </div>
+                <CharacteristicsSectionHeader
+                  icon={Scroll}
+                  iconClassName="text-amber-400"
+                  title="Story"
+                />
                 <div className="p-4 space-y-4">
                   <RichTextArea
                     id={backstoryId}
@@ -818,12 +649,11 @@ export function CharacteristicsPage() {
                   activeSection !== 'connections' && 'hidden',
                 )}
               >
-                <div className="flex h-11 shrink-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
-                  <Users className="h-4 w-4 text-teal-400" weight="duotone" />
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Connections
-                  </span>
-                </div>
+                <CharacteristicsSectionHeader
+                  icon={Users}
+                  iconClassName="text-teal-400"
+                  title="Connections"
+                />
                 <div className="p-4 space-y-4">
                   {/* Dropdown — always its own row */}
                   <Field id={organizationSelectId} label="Allies & Organizations">
@@ -950,84 +780,16 @@ export function CharacteristicsPage() {
                     </div>
                   )}
 
-                  {/* Preview */}
-                  {organizationSelectionKey === CUSTOM_ORGANIZATION_KEY ? (
-                    <div className="space-y-2 rounded-lg border border-border/60 p-3">
-                      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Preview
-                      </div>
-                      <div
-                        className={`relative overflow-hidden rounded-md border border-border/60 bg-gradient-to-br ${previewGradient}`}
-                      >
-                        {showPreviewImage ? (
-                          <>
-                            <div className="pointer-events-none absolute inset-0 bg-black/15" />
-                            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 overflow-hidden">
-                              <img
-                                src={previewImage}
-                                alt={previewTitle || 'Organization preview'}
-                                className="absolute right-2 top-1/2 h-[88%] w-auto -translate-y-1/2 object-contain opacity-95 drop-shadow-xl"
-                                onError={() => setFailedOrganizationPreviewImagePath(previewImage)}
-                              />
-                            </div>
-                          </>
-                        ) : (
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex w-1/3 items-center justify-center">
-                            <span className="text-4xl font-display font-bold text-white/90 tracking-widest">
-                              {getInitials(previewTitle || 'ORG')}
-                            </span>
-                          </div>
-                        )}
-                        <div className="relative z-10 min-h-44 space-y-2 p-4 pr-28 sm:pr-40">
-                          <h4 className="text-sm font-semibold text-white">
-                            {previewTitle || (
-                              <span className="opacity-40 italic">Organization name</span>
-                            )}
-                          </h4>
-                          <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
-                            {previewDescription}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : previewTitle || previewDescription ? (
-                    <div
-                      className={`relative overflow-hidden rounded-md border border-border/60 bg-gradient-to-br ${previewGradient}`}
-                    >
-                      {showPreviewImage ? (
-                        <>
-                          <div className="pointer-events-none absolute inset-0 bg-black/15" />
-                          <div className="pointer-events-none absolute inset-y-0 right-0 w-1/2 overflow-hidden">
-                            <img
-                              src={previewImage}
-                              alt={previewTitle || 'Organization preview'}
-                              className="absolute right-2 top-1/2 h-[88%] w-auto -translate-y-1/2 object-contain opacity-95 drop-shadow-xl"
-                              onError={() => setFailedOrganizationPreviewImagePath(previewImage)}
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex w-1/3 items-center justify-center">
-                          <span className="text-4xl font-display font-bold text-white/90 tracking-widest">
-                            {getInitials(previewTitle || 'Organization')}
-                          </span>
-                        </div>
-                      )}
-                      <div className="relative z-10 min-h-44 space-y-2 p-4 pr-28 sm:pr-40">
-                        <h4 className="text-sm font-semibold text-white">{previewTitle}</h4>
-                        <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap">
-                          {previewDescription}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    !organizationSelectionKey && (
-                      <p className="text-sm text-muted-foreground">
-                        Select an organization to preview its details, or choose Custom to upload an
-                        image and write your own description.
-                      </p>
-                    )
-                  )}
+                  <OrganizationPreview
+                    custom={organizationSelectionKey === CUSTOM_ORGANIZATION_KEY}
+                    description={previewDescription}
+                    gradient={previewGradient}
+                    hasSelection={Boolean(organizationSelectionKey)}
+                    image={previewImage}
+                    showImage={showPreviewImage}
+                    title={previewTitle}
+                    onImageError={() => setFailedOrganizationPreviewImagePath(previewImage)}
+                  />
                 </div>
 
                 <input

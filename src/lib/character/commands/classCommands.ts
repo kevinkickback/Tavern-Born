@@ -10,7 +10,6 @@ import {
   getClassDefaultEquipmentBlocks,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
-import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { mergeSkillState } from '@/lib/calculations/skills'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
 import {
@@ -37,20 +36,15 @@ import type {
   ClassFeatChoice,
   HitPointGain,
   HitPointGainMethod,
-  Skills,
 } from '@/types/character'
 import {
   reconcileClassChoiceSelectionGrants,
   reconcileClassChoiceSelections,
 } from './classChoiceCommands'
+import { isNarrativeTool, normalizeSavingThrowName } from './classProficiencies'
 import type { CharacterCommandResult } from './commandResult'
 
-function normalizeSavingThrowName(name: string): string {
-  const normalized = normalizeKey(name)
-  return toAbilityName(normalized) ?? normalized
-}
-
-const isNarrativeTool = (value: string) => /of your choice|choose|one type of/i.test(value)
+export { buildInitialCharacterProficiencies } from './classProficiencies'
 
 export interface ClassSelectionEntity {
   name: string
@@ -85,68 +79,6 @@ export interface LevelUpHitPointChoice {
 interface SelectSubclassOptions {
   classProgression?: CharacterClassEntry[]
   viewingEntry?: CharacterClassEntry
-}
-
-export function buildInitialCharacterProficiencies(
-  cls: (Omit<ClassSelectionEntity, 'name'> & { name?: string }) | undefined,
-  normalizedBackground:
-    | {
-        skillProficiencies?: unknown[]
-        languageProficiencies?: unknown[]
-        toolProficiencies?: unknown[]
-      }
-    | undefined,
-): {
-  proficiencies: {
-    armor: string[]
-    weapons: string[]
-    tools: string[]
-    skills: string[]
-    languages: string[]
-    savingThrows: string[]
-  }
-  skills: Skills
-} {
-  const clsProfs = cls?.startingProficiencies ?? {}
-  const armor = (clsProfs.armor ?? [])
-    .filter((value): value is string => typeof value === 'string')
-    .map(stripItemTag)
-  const weapons = (clsProfs.weapons ?? [])
-    .filter((value): value is string => typeof value === 'string')
-    .map(stripItemTag)
-  const classTools = [
-    ...(clsProfs.tools ?? [])
-      .filter((value): value is string => typeof value === 'string')
-      .map(stripItemTag)
-      .filter((value) => value && !isNarrativeTool(value)),
-    ...extractProficiencyBlockNames((clsProfs.toolProficiencies as unknown[]) ?? [], {
-      includeAnyStandard: false,
-    }),
-  ]
-  const savingThrows = [...new Set((cls?.proficiency ?? []).map(normalizeSavingThrowName))]
-  const backgroundSkills = extractProficiencyBlockNames(
-    normalizedBackground?.skillProficiencies ?? [],
-    { includeAnyStandard: false },
-  ).filter((name) => !name.toLowerCase().startsWith('choose '))
-  const backgroundLanguages = extractProficiencyBlockNames(
-    normalizedBackground?.languageProficiencies ?? [],
-    { includeAnyStandard: false },
-  )
-  const backgroundTools = extractProficiencyBlockNames(
-    normalizedBackground?.toolProficiencies ?? [],
-    { includeAnyStandard: false },
-  )
-  const skills = [...new Set(backgroundSkills.map((skill) => skill.toLowerCase()))]
-  const proficiencies = {
-    armor,
-    weapons,
-    tools: [...new Set([...classTools, ...backgroundTools])],
-    skills,
-    languages: [...new Set(backgroundLanguages)],
-    savingThrows,
-  }
-
-  return { proficiencies, skills: mergeSkillState({}, skills) }
 }
 
 function getClassChoiceKey(name: string, source?: string): string {

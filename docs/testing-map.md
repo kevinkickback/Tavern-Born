@@ -173,6 +173,9 @@ new tests land and do not lower them to merge a change.
   resistance, armor, language, tool, and checkbox appearances and flat
   workspace-shell/preview-canvas presentation coverage
 - Importable PDF kitchen-sink character coverage in tests/fixtures/pdf-kitchen-sink.tbc and tests/lib/pdfKitchenSinkFixture.test.ts (multiclass/subclass, class-owned and source-qualified feat choices, spell profiles, full skills/saves, attacks, magic items, 90-row inventory, narrative/runtime state, schema validation, and both template capacity boundaries)
+- Route-decomposition coverage keeps Feats and Characteristics behavior under their existing
+  integration suites; `tests/lib/characteristicsModel.test.ts` additionally locks legacy draft
+  compatibility and data-agnostic organization presentation.
 
 ## High-Priority Gaps
 
