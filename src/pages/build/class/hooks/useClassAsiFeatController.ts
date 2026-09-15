@@ -6,7 +6,6 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
-import { getClassFeatChoiceId } from '@/lib/character/classFeatChoices'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   applyClassAsiChoice,
@@ -21,15 +20,6 @@ import {
 import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
-
-export interface ClassFeatPickerState {
-  className: string
-  classSource?: string
-  progName: string
-  categories: string[]
-  total: number
-  slotLevels: number[]
-}
 
 interface ClassAsiFeatControllerParams {
   character: Character | null
@@ -50,13 +40,9 @@ export function useClassAsiFeatController({
 }: ClassAsiFeatControllerParams) {
   const calculationContext = useCharacterCalculationContext(character)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
-  const { replaceFeatSelections, replaceClassFeatSelections, commitFeatWithOptions } =
-    useFeatProvenanceMutations()
+  const { replaceFeatSelections, commitFeatWithOptions } = useFeatProvenanceMutations()
   const [featPickerOpen, setFeatPickerOpen] = useState(false)
   const [featPickerLevel, setFeatPickerLevel] = useState<number | null>(null)
-  const [classFeatPickerState, setClassFeatPickerState] = useState<ClassFeatPickerState | null>(
-    null,
-  )
   const [asiPickerLevel, setAsiPickerLevel] = useState<number | null>(null)
   const [asiModeByLevel, setAsiModeByLevel] = useState<Record<string, 'asi' | 'feat'>>({})
   const [optionsPendingFeat, setOptionsPendingFeat] = useState<
@@ -233,29 +219,6 @@ export function useClassAsiFeatController({
     })
   }
 
-  const confirmClassFeatSelections = (selectedFeats: Feat5e[]) => {
-    if (!classFeatPickerState) return
-    const owner = {
-      className: classFeatPickerState.className,
-      classSource: classFeatPickerState.classSource,
-      progressionName: classFeatPickerState.progName,
-      categories: classFeatPickerState.categories,
-      slotLevels: classFeatPickerState.slotLevels,
-    }
-    const choiceId = getClassFeatChoiceId(owner)
-    const previousKeys = new Set(
-      (character?.classFeatChoices?.find((choice) => choice.id === choiceId)?.feats ?? []).map(
-        (feat) => `${feat.name}|${feat.source}`,
-      ),
-    )
-    replaceClassFeatSelections(owner, selectedFeats)
-    const newlyAdded = selectedFeats.find(
-      (feat) => !previousKeys.has(`${feat.name}|${feat.source ?? ''}`) && hasFeatOptions(feat),
-    )
-    if (newlyAdded) setOptionsPendingFeat({ ...newlyAdded, classFeatChoiceId: choiceId })
-    setClassFeatPickerState(null)
-  }
-
   return {
     characterSnapshot,
     totalAsi,
@@ -269,9 +232,6 @@ export function useClassAsiFeatController({
     setFeatPickerOpen,
     featPickerLevel,
     setFeatPickerLevel,
-    classFeatPickerState,
-    setClassFeatPickerState,
-    confirmClassFeatSelections,
     asiPickerLevel,
     setAsiPickerLevel,
     asiModeByLevel,

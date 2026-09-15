@@ -28,15 +28,6 @@ import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelect
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Character } from '@/types/character'
 
-interface ClassFeatPickerState {
-  className: string
-  classSource?: string
-  progName: string
-  categories: string[]
-  total: number
-  slotLevels: number[]
-}
-
 interface BuildClassModalsProps {
   character: Character
   classes: Class5e[]
@@ -99,11 +90,6 @@ interface BuildClassModalsProps {
   featModalFeats: Feat5e[]
   featPickerInitialSelectedIds: string[]
   onFeatConfirm: (selectedFeats: Feat5e[]) => void
-
-  classFeatPickerState: ClassFeatPickerState | null
-  onClassFeatPickerStateChange: (state: ClassFeatPickerState | null) => void
-  onClassFeatConfirm: (selectedFeats: Feat5e[]) => void
-  feats: Feat5e[]
 }
 
 export function BuildClassModals({
@@ -145,10 +131,6 @@ export function BuildClassModals({
   featModalFeats,
   featPickerInitialSelectedIds,
   onFeatConfirm,
-  classFeatPickerState,
-  onClassFeatPickerStateChange,
-  onClassFeatConfirm,
-  feats,
 }: BuildClassModalsProps) {
   const { total: totalAbilityScores } = useTotalAbilityScores(character)
   return (
@@ -394,59 +376,6 @@ export function BuildClassModals({
         characterSnapshot={characterSnapshot}
         onConfirm={onFeatConfirm}
       />
-
-      {classFeatPickerState &&
-        (() => {
-          const categorySet = new Set(classFeatPickerState.categories)
-          const available = feats.filter(
-            (feat) => !!feat.category && categorySet.has(feat.category),
-          )
-          const availableIds = new Set(available.map((feat) => `${feat.name}|${feat.source ?? ''}`))
-          const savedInCategory =
-            character.classFeatChoices?.find(
-              (choice) =>
-                choice.className === classFeatPickerState.className &&
-                (choice.classSource ?? '') === (classFeatPickerState.classSource ?? '') &&
-                choice.progressionName === classFeatPickerState.progName &&
-                choice.categories.length === classFeatPickerState.categories.length &&
-                choice.categories.every((category) => categorySet.has(category)),
-            )?.feats ?? []
-          const savedNotInList = savedInCategory
-            .filter(
-              (specialFeat) => !availableIds.has(`${specialFeat.name}|${specialFeat.source ?? ''}`),
-            )
-            .map(
-              (specialFeat) =>
-                ({
-                  name: specialFeat.name,
-                  source: specialFeat.source,
-                  entries: [],
-                }) as Feat5e,
-            )
-
-          const modalFeats = [...available, ...savedNotInList]
-
-          return (
-            <FeatSelectionModal
-              open={true}
-              onOpenChange={(open) => {
-                if (!open) onClassFeatPickerStateChange(null)
-              }}
-              feats={modalFeats}
-              maxSelections={classFeatPickerState.total}
-              initialSelectedIds={savedInCategory.map(
-                (feat) => `${feat.name}|${feat.source ?? ''}`,
-              )}
-              initialFilters={{
-                limit: new Set(),
-                featCategory: new Set(),
-                prereq: new Set(['showUnmet']),
-              }}
-              characterSnapshot={characterSnapshot}
-              onConfirm={onClassFeatConfirm}
-            />
-          )
-        })()}
 
       {spellSwapLevel !== null &&
         (() => {

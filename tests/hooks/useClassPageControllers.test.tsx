@@ -247,16 +247,28 @@ describe('class page controllers', () => {
     })
     const character = useCharacterStore.getState().activeCharacter
     if (!character) throw new Error('Expected active character fixture')
-    const legacyProvenance = addGrant(
+    let legacyProvenance = addGrant(
       character.provenance ?? emptyProvenance(),
       'features',
       'Arcane Option',
+      makeSourceTag('class', 'Wizard', 'choice', 'PHB'),
+    )
+    legacyProvenance = addGrant(
+      legacyProvenance,
+      'features',
+      'Other Arcane Option',
       makeSourceTag('class', 'Wizard', 'choice', 'PHB'),
     )
     const migratedCharacter = makeCharacterFixture({
       ...character,
       features: [
         { id: 'legacy-arcane-option', name: 'Arcane Option', source: 'PHB', description: '' },
+        {
+          id: 'legacy-other-arcane-option',
+          name: 'Other Arcane Option',
+          source: 'PHB',
+          description: '',
+        },
       ],
       provenance: legacyProvenance,
     })
@@ -275,7 +287,10 @@ describe('class page controllers', () => {
           classFeatures: [],
           feats: [],
           items: [],
-          optionalFeatures: [{ name: 'Arcane Option', source: 'PHB', featureType: ['EI'] }],
+          optionalFeatures: [
+            { name: 'Arcane Option', source: 'PHB', featureType: ['EI'] },
+            { name: 'Other Arcane Option', source: 'PHB', featureType: ['OTHER'] },
+          ],
         },
       }),
     )
@@ -289,10 +304,12 @@ describe('class page controllers', () => {
     const saved = useCharacterStore.getState().activeCharacter
     expect(saved?.classChoiceSelections?.[0]?.choiceId).toBe(normalizedChoice.id)
     expect(saved?.features).toEqual([
+      expect.objectContaining({ name: 'Other Arcane Option', source: 'PHB' }),
       expect.objectContaining({ name: 'Arcane Option', source: 'PHB', level: 1 }),
     ])
     expect(saved?.provenance?.features['arcane option']).toEqual([
       expect.objectContaining({ grantVariant: normalizedChoice.id }),
     ])
+    expect(saved?.provenance?.features['other arcane option']).toHaveLength(1)
   })
 })

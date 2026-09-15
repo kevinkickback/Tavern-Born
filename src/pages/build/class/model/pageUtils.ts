@@ -17,9 +17,6 @@ interface BuildLevelsToShowParams {
   subclassLevel: number
   viewingClassLevel: number
   spellChoicesByLevel: Map<number, unknown>
-  classFeatProgressions: Array<{
-    progression: number[] | Record<string, number>
-  }>
 }
 
 interface BuildFeatModalFeatsParams<T extends { name: string; source?: string }> {
@@ -37,23 +34,6 @@ function resolveClassForEntry(
     return classLookup[getEntityLookupKey(entry.name, entry.source)]
   }
   return fallbackClassByName.get(entry.name)
-}
-
-function getOptFeatureTotalAtLevel(
-  progression: number[] | Record<string, number>,
-  level: number,
-): number {
-  if (Array.isArray(progression)) {
-    return progression[Math.max(0, level - 1)] ?? 0
-  }
-
-  let total = 0
-  for (const [key, value] of Object.entries(progression)) {
-    if (Number(key) <= level) {
-      total = Math.max(total, Number(value))
-    }
-  }
-  return total
 }
 
 export function countTotalAsiAcrossClasses({
@@ -99,7 +79,6 @@ export function buildLevelsToShow({
   subclassLevel,
   viewingClassLevel,
   spellChoicesByLevel,
-  classFeatProgressions,
 }: BuildLevelsToShowParams): number[] {
   const levels = new Set<number>()
 
@@ -124,17 +103,6 @@ export function buildLevelsToShow({
       levels.add(level)
     }
   })
-
-  for (const progression of classFeatProgressions) {
-    for (let level = 1; level <= viewingClassLevel; level++) {
-      if (
-        getOptFeatureTotalAtLevel(progression.progression, level) >
-        getOptFeatureTotalAtLevel(progression.progression, level - 1)
-      ) {
-        levels.add(level)
-      }
-    }
-  }
 
   return Array.from(levels).sort((a, b) => a - b)
 }

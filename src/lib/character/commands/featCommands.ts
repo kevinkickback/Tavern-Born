@@ -821,17 +821,20 @@ export function replaceClassFeatSelectionsCommand(
       proficiencies: workingCharacter.proficiencies,
       skills: workingCharacter.skills,
       abilityScores: workingCharacter.abilityScores,
-      classFeatChoices: [
-        ...retainedChoices,
-        {
-          id: choiceId,
-          className: owner.className,
-          classSource: owner.classSource,
-          progressionName: owner.progressionName,
-          categories: owner.categories,
-          feats,
-        },
-      ],
+      classFeatChoices:
+        feats.length > 0
+          ? [
+              ...retainedChoices,
+              {
+                id: choiceId,
+                className: owner.className,
+                classSource: owner.classSource,
+                progressionName: owner.progressionName,
+                categories: owner.categories,
+                feats,
+              },
+            ]
+          : retainedChoices,
     },
     provenanceUpdate,
   }

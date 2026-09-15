@@ -27,7 +27,6 @@ import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsi
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
 import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
 import { useSubclassSelectionController } from '@/pages/build/class/hooks/useSubclassSelectionController'
-import type { ClassFeatProgression } from '@/pages/build/class/model/levelsUtils'
 import { buildLevelsToShow } from '@/pages/build/class/model/pageUtils'
 import { useClassPageState } from '@/pages/build/class/useClassPageState'
 import { useCharacterStore } from '@/store/characterStore'
@@ -83,11 +82,6 @@ export function BuildClassPage() {
     () => new Map((spells as Spell5e[]).map((s) => [s.name, s])),
     [spells],
   )
-  const featByCompositeId = useMemo(
-    () => new Map(((feats ?? []) as Feat5e[]).map((f) => [`${f.name}|${f.source ?? ''}`, f])),
-    [feats],
-  )
-
   const viewingClassData = viewingClassSource
     ? classLookup[getEntityLookupKey(viewingClass, viewingClassSource)]
     : fallbackClassByName.get(viewingClass ?? '')
@@ -169,9 +163,6 @@ export function BuildClassPage() {
     featPickerOpen,
     setFeatPickerOpen,
     setFeatPickerLevel,
-    classFeatPickerState,
-    setClassFeatPickerState,
-    confirmClassFeatSelections,
     asiPickerLevel,
     setAsiPickerLevel,
     asiModeByLevel,
@@ -189,6 +180,8 @@ export function BuildClassPage() {
     viewingClassData,
     viewingClassLevel,
     catalogs: classChoiceCatalogs,
+    onFeatOptionsRequired: (feat, choiceId) =>
+      setOptionsPendingFeat({ ...feat, classFeatChoiceId: choiceId }),
   })
   const allClassFeatures = useMemo(() => {
     if (!viewingClass) return []
@@ -216,10 +209,6 @@ export function BuildClassPage() {
     return getSubclassSelectionInfo(viewingClassData)
   }, [viewingClassData])
   const asiLevels = viewingClassData ? getASILevelsFromClass(viewingClassData) : []
-  const classFeatProgressions = useMemo(
-    () => (viewingClassData?.featProgression ?? []) as ClassFeatProgression[],
-    [viewingClassData],
-  )
   const levelsToShow = useMemo(
     () =>
       buildLevelsToShow({
@@ -228,16 +217,8 @@ export function BuildClassPage() {
         subclassLevel,
         viewingClassLevel,
         spellChoicesByLevel,
-        classFeatProgressions,
       }),
-    [
-      allClassFeatures,
-      asiLevels,
-      subclassLevel,
-      viewingClassLevel,
-      spellChoicesByLevel,
-      classFeatProgressions,
-    ],
+    [allClassFeatures, asiLevels, subclassLevel, viewingClassLevel, spellChoicesByLevel],
   )
   const {
     pickerOpen: subclassPickerOpen,
@@ -316,7 +297,6 @@ export function BuildClassPage() {
               subclassLevel={subclassLevel}
               asiLevels={asiLevels}
               spellChoicesByLevel={spellChoicesByLevel}
-              classFeatProgressions={classFeatProgressions}
               featuresByLevel={featuresByLevel}
               subclassFeatureName={subclassFeatureName}
               selectedFeature={selectedFeature}
@@ -329,7 +309,6 @@ export function BuildClassPage() {
               viewingClassLevel={viewingClassLevel}
               classEquipmentBlockChoices={classEquipmentBlockChoices}
               classEquipmentItemChoices={classEquipmentItemChoices}
-              featByCompositeId={featByCompositeId}
               feats={(feats ?? []) as Feat5e[]}
               spellByName={spellByName}
               appliedAsiChoicesForClass={appliedAsiChoicesForClass}
@@ -350,7 +329,6 @@ export function BuildClassPage() {
                 setFeatPickerOpen(true)
               }}
               onOpenAsiPicker={setAsiPickerLevel}
-              onOpenClassFeatPicker={setClassFeatPickerState}
               onOpenClassChoice={classChoiceController.open}
               onBlockChoiceChange={(blockIndex, choice) => {
                 if (!viewingClassData) return
@@ -421,10 +399,6 @@ export function BuildClassPage() {
         featModalFeats={featModalFeats}
         featPickerInitialSelectedIds={featPickerInitialSelectedIds}
         onFeatConfirm={handleFeatConfirm}
-        classFeatPickerState={classFeatPickerState}
-        onClassFeatPickerStateChange={setClassFeatPickerState}
-        onClassFeatConfirm={confirmClassFeatSelections}
-        feats={(feats ?? []) as Feat5e[]}
         onApplyBatchSpellSelections={applyBatchSpellSelections}
         onRemoveSpellProvenance={removeSpellProvenance}
         onSwapSpellProvenance={swapSpellProvenance}

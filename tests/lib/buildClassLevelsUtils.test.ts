@@ -11,13 +11,6 @@ describe('buildClassLevelsUtils', () => {
       spellChoicesByLevel: new Map([
         [3, { cantrips: 1, spells: 2, maxSpellLevel: 2, canSwap: true }],
       ]),
-      classFeatProgressions: [
-        {
-          name: 'Fighting Style',
-          category: ['Fighting Style'],
-          progression: [0, 1, 1],
-        },
-      ],
       featuresByLevel: new Map([
         [
           3,
@@ -50,7 +43,6 @@ describe('buildClassLevelsUtils', () => {
       maxSpellLevel: 2,
       canSwap: true,
     })
-    expect(levelData.classFeatGainsAtLevel).toHaveLength(0)
     expect(levelData.passiveFeatures.map((f) => f.name)).toEqual(['Spellcasting', 'Fighting Style'])
     expect(levelData.choiceCount).toBe(2)
     expect(levelData.totalCount).toBe(4)

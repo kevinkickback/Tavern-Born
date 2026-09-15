@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useItemTypeLookup } from '@/hooks/data/useGameData'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
   type ClassChoiceCatalogs,
   type ClassChoiceOptionView,
@@ -10,7 +11,6 @@ import {
   getStandaloneClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
-import { emptyProvenance } from '@/lib/character/createCharacter'
 import type { Class5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
@@ -20,6 +20,7 @@ interface ClassChoiceControllerParams {
   viewingClassData?: Class5e
   viewingClassLevel: number
   catalogs: Omit<ClassChoiceCatalogs, 'itemTypeByAbbr' | 'weaponProficiencies'>
+  onFeatOptionsRequired?: (feat: ClassChoiceCatalogs['feats'][number], choiceId: string) => void
 }
 
 const EMPTY_WEAPON_PROFICIENCIES: readonly string[] = []
@@ -29,6 +30,7 @@ export function useClassChoiceController({
   viewingClassData,
   viewingClassLevel,
   catalogs,
+  onFeatOptionsRequired,
 }: ClassChoiceControllerParams) {
   const { applyClassChoiceSelection } = useClassProvenanceMutations()
   const itemTypeByAbbr = useItemTypeLookup()
@@ -63,18 +65,18 @@ export function useClassChoiceController({
   )
   const selectionByChoiceId = useMemo(() => {
     const selections = new Map(persistedSelectionByChoiceId)
-    const ledger = character?.provenance ?? emptyProvenance()
+    if (!character) return selections
     for (const choice of choices) {
       if (selections.has(choice.id)) continue
       const legacy = getLegacyClassChoiceSelection(
         choice,
         optionViewsByChoiceId.get(choice.id) ?? [],
-        ledger,
+        character,
       )
       if (legacy) selections.set(choice.id, legacy)
     }
     return selections
-  }, [character?.provenance, choices, optionViewsByChoiceId, persistedSelectionByChoiceId])
+  }, [character, choices, optionViewsByChoiceId, persistedSelectionByChoiceId])
   const selectedViewsByChoiceId = useMemo(
     () =>
       new Map(
@@ -102,11 +104,30 @@ export function useClassChoiceController({
 
   const confirm = (selected: ClassChoiceOptionView[]) => {
     if (!character || !activeChoice) return
+    const previousKeys = new Set(
+      (selectionByChoiceId.get(activeChoice.id)?.selected ?? []).map(getClassChoiceOptionKey),
+    )
+    const legacyOptions = persistedSelectionByChoiceId.has(activeChoice.id)
+      ? []
+      : (selectionByChoiceId.get(activeChoice.id)?.selected ?? [])
     applyClassChoiceSelection(
       activeChoice,
       selected.map((option) => option.reference),
-      activeOptionViews.map((option) => option.reference),
+      legacyOptions,
     )
+    if (activeChoice.kind === 'feat' && onFeatOptionsRequired) {
+      const newlyAdded = selected.find(
+        (option) => !previousKeys.has(getClassChoiceOptionKey(option.reference)),
+      )
+      const feat = newlyAdded
+        ? catalogs.feats.find(
+            (entry) =>
+              entry.name === newlyAdded.reference.name &&
+              (!newlyAdded.reference.source || entry.source === newlyAdded.reference.source),
+          )
+        : undefined
+      if (feat && hasFeatOptions(feat)) onFeatOptionsRequired(feat, activeChoice.id)
+    }
     setActiveChoice(null)
   }
 

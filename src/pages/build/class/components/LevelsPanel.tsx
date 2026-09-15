@@ -17,13 +17,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspacePaneHeader } from '@/components/workspace'
-import { featCategoryToFull, getOptFeatureTotal } from '@/lib/5etools/classData'
 import {
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
 } from '@/lib/calculations/spellProfiles'
 import type { ClassChoiceOptionView } from '@/lib/character/classChoiceOptions'
-import { findClassFeatChoice, getClassFeatSlotLevels } from '@/lib/character/classFeatChoices'
 import { cn } from '@/lib/utils'
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type {
@@ -34,14 +32,12 @@ import type {
   Feat,
 } from '@/types/character'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
-import type { ClassFeatProgression } from '../model/levelsUtils'
 import { computeLevelDisplayData } from '../model/levelsUtils'
 import { BuildClassAsiSection } from './AsiSection'
 import { BuildClassChoicesSection } from './ClassChoicesSection'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 import { BuildClassEquipmentSection } from './EquipmentSection'
 import { BuildClassPassiveFeatureList } from './PassiveFeatureList'
-import { BuildClassProgressionChoiceCard } from './ProgressionChoiceCard'
 import { BuildClassSpellSection } from './SpellSection'
 import { BuildClassSubclassSection } from './SubclassSection'
 
@@ -62,7 +58,6 @@ interface BuildClassLevelsPanelProps {
       canSwap: boolean
     }
   >
-  classFeatProgressions: ClassFeatProgression[]
   featuresByLevel: Map<number, ClassFeatureDisplay[]>
   subclassFeatureName: string | null
   selectedFeature: SelectedFeatureState | null
@@ -75,7 +70,6 @@ interface BuildClassLevelsPanelProps {
   viewingClassLevel: number
   classEquipmentBlockChoices: string[]
   classEquipmentItemChoices?: Readonly<Record<string, string>>
-  featByCompositeId: Map<string, Feat5e>
   feats: Feat5e[]
   spellByName: Map<string, Spell5e>
   appliedAsiChoicesForClass: AsiChoice[]
@@ -93,14 +87,6 @@ interface BuildClassLevelsPanelProps {
   onOpenSpellSwap: (level: number) => void
   onOpenFeatPicker: (level: number) => void
   onOpenAsiPicker: (level: number) => void
-  onOpenClassFeatPicker: (state: {
-    className: string
-    classSource?: string
-    progName: string
-    categories: string[]
-    total: number
-    slotLevels: number[]
-  }) => void
   onOpenClassChoice: (choice: NormalizedCharacterChoice) => void
   onBlockChoiceChange: (blockIndex: number, choice: string) => void
   onItemChoiceChange?: (blockIndex: number, choice: string, key: string, itemRef: string) => void
@@ -121,7 +107,6 @@ export function BuildClassLevelsPanel({
   subclassLevel,
   asiLevels,
   spellChoicesByLevel,
-  classFeatProgressions,
   featuresByLevel,
   subclassFeatureName,
   selectedFeature,
@@ -134,7 +119,6 @@ export function BuildClassLevelsPanel({
   viewingClassLevel,
   classEquipmentBlockChoices,
   classEquipmentItemChoices = {},
-  featByCompositeId,
   feats,
   spellByName,
   appliedAsiChoicesForClass,
@@ -152,7 +136,6 @@ export function BuildClassLevelsPanel({
   onOpenSpellSwap,
   onOpenFeatPicker,
   onOpenAsiPicker,
-  onOpenClassFeatPicker,
   onOpenClassChoice,
   onBlockChoiceChange,
   onItemChoiceChange = () => undefined,
@@ -301,7 +284,6 @@ export function BuildClassLevelsPanel({
                   isSubclassLevel,
                   isASILevel,
                   spellGain,
-                  classFeatGainsAtLevel,
                   passiveFeatures,
                   choiceCount,
                   totalCount,
@@ -311,7 +293,6 @@ export function BuildClassLevelsPanel({
                   subclassFeatureName,
                   asiLevels,
                   spellChoicesByLevel,
-                  classFeatProgressions,
                   featuresByLevel,
                 })
 
@@ -323,25 +304,11 @@ export function BuildClassLevelsPanel({
                 const selectedSpellCount = spellSelectionsByLevel.get(lv)?.length ?? 0
                 const spellChoiceComplete =
                   !spellGain || selectedSpellCount >= spellGain.cantrips + spellGain.spells
-                const classFeatChoicesComplete = classFeatGainsAtLevel.every((prog) => {
-                  const progName =
-                    prog.name ??
-                    prog.category.map((category) => featCategoryToFull(category)).join(', ')
-                  const selectedCount =
-                    findClassFeatChoice(character.classFeatChoices, {
-                      className: viewingClass,
-                      classSource: viewingClassSource,
-                      progressionName: progName,
-                      categories: prog.category,
-                    })?.feats.length ?? 0
-                  return selectedCount >= getOptFeatureTotal(prog.progression, viewingClassLevel)
-                })
                 const allChoicesComplete =
                   choiceCount > 0 &&
                   asiChoiceComplete &&
                   subclassChoiceComplete &&
-                  spellChoiceComplete &&
-                  classFeatChoicesComplete
+                  spellChoiceComplete
 
                 return (
                   <AccordionItem key={lv} value={`level-${lv}`}>
@@ -390,62 +357,6 @@ export function BuildClassLevelsPanel({
                             onOpenSubclassPicker={onOpenSubclassPicker}
                           />
                         )}
-
-                        {classFeatGainsAtLevel.map((prog) => {
-                          const totalAllowed = getOptFeatureTotal(
-                            prog.progression,
-                            viewingClassLevel,
-                          )
-                          const progLabel =
-                            prog.name ??
-                            prog.category.map((category) => featCategoryToFull(category)).join(', ')
-                          const chosenStyles =
-                            findClassFeatChoice(character.classFeatChoices, {
-                              className: viewingClass,
-                              classSource: viewingClassSource,
-                              progressionName: progLabel,
-                              categories: prog.category,
-                            })?.feats ?? []
-                          const selectedCount = chosenStyles.length
-                          const isFull = selectedCount >= totalAllowed
-
-                          return (
-                            <BuildClassProgressionChoiceCard
-                              key={`${progLabel}|${prog.category.join('|')}`}
-                              id={progLabel}
-                              label={progLabel}
-                              selectedCount={selectedCount}
-                              totalAllowed={totalAllowed}
-                              isFull={isFull}
-                              chosenItems={chosenStyles.map((style) => {
-                                const feat = featByCompositeId.get(
-                                  `${style.name}|${style.source ?? ''}`,
-                                )
-                                return {
-                                  name: style.name,
-                                  source: style.source,
-                                  entries: feat?.entries ?? [],
-                                }
-                              })}
-                              detailCollapsed={detailCollapsed}
-                              onChoose={() =>
-                                onOpenClassFeatPicker({
-                                  className: viewingClass,
-                                  classSource: viewingClassSource,
-                                  progName: progLabel,
-                                  categories: prog.category,
-                                  total: totalAllowed,
-                                  slotLevels: getClassFeatSlotLevels(
-                                    prog.progression,
-                                    viewingClassLevel,
-                                  ),
-                                })
-                              }
-                              onSelectFeature={onSelectFeature}
-                              onExpandDetails={onExpandDetails}
-                            />
-                          )
-                        })}
 
                         {isASILevel && (
                           <BuildClassAsiSection

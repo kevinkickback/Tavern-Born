@@ -2,7 +2,7 @@ import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormal
 import { addGrant } from '@/lib/provenance/ledger'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
-import type { ProvenanceLedger } from '@/lib/provenance/types'
+import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type {
   Character,
   CharacterClassChoiceOption,
@@ -12,6 +12,7 @@ import type {
 } from '@/types/character'
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { CharacterCommandResult } from './commandResult'
+import { replaceClassFeatSelectionsCommand } from './featCommands'
 
 const CLASS_CHOICE_FEATURE_ID_PREFIX = 'class-choice:'
 
@@ -105,6 +106,167 @@ function featureIdentity(option: Pick<CharacterClassChoiceOption, 'name' | 'sour
   return `${normalizeKey(option.name)}|${normalizeKey(option.source ?? '')}`
 }
 
+function applyCommandResult(character: Character, result: CharacterCommandResult): Character {
+  return {
+    ...character,
+    ...result.characterPatch,
+    provenance: result.provenanceUpdate,
+  }
+}
+
+function sameCategories(left: readonly string[], right: readonly string[]): boolean {
+  const normalizedRight = new Set(right.map(normalizeKey))
+  return (
+    left.length === right.length &&
+    left.every((category) => normalizedRight.has(normalizeKey(category)))
+  )
+}
+
+function remapClassFeatChoiceOwner(
+  tag: SourceTag,
+  previousChoiceId: string,
+  choiceId: string,
+): SourceTag {
+  const grantVariant =
+    tag.grantVariant === previousChoiceId
+      ? choiceId
+      : tag.grantVariant === `class:${previousChoiceId}`
+        ? `class:${choiceId}`
+        : tag.grantVariant
+  return grantVariant === tag.grantVariant ? tag : { ...tag, grantVariant }
+}
+
+function remapTagMap<T extends SourceTag>(
+  entries: Record<string, T[]>,
+  previousChoiceId: string,
+  choiceId: string,
+): Record<string, T[]> {
+  return Object.fromEntries(
+    Object.entries(entries).map(([key, tags]) => [
+      key,
+      tags.map((tag) => remapClassFeatChoiceOwner(tag, previousChoiceId, choiceId) as T),
+    ]),
+  )
+}
+
+/** Transfers legacy class-feat and feat-option ownership without reapplying mechanical effects. */
+function migrateClassFeatChoiceOwner(
+  character: Character,
+  ledger: ProvenanceLedger,
+  previousChoiceId: string,
+  choice: NormalizedCharacterChoice,
+  categories: readonly string[],
+): { character: Character; ledger: ProvenanceLedger } {
+  const remap = <T extends SourceTag>(entries: Record<string, T[]>) =>
+    remapTagMap(entries, previousChoiceId, choice.id)
+  return {
+    character: {
+      ...character,
+      classFeatChoices: character.classFeatChoices?.map((entry) =>
+        entry.id === previousChoiceId
+          ? {
+              ...entry,
+              id: choice.id,
+              progressionName: choice.label,
+              categories: [...categories],
+            }
+          : entry,
+      ),
+    },
+    ledger: {
+      ...ledger,
+      proficiencies: {
+        armor: remap(ledger.proficiencies.armor),
+        weapons: remap(ledger.proficiencies.weapons),
+        tools: remap(ledger.proficiencies.tools),
+        languages: remap(ledger.proficiencies.languages),
+        skills: remap(ledger.proficiencies.skills),
+        savingThrows: remap(ledger.proficiencies.savingThrows),
+      },
+      abilityBonuses: ledger.abilityBonuses.map((record) => ({
+        ...record,
+        sourceTag: remapClassFeatChoiceOwner(record.sourceTag, previousChoiceId, choice.id),
+      })),
+      features: remap(ledger.features),
+      feats: remap(ledger.feats),
+      spells: remap(ledger.spells),
+      equipment: remap(ledger.equipment),
+      choices: ledger.choices.map((record) => ({
+        ...record,
+        sourceTag: remapClassFeatChoiceOwner(record.sourceTag, previousChoiceId, choice.id),
+      })),
+    },
+  }
+}
+
+function reconcileClassChoiceFeatMirror(
+  character: Character,
+  ledger: ProvenanceLedger,
+  choice: NormalizedCharacterChoice,
+  selection: CharacterClassChoiceSelection | undefined,
+): CharacterCommandResult {
+  if (choice.kind !== 'feat') return { characterPatch: {}, provenanceUpdate: ledger }
+  const categories = choice.optionFilter?.categories ?? []
+  let workingCharacter = character
+  let provenanceUpdate = ledger
+  const legacyChoices = (character.classFeatChoices ?? []).filter(
+    (entry) =>
+      entry.id !== choice.id &&
+      entry.className === choice.owner.name &&
+      (entry.classSource ?? '') === choice.owner.source &&
+      normalizeKey(entry.progressionName) === normalizeKey(choice.label) &&
+      sameCategories(entry.categories, categories),
+  )
+  const firstLegacy = legacyChoices[0]
+  let migratedFirstLegacy = false
+  if (
+    firstLegacy &&
+    !(workingCharacter.classFeatChoices ?? []).some((entry) => entry.id === choice.id)
+  ) {
+    const migrated = migrateClassFeatChoiceOwner(
+      workingCharacter,
+      provenanceUpdate,
+      firstLegacy.id,
+      choice,
+      categories,
+    )
+    workingCharacter = migrated.character
+    provenanceUpdate = migrated.ledger
+    migratedFirstLegacy = true
+  }
+  for (const legacy of legacyChoices.slice(migratedFirstLegacy ? 1 : 0)) {
+    const cleared = replaceClassFeatSelectionsCommand(
+      workingCharacter,
+      provenanceUpdate,
+      {
+        choiceId: legacy.id,
+        className: legacy.className,
+        classSource: legacy.classSource,
+        progressionName: legacy.progressionName,
+        categories: legacy.categories,
+        slotLevels: legacy.feats.map((feat) => feat.classLevel ?? choice.level),
+      },
+      [],
+    )
+    workingCharacter = applyCommandResult(workingCharacter, cleared)
+    provenanceUpdate = cleared.provenanceUpdate
+  }
+
+  return replaceClassFeatSelectionsCommand(
+    workingCharacter,
+    provenanceUpdate,
+    {
+      choiceId: choice.id,
+      className: choice.owner.name,
+      classSource: choice.owner.source,
+      progressionName: choice.label,
+      categories,
+      slotLevels: selection?.selected.map((option) => option.slotLevel) ?? [],
+    },
+    selection?.selected.map((option) => ({ name: option.name, source: option.source })) ?? [],
+  )
+}
+
 function retractLegacyOptionalFeatureGrants(
   character: Character,
   ledger: ProvenanceLedger,
@@ -195,9 +357,9 @@ function rebuildClassChoiceFeatures(
 /**
  * Rebuilds grants owned by normalized class choices from their persisted selections.
  *
- * Feature-shaped options can be materialized without interpreting rules prose. Feat and item
- * options remain source-qualified selections until their dedicated domain handlers can apply
- * follow-up feat configuration or structured item effects safely.
+ * Feature-shaped options can be materialized without interpreting rules prose. Feat choices are
+ * reconciled separately through the established feat-option handler, while item choices remain
+ * source-qualified selections until structured item effects can be applied safely.
  */
 export function reconcileClassChoiceSelectionGrants(
   character: Pick<Character, 'classChoiceSelections' | 'features'>,
@@ -256,13 +418,26 @@ export function applyClassChoiceSelectionWithGrantsCommand(
     migrated.ledger,
     classChoiceSelections,
   )
+  const withSelections: Character = {
+    ...migrated.character,
+    classChoiceSelections,
+    features: grants.features,
+    provenance: grants.provenanceUpdate,
+  }
+  const featMirror = reconcileClassChoiceFeatMirror(
+    withSelections,
+    grants.provenanceUpdate,
+    choice,
+    classChoiceSelections.find((selection) => selection.choiceId === choice.id),
+  )
 
   return {
     characterPatch: {
+      ...featMirror.characterPatch,
       classChoiceSelections,
       features: grants.features,
     },
-    provenanceUpdate: grants.provenanceUpdate,
+    provenanceUpdate: featMirror.provenanceUpdate,
   }
 }
 

@@ -8,7 +8,6 @@ import {
   removeFeatChoiceCommand,
   removeFeatProvenanceCommand,
   replaceBonusFeatSelectionsCommand,
-  replaceClassFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
   resolveFeatChoiceCommand,
   resolveProficiencyChoiceCommand,
@@ -110,23 +109,6 @@ export function useFeatProvenanceMutations() {
     [character, ledger, applyCommand],
   )
 
-  const replaceClassFeatSelections = useCallback(
-    (
-      owner: {
-        className: string
-        classSource?: string
-        progressionName: string
-        categories: string[]
-        slotLevels: number[]
-      },
-      selectedFeats: Array<{ name: string; source?: string }>,
-    ) => {
-      if (!character) return
-      applyCommand(replaceClassFeatSelectionsCommand(character, ledger, owner, selectedFeats))
-    },
-    [character, ledger, applyCommand],
-  )
-
   const retractFeatOptionGrants = useCallback(
     (feat: FeatOptionTarget, selections: FeatOptionSelections) => {
       if (!character) return
@@ -155,7 +137,6 @@ export function useFeatProvenanceMutations() {
     removeFeatProvenance,
     replaceFeatSelections,
     replaceBonusFeatSelections,
-    replaceClassFeatSelections,
     resolveFeatChoiceSelection,
     removeFeatChoiceSelection,
     resolveChoiceSelection,

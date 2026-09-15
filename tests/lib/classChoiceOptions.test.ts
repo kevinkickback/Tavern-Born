@@ -140,7 +140,7 @@ describe('class choice option resolution', () => {
     })
   })
 
-  test('routes optional-feature progressions through normalized choices', () => {
+  test('routes every supported class choice through the normalized workflow', () => {
     const standalone = choice({ label: 'Standalone' })
     const optional = choice({
       label: 'Optional Pool',
@@ -151,9 +151,8 @@ describe('class choice option resolution', () => {
     expect(
       getStandaloneClassChoices({
         normalizedRules: { choices: [standalone, optional, featProgression] },
-        featProgression: [{ name: 'Feat Pool' }],
       }),
-    ).toEqual([standalone, optional])
+    ).toEqual([standalone, optional, featProgression])
   })
 
   test('projects legacy class-owned optional features into a normalized choice', () => {
@@ -183,11 +182,49 @@ describe('class choice option resolution', () => {
             entries: [],
           },
         ],
-        ledger,
+        { provenance: ledger },
       ),
     ).toMatchObject({
       choiceId: optional.id,
       selected: [{ name: 'Legacy Option', source: 'HB', slotLevel: 1 }],
+    })
+  })
+
+  test('projects a source-qualified legacy class feat into a normalized choice', () => {
+    const feat = choice({
+      label: 'Style Training',
+      kind: 'feat',
+      optionFilter: { entityType: 'feat', categories: ['STYLE'] },
+    })
+    const option = {
+      reference: { entityType: 'feat' as const, name: 'Guarded Style', source: 'HB' },
+      entries: [],
+    }
+
+    expect(
+      getLegacyClassChoiceSelection(feat, [option], {
+        classFeatChoices: [
+          {
+            id: 'legacy-style',
+            className: 'Any',
+            classSource: 'HB',
+            progressionName: 'Style Training',
+            categories: ['STYLE'],
+            feats: [
+              {
+                id: 'legacy-feat',
+                name: 'Guarded Style',
+                source: 'HB',
+                description: '',
+                classLevel: 1,
+              },
+            ],
+          },
+        ],
+      }),
+    ).toMatchObject({
+      choiceId: feat.id,
+      selected: [{ entityType: 'feat', name: 'Guarded Style', source: 'HB', slotLevel: 1 }],
     })
   })
 })

@@ -8,7 +8,11 @@ import type {
   OptionalFeatureLike,
   Raw5ePrereq,
 } from '@/types/5etools'
-import type { CharacterClassChoiceOption, CharacterClassChoiceSelection } from '@/types/character'
+import type {
+  Character,
+  CharacterClassChoiceOption,
+  CharacterClassChoiceSelection,
+} from '@/types/character'
 import type {
   ChoiceOptionEntityType,
   NormalizedCharacterChoice,
@@ -50,15 +54,42 @@ function isLegacyChoiceTag(
 export function getLegacyClassChoiceSelection(
   choice: NormalizedCharacterChoice,
   options: readonly ClassChoiceOptionView[],
-  ledger: ProvenanceLedger,
+  character: Pick<Character, 'classFeatChoices' | 'provenance'>,
 ): CharacterClassChoiceSelection | undefined {
-  if (choice.kind !== 'optional-feature' || choice.source.kind !== 'optional-feature-progression') {
+  let selected: CharacterClassChoiceOption[] = []
+  if (choice.kind === 'optional-feature' && choice.source.kind === 'optional-feature-progression') {
+    const ledger = character.provenance
+    if (!ledger) return undefined
+    selected = options
+      .map((option) => option.reference)
+      .filter((option) => isLegacyChoiceTag(ledger, choice, option))
+      .map((option) => ({ ...option, slotLevel: choice.level }))
+  } else if (choice.kind === 'feat') {
+    const categories = new Set((choice.optionFilter?.categories ?? []).map(normalized))
+    const legacy = character.classFeatChoices?.find(
+      (entry) =>
+        entry.id !== choice.id &&
+        entry.className === choice.owner.name &&
+        (entry.classSource ?? '') === choice.owner.source &&
+        normalized(entry.progressionName) === normalized(choice.label) &&
+        entry.categories.length === categories.size &&
+        entry.categories.every((category) => categories.has(normalized(category))),
+    )
+    if (!legacy) return undefined
+    const availableKeys = new Set(
+      options.map((option) => getClassChoiceOptionKey(option.reference)),
+    )
+    selected = legacy.feats
+      .map((feat) => ({
+        entityType: 'feat' as const,
+        name: feat.name,
+        source: feat.source,
+        slotLevel: feat.classLevel ?? choice.level,
+      }))
+      .filter((option) => availableKeys.has(getClassChoiceOptionKey(option)))
+  } else {
     return undefined
   }
-  const selected = options
-    .map((option) => option.reference)
-    .filter((option) => isLegacyChoiceTag(ledger, choice, option))
-    .map((option) => ({ ...option, slotLevel: choice.level }))
   if (selected.length === 0) return undefined
   return {
     choiceId: choice.id,
@@ -231,23 +262,9 @@ export function resolveClassChoiceOptions(
   )
 }
 
-/** Excludes normalized choices still owned by the legacy feat-progression editor. */
+/** Returns normalized class choices for the shared class-choice workflow. */
 export function getStandaloneClassChoices(classData: {
   normalizedRules?: { choices: NormalizedCharacterChoice[] }
-  featProgression?: unknown
 }): NormalizedCharacterChoice[] {
-  const progressionLabels = new Set(
-    [
-      ...(Array.isArray(classData.featProgression)
-        ? classData.featProgression.flatMap((progression) => {
-            if (!progression || typeof progression !== 'object') return []
-            const name = (progression as { name?: unknown }).name
-            return typeof name === 'string' ? [name] : []
-          })
-        : []),
-    ].map(normalized),
-  )
-  return (classData.normalizedRules?.choices ?? []).filter(
-    (choice) => !progressionLabels.has(normalized(choice.label)),
-  )
+  return classData.normalizedRules?.choices ?? []
 }
