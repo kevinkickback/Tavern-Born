@@ -40,4 +40,36 @@ describe('characterPersistenceSchema', () => {
     const result = characterPersistenceSchema.safeParse(character)
     expect(result.success).toBe(false)
   })
+
+  test('round-trips structured movement, adjustments, and overrides', () => {
+    const character = makeCharacterFixture({
+      movement: {
+        speeds: { walk: 25, swim: 30 },
+        hover: false,
+        other: { phase: 10, glide: true },
+        source: { kind: 'race', name: 'River Dwarf', source: 'HB' },
+      },
+      movementAdjustments: [
+        {
+          id: 'training',
+          label: 'Training',
+          mode: 'walk',
+          amount: 5,
+          sourceType: 'manual',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      movementOverrides: { fly: 40 },
+      movementHoverOverride: true,
+    })
+
+    const result = characterPersistenceSchema.parse(
+      JSON.parse(JSON.stringify(character)) as unknown,
+    )
+
+    expect(result.movement).toEqual(character.movement)
+    expect(result.movementAdjustments).toEqual(character.movementAdjustments)
+    expect(result.movementOverrides).toEqual({ fly: 40 })
+    expect(result.movementHoverOverride).toBe(true)
+  })
 })

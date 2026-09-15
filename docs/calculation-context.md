@@ -46,5 +46,7 @@ protects the current consumer list, and cross-surface fixtures verify the same e
 rules and both PDF mappings.
 
 The context also groups resolved classes, race/subrace, background, rules metadata, and equipment
-state. Later movement, effects, readiness, action, rest, and Play phases should extend this pure
-projection instead of introducing page-specific rules engines.
+state. It projects structured base movement, labeled per-mode adjustments, exact overrides, hover,
+and preserved unknown movement keys through the same boundary. Later effects, readiness, action,
+rest, and Play phases should extend this pure projection instead of introducing page-specific rules
+engines.

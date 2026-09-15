@@ -4,6 +4,11 @@ import {
   ensureOriginLanguageBaseline,
 } from '@/lib/calculations/languageOrigin'
 import {
+  getEffectiveCharacterMovement,
+  getWalkingSpeed,
+  normalizeRaceMovement,
+} from '@/lib/calculations/movement'
+import {
   ensureOriginSystemInvariants,
   normalizeRaceSelectionForOriginSystem,
 } from '@/lib/calculations/originSystem'
@@ -166,6 +171,7 @@ export function applyRaceSelectionCommand(
   )
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureOriginSystemInvariants(provenanceUpdate, character.originSystem)
+  const movement = normalizeRaceMovement(normalized.race, normalized.subrace)
 
   return {
     characterPatch: {
@@ -175,6 +181,8 @@ export function applyRaceSelectionCommand(
       subraceSource: subrace?.source || undefined,
       raceAsiBlockIndex,
       raceAsiChoices: [],
+      movement,
+      speed: getWalkingSpeed(getEffectiveCharacterMovement({ ...character, movement })),
       spells: workingCharacter.spells,
       abilityScores: workingCharacter.abilityScores,
       ...buildRaceMaterializedPatch(
@@ -229,12 +237,15 @@ export function applySubraceSelectionCommand(
   }
   provenanceUpdate = ensureOriginLanguageBaseline(provenanceUpdate, character.originSystem)
   ensureOriginSystemInvariants(provenanceUpdate, character.originSystem)
+  const movement = normalizeRaceMovement(normalized.race, normalized.subrace)
 
   return {
     characterPatch: {
       subrace: subrace?.name,
       subraceSource: subrace?.source || undefined,
       raceAsiChoices: [],
+      movement,
+      speed: getWalkingSpeed(getEffectiveCharacterMovement({ ...character, movement })),
       spells: workingCharacter.spells,
       abilityScores: workingCharacter.abilityScores,
       ...buildRaceMaterializedPatch(

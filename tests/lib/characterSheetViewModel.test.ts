@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
+import { mapCharacterSheet2014 } from '@/lib/pdf/characterSheetMapping2014'
+import { mapCharacterSheet2024 } from '@/lib/pdf/characterSheetMapping2024'
 import { createCharacterSheetViewModel } from '@/lib/pdf/characterSheetViewModel'
 import type { Background5e, Class5e, Organization5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -99,5 +101,33 @@ describe('createCharacterSheetViewModel', () => {
 
     expect(preset.organizationImage).toBe('/assets/images/factions/harpers-5e.webp')
     expect(custom.organizationImage).toBe('data:image/png;base64,custom-image')
+  })
+
+  test('projects structured movement into both fixed PDF templates', () => {
+    const viewModel = createCharacterSheetViewModel(
+      makeCharacterFixture({
+        speed: 30,
+        movement: {
+          speeds: { walk: 25, swim: 30, fly: 40 },
+          hover: true,
+          source: { kind: 'race', name: 'River Dwarf', source: 'HB' },
+        },
+      }),
+      {},
+    )
+
+    const map2014 = mapCharacterSheet2014(viewModel)
+    const map2024 = mapCharacterSheet2024(viewModel)
+
+    expect(viewModel.movementSummary).toBe('walk 25 ft., swim 30 ft., fly 40 ft. (hover)')
+    expect(map2014.textFields.Speed).toBe('25 ft')
+    expect(map2014.textFields['Speed encumbered']).toBe('15 ft')
+    expect(map2014.textFields['Racial Traits']).toContain(
+      'Additional movement: swim 30 ft., fly 40 ft. (hover)',
+    )
+    expect(map2024.textFields.Text_17).toBe('25 ft')
+    expect(map2024.textFields.Text_59).toContain(
+      'Additional movement: swim 30 ft., fly 40 ft. (hover)',
+    )
   })
 })

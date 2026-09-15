@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { GameContent } from '@/components/editor/GameContent'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
+import { MovementModal } from '@/components/modals/MovementModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
@@ -37,6 +38,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
+import { formatEffectiveMovement } from '@/lib/calculations/movement'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
 import {
@@ -69,6 +71,7 @@ export function BuildRacePage() {
   const [detailCollapsed, setDetailCollapsed] = useState(false)
   const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [featModalOpen, setFeatModalOpen] = useState(false)
+  const [movementModalOpen, setMovementModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
   const [optionsPendingFeat, setOptionsPendingFeat] = useState<FeatOptionsTarget | null>(null)
   const selectedRaceRef = useRef<HTMLDivElement | null>(null)
@@ -453,7 +456,9 @@ export function BuildRacePage() {
                           {
                             icon: <Lightning className="size-4 text-primary" weight="fill" />,
                             label: 'Speed',
-                            value: getSpeedDisplay(displayRace),
+                            value: calculationContext
+                              ? formatEffectiveMovement(calculationContext.movement)
+                              : getSpeedDisplay(displayRace),
                           },
                           {
                             icon: <Eye className="size-4 text-primary" weight="fill" />,
@@ -480,6 +485,18 @@ export function BuildRacePage() {
                             </div>
                           </div>
                         ))}
+                      </div>
+
+                      <div className="flex justify-end px-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setMovementModalOpen(true)}
+                        >
+                          <Lightning />
+                          Manage movement
+                        </Button>
                       </div>
 
                       <div className="border-y border-border">
@@ -586,6 +603,8 @@ export function BuildRacePage() {
           onDismiss={() => setOptionsPendingFeat(null)}
         />
       )}
+
+      <MovementModal open={movementModalOpen} onOpenChange={setMovementModalOpen} />
     </WorkspacePage>
   )
 }

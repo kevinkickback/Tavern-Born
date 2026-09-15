@@ -9,6 +9,12 @@ import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScor
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
+import {
+  type EffectiveMovement,
+  formatEffectiveMovement,
+  getAdditionalMovementSummary,
+  getWalkingSpeed,
+} from '@/lib/calculations/movement'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
@@ -85,6 +91,10 @@ export interface CharacterSheetViewModel {
   savingThrowByAbility: ReadonlyMap<AbilityName, ModifierResult>
   effectiveArmorClass: number
   maxHP: number
+  movement: EffectiveMovement
+  movementSummary: string
+  additionalMovementSummary: string
+  walkingSpeed: number
   remainingHitDice: number
   hitDiceRows: CharacterSheetHitDieRow[]
   classResourceRows: CharacterSheetClassResourceRow[]
@@ -611,6 +621,10 @@ export function createCharacterSheetViewModel(
     savingThrowByAbility,
     effectiveArmorClass: computeEffectiveCharacterArmorClass(character, effectiveAbilityScores),
     maxHP: getEffectiveMaxHP(character, resolvedClasses, effectiveAbilityScores),
+    movement: calculationContext.movement,
+    movementSummary: formatEffectiveMovement(calculationContext.movement),
+    additionalMovementSummary: getAdditionalMovementSummary(calculationContext.movement),
+    walkingSpeed: getWalkingSpeed(calculationContext.movement),
     remainingHitDice: Math.max(0, level - Math.max(0, character.hitDiceUsed ?? 0)),
     hitDiceRows: buildHitDiceRows(character, rawLookups),
     classResourceRows: buildClassResourceRows(character, rawLookups, effectiveAbilityScores),

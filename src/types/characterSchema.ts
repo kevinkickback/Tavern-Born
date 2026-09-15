@@ -88,6 +88,30 @@ const armorClassAdjustmentSchema = z.object({
   createdAt: z.string(),
 })
 
+const movementModeSchema = z.enum(['walk', 'climb', 'swim', 'fly', 'burrow'])
+
+const characterMovementSchema = z.object({
+  speeds: z.record(movementModeSchema, z.number().int().nonnegative()),
+  hover: z.boolean().optional(),
+  other: z.record(z.union([z.number().int().nonnegative(), z.boolean()])).optional(),
+  unresolvedInheritedModes: z.array(movementModeSchema).optional(),
+  source: z.object({
+    kind: z.enum(['race', 'legacy', 'manual']),
+    name: z.string().min(1),
+    source: z.string().optional(),
+  }),
+})
+
+const movementAdjustmentSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  mode: z.string().min(1),
+  amount: z.number().int(),
+  sourceType: z.enum(['manual', 'item', 'feat', 'other']),
+  sourceRef: z.string().optional(),
+  createdAt: z.string(),
+})
+
 const featureSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -548,7 +572,11 @@ export const characterSchema = z
     armorClassOverride: z.number().int().min(0).optional(),
     armorClassAdjustments: z.array(armorClassAdjustmentSchema).optional(),
     initiative: z.number().int(),
-    speed: z.number().int(),
+    speed: z.number().int().nonnegative(),
+    movement: characterMovementSchema.optional(),
+    movementAdjustments: z.array(movementAdjustmentSchema).optional(),
+    movementOverrides: z.record(z.number().int().nonnegative()).optional(),
+    movementHoverOverride: z.boolean().optional(),
     damageResistances: z.array(z.string()).optional(),
     damageImmunities: z.array(z.string()).optional(),
     conditionImmunities: z.array(z.string()).optional(),

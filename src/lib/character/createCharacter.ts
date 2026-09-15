@@ -87,6 +87,12 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
     armorClassAdjustments: [],
     initiative: 0,
     speed: 30,
+    movement: {
+      speeds: { walk: 30 },
+      source: { kind: 'manual', name: 'Default walking speed' },
+    },
+    movementAdjustments: [],
+    movementOverrides: {},
     savingThrows: {
       strength: { proficient: false, bonus: 0 },
       dexterity: { proficient: false, bonus: 0 },

@@ -161,6 +161,25 @@ describe('migrateCharacter', () => {
     expect(result.maxHitPointsOverride).toBe(42)
   })
 
+  it('migrates legacy walking speed into a source-labeled movement profile', () => {
+    const result = migrateCharacter(
+      {
+        ...baseCharacter,
+        version: '6.0.0',
+        speed: 25,
+      },
+      6,
+    )
+
+    expect(result.movement).toEqual({
+      speeds: { walk: 25 },
+      source: { kind: 'legacy', name: 'Legacy walking speed' },
+    })
+    expect(result.movementAdjustments).toEqual([])
+    expect(result.movementOverrides).toEqual({})
+    expect(result.version).toBe('7.0.0')
+  })
+
   it('merges a parameterized fixed grant with an existing base feat key', () => {
     const result = migrateCharacter(
       {
@@ -254,5 +273,32 @@ describe('downgradeCharacter', () => {
     }
 
     expect(() => downgradeCharacter(character, 5)).toThrow(/maximum-HP value/i)
+  })
+
+  it('projects effective walking speed when downgrading structured movement', () => {
+    const character = {
+      ...migrateCharacter(
+        { id: 'movement-id', name: 'Movement Hero', version: '6.0.0', speed: 25 },
+        6,
+      ),
+      movementAdjustments: [
+        {
+          id: 'boots',
+          label: 'Boots',
+          mode: 'walk',
+          amount: 10,
+          sourceType: 'item' as const,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      ],
+      movementOverrides: { walk: 40 },
+    }
+
+    const downgraded = downgradeCharacter(character, 6) as Record<string, unknown>
+
+    expect(downgraded.speed).toBe(40)
+    expect(downgraded.movement).toBeUndefined()
+    expect(downgraded.movementAdjustments).toBeUndefined()
+    expect(downgraded.movementOverrides).toBeUndefined()
   })
 })

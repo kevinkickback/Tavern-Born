@@ -91,6 +91,10 @@ function titleCaseAbility(ability: string | undefined): string {
 
 export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): CharacterSheetFieldMap {
   const { character } = viewModel
+  const additionalMovement =
+    viewModel.additionalMovementSummary === '—'
+      ? ''
+      : `Additional movement: ${viewModel.additionalMovementSummary}`
   const armorLower = character.proficiencies.armor.map((armor) => armor.toLowerCase())
   const [classFeaturesLeft, classFeaturesRight] = splitIntoColumns(
     viewModel.classFeaturesSummary2014,
@@ -119,14 +123,14 @@ export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): Chara
     Text_13: String(viewModel.level),
     Text_14: formatViewModelModifier(viewModel.proficiencyBonus),
     Text_16: formatViewModelModifier(viewModel.abilityModifiers.dexterity),
-    Text_17: `${character.speed || 30} ft`,
+    Text_17: `${viewModel.walkingSpeed} ft`,
     Text_18: normalizeSize(viewModel.sizeSummary),
     Text_19: String(passivePerception),
     Text_55: character.proficiencies.weapons.join(', '),
     Text_56: character.proficiencies.tools.join(', '),
     Text_57: classFeaturesLeft,
     Text_58: classFeaturesRight,
-    Text_59: viewModel.racialTraitsSummary,
+    Text_59: [viewModel.racialTraitsSummary, additionalMovement].filter(Boolean).join('\n'),
     Text_60: viewModel.featsSummary,
     Text_85:
       primarySpellcasting?.spellcastingAbility != null

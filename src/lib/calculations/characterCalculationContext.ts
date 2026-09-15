@@ -19,6 +19,7 @@ import {
   type RaceAbilityData,
 } from './abilityScores'
 import { getAbilityModifier } from './gameRules'
+import { type EffectiveMovement, getEffectiveCharacterMovement } from './movement'
 import {
   normalizeBackgroundForOriginSystem,
   normalizeRaceSelectionForOriginSystem,
@@ -56,6 +57,7 @@ export interface CharacterCalculationContext {
   classes: readonly Class5e[]
   abilityScores: EffectiveAbilityScoreData
   equipment: CharacterEquipmentCalculationState
+  movement: EffectiveMovement
 }
 
 function getProvenanceRacialBonuses(
@@ -193,5 +195,6 @@ export function createCharacterCalculationContext(
       equipped: allEquipment.filter((item) => item.equipped),
       attuned: allEquipment.filter((item) => item.attuned),
     },
+    movement: getEffectiveCharacterMovement(character),
   }
 }

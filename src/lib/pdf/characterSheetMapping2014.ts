@@ -61,6 +61,10 @@ function normalizeSize(code: string | undefined): string {
 
 export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): CharacterSheetFieldMap {
   const { character } = viewModel
+  const additionalMovement =
+    viewModel.additionalMovementSummary === '—'
+      ? ''
+      : `Additional movement: ${viewModel.additionalMovementSummary}`
   const languages = character.proficiencies.languages
   const tools = character.proficiencies.tools
   const armorLower = character.proficiencies.armor.map((armor) => armor.toLowerCase())
@@ -91,7 +95,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
       10 + (viewModel.skillByName.get('perception')?.modifier ?? viewModel.abilityModifiers.wisdom),
     ),
     'Initiative bonus': formatViewModelModifier(viewModel.abilityModifiers.dexterity),
-    Speed: `${character.speed || 30} ft`,
+    Speed: `${viewModel.walkingSpeed} ft`,
     AC: String(viewModel.effectiveArmorClass),
     'HP Max': String(viewModel.maxHP),
     'HP Current': String(character.hitPoints.current),
@@ -117,7 +121,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     Flaw: character.details.flaws || '',
     Background_History: viewModel.historyAndPersonalitySummary,
     'Class Features': viewModel.classFeaturesSummary2014,
-    'Racial Traits': viewModel.racialTraitsSummary,
+    'Racial Traits': [viewModel.racialTraitsSummary, additionalMovement].filter(Boolean).join('\n'),
     'Background Feature': viewModel.backgroundFeature.name,
     'Background Feature Description': viewModel.backgroundFeature.description,
     'Background_Organisation.Left': usesCustomOrganization(viewModel)
@@ -153,7 +157,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'Weight Encumbered': String(strengthScore * 5),
     'Weight Heavily Encumbered': String(strengthScore * 10),
     'Weight Push/Drag/Lift': String(strengthScore * 30),
-    'Speed encumbered': `${Math.max(0, (character.speed || 30) - 10)} ft`,
+    'Speed encumbered': `${Math.max(0, viewModel.walkingSpeed - 10)} ft`,
     'Spell save DC 1':
       spellcastingOne?.spellSaveDC != null ? String(spellcastingOne.spellSaveDC) : '',
     'Spell save DC 2':

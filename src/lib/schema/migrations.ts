@@ -5,13 +5,14 @@
  * backwards compatibility and smooth upgrades.
  */
 
+import { getEffectiveCharacterMovement, getWalkingSpeed } from '@/lib/calculations/movement'
 import type { Character } from '@/types/character'
 
 /**
  * Current character schema version.
  * Increment when making breaking changes to the character format.
  */
-export const CURRENT_SCHEMA_VERSION = 6
+export const CURRENT_SCHEMA_VERSION = 7
 
 /**
  * Migration handler: transform character from version N to N+1.
@@ -403,6 +404,52 @@ registerMigration({
           }
         : {}),
       version: '5.0.0',
+    }
+  },
+})
+
+registerMigration({
+  fromVersion: 6,
+  toVersion: 7,
+  description: 'Add structured movement with adjustments and exact per-mode overrides.',
+  up: (character) => {
+    const c = character as Record<string, unknown>
+    const legacySpeed =
+      typeof c.speed === 'number' && Number.isFinite(c.speed) && c.speed >= 0
+        ? Math.trunc(c.speed)
+        : 30
+    const existingMovement =
+      c.movement && typeof c.movement === 'object'
+        ? c.movement
+        : {
+            speeds: { walk: legacySpeed },
+            source: { kind: 'legacy', name: 'Legacy walking speed' },
+          }
+
+    return {
+      ...c,
+      speed: legacySpeed,
+      movement: existingMovement,
+      movementAdjustments: Array.isArray(c.movementAdjustments) ? c.movementAdjustments : [],
+      movementOverrides:
+        c.movementOverrides && typeof c.movementOverrides === 'object' ? c.movementOverrides : {},
+      version: '7.0.0',
+    } as Character
+  },
+  down: (character) => {
+    const c = character as unknown as Record<string, unknown>
+    const effectiveMovement = getEffectiveCharacterMovement(character)
+    const {
+      movement: _movement,
+      movementAdjustments: _movementAdjustments,
+      movementHoverOverride: _movementHoverOverride,
+      movementOverrides: _movementOverrides,
+      ...rest
+    } = c
+    return {
+      ...rest,
+      speed: getWalkingSpeed(effectiveMovement),
+      version: '6.0.0',
     }
   },
 })

@@ -5,6 +5,7 @@ import {
   getRaceAbilityData,
   hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
+import { getEffectiveCharacterMovement, normalizeRaceMovement } from '@/lib/calculations/movement'
 import type { Race5e } from '@/types/5etools'
 
 type RaceTraitEntry = {
@@ -77,32 +78,34 @@ export function formatCapitalized(s: unknown): string {
 }
 
 export function getSpeedDisplay(race: Race5e | undefined): string {
-  if (!race?.speed) return '—'
-  if (typeof race.speed === 'number') return `${race.speed} ft.`
-  if (typeof race.speed === 'object') {
-    const walk = race.speed.walk ?? 30
-    const parts = [`${walk} ft.`]
+  if (!race) return '—'
+  const base = normalizeRaceMovement(race)
+  const movement = getEffectiveCharacterMovement({ speed: base.speeds.walk ?? 0, movement: base })
+  const parts: string[] = []
+  const walk = movement.speeds.walk
+  if (walk !== undefined) parts.push(`${walk} ft.`)
 
-    const movementModes: Array<{ label: string; value: number | boolean | undefined }> = [
-      { label: 'fly', value: race.speed.fly },
-      { label: 'swim', value: race.speed.swim },
-      { label: 'climb', value: race.speed.climb },
-      { label: 'burrow', value: race.speed.burrow },
-    ]
-
-    for (const mode of movementModes) {
-      if (mode.value === true) {
-        parts.push(`${mode.label} ${walk} ft.`)
-        continue
-      }
-      if (typeof mode.value === 'number' && mode.value > 0) {
-        parts.push(`${mode.label} ${mode.value} ft.`)
-      }
-    }
-
-    return parts.join(', ')
+  const displayedModes = new Set<string>(['walk'])
+  for (const mode of ['fly', 'swim', 'climb', 'burrow']) {
+    displayedModes.add(mode)
+    const value = movement.speeds[mode]
+    if (value === undefined) continue
+    parts.push(`${mode} ${value} ft.${mode === 'fly' && movement.hover ? ' (hover)' : ''}`)
   }
-  return '—'
+  for (const [mode, value] of Object.entries(movement.speeds).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    if (!displayedModes.has(mode)) parts.push(`${mode} ${value} ft.`)
+  }
+  for (const [mode, value] of Object.entries(movement.other).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    if (value === true) parts.push(`${mode} (special)`)
+  }
+  for (const mode of movement.unresolvedInheritedModes) {
+    parts.push(`${mode} (inherits an unresolved walking speed)`)
+  }
+  return parts.join(', ') || '—'
 }
 
 export function getDarkvisionDisplay(race: Race5e | undefined): string {

@@ -25,6 +25,8 @@ new tests land and do not lower them to merge a change.
 - Core calculations in src/lib/calculations/* (including spellUtils)
 - Character calculation-context coverage for source-qualified resolution, ruleset normalization,
   origin/ASI score composition, equipment state, and cross-surface effective-score agreement.
+- Structured movement coverage for race/subrace inheritance, alternate and unknown modes, hover,
+  legacy migration/downgrade, manual adjustments, exact overrides, and both PDF templates.
 - A focused source-ownership test prevents Builder, header-stat, prerequisite, spellcasting, and PDF
   consumers from bypassing the effective-score boundary.
 - Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts

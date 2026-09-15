@@ -47,12 +47,12 @@ describe('characterStore', () => {
   test('validateCharacterData rejects characters from a newer schema without stripping data', () => {
     const futureCharacter = {
       ...makeCharacterFixture(),
-      version: '7.0.0',
+      version: '8.0.0',
       campaignState: { renown: 4 },
     }
 
     expect(validateCharacterData(futureCharacter)).toContain(
-      'schema version 7 is newer than supported version 6',
+      'schema version 8 is newer than supported version 7',
     )
   })
 

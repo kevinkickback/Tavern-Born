@@ -30,7 +30,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 5. Domain logic
 - Purpose: pure calculations and game rules.
-- Key files: src/lib/characterUtils.ts, src/lib/character/ids.ts, src/lib/character/equipmentHelpers.ts, src/lib/calculations/characterCalculationContext.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/spellIdentity.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/featChoices.ts, src/lib/calculations/subclassEligibility.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
+- Key files: src/lib/characterUtils.ts, src/lib/character/ids.ts, src/lib/character/equipmentHelpers.ts, src/lib/calculations/characterCalculationContext.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/movement.ts, src/lib/calculations/spellIdentity.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/featChoices.ts, src/lib/calculations/subclassEligibility.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
 
 6. Provenance system
 - Purpose: track source of grants and reconcile when race/class/features change.
@@ -77,6 +77,9 @@ Current implementation notes:
 - Level-up HP choices are committed with class progression through `applyLevelUp`; the stored gain is the raw hit-die result so Constitution changes remain live.
 - HP reads resolve class/Constitution HP, per-level gain records, lasting adjustments, and an optional exact override in that order. Current and temporary HP remain mutable session values.
 - AC reads across UI and PDF surfaces resolve equipped armor and Dexterity, then lasting adjustments, then an optional exact override. The legacy `character.armorClass` field is not a display source.
+- Movement reads across Builder and PDF surfaces resolve the race/subrace-owned structured base,
+  then labeled per-mode adjustments, then exact overrides. `character.speed` is only a walking-speed
+  compatibility mirror for legacy import/export.
 - The header heart and shield open the HP and AC management modals. A one-time anchored hint advertises these controls from the first Builder page.
 - Portaled tooltips and recursive rules previews share the scale-aware native title-bar safe inset in `src/lib/overlayPosition.ts`; measured preview cards are repositioned after layout so they cannot sit beneath Electron window controls. Root previews keep only their Pin action, nested previews add direct-history navigation, and pinning freezes the selected entry at its current viewport position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and keyboard repositioning while History and Unpin remain independent controls.
 - Per-character Rules and Sources live in the Builder workspace's Options group. Rules are tabbed by Ruleset, Advancement, and Character Options; the selected ruleset itself remains fixed after creation.

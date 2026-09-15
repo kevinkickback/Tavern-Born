@@ -60,6 +60,31 @@ export interface ArmorClassAdjustment {
   createdAt: string
 }
 
+export type MovementMode = 'walk' | 'climb' | 'swim' | 'fly' | 'burrow'
+
+export interface CharacterMovement {
+  speeds: Partial<Record<MovementMode, number>>
+  hover?: boolean
+  /** Numeric or boolean movement keys not yet understood by Tavern-Born. */
+  other?: Record<string, number | boolean>
+  unresolvedInheritedModes?: MovementMode[]
+  source: {
+    kind: 'race' | 'legacy' | 'manual'
+    name: string
+    source?: string
+  }
+}
+
+export interface MovementAdjustment {
+  id: string
+  label: string
+  mode: string
+  amount: number
+  sourceType: AdjustmentSource
+  sourceRef?: string
+  createdAt: string
+}
+
 export interface Character {
   id: string
   version: string
@@ -109,7 +134,16 @@ export interface Character {
   /** Lasting bonuses or penalties applied to calculated AC. */
   armorClassAdjustments?: ArmorClassAdjustment[]
   initiative: number
+  /** Legacy walking-speed mirror retained for import/export compatibility. */
   speed: number
+  /** Canonical structured base movement, normally supplied by the selected race/species. */
+  movement?: CharacterMovement
+  /** Labeled additive changes applied to individual movement modes. */
+  movementAdjustments?: MovementAdjustment[]
+  /** Exact per-mode values applied after base movement and adjustments. */
+  movementOverrides?: Record<string, number>
+  /** Exact hover override applied after the base movement profile. */
+  movementHoverOverride?: boolean
 
   /** Damage resistances granted by race or other sources. */
   damageResistances?: string[]

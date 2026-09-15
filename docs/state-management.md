@@ -180,9 +180,10 @@ Origin system note:
 
 **File:** `src/lib/schema/migrations.ts`
 
-The current schema version is 6. Version 5 introduced durable per-level hit-point gain records;
+The current schema version is 7. Version 5 introduced durable per-level hit-point gain records;
 version 6 moved legacy stored maximum HP into the explicit override model and initialized lasting
-HP/AC adjustment collections.
+HP/AC adjustment collections; version 7 migrates numeric walking speed into structured movement
+with labeled adjustments and exact per-mode overrides.
 
 The migration system allows character data to be evolved safely across app versions while maintaining backwards compatibility.
 

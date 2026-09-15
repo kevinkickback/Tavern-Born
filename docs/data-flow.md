@@ -264,7 +264,7 @@ Flow:
 
 Current implementation note:
 - `downgradeCharacter()` is intentionally infrastructure-only today (rollback/export support) and has no runtime callers in the app flow.
-- `CURRENT_SCHEMA_VERSION` is 6. v5 adds durable per-level hit-point gain records; v6 migrates legacy maximum HP into the explicit override model and initializes lasting HP/AC adjustment collections.
+- `CURRENT_SCHEMA_VERSION` is 7. v5 adds durable per-level hit-point gain records; v6 migrates legacy maximum HP into the explicit override model and initializes lasting HP/AC adjustment collections; v7 migrates numeric walking speed into structured, source-labeled movement.
 
 Versioning strategy:
 - Schema version is incremented only on **breaking changes** (added required fields, removed fields, restructured data).
