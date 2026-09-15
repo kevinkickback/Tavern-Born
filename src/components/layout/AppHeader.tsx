@@ -22,7 +22,7 @@ import {
   TrendUp,
   Users,
 } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArmorClassModal } from '@/components/modals/ArmorClassModal'
@@ -42,6 +42,12 @@ import { useCharacterStore } from '@/store/characterStore'
 const STAT_MENUS_HINT_ID = 'header-stat-management-menus'
 const STAT_MENUS_HINT_SELECTOR = '[data-character-stat-menus]'
 const STAT_MENUS_HINT_WIDTH = 340
+
+const ManualActionsModal = lazy(() =>
+  import('@/components/modals/ManualActionsModal').then((module) => ({
+    default: module.ManualActionsModal,
+  })),
+)
 
 const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
   ['/build/ability-scores', 'Ability Scores', Barbell],
@@ -78,6 +84,7 @@ export function AppHeader() {
   const [armorClassOpen, setArmorClassOpen] = useState(false)
   const [hitPointsOpen, setHitPointsOpen] = useState(false)
   const [manualEffectsOpen, setManualEffectsOpen] = useState(false)
+  const [manualActionsOpen, setManualActionsOpen] = useState(false)
   const [showStatMenusHint, setShowStatMenusHint] = useState(
     () => !isHintDismissed(STAT_MENUS_HINT_ID),
   )
@@ -271,6 +278,23 @@ export function AppHeader() {
             <TooltipContent>Manual effects and overrides</TooltipContent>
           </Tooltip>
 
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3"
+                aria-label="Manage manual actions"
+                disabled={!activeCharacter}
+                onClick={() => setManualActionsOpen(true)}
+              >
+                <Sword />
+                <span className="hidden 2xl:inline">Actions</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Manual actions</TooltipContent>
+          </Tooltip>
+
           {showLevelUp && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -323,6 +347,11 @@ export function AppHeader() {
       <ArmorClassModal open={armorClassOpen} onOpenChange={setArmorClassOpen} />
       <HitPointsModal open={hitPointsOpen} onOpenChange={setHitPointsOpen} />
       <ManualEffectsModal open={manualEffectsOpen} onOpenChange={setManualEffectsOpen} />
+      {manualActionsOpen && (
+        <Suspense fallback={null}>
+          <ManualActionsModal open={manualActionsOpen} onOpenChange={setManualActionsOpen} />
+        </Suspense>
+      )}
     </TooltipProvider>
   )
 }

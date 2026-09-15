@@ -180,7 +180,8 @@ describe('migrateCharacter', () => {
     expect(result.manualEffects).toEqual([])
     expect(result.suppressedEffectIds).toEqual([])
     expect(result.effectFlags).toEqual({})
-    expect(result.version).toBe('8.0.0')
+    expect(result.manualActions).toEqual([])
+    expect(result.version).toBe('9.0.0')
   })
 
   it('preserves existing typed effect state when migrating from version 7', () => {
@@ -207,7 +208,26 @@ describe('migrateCharacter', () => {
     expect(result.manualEffects).toEqual(manualEffects)
     expect(result.suppressedEffectIds).toEqual(['source-effect'])
     expect(result.effectFlags).toEqual({ situational: true })
-    expect(result.version).toBe('8.0.0')
+    expect(result.manualActions).toEqual([])
+    expect(result.version).toBe('9.0.0')
+  })
+
+  it('preserves existing manual actions when migrating from version 8', () => {
+    const manualActions = [
+      {
+        id: 'manual-action',
+        name: 'Test action',
+        kind: 'action',
+        description: 'Test rules.',
+        source: { kind: 'manual', name: 'Test action' },
+        active: true,
+      },
+    ]
+    const result = migrateCharacter({ ...baseCharacter, version: '8.0.0', manualActions }, 8)
+
+    expect(result.manualActions).toEqual(manualActions)
+    expect(result.version).toBe('9.0.0')
+    expect((downgradeCharacter(result, 8) as Record<string, unknown>).manualActions).toBeUndefined()
   })
 
   it('does not invent a rules value when legacy walking speed is missing', () => {

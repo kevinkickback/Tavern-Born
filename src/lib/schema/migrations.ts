@@ -12,7 +12,7 @@ import type { Character } from '@/types/character'
  * Current character schema version.
  * Increment when making breaking changes to the character format.
  */
-export const CURRENT_SCHEMA_VERSION = 8
+export const CURRENT_SCHEMA_VERSION = 9
 
 /**
  * Migration handler: transform character from version N to N+1.
@@ -209,6 +209,25 @@ registerMigration({
       ...rest
     } = c
     return { ...rest, version: '7.0.0' }
+  },
+})
+
+registerMigration({
+  fromVersion: 8,
+  toVersion: 9,
+  description: 'Add persisted user-authored structured actions.',
+  up: (character) => {
+    const c = character as Record<string, unknown>
+    return {
+      ...c,
+      manualActions: Array.isArray(c.manualActions) ? c.manualActions : [],
+      version: '9.0.0',
+    } as Character
+  },
+  down: (character) => {
+    const c = character as unknown as Record<string, unknown>
+    const { manualActions: _manualActions, ...rest } = c
+    return { ...rest, version: '8.0.0' }
   },
 })
 

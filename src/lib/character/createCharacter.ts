@@ -108,6 +108,7 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
     manualEffects: [],
     suppressedEffectIds: [],
     effectFlags: {},
+    manualActions: [],
     createdAt: now,
     lastModified: now,
     provenance: emptyProvenance(),

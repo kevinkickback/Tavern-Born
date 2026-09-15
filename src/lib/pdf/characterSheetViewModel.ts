@@ -11,6 +11,7 @@ import {
   deriveRulesTextActions,
   deriveSpellActions,
   deriveWeaponActions,
+  mergeCharacterActions,
 } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
@@ -552,18 +553,21 @@ export function createCharacterSheetViewModel(
       classData,
     ]),
   )
-  const actions = [
-    ...deriveWeaponActions(character, {
-      abilityModifiers,
-      proficiencyBonus,
-      itemLookup: rawLookups.itemLookup,
-      propertyLookup: rawLookups.itemPropertyByAbbr,
-      effects: calculationContext.effects.declarations,
-      effectContext: calculationContext.effects.resolutionContext,
-    }),
-    ...deriveSpellActions(character, rawLookups.spellsByKey ?? {}),
-    ...deriveRulesTextActions(character, raceResolution.mergedRace),
-  ]
+  const actions = mergeCharacterActions(
+    [
+      ...deriveWeaponActions(character, {
+        abilityModifiers,
+        proficiencyBonus,
+        itemLookup: rawLookups.itemLookup,
+        propertyLookup: rawLookups.itemPropertyByAbbr,
+        effects: calculationContext.effects.declarations,
+        effectContext: calculationContext.effects.resolutionContext,
+      }),
+      ...deriveSpellActions(character, rawLookups.spellsByKey ?? {}),
+      ...deriveRulesTextActions(character, raceResolution.mergedRace),
+    ],
+    character.manualActions,
+  )
 
   return {
     character,

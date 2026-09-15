@@ -154,4 +154,29 @@ describe('characterPersistenceSchema', () => {
 
     expect(characterPersistenceSchema.safeParse(character).success).toBe(false)
   })
+
+  test('round-trips manual structured actions and rejects source-derived snapshots', () => {
+    const action = {
+      id: 'manual-action',
+      name: 'Test action',
+      kind: 'bonus-action' as const,
+      description: 'Test description.',
+      source: { kind: 'manual' as const, name: 'Test action' },
+      active: true,
+      attackBonus: 3,
+      range: 'Test range',
+      damage: [{ dice: '1d6', bonus: 1, damageType: 'test damage' }],
+      resourceCost: { resourceId: 'test-resource', amount: 1 },
+      recharge: { rest: 'long' as const, note: 'Test recharge.' },
+    }
+    const character = makeCharacterFixture({ manualActions: [action] })
+
+    expect(characterPersistenceSchema.parse(character).manualActions).toEqual([action])
+    expect(
+      characterPersistenceSchema.safeParse({
+        ...character,
+        manualActions: [{ ...action, source: { kind: 'class', name: 'Test source' } }],
+      }).success,
+    ).toBe(false)
+  })
 })

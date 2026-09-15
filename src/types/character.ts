@@ -1,5 +1,6 @@
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type { FeatOptionSelections } from '@/types/feat'
+import type { CharacterAction } from './actions'
 import type { CharacterEffect } from './effects'
 
 export type { FeatOptionSelections } from '@/types/feat'
@@ -253,6 +254,8 @@ export interface Character {
   suppressedEffectIds?: string[]
   /** Explicit boolean switches used by typed effect activation requirements. */
   effectFlags?: Record<string, boolean>
+  /** User-authored actions; source-derived actions are projected from game data at runtime. */
+  manualActions?: CharacterAction[]
 
   createdAt: string
   lastModified: string

@@ -271,6 +271,55 @@ const characterEffectSchema = z.union([
   }),
 ])
 
+const manualActionSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  kind: z.enum(['action', 'bonus-action', 'reaction', 'passive', 'special', 'attack']),
+  description: z.string(),
+  source: z.object({
+    kind: z.literal('manual'),
+    name: z.string().min(1),
+    source: z.string().optional(),
+    entityId: z.string().optional(),
+  }),
+  active: z.boolean(),
+  inactiveReason: z.string().optional(),
+  ability: z
+    .enum(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'])
+    .optional(),
+  proficient: z.boolean().optional(),
+  attackBonus: z.number().int().optional(),
+  save: z
+    .object({
+      ability: z
+        .enum(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'])
+        .optional(),
+      dc: z.number().int().nonnegative(),
+    })
+    .optional(),
+  range: z.string().optional(),
+  damage: z
+    .array(
+      z.object({
+        dice: z.string().min(1).optional(),
+        bonus: z.number().int(),
+        damageType: z.string().min(1).optional(),
+      }),
+    )
+    .optional(),
+  properties: z.array(z.string()).optional(),
+  mastery: z.array(z.object({ name: z.string().min(1), source: z.string().optional() })).optional(),
+  resourceCost: z
+    .object({ resourceId: z.string().min(1), amount: z.number().int().positive() })
+    .optional(),
+  recharge: z
+    .object({
+      rest: z.enum(['short', 'long']).optional(),
+      note: z.string().min(1).optional(),
+    })
+    .optional(),
+})
+
 const characterClassChoiceSelectionSchema = z.object({
   choiceId: z.string().min(1),
   label: z.string().min(1),
@@ -782,6 +831,7 @@ export const characterSchema = z
     manualEffects: z.array(characterEffectSchema).optional(),
     suppressedEffectIds: z.array(z.string().min(1)).optional(),
     effectFlags: z.record(z.boolean()).optional(),
+    manualActions: z.array(manualActionSchema).optional(),
     createdAt: z.string(),
     lastModified: z.string(),
   })

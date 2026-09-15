@@ -130,6 +130,16 @@ export function deriveRulesTextActions(
   return [...featureActions, ...featActions, ...raceActions]
 }
 
+/** Merges runtime projections with persisted manual actions by stable ID. */
+export function mergeCharacterActions(
+  sourceActions: readonly CharacterAction[],
+  manualActions: readonly CharacterAction[] = [],
+): CharacterAction[] {
+  const byId = new Map<string, CharacterAction>()
+  for (const action of [...sourceActions, ...manualActions]) byId.set(action.id, action)
+  return [...byId.values()]
+}
+
 /** Derives weapon attacks from structured equipment and effect data without UI/PDF assumptions. */
 export function deriveWeaponActions(
   character: Character,
