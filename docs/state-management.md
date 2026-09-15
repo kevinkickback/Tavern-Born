@@ -137,7 +137,10 @@ edit.
   so level-down and class removal retract only unavailable slots without requiring game data during
   the state transition. The class-page choice controller resolves each descriptor against the
   character-filtered catalogs, retains saved options that are temporarily filtered out, and writes
-  through `applyClassChoiceSelectionCommand` plus `updateCharacter`.
+  through `useClassProvenanceMutations`. Class-feature and optional-feature options are also
+  materialized in `character.features` with choice-ID provenance; replacement, level-down, and
+  class removal rebuild those grants atomically. Feat and item options remain persisted selections
+  until their dedicated domain handlers can apply setup and effects without guessing semantics.
 
 ## Spell State Model
 

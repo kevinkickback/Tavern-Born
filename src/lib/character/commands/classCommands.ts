@@ -39,7 +39,10 @@ import type {
   HitPointGainMethod,
   Skills,
 } from '@/types/character'
-import { reconcileClassChoiceSelections } from './classChoiceCommands'
+import {
+  reconcileClassChoiceSelectionGrants,
+  reconcileClassChoiceSelections,
+} from './classChoiceCommands'
 import type { CharacterCommandResult } from './commandResult'
 
 function normalizeSavingThrowName(name: string): string {
@@ -452,6 +455,17 @@ export function applyClassProgressionUpdate(
             characterLevel: newTotalLevel - gains.length + index + 1,
           }))
       : retainedHitPointGains
+  const classChoiceSelections = reconcileClassChoiceSelections(
+    character.classChoiceSelections,
+    nextProgression,
+  )
+  const classChoiceGrants = reconcileClassChoiceSelectionGrants(
+    character,
+    provenanceUpdate,
+    classChoiceSelections,
+  )
+  provenanceUpdate = classChoiceGrants.provenanceUpdate
+
   const characterPatch: Partial<Character> = {
     classProgression: nextProgression,
     level: newTotalLevel,
@@ -459,10 +473,8 @@ export function applyClassProgressionUpdate(
     classSource: nextProgression[0]?.source ?? character.classSource,
     hitPointGains,
     classFeatChoices: retainedClassFeatChoices,
-    classChoiceSelections: reconcileClassChoiceSelections(
-      character.classChoiceSelections,
-      nextProgression,
-    ),
+    classChoiceSelections,
+    features: classChoiceGrants.features,
     spells: workingCharacter.spells,
     proficiencies: workingCharacter.proficiencies,
     skills: workingCharacter.skills,

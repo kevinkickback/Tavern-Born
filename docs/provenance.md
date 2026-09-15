@@ -135,6 +135,16 @@ Optional-feature behavior:
 - Class optional-feature replacement is a batch command. It removes only scoped prior choice tags,
   preserves unrelated features/grants, accumulates every selected feature, and applies one patch.
 
+Normalized class-choice behavior:
+- `applyClassChoiceSelectionWithGrantsCommand` persists the source-qualified selection and rebuilds
+  feature-shaped grants in the same command result. Each tag is owned by the exact class printing
+  and carries the normalized choice ID as `grantVariant`, so replacement and progression changes
+  retract only that choice's grants.
+- Class-feature and optional-feature selections can be materialized without interpreting prose.
+  Feat selections require the feat-options workflow, and item selections may describe mastery or
+  another relationship rather than inventory; those kinds stay persisted until their domain
+  handlers can apply them explicitly.
+
 Race trait application behavior:
 - `applyRaceSelection(race, subrace)` and `applySubraceChange(race, subrace)` apply and reconcile `darkvision`, `resist`, `immune`, and `conditionImmune`.
 - Applied race traits are persisted on the character as `visions`, `damageResistances`, `damageImmunities`, and `conditionImmunities`.

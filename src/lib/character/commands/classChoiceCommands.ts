@@ -3,12 +3,20 @@ import {
   type NormalizedCharacterChoice,
   type NormalizedChoiceOptionReference,
 } from '@/lib/5etools/classChoiceNormalization'
+import { addGrant } from '@/lib/provenance/ledger'
+import { normalizeKey } from '@/lib/provenance/normalization'
+import { makeSourceTag } from '@/lib/provenance/sourceLabels'
+import type { ProvenanceLedger } from '@/lib/provenance/types'
 import type {
   Character,
   CharacterClassChoiceOption,
   CharacterClassChoiceSelection,
   CharacterClassEntry,
+  Feature,
 } from '@/types/character'
+import type { CharacterCommandResult } from './commandResult'
+
+const CLASS_CHOICE_FEATURE_ID_PREFIX = 'class-choice:'
 
 function optionKey(option: NormalizedChoiceOptionReference): string {
   return `${option.entityType}|${option.name.trim().toLowerCase()}|${option.source?.trim().toLowerCase() ?? ''}`
@@ -85,6 +93,121 @@ export function applyClassChoiceSelectionCommand(
   )
   return {
     classChoiceSelections: selection.selected.length > 0 ? [...retained, selection] : retained,
+  }
+}
+
+function isFeatureOption(
+  option: CharacterClassChoiceOption,
+): option is CharacterClassChoiceOption & {
+  entityType: 'classFeature' | 'optionalFeature'
+} {
+  return option.entityType === 'classFeature' || option.entityType === 'optionalFeature'
+}
+
+function featureIdentity(option: Pick<CharacterClassChoiceOption, 'name' | 'source'>): string {
+  return `${normalizeKey(option.name)}|${normalizeKey(option.source ?? '')}`
+}
+
+function generatedFeatureId(
+  selection: CharacterClassChoiceSelection,
+  option: CharacterClassChoiceOption,
+): string {
+  return `${CLASS_CHOICE_FEATURE_ID_PREFIX}${encodeURIComponent(selection.choiceId)}:${encodeURIComponent(featureIdentity(option))}`
+}
+
+function rebuildClassChoiceFeatures(
+  existing: readonly Feature[],
+  selections: readonly CharacterClassChoiceSelection[],
+): Feature[] {
+  const retained = existing.filter(
+    (feature) => !feature.id.startsWith(CLASS_CHOICE_FEATURE_ID_PREFIX),
+  )
+  const existingIdentities = new Set(retained.map(featureIdentity))
+
+  for (const selection of selections) {
+    for (const option of selection.selected) {
+      if (!isFeatureOption(option)) continue
+      const identity = featureIdentity(option)
+      if (existingIdentities.has(identity)) continue
+      retained.push({
+        id: generatedFeatureId(selection, option),
+        name: option.name,
+        source: option.source ?? '',
+        description: '',
+        level: option.slotLevel,
+      })
+      existingIdentities.add(identity)
+    }
+  }
+
+  return retained
+}
+
+/**
+ * Rebuilds grants owned by normalized class choices from their persisted selections.
+ *
+ * Feature-shaped options can be materialized without interpreting rules prose. Feat and item
+ * options remain source-qualified selections until their dedicated domain handlers can apply
+ * follow-up feat configuration or structured item effects safely.
+ */
+export function reconcileClassChoiceSelectionGrants(
+  character: Pick<Character, 'classChoiceSelections' | 'features'>,
+  ledger: ProvenanceLedger,
+  selections: readonly CharacterClassChoiceSelection[],
+): Pick<CharacterCommandResult, 'provenanceUpdate'> & { features: Feature[] } {
+  const ownedChoiceIds = new Set([
+    ...(character.classChoiceSelections ?? []).map((selection) => selection.choiceId),
+    ...selections.map((selection) => selection.choiceId),
+  ])
+  const features = Object.fromEntries(
+    Object.entries(ledger.features).flatMap(([key, tags]) => {
+      const retained = tags.filter(
+        (tag) =>
+          !(
+            tag.sourceType === 'class' &&
+            tag.grantVariant !== undefined &&
+            ownedChoiceIds.has(tag.grantVariant)
+          ),
+      )
+      return retained.length > 0 ? [[key, retained]] : []
+    }),
+  )
+  let provenanceUpdate: ProvenanceLedger = { ...ledger, features }
+
+  for (const selection of selections) {
+    const tag = {
+      ...makeSourceTag('class', selection.className, 'choice', selection.classSource),
+      grantVariant: selection.choiceId,
+    }
+    for (const option of selection.selected) {
+      if (!isFeatureOption(option)) continue
+      provenanceUpdate = addGrant(provenanceUpdate, 'features', option.name, tag)
+    }
+  }
+
+  return {
+    features: rebuildClassChoiceFeatures(character.features, selections),
+    provenanceUpdate,
+  }
+}
+
+/** Persists a normalized class choice and atomically reconciles its safe mechanical grants. */
+export function applyClassChoiceSelectionWithGrantsCommand(
+  character: Character,
+  ledger: ProvenanceLedger,
+  choice: NormalizedCharacterChoice,
+  selected: readonly NormalizedChoiceOptionReference[],
+): CharacterCommandResult {
+  const selectionPatch = applyClassChoiceSelectionCommand(character, choice, selected)
+  const classChoiceSelections = selectionPatch.classChoiceSelections ?? []
+  const grants = reconcileClassChoiceSelectionGrants(character, ledger, classChoiceSelections)
+
+  return {
+    characterPatch: {
+      classChoiceSelections,
+      features: grants.features,
+    },
+    provenanceUpdate: grants.provenanceUpdate,
   }
 }
 

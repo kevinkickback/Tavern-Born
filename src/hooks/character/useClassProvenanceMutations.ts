@@ -1,5 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { useItemLookup } from '@/hooks/data/useGameData'
+import type {
+  NormalizedCharacterChoice,
+  NormalizedChoiceOptionReference,
+} from '@/lib/5etools/classChoiceNormalization'
+import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import {
   applyClassEquipmentChoiceCommand,
   applyClassSelectionCommand,
@@ -76,5 +81,17 @@ export function useClassProvenanceMutations() {
     [character, ledger, itemLookup, updateCharacter],
   )
 
-  return { applyClassSelection, applyClassEquipmentChoice }
+  const applyClassChoiceSelection = useCallback(
+    (choice: NormalizedCharacterChoice, selected: readonly NormalizedChoiceOptionReference[]) => {
+      if (!character) return
+      const result = applyClassChoiceSelectionWithGrantsCommand(character, ledger, choice, selected)
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    },
+    [character, ledger, updateCharacter],
+  )
+
+  return { applyClassSelection, applyClassEquipmentChoice, applyClassChoiceSelection }
 }

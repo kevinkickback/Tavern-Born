@@ -214,5 +214,18 @@ describe('class page controllers', () => {
       classSource: 'PHB',
       selected: [{ name: 'Practical Study', source: 'PHB', slotLevel: 1 }],
     })
+    expect(useCharacterStore.getState().activeCharacter?.features).toEqual([
+      expect.objectContaining({ name: 'Practical Study', source: 'PHB', level: 1 }),
+    ])
+    expect(
+      useCharacterStore.getState().activeCharacter?.provenance?.features['practical study'],
+    ).toEqual([
+      expect.objectContaining({
+        sourceType: 'class',
+        sourceName: 'Wizard',
+        sourceRef: 'PHB',
+        grantVariant: normalizedChoice.id,
+      }),
+    ])
   })
 })

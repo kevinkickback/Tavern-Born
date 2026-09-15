@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useItemTypeLookup } from '@/hooks/data/useGameData'
 import {
   getRequiredChoiceSelectionCount,
@@ -11,8 +12,6 @@ import {
   getStandaloneClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
-import { applyClassChoiceSelectionCommand } from '@/lib/character/commands/classChoiceCommands'
-import { useCharacterStore } from '@/store/characterStore'
 import type { Class5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 
@@ -29,7 +28,7 @@ export function useClassChoiceController({
   viewingClassLevel,
   catalogs,
 }: ClassChoiceControllerParams) {
-  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+  const { applyClassChoiceSelection } = useClassProvenanceMutations()
   const itemTypeByAbbr = useItemTypeLookup()
   const [activeChoice, setActiveChoice] = useState<NormalizedCharacterChoice | null>(null)
   const choices = useMemo(
@@ -86,13 +85,9 @@ export function useClassChoiceController({
 
   const confirm = (selected: ClassChoiceOptionView[]) => {
     if (!character || !activeChoice) return
-    updateCharacter(
-      character.id,
-      applyClassChoiceSelectionCommand(
-        character,
-        activeChoice,
-        selected.map((option) => option.reference),
-      ),
+    applyClassChoiceSelection(
+      activeChoice,
+      selected.map((option) => option.reference),
     )
     setActiveChoice(null)
   }

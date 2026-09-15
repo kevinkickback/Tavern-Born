@@ -2,8 +2,11 @@ import { describe, expect, test } from 'vitest'
 import type { NormalizedCharacterChoice } from '@/lib/5etools/classChoiceNormalization'
 import {
   applyClassChoiceSelectionCommand,
+  applyClassChoiceSelectionWithGrantsCommand,
   reconcileClassChoiceSelections,
 } from '@/lib/character/commands/classChoiceCommands'
+import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
+import { emptyProvenance } from '@/lib/character/createCharacter'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 function choice(overrides: Partial<NormalizedCharacterChoice> = {}): NormalizedCharacterChoice {
@@ -101,6 +104,104 @@ describe('class choice commands', () => {
     ).toThrow(/not available/i)
   })
 
+  test('materializes feature selections with exact class-choice ownership', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Test Class', source: 'TEST', levels: 1 }],
+      features: [],
+    })
+    const trainingPath = choice({
+      id: 'class:test-class|test|choice:training-path|1',
+      label: 'Training Path',
+      kind: 'class-feature',
+      owner: { type: 'class', name: 'Test Class', source: 'TEST' },
+      level: 1,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: Array(20).fill(1),
+      options: [
+        { entityType: 'classFeature', name: 'Guard Training', source: 'TEST' },
+        { entityType: 'classFeature', name: 'Scholar Training', source: 'TEST' },
+      ],
+      optionFilter: undefined,
+    })
+
+    const first = applyClassChoiceSelectionWithGrantsCommand(
+      character,
+      emptyProvenance(),
+      trainingPath,
+      [{ entityType: 'classFeature', name: 'Guard Training', source: 'TEST' }],
+    )
+    expect(first.characterPatch.features).toEqual([
+      expect.objectContaining({ name: 'Guard Training', source: 'TEST', level: 1 }),
+    ])
+    expect(first.provenanceUpdate.features['guard training']).toEqual([
+      expect.objectContaining({
+        sourceType: 'class',
+        sourceName: 'Test Class',
+        sourceRef: 'TEST',
+        grantType: 'choice',
+        grantVariant: trainingPath.id,
+      }),
+    ])
+
+    const appliedCharacter = makeCharacterFixture({
+      ...character,
+      ...first.characterPatch,
+      provenance: first.provenanceUpdate,
+    })
+    const replacement = applyClassChoiceSelectionWithGrantsCommand(
+      appliedCharacter,
+      first.provenanceUpdate,
+      trainingPath,
+      [{ entityType: 'classFeature', name: 'Scholar Training', source: 'TEST' }],
+    )
+    expect(replacement.characterPatch.features?.map((feature) => feature.name)).toEqual([
+      'Scholar Training',
+    ])
+    expect(replacement.provenanceUpdate.features['guard training']).toBeUndefined()
+    expect(replacement.provenanceUpdate.features['scholar training']).toHaveLength(1)
+  })
+
+  test('keeps item and feat choices source-qualified without inventing domain effects', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'XPHB', levels: 1 }],
+      features: [],
+      feats: [],
+      equipment: [],
+    })
+    const itemChoice = choice({
+      id: 'class:fighter|xphb|choice:mastery|1',
+      label: 'Mastery',
+      kind: 'item',
+      owner: { type: 'class', name: 'Fighter', source: 'XPHB' },
+      level: 1,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: Array(20).fill(1),
+      options: [{ entityType: 'item', name: 'Training Weapon', source: 'TEST' }],
+      optionFilter: undefined,
+    })
+
+    const result = applyClassChoiceSelectionWithGrantsCommand(
+      character,
+      emptyProvenance(),
+      itemChoice,
+      itemChoice.options,
+    )
+
+    expect(result.characterPatch.classChoiceSelections?.[0]?.selected).toEqual([
+      expect.objectContaining({
+        entityType: 'item',
+        name: 'Training Weapon',
+        source: 'TEST',
+      }),
+    ])
+    expect(result.characterPatch.features).toEqual([])
+    expect(result.characterPatch.equipment).toBeUndefined()
+    expect(result.provenanceUpdate.features).toEqual({})
+    expect(result.provenanceUpdate.equipment).toEqual({})
+  })
+
   test('level-down and class removal retract only slots no longer owned', () => {
     const selections = applyClassChoiceSelectionCommand(
       makeCharacterFixture({
@@ -126,5 +227,46 @@ describe('class choice commands', () => {
     expect(
       reconcileClassChoiceSelections(reduced, [{ name: 'Fighter', source: 'PHB', levels: 1 }]),
     ).toEqual([])
+  })
+
+  test('level-down reconciliation retracts generated features and their exact tags', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Test Class', source: 'TEST', levels: 10 }],
+      features: [],
+    })
+    const trainingOptions = choice({
+      id: 'class:test-class|test|choice:training-options|2',
+      label: 'Training Options',
+      owner: { type: 'class', name: 'Test Class', source: 'TEST' },
+    })
+    const applied = applyClassChoiceSelectionWithGrantsCommand(
+      character,
+      emptyProvenance(),
+      trainingOptions,
+      [
+        { entityType: 'optionalFeature', name: 'Option A', source: 'TEST' },
+        { entityType: 'optionalFeature', name: 'Option B', source: 'TEST' },
+        { entityType: 'optionalFeature', name: 'Option C', source: 'TEST' },
+        { entityType: 'optionalFeature', name: 'Option D', source: 'TEST' },
+      ],
+    )
+    const appliedCharacter = makeCharacterFixture({
+      ...character,
+      ...applied.characterPatch,
+      provenance: applied.provenanceUpdate,
+    })
+    const reconciled = applyClassProgressionUpdate(appliedCharacter, applied.provenanceUpdate, [
+      { name: 'Test Class', source: 'TEST', levels: 2 },
+    ])
+
+    expect(reconciled.characterPatch.features?.map((feature) => feature.name)).toEqual([
+      'Option A',
+      'Option B',
+    ])
+    expect(reconciled.characterPatch.classChoiceSelections?.[0]?.selected).toHaveLength(2)
+    expect(Object.keys(reconciled.provenanceUpdate.features).sort()).toEqual([
+      'option a',
+      'option b',
+    ])
   })
 })
