@@ -1,6 +1,11 @@
 import { useMemo } from 'react'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
-import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
+import {
+  buildBackgroundLookup,
+  buildClassLookup,
+  buildFeatLookup,
+  buildRaceLookup,
+} from '@/lib/5etools/lookups'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import {
   type CharacterCalculationContext,
@@ -15,6 +20,7 @@ export function useCharacterCalculationContext(
   const {
     backgrounds = [],
     classes = [],
+    feats = [],
     items = [],
     itemsBase = [],
     races = [],
@@ -25,15 +31,17 @@ export function useCharacterCalculationContext(
     () => ({
       backgroundsByKey: buildBackgroundLookup(backgrounds),
       classesByKey: buildClassLookup(classes),
+      featsByKey: buildFeatLookup(feats),
       itemLookup: buildItemLookup([...items, ...itemsBase]),
       racesByKey: buildRaceLookup(races),
     }),
-    [backgrounds, classes, items, itemsBase, races],
+    [backgrounds, classes, feats, items, itemsBase, races],
   )
   const rawLookups = useMemo(
     () => ({
       backgroundsByKey: rawLookupSet?.backgroundsByKey ?? {},
       classesByKey: rawLookupSet?.classesByKey ?? {},
+      featsByKey: rawLookupSet?.featsByKey ?? {},
       itemLookup: rawLookupSet?.itemLookup,
       racesByKey: rawLookupSet?.racesByKey ?? {},
     }),

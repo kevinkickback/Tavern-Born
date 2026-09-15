@@ -97,6 +97,11 @@ Current implementation notes:
 - Movement reads across Builder and PDF surfaces resolve the race/subrace-owned structured base,
   then labeled per-mode adjustments, then exact overrides. `character.speed` is only a walking-speed
   compatibility mirror for legacy import/export.
+- Lasting feat resistances and immunities resolve from the selected feat's `name|source` runtime
+  record through the calculation context. Structured choice objects are deliberately not guessed;
+  their rules prose remains visible and the global manual-effects editor covers the resolved choice.
+  Class records expose no equivalent top-level lasting-effect fields in the supported corpus, and
+  known/prepared spell effects are not treated as active without an active-effect lifecycle.
 - The header heart and shield open the HP and AC management modals. A one-time anchored hint advertises these controls from the first Builder page.
 - Portaled tooltips and recursive rules previews share the scale-aware native title-bar safe inset in `src/lib/overlayPosition.ts`; measured preview cards are repositioned after layout so they cannot sit beneath Electron window controls. Root previews keep only their Pin action, nested previews add direct-history navigation, and pinning freezes the selected entry at its current viewport position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and keyboard repositioning while History and Unpin remain independent controls.
 - Per-character Rules and Sources live in the Builder workspace's Options group. Rules are tabbed by Ruleset, Advancement, and Character Options; the selected ruleset itself remains fixed after creation.

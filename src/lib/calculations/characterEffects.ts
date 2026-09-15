@@ -1,5 +1,5 @@
 import { resolveItemReference } from '@/lib/5etools/itemResolvers'
-import type { Item5e, Race5e } from '@/types/5etools'
+import type { Feat5e, Item5e, Race5e } from '@/types/5etools'
 import type {
   ArmorClassAdjustment,
   Character,
@@ -117,8 +117,12 @@ function projectLegacyEffects(
   return effects
 }
 
-function entityEffectId(entity: Pick<Race5e, 'name' | 'source'>, suffix: string): string {
-  return `race:${encodeURIComponent(entity.name)}|${encodeURIComponent(entity.source)}:${suffix}`
+function entityEffectId(
+  kind: 'race' | 'feat',
+  entity: Pick<Race5e | Feat5e, 'name' | 'source'>,
+  suffix: string,
+): string {
+  return `${kind}:${encodeURIComponent(entity.name)}|${encodeURIComponent(entity.source)}:${suffix}`
 }
 
 function itemEffectId(item: Equipment, suffix: string): string {
@@ -288,7 +292,7 @@ export function deriveStructuredRaceEffects(race: Race5e | undefined): Character
   const effects: CharacterEffect[] = []
   if (typeof race.darkvision === 'number' && Number.isFinite(race.darkvision)) {
     effects.push({
-      id: entityEffectId(race, 'sense:darkvision'),
+      id: entityEffectId('race', race, 'sense:darkvision'),
       label: `${race.name} sense`,
       target: { kind: 'sense', sense: 'darkvision' },
       operation: { kind: 'base', value: Math.max(0, race.darkvision) },
@@ -320,12 +324,58 @@ export function deriveStructuredRaceEffects(race: Race5e | undefined): Character
     for (const value of grant.values ?? []) {
       if (typeof value !== 'string' || !value.trim()) continue
       effects.push({
-        id: entityEffectId(race, `${grant.suffix}:${encodeURIComponent(value)}`),
+        id: entityEffectId('race', race, `${grant.suffix}:${encodeURIComponent(value)}`),
         label: value,
         target: grant.target(value),
         operation: { kind: 'grant' },
         source,
       } as CharacterEffect)
+    }
+  }
+  return effects
+}
+
+/** Projects unconditional, structured feat grants; choice objects remain player-reviewed prose. */
+export function deriveStructuredFeatEffects(feats: readonly Feat5e[]): CharacterEffect[] {
+  const effects: CharacterEffect[] = []
+  const seen = new Set<string>()
+  for (const feat of feats) {
+    const featKey = `${feat.name}|${feat.source}`
+    if (seen.has(featKey)) continue
+    seen.add(featKey)
+    const source = { kind: 'feat' as const, name: feat.name, source: feat.source }
+    const grants: Array<{
+      values: readonly (string | Record<string, unknown>)[] | undefined
+      target: (value: string) => CharacterEffect['target']
+      suffix: string
+    }> = [
+      {
+        values: feat.resist,
+        target: (damageType) => ({ kind: 'damage-resistance', damageType }),
+        suffix: 'resistance',
+      },
+      {
+        values: feat.immune,
+        target: (damageType) => ({ kind: 'damage-immunity', damageType }),
+        suffix: 'immunity',
+      },
+      {
+        values: feat.conditionImmune,
+        target: (condition) => ({ kind: 'condition-immunity', condition }),
+        suffix: 'condition-immunity',
+      },
+    ]
+    for (const grant of grants) {
+      for (const value of grant.values ?? []) {
+        if (typeof value !== 'string' || !value.trim()) continue
+        effects.push({
+          id: entityEffectId('feat', feat, `${grant.suffix}:${encodeURIComponent(value)}`),
+          label: `${feat.name}: ${value}`,
+          target: grant.target(value),
+          operation: { kind: 'grant' },
+          source,
+        } as CharacterEffect)
+      }
     }
   }
   return effects

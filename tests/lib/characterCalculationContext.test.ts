@@ -1,10 +1,15 @@
 import { describe, expect, test } from 'vitest'
-import { buildBackgroundLookup, buildClassLookup, buildRaceLookup } from '@/lib/5etools/lookups'
+import {
+  buildBackgroundLookup,
+  buildClassLookup,
+  buildFeatLookup,
+  buildRaceLookup,
+} from '@/lib/5etools/lookups'
 import {
   createCharacterCalculationContext,
   deriveEffectiveAbilityScores,
 } from '@/lib/calculations/characterCalculationContext'
-import type { Background5e, Class5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('character calculation context', () => {
@@ -154,5 +159,33 @@ describe('character calculation context', () => {
         { kind: 'damage-resistance', damageType: 'test damage' },
       ]),
     )
+  })
+
+  test('includes source-qualified feat grants from every persisted feat owner', () => {
+    const feat = {
+      name: 'Test Enduring Feature',
+      source: 'TEST',
+      resist: ['test damage'],
+    } as Feat5e
+    const conflictingFeat = {
+      name: feat.name,
+      source: 'OTHER',
+      immune: ['other damage'],
+    } as Feat5e
+    const selectedFeat = { id: 'selected', name: feat.name, source: feat.source, description: '' }
+    const character = makeCharacterFixture({ specialFeats: [selectedFeat] })
+
+    const context = createCharacterCalculationContext(character, {
+      featsByKey: buildFeatLookup([conflictingFeat, feat]),
+    })
+
+    expect(context.effects.declarations.map((effect) => effect.target)).toContainEqual({
+      kind: 'damage-resistance',
+      damageType: 'test damage',
+    })
+    expect(context.effects.declarations.map((effect) => effect.target)).not.toContainEqual({
+      kind: 'damage-immunity',
+      damageType: 'other damage',
+    })
   })
 })

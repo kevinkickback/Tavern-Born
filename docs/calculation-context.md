@@ -12,8 +12,8 @@ Effective ability scores are composed in this order:
 1. `character.abilityScores`: allocated/base scores and legacy materialized feat-option changes.
 2. Ruleset-normalized origin bonuses: race/subrace for 2014 or background for 2024.
 3. Persisted class ASI contributions from `character.asiChoices`.
-4. Future typed lasting modifiers, once the effects system is introduced.
-5. Future exact overrides, applied last when explicitly supported.
+4. Active typed lasting modifiers from structured source data and labeled manual declarations.
+5. Exact overrides, applied last when explicitly supported.
 
 Each layer is added to a fresh score object. The persisted base scores are never mutated during
 derivation. Origin entities resolve by `name|source`, with the raw lookup as a fallback when a
@@ -48,8 +48,11 @@ protects the current consumer list, and cross-surface fixtures verify the same e
 rules and both PDF mappings.
 
 The context also groups resolved classes, race/subrace, background, rules metadata, equipment state,
-and resolved typed effects. It projects structured base movement, labeled per-mode adjustments,
-exact overrides, hover, and preserved unknown movement keys through the same boundary.
+and resolved typed effects. It source-qualifies runtime projections from race, feat, and item data;
+projects structured base movement, labeled per-mode adjustments, exact overrides, hover, and
+preserved unknown movement keys; and never stores those source declarations in a character save.
+Only unconditional scalar/list fields are automated. Choice objects and prose remain visible rules
+text and can be represented with a labeled manual effect after the player resolves the choice.
 
 `getCharacterReadiness()` consumes this context with optional feat and spell lookups. Its focused
 validators return stable issue IDs, blocking/recommendation severity, an owning Builder section, and

@@ -1,12 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import {
+  deriveStructuredFeatEffects,
   deriveStructuredItemEffects,
   deriveStructuredRaceEffects,
   getCharacterEffectResolutionContext,
   getCharacterEffects,
 } from '@/lib/calculations/characterEffects'
 import { resolveGrantedTrait, resolveNumericEffect } from '@/lib/calculations/effects'
-import type { Race5e } from '@/types/5etools'
+import type { Feat5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('character effect projection', () => {
@@ -69,6 +70,25 @@ describe('character effect projection', () => {
       flags: { enabled: true },
       suppressedEffectIds: ['manual-adjustment'],
     })
+  })
+
+  test('projects only unconditional structured feat grants with source-qualified resolution', () => {
+    const feat = {
+      name: 'Test Durable Gift',
+      source: 'TEST',
+      resist: ['test damage', { choose: { from: ['other damage'] } }],
+      immune: ['other damage'],
+      conditionImmune: ['test condition'],
+      entries: ['Choice prose remains available for manual review.'],
+    } as Feat5e
+    const effects = deriveStructuredFeatEffects([feat, feat])
+
+    expect(effects.map((effect) => effect.target)).toEqual([
+      { kind: 'damage-resistance', damageType: 'test damage' },
+      { kind: 'damage-immunity', damageType: 'other damage' },
+      { kind: 'condition-immunity', condition: 'test condition' },
+    ])
+    expect(effects.every((effect) => effect.source.kind === 'feat')).toBe(true)
   })
 
   test('projects structured item fields and gates every declaration by equipment state', () => {

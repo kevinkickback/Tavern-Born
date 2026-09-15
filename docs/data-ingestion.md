@@ -56,6 +56,12 @@ source content.
 3. Parsing and normalization
 - parsers extract arrays and normalize structure differences.
 - Condition ingestion reads both `.condition[]` and `.disease[]` from `conditionsdiseases.json`, preserves their structured `entries`, and tags each record with its source type. `useConditions()` exposes valid condition records while excluding diseases; this lets the Conditions page render names, descriptions, inline tags, and PHB/XPHB exhaustion rules from data instead of local constants.
+- Feat lookup ingestion indexes parsed feats by `name|source`. The calculation boundary consumes
+  only unconditional string entries from structured `resist`, `immune`, and `conditionImmune`
+  fields. Object-shaped choices are preserved by passthrough parsing but are not interpreted as a
+  selected benefit. A 2026-09-15 corpus audit found these lasting fields on feats, no equivalent
+  top-level fields in supported class/class-feature records, and temporary condition-immunity data
+  on spells. Spell fields are not projected merely because a spell is known or prepared.
 - Class and subclass feature references are normalized for downstream consumption. Class ingestion
   also produces `normalizedRules` for spendable resources, recovery amount and cadence, ritual
   casting, source-qualified ASI levels, and class-owned choices. Choice normalization consumes

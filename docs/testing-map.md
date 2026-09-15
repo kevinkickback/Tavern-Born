@@ -152,6 +152,9 @@ new tests land and do not lower them to merge a change.
 - Atomic rest calculation, hook commit, and preview-dialog choice coverage in
   tests/lib/restCommands.test.ts, tests/hooks/useRestPreview.test.tsx, and
   tests/integration/restPreviewDialog.test.tsx.
+- Structured feat-effect coverage verifies source-qualified lookup across persisted feat owners,
+  deduplication, unconditional resistance/immunity projection, and fail-closed handling of choice
+  objects without interpreting rules prose.
 - Spell display-name coverage verifies lowercase 5etools grant tokens render with canonical parsed casing
 - Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 - Electron updater lifecycle coverage in tests/lib/updateManager.test.ts (offline short-circuit, startup schedule skip, event forwarding, destroyed-window handling, duplicate-download guard, cancellation, and completed-token cleanup)

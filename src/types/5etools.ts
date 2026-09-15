@@ -216,6 +216,7 @@ export interface GameDataLookups {
   classesByKey: Record<string, Class5e>
   racesByKey: Record<string, Race5e>
   backgroundsByKey: Record<string, Background5e>
+  featsByKey: Record<string, Feat5e>
   classFeaturesByKey: Record<string, ClassFeature>
   spellsByKey: Record<string, Spell5e>
   optionalFeaturesByKey: Record<string, unknown>
@@ -280,6 +281,9 @@ export interface Feat5e {
   category?: string
   prerequisite?: Raw5ePrereq[]
   ability?: AbilityBonus[]
+  resist?: Array<string | Record<string, unknown>>
+  immune?: Array<string | Record<string, unknown>>
+  conditionImmune?: Array<string | Record<string, unknown>>
   entries?: unknown[]
   [key: string]: unknown
 }

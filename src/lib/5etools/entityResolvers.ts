@@ -1,6 +1,6 @@
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
-import type { Background5e, Class5e, Item5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Feat5e, Item5e, Race5e } from '@/types/5etools'
 
 export interface EntityReference {
   name?: string
@@ -11,6 +11,7 @@ export interface EntityLookupSet {
   classesByKey?: Readonly<Record<string, Class5e>>
   racesByKey?: Readonly<Record<string, Race5e>>
   backgroundsByKey?: Readonly<Record<string, Background5e>>
+  featsByKey?: Readonly<Record<string, Feat5e>>
   itemLookup?: ReadonlyMap<string, Item5e>
 }
 
@@ -71,6 +72,14 @@ export function resolveBackgroundReference(
   rawLookups: EntityLookupSet = primaryLookups,
 ): Background5e | undefined {
   return resolveEntity(reference, primaryLookups.backgroundsByKey, rawLookups.backgroundsByKey)
+}
+
+export function resolveFeatReference(
+  reference: EntityReference,
+  primaryLookups: EntityLookupSet,
+  rawLookups: EntityLookupSet = primaryLookups,
+): Feat5e | undefined {
+  return resolveEntity(reference, primaryLookups.featsByKey, rawLookups.featsByKey)
 }
 
 function resolveSubraceFromParents(

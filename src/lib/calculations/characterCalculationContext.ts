@@ -3,6 +3,7 @@ import {
   type ResolvedRaceReference,
   resolveBackgroundReference,
   resolveClassReference,
+  resolveFeatReference,
   resolveRaceReference,
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
@@ -20,6 +21,7 @@ import {
   type RaceAbilityData,
 } from './abilityScores'
 import {
+  deriveStructuredFeatEffects,
   deriveStructuredItemEffects,
   deriveStructuredRaceEffects,
   getCharacterEffectResolutionContext,
@@ -208,9 +210,19 @@ export function createCharacterCalculationContext(
     return resolved ? [resolved] : []
   })
   const allEquipment = character.equipment ?? []
+  const selectedFeats = [
+    ...(character.feats ?? []),
+    ...(character.specialFeats ?? []),
+    ...(character.classFeatChoices ?? []).flatMap((choice) => choice.feats),
+  ]
+  const resolvedFeats = selectedFeats.flatMap((feat) => {
+    const resolved = resolveFeatReference(feat, primaryLookups, rawLookups)
+    return resolved ? [resolved] : []
+  })
   const effectResolutionContext = getCharacterEffectResolutionContext(character)
   const sourceEffects = [
     ...deriveStructuredRaceEffects(raceResolution.mergedRace),
+    ...deriveStructuredFeatEffects(resolvedFeats),
     ...deriveStructuredItemEffects(
       allEquipment,
       primaryLookups.itemLookup ?? rawLookups.itemLookup,
