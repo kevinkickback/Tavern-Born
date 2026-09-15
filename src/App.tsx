@@ -43,6 +43,11 @@ const BuildProficienciesPage = lazy(() =>
 const BuildRacePage = lazy(() =>
   import('@/pages/build/race/RacePage').then((module) => ({ default: module.BuildRacePage })),
 )
+const BuildReviewPage = lazy(() =>
+  import('@/pages/build/review/ReviewPage').then((module) => ({
+    default: module.BuildReviewPage,
+  })),
+)
 const CharacterSheetPage = lazy(() =>
   import('@/pages/CharacterSheetPage').then((module) => ({ default: module.CharacterSheetPage })),
 )
@@ -199,6 +204,7 @@ function App() {
                 <Route path="/build/background" element={<BuildBackgroundPage />} />
                 <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
                 <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
+                <Route path="/build/review" element={<BuildReviewPage />} />
                 <Route path="/feats" element={<FeatsPage />} />
                 <Route path="/spells" element={<SpellsPage />} />
                 <Route path="/equipment" element={<EquipmentPage />} />

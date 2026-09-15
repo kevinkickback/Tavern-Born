@@ -9,9 +9,20 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { useCharacterReadiness } from '@/hooks/character/useCharacterReadiness'
 import {
   useBackgroundLookup,
   useClassLookup,
@@ -52,8 +63,10 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [zoom, setZoom] = useState(100)
+  const [incompleteExportOpen, setIncompleteExportOpen] = useState(false)
   const cancelRef = useRef<{ canceled: boolean } | null>(null)
   const selectedTemplate = useMemo(() => getCharacterSheetTemplate(templateId), [templateId])
+  const readiness = useCharacterReadiness(character)
   const viewModel = useMemo(
     () =>
       character
@@ -128,7 +141,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
     }
   }, [character, selectedTemplate, templateId, viewModel])
 
-  const handleDownload = () => {
+  const downloadPdf = () => {
     if (!pdfBytes) {
       toast.error('Generate a preview before downloading the sheet.')
       return
@@ -145,6 +158,18 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
     URL.revokeObjectURL(url)
 
     toast.success('Character sheet PDF downloaded.')
+  }
+
+  const handleDownload = () => {
+    if (!pdfBytes) {
+      toast.error('Generate a preview before downloading the sheet.')
+      return
+    }
+    if (readiness?.status === 'incomplete') {
+      setIncompleteExportOpen(true)
+      return
+    }
+    downloadPdf()
   }
 
   if (!character) {
@@ -164,6 +189,13 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
           <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning">
             <Warning className="size-3.5" />
             Different from character ruleset
+          </Badge>
+        )}
+
+        {readiness?.status === 'incomplete' && (
+          <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning">
+            <Warning className="size-3.5" />
+            {readiness.blockingIssues.length} required
           </Badge>
         )}
 
@@ -270,6 +302,30 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
           )}
         </div>
       </WorkspaceBody>
+
+      <AlertDialog open={incompleteExportOpen} onOpenChange={setIncompleteExportOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Download an incomplete character sheet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This draft has {readiness?.blockingIssues.length ?? 0} unresolved required{' '}
+              {(readiness?.blockingIssues.length ?? 0) === 1 ? 'choice' : 'choices'}. The PDF may be
+              missing rules or selections. You can still download it if that is intentional.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Go Back</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setIncompleteExportOpen(false)
+                downloadPdf()
+              }}
+            >
+              Download Incomplete PDF
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </WorkspacePage>
   )
 }

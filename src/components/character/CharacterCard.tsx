@@ -1,6 +1,7 @@
 import { Trash, Upload } from '@phosphor-icons/react'
 import { memo } from 'react'
 import { CharacterCardFrame } from '@/components/character/CharacterCardFrame'
+import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -98,6 +99,13 @@ export const CharacterCard = memo(function CharacterCard({
           ) : undefined
         }
       />
+
+      {isActive && (
+        <CharacterReadinessBadge
+          character={character}
+          className="pointer-events-none absolute left-3 top-3 z-10 shadow-sm"
+        />
+      )}
 
       {selectionMode && (
         <div className="absolute left-3 top-3 z-10">

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { buildSpellLookup } from '@/lib/5etools/lookups'
 import {
+  deriveCharacterActions,
   deriveRulesTextActions,
   deriveSpellActions,
   deriveWeaponActions,
@@ -244,5 +245,44 @@ describe('character action projection', () => {
         description: 'Test trait rules.',
       }),
     ])
+  })
+
+  test('combines source-backed and manual actions through one view-neutral projection', () => {
+    const character = makeCharacterFixture({
+      equipment: [
+        {
+          id: 'test-weapon',
+          name: 'Test Weapon',
+          type: 'M',
+          quantity: 1,
+          equipped: true,
+          dmg1: '1d6',
+        },
+      ],
+      manualActions: [
+        {
+          id: 'manual:test-action',
+          name: 'Test Manual Action',
+          kind: 'bonus-action',
+          description: 'Test manual rules.',
+          source: { kind: 'manual', name: 'Test Manual Action' },
+          active: true,
+        },
+      ],
+    })
+
+    const actions = deriveCharacterActions(character, {
+      abilityModifiers: {
+        strength: 1,
+        dexterity: 0,
+        constitution: 0,
+        intelligence: 0,
+        wisdom: 0,
+        charisma: 0,
+      },
+      proficiencyBonus: 2,
+    })
+
+    expect(actions.map((action) => action.id)).toEqual(['weapon:test-weapon', 'manual:test-action'])
   })
 })

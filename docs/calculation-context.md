@@ -40,13 +40,20 @@ typed contributions after defining stacking, migration, and exact-override seman
 
 Ordinary UI and export code must not read `character.abilityScores` directly. Score editing,
 schema migration, the context itself, reversible legacy feat commands, and the explicitly
-backward-compatible `calculateAC` adapter are the intentional exceptions. Canonical domain APIs
-require effective scores to be passed explicitly. `tests/lib/effectiveAbilityScoreOwnership.test.ts`
+backward-compatible `calculateAC` adapter are the intentional exceptions. The readiness service is
+also an explicit boundary because score-allocation validity must inspect the persisted base scores,
+not the effective totals after origin, ASI, and effect contributions. Canonical domain APIs require
+effective scores to be passed explicitly. `tests/lib/effectiveAbilityScoreOwnership.test.ts`
 protects the current consumer list, and cross-surface fixtures verify the same effective totals in
 rules and both PDF mappings.
 
-The context also groups resolved classes, race/subrace, background, rules metadata, and equipment
-state. It projects structured base movement, labeled per-mode adjustments, exact overrides, hover,
-and preserved unknown movement keys through the same boundary. Later effects, readiness, action,
-rest, and Play phases should extend this pure projection instead of introducing page-specific rules
-engines.
+The context also groups resolved classes, race/subrace, background, rules metadata, equipment state,
+and resolved typed effects. It projects structured base movement, labeled per-mode adjustments,
+exact overrides, hover, and preserved unknown movement keys through the same boundary.
+
+`getCharacterReadiness()` consumes this context with optional feat and spell lookups. Its focused
+validators return stable issue IDs, blocking/recommendation severity, an owning Builder section, and
+a navigation target; they never repair or delete unresolved state. `deriveCharacterActions()` is
+the corresponding view-neutral action boundary: Builder review and PDF export supply this context
+and consume the same weapon, spell, rules-text, and manual action list. Rest and Play work should
+extend these pure projections instead of introducing page-specific rules engines.

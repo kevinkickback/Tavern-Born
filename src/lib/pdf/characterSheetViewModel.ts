@@ -7,12 +7,7 @@ import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import { type EntityLookupSet, resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
-import {
-  deriveRulesTextActions,
-  deriveSpellActions,
-  deriveWeaponActions,
-  mergeCharacterActions,
-} from '@/lib/calculations/actions'
+import { deriveCharacterActions } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -553,21 +548,16 @@ export function createCharacterSheetViewModel(
       classData,
     ]),
   )
-  const actions = mergeCharacterActions(
-    [
-      ...deriveWeaponActions(character, {
-        abilityModifiers,
-        proficiencyBonus,
-        itemLookup: rawLookups.itemLookup,
-        propertyLookup: rawLookups.itemPropertyByAbbr,
-        effects: calculationContext.effects.declarations,
-        effectContext: calculationContext.effects.resolutionContext,
-      }),
-      ...deriveSpellActions(character, rawLookups.spellsByKey ?? {}),
-      ...deriveRulesTextActions(character, raceResolution.mergedRace),
-    ],
-    character.manualActions,
-  )
+  const actions = deriveCharacterActions(character, {
+    abilityModifiers,
+    proficiencyBonus,
+    itemLookup: rawLookups.itemLookup,
+    propertyLookup: rawLookups.itemPropertyByAbbr,
+    effects: calculationContext.effects.declarations,
+    effectContext: calculationContext.effects.resolutionContext,
+    spellsByKey: rawLookups.spellsByKey,
+    race: raceResolution.mergedRace,
+  })
 
   return {
     character,

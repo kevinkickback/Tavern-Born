@@ -41,6 +41,11 @@ export interface WeaponActionProjectionContext {
   effectContext?: EffectResolutionContext
 }
 
+export interface CharacterActionProjectionContext extends WeaponActionProjectionContext {
+  spellsByKey?: Readonly<Record<string, Spell5e>>
+  race?: Race5e
+}
+
 function spellActionKind(unit: string | undefined): CharacterAction['kind'] {
   if (unit === 'action') return 'action'
   if (unit === 'bonus') return 'bonus-action'
@@ -131,13 +136,28 @@ export function deriveRulesTextActions(
 }
 
 /** Merges runtime projections with persisted manual actions by stable ID. */
-export function mergeCharacterActions(
+function mergeCharacterActions(
   sourceActions: readonly CharacterAction[],
   manualActions: readonly CharacterAction[] = [],
 ): CharacterAction[] {
   const byId = new Map<string, CharacterAction>()
   for (const action of [...sourceActions, ...manualActions]) byId.set(action.id, action)
   return [...byId.values()]
+}
+
+/** Projects every source-backed and manual action through one view-neutral pipeline. */
+export function deriveCharacterActions(
+  character: Character,
+  context: CharacterActionProjectionContext,
+): CharacterAction[] {
+  return mergeCharacterActions(
+    [
+      ...deriveWeaponActions(character, context),
+      ...deriveSpellActions(character, context.spellsByKey ?? {}),
+      ...deriveRulesTextActions(character, context.race),
+    ],
+    character.manualActions,
+  )
 }
 
 /** Derives weapon attacks from structured equipment and effect data without UI/PDF assumptions. */

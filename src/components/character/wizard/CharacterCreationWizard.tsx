@@ -1,5 +1,6 @@
 import { Warning } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
@@ -42,6 +43,7 @@ function getDefaultAbilityScoresForMethod(method: string): Record<string, number
 }
 
 export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreationWizardProps) {
+  const navigate = useNavigate()
   const addCharacter = useCharacterStore((state) => state.addCharacter)
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const [currentStep, setCurrentStep] = useState(1)
@@ -131,7 +133,8 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     addCharacter(character)
     setActiveCharacter(character.id)
     handleClose()
-    toast.success('Character created successfully')
+    navigate('/build/review')
+    toast.success('Character draft created')
   }
 
   const handleNext = () => {

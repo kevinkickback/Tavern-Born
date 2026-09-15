@@ -30,7 +30,7 @@ export function WizardFooter({
           </Button>
         )}
         <Button size="sm" onClick={onNext} className="min-w-24">
-          {currentStep === totalSteps ? 'Create' : 'Next'}
+          {currentStep === totalSteps ? 'Create Draft and Continue' : 'Next'}
         </Button>
       </div>
     </div>

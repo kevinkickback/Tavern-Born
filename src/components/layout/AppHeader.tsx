@@ -4,6 +4,7 @@ import {
   Book,
   Books,
   Certificate,
+  ClipboardText,
   FilePdf,
   FloppyDisk,
   Gear,
@@ -50,6 +51,7 @@ const ManualActionsModal = lazy(() =>
 )
 
 const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
+  ['/build/review', 'Character Review', ClipboardText],
   ['/build/ability-scores', 'Ability Scores', Barbell],
   ['/build/proficiencies', 'Proficiencies', Certificate],
   ['/build/background', 'Background', Scroll],

@@ -5,6 +5,7 @@ import {
   Book,
   Books,
   Certificate,
+  ClipboardText,
   FilePdf,
   Gear,
   Image,
@@ -19,7 +20,7 @@ import {
   Users,
   Wrench,
 } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   AlertDialog,
@@ -36,6 +37,12 @@ import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
+
+const CharacterReadinessBadge = lazy(() =>
+  import('@/components/character/CharacterReadinessBadge').then((module) => ({
+    default: module.CharacterReadinessBadge,
+  })),
+)
 
 interface ContextItem {
   label: string
@@ -95,6 +102,7 @@ const workspaces: Workspace[] = [
           { label: 'Feats', path: '/feats', icon: Star },
           { label: 'Spells', path: '/spells', icon: MagicWand },
           { label: 'Equipment', path: '/equipment', icon: Backpack },
+          { label: 'Review', path: '/build/review', icon: ClipboardText },
         ],
       },
       {
@@ -364,6 +372,15 @@ export function AppSidebar() {
                           weight={active ? 'fill' : 'regular'}
                         />
                         <span className="truncate">{item.label}</span>
+                        {item.path === '/build/review' && activeCharacter && (
+                          <Suspense fallback={null}>
+                            <CharacterReadinessBadge
+                              character={activeCharacter}
+                              compact
+                              className="ml-auto px-1.5 py-0 text-[10px]"
+                            />
+                          </Suspense>
+                        )}
                       </Link>
                     </li>
                   )

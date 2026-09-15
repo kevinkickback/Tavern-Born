@@ -14,6 +14,7 @@ import {
 import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { CharacterCard } from '@/components/character/CharacterCard'
+import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
 import { CharacterCreationWizard } from '@/components/character/wizard/CharacterCreationWizard'
 import {
   AlertDialog,
@@ -118,6 +119,7 @@ function CharacterListRow({
                 Active
               </span>
             )}
+            {isActive && <CharacterReadinessBadge character={character} />}
           </div>
           <p className="truncate text-xs text-muted-foreground">{summary}</p>
         </div>

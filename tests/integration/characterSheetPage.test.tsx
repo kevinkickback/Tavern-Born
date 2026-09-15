@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { CharacterSheetPage } from '@/pages/CharacterSheetPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -12,6 +13,18 @@ vi.mock('@/lib/storage/idb-storage', () => ({
   }),
 }))
 
+vi.mock('@/components/PdfCanvasPreview', () => ({
+  PdfCanvasPreview: () => <div>PDF preview</div>,
+}))
+
+vi.mock('@/lib/pdf/characterSheetPdf', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/pdf/characterSheetPdf')>()
+  return {
+    ...original,
+    generateFilledCharacterSheetPdf: vi.fn(async () => new Uint8Array([1, 2, 3])),
+  }
+})
+
 describe('CharacterSheetPage', () => {
   beforeEach(() => {
     const character = makeCharacterFixture()
@@ -20,10 +33,15 @@ describe('CharacterSheetPage', () => {
       activeCharacterId: character.id,
       activeCharacter: character,
     })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(new Uint8Array([1, 2, 3]), { status: 200 })),
+    )
   })
 
   afterEach(() => {
     cleanup()
+    vi.unstubAllGlobals()
     vi.clearAllMocks()
   })
 
@@ -50,5 +68,21 @@ describe('CharacterSheetPage', () => {
     )
     expect(screen.getByRole('button', { name: 'Generate Preview' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Download PDF' })).toBeTruthy()
+  })
+
+  test('requires explicit acknowledgement before downloading an incomplete sheet', async () => {
+    const user = userEvent.setup()
+    render(<CharacterSheetPage templateId="2014" />)
+
+    await user.click(screen.getByRole('button', { name: 'Generate Preview' }))
+    await waitFor(() => expect(screen.getByText('PDF preview')).toBeTruthy())
+    await user.click(screen.getByRole('button', { name: 'Download PDF' }))
+
+    expect(screen.getByRole('alertdialog')).toBeTruthy()
+    expect(screen.getByText('Download an incomplete character sheet?')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Download Incomplete PDF' })).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Go Back' }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
   })
 })
