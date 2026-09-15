@@ -186,6 +186,31 @@ function resolveSubclassFeatureRecord(
     return feature
   }
 
+  // A copied subclass can retain source-qualified feature references from its original
+  // class printing while changing only the parent class source. Resolve that mismatch
+  // only when every other encoded identity field selects one unique record.
+  if (source) {
+    const sourceQualifiedCandidates = subclassFeatureRecords.map(asObject).filter((feature) => {
+      if (normalizeKey(feature.name) !== name) return false
+      if (className && normalizeKey(feature.className) !== className) return false
+      if (subclassShortName && normalizeKey(feature.subclassShortName) !== subclassShortName)
+        return false
+      if (subclassSource && normalizeKey(feature.subclassSource) !== subclassSource) return false
+      if (level !== undefined && feature.level !== level) return false
+      return normalizeKey(feature.source) === source
+    })
+    if (sourceQualifiedCandidates.length === 1) return sourceQualifiedCandidates[0]
+  }
+
+  const encodedIdentityCandidates = subclassFeatureRecords.map(asObject).filter((feature) => {
+    if (normalizeKey(feature.name) !== name) return false
+    if (className && normalizeKey(feature.className) !== className) return false
+    if (subclassShortName && normalizeKey(feature.subclassShortName) !== subclassShortName)
+      return false
+    return level === undefined || feature.level === level
+  })
+  if (encodedIdentityCandidates.length === 1) return encodedIdentityCandidates[0]
+
   if (!source) {
     for (const record of subclassFeatureRecords) {
       const feature = asObject(record)

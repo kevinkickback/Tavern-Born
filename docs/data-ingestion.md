@@ -71,6 +71,10 @@ source content.
   not become counters. Source-qualified adapters cover rules that upstream exposes only through
   prose. Encoded reference levels take precedence when repeated feature names occur at more than
   one level.
+- Copied subclasses can retain feature references from their original class printing. Resolution
+  first uses the full encoded identity, then permits progressively broader matching only when the
+  remaining source-qualified identity selects exactly one feature. Ambiguous copies remain
+  unresolved; the parser never chooses the first name match.
 - Background ingestion produces `normalizedOriginRules`. Structured ability and feat fields win;
   a ruleset-qualified, versioned 2024 adapter fills only the upstream prose-only gap and records its
   provenance.
@@ -233,3 +237,12 @@ When a user selects spells for a multiclass character:
 - Progress callbacks are completion-based during ingestion: each completed resource increments progress, regardless of completion order.
 - Remote request count is bounded across both top-level resources and expanded index files; do not
   replace the worker pool with an unbounded `Promise.all()`.
+
+## Corpus Capability Report
+
+Run `npm run report:capabilities` with a configured local `data/` checkout to inventory parsed
+classes, races, backgrounds, feats, items, and optional features. The report lists normalized class
+choice kinds and diagnostics, every movement representation, all observed top-level field shapes,
+and source-qualified reference failures. It is intentionally observational: unfamiliar fields and
+ambiguous references are reported rather than converted into guessed rules. The corpus itself is
+read-only and is never changed by the report.

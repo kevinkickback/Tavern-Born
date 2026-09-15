@@ -15,6 +15,7 @@ Key scripts in package.json:
 - npm run lint
 - npm run check:bundle (run after `npm run build`)
 - npm run check:health
+- npm run report:capabilities (requires the externally managed local `data/` corpus)
 - npm run test
 - npm run test:coverage
 - npm run test:e2e
@@ -51,6 +52,10 @@ new tests land and do not lower them to merge a change.
 - Class-choice normalization coverage for source-qualified feature options, optional-feature
   progressions, generic table-backed capacity, tagged filters, replacement rules, name-independent
   classification, and unsafe-shape diagnostics, including the configured 2024 core corpus.
+- Corpus capability coverage inventories class choices, movement forms, top-level structured field
+  shapes, and unresolved source-qualified references without making the external `data/` directory
+  a CI prerequisite. Copied-subclass tests cover both unique source-safe resolution and ambiguous
+  no-guess behavior.
 - Class-choice option resolution and Builder workflow coverage in
   tests/lib/classChoiceOptions.test.ts, tests/hooks/useClassPageControllers.test.tsx, and
   tests/integration/classLevelsPanel.test.tsx (catalog filters, source identity, filtered saved

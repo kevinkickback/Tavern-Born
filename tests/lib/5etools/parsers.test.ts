@@ -177,6 +177,88 @@ describe('5etools/parsers', () => {
     expect(items.map((i) => i.name)).toEqual(['Rope', 'Pack', 'Longsword'])
   })
 
+  test('resolves a uniquely source-qualified feature retained by a copied subclass', () => {
+    const parsed = parseClasses({
+      class: [{ name: 'Test Class', source: 'NEW' }],
+      subclass: [
+        {
+          name: 'Copied Path',
+          shortName: 'Copied',
+          source: 'EXT',
+          className: 'Test Class',
+          classSource: 'NEW',
+          subclassFeatures: ['Retained Feature|Test Class||Copied||6'],
+        },
+      ],
+      subclassFeature: [
+        {
+          name: 'Retained Feature',
+          source: 'OLD',
+          className: 'Test Class',
+          classSource: 'OLD',
+          subclassShortName: 'Copied',
+          subclassSource: 'OLD',
+          level: 6,
+          entries: ['retained feature text'],
+        },
+      ],
+    }) as Array<{
+      subclasses?: Array<{
+        subclassFeatureRefs?: Array<{ feature?: { entries?: unknown[] } }>
+      }>
+    }>
+
+    expect(parsed[0]?.subclasses?.[0]?.subclassFeatureRefs?.[0]?.feature?.entries).toEqual([
+      'retained feature text',
+    ])
+  })
+
+  test('does not guess when a copied subclass feature reference remains ambiguous', () => {
+    const sharedFeature = {
+      name: 'Retained Feature',
+      source: 'EXT',
+      className: 'Test Class',
+      subclassShortName: 'Copied',
+      subclassSource: 'EXT',
+      level: 6,
+    }
+    const parsed = parseClasses({
+      class: [{ name: 'Test Class', source: 'NEW' }],
+      subclass: [
+        {
+          name: 'Copied Path',
+          shortName: 'Copied',
+          source: 'EXT',
+          className: 'Test Class',
+          classSource: 'NEW',
+          subclassFeatures: ['Retained Feature|Test Class||Copied||6'],
+        },
+      ],
+      subclassFeature: [
+        {
+          ...sharedFeature,
+          source: 'OLD-A',
+          subclassSource: 'OLD-A',
+          classSource: 'OLD-A',
+          entries: ['first'],
+        },
+        {
+          ...sharedFeature,
+          source: 'OLD-B',
+          subclassSource: 'OLD-B',
+          classSource: 'OLD-B',
+          entries: ['second'],
+        },
+      ],
+    }) as Array<{
+      subclasses?: Array<{
+        subclassFeatureRefs?: Array<{ feature?: unknown }>
+      }>
+    }>
+
+    expect(parsed[0]?.subclasses?.[0]?.subclassFeatureRefs?.[0]?.feature).toBeUndefined()
+  })
+
   test('extractProficiencyBlockNames includes fixed keys, anyStandard, and choose count', () => {
     const names = extractProficiencyBlockNames([
       {
