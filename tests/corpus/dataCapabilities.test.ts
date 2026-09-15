@@ -6,6 +6,7 @@ import {
   createClassChoiceCoverageMatrix,
   findClassChoiceCoverageGaps,
   getPrimaryClassSourceForEdition,
+  getSrdClassCohort,
 } from '@/lib/5etools/classChoiceCoverage'
 import {
   parseBackgrounds,
@@ -68,10 +69,11 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     const primaryEditionClasses = classes.filter(
       (classData) => classData.source === primaryEditionSource,
     )
+    const srd52Classes = getSrdClassCohort(classes, 'srd52')
     const maximumLevel = CORE_RULES_METADATA['2024'].maxCharacterLevel
-    const choiceCoverage = createClassChoiceCoverageMatrix(primaryEditionClasses, maximumLevel)
+    const choiceCoverage = createClassChoiceCoverageMatrix(srd52Classes, maximumLevel)
     const choiceCoverageGaps = findClassChoiceCoverageGaps(
-      primaryEditionClasses,
+      srd52Classes,
       choiceCoverage,
       maximumLevel,
     )
@@ -92,7 +94,8 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
           classChoices: report.classChoices,
           primaryEditionChoiceCoverage: {
             source: primaryEditionSource,
-            classes: choiceCoverage.length,
+            primarySourceClasses: primaryEditionClasses.length,
+            srdTaggedClasses: choiceCoverage.length,
             levelsPerClass: maximumLevel,
             gaps: choiceCoverageGaps,
           },
@@ -117,6 +120,7 @@ describe.runIf(existsSync(DATA_ROOT))('configured 5etools corpus capabilities', 
     expect(report.fields.length).toBeGreaterThan(0)
     expect(report.issues.filter((issue) => issue.code === 'unresolved-reference')).toEqual([])
     expect(primaryEditionClasses.length).toBeGreaterThan(0)
+    expect(srd52Classes.length).toBeGreaterThan(0)
     expect(choiceCoverage.every((row) => row.levels.length === maximumLevel)).toBe(true)
     expect(choiceCoverageGaps).toEqual([])
     expect(

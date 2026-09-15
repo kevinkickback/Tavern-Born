@@ -251,3 +251,9 @@ choice kinds and diagnostics, every movement representation, all observed top-le
 and source-qualified reference failures. It is intentionally observational: unfamiliar fields and
 ambiguous references are reported rather than converted into guessed rules. The corpus itself is
 read-only and is never changed by the report.
+
+The class-choice coverage gate uses upstream `srd52: true` markers to select the revised SRD cohort
+from the normal parsed class records. It does not infer SRD membership from a book/source code. Each
+source-qualified class must have a unique 20-level matrix, normalized rules, complete choice
+progressions, matching owners, and no choice diagnostics. This validates the existing dataset only;
+it does not package or redistribute SRD content.

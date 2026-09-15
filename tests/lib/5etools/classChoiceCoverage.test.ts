@@ -3,6 +3,7 @@ import {
   createClassChoiceCoverageMatrix,
   findClassChoiceCoverageGaps,
   getPrimaryClassSourceForEdition,
+  getSrdClassCohort,
 } from '@/lib/5etools/classChoiceCoverage'
 import { makeClassFixture } from '../../fixtures/gameDataFixtures'
 
@@ -102,5 +103,25 @@ describe('class choice coverage', () => {
         'next',
       ),
     ).toBe('CORE')
+  })
+
+  test('selects only classes carrying the requested upstream SRD marker', () => {
+    const legacy = makeClassFixture({ name: 'Legacy', source: 'TEST', srd: true })
+    const revised = makeClassFixture({ name: 'Revised', source: 'TEST', srd52: true })
+    const expansion = makeClassFixture({ name: 'Expansion', source: 'TEST' })
+
+    expect(getSrdClassCohort([legacy, revised, expansion], 'srd')).toEqual([legacy])
+    expect(getSrdClassCohort([legacy, revised, expansion], 'srd52')).toEqual([revised])
+  })
+
+  test('reports duplicate source-qualified classes in a coverage cohort', () => {
+    const duplicate = makeClassFixture({ name: 'Test Class', source: 'TEST' })
+    const classes = [duplicate, { ...duplicate }]
+
+    expect(
+      findClassChoiceCoverageGaps(classes, createClassChoiceCoverageMatrix(classes, 1), 1).map(
+        (gap) => gap.message,
+      ),
+    ).toContain('Coverage contains a duplicate source-qualified class.')
   })
 })

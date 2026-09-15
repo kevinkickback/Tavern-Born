@@ -23,6 +23,8 @@ export interface ClassChoiceCoverageGap {
   message: string
 }
 
+export type SrdClassMarker = 'srd' | 'srd52'
+
 function requiredAtLevel(choice: NormalizedCharacterChoice, level: number): number {
   const value = choice.selectionCountByLevel[level - 1]
   return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0
@@ -77,9 +79,16 @@ export function findClassChoiceCoverageGaps(
 ): ClassChoiceCoverageGap[] {
   const gaps: ClassChoiceCoverageGap[] = []
   const rows = new Map(matrix.map((row) => [`${row.owner.name}|${row.owner.source}`, row]))
+  const seenOwners = new Set<string>()
   for (const classData of classes) {
     const owner = { name: classData.name, source: classData.source }
-    const row = rows.get(`${owner.name}|${owner.source}`)
+    const ownerKey = `${owner.name}|${owner.source}`
+    if (seenOwners.has(ownerKey)) {
+      gaps.push({ owner, message: 'Coverage contains a duplicate source-qualified class.' })
+      continue
+    }
+    seenOwners.add(ownerKey)
+    const row = rows.get(ownerKey)
     if (!row || row.levels.length !== maximumLevel) {
       gaps.push({ owner, message: `Coverage must contain levels 1-${maximumLevel}.` })
       continue
@@ -105,6 +114,11 @@ export function findClassChoiceCoverageGaps(
     }
   }
   return gaps
+}
+
+/** Selects the classes explicitly tagged by upstream as belonging to an SRD generation. */
+export function getSrdClassCohort(classes: readonly Class5e[], marker: SrdClassMarker): Class5e[] {
+  return classes.filter((classData) => classData[marker] === true)
 }
 
 /** Selects the most complete source cohort for an edition marker supplied by parsed data. */

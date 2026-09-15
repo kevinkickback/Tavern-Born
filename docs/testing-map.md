@@ -119,6 +119,10 @@ new tests land and do not lower them to merge a change.
 - Structured class-choice command coverage in tests/unit/classChoiceCommands.test.ts includes
   partial drafts, cardinality/source validation, deterministic slot ownership, feature-shaped grant
   materialization/replacement, explicit non-inference for item choices, and level/class retraction.
+- Source-qualified class-choice coverage tests select the upstream `srd52: true` cohort, require a
+  unique 20-level matrix for every tagged class, and reject diagnostics, incomplete progressions,
+  and mismatched owners (`tests/lib/5etools/classChoiceCoverage.test.ts` and
+  `tests/corpus/dataCapabilities.test.ts`).
 - Schema migrations in src/lib/schema/migrations.ts with dedicated unit coverage in tests/lib/migrations.test.ts
 - Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)
 - Current workflow coverage in tests/integration/spellOperations.test.tsx, tests/integration/multiclassUpdates.test.tsx, tests/integration/contentFiltering.test.tsx, and tests/integration/armorClass.test.tsx
