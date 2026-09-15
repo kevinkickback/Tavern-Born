@@ -135,7 +135,9 @@ edit.
 - Other normalized class choices are stored in `character.classChoiceSelections`. Every selected
   option retains its source-qualified entity identity and the class level that supplied its slot,
   so level-down and class removal retract only unavailable slots without requiring game data during
-  the state transition.
+  the state transition. The class-page choice controller resolves each descriptor against the
+  character-filtered catalogs, retains saved options that are temporarily filtered out, and writes
+  through `applyClassChoiceSelectionCommand` plus `updateCharacter`.
 
 ## Spell State Model
 

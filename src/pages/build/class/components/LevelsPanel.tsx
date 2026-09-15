@@ -17,6 +17,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspacePaneHeader } from '@/components/workspace'
+import type {
+  ClassChoiceDiagnostic,
+  NormalizedCharacterChoice,
+} from '@/lib/5etools/classChoiceNormalization'
 import {
   featCategoryToFull,
   getOptFeatureTotal,
@@ -27,13 +31,21 @@ import {
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
 } from '@/lib/calculations/spellProfiles'
+import type { ClassChoiceOptionView } from '@/lib/character/classChoiceOptions'
 import { findClassFeatChoice, getClassFeatSlotLevels } from '@/lib/character/classFeatChoices'
 import { cn } from '@/lib/utils'
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
-import type { AsiChoice, Character, CharacterClassEntry, Feat } from '@/types/character'
+import type {
+  AsiChoice,
+  Character,
+  CharacterClassChoiceSelection,
+  CharacterClassEntry,
+  Feat,
+} from '@/types/character'
 import type { ClassFeatProgression, OptionalFeatureProgression } from '../model/levelsUtils'
 import { computeLevelDisplayData } from '../model/levelsUtils'
 import { BuildClassAsiSection } from './AsiSection'
+import { BuildClassChoicesSection } from './ClassChoicesSection'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 import { BuildClassEquipmentSection } from './EquipmentSection'
 import { BuildClassPassiveFeatureList } from './PassiveFeatureList'
@@ -82,6 +94,10 @@ interface BuildClassLevelsPanelProps {
   asiModeByLevel: Record<string, 'asi' | 'feat'>
   usedASI: number
   totalASIAcrossClasses: number
+  classChoices: NormalizedCharacterChoice[]
+  classChoiceDiagnostics: ClassChoiceDiagnostic[]
+  classChoiceSelectionById: ReadonlyMap<string, CharacterClassChoiceSelection>
+  selectedClassChoiceViewsById: ReadonlyMap<string, ClassChoiceOptionView[]>
   onOpenClassPicker: () => void
   onOpenSubclassPicker: () => void
   onOpenSpellPicker: (level: number) => void
@@ -97,6 +113,7 @@ interface BuildClassLevelsPanelProps {
     total: number
     slotLevels: number[]
   }) => void
+  onOpenClassChoice: (choice: NormalizedCharacterChoice) => void
   onBlockChoiceChange: (blockIndex: number, choice: string) => void
   onItemChoiceChange?: (blockIndex: number, choice: string, key: string, itemRef: string) => void
   onSelectFeature: (feature: SelectedFeatureState) => void
@@ -140,6 +157,10 @@ export function BuildClassLevelsPanel({
   asiModeByLevel,
   usedASI,
   totalASIAcrossClasses,
+  classChoices,
+  classChoiceDiagnostics,
+  classChoiceSelectionById,
+  selectedClassChoiceViewsById,
   onOpenClassPicker,
   onOpenSubclassPicker,
   onOpenSpellPicker,
@@ -148,6 +169,7 @@ export function BuildClassLevelsPanel({
   onOpenAsiPicker,
   onOpenOptPicker,
   onOpenClassFeatPicker,
+  onOpenClassChoice,
   onBlockChoiceChange,
   onItemChoiceChange = () => undefined,
   onSelectFeature,
@@ -260,6 +282,32 @@ export function BuildClassLevelsPanel({
                         onExpandDetails={onExpandDetails}
                       />
                     </div>
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+
+              {(classChoices.length > 0 || classChoiceDiagnostics.length > 0) && (
+                <AccordionItem value="required-class-choices">
+                  <AccordionTrigger className="px-1 text-sm hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Required Choices</span>
+                      <Badge variant="secondary" className="h-5 px-1.5 font-mono text-xs">
+                        {classChoices.length + classChoiceDiagnostics.length}
+                      </Badge>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <BuildClassChoicesSection
+                      choices={classChoices}
+                      diagnostics={classChoiceDiagnostics}
+                      classLevel={viewingClassLevel}
+                      selectionByChoiceId={classChoiceSelectionById}
+                      selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                      detailCollapsed={detailCollapsed}
+                      onChoose={onOpenClassChoice}
+                      onSelectFeature={onSelectFeature}
+                      onExpandDetails={onExpandDetails}
+                    />
                   </AccordionContent>
                 </AccordionItem>
               )}

@@ -37,6 +37,10 @@ new tests land and do not lower them to merge a change.
 - Class-choice normalization coverage for source-qualified feature options, optional-feature
   progressions, generic table-backed capacity, tagged filters, replacement rules, name-independent
   classification, and unsafe-shape diagnostics, including the configured 2024 core corpus.
+- Class-choice option resolution and Builder workflow coverage in
+  tests/lib/classChoiceOptions.test.ts, tests/hooks/useClassPageControllers.test.tsx, and
+  tests/integration/classLevelsPanel.test.tsx (catalog filters, source identity, filtered saved
+  selections, store-backed persistence, completion cards, and unresolved-choice warnings).
 - Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions, deterministic source-less fallback, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
 - Renderer output in src/lib/renderer.ts

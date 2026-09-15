@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
@@ -45,6 +45,10 @@ function makeProps(
     asiModeByLevel: {},
     usedASI: 0,
     totalASIAcrossClasses: 1,
+    classChoices: [],
+    classChoiceDiagnostics: [],
+    classChoiceSelectionById: new Map(),
+    selectedClassChoiceViewsById: new Map(),
     onOpenClassPicker: vi.fn(),
     onOpenSubclassPicker: vi.fn(),
     onOpenSpellPicker: vi.fn(),
@@ -53,6 +57,7 @@ function makeProps(
     onOpenAsiPicker: vi.fn(),
     onOpenOptPicker: vi.fn(),
     onOpenClassFeatPicker: vi.fn(),
+    onOpenClassChoice: vi.fn(),
     onBlockChoiceChange: vi.fn(),
     onSelectFeature: vi.fn(),
     onExpandDetails: vi.fn(),
@@ -90,5 +95,51 @@ describe('BuildClassLevelsPanel', () => {
     const completeBadge = screen.getByText(/1 choice/).closest('[data-slot="badge"]')
     expect(completeBadge?.className).toContain('text-success')
     expect(completeBadge?.querySelector('svg')).toBeTruthy()
+  })
+
+  test('surfaces required normalized choices and unsafe source-data diagnostics', () => {
+    const onOpenClassChoice = vi.fn()
+    render(
+      <BuildClassLevelsPanel
+        {...makeProps({
+          classChoices: [
+            {
+              id: 'class:any|hb|choice:path|1',
+              label: 'Training Path',
+              kind: 'class-feature',
+              owner: { type: 'class', name: 'Artificer', source: 'PHB' },
+              level: 1,
+              minimumSelections: 1,
+              maximumSelections: 1,
+              selectionCountByLevel: Array(20).fill(1),
+              options: [{ entityType: 'classFeature', name: 'First Path', source: 'PHB' }],
+              repeatable: false,
+              replacement: { cadence: 'never' },
+              source: { kind: 'class-feature-options', field: 'fixture' },
+            },
+          ],
+          classChoiceDiagnostics: [
+            {
+              code: 'invalid-count',
+              className: 'Artificer',
+              classSource: 'PHB',
+              featureName: 'Unresolved Training',
+              level: 2,
+              message: 'Fixture diagnostic',
+            },
+          ],
+          onOpenClassChoice,
+        })}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Required Choices'))
+    expect(screen.getByText('Training Path')).toBeTruthy()
+    expect(screen.getByText('Unresolved Training')).toBeTruthy()
+    expect(screen.getByText(/No rule was guessed/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Choose' }))
+    expect(onOpenClassChoice).toHaveBeenCalledWith(
+      expect.objectContaining({ label: 'Training Path' }),
+    )
   })
 })

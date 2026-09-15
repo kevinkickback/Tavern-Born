@@ -1,7 +1,8 @@
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
+import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
 import { useClassOptionalFeatureController } from '@/pages/build/class/hooks/useClassOptionalFeatureController'
 import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
 import { useSubclassSelectionController } from '@/pages/build/class/hooks/useSubclassSelectionController'
@@ -158,5 +159,60 @@ describe('class page controllers', () => {
 
     expect(result.current.viewingSubclass).toBeUndefined()
     expect(result.current.viewingSubclassData).toBeUndefined()
+  })
+
+  test('persists a source-qualified normalized class choice through the store', () => {
+    const character = useCharacterStore.getState().activeCharacter
+    if (!character) throw new Error('Expected active character fixture')
+    const normalizedChoice = {
+      id: 'class:wizard|phb|choice:study|1',
+      label: 'Field of Study',
+      kind: 'class-feature' as const,
+      owner: { type: 'class' as const, name: 'Wizard', source: 'PHB' },
+      level: 1,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: Array(20).fill(1),
+      options: [{ entityType: 'classFeature' as const, name: 'Practical Study', source: 'PHB' }],
+      repeatable: false,
+      replacement: { cadence: 'never' as const },
+      source: { kind: 'class-feature-options' as const, field: 'fixture' },
+    }
+    const classEntity = makeClassFixture({
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [normalizedChoice],
+        choiceDiagnostics: [],
+      },
+    })
+    const catalogs = {
+      classFeatures: [
+        { name: 'Practical Study', source: 'PHB', entries: ['Choose practical training.'] },
+      ],
+      feats: [],
+      items: [],
+      optionalFeatures: [],
+    }
+    const { result } = renderHook(() =>
+      useClassChoiceController({
+        character,
+        viewingClassData: classEntity,
+        viewingClassLevel: 4,
+        catalogs,
+      }),
+    )
+
+    act(() => result.current.open(normalizedChoice))
+    expect(result.current.activeOptionViews[0]?.reference.name).toBe('Practical Study')
+    act(() => result.current.confirm(result.current.activeOptionViews))
+
+    expect(useCharacterStore.getState().activeCharacter?.classChoiceSelections?.[0]).toMatchObject({
+      choiceId: normalizedChoice.id,
+      className: 'Wizard',
+      classSource: 'PHB',
+      selected: [{ name: 'Practical Study', source: 'PHB', slotLevel: 1 }],
+    })
   })
 })

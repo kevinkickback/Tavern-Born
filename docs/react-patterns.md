@@ -114,8 +114,10 @@ functions, and exposes command-backed actions. Keep the route responsible for se
 pane state, and cross-domain presentation only.
 
 `BuildClassPage` is the reference: subclass, spell, ASI/feat, and optional-feature controllers live
-under `src/pages/build/class/hooks/`. Do not move canonical rules into a controller; rules remain
-pure calculations or commands.
+under `src/pages/build/class/hooks/`. Its generic class-choice controller also resolves normalized
+choice descriptors into source-qualified view models while the pure resolver remains in
+`src/lib/character/classChoiceOptions.ts`. Do not move canonical rules into a controller; rules
+remain pure calculations or commands.
 
 ---
 

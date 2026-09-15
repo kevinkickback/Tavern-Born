@@ -72,7 +72,11 @@ Spellcasting note:
 
 Current implementation notes:
 - Race, class, background, feat, and spell mutations use complete pure commands returning `characterPatch` plus `provenanceUpdate`.
-- BuildClassPage arranges sections and modals; subclass, spell, ASI/feat, and optional-feature decisions live in focused hooks under src/pages/build/class/hooks. Subclass eligibility is a pure parsed-first calculation with isolated legacy fallbacks.
+- BuildClassPage arranges sections and modals; subclass, spell, ASI/feat, optional-feature, and
+  normalized class-choice decisions live in focused hooks under src/pages/build/class/hooks. The
+  class-choice option resolver in src/lib/character/classChoiceOptions.ts joins descriptors to
+  filtered source-qualified catalogs without embedding option lists. Subclass eligibility is a pure
+  parsed-first calculation with isolated legacy fallbacks.
 - Character creation composes the same origin commands through `buildInitialCharacter`; pages and hooks do not reconstruct grant pipelines.
 - Level-up HP choices are committed with class progression through `applyLevelUp`; the stored gain is the raw hit-die result so Constitution changes remain live.
 - HP reads resolve class/Constitution HP, per-level gain records, lasting adjustments, and an optional exact override in that order. Current and temporary HP remain mutable session values.

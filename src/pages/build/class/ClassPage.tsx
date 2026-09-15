@@ -16,6 +16,7 @@ import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
+import { ClassChoiceSelectionModal } from '@/pages/build/class/components/ClassChoiceSelectionModal'
 import {
   BuildClassDetailsPanel,
   type SelectedFeatureState,
@@ -23,6 +24,7 @@ import {
 import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPanel'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
+import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
 import { useClassOptionalFeatureController } from '@/pages/build/class/hooks/useClassOptionalFeatureController'
 import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
 import { useSubclassSelectionController } from '@/pages/build/class/hooks/useSubclassSelectionController'
@@ -30,7 +32,14 @@ import type { ClassFeatProgression } from '@/pages/build/class/model/levelsUtils
 import { buildLevelsToShow } from '@/pages/build/class/model/pageUtils'
 import { useClassPageState } from '@/pages/build/class/useClassPageState'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
+import type {
+  Class5e,
+  ClassFeature,
+  Feat5e,
+  Item5e,
+  OptionalFeatureLike,
+  Spell5e,
+} from '@/types/5etools'
 
 const CLASS_LEVEL_UP_HINT_ID = 'class-level-up-banner'
 const LEVEL_UP_BUTTON_SELECTOR = '[data-level-up-button="true"]'
@@ -39,7 +48,7 @@ const LEVEL_UP_HINT_WIDTH = 320
 export function BuildClassPage() {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { classes, classFeatures, optionalfeatures, spells, feats } = useFilteredGameData()
+  const { classes, classFeatures, optionalfeatures, spells, feats, items } = useFilteredGameData()
   const classLookup = useClassLookup()
   const { selectClass } = useUnifiedClassSelection()
   const { applyClassEquipmentChoice } = useClassProvenanceMutations()
@@ -83,6 +92,21 @@ export function BuildClassPage() {
   const viewingClassData = viewingClassSource
     ? classLookup[getEntityLookupKey(viewingClass, viewingClassSource)]
     : fallbackClassByName.get(viewingClass ?? '')
+  const classChoiceCatalogs = useMemo(
+    () => ({
+      classFeatures: classFeatures as ClassFeature[],
+      feats: feats as Feat5e[],
+      items: items as Item5e[],
+      optionalFeatures: optionalfeatures as OptionalFeatureLike[],
+    }),
+    [classFeatures, feats, items, optionalfeatures],
+  )
+  const classChoiceController = useClassChoiceController({
+    character,
+    viewingClassData,
+    viewingClassLevel,
+    catalogs: classChoiceCatalogs,
+  })
   const spellController = useClassSpellChoiceController(viewingClassData)
   const {
     choicesByLevel: spellChoicesByLevel,
@@ -332,6 +356,10 @@ export function BuildClassPage() {
               asiModeByLevel={asiModeByLevel}
               usedASI={usedASI}
               totalASIAcrossClasses={totalASIAcrossClasses}
+              classChoices={classChoiceController.choices}
+              classChoiceDiagnostics={classChoiceController.diagnostics}
+              classChoiceSelectionById={classChoiceController.selectionByChoiceId}
+              selectedClassChoiceViewsById={classChoiceController.selectedViewsByChoiceId}
               onOpenClassPicker={() => setClassPickerOpen(true)}
               onOpenSubclassPicker={() => setSubclassPickerOpen(true)}
               onOpenSpellPicker={setSpellPickerLevel}
@@ -343,6 +371,7 @@ export function BuildClassPage() {
               onOpenAsiPicker={setAsiPickerLevel}
               onOpenOptPicker={setOptPickerState}
               onOpenClassFeatPicker={setClassFeatPickerState}
+              onOpenClassChoice={classChoiceController.open}
               onBlockChoiceChange={(blockIndex, choice) => {
                 if (!viewingClassData) return
                 applyClassEquipmentChoice(viewingClassData, blockIndex, choice)
@@ -428,6 +457,17 @@ export function BuildClassPage() {
         onSpellSwapLevelChange={setSpellSwapLevel}
         onSpellSwapDropChange={setSpellSwapDrop}
       />
+
+      {classChoiceController.activeChoice && (
+        <ClassChoiceSelectionModal
+          choice={classChoiceController.activeChoice}
+          options={classChoiceController.activeOptionViews}
+          maximumSelections={classChoiceController.activeRequiredCount}
+          initialSelectedIds={classChoiceController.activeInitialSelectedIds}
+          onClose={classChoiceController.close}
+          onConfirm={classChoiceController.confirm}
+        />
+      )}
 
       {optionsPendingFeat && (
         <FeatOptionsModal
