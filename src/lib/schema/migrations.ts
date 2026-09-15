@@ -12,7 +12,7 @@ import type { Character } from '@/types/character'
  * Current character schema version.
  * Increment when making breaking changes to the character format.
  */
-export const CURRENT_SCHEMA_VERSION = 9
+export const CURRENT_SCHEMA_VERSION = 10
 
 /**
  * Migration handler: transform character from version N to N+1.
@@ -228,6 +228,29 @@ registerMigration({
     const c = character as unknown as Record<string, unknown>
     const { manualActions: _manualActions, ...rest } = c
     return { ...rest, version: '8.0.0' }
+  },
+})
+
+registerMigration({
+  fromVersion: 9,
+  toVersion: 10,
+  description: 'Separate Pact Magic usage from shared spell-slot usage.',
+  up: (character) => {
+    const c = character as Record<string, unknown>
+    const spells =
+      c.spells && typeof c.spells === 'object' ? (c.spells as Record<string, unknown>) : {}
+    return {
+      ...c,
+      spells: { ...spells, pactSpellSlots: {} },
+      version: '10.0.0',
+    } as Character
+  },
+  down: (character) => {
+    const c = character as unknown as Record<string, unknown>
+    const spells =
+      c.spells && typeof c.spells === 'object' ? (c.spells as Record<string, unknown>) : {}
+    const { pactSpellSlots: _pactSpellSlots, ...legacySpells } = spells
+    return { ...c, spells: legacySpells, version: '9.0.0' }
   },
 })
 

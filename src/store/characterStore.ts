@@ -100,6 +100,9 @@ function coerceCharacterShape(character: unknown): Character | null {
   const rawSpellSlots: Record<string, unknown> = isRecord(rawSpells.spellSlots)
     ? rawSpells.spellSlots
     : {}
+  const rawPactSpellSlots: Record<string, unknown> = isRecord(rawSpells.pactSpellSlots)
+    ? rawSpells.pactSpellSlots
+    : {}
 
   // Clamp spell slot usage to max to prevent validation failures when max decreases
   const clampedSpellSlots = Object.entries({
@@ -127,6 +130,28 @@ function coerceCharacterShape(character: unknown): Character | null {
     },
     {} as typeof baseline.spells.spellSlots,
   )
+  const clampedPactSpellSlots = Object.entries({
+    ...baseline.spells.pactSpellSlots,
+    ...rawPactSpellSlots,
+  }).reduce(
+    (acc, [level, slot]) => {
+      if (
+        slot &&
+        typeof slot === 'object' &&
+        'max' in slot &&
+        'used' in slot &&
+        typeof slot.max === 'number' &&
+        typeof slot.used === 'number'
+      ) {
+        acc[Number(level) as keyof typeof baseline.spells.spellSlots] = {
+          max: slot.max,
+          used: Math.min(slot.used, slot.max),
+        }
+      }
+      return acc
+    },
+    { ...baseline.spells.pactSpellSlots },
+  )
 
   return {
     ...baseline,
@@ -143,6 +168,7 @@ function coerceCharacterShape(character: unknown): Character | null {
         ? rawSpells.spellProfiles
         : baseline.spells.spellProfiles,
       spellSlots: clampedSpellSlots,
+      pactSpellSlots: clampedPactSpellSlots,
     },
     hitPoints: {
       ...baseline.hitPoints,

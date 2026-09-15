@@ -100,6 +100,17 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
         8: { max: 0, used: 0 },
         9: { max: 0, used: 0 },
       },
+      pactSpellSlots: {
+        1: { max: 0, used: 0 },
+        2: { max: 0, used: 0 },
+        3: { max: 0, used: 0 },
+        4: { max: 0, used: 0 },
+        5: { max: 0, used: 0 },
+        6: { max: 0, used: 0 },
+        7: { max: 0, used: 0 },
+        8: { max: 0, used: 0 },
+        9: { max: 0, used: 0 },
+      },
     },
     equipment: [],
     hitPoints: {

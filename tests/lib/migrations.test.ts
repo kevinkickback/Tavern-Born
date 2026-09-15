@@ -181,7 +181,7 @@ describe('migrateCharacter', () => {
     expect(result.suppressedEffectIds).toEqual([])
     expect(result.effectFlags).toEqual({})
     expect(result.manualActions).toEqual([])
-    expect(result.version).toBe('9.0.0')
+    expect(result.version).toBe(`${CURRENT_SCHEMA_VERSION}.0.0`)
   })
 
   it('preserves existing typed effect state when migrating from version 7', () => {
@@ -209,7 +209,7 @@ describe('migrateCharacter', () => {
     expect(result.suppressedEffectIds).toEqual(['source-effect'])
     expect(result.effectFlags).toEqual({ situational: true })
     expect(result.manualActions).toEqual([])
-    expect(result.version).toBe('9.0.0')
+    expect(result.version).toBe(`${CURRENT_SCHEMA_VERSION}.0.0`)
   })
 
   it('preserves existing manual actions when migrating from version 8', () => {
@@ -226,8 +226,24 @@ describe('migrateCharacter', () => {
     const result = migrateCharacter({ ...baseCharacter, version: '8.0.0', manualActions }, 8)
 
     expect(result.manualActions).toEqual(manualActions)
-    expect(result.version).toBe('9.0.0')
+    expect(result.version).toBe(`${CURRENT_SCHEMA_VERSION}.0.0`)
     expect((downgradeCharacter(result, 8) as Record<string, unknown>).manualActions).toBeUndefined()
+  })
+
+  it('adds an independent Pact Magic slot pool to version 9 characters', () => {
+    const result = migrateCharacter(
+      {
+        ...baseCharacter,
+        version: '9.0.0',
+        spells: { spellProfiles: [], spellSlots: { 1: { max: 2, used: 1 } } },
+      },
+      9,
+    )
+
+    expect(result.spells.pactSpellSlots).toEqual({})
+    expect(result.spells.spellSlots[1]).toEqual({ max: 2, used: 1 })
+    const downgraded = downgradeCharacter(result, 9) as Record<string, unknown>
+    expect((downgraded.spells as Record<string, unknown>).pactSpellSlots).toBeUndefined()
   })
 
   it('does not invent a rules value when legacy walking speed is missing', () => {

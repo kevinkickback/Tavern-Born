@@ -706,6 +706,7 @@ const spellSelectionSchema = z
   .object({
     spellProfiles: z.array(spellProfileSchema).min(1, 'At least one spell profile must exist'),
     spellSlots: spellSlotsSchema,
+    pactSpellSlots: spellSlotsSchema.default({}),
   })
   .refine(
     (selection) => {

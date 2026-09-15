@@ -334,7 +334,10 @@ export interface AsiChoice {
 
 interface SpellSelection {
   spellProfiles: SpellProfile[]
+  /** Shared Spellcasting slot usage. Maxima are reconciled from class data. */
   spellSlots: SpellSlots
+  /** Pact Magic usage kept separate when both pools have slots of the same level. */
+  pactSpellSlots?: SpellSlots
 }
 
 type SpellProfileType = 'class' | 'special' | 'racial'
@@ -372,7 +375,12 @@ export interface SpellProfile {
   spellSwaps?: Record<number, { removed: string; added: string }>
 }
 
-type SpellSlots = Partial<Record<number, { max: number; used: number }>>
+interface SpellSlotState {
+  max: number
+  used: number
+}
+
+export type SpellSlots = Partial<Record<number, SpellSlotState>>
 
 export interface Equipment {
   id: string

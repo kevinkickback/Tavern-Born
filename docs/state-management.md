@@ -154,8 +154,13 @@ edit.
   normalized, case-insensitive spell-name key; source-qualified input selects the matching catalog
   row, while two printings with the same normalized name intentionally collapse to one profile entry.
 - The unrestricted profile is `special:unrestricted` and is always prepared by definition.
-- Spell slots remain persisted in `character.spells.spellSlots` as mutable runtime usage state.
-- `character.spells.spellSlots` is stored as a numeric-keyed map (`1..9`) where each key is `{ max, used }`.
+- Shared Spellcasting and Pact Magic usage are persisted independently in
+  `character.spells.spellSlots` and `character.spells.pactSpellSlots`. Both are numeric-keyed maps
+  (`1..9`) whose entries are `{ max, used }`; separating the pools prevents a multiclass character's
+  same-level Pact and shared slots from overwriting each other.
+- Slot maxima are recalculated from class data and reconciled through the pure spell-slot command.
+  Existing usage is preserved and clamped when a maximum falls, while newly gained capacity starts
+  unused. Spend, restore, and manual-correction operations update only the selected pool.
 - Class-level spell source attribution is tracked in provenance spell source tags.
 - Attribution may be exact (class page level picker) or inferred (spells page lowest-eligible assignment).
 - Class-page per-level spell displays are derived from provenance attribution metadata.
@@ -193,10 +198,9 @@ Origin system note:
 
 **File:** `src/lib/schema/migrations.ts`
 
-The current schema version is 7. Version 5 introduced durable per-level hit-point gain records;
-version 6 moved legacy stored maximum HP into the explicit override model and initialized lasting
-HP/AC adjustment collections; version 7 migrates numeric walking speed into structured movement
-with labeled adjustments and exact per-mode overrides.
+The current schema version is 10. Version 8 introduced typed manual effects, version 9 introduced
+structured manual actions, and version 10 separates Pact Magic usage from shared spell-slot usage.
+The v9→v10 downgrade removes the new pool without rewriting the legacy shared pool.
 
 The migration system allows character data to be evolved safely across app versions while maintaining backwards compatibility.
 

@@ -119,11 +119,11 @@ export function calculateCharacterSpellSlots(
 
   const mergedSharedWithUsage = mergeSpellSlots(shared, usedMap)
 
-  const pactUsedMap: Record<number, number> = {}
+  const pactUsedMap = getSpellSlotFieldMap(character.spells.pactSpellSlots ?? {}, 'used')
   for (const [levelText, slots] of Object.entries(pact)) {
     const level = Number.parseInt(levelText, 10)
     if (!level || !slots) continue
-    const used = Math.min(usedMap[level] ?? 0, slots.max)
+    const used = Math.min(pactUsedMap[level] ?? 0, slots.max)
     pactUsedMap[level] = used
   }
   const mergedPactWithUsage = mergeSpellSlots(pact, pactUsedMap)
