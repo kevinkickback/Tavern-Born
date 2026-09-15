@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'vitest'
 import {
+  deriveStructuredItemEffects,
   deriveStructuredRaceEffects,
   getCharacterEffectResolutionContext,
   getCharacterEffects,
 } from '@/lib/calculations/characterEffects'
+import { resolveGrantedTrait, resolveNumericEffect } from '@/lib/calculations/effects'
 import type { Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -67,5 +69,85 @@ describe('character effect projection', () => {
       flags: { enabled: true },
       suppressedEffectIds: ['manual-adjustment'],
     })
+  })
+
+  test('projects structured item fields and gates every declaration by equipment state', () => {
+    const itemData = {
+      name: 'Test Implement',
+      source: 'TEST',
+      type: 'G',
+      reqAttune: true,
+      bonusAc: '+1',
+      bonusSavingThrow: '+2',
+      bonusAbilityCheck: '+1',
+      bonusSpellAttack: '+3',
+      bonusSpellSaveDc: '+2',
+      modifySpeed: {
+        static: { swim: 20 },
+        multiply: { walk: 2, fly: 2 },
+        bonus: { '*': 5 },
+        equal: { fly: 'walk' },
+      },
+      resist: ['test damage'],
+      entries: ['Rules prose is preserved but not interpreted.'],
+    }
+    const equipment = [
+      {
+        id: 'test-item',
+        name: itemData.name,
+        source: itemData.source,
+        type: itemData.type,
+        quantity: 1,
+        equipped: true,
+        attuned: false,
+      },
+    ]
+    const effects = deriveStructuredItemEffects(equipment, new Map([['test', itemData]]))
+    const inactiveContext = { equipment: { 'test-item': { equipped: true, attuned: false } } }
+    const activeContext = { equipment: { 'test-item': { equipped: true, attuned: true } } }
+
+    expect(effects.length).toBeGreaterThan(0)
+    expect(
+      effects.every((effect) => {
+        const requirement = effect.requirements?.[0]
+        return requirement?.kind === 'equipment' && requirement.itemId === 'test-item'
+      }),
+    ).toBe(true)
+    expect(resolveNumericEffect(10, { kind: 'armor-class' }, effects, inactiveContext).value).toBe(
+      10,
+    )
+    expect(resolveNumericEffect(10, { kind: 'armor-class' }, effects, activeContext).value).toBe(11)
+    expect(
+      resolveNumericEffect(
+        0,
+        { kind: 'saving-throw-modifier', ability: 'wisdom' },
+        effects,
+        activeContext,
+      ).value,
+    ).toBe(2)
+    expect(
+      resolveNumericEffect(
+        0,
+        { kind: 'ability-check-modifier', ability: 'wisdom' },
+        effects,
+        activeContext,
+      ).value,
+    ).toBe(1)
+    expect(
+      resolveNumericEffect(30, { kind: 'speed', mode: 'walk' }, effects, activeContext).value,
+    ).toBe(70)
+    expect(
+      resolveNumericEffect(0, { kind: 'speed', mode: 'swim' }, effects, activeContext).value,
+    ).toBe(20)
+    expect(
+      resolveNumericEffect(0, { kind: 'speed', mode: 'fly' }, effects, activeContext).value,
+    ).toBe(5)
+    expect(
+      resolveGrantedTrait(
+        { kind: 'damage-resistance', damageType: 'test damage' },
+        effects,
+        activeContext,
+      ).granted,
+    ).toBe(true)
   })
 })

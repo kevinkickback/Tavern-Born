@@ -108,6 +108,8 @@ export function useSpellSlots(): SpellSlotsState {
       character,
       classesById,
       calculationContext?.abilityScores.total ?? deriveEffectiveAbilityScores(character).total,
+      calculationContext?.effects.declarations,
+      calculationContext?.effects.resolutionContext,
     )
   }, [character, classesById, calculationContext])
 

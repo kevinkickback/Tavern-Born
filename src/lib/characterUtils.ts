@@ -6,6 +6,7 @@ import type {
   HitPointAdjustment,
   HitPointGain,
 } from '@/types/character'
+import type { CharacterEffect } from '@/types/effects'
 import {
   getCharacterEffectResolutionContext,
   getCharacterEffects,
@@ -176,6 +177,7 @@ export function getEffectiveMaxHP(
   character: Character,
   classesData: readonly Class5e[] | undefined,
   effectiveAbilityScores: AbilityScores,
+  sourceEffects: readonly CharacterEffect[] = [],
 ): number {
   const entries = getCharacterClassEntries(character)
   const conMod = getAbilityModifier(effectiveAbilityScores.constitution)
@@ -189,7 +191,7 @@ export function getEffectiveMaxHP(
   const resolved = resolveNumericEffect(
     calculatedMaxHP,
     { kind: 'hit-point-maximum' },
-    getCharacterEffects(character, characterLevel),
+    getCharacterEffects(character, characterLevel, sourceEffects),
     getCharacterEffectResolutionContext(character),
   )
   return Math.max(1, Math.trunc(resolved.value))

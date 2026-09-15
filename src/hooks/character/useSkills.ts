@@ -69,6 +69,8 @@ export function useSkills(): SkillsState {
         proficiencyBonus,
         skillToAbilityMap,
         parsedSkillList,
+        calculationContext?.effects.declarations,
+        calculationContext?.effects.resolutionContext,
       ),
     [
       abilityModifiers,
@@ -77,6 +79,7 @@ export function useSkills(): SkillsState {
       proficiencyBonus,
       skillToAbilityMap,
       parsedSkillList,
+      calculationContext,
     ],
   )
 

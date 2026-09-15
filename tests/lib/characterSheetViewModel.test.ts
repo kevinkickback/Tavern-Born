@@ -201,4 +201,68 @@ describe('createCharacterSheetViewModel', () => {
     expect(map2024.textFields.Text_11).toBe('12')
     expect(map2024.textFields.Text_17).toBe('35 ft')
   })
+
+  test('applies every structured equipped-item bonus through the shared PDF view model', () => {
+    const testClass = {
+      name: 'Test Caster',
+      source: 'TEST',
+      hd: { faces: 8 },
+      spellcastingAbility: 'int',
+      casterProgression: 'full',
+    } as Class5e
+    const itemData = {
+      name: 'Test Focus',
+      source: 'TEST',
+      type: 'G',
+      reqAttune: true,
+      bonusAc: '+1',
+      bonusSavingThrow: '+1',
+      bonusAbilityCheck: '+1',
+      bonusSpellAttack: '+1',
+      bonusSpellSaveDc: '+1',
+      modifySpeed: { bonus: { '*': 5 } },
+    }
+    const character = makeCharacterFixture({
+      class: testClass.name,
+      classSource: testClass.source,
+      classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
+      abilityScores: {
+        strength: 10,
+        dexterity: 14,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      equipment: [
+        {
+          id: 'test-focus',
+          name: itemData.name,
+          source: itemData.source,
+          type: itemData.type,
+          quantity: 1,
+          equipped: true,
+          attuned: true,
+          reqAttune: true,
+        },
+      ],
+    })
+    const viewModel = createCharacterSheetViewModel(character, {
+      classesByKey: buildClassLookup([testClass]),
+      itemLookup: new Map([['test', itemData]]),
+    })
+    const map2014 = mapCharacterSheet2014(viewModel)
+    const map2024 = mapCharacterSheet2024(viewModel)
+
+    expect(viewModel.effectiveArmorClass).toBe(13)
+    expect(viewModel.walkingSpeed).toBe(35)
+    expect(viewModel.savingThrowByAbility.get('strength')?.modifier).toBe(1)
+    expect(viewModel.skillByName.get('athletics')?.modifier).toBe(1)
+    expect(viewModel.spellcastingDetails[0]?.spellAttackBonus).toBe(3)
+    expect(viewModel.spellcastingDetails[0]?.spellSaveDC).toBe(11)
+    expect(map2014.textFields.AC).toBe('13')
+    expect(map2014.textFields.Speed).toBe('35 ft')
+    expect(map2024.textFields.Text_8).toBe('13')
+    expect(map2024.textFields.Text_17).toBe('35 ft')
+  })
 })

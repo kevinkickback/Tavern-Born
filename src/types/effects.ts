@@ -2,12 +2,13 @@ import type { AbilityName } from './character'
 
 export type NumericEffectTarget =
   | { kind: 'ability-score'; ability: AbilityName }
+  | { kind: 'ability-check-modifier'; ability: AbilityName }
   | { kind: 'skill-modifier'; skill: string }
   | { kind: 'saving-throw-modifier'; ability: AbilityName }
   | { kind: 'initiative' }
   | { kind: 'armor-class' }
   | { kind: 'hit-point-maximum' }
-  | { kind: 'speed'; mode: string }
+  | { kind: 'speed'; mode?: string }
   | { kind: 'carrying-capacity' }
   | { kind: 'attack-roll'; attackId?: string }
   | { kind: 'damage'; attackId?: string; damageType?: string }

@@ -116,6 +116,17 @@ const numericEffectTargetSchema = z.discriminatedUnion('kind', [
       'charisma',
     ]),
   }),
+  z.object({
+    kind: z.literal('ability-check-modifier'),
+    ability: z.enum([
+      'strength',
+      'dexterity',
+      'constitution',
+      'intelligence',
+      'wisdom',
+      'charisma',
+    ]),
+  }),
   z.object({ kind: z.literal('skill-modifier'), skill: z.string().min(1) }),
   z.object({
     kind: z.literal('saving-throw-modifier'),
@@ -131,7 +142,7 @@ const numericEffectTargetSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('initiative') }),
   z.object({ kind: z.literal('armor-class') }),
   z.object({ kind: z.literal('hit-point-maximum') }),
-  z.object({ kind: z.literal('speed'), mode: z.string().min(1) }),
+  z.object({ kind: z.literal('speed'), mode: z.string().min(1).optional() }),
   z.object({ kind: z.literal('carrying-capacity') }),
   z.object({ kind: z.literal('attack-roll'), attackId: z.string().min(1).optional() }),
   z.object({

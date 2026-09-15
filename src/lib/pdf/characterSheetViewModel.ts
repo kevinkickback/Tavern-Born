@@ -578,6 +578,10 @@ export function createCharacterSheetViewModel(
       character.proficiencies.skills,
       expertiseSkills,
       proficiencyBonus,
+      undefined,
+      undefined,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
     ).map((skill) => [skill.name, skill] as const),
   )
   const savingThrowByAbility = new Map(
@@ -585,6 +589,8 @@ export function createCharacterSheetViewModel(
       abilityModifiers,
       character.proficiencies.savingThrows,
       proficiencyBonus,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
     ).map((save) => [save.ability, save] as const),
   )
   const resolvedClasses = calculationContext.classes
@@ -609,8 +615,17 @@ export function createCharacterSheetViewModel(
     abilityModifiers,
     skillByName,
     savingThrowByAbility,
-    effectiveArmorClass: computeEffectiveCharacterArmorClass(character, effectiveAbilityScores),
-    maxHP: getEffectiveMaxHP(character, resolvedClasses, effectiveAbilityScores),
+    effectiveArmorClass: computeEffectiveCharacterArmorClass(
+      character,
+      effectiveAbilityScores,
+      calculationContext.effects.declarations,
+    ),
+    maxHP: getEffectiveMaxHP(
+      character,
+      resolvedClasses,
+      effectiveAbilityScores,
+      calculationContext.effects.declarations,
+    ),
     movement: calculationContext.movement,
     movementSummary: formatEffectiveMovement(calculationContext.movement),
     additionalMovementSummary: getAdditionalMovementSummary(calculationContext.movement),
@@ -633,6 +648,8 @@ export function createCharacterSheetViewModel(
       character,
       classesById,
       effectiveAbilityScores,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
     ),
     visionSummary: buildVisionSummary(character, raceResolution.mergedRace),
     racialTraitsSummary: buildRacialTraitsSummary(character, raceResolution.mergedRace),

@@ -1,5 +1,6 @@
 import type { Race5e } from '@/types/5etools'
 import type { Character, CharacterMovement, MovementMode } from '@/types/character'
+import type { CharacterEffect } from '@/types/effects'
 import { getCharacterEffectResolutionContext, getCharacterEffects } from './characterEffects'
 import { resolveNumericEffect } from './effects'
 
@@ -106,6 +107,7 @@ export function getEffectiveCharacterMovement(
         | 'suppressedEffectIds'
       >
     >,
+  sourceEffects: readonly CharacterEffect[] = [],
 ): EffectiveMovement {
   const base = getBaseCharacterMovement(character)
   const speeds: Record<string, number> = { ...base.speeds }
@@ -113,11 +115,13 @@ export function getEffectiveCharacterMovement(
     if (typeof value === 'number') speeds[mode] = value
   }
 
-  const effects = getCharacterEffects(character)
+  const effects = getCharacterEffects(character, 1, sourceEffects)
   const modes = new Set([
     ...Object.keys(speeds),
     ...effects.flatMap((effect) =>
-      effect.target.kind === 'speed' ? [effect.target.mode.trim().toLowerCase()] : [],
+      effect.target.kind === 'speed' && effect.target.mode
+        ? [effect.target.mode.trim().toLowerCase()]
+        : [],
     ),
   ])
   const context = getCharacterEffectResolutionContext(character)

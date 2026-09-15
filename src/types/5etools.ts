@@ -327,6 +327,20 @@ export interface Item5e {
   focus?: string[]
   /** Whether the item requires attunement; may be a class restriction string. */
   reqAttune?: boolean | string
+  bonusAc?: string | number
+  bonusSpellAttack?: string | number
+  bonusSpellSaveDc?: string | number
+  bonusSavingThrow?: string | number
+  bonusAbilityCheck?: string | number
+  modifySpeed?: {
+    static?: Record<string, number>
+    multiply?: Record<string, number>
+    bonus?: Record<string, number>
+    equal?: Record<string, string>
+  }
+  resist?: string[]
+  immune?: string[]
+  conditionImmune?: string[]
   [key: string]: unknown
 }
 

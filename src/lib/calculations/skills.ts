@@ -1,8 +1,10 @@
 import { SKILL_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
 import type { Class5e } from '@/types/5etools'
 import type { CharacterClassEntry, Skills } from '@/types/character'
+import type { CharacterEffect } from '@/types/effects'
 import { ABILITY_ABBREV_TO_FULL } from './abilityNames'
 import { ABILITY_NAMES, type AbilityName, formatModifier } from './abilityScores'
+import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 
 export { formatModifier }
 
@@ -107,14 +109,19 @@ export function deriveAllSavingThrows(
   abilityModifiers: Record<AbilityName, number>,
   proficientSavingThrows: string[],
   proficiencyBonus: number,
+  effects: readonly CharacterEffect[] = [],
+  effectContext: EffectResolutionContext = {},
 ): SavingThrowResult[] {
   const proficientSet = new Set(proficientSavingThrows.map((s) => s.toLowerCase()))
   return SAVING_THROW_ABILITIES.map((ability) => {
     const proficient = proficientSet.has(ability)
-    const modifier = calculateSavingThrowModifier(
-      abilityModifiers[ability] ?? 0,
-      proficiencyBonus,
-      proficient,
+    const modifier = Math.trunc(
+      resolveNumericEffect(
+        calculateSavingThrowModifier(abilityModifiers[ability] ?? 0, proficiencyBonus, proficient),
+        { kind: 'saving-throw-modifier', ability },
+        effects,
+        effectContext,
+      ).value,
     )
     return {
       ability,
@@ -164,6 +171,8 @@ export function deriveAllSkills(
   proficiencyBonus: number,
   parsedSkillToAbilityMap?: Readonly<Record<string, string>>,
   parsedSkillList?: readonly string[],
+  effects: readonly CharacterEffect[] = [],
+  effectContext: EffectResolutionContext = {},
 ): SkillResult[] {
   const resolvedMap = parsedSkillToAbilityMap ?? SKILL_TO_ABILITY
   const resolvedSkillList = parsedSkillList ?? ALL_SKILLS
@@ -174,11 +183,25 @@ export function deriveAllSkills(
     const ability = (resolvedMap[name] as AbilityName | undefined) ?? 'strength'
     const proficient = proficientSet.has(name)
     const expertise = expertiseSet.has(name)
-    const modifier = calculateSkillModifier(
+    const baseModifier = calculateSkillModifier(
       abilityModifiers[ability] ?? 0,
       proficiencyBonus,
       proficient,
       expertise,
+    )
+    const abilityCheckModifier = resolveNumericEffect(
+      baseModifier,
+      { kind: 'ability-check-modifier', ability },
+      effects,
+      effectContext,
+    ).value
+    const modifier = Math.trunc(
+      resolveNumericEffect(
+        abilityCheckModifier,
+        { kind: 'skill-modifier', skill: name },
+        effects,
+        effectContext,
+      ).value,
     )
     return {
       name,

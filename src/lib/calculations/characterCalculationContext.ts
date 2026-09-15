@@ -20,6 +20,7 @@ import {
   type RaceAbilityData,
 } from './abilityScores'
 import {
+  deriveStructuredItemEffects,
   deriveStructuredRaceEffects,
   getCharacterEffectResolutionContext,
   getCharacterEffects,
@@ -103,6 +104,7 @@ export function deriveEffectiveAbilityScores(
   race?: Race5e,
   subrace?: Race5e,
   background?: Background5e,
+  sourceEffects: readonly CharacterEffect[] = [],
 ): EffectiveAbilityScoreData {
   const base = character ? { ...character.abilityScores } : makeDefaultAbilityScores(8)
   const normalizedRaceSelection = normalizeRaceSelectionForOriginSystem(
@@ -144,7 +146,7 @@ export function deriveEffectiveAbilityScores(
   addBonuses(total, asiBonuses)
 
   if (character) {
-    const effects = getCharacterEffects(character, character.level)
+    const effects = getCharacterEffects(character, character.level, sourceEffects)
     const effectContext = getCharacterEffectResolutionContext(character)
     for (const ability of Object.keys(total) as AbilityName[]) {
       total[ability] = Math.max(
@@ -207,11 +209,14 @@ export function createCharacterCalculationContext(
   })
   const allEquipment = character.equipment ?? []
   const effectResolutionContext = getCharacterEffectResolutionContext(character)
-  const effects = getCharacterEffects(
-    character,
-    character.level,
-    deriveStructuredRaceEffects(raceResolution.mergedRace),
-  )
+  const sourceEffects = [
+    ...deriveStructuredRaceEffects(raceResolution.mergedRace),
+    ...deriveStructuredItemEffects(
+      allEquipment,
+      primaryLookups.itemLookup ?? rawLookups.itemLookup,
+    ),
+  ]
+  const effects = getCharacterEffects(character, character.level, sourceEffects)
 
   return {
     character,
@@ -227,13 +232,14 @@ export function createCharacterCalculationContext(
       raceResolution.parentRace,
       raceResolution.subraceData,
       background,
+      sourceEffects,
     ),
     equipment: {
       all: allEquipment,
       equipped: allEquipment.filter((item) => item.equipped),
       attuned: allEquipment.filter((item) => item.attuned),
     },
-    movement: getEffectiveCharacterMovement(character),
+    movement: getEffectiveCharacterMovement(character, sourceEffects),
     effects: {
       declarations: effects,
       resolutionContext: effectResolutionContext,

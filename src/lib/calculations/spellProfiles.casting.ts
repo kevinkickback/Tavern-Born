@@ -13,6 +13,8 @@ import {
 import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
 import type { AbilityScores, Character } from '@/types/character'
+import type { CharacterEffect } from '@/types/effects'
+import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { toClassProfileId } from './spellProfiles.constants'
 
 function normalizeProgression(value?: string): CasterProgression {
@@ -230,6 +232,8 @@ export function buildSpellcastingClassDetails(
   character: Character,
   classesById: Map<string, Class5e>,
   effectiveAbilityScores: AbilityScores,
+  effects: readonly CharacterEffect[] = [],
+  effectContext: EffectResolutionContext = {},
 ): SpellcastingClassDetail[] {
   const entries = getCharacterClassEntries(character)
   const totalLevel = getTotalClassLevels(entries)
@@ -237,6 +241,7 @@ export function buildSpellcastingClassDetails(
 
   return entries
     .map((entry) => {
+      const profileId = toClassProfileId(entry.name, entry.source)
       const classData = classesById.get(toClassProfileId(entry.name, entry.source))
       const subclassData = getSelectedSubclassData(classData, entry)
       const effectiveProgression = getEffectiveCasterProgression(classData, subclassData)
@@ -245,8 +250,28 @@ export function buildSpellcastingClassDetails(
       const mod = ability
         ? getAbilityModifier((effectiveAbilityScores as AbilityScores)[ability] ?? 10)
         : null
-      const saveDc = mod !== null ? 8 + proficiency + mod : null
-      const attack = mod !== null ? proficiency + mod : null
+      const saveDc =
+        mod !== null
+          ? Math.trunc(
+              resolveNumericEffect(
+                8 + proficiency + mod,
+                { kind: 'spell-save-dc', profileId },
+                effects,
+                effectContext,
+              ).value,
+            )
+          : null
+      const attack =
+        mod !== null
+          ? Math.trunc(
+              resolveNumericEffect(
+                proficiency + mod,
+                { kind: 'spell-attack', profileId },
+                effects,
+                effectContext,
+              ).value,
+            )
+          : null
       const preparedCaster = isPreparedCaster(classData)
       const truePreparedCaster = isTruePreparedCaster(classData)
       const levelOnlyPrepared = isLevelOnlyPreparedCaster(classData)
@@ -269,7 +294,7 @@ export function buildSpellcastingClassDetails(
       }
 
       return {
-        profileId: toClassProfileId(entry.name, entry.source),
+        profileId,
         className: entry.name,
         classSource: entry.source,
         classLevel: entry.levels,

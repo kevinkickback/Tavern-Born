@@ -48,7 +48,11 @@ export function useArmorClass(): ArmorClassState {
     adjustmentTotal,
     adjustedAC,
     overrideAC: character?.armorClassOverride,
-    effectiveAC: computeEffectiveCharacterArmorClass(character ?? {}, effectiveAbilityScores),
+    effectiveAC: computeEffectiveCharacterArmorClass(
+      character ?? {},
+      effectiveAbilityScores,
+      calculationContext?.effects.declarations,
+    ),
     setAC: (ac) => {
       if (!character) return
       updateCharacter(character.id, { armorClassOverride: Math.max(0, ac) })

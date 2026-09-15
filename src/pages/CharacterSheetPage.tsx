@@ -15,6 +15,7 @@ import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/
 import {
   useBackgroundLookup,
   useClassLookup,
+  useItemLookup,
   useItemPropertyLookup,
   useOrganizations,
   useRaceLookup,
@@ -44,6 +45,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const racesByKey = useRaceLookup()
   const backgroundsByKey = useBackgroundLookup()
   const spellsByKey = useSpellLookup()
+  const itemLookup = useItemLookup()
   const itemPropertyByAbbr = useItemPropertyLookup()
   const organizations = useOrganizations()
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
@@ -60,6 +62,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
             racesByKey,
             backgroundsByKey,
             spellsByKey,
+            itemLookup,
             itemPropertyByAbbr,
             organizations,
           })
@@ -69,6 +72,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
       character,
       classesByKey,
       itemPropertyByAbbr,
+      itemLookup,
       organizations,
       racesByKey,
       spellsByKey,

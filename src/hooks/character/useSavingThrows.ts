@@ -29,8 +29,15 @@ export function useSavingThrows(): SavingThrowsState {
   const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level])
 
   const savingThrows = useMemo(
-    () => deriveAllSavingThrows(abilityModifiers, proficientSavingThrows, proficiencyBonus),
-    [abilityModifiers, proficientSavingThrows, proficiencyBonus],
+    () =>
+      deriveAllSavingThrows(
+        abilityModifiers,
+        proficientSavingThrows,
+        proficiencyBonus,
+        calculationContext?.effects.declarations,
+        calculationContext?.effects.resolutionContext,
+      ),
+    [abilityModifiers, proficientSavingThrows, proficiencyBonus, calculationContext],
   )
 
   const toggleProficiency = (ability: AbilityName) => {

@@ -1,4 +1,5 @@
 import type { ArmorClassAdjustment, Character, Equipment } from '@/types/character'
+import type { CharacterEffect } from '@/types/effects'
 import { getCharacterEffectResolutionContext, getCharacterEffects } from './characterEffects'
 import { resolveNumericEffect } from './effects'
 import { getAbilityModifier } from './gameRules'
@@ -123,13 +124,14 @@ export function computeEffectiveCharacterArmorClass(
     >
   > & { abilityScores?: { dexterity?: number; dex?: number } },
   effectiveAbilityScores: { dexterity?: number; dex?: number } | undefined,
+  sourceEffects: readonly CharacterEffect[] = [],
 ): number {
   const dexScore = effectiveAbilityScores?.dexterity ?? effectiveAbilityScores?.dex ?? 10
   const dexModifier = getAbilityModifier(dexScore)
   const resolved = resolveNumericEffect(
     computeArmorClass(character.equipment ?? [], dexModifier),
     { kind: 'armor-class' },
-    getCharacterEffects(character),
+    getCharacterEffects(character, 1, sourceEffects),
     getCharacterEffectResolutionContext(character),
   )
   return Math.max(0, Math.trunc(resolved.value))
