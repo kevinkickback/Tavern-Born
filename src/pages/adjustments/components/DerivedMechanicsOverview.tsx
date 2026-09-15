@@ -1,6 +1,13 @@
 import { useId } from 'react'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { formatModifier } from '@/lib/calculations/abilityScores'
+import { isActionSizedCharacterAction } from '@/lib/calculations/actions'
 import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
 import type { CharacterAction } from '@/types/actions'
 import type { CharacterEffect } from '@/types/effects'
@@ -86,7 +93,9 @@ function effectOperationLabel(effect: CharacterEffect): string {
 
 export function SourceDerivedActions({ actions }: { actions: readonly CharacterAction[] }) {
   const headingId = useId()
-  const derivedActions = actions.filter((action) => action.source.kind !== 'manual')
+  const derivedActions = actions.filter(
+    (action) => action.source.kind !== 'manual' && isActionSizedCharacterAction(action),
+  )
 
   return (
     <section aria-labelledby={headingId} className="space-y-2">
@@ -96,8 +105,8 @@ export function SourceDerivedActions({ actions }: { actions: readonly CharacterA
             Source-derived actions
           </h2>
           <p className="text-sm text-muted-foreground">
-            Derived from equipped weapons, spells, ancestry, feats, and class features. Manage each
-            entry at its source.
+            Limited to attacks and rules that explicitly grant an action, bonus action, or reaction.
+            Manage each entry at its source.
           </p>
         </div>
         <Badge variant="outline">{derivedActions.length}</Badge>
@@ -147,53 +156,56 @@ export function SourceDerivedEffects({
   effects: readonly CharacterEffect[]
   resolutionContext: EffectResolutionContext
 }) {
-  const headingId = useId()
   const derivedEffects = effects.filter((effect) => effect.source.kind !== 'manual')
 
   return (
-    <section aria-labelledby={headingId} className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 id={headingId} className="font-semibold">
-            Source-derived effects
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Derived from ancestry, feats, equipment, and other configured sources. Manage each entry
-            at its source.
-          </p>
-        </div>
-        <Badge variant="outline">{derivedEffects.length}</Badge>
-      </div>
-      {derivedEffects.length === 0 ? (
-        <p className="border-y border-border py-4 text-sm text-muted-foreground">
-          No source-derived effects are currently available.
-        </p>
-      ) : (
-        <div className="divide-y divide-border border-y border-border">
-          {derivedEffects.map((effect) => {
-            const active = isCharacterEffectActive(effect, resolutionContext)
-            return (
-              <div key={effect.id} className="py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{effect.label}</span>
-                  <Badge variant={active ? 'secondary' : 'outline'}>
-                    {active ? 'Active' : 'Inactive'}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {sourceLabel(effect.source)}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {effectTargetLabel(effect)} · {effectOperationLabel(effect)}
-                </p>
-                {effect.condition && (
-                  <p className="mt-1 text-xs text-muted-foreground">{effect.condition}</p>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </section>
+    <Accordion type="single" collapsible defaultValue="source-derived-effects">
+      <AccordionItem value="source-derived-effects" className="border-0">
+        <AccordionTrigger className="py-1">
+          <span className="min-w-0">
+            <span className="block font-semibold">Source-derived effects</span>
+            <span className="mt-0.5 block text-sm font-normal text-muted-foreground">
+              Derived from ancestry, feats, equipment, and other configured sources. Manage each
+              entry at its source.
+            </span>
+          </span>
+          <Badge variant="outline" className="ml-auto">
+            {derivedEffects.length}
+          </Badge>
+        </AccordionTrigger>
+        <AccordionContent className="pt-2 pb-0">
+          {derivedEffects.length === 0 ? (
+            <p className="border-y border-border py-4 text-sm text-muted-foreground">
+              No source-derived effects are currently available.
+            </p>
+          ) : (
+            <div className="divide-y divide-border border-y border-border">
+              {derivedEffects.map((effect) => {
+                const active = isCharacterEffectActive(effect, resolutionContext)
+                return (
+                  <div key={effect.id} className="py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{effect.label}</span>
+                      <Badge variant={active ? 'secondary' : 'outline'}>
+                        {active ? 'Active' : 'Inactive'}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {sourceLabel(effect.source)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {effectTargetLabel(effect)} · {effectOperationLabel(effect)}
+                    </p>
+                    {effect.condition && (
+                      <p className="mt-1 text-xs text-muted-foreground">{effect.condition}</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }

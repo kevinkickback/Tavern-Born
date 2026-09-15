@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AdjustmentsPage } from '@/pages/adjustments/AdjustmentsPage'
+import { SourceDerivedActions } from '@/pages/adjustments/components/DerivedMechanicsOverview'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -61,9 +62,46 @@ describe('AdjustmentsPage', () => {
     expect(screen.getByRole('heading', { name: 'Current effects' })).toBeTruthy()
     expect(screen.queryByRole('dialog')).toBeNull()
 
+    const sourceEffects = screen.getByRole('button', { name: /Source-derived effects/ })
+    const manualEffects = screen.getByRole('button', { name: /Manual effects/ })
+    expect(sourceEffects.getAttribute('aria-expanded')).toBe('true')
+    expect(manualEffects.getAttribute('aria-expanded')).toBe('true')
+    await user.click(sourceEffects)
+    await user.click(manualEffects)
+    expect(sourceEffects.getAttribute('aria-expanded')).toBe('false')
+    expect(manualEffects.getAttribute('aria-expanded')).toBe('false')
+
     await user.click(screen.getByRole('tab', { name: 'Actions' }))
 
     expect(screen.getByRole('heading', { name: 'Manual Actions' })).toBeTruthy()
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  test('limits the source list to action-sized projections', () => {
+    render(
+      <SourceDerivedActions
+        actions={[
+          {
+            id: 'source-action',
+            name: 'Action-sized rule',
+            kind: 'action',
+            description: 'Explicit action rules.',
+            source: { kind: 'race', name: 'Fixture source' },
+            active: true,
+          },
+          {
+            id: 'source-passive',
+            name: 'Passive rule',
+            kind: 'special',
+            description: 'Passive rules text.',
+            source: { kind: 'race', name: 'Fixture source' },
+            active: true,
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('Action-sized rule')).toBeTruthy()
+    expect(screen.queryByText('Passive rule')).toBeNull()
   })
 })

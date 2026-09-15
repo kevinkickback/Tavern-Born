@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { BuildAbilityScoresPage } from '@/pages/build/ability-scores/AbilityScoresPage'
 import { useCharacterStore } from '@/store/characterStore'
@@ -37,6 +38,13 @@ const testBackground: Background5e = {
 }
 
 describe('BuildAbilityScoresPage', () => {
+  const renderPage = (initialEntry = '/build/ability-scores') =>
+    render(
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <BuildAbilityScoresPage />
+      </MemoryRouter>,
+    )
+
   beforeEach(() => {
     const character = makeCharacterFixture({
       originSystem: '2024',
@@ -88,7 +96,7 @@ describe('BuildAbilityScoresPage', () => {
 
   test('edits revised background bonuses in the canonical ability-score section', async () => {
     const user = userEvent.setup()
-    render(<BuildAbilityScoresPage />)
+    renderPage()
 
     expect(screen.getByTestId('background-ability-choices')).toBeTruthy()
     await user.click(screen.getByLabelText('Background ability bonus +2'))
@@ -102,7 +110,7 @@ describe('BuildAbilityScoresPage', () => {
 
   test('shows the unresolved parsed background bonus pattern in Sources', async () => {
     const user = userEvent.setup()
-    render(<BuildAbilityScoresPage />)
+    renderPage()
 
     await user.click(screen.getByRole('button', { name: /Sources/ }))
 
@@ -125,12 +133,52 @@ describe('BuildAbilityScoresPage', () => {
       activeCharacter: character,
     })
     const user = userEvent.setup()
-    render(<BuildAbilityScoresPage />)
+    renderPage()
 
     await user.click(screen.getByRole('button', { name: 'Sources' }))
 
     expect(
       screen.getByText('No ability bonus sources recorded. Select a background to get started.'),
     ).toBeTruthy()
+  })
+
+  test('highlights the revised background bonus destination from its configuration link', () => {
+    renderPage('/build/ability-scores?focus=background-bonuses')
+
+    expect(screen.getByTestId('background-ability-choices').className).toContain(
+      'animate-route-focus',
+    )
+  })
+
+  test('highlights the legacy race bonus destination from its configuration link', () => {
+    const legacyRace: Race5e = {
+      name: 'Legacy Choice Race',
+      source: 'TEST',
+      ability: [{ choose: { count: 1, amount: 2, from: ['str', 'dex'] } }],
+    }
+    const character = makeCharacterFixture({
+      originSystem: '2014',
+      race: legacyRace.name,
+      raceSource: legacyRace.source,
+      background: '',
+      backgroundSource: undefined,
+      raceAsiChoices: [],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    useGameDataStore.setState({
+      gameData: {
+        ...useGameDataStore.getState().gameData!,
+        races: [legacyRace],
+        backgrounds: [],
+      },
+    })
+
+    renderPage('/build/ability-scores?focus=race-bonuses')
+
+    expect(screen.getByTestId('race-ability-choices').className).toContain('animate-route-focus')
   })
 })

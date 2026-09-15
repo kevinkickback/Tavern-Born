@@ -61,8 +61,13 @@ type FeatOptionsTarget = Feat5e & {
 function getFeatLinkTarget(name: string, source: string) {
   return {
     pathname: '/feats',
-    search: createSearchParams({ view: 'character', feat: name, source }).toString(),
+    search: createSearchParams({ view: 'character', feat: name, source, focus: 'feat' }).toString(),
   }
+}
+
+const BACKGROUND_BONUSES_LINK = {
+  pathname: '/build/ability-scores',
+  search: createSearchParams({ focus: 'background-bonuses' }).toString(),
 }
 
 export function BuildBackgroundPage() {
@@ -253,7 +258,7 @@ export function BuildBackgroundPage() {
                 </p>
               </div>
               <Button asChild size="sm" variant="accentOutline" className="h-8 text-xs">
-                <Link to="/build/ability-scores">
+                <Link to={BACKGROUND_BONUSES_LINK}>
                   <PencilSimple className="size-3" />
                   Edit bonuses
                 </Link>
@@ -317,19 +322,21 @@ export function BuildBackgroundPage() {
                 return (
                   <div key={choice.id}>
                     {isResolved ? (
-                      <div className="flex items-center gap-1.5">
-                        <Badge variant="outline" className="text-xs gap-1 opacity-70 w-fit">
-                          <Star className="h-3 w-3" weight="duotone" />
-                          {resolvedFeat?.name ?? choice.selected[0]}
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 text-xs px-1.5"
-                          onClick={() => handleOpenFeatModal(choice.id)}
-                        >
-                          Change
-                        </Button>
+                      <div className="flex flex-col items-start gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-xs gap-1 opacity-70 w-fit">
+                            <Star className="h-3 w-3" weight="duotone" />
+                            {resolvedFeat?.name ?? choice.selected[0]}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-xs px-1.5"
+                            onClick={() => handleOpenFeatModal(choice.id)}
+                          >
+                            Change
+                          </Button>
+                        </div>
                         {resolvedFeat && hasFeatOptions(resolvedFeat) && (
                           <Button asChild size="sm" variant="accentOutline" className="h-7 text-xs">
                             <Link to={getFeatLinkTarget(resolvedFeat.name, resolvedFeat.source)}>

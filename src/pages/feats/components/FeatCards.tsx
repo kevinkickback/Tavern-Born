@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import {
   checkAllPrerequisites,
@@ -44,6 +45,7 @@ interface FeatDetailCardProps {
   optionsPending?: boolean
   optionsConfigured?: boolean
   selected?: boolean
+  highlighted?: boolean
   onSelect?: (name: string, source: string) => void
 }
 
@@ -64,8 +66,10 @@ export const FeatDetailCard = memo(function FeatDetailCard({
   optionsPending,
   optionsConfigured,
   selected,
+  highlighted,
   onSelect,
 }: FeatDetailCardProps) {
+  const routeFocusRef = useRouteFocusTarget<HTMLDivElement>(!!highlighted)
   const categoryLabel =
     typeof featData?.category === 'string' && featData.category.length > 0
       ? featCategoryToFull(featData.category)
@@ -109,9 +113,11 @@ export const FeatDetailCard = memo(function FeatDetailCard({
 
   return (
     <div
+      ref={routeFocusRef}
       className={cn(
         'relative min-w-0 cursor-default rounded-xl border border-border bg-workspace-pane transition-colors hover:bg-surface-hover',
         selected && 'bg-surface-selected ring-1 ring-inset ring-primary/45',
+        highlighted && 'animate-route-focus',
       )}
     >
       <button

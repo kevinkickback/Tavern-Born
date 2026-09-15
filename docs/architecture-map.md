@@ -143,7 +143,14 @@ Current implementation notes:
   workbench keeps the manual form and Actions/Effects tabs in the narrower left pane and the
   complete current source/manual list in the larger right pane. Source-owned entries remain
   editable only through Equipment, Race, Class, Feats, Spells, and their other owning workflows;
-  this page never duplicates or deletes them. Actions remains the default. Review is the sole
+  this page never duplicates or deletes them. Source action projection is conservative: structured
+  weapon attacks and timed spells are supplemented only by race, feat, and class rules text that
+  explicitly grants an action, bonus action, reaction, or attack replacement. Passive prose is not
+  promoted to an action, and non-action casting times are omitted from the action-oriented list.
+  Source-derived and manual effect lists are independently collapsible. Actions remains the default.
+  Cross-page configuration links carry a presentation-only focus key so the destination card can
+  scroll into view and briefly highlight itself; the query does not change character state and
+  works for both legacy race bonuses and revised background bonuses. Review is the sole
   destination in Builder's final Finish group after Core and Details; its header separates Needs
   Attention from the remaining Character Overview. Builder has no one-item Options group. Rules is
   a character-scoped

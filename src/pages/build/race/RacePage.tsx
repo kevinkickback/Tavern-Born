@@ -9,7 +9,7 @@ import {
   Star,
 } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { createSearchParams, Link } from 'react-router-dom'
 import { GameContent } from '@/components/editor/GameContent'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
@@ -64,6 +64,11 @@ import { useCharacterStore } from '@/store/characterStore'
 import type { Feat5e, Race5e, Spell5e } from '@/types/5etools'
 
 type FeatOptionsTarget = Feat5e & { provenanceChoiceId?: string }
+
+const RACE_BONUSES_LINK = {
+  pathname: '/build/ability-scores',
+  search: createSearchParams({ focus: 'race-bonuses' }).toString(),
+}
 
 export function BuildRacePage() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -471,7 +476,7 @@ export function BuildRacePage() {
                                 variant="accentOutline"
                                 className="h-7 px-2 text-xs"
                               >
-                                <Link to="/build/ability-scores">
+                                <Link to={RACE_BONUSES_LINK}>
                                   <PencilSimple className="size-3" />
                                   Choose bonuses
                                 </Link>

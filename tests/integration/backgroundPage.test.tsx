@@ -88,8 +88,13 @@ describe('BackgroundPage', () => {
     expect(screen.queryByTestId('feat-options-modal')).toBeNull()
     expect(screen.queryByText('Current Bonuses')).toBeNull()
     expect(screen.queryByText('Provided by background')).toBeNull()
-    expect(screen.getByRole('link', { name: 'Configure feat' }).getAttribute('href')).toBe(
-      '/feats?view=character&feat=Configurable+Fixture+Feat&source=TEST',
+    const configureLink = screen.getByRole('link', { name: 'Configure feat' })
+    expect(configureLink.getAttribute('href')).toBe(
+      '/feats?view=character&feat=Configurable+Fixture+Feat&source=TEST&focus=feat',
+    )
+    expect(configureLink.closest('div.flex.flex-col')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Edit bonuses' }).getAttribute('href')).toBe(
+      '/build/ability-scores?focus=background-bonuses',
     )
     expect(screen.getAllByText('Origin Feat')).toHaveLength(1)
   })

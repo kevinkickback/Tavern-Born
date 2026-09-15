@@ -70,6 +70,8 @@ describe('source-derived mechanics overview', () => {
     expect(screen.getByText('Fixture armor class')).toBeTruthy()
     expect(screen.getByText('Active')).toBeTruthy()
     expect(screen.queryByText('Manual fixture effect')).toBeNull()
-    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.getAllByRole('button')).toEqual([
+      screen.getByRole('button', { name: /Source-derived effects/ }),
+    ])
   })
 })

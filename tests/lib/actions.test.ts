@@ -5,6 +5,7 @@ import {
   deriveRulesTextActions,
   deriveSpellActions,
   deriveWeaponActions,
+  inferRulesTextActionKind,
 } from '@/lib/calculations/actions'
 import type { Race5e, Spell5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -194,14 +195,20 @@ describe('character action projection', () => {
     ])
   })
 
-  test('keeps feature, feat, and structured species entries as unautomated rules text', () => {
+  test('classifies explicit action grants while excluding passive feature prose', () => {
     const character = makeCharacterFixture({
       features: [
         {
-          id: 'test-feature',
-          name: 'Test Feature',
+          id: 'test-action-feature',
+          name: 'Test Action Feature',
           source: 'TEST',
-          description: 'Test feature rules.',
+          description: 'As an action, you can use this feature.',
+        },
+        {
+          id: 'test-passive-feature',
+          name: 'Test Passive Feature',
+          source: 'TEST',
+          description: 'You learn one additional language.',
         },
       ],
       feats: [
@@ -209,7 +216,7 @@ describe('character action projection', () => {
           id: 'test-feat',
           name: 'Test Feat',
           source: 'TEST',
-          description: 'Test feat rules.',
+          description: 'When a creature moves, you can use your reaction to respond.',
         },
       ],
     })
@@ -220,7 +227,12 @@ describe('character action projection', () => {
         {
           type: 'entries',
           name: 'Test Trait',
-          entries: ['Test trait rules.'],
+          entries: ['As a Bonus Action, you can activate this trait.'],
+        },
+        {
+          type: 'entries',
+          name: 'Extra Language',
+          entries: ['You can speak, read, and write one extra language.'],
         },
         'Unstructured top-level prose is not treated as an action.',
       ],
@@ -228,23 +240,35 @@ describe('character action projection', () => {
 
     expect(deriveRulesTextActions(character, race)).toEqual([
       expect.objectContaining({
-        id: 'feature:test-feature',
-        name: 'Test Feature',
-        kind: 'special',
-        description: 'Test feature rules.',
+        id: 'feature:test-action-feature',
+        name: 'Test Action Feature',
+        kind: 'action',
       }),
       expect.objectContaining({
         id: 'feat:test-feat',
         name: 'Test Feat',
-        kind: 'special',
-        description: 'Test feat rules.',
+        kind: 'reaction',
       }),
       expect.objectContaining({
         name: 'Test Trait',
-        kind: 'special',
-        description: 'Test trait rules.',
+        kind: 'bonus-action',
       }),
     ])
+  })
+
+  test('recognizes both legacy and revised action wording without catalog-specific names', () => {
+    expect(inferRulesTextActionKind('You can use your action to activate this benefit.')).toBe(
+      'action',
+    )
+    expect(
+      inferRulesTextActionKind(
+        'When you take the Attack action, you can replace one of your attacks with this benefit.',
+      ),
+    ).toBe('action')
+    expect(inferRulesTextActionKind('As a Bonus Action, you can activate this benefit.')).toBe(
+      'bonus-action',
+    )
+    expect(inferRulesTextActionKind('You gain proficiency in one additional skill.')).toBeNull()
   })
 
   test('combines source-backed and manual actions through one view-neutral projection', () => {

@@ -1,6 +1,12 @@
 import { Plus, SlidersHorizontal, Trash } from '@phosphor-icons/react'
 import { useId, useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -314,49 +320,58 @@ export function ManualEffectsList() {
     updateCharacter(character.id, patch)
 
   return (
-    <section className="space-y-2">
-      <h3 className="text-sm font-semibold">Manual effects</h3>
-      {manualEffects.length === 0 ? (
-        <p className="border-y border-border py-4 text-sm text-muted-foreground">
-          No manual effects have been added.
-        </p>
-      ) : (
-        <div className="divide-y divide-border border-y border-border">
-          {manualEffects.map((effect) => {
-            const enabled = !suppressed.has(effect.id)
-            return (
-              <div key={effect.id} className="flex items-center gap-3 py-3">
-                <Switch
-                  checked={enabled}
-                  aria-label={`${enabled ? 'Disable' : 'Enable'} ${effect.label}`}
-                  onCheckedChange={(checked) =>
-                    update(setEffectSuppressedCommand(character, effect.id, !checked))
-                  }
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{effect.label}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatTarget(effect.target)} · {formatOperation(effect.operation)}
-                  </p>
-                  {effect.condition && (
-                    <p className="mt-1 text-xs text-muted-foreground">{effect.condition}</p>
-                  )}
-                </div>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  aria-label={`Remove ${effect.label}`}
-                  onClick={() => update(removeManualEffectCommand(character, effect.id))}
-                >
-                  <Trash />
-                </Button>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </section>
+    <Accordion type="single" collapsible defaultValue="manual-effects">
+      <AccordionItem value="manual-effects" className="border-0">
+        <AccordionTrigger className="py-1">
+          <span className="font-semibold">Manual effects</span>
+          <span className="ml-auto rounded-md border border-border px-2 py-0.5 text-xs font-medium">
+            {manualEffects.length}
+          </span>
+        </AccordionTrigger>
+        <AccordionContent className="pt-2 pb-0">
+          {manualEffects.length === 0 ? (
+            <p className="border-y border-border py-4 text-sm text-muted-foreground">
+              No manual effects have been added.
+            </p>
+          ) : (
+            <div className="divide-y divide-border border-y border-border">
+              {manualEffects.map((effect) => {
+                const enabled = !suppressed.has(effect.id)
+                return (
+                  <div key={effect.id} className="flex items-center gap-3 py-3">
+                    <Switch
+                      checked={enabled}
+                      aria-label={`${enabled ? 'Disable' : 'Enable'} ${effect.label}`}
+                      onCheckedChange={(checked) =>
+                        update(setEffectSuppressedCommand(character, effect.id, !checked))
+                      }
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{effect.label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatTarget(effect.target)} · {formatOperation(effect.operation)}
+                      </p>
+                      {effect.condition && (
+                        <p className="mt-1 text-xs text-muted-foreground">{effect.condition}</p>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`Remove ${effect.label}`}
+                      onClick={() => update(removeManualEffectCommand(character, effect.id))}
+                    >
+                      <Trash />
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }
 

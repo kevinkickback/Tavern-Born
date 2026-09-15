@@ -68,6 +68,9 @@ describe('Race page summary', () => {
     expect(screen.getByRole('link', { name: 'Choose bonuses' }).className).toContain(
       'border-accent',
     )
+    expect(screen.getByRole('link', { name: 'Choose bonuses' }).getAttribute('href')).toBe(
+      '/build/ability-scores?focus=race-bonuses',
+    )
 
     const speedValue = screen.getByText(/^walk 30 ft/i)
     const speedCell = speedValue.closest('div.flex.min-h-16')

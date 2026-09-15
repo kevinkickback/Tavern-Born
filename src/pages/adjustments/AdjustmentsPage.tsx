@@ -9,6 +9,7 @@ import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useCharacterActions } from '@/hooks/character/useCharacterActions'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
+import { isActionSizedCharacterAction } from '@/lib/calculations/actions'
 import { cn } from '@/lib/utils'
 import {
   SourceDerivedActions,
@@ -131,7 +132,10 @@ export function AdjustmentsPage() {
                   title={section === 'actions' ? 'Current actions' : 'Current effects'}
                   count={
                     section === 'actions'
-                      ? actions.length
+                      ? actions.filter(
+                          (action) =>
+                            action.source.kind === 'manual' || isActionSizedCharacterAction(action),
+                        ).length
                       : (calculation?.effects.declarations.length ?? 0)
                   }
                   className="pr-20"

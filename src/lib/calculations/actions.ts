@@ -46,11 +46,52 @@ export interface CharacterActionProjectionContext extends WeaponActionProjection
   race?: Race5e
 }
 
+/** Whether an action belongs in action/attack-oriented UI and fixed-sheet projections. */
+export function isActionSizedCharacterAction(action: CharacterAction): boolean {
+  return (
+    action.kind === 'action' ||
+    action.kind === 'attack' ||
+    action.kind === 'bonus-action' ||
+    action.kind === 'reaction'
+  )
+}
+
 function spellActionKind(unit: string | undefined): CharacterAction['kind'] {
   if (unit === 'action') return 'action'
   if (unit === 'bonus') return 'bonus-action'
   if (unit === 'reaction') return 'reaction'
   return 'special'
+}
+
+const BONUS_ACTION_PATTERNS = [
+  /\bas (?:a |an )?bonus action\b/i,
+  /\b(?:can|may) (?:take|use) (?:a |one |your |this )?bonus action\b/i,
+  /\buse (?:a |your )bonus action\b/i,
+]
+
+const REACTION_PATTERNS = [
+  /\bas (?:a |an )?reaction\b/i,
+  /\b(?:can|may) (?:take|use) (?:a |one |your |this )?reaction\b/i,
+  /\buse (?:a |your )reaction\b/i,
+]
+
+const ACTION_PATTERNS = [
+  /\bas (?:a |an )?(?:\w+ )?action\b/i,
+  /\b(?:can|may) (?:take|use) (?:a |an |one |your |this )?(?:additional )?(?:\w+ )?action\b/i,
+  /\buse (?:an |your )action\b/i,
+  /\bwhen you take (?:the |an? )?(?:[\w-]+ )*action\b[^.]*\breplace (?:one|an)\b[^.]*\battack/i,
+]
+
+/** Classifies only rules text that explicitly grants an action-sized choice. */
+export function inferRulesTextActionKind(
+  description: string,
+): Extract<CharacterAction['kind'], 'action' | 'bonus-action' | 'reaction'> | null {
+  const normalized = description.replace(/\s+/g, ' ').trim()
+  if (!normalized) return null
+  if (BONUS_ACTION_PATTERNS.some((pattern) => pattern.test(normalized))) return 'bonus-action'
+  if (REACTION_PATTERNS.some((pattern) => pattern.test(normalized))) return 'reaction'
+  if (ACTION_PATTERNS.some((pattern) => pattern.test(normalized))) return 'action'
+  return null
 }
 
 /** Projects known spells from structured casting-time/range fields and preserves their rules text. */
@@ -90,42 +131,53 @@ export function deriveSpellActions(
   })
 }
 
-/** Preserves unautomated feature, feat, and species rules as explicit special entries. */
+/** Projects feature, feat, and species rules only when their text explicitly grants an action. */
 export function deriveRulesTextActions(
   character: Character,
   race: Race5e | undefined,
 ): CharacterAction[] {
-  const featureActions = character.features.map(
-    (feature): CharacterAction => ({
-      id: `feature:${feature.id}`,
-      name: feature.name,
-      kind: 'special',
-      description: feature.description,
-      source: { kind: 'other', name: feature.name, source: feature.source, entityId: feature.id },
-      active: true,
-    }),
-  )
-  const featActions = character.feats.map(
-    (feat): CharacterAction => ({
-      id: `feat:${feat.id}`,
-      name: feat.name,
-      kind: 'special',
-      description: feat.description,
-      source: { kind: 'feat', name: feat.name, source: feat.source, entityId: feat.id },
-      active: true,
-    }),
-  )
+  const featureActions = character.features.flatMap((feature): CharacterAction[] => {
+    const kind = inferRulesTextActionKind(feature.description)
+    if (!kind) return []
+    return [
+      {
+        id: `feature:${feature.id}`,
+        name: feature.name,
+        kind,
+        description: feature.description,
+        source: { kind: 'other', name: feature.name, source: feature.source, entityId: feature.id },
+        active: true,
+      },
+    ]
+  })
+  const featActions = character.feats.flatMap((feat): CharacterAction[] => {
+    const kind = inferRulesTextActionKind(feat.description)
+    if (!kind) return []
+    return [
+      {
+        id: `feat:${feat.id}`,
+        name: feat.name,
+        kind,
+        description: feat.description,
+        source: { kind: 'feat', name: feat.name, source: feat.source, entityId: feat.id },
+        active: true,
+      },
+    ]
+  })
   const raceActions = (race?.presentationEntries ?? race?.entries ?? []).flatMap(
     (entry, index): CharacterAction[] => {
       if (!entry || typeof entry !== 'object') return []
       const block = entry as { type?: string; name?: string; entries?: unknown[] }
       if (block.type !== 'entries' || !block.name?.trim()) return []
+      const description = renderEntriesToText(block.entries)
+      const kind = inferRulesTextActionKind(description)
+      if (!kind) return []
       return [
         {
           id: `race:${encodeURIComponent(`${race?.name}|${race?.source}`)}:${index}`,
           name: block.name,
-          kind: 'special',
-          description: renderEntriesToText(block.entries),
+          kind,
+          description,
           source: { kind: 'race', name: race?.name ?? '', source: race?.source },
           active: true,
         },

@@ -71,7 +71,10 @@ export function useFeatsPageController() {
   const linkedFeatName = searchParams.get('feat')
   const linkedFeatSource = searchParams.get('source')
   const hasLinkedFeat = !!linkedFeatName && !!linkedFeatSource
-  const [compactPane, setCompactPane] = useState<CompactPane>(hasLinkedFeat ? 'right' : 'left')
+  const focusLinkedConfiguration = searchParams.get('focus') === 'feat'
+  const [compactPane, setCompactPane] = useState<CompactPane>(
+    hasLinkedFeat && !focusLinkedConfiguration ? 'right' : 'left',
+  )
   const [selectedFeat, setSelectedFeat] = useState<SelectedFeatIdentity | null>(() =>
     hasLinkedFeat ? { name: linkedFeatName, source: linkedFeatSource } : null,
   )

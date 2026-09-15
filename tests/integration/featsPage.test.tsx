@@ -203,10 +203,14 @@ describe('FeatsPage bonus feat configuration', () => {
       activeCharacter: character,
     })
 
-    renderPage()
+    renderPage('/feats?view=character&feat=Magic+Initiate&source=XPHB&focus=feat')
 
-    expect(screen.getByText('You gain the following benefits.')).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Feats' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getAllByText('You gain the following benefits.').length).toBeGreaterThan(0)
     expect(screen.getByText('Cleric')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Select Magic Initiate' }).parentElement?.className,
+    ).toContain('animate-route-focus')
     fireEvent.click(screen.getByRole('button', { name: 'Complete Setup' }))
     expect(screen.getByRole('dialog', { name: 'Configure Magic Initiate' }).textContent).toContain(
       'Cleric Spells',

@@ -1,5 +1,6 @@
 import { Barbell, Coins, ListNumbers, PencilSimple } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Progress } from '@/components/ui/progress'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
@@ -20,6 +21,7 @@ import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceM
 import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useSkillList, useSkillToAbilityMap } from '@/hooks/data/useGameData'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import {
   ABILITY_ABBREVIATIONS,
   type AbilityName,
@@ -46,6 +48,11 @@ const EMPTY_RACE_ASI_CHOICES: string[][] = []
 const EMPTY_BACKGROUND_ASI_CHOICES: string[] = []
 
 export function BuildAbilityScoresPage() {
+  const [searchParams] = useSearchParams()
+  const focusRaceBonuses = searchParams.get('focus') === 'race-bonuses'
+  const focusBackgroundBonuses = searchParams.get('focus') === 'background-bonuses'
+  const raceBonusesRef = useRouteFocusTarget<HTMLElement>(focusRaceBonuses)
+  const backgroundBonusesRef = useRouteFocusTarget<HTMLElement>(focusBackgroundBonuses)
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { skills } = useFilteredGameData()
@@ -333,7 +340,14 @@ export function BuildAbilityScoresPage() {
                       </TabsContent>
                     </Tabs>
                     {raceAsiData.choices.length > 0 && (
-                      <section className="mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4">
+                      <section
+                        ref={raceBonusesRef}
+                        className={cn(
+                          'mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4',
+                          focusRaceBonuses && 'animate-route-focus',
+                        )}
+                        data-testid="race-ability-choices"
+                      >
                         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
                           <div className="min-w-0">
                             <h3 className="text-sm font-semibold text-foreground">
@@ -453,7 +467,11 @@ export function BuildAbilityScoresPage() {
                     )}
                     {backgroundAbilityEntity && bgAsiData.blocks.length > 0 && (
                       <section
-                        className="mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4"
+                        ref={backgroundBonusesRef}
+                        className={cn(
+                          'mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4',
+                          focusBackgroundBonuses && 'animate-route-focus',
+                        )}
                         data-testid="background-ability-choices"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">

@@ -1,4 +1,5 @@
 import { Lightning, Plus, Star, WarningCircle } from '@phosphor-icons/react'
+import { useSearchParams } from 'react-router-dom'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
@@ -37,6 +38,7 @@ import {
 } from './hooks/useFeatsPageController'
 
 export function FeatsPage() {
+  const [searchParams] = useSearchParams()
   const controller = useFeatsPageController()
   const {
     activeFeatData,
@@ -344,6 +346,10 @@ export function FeatsPage() {
                                   granted.name,
                                   granted.source,
                                 )}
+                                highlighted={
+                                  searchParams.get('focus') === 'feat' &&
+                                  isSelectedFeat(selectedFeat, granted.name, granted.source)
+                                }
                                 onSelect={handleSelectFeat}
                                 grantedBy={granted.sourceLabel}
                                 grantVariant={granted.grantVariant}
@@ -397,6 +403,10 @@ export function FeatsPage() {
                                       selectedName,
                                       selectedSource,
                                     )}
+                                    highlighted={
+                                      searchParams.get('focus') === 'feat' &&
+                                      isSelectedFeat(selectedFeat, selectedName, selectedSource)
+                                    }
                                     onSelect={handleSelectFeat}
                                     grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
                                     onRemove={() =>
@@ -430,6 +440,10 @@ export function FeatsPage() {
                                   granted.name,
                                   granted.source,
                                 )}
+                                highlighted={
+                                  searchParams.get('focus') === 'feat' &&
+                                  isSelectedFeat(selectedFeat, granted.name, granted.source)
+                                }
                                 onSelect={handleSelectFeat}
                                 grantedBy={granted.sourceLabel}
                                 grantVariant={granted.grantVariant}
@@ -484,6 +498,10 @@ export function FeatsPage() {
                                       selectedName,
                                       selectedSource,
                                     )}
+                                    highlighted={
+                                      searchParams.get('focus') === 'feat' &&
+                                      isSelectedFeat(selectedFeat, selectedName, selectedSource)
+                                    }
                                     onSelect={handleSelectFeat}
                                     grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
                                     onRemove={() =>
