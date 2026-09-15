@@ -20,6 +20,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "generate:test-fixtures": "node scripts/generate-pdf-kitchen-sink-fixtures.mjs",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:boundaries": "depcruise --config .dependency-cruiser.cjs src electron",
     "check:dead-code": "knip --no-progress --exclude duplicates",

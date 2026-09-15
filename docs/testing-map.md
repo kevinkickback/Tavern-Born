@@ -113,7 +113,7 @@ new tests land and do not lower them to merge a change.
   source-qualified race/background choices, option retraction, and class level-down cleanup.
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
-- Header HP/AC/rest launch controls and immediate in-session one-time-hint reset coverage in
+- Header HP/AC launch controls, deliberate Rest-action absence, and immediate in-session one-time-hint reset coverage in
   tests/integration/appHeader.test.tsx
 - Character-card action behavior and consistent accent-colored level, race, and class icons in tests/integration/characterCard.test.tsx
 - Title-bar-safe Floating UI collision padding and live anchoring across supported interface scales,
@@ -121,10 +121,12 @@ new tests land and do not lower them to merge a change.
   without a position jump, and constrained pointer/keyboard movement. Pure positioning tests cover
   only Tavern Born's pinned-preview clamping; Floating UI's geometry implementation is not
   duplicated in the test suite.
-- HP and AC management modal coverage in tests/integration/hitPointsModal.test.tsx and
+- HP and AC Overview/Manual changes modal coverage in tests/integration/hitPointsModal.test.tsx and
   tests/integration/armorClassModal.test.tsx
 - Builder Adjustments page/editor coverage in tests/integration/adjustmentsPage.test.tsx,
   tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx
+- Race summary coverage for parsed unresolved ability choices and cell-owned bonus/movement actions
+  in tests/integration/racePageSummary.test.tsx
 - Canonical 2014 race/2024 background readiness routing and revised background-bonus editing in
   tests/lib/characterReadiness.test.ts and tests/integration/abilityScoresPage.test.tsx
 - Warning/destructive palette import regression coverage in tests/lib/themeColors.test.ts
@@ -196,7 +198,11 @@ new tests land and do not lower them to merge a change.
   contracts, form filling, and 2014 MPMB cleanup, plus saved-file compatibility coverage for
   resistance, armor, language, tool, and checkbox appearances and flat
   workspace-shell/preview-canvas presentation coverage
-- Importable PDF kitchen-sink character coverage in tests/fixtures/pdf-kitchen-sink.tbc and tests/lib/pdfKitchenSinkFixture.test.ts (multiclass/subclass, class-owned and source-qualified feat choices, spell profiles, full skills/saves, attacks, magic items, 90-row inventory, narrative/runtime state, schema validation, and both template capacity boundaries)
+- Importable, ruleset-specific PDF kitchen-sink coverage in
+  tests/fixtures/pdf-kitchen-sink-2014.tbc, tests/fixtures/pdf-kitchen-sink-2024.tbc, and
+  tests/lib/pdfKitchenSinkFixture.test.ts. The fixtures retain high-capacity multiclass, spell,
+  skill/save, attack, magic-item, inventory, narrative, and runtime coverage while a corpus audit
+  requires every source-qualified entity to resolve and forbids embedded item/feat/feature prose.
 - Route-decomposition coverage keeps Feats and Characteristics behavior under their existing
   integration suites; `tests/lib/characteristicsModel.test.ts` additionally locks legacy draft
   compatibility and data-agnostic organization presentation.

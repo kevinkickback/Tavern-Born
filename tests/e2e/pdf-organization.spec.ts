@@ -15,7 +15,7 @@ test('2014 PDF replaces the organization placeholder with the selected emblem', 
 }, testInfo) => {
   test.setTimeout(60_000)
   const fixture = JSON.parse(
-    fs.readFileSync(path.resolve('tests/fixtures/pdf-kitchen-sink.tbc'), 'utf8'),
+    fs.readFileSync(path.resolve('tests/fixtures/pdf-kitchen-sink-2014.tbc'), 'utf8'),
   ) as Record<string, unknown>
   const character = {
     ...fixture,

@@ -85,4 +85,12 @@ reopens an actual generated 2014 file and verifies the resistance, armor, langua
 plus portable checkbox appearances. When replacing either template, rerun those tests and visually
 inspect every generated page before changing field names.
 
-`tests/fixtures/pdf-kitchen-sink.tbc` is an importable level-20 regression character designed to populate both templates heavily. It includes three classes/subclasses, a race/subrace, class-owned and source-qualified choice feats, four spell profiles with 31 unique spells, all skills and saves, six weapons, five magic items, 90 inventory rows, multiple defenses, runtime state, provenance, a portrait, and extensive character details. Its companion test validates the schema, feat-choice ownership fields, and both mapping-capacity boundaries.
+`tests/fixtures/pdf-kitchen-sink-2014.tbc` and
+`tests/fixtures/pdf-kitchen-sink-2024.tbc` are importable level-20 regression characters dedicated
+to their respective rulesets. Each includes three corpus-valid classes/subclasses, four spell
+profiles, all skills and saves, at least six weapons, five magic items, 90 inventory rows, multiple
+defenses, runtime state, a portrait, and extensive character details. The generation script sources
+equipment fields and source-qualified selections from `data/` and stores no copied item, feat, or
+feature rules prose. The companion test reparses the current 5etools corpus, rejects every unresolved
+race/species, subrace, class/subclass, background, feat, spell, item, or feature reference, validates
+both schemas, and exercises each fixture only against its matching template capacity boundary.
