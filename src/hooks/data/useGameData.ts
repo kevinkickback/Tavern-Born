@@ -99,15 +99,6 @@ export function useSpellLookup() {
   return useMemo(() => gameData?.lookups?.spellsByKey ?? {}, [gameData?.lookups?.spellsByKey])
 }
 
-export function useOptionalFeatureLookup() {
-  const gameData = useGameDataStore((state) => state.gameData)
-
-  return useMemo(
-    () => gameData?.lookups?.optionalFeaturesByKey ?? {},
-    [gameData?.lookups?.optionalFeaturesByKey],
-  )
-}
-
 function useSubclassLookup() {
   const gameData = useGameDataStore((state) => state.gameData)
 

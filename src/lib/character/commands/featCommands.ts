@@ -8,7 +8,6 @@ import {
   addGrant,
   addSpellGrant,
   applyFeatGrant,
-  applyOptionalFeatureGrant,
   makeSourceTag,
   removeGrantsBySourceRef,
   resolveChoice,
@@ -170,87 +169,6 @@ export function removeFeatProvenanceCommand(
   const feats = { ...ledger.feats }
   delete feats[normalizeKey(featName)]
   return { characterPatch: {}, provenanceUpdate: { ...ledger, feats } }
-}
-
-export function applyOptionalFeatureSelectionCommand(
-  ledger: ProvenanceLedger,
-  featureName: string,
-  featureSource: string | undefined,
-  grantingSourceName: string,
-  grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
-): CharacterCommandResult {
-  return {
-    characterPatch: {},
-    provenanceUpdate: applyOptionalFeatureGrant(
-      ledger,
-      featureName,
-      featureSource,
-      grantingSourceName,
-      grantingSourceType,
-    ),
-  }
-}
-
-interface OptionalFeatureSelection {
-  name: string
-  source?: string
-}
-
-export function replaceOptionalFeatureSelectionsCommand(
-  character: Character,
-  ledger: ProvenanceLedger,
-  replacedFeatures: OptionalFeatureSelection[],
-  selectedFeatures: OptionalFeatureSelection[],
-  grantingSourceName: string,
-  grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
-): CharacterCommandResult {
-  const replacedKeys = new Set(
-    replacedFeatures.map((feature) => `${normalizeKey(feature.name)}|${feature.source ?? ''}`),
-  )
-  const retainedFeatures = character.features.filter(
-    (feature) => !replacedKeys.has(`${normalizeKey(feature.name)}|${feature.source ?? ''}`),
-  )
-  let provenanceUpdate = ledger
-  for (const feature of replacedFeatures) {
-    const key = normalizeKey(feature.name)
-    const retainedTags = (provenanceUpdate.features[key] ?? []).filter(
-      (tag) =>
-        !(
-          tag.sourceType === grantingSourceType &&
-          tag.sourceName === grantingSourceName &&
-          tag.grantType === 'choice'
-        ),
-    )
-    const features = { ...provenanceUpdate.features }
-    if (retainedTags.length > 0) features[key] = retainedTags
-    else delete features[key]
-    provenanceUpdate = { ...provenanceUpdate, features }
-  }
-
-  for (const feature of selectedFeatures) {
-    provenanceUpdate = applyOptionalFeatureGrant(
-      provenanceUpdate,
-      feature.name,
-      feature.source,
-      grantingSourceName,
-      grantingSourceType,
-    )
-  }
-
-  return {
-    characterPatch: {
-      features: [
-        ...retainedFeatures,
-        ...selectedFeatures.map((feature) => ({
-          id: `${feature.name}-opt`,
-          name: feature.name,
-          source: feature.source ?? '',
-          description: '',
-        })),
-      ],
-    },
-    provenanceUpdate,
-  }
 }
 
 export function resolveFeatChoiceCommand(

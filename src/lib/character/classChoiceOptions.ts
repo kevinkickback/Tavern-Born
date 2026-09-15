@@ -1,6 +1,14 @@
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
-import type { ClassFeature, Feat5e, Item5e, OptionalFeatureLike } from '@/types/5etools'
-import type { CharacterClassChoiceOption } from '@/types/character'
+import { normalizeKey } from '@/lib/provenance/normalization'
+import type { ProvenanceLedger } from '@/lib/provenance/types'
+import type {
+  ClassFeature,
+  Feat5e,
+  Item5e,
+  OptionalFeatureLike,
+  Raw5ePrereq,
+} from '@/types/5etools'
+import type { CharacterClassChoiceOption, CharacterClassChoiceSelection } from '@/types/character'
 import type {
   ChoiceOptionEntityType,
   NormalizedCharacterChoice,
@@ -11,6 +19,7 @@ import type {
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference
   entries: unknown[]
+  prerequisite?: Raw5ePrereq[]
 }
 
 export interface ClassChoiceCatalogs {
@@ -20,6 +29,46 @@ export interface ClassChoiceCatalogs {
   optionalFeatures: readonly OptionalFeatureLike[]
   itemTypeByAbbr: Readonly<Record<string, string>>
   weaponProficiencies: readonly string[]
+}
+
+function isLegacyChoiceTag(
+  ledger: ProvenanceLedger,
+  choice: NormalizedCharacterChoice,
+  option: NormalizedChoiceOptionReference,
+): boolean {
+  return (ledger.features[normalizeKey(option.name)] ?? []).some(
+    (tag) =>
+      tag.sourceType === 'class' &&
+      tag.sourceName === choice.owner.name &&
+      tag.grantType === 'choice' &&
+      tag.grantVariant === undefined &&
+      (!option.source || (tag.sourceRef ?? '') === option.source),
+  )
+}
+
+/** Projects legacy optional-feature grants into the normalized choice UI until the next save. */
+export function getLegacyClassChoiceSelection(
+  choice: NormalizedCharacterChoice,
+  options: readonly ClassChoiceOptionView[],
+  ledger: ProvenanceLedger,
+): CharacterClassChoiceSelection | undefined {
+  if (choice.kind !== 'optional-feature' || choice.source.kind !== 'optional-feature-progression') {
+    return undefined
+  }
+  const selected = options
+    .map((option) => option.reference)
+    .filter((option) => isLegacyChoiceTag(ledger, choice, option))
+    .map((option) => ({ ...option, slotLevel: choice.level }))
+  if (selected.length === 0) return undefined
+  return {
+    choiceId: choice.id,
+    label: choice.label,
+    kind: choice.kind,
+    className: choice.owner.name,
+    classSource: choice.owner.source,
+    classLevel: choice.level,
+    selected,
+  }
 }
 
 type ChoiceCatalogEntity = ClassFeature | Feat5e | Item5e | OptionalFeatureLike
@@ -123,6 +172,9 @@ function toView(
       ...(entity.source ? { source: entity.source } : {}),
     },
     entries: Array.isArray(entity.entries) ? entity.entries : [],
+    ...('prerequisite' in entity && Array.isArray(entity.prerequisite)
+      ? { prerequisite: entity.prerequisite }
+      : {}),
   }
 }
 
@@ -179,15 +231,13 @@ export function resolveClassChoiceOptions(
   )
 }
 
-/** Excludes normalized choices already owned by the legacy progression-specific editors. */
+/** Excludes normalized choices still owned by the legacy feat-progression editor. */
 export function getStandaloneClassChoices(classData: {
   normalizedRules?: { choices: NormalizedCharacterChoice[] }
-  optionalfeatureProgression?: Array<{ name: string }>
   featProgression?: unknown
 }): NormalizedCharacterChoice[] {
   const progressionLabels = new Set(
     [
-      ...(classData.optionalfeatureProgression ?? []).map((progression) => progression.name),
       ...(Array.isArray(classData.featProgression)
         ? classData.featProgression.flatMap((progression) => {
             if (!progression || typeof progression !== 'object') return []
@@ -198,8 +248,6 @@ export function getStandaloneClassChoices(classData: {
     ].map(normalized),
   )
   return (classData.normalizedRules?.choices ?? []).filter(
-    (choice) =>
-      choice.source.kind !== 'optional-feature-progression' &&
-      !progressionLabels.has(normalized(choice.label)),
+    (choice) => !progressionLabels.has(normalized(choice.label)),
   )
 }

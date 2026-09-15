@@ -1,12 +1,6 @@
 import { getOptFeatureTotal } from '@/lib/5etools/classData'
 import type { ClassFeatureDisplay } from '../components/DetailsPanel'
 
-export interface OptionalFeatureProgression {
-  name?: string
-  featureType: string[]
-  progression: number[] | Record<string, number>
-}
-
 export interface ClassFeatProgression {
   name?: string
   category: string[]
@@ -26,7 +20,6 @@ interface ComputeLevelDisplayDataParams {
   subclassFeatureName: string | null
   asiLevels: number[]
   spellChoicesByLevel: Map<number, SpellGain>
-  optFeatureProgressions: OptionalFeatureProgression[]
   classFeatProgressions: ClassFeatProgression[]
   featuresByLevel: Map<number, ClassFeatureDisplay[]>
 }
@@ -37,14 +30,12 @@ export function computeLevelDisplayData({
   subclassFeatureName,
   asiLevels,
   spellChoicesByLevel,
-  optFeatureProgressions,
   classFeatProgressions,
   featuresByLevel,
 }: ComputeLevelDisplayDataParams): {
   isSubclassLevel: boolean
   isASILevel: boolean
   spellGain: SpellGain | undefined
-  optFeatureGainsAtLevel: OptionalFeatureProgression[]
   classFeatGainsAtLevel: ClassFeatProgression[]
   passiveFeatures: ClassFeatureDisplay[]
   choiceCount: number
@@ -53,12 +44,6 @@ export function computeLevelDisplayData({
   const isSubclassLevel = level === subclassLevel
   const isASILevel = asiLevels.includes(level)
   const spellGain = spellChoicesByLevel.get(level)
-
-  const optFeatureGainsAtLevel = optFeatureProgressions.filter(
-    (progression) =>
-      getOptFeatureTotal(progression.progression, level) >
-      getOptFeatureTotal(progression.progression, level - 1),
-  )
 
   const classFeatGainsAtLevel = classFeatProgressions.filter(
     (progression) =>
@@ -87,14 +72,12 @@ export function computeLevelDisplayData({
     (isSubclassLevel ? 1 : 0) +
     (isASILevel ? 1 : 0) +
     (spellGain ? 1 : 0) +
-    optFeatureGainsAtLevel.length +
     classFeatGainsAtLevel.length
 
   return {
     isSubclassLevel,
     isASILevel,
     spellGain,
-    optFeatureGainsAtLevel,
     classFeatGainsAtLevel,
     passiveFeatures,
     choiceCount,

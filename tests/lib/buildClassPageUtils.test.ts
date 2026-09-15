@@ -170,11 +170,10 @@ describe('buildClassPageUtils', () => {
         [1, { cantrips: 2 }],
         [5, { spells: 2 }],
       ]),
-      optFeatureProgressions: [{ progression: { '2': 1, '6': 2 } }],
       classFeatProgressions: [{ progression: [0, 0, 1, 1, 2, 2, 2, 3] }],
     })
 
-    expect(levels).toEqual([1, 2, 3, 4, 5, 6, 8])
+    expect(levels).toEqual([1, 3, 4, 5, 8])
   })
 
   test('buildFeatModalFeats keeps available feats and appends selected missing feats', () => {

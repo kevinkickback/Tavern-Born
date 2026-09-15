@@ -194,6 +194,7 @@ export interface OptionalFeatureLike {
   source?: string
   featureType?: string | string[]
   entries?: unknown[]
+  prerequisite?: Raw5ePrereq[]
 }
 
 export interface ItemProperty5e {

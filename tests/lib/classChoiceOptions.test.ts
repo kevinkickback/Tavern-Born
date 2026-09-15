@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'vitest'
 import {
+  getLegacyClassChoiceSelection,
   getStandaloneClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { addGrant, makeSourceTag } from '@/lib/provenance'
+import { emptyProvenance } from '@/store/characterStore'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 function choice(overrides: Partial<NormalizedCharacterChoice>): NormalizedCharacterChoice {
@@ -137,7 +140,7 @@ describe('class choice option resolution', () => {
     })
   })
 
-  test('leaves progression-owned choices with their existing editors', () => {
+  test('routes optional-feature progressions through normalized choices', () => {
     const standalone = choice({ label: 'Standalone' })
     const optional = choice({
       label: 'Optional Pool',
@@ -148,9 +151,43 @@ describe('class choice option resolution', () => {
     expect(
       getStandaloneClassChoices({
         normalizedRules: { choices: [standalone, optional, featProgression] },
-        optionalfeatureProgression: [{ name: 'Optional Pool' }],
         featProgression: [{ name: 'Feat Pool' }],
       }),
-    ).toEqual([standalone])
+    ).toEqual([standalone, optional])
+  })
+
+  test('projects legacy class-owned optional features into a normalized choice', () => {
+    const optional = choice({
+      label: 'Optional Pool',
+      kind: 'optional-feature',
+      source: { kind: 'optional-feature-progression', field: 'optionalfeatureProgression[0]' },
+      optionFilter: { entityType: 'optionalFeature', featureTypes: ['CUSTOM'] },
+    })
+    const ledger = addGrant(
+      emptyProvenance(),
+      'features',
+      'Legacy Option',
+      makeSourceTag('class', 'Any', 'choice', 'HB'),
+    )
+
+    expect(
+      getLegacyClassChoiceSelection(
+        optional,
+        [
+          {
+            reference: {
+              entityType: 'optionalFeature',
+              name: 'Legacy Option',
+              source: 'HB',
+            },
+            entries: [],
+          },
+        ],
+        ledger,
+      ),
+    ).toMatchObject({
+      choiceId: optional.id,
+      selected: [{ name: 'Legacy Option', source: 'HB', slotLevel: 1 }],
+    })
   })
 })

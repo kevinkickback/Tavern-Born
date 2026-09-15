@@ -17,12 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspacePaneHeader } from '@/components/workspace'
-import {
-  featCategoryToFull,
-  getOptFeatureTotal,
-  type OptionalFeatureLike,
-  optFeatureTypeToFull,
-} from '@/lib/5etools/classData'
+import { featCategoryToFull, getOptFeatureTotal } from '@/lib/5etools/classData'
 import {
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
@@ -39,7 +34,7 @@ import type {
   Feat,
 } from '@/types/character'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
-import type { ClassFeatProgression, OptionalFeatureProgression } from '../model/levelsUtils'
+import type { ClassFeatProgression } from '../model/levelsUtils'
 import { computeLevelDisplayData } from '../model/levelsUtils'
 import { BuildClassAsiSection } from './AsiSection'
 import { BuildClassChoicesSection } from './ClassChoicesSection'
@@ -67,7 +62,6 @@ interface BuildClassLevelsPanelProps {
       canSwap: boolean
     }
   >
-  optFeatureProgressions: OptionalFeatureProgression[]
   classFeatProgressions: ClassFeatProgression[]
   featuresByLevel: Map<number, ClassFeatureDisplay[]>
   subclassFeatureName: string | null
@@ -81,8 +75,6 @@ interface BuildClassLevelsPanelProps {
   viewingClassLevel: number
   classEquipmentBlockChoices: string[]
   classEquipmentItemChoices?: Readonly<Record<string, string>>
-  selectedNames: Set<string>
-  optFeatures: OptionalFeatureLike[]
   featByCompositeId: Map<string, Feat5e>
   feats: Feat5e[]
   spellByName: Map<string, Spell5e>
@@ -101,7 +93,6 @@ interface BuildClassLevelsPanelProps {
   onOpenSpellSwap: (level: number) => void
   onOpenFeatPicker: (level: number) => void
   onOpenAsiPicker: (level: number) => void
-  onOpenOptPicker: (state: { progName: string; featureTypes: string[]; total: number }) => void
   onOpenClassFeatPicker: (state: {
     className: string
     classSource?: string
@@ -130,7 +121,6 @@ export function BuildClassLevelsPanel({
   subclassLevel,
   asiLevels,
   spellChoicesByLevel,
-  optFeatureProgressions,
   classFeatProgressions,
   featuresByLevel,
   subclassFeatureName,
@@ -144,8 +134,6 @@ export function BuildClassLevelsPanel({
   viewingClassLevel,
   classEquipmentBlockChoices,
   classEquipmentItemChoices = {},
-  selectedNames,
-  optFeatures,
   featByCompositeId,
   feats,
   spellByName,
@@ -164,7 +152,6 @@ export function BuildClassLevelsPanel({
   onOpenSpellSwap,
   onOpenFeatPicker,
   onOpenAsiPicker,
-  onOpenOptPicker,
   onOpenClassFeatPicker,
   onOpenClassChoice,
   onBlockChoiceChange,
@@ -314,7 +301,6 @@ export function BuildClassLevelsPanel({
                   isSubclassLevel,
                   isASILevel,
                   spellGain,
-                  optFeatureGainsAtLevel,
                   classFeatGainsAtLevel,
                   passiveFeatures,
                   choiceCount,
@@ -325,7 +311,6 @@ export function BuildClassLevelsPanel({
                   subclassFeatureName,
                   asiLevels,
                   spellChoicesByLevel,
-                  optFeatureProgressions,
                   classFeatProgressions,
                   featuresByLevel,
                 })
@@ -351,25 +336,12 @@ export function BuildClassLevelsPanel({
                     })?.feats.length ?? 0
                   return selectedCount >= getOptFeatureTotal(prog.progression, viewingClassLevel)
                 })
-                const optionalFeatureChoicesComplete = optFeatureGainsAtLevel.every((prog) => {
-                  const selectedCount = optFeatures.filter((feature) => {
-                    const featureTypes = Array.isArray(feature.featureType)
-                      ? feature.featureType
-                      : [feature.featureType ?? '']
-                    return (
-                      prog.featureType.some((type) => featureTypes.includes(type)) &&
-                      selectedNames.has(feature.name)
-                    )
-                  }).length
-                  return selectedCount >= getOptFeatureTotal(prog.progression, viewingClassLevel)
-                })
                 const allChoicesComplete =
                   choiceCount > 0 &&
                   asiChoiceComplete &&
                   subclassChoiceComplete &&
                   spellChoiceComplete &&
-                  classFeatChoicesComplete &&
-                  optionalFeatureChoicesComplete
+                  classFeatChoicesComplete
 
                 return (
                   <AccordionItem key={lv} value={`level-${lv}`}>
@@ -467,55 +439,6 @@ export function BuildClassLevelsPanel({
                                     prog.progression,
                                     viewingClassLevel,
                                   ),
-                                })
-                              }
-                              onSelectFeature={onSelectFeature}
-                              onExpandDetails={onExpandDetails}
-                            />
-                          )
-                        })}
-
-                        {optFeatureGainsAtLevel.map((prog) => {
-                          const totalAllowed = getOptFeatureTotal(
-                            prog.progression,
-                            viewingClassLevel,
-                          )
-                          const featuresOfType = optFeatures.filter((feature) => {
-                            const featureTypes = Array.isArray(feature.featureType)
-                              ? feature.featureType
-                              : [feature.featureType ?? '']
-                            return prog.featureType.some((type) => featureTypes.includes(type))
-                          })
-                          const selectedCount = featuresOfType.filter((feature) =>
-                            selectedNames.has(feature.name),
-                          ).length
-                          const progLabel =
-                            prog.name ||
-                            prog.featureType.map((type) => optFeatureTypeToFull(type)).join(', ')
-                          const isFull = selectedCount >= totalAllowed
-                          const chosenFeatures = featuresOfType.filter((feature) =>
-                            selectedNames.has(feature.name),
-                          )
-
-                          return (
-                            <BuildClassProgressionChoiceCard
-                              key={`${progLabel}|${prog.featureType.join('|')}`}
-                              id={progLabel}
-                              label={progLabel}
-                              selectedCount={selectedCount}
-                              totalAllowed={totalAllowed}
-                              isFull={isFull}
-                              chosenItems={chosenFeatures.map((feature) => ({
-                                name: feature.name,
-                                source: feature.source,
-                                entries: feature.entries ?? [],
-                              }))}
-                              detailCollapsed={detailCollapsed}
-                              onChoose={() =>
-                                onOpenOptPicker({
-                                  progName: progLabel,
-                                  featureTypes: prog.featureType,
-                                  total: totalAllowed,
                                 })
                               }
                               onSelectFeature={onSelectFeature}

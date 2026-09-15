@@ -1,12 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import {
-  applyOptionalFeatureSelectionCommand,
   commitFeatOptionsCommand,
   editFeatOptionsCommand,
   replaceBonusFeatSelectionsCommand,
   replaceClassFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
-  replaceOptionalFeatureSelectionsCommand,
   resolveFeatChoiceCommand,
   retractFeatOptionsCommand,
 } from '@/lib/character/commands/featCommands'
@@ -26,43 +24,6 @@ function applyResult(
 }
 
 describe('feat commands', () => {
-  test('replaces optional features and accumulates provenance in one result', () => {
-    const character = makeCharacterFixture({
-      features: [
-        { id: 'old-opt', name: 'Old Invocation', source: 'PHB', description: '' },
-        { id: 'race-feature', name: 'Darkvision', source: 'PHB', description: '' },
-      ],
-    })
-    const ledger = applyOptionalFeatureSelectionCommand(
-      character.provenance ?? emptyProvenance(),
-      'Old Invocation',
-      'PHB',
-      'Warlock',
-      'class',
-    ).provenanceUpdate
-
-    const result = replaceOptionalFeatureSelectionsCommand(
-      character,
-      ledger,
-      [{ name: 'Old Invocation', source: 'PHB' }],
-      [
-        { name: 'Agonizing Blast', source: 'PHB' },
-        { name: 'Repelling Blast', source: 'PHB' },
-      ],
-      'Warlock',
-      'class',
-    )
-
-    expect(result.characterPatch.features?.map((feature) => feature.name)).toEqual([
-      'Darkvision',
-      'Agonizing Blast',
-      'Repelling Blast',
-    ])
-    expect(result.provenanceUpdate.features['old invocation']).toBeUndefined()
-    expect(result.provenanceUpdate.features['agonizing blast']).toHaveLength(1)
-    expect(result.provenanceUpdate.features['repelling blast']).toHaveLength(1)
-  })
-
   test('option grants apply and retract symmetrically', () => {
     const character = makeCharacterFixture({
       specialFeats: [{ id: 'bonus-skilled', name: 'Skilled', source: 'PHB', description: '' }],

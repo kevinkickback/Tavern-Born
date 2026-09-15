@@ -1,5 +1,4 @@
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
-import { OptionalFeatureSelectionModal } from '@/components/modals/OptionalFeatureSelectionModal'
 import type { ActiveFilters, CategoryLimit } from '@/components/modals/SelectionModal'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { SubclassSelectionModal } from '@/components/modals/SubclassSelectionModal'
@@ -11,7 +10,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
-import { getFeatureTypes, type OptionalFeatureLike } from '@/lib/5etools/classData'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import {
   buildSpellNameKeySet,
@@ -30,12 +28,6 @@ import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelect
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Character } from '@/types/character'
 
-interface OptPickerState {
-  progName: string
-  featureTypes: string[]
-  total: number
-}
-
 interface ClassFeatPickerState {
   className: string
   classSource?: string
@@ -43,13 +35,6 @@ interface ClassFeatPickerState {
   categories: string[]
   total: number
   slotLevels: number[]
-}
-
-type OptionalFeatureModalOption = {
-  name: string
-  source?: string
-  entries?: unknown[]
-  [extra: string]: unknown
 }
 
 interface BuildClassModalsProps {
@@ -102,11 +87,7 @@ interface BuildClassModalsProps {
   viewingSubclass?: string
   onSubclassConfirm: (subclass: Subclass5e) => void
 
-  optPickerState: OptPickerState | null
-  onOptPickerStateChange: (state: OptPickerState | null) => void
-  optFeatures: OptionalFeatureLike[]
   characterSnapshot: PrereqCharacterSnapshot
-  onOptFeatureConfirm: (names: string[], featureTypes: string[]) => void
 
   asiPickerLevel: number | null
   onAsiPickerLevelChange: (level: number | null) => void
@@ -154,11 +135,7 @@ export function BuildClassModals({
   subclasses,
   viewingSubclass,
   onSubclassConfirm,
-  optPickerState,
-  onOptPickerStateChange,
-  optFeatures,
   characterSnapshot,
-  onOptFeatureConfirm,
   asiPickerLevel,
   onAsiPickerLevelChange,
   appliedAsiChoicesForClass,
@@ -391,41 +368,6 @@ export function BuildClassModals({
           onConfirm={onSubclassConfirm}
         />
       )}
-
-      {optPickerState &&
-        (() => {
-          const featuresOfType = optFeatures.filter((feature) => {
-            const featureTypes = getFeatureTypes(feature)
-            return optPickerState.featureTypes.some((type) => featureTypes.includes(type))
-          })
-
-          const initialSelectedNames = character.features
-            .filter((feature) => featuresOfType.some((of) => of.name === feature.name))
-            .map((feature) => feature.name)
-
-          const modalFeatures: OptionalFeatureModalOption[] = featuresOfType.map((feature) => ({
-            ...feature,
-          }))
-
-          return (
-            <OptionalFeatureSelectionModal
-              open={true}
-              onOpenChange={(open) => {
-                if (!open) onOptPickerStateChange(null)
-              }}
-              title={`Choose ${optPickerState.progName}`}
-              features={modalFeatures}
-              maxSelections={optPickerState.total}
-              initialSelectedNames={initialSelectedNames}
-              characterSnapshot={characterSnapshot}
-              className={viewingClass}
-              onConfirm={(names) => {
-                onOptFeatureConfirm(names, optPickerState.featureTypes)
-                onOptPickerStateChange(null)
-              }}
-            />
-          )
-        })()}
 
       {asiPickerLevel !== null &&
         (() => {

@@ -2,7 +2,6 @@ import { useCallback, useMemo } from 'react'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import {
   applyFeatSelectionCommand,
-  applyOptionalFeatureSelectionCommand,
   commitFeatOptionsCommand,
   editFeatOptionsCommand,
   type FeatOptionTarget,
@@ -11,7 +10,6 @@ import {
   replaceBonusFeatSelectionsCommand,
   replaceClassFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
-  replaceOptionalFeatureSelectionsCommand,
   resolveFeatChoiceCommand,
   resolveProficiencyChoiceCommand,
   retractFeatOptionsCommand,
@@ -69,49 +67,6 @@ export function useFeatProvenanceMutations() {
     (selectedFeats: Array<{ name: string; source?: string }>) => {
       if (!character) return
       applyCommand(replaceBonusFeatSelectionsCommand(character, ledger, selectedFeats))
-    },
-    [character, ledger, applyCommand],
-  )
-
-  const applyOptionalFeatureSelection = useCallback(
-    (
-      featureName: string,
-      featureSource: string | undefined,
-      grantingSourceName: string,
-      grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
-    ) => {
-      if (!character) return
-      applyCommand(
-        applyOptionalFeatureSelectionCommand(
-          ledger,
-          featureName,
-          featureSource,
-          grantingSourceName,
-          grantingSourceType,
-        ),
-      )
-    },
-    [character, ledger, applyCommand],
-  )
-
-  const replaceOptionalFeatureSelections = useCallback(
-    (
-      replacedFeatures: Array<{ name: string; source?: string }>,
-      selectedFeatures: Array<{ name: string; source?: string }>,
-      grantingSourceName: string,
-      grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
-    ) => {
-      if (!character) return
-      applyCommand(
-        replaceOptionalFeatureSelectionsCommand(
-          character,
-          ledger,
-          replacedFeatures,
-          selectedFeatures,
-          grantingSourceName,
-          grantingSourceType,
-        ),
-      )
     },
     [character, ledger, applyCommand],
   )
@@ -201,8 +156,6 @@ export function useFeatProvenanceMutations() {
     replaceFeatSelections,
     replaceBonusFeatSelections,
     replaceClassFeatSelections,
-    applyOptionalFeatureSelection,
-    replaceOptionalFeatureSelections,
     resolveFeatChoiceSelection,
     removeFeatChoiceSelection,
     resolveChoiceSelection,

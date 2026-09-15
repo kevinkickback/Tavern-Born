@@ -25,7 +25,6 @@ import { BuildClassLevelsPanel } from '@/pages/build/class/components/LevelsPane
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
 import { useClassAsiFeatController } from '@/pages/build/class/hooks/useClassAsiFeatController'
 import { useClassChoiceController } from '@/pages/build/class/hooks/useClassChoiceController'
-import { useClassOptionalFeatureController } from '@/pages/build/class/hooks/useClassOptionalFeatureController'
 import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClassSpellChoiceController'
 import { useSubclassSelectionController } from '@/pages/build/class/hooks/useSubclassSelectionController'
 import type { ClassFeatProgression } from '@/pages/build/class/model/levelsUtils'
@@ -92,21 +91,18 @@ export function BuildClassPage() {
   const viewingClassData = viewingClassSource
     ? classLookup[getEntityLookupKey(viewingClass, viewingClassSource)]
     : fallbackClassByName.get(viewingClass ?? '')
+  const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
   const classChoiceCatalogs = useMemo(
     () => ({
       classFeatures: classFeatures as ClassFeature[],
       feats: feats as Feat5e[],
       items: items as Item5e[],
-      optionalFeatures: optionalfeatures as OptionalFeatureLike[],
+      optionalFeatures: (
+        optionalfeatures as Array<OptionalFeatureLike & { isClassFeatureVariant?: boolean }>
+      ).filter((feature) => includeClassFeatureVariants || !feature.isClassFeatureVariant),
     }),
-    [classFeatures, feats, items, optionalfeatures],
+    [classFeatures, feats, includeClassFeatureVariants, items, optionalfeatures],
   )
-  const classChoiceController = useClassChoiceController({
-    character,
-    viewingClassData,
-    viewingClassLevel,
-    catalogs: classChoiceCatalogs,
-  })
   const spellController = useClassSpellChoiceController(viewingClassData)
   const {
     choicesByLevel: spellChoicesByLevel,
@@ -154,22 +150,6 @@ export function BuildClassPage() {
     selectClass(className, classSource, classLookup, fallbackClassByName)
     handleClassSelectionApplied()
   }
-  const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
-  const optionalFeatureController = useClassOptionalFeatureController({
-    character,
-    viewingClass,
-    viewingClassData,
-    optionalFeatures: optionalfeatures,
-    includeClassFeatureVariants,
-  })
-  const {
-    features: optFeatures,
-    progressions: optFeatureProgressions,
-    selectedNames,
-    pickerState: optPickerState,
-    setPickerState: setOptPickerState,
-    confirm: handleOptFeatureConfirm,
-  } = optionalFeatureController
   const asiFeatController = useClassAsiFeatController({
     character,
     viewingClass,
@@ -204,6 +184,12 @@ export function BuildClassPage() {
     setAsiMode,
     commitFeatWithOptions,
   } = asiFeatController
+  const classChoiceController = useClassChoiceController({
+    character,
+    viewingClassData,
+    viewingClassLevel,
+    catalogs: classChoiceCatalogs,
+  })
   const allClassFeatures = useMemo(() => {
     if (!viewingClass) return []
     const src = viewingClassSource ?? viewingClassData?.source
@@ -242,7 +228,6 @@ export function BuildClassPage() {
         subclassLevel,
         viewingClassLevel,
         spellChoicesByLevel,
-        optFeatureProgressions,
         classFeatProgressions,
       }),
     [
@@ -251,7 +236,6 @@ export function BuildClassPage() {
       subclassLevel,
       viewingClassLevel,
       spellChoicesByLevel,
-      optFeatureProgressions,
       classFeatProgressions,
     ],
   )
@@ -332,7 +316,6 @@ export function BuildClassPage() {
               subclassLevel={subclassLevel}
               asiLevels={asiLevels}
               spellChoicesByLevel={spellChoicesByLevel}
-              optFeatureProgressions={optFeatureProgressions}
               classFeatProgressions={classFeatProgressions}
               featuresByLevel={featuresByLevel}
               subclassFeatureName={subclassFeatureName}
@@ -346,8 +329,6 @@ export function BuildClassPage() {
               viewingClassLevel={viewingClassLevel}
               classEquipmentBlockChoices={classEquipmentBlockChoices}
               classEquipmentItemChoices={classEquipmentItemChoices}
-              selectedNames={selectedNames}
-              optFeatures={optFeatures}
               featByCompositeId={featByCompositeId}
               feats={(feats ?? []) as Feat5e[]}
               spellByName={spellByName}
@@ -369,7 +350,6 @@ export function BuildClassPage() {
                 setFeatPickerOpen(true)
               }}
               onOpenAsiPicker={setAsiPickerLevel}
-              onOpenOptPicker={setOptPickerState}
               onOpenClassFeatPicker={setClassFeatPickerState}
               onOpenClassChoice={classChoiceController.open}
               onBlockChoiceChange={(blockIndex, choice) => {
@@ -428,11 +408,7 @@ export function BuildClassPage() {
         subclasses={subclasses}
         viewingSubclass={viewingSubclass}
         onSubclassConfirm={handleSubclassSelect}
-        optPickerState={optPickerState}
-        onOptPickerStateChange={setOptPickerState}
-        optFeatures={optFeatures}
         characterSnapshot={characterSnapshot}
-        onOptFeatureConfirm={handleOptFeatureConfirm}
         asiPickerLevel={asiPickerLevel}
         onAsiPickerLevelChange={setAsiPickerLevel}
         appliedAsiChoicesForClass={appliedAsiChoicesForClass}
@@ -464,6 +440,8 @@ export function BuildClassPage() {
           options={classChoiceController.activeOptionViews}
           maximumSelections={classChoiceController.activeRequiredCount}
           initialSelectedIds={classChoiceController.activeInitialSelectedIds}
+          characterSnapshot={characterSnapshot}
+          className={viewingClass}
           onClose={classChoiceController.close}
           onConfirm={classChoiceController.confirm}
         />

@@ -105,6 +105,58 @@ function featureIdentity(option: Pick<CharacterClassChoiceOption, 'name' | 'sour
   return `${normalizeKey(option.name)}|${normalizeKey(option.source ?? '')}`
 }
 
+function retractLegacyOptionalFeatureGrants(
+  character: Character,
+  ledger: ProvenanceLedger,
+  choice: NormalizedCharacterChoice,
+  legacyOptions: readonly NormalizedChoiceOptionReference[],
+): { character: Character; ledger: ProvenanceLedger } {
+  if (
+    choice.kind !== 'optional-feature' ||
+    choice.source.kind !== 'optional-feature-progression' ||
+    legacyOptions.length === 0
+  ) {
+    return { character, ledger }
+  }
+  const optionIdentities = new Set(legacyOptions.map(featureIdentity))
+  const features = { ...ledger.features }
+  const identitiesWithoutOwners = new Set<string>()
+  for (const option of legacyOptions) {
+    const key = normalizeKey(option.name)
+    const existing = features[key] ?? []
+    const retained = existing.filter(
+      (tag) =>
+        !(
+          tag.sourceType === 'class' &&
+          tag.sourceName === choice.owner.name &&
+          tag.grantType === 'choice' &&
+          tag.grantVariant === undefined &&
+          (!option.source || (tag.sourceRef ?? '') === option.source)
+        ),
+    )
+    if (retained.length === existing.length) continue
+    if (retained.length > 0) features[key] = retained
+    else {
+      delete features[key]
+      identitiesWithoutOwners.add(featureIdentity(option))
+    }
+  }
+  if (identitiesWithoutOwners.size === 0) return { character, ledger: { ...ledger, features } }
+  return {
+    character: {
+      ...character,
+      features: character.features.filter(
+        (feature) =>
+          !(
+            optionIdentities.has(featureIdentity(feature)) &&
+            identitiesWithoutOwners.has(featureIdentity(feature))
+          ),
+      ),
+    },
+    ledger: { ...ledger, features },
+  }
+}
+
 function generatedFeatureId(
   selection: CharacterClassChoiceSelection,
   option: CharacterClassChoiceOption,
@@ -194,10 +246,16 @@ export function applyClassChoiceSelectionWithGrantsCommand(
   ledger: ProvenanceLedger,
   choice: NormalizedCharacterChoice,
   selected: readonly NormalizedChoiceOptionReference[],
+  legacyOptions: readonly NormalizedChoiceOptionReference[] = [],
 ): CharacterCommandResult {
-  const selectionPatch = applyClassChoiceSelectionCommand(character, choice, selected)
+  const migrated = retractLegacyOptionalFeatureGrants(character, ledger, choice, legacyOptions)
+  const selectionPatch = applyClassChoiceSelectionCommand(migrated.character, choice, selected)
   const classChoiceSelections = selectionPatch.classChoiceSelections ?? []
-  const grants = reconcileClassChoiceSelectionGrants(character, ledger, classChoiceSelections)
+  const grants = reconcileClassChoiceSelectionGrants(
+    migrated.character,
+    migrated.ledger,
+    classChoiceSelections,
+  )
 
   return {
     characterPatch: {

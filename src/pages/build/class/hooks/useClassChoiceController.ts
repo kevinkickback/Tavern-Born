@@ -6,9 +6,11 @@ import {
   type ClassChoiceCatalogs,
   type ClassChoiceOptionView,
   getClassChoiceOptionKey,
+  getLegacyClassChoiceSelection,
   getStandaloneClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import { emptyProvenance } from '@/lib/character/createCharacter'
 import type { Class5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
@@ -41,7 +43,7 @@ export function useClassChoiceController({
         : [],
     [viewingClassData, viewingClassLevel],
   )
-  const selectionByChoiceId = useMemo(
+  const persistedSelectionByChoiceId = useMemo(
     () => new Map((character?.classChoiceSelections ?? []).map((entry) => [entry.choiceId, entry])),
     [character?.classChoiceSelections],
   )
@@ -53,12 +55,26 @@ export function useClassChoiceController({
     () =>
       new Map(
         choices.map((choice) => {
-          const selected = selectionByChoiceId.get(choice.id)?.selected ?? []
+          const selected = persistedSelectionByChoiceId.get(choice.id)?.selected ?? []
           return [choice.id, resolveClassChoiceOptions(choice, resolvedCatalogs, selected)]
         }),
       ),
-    [choices, resolvedCatalogs, selectionByChoiceId],
+    [choices, persistedSelectionByChoiceId, resolvedCatalogs],
   )
+  const selectionByChoiceId = useMemo(() => {
+    const selections = new Map(persistedSelectionByChoiceId)
+    const ledger = character?.provenance ?? emptyProvenance()
+    for (const choice of choices) {
+      if (selections.has(choice.id)) continue
+      const legacy = getLegacyClassChoiceSelection(
+        choice,
+        optionViewsByChoiceId.get(choice.id) ?? [],
+        ledger,
+      )
+      if (legacy) selections.set(choice.id, legacy)
+    }
+    return selections
+  }, [character?.provenance, choices, optionViewsByChoiceId, persistedSelectionByChoiceId])
   const selectedViewsByChoiceId = useMemo(
     () =>
       new Map(
@@ -89,6 +105,7 @@ export function useClassChoiceController({
     applyClassChoiceSelection(
       activeChoice,
       selected.map((option) => option.reference),
+      activeOptionViews.map((option) => option.reference),
     )
     setActiveChoice(null)
   }

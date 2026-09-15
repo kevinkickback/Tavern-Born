@@ -17,9 +17,6 @@ interface BuildLevelsToShowParams {
   subclassLevel: number
   viewingClassLevel: number
   spellChoicesByLevel: Map<number, unknown>
-  optFeatureProgressions: Array<{
-    progression: number[] | Record<string, number>
-  }>
   classFeatProgressions: Array<{
     progression: number[] | Record<string, number>
   }>
@@ -102,7 +99,6 @@ export function buildLevelsToShow({
   subclassLevel,
   viewingClassLevel,
   spellChoicesByLevel,
-  optFeatureProgressions,
   classFeatProgressions,
 }: BuildLevelsToShowParams): number[] {
   const levels = new Set<number>()
@@ -128,17 +124,6 @@ export function buildLevelsToShow({
       levels.add(level)
     }
   })
-
-  for (const progression of optFeatureProgressions) {
-    for (let level = 1; level <= viewingClassLevel; level++) {
-      if (
-        getOptFeatureTotalAtLevel(progression.progression, level) >
-        getOptFeatureTotalAtLevel(progression.progression, level - 1)
-      ) {
-        levels.add(level)
-      }
-    }
-  }
 
   for (const progression of classFeatProgressions) {
     for (let level = 1; level <= viewingClassLevel; level++) {

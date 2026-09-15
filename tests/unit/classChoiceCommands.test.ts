@@ -6,6 +6,7 @@ import {
 } from '@/lib/character/commands/classChoiceCommands'
 import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import { emptyProvenance } from '@/lib/character/createCharacter'
+import { addGrant, makeSourceTag } from '@/lib/provenance'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -267,6 +268,55 @@ describe('class choice commands', () => {
     expect(Object.keys(reconciled.provenanceUpdate.features).sort()).toEqual([
       'option a',
       'option b',
+    ])
+  })
+
+  test('migrates only the legacy optional-feature pool being edited', () => {
+    const optionalChoice = choice({
+      id: 'class:test-class|test|choice:first-pool|1',
+      label: 'First Pool',
+      owner: { type: 'class', name: 'Test Class', source: 'TEST' },
+      level: 1,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: Array(20).fill(1),
+    })
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Test Class', source: 'TEST', levels: 1 }],
+      features: [
+        { id: 'legacy-a', name: 'Legacy A', source: 'TEST', description: '' },
+        { id: 'legacy-b', name: 'Legacy B', source: 'TEST', description: '' },
+      ],
+    })
+    let ledger = addGrant(
+      emptyProvenance(),
+      'features',
+      'Legacy A',
+      makeSourceTag('class', 'Test Class', 'choice', 'TEST'),
+    )
+    ledger = addGrant(
+      ledger,
+      'features',
+      'Legacy B',
+      makeSourceTag('class', 'Test Class', 'choice', 'TEST'),
+    )
+
+    const result = applyClassChoiceSelectionWithGrantsCommand(
+      character,
+      ledger,
+      optionalChoice,
+      [{ entityType: 'optionalFeature', name: 'Replacement A', source: 'TEST' }],
+      [{ entityType: 'optionalFeature', name: 'Legacy A', source: 'TEST' }],
+    )
+
+    expect(result.characterPatch.features?.map((feature) => feature.name).sort()).toEqual([
+      'Legacy B',
+      'Replacement A',
+    ])
+    expect(result.provenanceUpdate.features['legacy a']).toBeUndefined()
+    expect(result.provenanceUpdate.features['legacy b']).toHaveLength(1)
+    expect(result.provenanceUpdate.features['replacement a']).toEqual([
+      expect.objectContaining({ grantVariant: optionalChoice.id }),
     ])
   })
 })
