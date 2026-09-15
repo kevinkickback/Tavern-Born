@@ -115,13 +115,7 @@ const movementAdjustmentSchema = z.object({
 const characterClassChoiceSelectionSchema = z.object({
   choiceId: z.string().min(1),
   label: z.string().min(1),
-  kind: z.enum([
-    'class-feature',
-    'fighting-style',
-    'metamagic',
-    'optional-feature',
-    'weapon-mastery',
-  ]),
+  kind: z.enum(['class-feature', 'feat', 'item', 'optional-feature']),
   className: z.string().min(1),
   classSource: z.string().min(1),
   classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),

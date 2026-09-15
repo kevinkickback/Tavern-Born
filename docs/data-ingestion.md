@@ -60,12 +60,17 @@ source content.
   also produces `normalizedRules` for spendable resources, recovery amount and cadence, ritual
   casting, source-qualified ASI levels, and class-owned choices. Choice normalization consumes
   explicit class-feature option blocks, optional-feature progressions, tagged entity filters, and
-  Weapon Mastery class-table capacity. Each descriptor has stable source-qualified ownership,
+  matching class-table capacities. Each descriptor has stable source-qualified ownership,
   per-level selection counts, replacement rules, and input-field provenance; unsafe option blocks
-  remain visible in `choiceDiagnostics`. Only known spendable resource columns are accepted from
-  class tables, so numeric capacities such as Weapon Mastery do not become counters. Source-qualified
-  adapters cover rules that upstream exposes only through prose. Encoded reference levels take
-  precedence when repeated feature names occur at more than one level.
+  remain visible in `choiceDiagnostics`. Choice kinds come from the referenced entity collection,
+  and table-backed choices are joined by source-provided feature and column labels; runtime code
+  contains no class names, feature names, option catalogs, or assumed selection/replacement values.
+  Narrow replacement and singular-choice phrases are parsed only when an entity filter provides
+  the choice boundary; ambiguous prose produces a diagnostic instead of an invented rule. Only
+  known spendable resource columns are accepted from class tables, so numeric choice capacities do
+  not become counters. Source-qualified adapters cover rules that upstream exposes only through
+  prose. Encoded reference levels take precedence when repeated feature names occur at more than
+  one level.
 - Background ingestion produces `normalizedOriginRules`. Structured ability and feat fields win;
   a ruleset-qualified, versioned 2024 adapter fills only the upstream prose-only gap and records its
   provenance.

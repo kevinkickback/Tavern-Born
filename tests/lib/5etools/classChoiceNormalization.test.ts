@@ -107,7 +107,7 @@ describe('class choice normalization', () => {
     ).choices
 
     expect(metamagic).toMatchObject({
-      kind: 'metamagic',
+      kind: 'optional-feature',
       level: 2,
       maximumSelections: 6,
       optionFilter: { entityType: 'optionalFeature', featureTypes: ['MM'] },
@@ -148,7 +148,7 @@ describe('class choice normalization', () => {
     ).choices
 
     expect(mastery).toMatchObject({
-      kind: 'weapon-mastery',
+      kind: 'item',
       optionFilter: {
         entityType: 'item',
         itemTypes: ['simple weapon', 'martial weapon'],
@@ -171,7 +171,7 @@ describe('class choice normalization', () => {
     ]).choices
 
     expect(style).toMatchObject({
-      kind: 'fighting-style',
+      kind: 'feat',
       level: 1,
       optionFilter: { entityType: 'feat', categories: ['FS'] },
     })
@@ -196,7 +196,9 @@ describe('class choice normalization', () => {
       ]),
     )
     expect(sorcerer.normalizedRules?.choices).toEqual(
-      expect.arrayContaining([expect.objectContaining({ kind: 'metamagic' })]),
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Metamagic', kind: 'optional-feature' }),
+      ]),
     )
     expect(warlock.normalizedRules?.choices).toEqual(
       expect.arrayContaining([
@@ -208,9 +210,38 @@ describe('class choice normalization', () => {
     )
     expect(fighter.normalizedRules?.choices).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ kind: 'weapon-mastery' }),
-        expect.objectContaining({ kind: 'fighting-style' }),
+        expect.objectContaining({ label: 'Weapon Mastery', kind: 'item' }),
+        expect.objectContaining({ label: 'Fighting Style', kind: 'feat' }),
       ]),
     )
+  })
+
+  test('does not classify choices from feature or class names', () => {
+    const [choice] = normalizeClassChoices(
+      {
+        name: 'Any Class',
+        source: 'HB',
+        classTableGroups: [{ colLabels: ['Practiced Tools'], rows: [[2], [3]] }],
+      },
+      [
+        featureRef(
+          'Practiced Tools',
+          1,
+          [
+            'Choose two kinds of {@filter tools|items|type=tool}. Whenever you finish a Long Rest, you can replace one of those choices.',
+          ],
+          'HB',
+        ),
+      ],
+    ).choices
+
+    expect(choice).toMatchObject({
+      label: 'Practiced Tools',
+      kind: 'item',
+      optionFilter: { entityType: 'item', itemTypes: ['tool'] },
+      replacement: { cadence: 'long-rest', maximumPerEvent: 1 },
+    })
+    expect(getRequiredChoiceSelectionCount(choice!, 1)).toBe(2)
+    expect(getRequiredChoiceSelectionCount(choice!, 2)).toBe(3)
   })
 })

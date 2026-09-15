@@ -79,7 +79,7 @@ describe('characterPersistenceSchema', () => {
         {
           choiceId: 'class:sorcerer|xphb|choice:metamagic|2',
           label: 'Metamagic',
-          kind: 'metamagic',
+          kind: 'optional-feature',
           className: 'Sorcerer',
           classSource: 'XPHB',
           classLevel: 2,

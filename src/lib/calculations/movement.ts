@@ -86,9 +86,9 @@ export function getBaseCharacterMovement(
   character: Pick<Character, 'movement' | 'speed'>,
 ): CharacterMovement {
   if (character.movement) return character.movement
-  const legacyWalk = normalizeDistance(character.speed) ?? 30
+  const legacyWalk = normalizeDistance(character.speed)
   return {
-    speeds: { walk: legacyWalk },
+    speeds: legacyWalk === undefined ? {} : { walk: legacyWalk },
     source: { kind: 'legacy', name: 'Legacy walking speed' },
   }
 }

@@ -89,4 +89,11 @@ describe('movement calculations', () => {
     expect(effective.speeds).toEqual({ walk: 25 })
     expect(effective.source.kind).toBe('legacy')
   })
+
+  test('does not invent a walking speed when legacy movement is malformed', () => {
+    const effective = getEffectiveCharacterMovement({ speed: Number.NaN })
+
+    expect(effective.speeds).toEqual({})
+    expect(getWalkingSpeed(effective)).toBe(0)
+  })
 })

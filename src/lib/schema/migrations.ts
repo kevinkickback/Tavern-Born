@@ -417,18 +417,18 @@ registerMigration({
     const legacySpeed =
       typeof c.speed === 'number' && Number.isFinite(c.speed) && c.speed >= 0
         ? Math.trunc(c.speed)
-        : 30
+        : undefined
     const existingMovement =
       c.movement && typeof c.movement === 'object'
         ? c.movement
         : {
-            speeds: { walk: legacySpeed },
+            speeds: legacySpeed === undefined ? {} : { walk: legacySpeed },
             source: { kind: 'legacy', name: 'Legacy walking speed' },
           }
 
     return {
       ...c,
-      speed: legacySpeed,
+      speed: legacySpeed ?? 0,
       movement: existingMovement,
       movementAdjustments: Array.isArray(c.movementAdjustments) ? c.movementAdjustments : [],
       movementOverrides:

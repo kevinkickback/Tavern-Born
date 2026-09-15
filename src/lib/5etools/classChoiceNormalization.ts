@@ -1,11 +1,6 @@
 import type { Class5e, ClassFeatureReference, OptFeatureProg } from '@/types/5etools'
 
-export type NormalizedCharacterChoiceKind =
-  | 'class-feature'
-  | 'fighting-style'
-  | 'metamagic'
-  | 'optional-feature'
-  | 'weapon-mastery'
+export type NormalizedCharacterChoiceKind = 'class-feature' | 'feat' | 'item' | 'optional-feature'
 
 export type ChoiceOptionEntityType = 'classFeature' | 'feat' | 'item' | 'optionalFeature'
 
@@ -175,29 +170,69 @@ function getFeatureText(ref: ClassFeatureReference): string {
   }
 }
 
-function inferChoiceKind(featureName: string): NormalizedCharacterChoiceKind {
-  if (/fighting style/i.test(featureName)) return 'fighting-style'
-  if (/metamagic/i.test(featureName)) return 'metamagic'
-  return 'class-feature'
+function toSearchableText(text: string): string {
+  return text
+    .replace(/\{@[^\s}]+\s+([^|}]+)(?:\|[^}]*)?}/g, '$1')
+    .replace(/[{}"\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
-function inferReplacement(
-  text: string,
-  fallback: NormalizedCharacterChoice['replacement'],
-): NormalizedCharacterChoice['replacement'] {
-  if (/finish (?:a|the) long rest/i.test(text) && /change|replace/i.test(text)) {
+function inferReplacement(text: string): NormalizedCharacterChoice['replacement'] {
+  const searchableText = toSearchableText(text)
+  if (
+    /finish (?:a|the) long rest/i.test(searchableText) &&
+    /\b(?:change|replace)\b/i.test(searchableText)
+  ) {
     return {
       cadence: 'long-rest',
-      maximumPerEvent: /change one|replace one/i.test(text) ? 1 : 'all',
+      maximumPerEvent: /\b(?:change|replace) (?:one|a|an)\b/i.test(searchableText) ? 1 : 'all',
     }
   }
-  if (/gain (?:a|another) [^.]*(?:class|fighter|sorcerer|warlock) level/i.test(text)) {
+  if (
+    /whenever you gain (?:a|an|another) [^.]{0,120}\blevel\b/i.test(searchableText) &&
+    /\b(?:change|replace)\b/i.test(searchableText)
+  ) {
     return {
       cadence: 'class-level',
-      maximumPerEvent: /replace one|change one/i.test(text) ? 1 : 'all',
+      maximumPerEvent: /\b(?:change|replace) (?:one|a|an)\b/i.test(searchableText) ? 1 : 'all',
     }
   }
-  return fallback
+  return { cadence: 'never' }
+}
+
+function choiceKindForEntity(entityType: ChoiceOptionEntityType): NormalizedCharacterChoiceKind {
+  if (entityType === 'classFeature') return 'class-feature'
+  if (entityType === 'optionalFeature') return 'optional-feature'
+  return entityType
+}
+
+function inferSingleFilteredChoice(text: string, label: string): boolean {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const searchableText = toSearchableText(text)
+  return new RegExp(
+    `\\b(?:gain|choose|select|learn|pick)\\s+(?:a|an|one)\\s+${escapedLabel}\\b`,
+    'i',
+  ).test(searchableText)
+}
+
+function mergeFilters(tags: readonly ParsedFilterTag[]): NormalizedChoiceOptionFilter | undefined {
+  const entityType = tags[0]?.entityType
+  if (!entityType || tags.some((tag) => tag.entityType !== entityType)) return undefined
+  const distinct = (values: (string | undefined)[]) => [
+    ...new Set(values.filter(Boolean) as string[]),
+  ]
+  const categories = distinct(tags.flatMap((tag) => tag.filter.categories ?? []))
+  const featureTypes = distinct(tags.flatMap((tag) => tag.filter.featureTypes ?? []))
+  const itemTypes = distinct(tags.flatMap((tag) => tag.filter.itemTypes ?? []))
+  const sources = distinct(tags.map((tag) => tag.filter.source))
+  return {
+    entityType,
+    ...(categories.length > 0 ? { categories } : {}),
+    ...(featureTypes.length > 0 ? { featureTypes } : {}),
+    ...(itemTypes.length > 0 ? { itemTypes } : {}),
+    ...(sources.length === 1 ? { source: sources[0] } : {}),
+  }
 }
 
 function parseFilterTags(text: string): ParsedFilterTag[] {
@@ -253,13 +288,10 @@ function normalizeFeatureOptionChoices(
 
     blocks.forEach((block, blockIndex) => {
       const rawCount = block.count
-      const knownImplicitSingleChoice = /fighting style/i.test(ref.name)
       const count =
         typeof rawCount === 'number' && Number.isFinite(rawCount) && rawCount > 0
           ? Math.trunc(rawCount)
-          : knownImplicitSingleChoice
-            ? 1
-            : undefined
+          : undefined
       if (!count) {
         diagnostics.push({
           code: 'invalid-count',
@@ -293,7 +325,7 @@ function normalizeFeatureOptionChoices(
       choices.push({
         id: buildChoiceId(classData, label, level),
         label,
-        kind: inferChoiceKind(ref.name),
+        kind: 'class-feature',
         owner: {
           type: 'class',
           name: classData.name,
@@ -307,7 +339,7 @@ function normalizeFeatureOptionChoices(
         selectionCountByLevel: countsFromLevel(level, count),
         options,
         repeatable: false,
-        replacement: inferReplacement(getFeatureText(ref), { cadence: 'never' }),
+        replacement: inferReplacement(getFeatureText(ref)),
         source: {
           kind: 'class-feature-options',
           field: `classFeatureRefs:${ref.ref || ref.name}:entries`,
@@ -327,17 +359,18 @@ function normalizeOptionalFeatureProgressions(
     const levelIndex = counts.findIndex((count) => count > 0)
     if (levelIndex < 0) return []
     const maximumSelections = Math.max(...counts)
-    const featureRef = refs.find((ref) =>
-      progression.featureType.some((type) =>
-        getFeatureText(ref).toLowerCase().includes(`feature type=${type.toLowerCase()}`),
-      ),
+    const featureRef = refs.find(
+      (ref) =>
+        ref.name.trim().toLowerCase() === progression.name.trim().toLowerCase() ||
+        progression.featureType.some((type) =>
+          getFeatureText(ref).toLowerCase().includes(`feature type=${type.toLowerCase()}`),
+        ),
     )
-    const kind = progression.featureType.includes('MM') ? 'metamagic' : 'optional-feature'
     return [
       {
         id: buildChoiceId(classData, progression.name, levelIndex + 1),
         label: progression.name,
-        kind,
+        kind: 'optional-feature' as const,
         owner: {
           type: 'class' as const,
           name: classData.name,
@@ -355,10 +388,7 @@ function normalizeOptionalFeatureProgressions(
           featureTypes: [...progression.featureType],
         },
         repeatable: false,
-        replacement: inferReplacement(featureRef ? getFeatureText(featureRef) : '', {
-          cadence: 'class-level' as const,
-          maximumPerEvent: 1,
-        }),
+        replacement: inferReplacement(featureRef ? getFeatureText(featureRef) : ''),
         source: {
           kind: 'optional-feature-progression' as const,
           field: `optionalfeatureProgression[${index}]`,
@@ -368,129 +398,139 @@ function normalizeOptionalFeatureProgressions(
   })
 }
 
-function normalizeWeaponMasteryChoice(
+function normalizeTableBackedFilterChoices(
   classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups'>,
   refs: readonly ClassFeatureReference[],
 ): NormalizedCharacterChoice[] {
-  const featureRef = refs.find((ref) => /weapon mastery/i.test(ref.name))
-  if (!featureRef) return []
-  for (const [groupIndex, rawGroup] of (classData.classTableGroups ?? []).entries()) {
-    const group = asRecord(rawGroup)
-    const labels = Array.isArray(group?.colLabels) ? group.colLabels : []
-    const columnIndex = labels.findIndex(
-      (label) => typeof label === 'string' && label.trim().toLowerCase() === 'weapon mastery',
-    )
-    if (columnIndex < 0 || !Array.isArray(group?.rows)) continue
-    const rows = group.rows
-    const counts = Array.from({ length: LEVEL_COUNT }, (_, index) => {
-      const row = rows[index]
-      if (!Array.isArray(row)) return 0
-      const parsed = Number(row[columnIndex])
-      return Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0
-    })
-    const firstLevelIndex = counts.findIndex((count) => count > 0)
-    if (firstLevelIndex < 0) return []
+  return refs.flatMap((featureRef) => {
     const text = getFeatureText(featureRef)
-    const itemFilter = parseFilterTags(text).find((tag) => tag.entityType === 'item')?.filter ?? {
-      entityType: 'item' as const,
-    }
-    const maximumSelections = Math.max(...counts)
-    return [
-      {
-        id: buildChoiceId(classData, 'Weapon Mastery', firstLevelIndex + 1),
-        label: 'Weapon Mastery',
-        kind: 'weapon-mastery',
-        owner: {
-          type: 'class',
-          name: classData.name,
-          source: classData.source,
-          featureName: featureRef.name,
-          featureSource: featureRef.source ?? classData.source,
-        },
-        level: firstLevelIndex + 1,
-        minimumSelections: maximumSelections,
-        maximumSelections,
-        selectionCountByLevel: counts,
-        options: [],
-        optionFilter: itemFilter,
-        repeatable: false,
-        replacement: inferReplacement(text, {
-          cadence: 'long-rest',
-          maximumPerEvent: 'all',
-        }),
-        source: {
-          kind: 'class-table',
-          field: `classTableGroups[${groupIndex}].rows[].[${columnIndex}]`,
-        },
-      },
-    ]
-  }
-  return []
-}
+    const tags = parseFilterTags(text)
+    const filter = mergeFilters(tags)
+    if (!filter) return []
 
-function normalizeFightingStyleFilterChoices(
-  classData: Pick<Class5e, 'name' | 'source'>,
-  refs: readonly ClassFeatureReference[],
-  existing: readonly NormalizedCharacterChoice[],
-): NormalizedCharacterChoice[] {
-  return refs.flatMap((ref) => {
-    const level = getReferenceLevel(ref)
-    if (!level || !/fighting style/i.test(ref.name)) return []
-    if (
-      existing.some((choice) => choice.owner.featureName === ref.name && choice.level === level)
-    ) {
-      return []
+    for (const [groupIndex, rawGroup] of (classData.classTableGroups ?? []).entries()) {
+      const group = asRecord(rawGroup)
+      const labels = Array.isArray(group?.colLabels) ? group.colLabels : []
+      const columnIndex = labels.findIndex(
+        (label) =>
+          typeof label === 'string' &&
+          toSearchableText(label).toLowerCase() === featureRef.name.trim().toLowerCase(),
+      )
+      if (columnIndex < 0 || !Array.isArray(group?.rows)) continue
+      const rows = group.rows
+      const counts = Array.from({ length: LEVEL_COUNT }, (_, index) => {
+        const row = rows[index]
+        if (!Array.isArray(row)) return 0
+        const parsed = Number(row[columnIndex])
+        return Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0
+      })
+      const firstLevelIndex = counts.findIndex((count) => count > 0)
+      if (firstLevelIndex < 0) return []
+      const maximumSelections = Math.max(...counts)
+      return [
+        {
+          id: buildChoiceId(classData, featureRef.name, firstLevelIndex + 1),
+          label: featureRef.name,
+          kind: choiceKindForEntity(filter.entityType),
+          owner: {
+            type: 'class' as const,
+            name: classData.name,
+            source: classData.source,
+            featureName: featureRef.name,
+            featureSource: featureRef.source ?? classData.source,
+          },
+          level: firstLevelIndex + 1,
+          minimumSelections: maximumSelections,
+          maximumSelections,
+          selectionCountByLevel: counts,
+          options: [],
+          optionFilter: filter,
+          repeatable: false,
+          replacement: inferReplacement(text),
+          source: {
+            kind: 'class-table' as const,
+            field: `classTableGroups[${groupIndex}].rows[].[${columnIndex}]`,
+          },
+        },
+      ]
     }
-    const filterTag = parseFilterTags(getFeatureText(ref)).find(
-      (tag) => tag.entityType === 'feat' || tag.entityType === 'optionalFeature',
-    )
-    if (!filterTag) return []
-    return [
-      {
-        id: buildChoiceId(classData, ref.name, level),
-        label: ref.name,
-        kind: 'fighting-style' as const,
-        owner: {
-          type: 'class' as const,
-          name: classData.name,
-          source: classData.source,
-          featureName: ref.name,
-          featureSource: ref.source ?? classData.source,
-        },
-        level,
-        minimumSelections: 1,
-        maximumSelections: 1,
-        selectionCountByLevel: countsFromLevel(level, 1),
-        options: [],
-        optionFilter: filterTag.filter,
-        repeatable: false,
-        replacement: inferReplacement(getFeatureText(ref), {
-          cadence: 'class-level' as const,
-          maximumPerEvent: 1,
-        }),
-        source: {
-          kind: 'class-feature-options' as const,
-          field: `classFeatureRefs:${ref.ref || ref.name}:entries.filter`,
-        },
-      },
-    ]
+    return []
   })
 }
 
-/** Normalizes class-owned choice requirements without interpreting arbitrary prose. */
+function normalizeSingleFilterChoices(
+  classData: Pick<Class5e, 'name' | 'source'>,
+  refs: readonly ClassFeatureReference[],
+  existing: readonly NormalizedCharacterChoice[],
+): ChoiceNormalizationResult {
+  const choices: NormalizedCharacterChoice[] = []
+  const diagnostics: ClassChoiceDiagnostic[] = []
+  for (const ref of refs) {
+    const level = getReferenceLevel(ref)
+    if (!level) continue
+    if (
+      existing.some((choice) => choice.owner.featureName === ref.name && choice.level === level)
+    ) {
+      continue
+    }
+    const text = getFeatureText(ref)
+    const tags = parseFilterTags(text)
+    const filter = mergeFilters(tags)
+    if (!filter) continue
+    const labels = [...new Set(tags.map((tag) => tag.label))]
+    if (!labels.some((label) => inferSingleFilteredChoice(text, label))) {
+      diagnostics.push({
+        code: 'invalid-count',
+        className: classData.name,
+        classSource: classData.source,
+        featureName: ref.name,
+        level,
+        message: 'Filtered choice has no safely parseable selection count or matching class table.',
+      })
+      continue
+    }
+    choices.push({
+      id: buildChoiceId(classData, ref.name, level),
+      label: ref.name,
+      kind: choiceKindForEntity(filter.entityType),
+      owner: {
+        type: 'class',
+        name: classData.name,
+        source: classData.source,
+        featureName: ref.name,
+        featureSource: ref.source ?? classData.source,
+      },
+      level,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: countsFromLevel(level, 1),
+      options: [],
+      optionFilter: filter,
+      repeatable: false,
+      replacement: inferReplacement(text),
+      source: {
+        kind: 'class-feature-options',
+        field: `classFeatureRefs:${ref.ref || ref.name}:entries.filter`,
+      },
+    })
+  }
+  return { choices, diagnostics }
+}
+
+/** Normalizes class-owned choice requirements with data-shape rules shared by every class. */
 export function normalizeClassChoices(
   classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups' | 'optionalfeatureProgression'>,
   refs: readonly ClassFeatureReference[],
 ): ChoiceNormalizationResult {
   const direct = normalizeFeatureOptionChoices(classData, refs)
   const progression = normalizeOptionalFeatureProgressions(classData, refs)
-  const mastery = normalizeWeaponMasteryChoice(classData, refs)
-  const accumulated = [...direct.choices, ...progression, ...mastery]
-  const fightingStyles = normalizeFightingStyleFilterChoices(classData, refs, accumulated)
-  const choices = [...accumulated, ...fightingStyles].sort(
+  const tableBacked = normalizeTableBackedFilterChoices(classData, refs)
+  const accumulated = [...direct.choices, ...progression, ...tableBacked]
+  const singleFilters = normalizeSingleFilterChoices(classData, refs, accumulated)
+  const choices = [...accumulated, ...singleFilters.choices].sort(
     (left, right) => left.level - right.level || left.id.localeCompare(right.id),
   )
-  return { choices, diagnostics: direct.diagnostics }
+  return { choices, diagnostics: [...direct.diagnostics, ...singleFilters.diagnostics] }
 }
 
 export function getRequiredChoiceSelectionCount(

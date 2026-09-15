@@ -88,8 +88,8 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
     initiative: 0,
     speed: 30,
     movement: {
-      speeds: { walk: 30 },
-      source: { kind: 'manual', name: 'Default walking speed' },
+      speeds: {},
+      source: { kind: 'manual', name: 'Unspecified movement' },
     },
     movementAdjustments: [],
     movementOverrides: {},

@@ -180,6 +180,23 @@ describe('migrateCharacter', () => {
     expect(result.version).toBe('7.0.0')
   })
 
+  it('does not invent a rules value when legacy walking speed is missing', () => {
+    const result = migrateCharacter(
+      {
+        ...baseCharacter,
+        version: '6.0.0',
+        speed: undefined,
+      },
+      6,
+    )
+
+    expect(result.movement).toEqual({
+      speeds: {},
+      source: { kind: 'legacy', name: 'Legacy walking speed' },
+    })
+    expect(result.speed).toBe(0)
+  })
+
   it('merges a parameterized fixed grant with an existing base feat key', () => {
     const result = migrateCharacter(
       {

@@ -10,6 +10,10 @@ import type { MovementAdjustment } from '@/types/character'
 
 const EMPTY_ADJUSTMENTS: MovementAdjustment[] = []
 const EMPTY_OVERRIDES: Record<string, number> = {}
+const EMPTY_MOVEMENT_CHARACTER = {
+  speed: 0,
+  movement: { speeds: {}, source: { kind: 'manual' as const, name: 'Unspecified movement' } },
+}
 
 export interface MovementSettings {
   adjustments: MovementAdjustment[]
@@ -22,12 +26,12 @@ export function useMovement() {
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const calculationContext = useCharacterCalculationContext(character)
   const fallbackMovement = useMemo(
-    () => getEffectiveCharacterMovement(character ?? { speed: 30 }),
+    () => getEffectiveCharacterMovement(character ?? EMPTY_MOVEMENT_CHARACTER),
     [character],
   )
   const effectiveMovement = calculationContext?.movement ?? fallbackMovement
   const baseMovement = useMemo(
-    () => getBaseCharacterMovement(character ?? { speed: 30 }),
+    () => getBaseCharacterMovement(character ?? EMPTY_MOVEMENT_CHARACTER),
     [character],
   )
 

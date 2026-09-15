@@ -10,7 +10,7 @@ function choice(overrides: Partial<NormalizedCharacterChoice> = {}): NormalizedC
   return {
     id: 'class:sorcerer|xphb|choice:metamagic|2',
     label: 'Metamagic',
-    kind: 'metamagic',
+    kind: 'optional-feature',
     owner: { type: 'class', name: 'Sorcerer', source: 'XPHB', featureName: 'Metamagic' },
     level: 2,
     minimumSelections: 6,

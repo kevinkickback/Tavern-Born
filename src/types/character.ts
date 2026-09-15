@@ -85,12 +85,7 @@ export interface MovementAdjustment {
   createdAt: string
 }
 
-export type CharacterClassChoiceKind =
-  | 'class-feature'
-  | 'fighting-style'
-  | 'metamagic'
-  | 'optional-feature'
-  | 'weapon-mastery'
+export type CharacterClassChoiceKind = 'class-feature' | 'feat' | 'item' | 'optional-feature'
 
 export interface CharacterClassChoiceOption {
   entityType: 'classFeature' | 'feat' | 'item' | 'optionalFeature'
