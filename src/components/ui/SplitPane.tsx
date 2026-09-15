@@ -29,6 +29,8 @@ interface SplitPaneProps {
   onCompactPaneChange?: (pane: CompactPane) => void
   compactLeftLabel?: string
   compactRightLabel?: string
+  leftCollapseLabel?: string
+  rightCollapseLabel?: string
   className?: string
   leftClassName?: string
   rightClassName?: string
@@ -59,6 +61,8 @@ export function SplitPane({
   onCompactPaneChange,
   compactLeftLabel = 'List',
   compactRightLabel = 'Details',
+  leftCollapseLabel = 'list',
+  rightCollapseLabel = 'details',
   className,
   leftClassName,
   rightClassName,
@@ -134,7 +138,7 @@ export function SplitPane({
               type="button"
               onClick={() => onLeftCollapsedChange(!leftCollapsed)}
               disabled={rightCollapsed}
-              title={leftCollapsed ? 'Expand list panel' : 'Collapse list panel'}
+              title={`${leftCollapsed ? 'Expand' : 'Collapse'} ${leftCollapseLabel} panel`}
               className="flex size-7 cursor-pointer items-center justify-center rounded-md border border-border-strong bg-surface-raised text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Sidebar className="h-3.5 w-3.5" weight={leftCollapsed ? 'regular' : 'fill'} />
@@ -144,7 +148,7 @@ export function SplitPane({
               type="button"
               onClick={() => onRightCollapsedChange(!rightCollapsed)}
               disabled={leftCollapsed}
-              title={rightCollapsed ? 'Expand details panel' : 'Collapse details panel'}
+              title={`${rightCollapsed ? 'Expand' : 'Collapse'} ${rightCollapseLabel} panel`}
               className="flex size-7 cursor-pointer items-center justify-center rounded-md border border-border-strong bg-surface-raised text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Sidebar

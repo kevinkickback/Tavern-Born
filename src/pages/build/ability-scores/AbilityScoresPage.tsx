@@ -26,6 +26,7 @@ import {
   hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
 import { POINT_BUY_BUDGET } from '@/lib/calculations/gameRules'
+import { getPendingBackgroundAbilityRows } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildAbilityScoresDetailsPanel } from '@/pages/build/ability-scores/components/DetailsPanel'
@@ -98,6 +99,21 @@ export function BuildAbilityScoresPage() {
   const hasFixedBackgroundAssignment =
     !!currentBackgroundBlock &&
     currentBackgroundBlock.from.length === currentBackgroundBlock.weights.length
+  const abilitySourceRows = useMemo(() => {
+    const rows = getSourcesRowsBySection('build-ability-scores')
+    if (character?.originSystem !== '2024' || !backgroundAbilityEntity) return rows
+    return [
+      ...rows,
+      ...getPendingBackgroundAbilityRows(bgAsiData, backgroundBlockIndex, backgroundChoices),
+    ]
+  }, [
+    backgroundAbilityEntity,
+    backgroundBlockIndex,
+    backgroundChoices,
+    bgAsiData,
+    character?.originSystem,
+    getSourcesRowsBySection,
+  ])
 
   useEffect(() => {
     if (!backgroundAbilityEntity || !currentBackgroundBlock || !hasFixedBackgroundAssignment) {
@@ -550,8 +566,8 @@ export function BuildAbilityScoresPage() {
                 <SourcesAccordion
                   sectionId="build-ability-scores"
                   title="Sources"
-                  rows={getSourcesRowsBySection('build-ability-scores')}
-                  emptyText="No ability bonus sources recorded. Select a race to get started."
+                  rows={abilitySourceRows}
+                  emptyText={`No ability bonus sources recorded. Select a ${character.originSystem === '2024' ? 'background' : 'race'} to get started.`}
                 />
               </div>
             </>

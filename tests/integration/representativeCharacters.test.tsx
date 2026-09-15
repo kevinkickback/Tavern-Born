@@ -1,4 +1,5 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { useEffect } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, test, vi } from 'vitest'
@@ -160,6 +161,7 @@ afterEach(() => {
 
 describe('representative character consumers', () => {
   test.each(REPRESENTATIVE_CHARACTER_FIXTURES)('$label', async (fixture) => {
+    const user = userEvent.setup()
     expect(characterPersistenceSchema.safeParse(fixture.character).success).toBe(true)
     activateFixture(fixture)
     let consumerSnapshot: ConsumerSnapshot | undefined
@@ -168,7 +170,7 @@ describe('representative character consumers', () => {
     }
 
     render(
-      <MemoryRouter initialEntries={['/build/review']}>
+      <MemoryRouter initialEntries={['/build/review?section=overview']}>
         <AppHeader />
         <BuildReviewPage />
         <ConsumerProbe character={fixture.character} onSnapshot={onSnapshot} />
@@ -224,6 +226,7 @@ describe('representative character consumers', () => {
     expect(screen.getByTestId('review-movement-walk').textContent).toContain(
       String(fixture.expected.walkingSpeed),
     )
+    await user.click(screen.getByRole('tab', { name: /Needs attention/i }))
     expect(screen.getByText('Character is ready')).toBeTruthy()
 
     expect(snapshot.profileIds).toEqual(fixture.expected.profileIds)

@@ -2,6 +2,8 @@ import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
 import {
   ABILITY_ABBREVIATIONS,
   type BackgroundAbilityData,
+  formatBackgroundAbilityPatterns,
+  isBackgroundAbilitySelectionComplete,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
 import type { Background5e } from '@/types/5etools'
@@ -62,22 +64,11 @@ export function getBackgroundAbilitySummary(
         return `+${weight} ${ABILITY_ABBREVIATIONS[ability]}`
       })
     : []
-  const hasCompleteSelection =
-    !!selectedBlock &&
-    selected.every((choice) => choice !== null) &&
-    new Set(choices.map((choice) => normalizeAbilityName(choice)).filter(Boolean)).size ===
-      selectedBlock.weights.length
-
-  const options = data.blocks.map((block) => {
-    const weights = block.weights.map((weight) => `+${weight}`).join('/')
-    const abilities = block.from.map((ability) => ABILITY_ABBREVIATIONS[ability]).join(', ')
-    const count = block.weights.length
-    return `${weights} across ${count} different ${count === 1 ? 'ability' : 'abilities'} from ${abilities}`
-  })
+  const hasCompleteSelection = isBackgroundAbilitySelectionComplete(data, blockIndex, choices)
 
   return {
     current: hasCompleteSelection ? selected.join(' · ') : 'Not configured',
-    options: options.join(' or '),
+    options: formatBackgroundAbilityPatterns(data).join(' or '),
   }
 }
 

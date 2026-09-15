@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -36,10 +36,17 @@ describe('AdjustmentsPage', () => {
       </MemoryRouter>,
     )
 
-    const tabs = screen.getAllByRole('tab')
+    const tabs = within(screen.getByRole('tablist', { name: 'Adjustment type' })).getAllByRole(
+      'tab',
+    )
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Actions', 'Effects'])
     expect(tabs[0]?.getAttribute('aria-selected')).toBe('true')
     expect(screen.getByRole('heading', { name: 'Manual Actions' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Current actions' })).toBeTruthy()
+    expect(screen.getByText('Source-derived actions')).toBeTruthy()
+    expect(document.querySelector('[data-slot="split-pane"]')).toBeTruthy()
+    expect(screen.getByTitle('Collapse manual form panel')).toBeTruthy()
+    expect(screen.getByTitle('Collapse current mechanics panel')).toBeTruthy()
   })
 
   test('preserves an explicit Effects deep link and can switch to Actions', async () => {
@@ -51,6 +58,7 @@ describe('AdjustmentsPage', () => {
     )
 
     expect(screen.getByRole('heading', { name: 'Manual Effects' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Current effects' })).toBeTruthy()
     expect(screen.queryByRole('dialog')).toBeNull()
 
     await user.click(screen.getByRole('tab', { name: 'Actions' }))

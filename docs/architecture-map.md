@@ -139,11 +139,14 @@ Current implementation notes:
   position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and
   keyboard repositioning while History and Unpin remain independent controls.
 - Actions & Effects lives in Builder's Details group and presents source-derived actions and typed
-  effects as read-only rows beside clearly separated manual editors. Source-owned entries remain
+  effects as read-only rows beside clearly separated manual editors. Its responsive split
+  workbench keeps the manual form and Actions/Effects tabs in the narrower left pane and the
+  complete current source/manual list in the larger right pane. Source-owned entries remain
   editable only through Equipment, Race, Class, Feats, Spells, and their other owning workflows;
-  this page never duplicates or deletes them. The flat functional page is ordered Actions then
-  Effects with Actions as the default. Review is the sole destination in Builder's final Finish
-  group after Core and Details; Builder has no one-item Options group. Rules is a character-scoped
+  this page never duplicates or deletes them. Actions remains the default. Review is the sole
+  destination in Builder's final Finish group after Core and Details; its header separates Needs
+  Attention from the remaining Character Overview. Builder has no one-item Options group. Rules is
+  a character-scoped
   top-level workspace because it configures the whole build and loaded catalog. Its Ruleset,
   Advancement, Character Options, and Sources tabs remain protected until a character is active;
   `/sources` redirects to the Sources tab for compatibility. The selected ruleset remains fixed
@@ -153,10 +156,12 @@ Current implementation notes:
   Race shows that link only while a parsed 2014 race choice remains unresolved; fixed and completed
   bonuses are display-only. The selected base-score method, including Custom, does not replace
   origin-bonus requirements. Background shows the current assignment and every parsed assignment
-  pattern, then links to Ability Scores rather than maintaining a duplicate editor. Selecting a
-  fixed-feat background does not force the feat options wizard; follow-up configuration remains
-  available in the owning feat workflow. Readiness issues for either origin route to
-  `/build/ability-scores`.
+  pattern in compact form, then links to Ability Scores rather than maintaining a duplicate editor.
+  Selecting a fixed-feat background does not force the feat options wizard; configurable origin
+  feats expose a source-qualified link to their owning Feats entry. Before a 2024 assignment is
+  complete, Ability Scores synthesizes a pending Sources row from the parsed background blocks so
+  provenance remains visible without persisting a fake grant. Readiness issues for either origin
+  route to `/build/ability-scores`.
 - Movement remains a focused modal because it combines source-derived walking and alternate modes,
   hover, labeled table rulings, and exact per-mode overrides in one compact correction workflow.
   It is not a live-play surface, and removing it would leave alternate or unsupported structured

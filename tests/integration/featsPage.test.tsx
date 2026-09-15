@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
@@ -102,6 +103,13 @@ vi.mock('@/components/modals/FeatOptionsModal', () => ({
 }))
 
 describe('FeatsPage bonus feat configuration', () => {
+  const renderPage = (initialEntry = '/feats') =>
+    render(
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <FeatsPage />
+      </MemoryRouter>,
+    )
+
   beforeEach(() => {
     const character = makeCharacterFixture({ specialFeats: [] })
     useCharacterStore.setState({
@@ -117,7 +125,7 @@ describe('FeatsPage bonus feat configuration', () => {
   })
 
   test('automatically configures a newly selected bonus feat', () => {
-    render(<FeatsPage />)
+    renderPage()
 
     expect(screen.queryByRole('tab', { name: /Needs Setup/ })).toBeNull()
     const addBonusFeat = screen.getByRole('button', { name: 'Add Bonus Feat' })
@@ -158,7 +166,7 @@ describe('FeatsPage bonus feat configuration', () => {
       activeCharacter: character,
     })
 
-    render(<FeatsPage />)
+    renderPage()
 
     const editButtons = screen.getAllByRole('button', { name: 'Edit Setup' })
     expect(editButtons).toHaveLength(2)
@@ -195,7 +203,7 @@ describe('FeatsPage bonus feat configuration', () => {
       activeCharacter: character,
     })
 
-    render(<FeatsPage />)
+    renderPage()
 
     expect(screen.getByText('You gain the following benefits.')).toBeTruthy()
     expect(screen.getByText('Cleric')).toBeTruthy()
@@ -228,7 +236,7 @@ describe('FeatsPage bonus feat configuration', () => {
       activeCharacter: character,
     })
 
-    render(<FeatsPage />)
+    renderPage()
 
     const selectButtons = screen.getAllByRole('button', { name: 'Select Skilled' })
     fireEvent.click(selectButtons[1])
@@ -241,5 +249,14 @@ describe('FeatsPage bonus feat configuration', () => {
     expect(useCharacterStore.getState().activeCharacter?.feats).toEqual([
       expect.objectContaining({ name: 'Skilled', source: 'XPHB' }),
     ])
+  })
+
+  test('opens a source-qualified feat from a route deep link', () => {
+    renderPage('/feats?view=character&feat=Skilled&source=XPHB')
+
+    expect(screen.getByRole('tab', { name: /^Character/ }).getAttribute('aria-selected')).toBe(
+      'true',
+    )
+    expect(screen.getByText('Gain proficiency using the revised printing.')).toBeTruthy()
   })
 })

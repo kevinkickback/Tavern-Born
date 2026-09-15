@@ -258,6 +258,30 @@ export interface BackgroundAbilityData {
   blocks: BackgroundAbilityBlock[]
 }
 
+export function formatBackgroundAbilityPatterns(data: BackgroundAbilityData): string[] {
+  return data.blocks.map((block) => {
+    const weights = block.weights.map((weight) => `+${weight}`).join('/')
+    const abilities = block.from.map((ability) => ABILITY_ABBREVIATIONS[ability]).join(', ')
+    return `${weights} from ${abilities}`
+  })
+}
+
+export function isBackgroundAbilitySelectionComplete(
+  data: BackgroundAbilityData,
+  blockIndex: number,
+  choices: string[],
+): boolean {
+  const block = data.blocks[blockIndex] ?? data.blocks[0]
+  if (!block || choices.length < block.weights.length) return false
+  const selected = choices
+    .slice(0, block.weights.length)
+    .map((choice) => normalizeAbilityName(choice))
+  return (
+    selected.every((ability) => ability !== null && block.from.includes(ability)) &&
+    new Set(selected).size === block.weights.length
+  )
+}
+
 /**
  * Parse the `ability` field on a 2024 (XPHB) background into structured block data.
  * XPHB backgrounds carry two alternative assignment methods as separate blocks.

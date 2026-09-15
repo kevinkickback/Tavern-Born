@@ -93,7 +93,7 @@ export function SourceDerivedActions({ actions }: { actions: readonly CharacterA
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 id={headingId} className="font-semibold">
-            Character actions
+            Source-derived actions
           </h2>
           <p className="text-sm text-muted-foreground">
             Derived from equipped weapons, spells, ancestry, feats, and class features. Manage each
@@ -155,7 +155,7 @@ export function SourceDerivedEffects({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 id={headingId} className="font-semibold">
-            Character effects
+            Source-derived effects
           </h2>
           <p className="text-sm text-muted-foreground">
             Derived from ancestry, feats, equipment, and other configured sources. Manage each entry

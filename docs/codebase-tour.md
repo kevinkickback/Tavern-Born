@@ -142,12 +142,15 @@ Combat stats and advancement:
 - src/hooks/ui/useAnchoredHintPosition.ts — Floating UI anchor selection plus lifecycle recovery for
   persistent and responsive controls
 - src/pages/adjustments/components/DerivedMechanicsOverview.tsx — flat, read-only projections of
-  source-derived character actions and typed effects; manual editors remain separate
+  source-derived character actions and typed effects; the route pairs these with separate manual
+  form/list components in a responsive split workbench
 
 Rules, sources, and condition tracking:
 - src/components/layout/AppSidebar.tsx — Rules is the character-configuration workspace between
   Builder and Character Sheet; manual Actions & Effects is in Builder Details and Review is in the
   final Builder Finish group
+- src/pages/build/review/ReviewPage.tsx — header-tabbed readiness issues and calculated character
+  overview
 - src/pages/rules/RulesPage.tsx — post-creation configuration split into Ruleset, Advancement,
   Character Options, and Sources tabs
 - src/pages/rules/SourcesPanel.tsx — reusable Sources-tab panel for per-character allowed sources

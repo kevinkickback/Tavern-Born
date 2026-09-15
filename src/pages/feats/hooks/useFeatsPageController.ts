@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import type { CompactPane } from '@/components/ui/SplitPane'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
@@ -53,6 +54,7 @@ export function isSelectedFeat(
 }
 
 export function useFeatsPageController() {
+  const [searchParams] = useSearchParams()
   const character = useCharacterStore((state) => state.activeCharacter)
   const calculationContext = useCharacterCalculationContext(character)
   const { feats, spells, classes } = useFilteredGameData()
@@ -66,9 +68,17 @@ export function useFeatsPageController() {
   const { ledger, getSourcesRowsBySection } = useProvenanceLedger()
   const [listCollapsed, setListCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
-  const [compactPane, setCompactPane] = useState<CompactPane>('left')
-  const [selectedFeat, setSelectedFeat] = useState<SelectedFeatIdentity | null>(null)
-  const [featView, setFeatView] = useState<FeatView>('all')
+  const linkedFeatName = searchParams.get('feat')
+  const linkedFeatSource = searchParams.get('source')
+  const hasLinkedFeat = !!linkedFeatName && !!linkedFeatSource
+  const [compactPane, setCompactPane] = useState<CompactPane>(hasLinkedFeat ? 'right' : 'left')
+  const [selectedFeat, setSelectedFeat] = useState<SelectedFeatIdentity | null>(() =>
+    hasLinkedFeat ? { name: linkedFeatName, source: linkedFeatSource } : null,
+  )
+  const [featView, setFeatView] = useState<FeatView>(() => {
+    const linkedView = searchParams.get('view')
+    return linkedView === 'character' || linkedView === 'bonus' ? linkedView : 'all'
+  })
   const [bonusModalOpen, setBonusModalOpen] = useState(false)
   const [featOptionsTarget, setFeatOptionsTarget] = useState<FeatOptionsTarget | null>(null)
   const [featEditCandidate, setFeatEditCandidate] = useState<{

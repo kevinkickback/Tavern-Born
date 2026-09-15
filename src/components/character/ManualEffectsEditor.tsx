@@ -90,7 +90,7 @@ function formatOperation(operation: CharacterEffect['operation']): string {
   return operation.kind
 }
 
-export function ManualEffectsEditor() {
+export function ManualEffectsForm({ showHeader = true }: { showHeader?: boolean }) {
   const character = useCharacterStore((state) => state.activeCharacter)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const parsedSkills = useSkillList()
@@ -105,11 +105,6 @@ export function ManualEffectsEditor() {
   const qualifierId = useId()
   const valueId = useId()
   const conditionId = useId()
-  const manualEffects = useMemo(
-    () => (character?.manualEffects ?? []).filter((effect) => effect.source.kind === 'manual'),
-    [character?.manualEffects],
-  )
-  const suppressed = new Set(character?.suppressedEffectIds ?? [])
   const needsAbility =
     targetKind === 'ability-score' ||
     targetKind === 'ability-check-modifier' ||
@@ -162,189 +157,214 @@ export function ManualEffectsEditor() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h2 className="flex items-center gap-2 font-semibold">
-          <SlidersHorizontal className="size-5 text-primary" />
-          Manual Effects
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add a labeled adjustment when source data cannot represent a rule reliably. Exact
-          overrides are applied last and should be used sparingly.
-        </p>
-      </header>
+      {showHeader && (
+        <header>
+          <h2 className="flex items-center gap-2 font-semibold">
+            <SlidersHorizontal className="size-5 text-primary" />
+            Manual Effects
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add a labeled adjustment when source data cannot represent a rule reliably. Exact
+            overrides are applied last and should be used sparingly.
+          </p>
+        </header>
+      )}
 
-      <div className="space-y-5">
-        <section className="grid gap-3 border-y border-border py-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor={labelId}>What caused it?</Label>
-            <Input
-              id={labelId}
-              value={label}
-              onChange={(event) => setLabel(event.target.value)}
-              placeholder="Describe the rule or table ruling"
-            />
-          </div>
+      <section className="grid gap-3 border-y border-border py-4 sm:grid-cols-2">
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor={labelId}>What caused it?</Label>
+          <Input
+            id={labelId}
+            value={label}
+            onChange={(event) => setLabel(event.target.value)}
+            placeholder="Describe the rule or table ruling"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Target</Label>
+          <Select
+            value={targetKind}
+            onValueChange={(next) => {
+              setTargetKind(next as ManualTargetKind)
+              setQualifier('')
+            }}
+          >
+            <SelectTrigger className="w-full" aria-label="Adjustment target">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TARGET_OPTIONS.map((option) => (
+                <SelectItem key={option.kind} value={option.kind}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {needsAbility && (
           <div className="space-y-1.5">
-            <Label>Target</Label>
-            <Select
-              value={targetKind}
-              onValueChange={(next) => {
-                setTargetKind(next as ManualTargetKind)
-                setQualifier('')
-              }}
-            >
-              <SelectTrigger className="w-full" aria-label="Adjustment target">
+            <Label>Ability</Label>
+            <Select value={ability} onValueChange={(next) => setAbility(next as AbilityName)}>
+              <SelectTrigger className="w-full" aria-label="Target ability">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {TARGET_OPTIONS.map((option) => (
-                  <SelectItem key={option.kind} value={option.kind}>
-                    {option.label}
+                {ABILITY_NAMES.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {titleCase(name)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          {needsAbility && (
-            <div className="space-y-1.5">
-              <Label>Ability</Label>
-              <Select value={ability} onValueChange={(next) => setAbility(next as AbilityName)}>
-                <SelectTrigger className="w-full" aria-label="Target ability">
-                  <SelectValue />
+        )}
+        {needsSkill && (
+          <div className="space-y-1.5">
+            <Label>Skill</Label>
+            {parsedSkills.length > 0 ? (
+              <Select value={qualifier} onValueChange={setQualifier}>
+                <SelectTrigger className="w-full" aria-label="Target skill">
+                  <SelectValue placeholder="Choose a skill" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ABILITY_NAMES.map((name) => (
-                    <SelectItem key={name} value={name}>
-                      {titleCase(name)}
+                  {parsedSkills.map((skill) => (
+                    <SelectItem key={skill} value={skill}>
+                      {titleCase(skill)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
-          {needsSkill && (
-            <div className="space-y-1.5">
-              <Label>Skill</Label>
-              {parsedSkills.length > 0 ? (
-                <Select value={qualifier} onValueChange={setQualifier}>
-                  <SelectTrigger className="w-full" aria-label="Target skill">
-                    <SelectValue placeholder="Choose a skill" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {parsedSkills.map((skill) => (
-                      <SelectItem key={skill} value={skill}>
-                        {titleCase(skill)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  id={qualifierId}
-                  value={qualifier}
-                  onChange={(event) => setQualifier(event.target.value)}
-                  placeholder="Skill name"
-                />
-              )}
-            </div>
-          )}
-          {qualifierLabel && (
-            <div className="space-y-1.5">
-              <Label htmlFor={qualifierId}>{qualifierLabel}</Label>
+            ) : (
               <Input
                 id={qualifierId}
                 value={qualifier}
                 onChange={(event) => setQualifier(event.target.value)}
+                placeholder="Skill name"
               />
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <Label>Operation</Label>
-            <Select
-              value={operationKind}
-              onValueChange={(next) => setOperationKind(next as NumericOperationKind)}
-            >
-              <SelectTrigger className="w-full" aria-label="Adjustment operation">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {OPERATION_OPTIONS.map((option) => (
-                  <SelectItem key={option.kind} value={option.kind}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            )}
           </div>
+        )}
+        {qualifierLabel && (
           <div className="space-y-1.5">
-            <Label htmlFor={valueId}>Value</Label>
+            <Label htmlFor={qualifierId}>{qualifierLabel}</Label>
             <Input
-              id={valueId}
-              type="number"
-              step="any"
-              value={value}
-              onChange={(event) => setValue(event.target.value)}
+              id={qualifierId}
+              value={qualifier}
+              onChange={(event) => setQualifier(event.target.value)}
             />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor={conditionId}>Condition or note (optional)</Label>
-            <Input
-              id={conditionId}
-              value={condition}
-              onChange={(event) => setCondition(event.target.value)}
-              placeholder="Shown as text; it is not evaluated automatically"
-            />
-          </div>
-          <Button type="button" className="sm:col-span-2" onClick={addEffect}>
-            <Plus />
-            Add adjustment
-          </Button>
-        </section>
+        )}
+        <div className="space-y-1.5">
+          <Label>Operation</Label>
+          <Select
+            value={operationKind}
+            onValueChange={(next) => setOperationKind(next as NumericOperationKind)}
+          >
+            <SelectTrigger className="w-full" aria-label="Adjustment operation">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {OPERATION_OPTIONS.map((option) => (
+                <SelectItem key={option.kind} value={option.kind}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={valueId}>Value</Label>
+          <Input
+            id={valueId}
+            type="number"
+            step="any"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor={conditionId}>Condition or note (optional)</Label>
+          <Input
+            id={conditionId}
+            value={condition}
+            onChange={(event) => setCondition(event.target.value)}
+            placeholder="Shown as text; it is not evaluated automatically"
+          />
+        </div>
+        <Button type="button" className="sm:col-span-2" onClick={addEffect}>
+          <Plus />
+          Add adjustment
+        </Button>
+      </section>
+    </div>
+  )
+}
 
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold">Saved manual effects</h3>
-          {manualEffects.length === 0 ? (
-            <p className="border-y border-border py-4 text-sm text-muted-foreground">
-              No manual effects have been added.
-            </p>
-          ) : (
-            <div className="divide-y divide-border border-y border-border">
-              {manualEffects.map((effect) => {
-                const enabled = !suppressed.has(effect.id)
-                return (
-                  <div key={effect.id} className="flex items-center gap-3 py-3">
-                    <Switch
-                      checked={enabled}
-                      aria-label={`${enabled ? 'Disable' : 'Enable'} ${effect.label}`}
-                      onCheckedChange={(checked) =>
-                        update(setEffectSuppressedCommand(character, effect.id, !checked))
-                      }
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{effect.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatTarget(effect.target)} · {formatOperation(effect.operation)}
-                      </p>
-                      {effect.condition && (
-                        <p className="mt-1 text-xs text-muted-foreground">{effect.condition}</p>
-                      )}
-                    </div>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`Remove ${effect.label}`}
-                      onClick={() => update(removeManualEffectCommand(character, effect.id))}
-                    >
-                      <Trash />
-                    </Button>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </section>
-      </div>
+export function ManualEffectsList() {
+  const character = useCharacterStore((state) => state.activeCharacter)
+  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+  const manualEffects = useMemo(
+    () => (character?.manualEffects ?? []).filter((effect) => effect.source.kind === 'manual'),
+    [character?.manualEffects],
+  )
+  const suppressed = new Set(character?.suppressedEffectIds ?? [])
+  if (!character) return null
+
+  const update = (patch: Parameters<typeof updateCharacter>[1]) =>
+    updateCharacter(character.id, patch)
+
+  return (
+    <section className="space-y-2">
+      <h3 className="text-sm font-semibold">Manual effects</h3>
+      {manualEffects.length === 0 ? (
+        <p className="border-y border-border py-4 text-sm text-muted-foreground">
+          No manual effects have been added.
+        </p>
+      ) : (
+        <div className="divide-y divide-border border-y border-border">
+          {manualEffects.map((effect) => {
+            const enabled = !suppressed.has(effect.id)
+            return (
+              <div key={effect.id} className="flex items-center gap-3 py-3">
+                <Switch
+                  checked={enabled}
+                  aria-label={`${enabled ? 'Disable' : 'Enable'} ${effect.label}`}
+                  onCheckedChange={(checked) =>
+                    update(setEffectSuppressedCommand(character, effect.id, !checked))
+                  }
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{effect.label}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatTarget(effect.target)} · {formatOperation(effect.operation)}
+                  </p>
+                  {effect.condition && (
+                    <p className="mt-1 text-xs text-muted-foreground">{effect.condition}</p>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={`Remove ${effect.label}`}
+                  onClick={() => update(removeManualEffectCommand(character, effect.id))}
+                >
+                  <Trash />
+                </Button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
+export function ManualEffectsEditor() {
+  return (
+    <div className="space-y-5">
+      <ManualEffectsForm />
+      <ManualEffectsList />
     </div>
   )
 }

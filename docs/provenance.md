@@ -89,7 +89,10 @@ page derives a read-only current selection and every available assignment patter
 blocks, then links to that editor. The bonuses are included in `displayBonuses` on
 `AbilityScoresPage` via `buildBackgroundBonuses` from `src/lib/calculations/abilityScores.ts`.
 Selecting a background applies its fixed origin-feat grant but does not automatically open the feat
-options wizard; any required follow-up remains visible and editable through the owning feat flow.
+options wizard; any required follow-up remains visible and editable through a source-qualified link
+to the owning Feats entry. Until the ability assignment is complete,
+`getPendingBackgroundAbilityRows` derives a view-only Sources placeholder from the parsed blocks;
+it does not write a speculative grant to the ledger.
 
 ## Grant Application Pattern
 

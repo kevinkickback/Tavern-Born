@@ -44,7 +44,7 @@ function optionalInteger(value: string): number | undefined {
   return Number.isInteger(parsed) ? parsed : undefined
 }
 
-export function ManualActionsEditor() {
+export function ManualActionsForm({ showHeader = true }: { showHeader?: boolean }) {
   const character = useCharacterStore((state) => state.activeCharacter)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const [name, setName] = useState('')
@@ -160,217 +160,238 @@ export function ManualActionsEditor() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h2 className="flex items-center gap-2 font-semibold">
-          <Sword className="size-5 text-primary" />
-          Manual Actions
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Record a table ruling or action that cannot be derived safely from source data.
-        </p>
-      </header>
+      {showHeader && (
+        <header>
+          <h2 className="flex items-center gap-2 font-semibold">
+            <Sword className="size-5 text-primary" />
+            Manual Actions
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Record a table ruling or action that cannot be derived safely from source data.
+          </p>
+        </header>
+      )}
 
-      <div className="space-y-5">
-        <section className="grid gap-3 border-y border-border py-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor={nameId}>Name</Label>
-            <Input id={nameId} value={name} onChange={(event) => setName(event.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Timing</Label>
-            <Select value={kind} onValueChange={(value) => setKind(value as ActionKind)}>
-              <SelectTrigger className="w-full" aria-label="Action timing">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ACTION_KINDS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Attack or save</Label>
-            <Select value={behavior} onValueChange={(value) => setBehavior(value as Behavior)}>
-              <SelectTrigger className="w-full" aria-label="Attack or save behavior">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Neither</SelectItem>
-                <SelectItem value="attack">Attack roll</SelectItem>
-                <SelectItem value="save">Saving throw</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {behavior === 'attack' && (
-            <div className="space-y-1.5">
-              <Label htmlFor={attackBonusId}>Attack bonus</Label>
-              <Input
-                id={attackBonusId}
-                type="number"
-                value={attackBonus}
-                onChange={(event) => setAttackBonus(event.target.value)}
-              />
-            </div>
-          )}
-          {behavior === 'save' && (
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1.5">
-                <Label>Save ability</Label>
-                <Select
-                  value={saveAbility}
-                  onValueChange={(value) => setSaveAbility(value as AbilityName)}
-                >
-                  <SelectTrigger className="w-full" aria-label="Save ability">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ABILITY_NAMES.map((ability) => (
-                      <SelectItem key={ability} value={ability}>
-                        {titleCase(ability)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={saveDcId}>Save DC</Label>
-                <Input
-                  id={saveDcId}
-                  type="number"
-                  min={0}
-                  value={saveDc}
-                  onChange={(event) => setSaveDc(event.target.value)}
-                />
-              </div>
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <Label htmlFor={rangeId}>Range (optional)</Label>
-            <Input id={rangeId} value={range} onChange={(event) => setRange(event.target.value)} />
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:col-span-2">
-            <div className="space-y-1.5">
-              <Label htmlFor={damageDiceId}>Damage dice</Label>
-              <Input
-                id={damageDiceId}
-                value={damageDice}
-                onChange={(event) => setDamageDice(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor={damageBonusId}>Damage bonus</Label>
-              <Input
-                id={damageBonusId}
-                type="number"
-                value={damageBonus}
-                onChange={(event) => setDamageBonus(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor={damageTypeId}>Damage type</Label>
-              <Input
-                id={damageTypeId}
-                value={damageType}
-                onChange={(event) => setDamageType(event.target.value)}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-[1fr_7rem] gap-2">
-            <div className="space-y-1.5">
-              <Label htmlFor={resourceIdId}>Resource ID</Label>
-              <Input
-                id={resourceIdId}
-                value={resourceId}
-                onChange={(event) => setResourceId(event.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor={resourceAmountId}>Cost</Label>
-              <Input
-                id={resourceAmountId}
-                type="number"
-                min={1}
-                value={resourceAmount}
-                onChange={(event) => setResourceAmount(event.target.value)}
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Recovers on</Label>
-            <Select value={rest} onValueChange={(value) => setRest(value as Rest)}>
-              <SelectTrigger className="w-full" aria-label="Recovery rest">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No automatic rest</SelectItem>
-                <SelectItem value="short">Short rest</SelectItem>
-                <SelectItem value="long">Long rest</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor={rechargeNoteId}>Recharge note (optional)</Label>
-            <Input
-              id={rechargeNoteId}
-              value={rechargeNote}
-              onChange={(event) => setRechargeNote(event.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor={descriptionId}>Description</Label>
-            <Textarea
-              id={descriptionId}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </div>
-          <Button type="button" className="sm:col-span-2" onClick={addAction}>
-            <Plus /> Add action
-          </Button>
-        </section>
-
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold">Saved manual actions</h3>
-          {(character.manualActions ?? []).length === 0 ? (
-            <p className="border-y border-border py-4 text-sm text-muted-foreground">
-              No manual actions have been added.
-            </p>
-          ) : (
-            <div className="divide-y divide-border border-y border-border">
-              {(character.manualActions ?? []).map((action) => (
-                <div key={action.id} className="flex items-center gap-3 py-3">
-                  <Switch
-                    checked={action.active}
-                    aria-label={`${action.active ? 'Disable' : 'Enable'} ${action.name}`}
-                    onCheckedChange={(active) =>
-                      update(upsertManualActionCommand(character, { ...action, active }))
-                    }
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{action.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {ACTION_KINDS.find((option) => option.value === action.kind)?.label}
-                      {action.range ? ` · ${action.range}` : ''}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`Remove ${action.name}`}
-                    onClick={() => update(removeManualActionCommand(character, action.id))}
-                  >
-                    <Trash />
-                  </Button>
-                </div>
+      <section className="grid gap-3 border-y border-border py-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor={nameId}>Name</Label>
+          <Input id={nameId} value={name} onChange={(event) => setName(event.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Timing</Label>
+          <Select value={kind} onValueChange={(value) => setKind(value as ActionKind)}>
+            <SelectTrigger className="w-full" aria-label="Action timing">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ACTION_KINDS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Attack or save</Label>
+          <Select value={behavior} onValueChange={(value) => setBehavior(value as Behavior)}>
+            <SelectTrigger className="w-full" aria-label="Attack or save behavior">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Neither</SelectItem>
+              <SelectItem value="attack">Attack roll</SelectItem>
+              <SelectItem value="save">Saving throw</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {behavior === 'attack' && (
+          <div className="space-y-1.5">
+            <Label htmlFor={attackBonusId}>Attack bonus</Label>
+            <Input
+              id={attackBonusId}
+              type="number"
+              value={attackBonus}
+              onChange={(event) => setAttackBonus(event.target.value)}
+            />
+          </div>
+        )}
+        {behavior === 'save' && (
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label>Save ability</Label>
+              <Select
+                value={saveAbility}
+                onValueChange={(value) => setSaveAbility(value as AbilityName)}
+              >
+                <SelectTrigger className="w-full" aria-label="Save ability">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ABILITY_NAMES.map((ability) => (
+                    <SelectItem key={ability} value={ability}>
+                      {titleCase(ability)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </section>
-      </div>
+            <div className="space-y-1.5">
+              <Label htmlFor={saveDcId}>Save DC</Label>
+              <Input
+                id={saveDcId}
+                type="number"
+                min={0}
+                value={saveDc}
+                onChange={(event) => setSaveDc(event.target.value)}
+              />
+            </div>
+          </div>
+        )}
+        <div className="space-y-1.5">
+          <Label htmlFor={rangeId}>Range (optional)</Label>
+          <Input id={rangeId} value={range} onChange={(event) => setRange(event.target.value)} />
+        </div>
+        <div className="grid grid-cols-3 gap-2 sm:col-span-2">
+          <div className="space-y-1.5">
+            <Label htmlFor={damageDiceId}>Damage dice</Label>
+            <Input
+              id={damageDiceId}
+              value={damageDice}
+              onChange={(event) => setDamageDice(event.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={damageBonusId}>Damage bonus</Label>
+            <Input
+              id={damageBonusId}
+              type="number"
+              value={damageBonus}
+              onChange={(event) => setDamageBonus(event.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={damageTypeId}>Damage type</Label>
+            <Input
+              id={damageTypeId}
+              value={damageType}
+              onChange={(event) => setDamageType(event.target.value)}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-[1fr_7rem] gap-2">
+          <div className="space-y-1.5">
+            <Label htmlFor={resourceIdId}>Resource ID</Label>
+            <Input
+              id={resourceIdId}
+              value={resourceId}
+              onChange={(event) => setResourceId(event.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={resourceAmountId}>Cost</Label>
+            <Input
+              id={resourceAmountId}
+              type="number"
+              min={1}
+              value={resourceAmount}
+              onChange={(event) => setResourceAmount(event.target.value)}
+            />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Recovers on</Label>
+          <Select value={rest} onValueChange={(value) => setRest(value as Rest)}>
+            <SelectTrigger className="w-full" aria-label="Recovery rest">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No automatic rest</SelectItem>
+              <SelectItem value="short">Short rest</SelectItem>
+              <SelectItem value="long">Long rest</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor={rechargeNoteId}>Recharge note (optional)</Label>
+          <Input
+            id={rechargeNoteId}
+            value={rechargeNote}
+            onChange={(event) => setRechargeNote(event.target.value)}
+          />
+        </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor={descriptionId}>Description</Label>
+          <Textarea
+            id={descriptionId}
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+        </div>
+        <Button type="button" className="sm:col-span-2" onClick={addAction}>
+          <Plus /> Add action
+        </Button>
+      </section>
+    </div>
+  )
+}
+
+export function ManualActionsList() {
+  const character = useCharacterStore((state) => state.activeCharacter)
+  const updateCharacter = useCharacterStore((state) => state.updateCharacter)
+  if (!character) return null
+
+  const update = (patch: Parameters<typeof updateCharacter>[1]) =>
+    updateCharacter(character.id, patch)
+  const manualActions = character.manualActions ?? []
+
+  return (
+    <section className="space-y-2">
+      <h3 className="text-sm font-semibold">Manual actions</h3>
+      {manualActions.length === 0 ? (
+        <p className="border-y border-border py-4 text-sm text-muted-foreground">
+          No manual actions have been added.
+        </p>
+      ) : (
+        <div className="divide-y divide-border border-y border-border">
+          {manualActions.map((action) => (
+            <div key={action.id} className="flex items-center gap-3 py-3">
+              <Switch
+                checked={action.active}
+                aria-label={`${action.active ? 'Disable' : 'Enable'} ${action.name}`}
+                onCheckedChange={(active) =>
+                  update(upsertManualActionCommand(character, { ...action, active }))
+                }
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{action.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {ACTION_KINDS.find((option) => option.value === action.kind)?.label}
+                  {action.range ? ` · ${action.range}` : ''}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                aria-label={`Remove ${action.name}`}
+                onClick={() => update(removeManualActionCommand(character, action.id))}
+              >
+                <Trash />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+export function ManualActionsEditor() {
+  return (
+    <div className="space-y-5">
+      <ManualActionsForm />
+      <ManualActionsList />
     </div>
   )
 }

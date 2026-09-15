@@ -83,10 +83,14 @@ describe('BackgroundPage', () => {
     await user.click(screen.getByRole('button', { name: /Fixture Background$/ }))
 
     await waitFor(() => expect(screen.getByText('Not configured')).toBeTruthy())
-    expect(screen.getByText(/\+2\/\+1 across 2 different abilities/)).toBeTruthy()
-    expect(screen.getByText(/\+1\/\+1\/\+1 across 3 different abilities/)).toBeTruthy()
+    expect(screen.getByText(/\+2\/\+1 from STR, DEX, CON/)).toBeTruthy()
+    expect(screen.getByText(/\+1\/\+1\/\+1 from STR, DEX, CON/)).toBeTruthy()
     expect(screen.queryByTestId('feat-options-modal')).toBeNull()
     expect(screen.queryByText('Current Bonuses')).toBeNull()
+    expect(screen.queryByText('Provided by background')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Configure feat' }).getAttribute('href')).toBe(
+      '/feats?view=character&feat=Configurable+Fixture+Feat&source=TEST',
+    )
     expect(screen.getAllByText('Origin Feat')).toHaveLength(1)
   })
 })

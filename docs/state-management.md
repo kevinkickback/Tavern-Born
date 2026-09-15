@@ -382,7 +382,13 @@ The Actions & Effects page is a projection, not a second owner of source data. I
 read-only source rows. Equipment state determines whether weapon actions and item effects are
 active; race, class, feat, and spell actions remain owned by their respective builder workflows.
 Only `character.manualActions[]` and `character.manualEffects[]` can be created, edited, or removed
-from this page. This keeps the overview complete without introducing a parallel mutation path.
+from this page. The split workbench places those forms on the left and the complete current lists on
+the right without changing ownership or introducing a parallel mutation path.
+
+An incomplete 2024 background ability assignment has no materialized ability-bonus grant yet.
+Ability Scores therefore derives its pending Sources row from the selected background's parsed
+ability blocks and the persisted selection fields. This row is view-only; completed selections
+continue to materialize normal provenance records through the background ability command.
 
 ### Armor Class Ownership Model
 

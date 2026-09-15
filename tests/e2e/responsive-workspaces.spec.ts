@@ -13,6 +13,7 @@ const SPLIT_WORKSPACES = [
   { route: '/build/background', heading: 'Background' },
   { route: '/build/ability-scores', heading: 'Ability Scores' },
   { route: '/build/proficiencies', heading: 'Proficiencies' },
+  { route: '/build/adjustments', heading: 'Actions & Effects' },
   { route: '/feats', heading: 'Feats' },
   { route: '/spells', heading: 'Spells' },
   { route: '/equipment', heading: 'Equipment' },

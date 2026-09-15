@@ -1,6 +1,6 @@
 import { PencilSimple, Scroll, Star } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { createSearchParams, Link } from 'react-router-dom'
 import { GenericEquipmentSelect } from '@/components/character/GenericEquipmentSelect'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
@@ -56,6 +56,13 @@ type FeatOptionsTarget = Feat5e & {
   grantVariant?: string
   fixedSpellcastingClass?: string
   provenanceChoiceId?: string
+}
+
+function getFeatLinkTarget(name: string, source: string) {
+  return {
+    pathname: '/feats',
+    search: createSearchParams({ view: 'character', feat: name, source }).toString(),
+  }
 }
 
 export function BuildBackgroundPage() {
@@ -152,18 +159,16 @@ export function BuildBackgroundPage() {
   // Fixed feats granted directly by the selected background (no player choice)
   const fixedBgFeats = useMemo(() => {
     if (!selectedBg) return []
-    return Object.entries(ledger.feats)
-      .flatMap(([name, tags]) =>
-        tags
-          .filter(
-            (tag) =>
-              tag.sourceType === 'background' &&
-              tag.sourceName === selectedBg.name &&
-              tag.grantType === 'fixed',
-          )
-          .map((tag) => resolveFixedFeatGrant(feats as Feat5e[], name, tag)),
-      )
-      .map((grant) => (grant.variantLabel ? `${grant.name} (${grant.variantLabel})` : grant.name))
+    return Object.entries(ledger.feats).flatMap(([name, tags]) =>
+      tags
+        .filter(
+          (tag) =>
+            tag.sourceType === 'background' &&
+            tag.sourceName === selectedBg.name &&
+            tag.grantType === 'fixed',
+        )
+        .map((tag) => resolveFixedFeatGrant(feats as Feat5e[], name, tag)),
+    )
   }, [selectedBg, ledger.feats, feats])
 
   const activeFeatChoice = useMemo(
@@ -268,26 +273,45 @@ export function BuildBackgroundPage() {
             Origin Feat
           </div>
           {fixedBgFeats.length > 0 ? (
-            <div className="mt-2 flex flex-col gap-1">
-              {fixedBgFeats.map((name) => (
-                <Badge key={name} variant="outline" className="text-xs gap-1 opacity-70 w-fit">
-                  <Star className="h-3 w-3" weight="duotone" />
-                  {name}
-                </Badge>
-              ))}
-              <p className="text-xs text-muted-foreground mt-0.5">Provided by background</p>
+            <div className="mt-2 flex flex-col items-start gap-2">
+              {fixedBgFeats.map((grant) => {
+                const label = grant.variantLabel
+                  ? `${grant.name} (${grant.variantLabel})`
+                  : grant.name
+                return (
+                  <div key={`${grant.name}|${grant.source}|${grant.variant ?? ''}`}>
+                    <Badge variant="outline" className="w-fit gap-1 text-xs opacity-70">
+                      <Star className="h-3 w-3" weight="duotone" />
+                      {label}
+                    </Badge>
+                    {grant.feat && hasFeatOptions(grant.feat) && (
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="accentOutline"
+                        className="mt-2 h-8 text-xs"
+                      >
+                        <Link to={getFeatLinkTarget(grant.name, grant.source)}>Configure feat</Link>
+                      </Button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           ) : originFeatChoices.length > 0 ? (
             <div className="mt-2 flex flex-col gap-1.5">
               {originFeatChoices.map((choice) => {
                 const isResolved = choice.selected.length > 0
+                const selectedRef = choice.selectedRefs?.[0]
                 const poolLabel = choice.optionPool
                   .filter((p) => p.startsWith('category:'))
                   .map((p) => featCategoryToFull(p.replace('category:', '')))
                   .join(', ')
                 const resolvedFeat = isResolved
                   ? (feats as Feat5e[]).find(
-                      (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                      (f) =>
+                        f.name.toLowerCase() === choice.selected[0].toLowerCase() &&
+                        (!selectedRef?.source || f.source === selectedRef.source),
                     )
                   : undefined
                 return (
@@ -306,6 +330,13 @@ export function BuildBackgroundPage() {
                         >
                           Change
                         </Button>
+                        {resolvedFeat && hasFeatOptions(resolvedFeat) && (
+                          <Button asChild size="sm" variant="accentOutline" className="h-7 text-xs">
+                            <Link to={getFeatLinkTarget(resolvedFeat.name, resolvedFeat.source)}>
+                              Configure feat
+                            </Link>
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <Button

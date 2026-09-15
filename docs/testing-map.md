@@ -128,7 +128,7 @@ new tests land and do not lower them to merge a change.
   tests/integration/derivedMechanicsOverview.test.tsx,
   tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx,
   including Actions-first ordering/default, Effects deep links, read-only source-owned rows, active
-  equipment requirements, manual-entry separation, and the flat presentation
+  equipment requirements, manual-entry separation, and the responsive form/detail split workbench
 - Race summary coverage for parsed unresolved, completed, and fixed ability bonuses; the custom
   base-score method; shared accent-outline actions; and omission of race-bonus editing under 2024
   rules in tests/integration/racePageSummary.test.tsx
@@ -139,8 +139,13 @@ new tests land and do not lower them to merge a change.
   tests/lib/characterReadiness.test.ts and tests/integration/abilityScoresPage.test.tsx. The 2024
   Background page regression in tests/integration/backgroundPage.test.tsx verifies selection does
   not force fixed-feat configuration, the proficiency grid is not duplicated with origin fields,
-  and all parsed ability-assignment patterns appear in the setup summary; pure summary formatting
-  is covered by tests/unit/backgroundPageData.test.ts.
+  configurable feats link to the source-qualified Feats entry, and all parsed ability-assignment
+  patterns appear in the setup summary. Deep-link selection is covered by
+  tests/integration/featsPage.test.tsx; pure compact summary and pending Sources-row formatting is
+  covered by tests/unit/backgroundPageData.test.ts. Ability Scores integration covers unresolved
+  2024 background attribution and ruleset-correct empty guidance.
+- Review-page integration coverage in tests/integration/reviewPage.test.tsx verifies the default
+  Needs Attention tab, separate Character Overview, and retained readiness navigation targets.
 - Warning/destructive palette import regression coverage in tests/lib/themeColors.test.ts
 - Combined Rules/Sources tab behavior and source-panel layout coverage in
   tests/integration/rulesPage.test.tsx and tests/integration/sourcesPanelLayout.test.tsx

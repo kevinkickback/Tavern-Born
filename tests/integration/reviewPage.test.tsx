@@ -111,7 +111,7 @@ describe('BuildReviewPage', () => {
     vi.clearAllMocks()
   })
 
-  test('shows shared totals, actions, sources, PDF readiness, and deep-linked issues', async () => {
+  test('separates attention items from the character overview and preserves issue links', async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={['/build/review']}>
@@ -122,12 +122,23 @@ describe('BuildReviewPage', () => {
       </MemoryRouter>,
     )
 
+    const tabs = screen.getAllByRole('tab')
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      expect.stringContaining('Needs attention'),
+      'Character overview',
+    ])
+    expect(tabs[0]?.getAttribute('aria-selected')).toBe('true')
     expect(screen.getByText('Character needs attention')).toBeTruthy()
+    expect(screen.queryByText('Calculated totals')).toBeNull()
+
+    await user.click(screen.getByRole('tab', { name: 'Character overview' }))
+
     expect(screen.getAllByText('Test Manual Action')).toHaveLength(2)
     expect(screen.getByText('+4 to hit')).toBeTruthy()
     expect(screen.getByText('Test Source')).toBeTruthy()
-    expect(screen.getByText('Needs attention')).toBeTruthy()
     expect(screen.getByText('walk 35 ft.')).toBeTruthy()
+
+    await user.click(screen.getByRole('tab', { name: /Needs attention/ }))
 
     await user.click(screen.getByRole('button', { name: /Finish Test language choice/i }))
     expect(screen.getByText('Proficiency destination')).toBeTruthy()

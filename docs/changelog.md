@@ -43,6 +43,10 @@
 * Simplified Actions & Effects layouts by removing repeated nested cards
 * 2024 background selection no longer interrupts the workflow with an automatic feat setup window, and its ability-bonus summary now shows every available assignment pattern
 * Fixed the Armor Class and Hit Point hint failing to appear when its responsive header controls became available after initial layout
+* Actions & Effects now uses a responsive workbench with manual-entry forms beside the complete current mechanics list
+* Review now separates required attention items from the full character overview with header tabs
+* Background ability choices use shorter summaries, and configurable origin feats link directly to their source-qualified Feats entry
+* Ability Scores now shows pending 2024 background bonus sources before ability selections are complete and uses ruleset-correct setup guidance
 
 </details>
 

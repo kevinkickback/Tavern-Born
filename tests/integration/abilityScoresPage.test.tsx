@@ -99,4 +99,38 @@ describe('BuildAbilityScoresPage', () => {
       '',
     ])
   })
+
+  test('shows the unresolved parsed background bonus pattern in Sources', async () => {
+    const user = userEvent.setup()
+    render(<BuildAbilityScoresPage />)
+
+    await user.click(screen.getByRole('button', { name: /Sources/ }))
+
+    expect(screen.getByText(/choose \+2\/\+1 from STR, DEX, CON/i)).toBeTruthy()
+    expect(screen.getByText(/\(background\)/i)).toBeTruthy()
+  })
+
+  test('uses background-specific empty guidance for revised characters', async () => {
+    const character = makeCharacterFixture({
+      originSystem: '2024',
+      race: testRace.name,
+      raceSource: testRace.source,
+      background: '',
+      backgroundSource: undefined,
+      backgroundAsiChoices: [],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    const user = userEvent.setup()
+    render(<BuildAbilityScoresPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Sources' }))
+
+    expect(
+      screen.getByText('No ability bonus sources recorded. Select a background to get started.'),
+    ).toBeTruthy()
+  })
 })
