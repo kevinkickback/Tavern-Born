@@ -214,6 +214,17 @@ function inferReplacement(text: string): NormalizedCharacterChoice['replacement'
     }
   }
   if (
+    /whenever you reach a level in this class that grants the ability score improvement feature/i.test(
+      searchableText,
+    ) &&
+    /\breplace\b/i.test(searchableText)
+  ) {
+    return {
+      cadence: 'asi-level',
+      maximumPerEvent: /\breplace (?:one|a|an)\b/i.test(searchableText) ? 1 : 'all',
+    }
+  }
+  if (
     /whenever you gain (?:a|an|another) [^.]{0,120}\blevel\b/i.test(searchableText) &&
     /\b(?:change|replace)\b/i.test(searchableText)
   ) {
@@ -223,6 +234,41 @@ function inferReplacement(text: string): NormalizedCharacterChoice['replacement'
     }
   }
   return { cadence: 'never' }
+}
+
+function hasFilteredSelectionIntent(text: string, labels: readonly string[]): boolean {
+  const searchableText = toSearchableText(text)
+  const countWords = Object.keys(COUNT_WORDS).join('|')
+  if (
+    new RegExp(`\\b(?:choose|select|learn|pick)\\s+(?:a|an|\\d+|${countWords})\\s+[a-z]`, 'i').test(
+      searchableText,
+    )
+  ) {
+    return true
+  }
+  return labels.some((label) => {
+    const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return new RegExp(
+      `\\b(?:gain|choose|select|learn|pick|replace)\\s+(?:(?:a|an|one|another|any|\\d+|${countWords})\\s+)?${escapedLabel}\\b`,
+      'i',
+    ).test(searchableText)
+  })
+}
+
+function filtersSameOptionalFeatureFamily(
+  progression: NormalizedCharacterChoice,
+  filter: NormalizedChoiceOptionFilter,
+): boolean {
+  if (
+    progression.source.kind !== 'optional-feature-progression' ||
+    filter.entityType !== 'optionalFeature'
+  ) {
+    return false
+  }
+  const progressionTypes = new Set(
+    (progression.optionFilter?.featureTypes ?? []).map((type) => type.toLowerCase()),
+  )
+  return (filter.featureTypes ?? []).some((type) => progressionTypes.has(type.toLowerCase()))
 }
 
 function choiceKindForEntity(entityType: ChoiceOptionEntityType): NormalizedCharacterChoiceKind {
@@ -441,6 +487,28 @@ function normalizeOptionalFeatureProgressions(
           getFeatureText(ref).toLowerCase().includes(`feature type=${type.toLowerCase()}`),
         ),
     )
+    let replacement = inferReplacement(featureRef ? getFeatureText(featureRef) : '')
+    if (replacement.cadence === 'never') {
+      for (const ref of refs) {
+        const candidate = inferReplacement(getFeatureText(ref))
+        if (candidate.cadence === 'never') continue
+        const tags = parseFilterTags(getFeatureText(ref))
+        if (
+          tags.some(
+            (tag) =>
+              tag.entityType === 'optionalFeature' &&
+              (tag.filter.featureTypes ?? []).some((type) =>
+                progression.featureType.some(
+                  (progressionType) => progressionType.toLowerCase() === type.toLowerCase(),
+                ),
+              ),
+          )
+        ) {
+          replacement = candidate
+          break
+        }
+      }
+    }
     return [
       {
         id: buildChoiceId(classData, progression.name, levelIndex + 1),
@@ -463,7 +531,7 @@ function normalizeOptionalFeatureProgressions(
           featureTypes: [...progression.featureType],
         },
         repeatable: false,
-        replacement: inferReplacement(featureRef ? getFeatureText(featureRef) : ''),
+        replacement,
         source: {
           kind: 'optional-feature-progression' as const,
           field: `optionalfeatureProgression[${index}]`,
@@ -555,11 +623,12 @@ function normalizeSingleFilterChoices(
     if (!mergedFilter) continue
     const filter = addChoiceContext(mergedFilter, text)
     if (
-      filter.entityType === 'optionalFeature' &&
       existing.some(
         (choice) =>
-          choice.source.kind === 'optional-feature-progression' &&
-          choiceNameStem(choice.label) === choiceNameStem(ref.name),
+          filtersSameOptionalFeatureFamily(choice, filter) ||
+          (filter.entityType === 'optionalFeature' &&
+            choice.source.kind === 'optional-feature-progression' &&
+            choiceNameStem(choice.label) === choiceNameStem(ref.name)),
       )
     ) {
       continue
@@ -570,6 +639,7 @@ function normalizeSingleFilterChoices(
       undefined,
     )
     if (!count) {
+      if (!hasFilteredSelectionIntent(text, labels)) continue
       diagnostics.push({
         code: 'invalid-count',
         className: classData.name,

@@ -186,6 +186,54 @@ describe('class choice normalization', () => {
     expect(getRequiredChoiceSelectionCount(metamagic!, 17)).toBe(6)
   })
 
+  test('merges source-provided ASI replacement rules into an optional-feature progression', () => {
+    const [techniques] = normalizeClassChoices(
+      {
+        name: 'Test Class',
+        source: 'TST',
+        optionalfeatureProgression: [
+          { name: 'Mystic Techniques', featureType: ['MT'], progression: { '2': 2 } },
+        ],
+      },
+      [
+        featureRef('Mystic Techniques', 2, ['You learn two techniques.'], 'TST'),
+        featureRef(
+          'Mystic Versatility',
+          4,
+          [
+            'Whenever you reach a level in this class that grants the Ability Score Improvement feature, you can replace a {@filter Mystic Technique|optionalfeatures|feature type=MT} you know with another.',
+          ],
+          'TST',
+        ),
+      ],
+    ).choices
+
+    expect(techniques?.replacement).toEqual({ cadence: 'asi-level', maximumPerEvent: 1 })
+  })
+
+  test('does not report descriptive or runtime filter links as build choices', () => {
+    const result = normalizeClassChoices({ name: 'Test Class', source: 'TST' }, [
+      featureRef(
+        'Weapon Definition',
+        1,
+        [
+          'Weapons for this feature are any {@filter simple melee weapons|items|type=simple weapon}.',
+        ],
+        'TST',
+      ),
+      featureRef(
+        'Active Technique',
+        2,
+        [
+          'While this technique is active, you can use two of your {@filter Mystic Techniques|optionalfeatures|feature type=MT} at once.',
+        ],
+        'TST',
+      ),
+    ])
+
+    expect(result).toEqual({ choices: [], diagnostics: [] })
+  })
+
   test('normalizes Weapon Mastery capacity from the class table, not as a resource', () => {
     const [mastery] = normalizeClassChoices(
       {

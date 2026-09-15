@@ -36,7 +36,7 @@ export interface NormalizedCharacterChoice {
   optionFilter?: NormalizedChoiceOptionFilter
   repeatable: boolean
   replacement: {
-    cadence: 'never' | 'class-level' | 'long-rest'
+    cadence: 'never' | 'class-level' | 'asi-level' | 'long-rest'
     maximumPerEvent?: number | 'all'
   }
   source: {
