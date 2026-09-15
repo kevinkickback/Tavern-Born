@@ -13,6 +13,7 @@ This document maps current test coverage and practical priorities for expansion.
 
 Key scripts in package.json:
 - npm run lint
+- npm run check:bundle (run after `npm run build`)
 - npm run check:health
 - npm run test
 - npm run test:coverage
@@ -24,6 +25,10 @@ imports of managed data JSON, production imports of tests, and dependencies from
 modules into UI, hook, page, or store layers. Knip's duplicate-export diagnostic is excluded because
 the few same-value public aliases are intentional compatibility names; unused-code diagnostics stay
 enabled.
+
+`npm run check:bundle` measures the actual production output and enforces reviewed budgets for the
+initial renderer, lazy chunks, worker, static assets, and total distribution. Its measurement and
+failure behavior is covered by `tests/bundle-budget.test.ts`; CI and `npm run dist` both enforce it.
 
 The current global coverage floor is 60% statements, 50% branches, 57% functions, and 63% lines.
 These values are an honest ratchet based on the measured suite, not the long-term target; raise them as

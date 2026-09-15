@@ -20,6 +20,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:boundaries": "depcruise --config .dependency-cruiser.cjs src electron",
     "check:dead-code": "knip --no-progress --exclude duplicates",
     "check:health": "npm run check:dead-code && npm run check:boundaries",
@@ -30,7 +31,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:electron": "playwright test --config playwright.electron.config.ts",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && npm run check:bundle && electron-builder"
   },
   "dependencies": {
     "@cantoo/pdf-lib": "^2.6.5",
