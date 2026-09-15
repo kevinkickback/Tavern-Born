@@ -16,7 +16,6 @@ describe('CharacterCard', () => {
     const onDelete = vi.fn()
     const onExport = vi.fn()
     const onDuplicate = vi.fn()
-    const onExportTemplate = vi.fn()
 
     const { container } = render(
       <CharacterCard
@@ -25,7 +24,6 @@ describe('CharacterCard', () => {
         onDelete={onDelete}
         onExport={onExport}
         onDuplicate={onDuplicate}
-        onExportTemplate={onExportTemplate}
       />,
     )
 
@@ -51,9 +49,7 @@ describe('CharacterCard', () => {
     expect(onDuplicate).toHaveBeenCalledWith(character)
     expect(onLoad).not.toHaveBeenCalled()
 
-    await user.click(screen.getByRole('button', { name: 'Export Accessible Hero as template' }))
-    expect(onExportTemplate).toHaveBeenCalledWith(character)
-    expect(onLoad).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: /template/i })).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Delete Accessible Hero' }))
     expect(onDelete).toHaveBeenCalledWith('card-actions')
@@ -76,7 +72,6 @@ describe('CharacterCard', () => {
         onDelete={vi.fn()}
         onExport={vi.fn()}
         onDuplicate={vi.fn()}
-        onExportTemplate={vi.fn()}
         selectionMode
         isSelected
         onToggleSelect={onToggleSelect}

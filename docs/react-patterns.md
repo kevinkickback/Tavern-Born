@@ -100,7 +100,16 @@ selection handlers that reveal details should control `compactPane` and select t
 changing the desktop `leftCollapsed` or `rightCollapsed` preferences. Toolbars inside a pane should
 respond to their own container width rather than the application viewport.
 
-Rules and Conditions are the reference tabbed pages. Their parent remains flat while each meaningful section may use its own bordered card. Sources is the reference for a flat configuration page with controls placed directly inside its constrained content area. Avoid wrapping the entire content area in a second card unless the page intentionally uses the dual-pane/workbench pattern.
+Rules and Conditions are the reference tabbed pages. Their parent remains flat while each meaningful
+section may use its own bordered card. The Rules Sources tab is the reference for a flat
+configuration panel with controls placed directly inside its constrained content area. Avoid
+wrapping the entire content area in a second card unless the page intentionally uses the
+dual-pane/workbench pattern.
+
+Use the shared `Button` `accentOutline` variant for compact edit/configure affordances that lead to
+an existing setup workflow. It provides an accent border and text without a filled resting state.
+Incomplete or destructive actions retain their warning/destructive semantic variants instead of
+using `accentOutline`.
 
 Settings and Compendium retain their established route-specific containers. Character cards and the sidebar remain full-bleed by design.
 

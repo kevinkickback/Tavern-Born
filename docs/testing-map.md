@@ -123,14 +123,15 @@ new tests land and do not lower them to merge a change.
   duplicated in the test suite.
 - HP and AC Overview/Manual changes modal coverage in tests/integration/hitPointsModal.test.tsx and
   tests/integration/armorClassModal.test.tsx
-- Builder Adjustments page/editor coverage in tests/integration/adjustmentsPage.test.tsx,
+- Builder Actions & Effects page/editor coverage in tests/integration/adjustmentsPage.test.tsx,
   tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx
-- Race summary coverage for parsed unresolved ability choices and cell-owned bonus/movement actions
-  in tests/integration/racePageSummary.test.tsx
+- Race summary coverage for parsed unresolved ability choices, shared accent-outline actions, and
+  omission of the race-bonus action under 2024 rules in tests/integration/racePageSummary.test.tsx
 - Canonical 2014 race/2024 background readiness routing and revised background-bonus editing in
   tests/lib/characterReadiness.test.ts and tests/integration/abilityScoresPage.test.tsx
 - Warning/destructive palette import regression coverage in tests/lib/themeColors.test.ts
-- Rules and Sources page behavior/layout coverage in tests/integration/rulesPage.test.tsx and tests/integration/sourcesPageLayout.test.tsx
+- Combined Rules/Sources tab behavior and source-panel layout coverage in
+  tests/integration/rulesPage.test.tsx and tests/integration/sourcesPanelLayout.test.tsx
 - Ability-score method descriptors are tested for both origin systems in
   tests/unit/abilityScoreMethods.test.ts.
 - Conditions tab, data-driven rule text/tooltip, whole-card toggle, and exhaustion-state coverage in tests/integration/conditionsPage.test.tsx
@@ -157,9 +158,8 @@ new tests land and do not lower them to merge a change.
 - Character lifecycle E2E (import -> portrait edit -> save -> reload) in tests/e2e/lifecycle.spec.ts
 - Complete create-character E2E (required wizard selections -> review -> create -> reload persistence)
 - Character-library E2E for metadata search, cancel/confirm deletion, persisted deletion, and distinct malformed/schema-invalid import errors
-- Character copy/template unit and integration coverage for exact deep copies, reusable runtime
-  reset, collision-free naming, identity-free versioned template payloads, and template import
-  through the canonical store validation boundary.
+- Character copy and transfer coverage for exact deep copies, reusable runtime reset,
+  collision-free naming, complete-character `.tbc` export, and schema-validated import.
 - Active-character spell workflow E2E (profile switching, add/remove, prepared toggle) in tests/e2e/spells-active.spec.ts
 - Startup cache-branch full coverage in tests/hooks/useDataInit.test.tsx (unconfigured, stale, fresh, offline, source-changed, direct-load)
 - Provenance reconciliation edge cases in tests/lib/provenance/reconciliation.test.ts (mixed-source retention, background choice removal, multiclass-safe class reconciliation)

@@ -3,6 +3,7 @@ import {
   Check,
   Eye,
   Lightning,
+  PencilSimple,
   PersonSimple,
   Sparkle,
   Star,
@@ -449,16 +450,20 @@ export function BuildRacePage() {
                                 ? 'Provided by background'
                                 : 'No racial bonus'
                             })(),
-                            action: (
-                              <Button
-                                asChild
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-xs"
-                              >
-                                <Link to="/build/ability-scores">Choose bonuses</Link>
-                              </Button>
-                            ),
+                            action:
+                              character.originSystem === '2014' ? (
+                                <Button
+                                  asChild
+                                  size="sm"
+                                  variant="accentOutline"
+                                  className="h-7 px-2 text-xs"
+                                >
+                                  <Link to="/build/ability-scores">
+                                    <PencilSimple className="size-3" />
+                                    Choose bonuses
+                                  </Link>
+                                </Button>
+                              ) : undefined,
                           },
                           {
                             icon: (
@@ -478,10 +483,11 @@ export function BuildRacePage() {
                               <Button
                                 type="button"
                                 size="sm"
-                                variant="ghost"
+                                variant="accentOutline"
                                 className="h-7 px-2 text-xs"
                                 onClick={() => setMovementModalOpen(true)}
                               >
+                                <PencilSimple className="size-3" />
                                 Edit movement
                               </Button>
                             ),

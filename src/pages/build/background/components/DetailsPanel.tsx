@@ -172,7 +172,7 @@ function BackgroundDetails2024({
         />
         <StatTile
           icon={<Barbell className="size-4" weight="fill" />}
-          label="Ability Scores"
+          label="Current Bonuses"
           value={asiDisplay}
           className="border-r border-border"
         />

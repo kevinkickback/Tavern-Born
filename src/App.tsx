@@ -89,9 +89,6 @@ const SettingsPage = lazy(() =>
 const RulesPage = lazy(() =>
   import('@/pages/rules/RulesPage').then((module) => ({ default: module.RulesPage })),
 )
-const SourcesPage = lazy(() =>
-  import('@/pages/sources/SourcesPage').then((module) => ({ default: module.SourcesPage })),
-)
 const SpellsPage = lazy(() =>
   import('@/pages/spells/SpellsPage').then((module) => ({ default: module.SpellsPage })),
 )
@@ -219,7 +216,7 @@ function App() {
                 <Route path="/details/portrait" element={<PortraitPage />} />
                 <Route path="/details/characteristics" element={<CharacteristicsPage />} />
                 <Route path="/details/conditions" element={<ConditionsPage />} />
-                <Route path="/sources" element={<SourcesPage />} />
+                <Route path="/sources" element={<Navigate to="/rules?section=sources" replace />} />
                 <Route path="/character-sheet" element={<CharacterSheetRedirect />} />
                 <Route
                   path="/character-sheet/2014"

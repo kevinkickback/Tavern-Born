@@ -58,7 +58,7 @@ interface ContextGroup {
 }
 
 interface Workspace {
-  id: 'start' | 'build' | 'rules' | 'sources' | 'sheet' | 'compendium'
+  id: 'start' | 'build' | 'rules' | 'sheet' | 'compendium'
   label: string
   path: string
   icon: Icon
@@ -112,11 +112,8 @@ const workspaces: Workspace[] = [
           { label: 'Portrait', path: '/details/portrait', icon: Image },
           { label: 'Characteristics', path: '/details/characteristics', icon: Sparkle },
           { label: 'Conditions', path: '/details/conditions', icon: Lightning },
+          { label: 'Actions & Effects', path: '/build/adjustments', icon: PencilSimple },
         ],
-      },
-      {
-        label: 'Options',
-        items: [{ label: 'Adjustments', path: '/build/adjustments', icon: PencilSimple }],
       },
     ],
   },
@@ -126,25 +123,11 @@ const workspaces: Workspace[] = [
     path: '/rules',
     icon: SlidersHorizontal,
     requiresCharacter: true,
-    matches: (pathname) => pathname.startsWith('/rules'),
+    matches: (pathname) => pathname.startsWith('/rules') || pathname.startsWith('/sources'),
     groups: [
       {
         label: 'Character Configuration',
-        items: [{ label: 'Rules', path: '/rules', icon: SlidersHorizontal }],
-      },
-    ],
-  },
-  {
-    id: 'sources',
-    label: 'Sources',
-    path: '/sources',
-    icon: Books,
-    requiresCharacter: true,
-    matches: (pathname) => pathname.startsWith('/sources'),
-    groups: [
-      {
-        label: 'Content Configuration',
-        items: [{ label: 'Sources', path: '/sources', icon: Books }],
+        items: [{ label: 'Rules & Sources', path: '/rules', icon: SlidersHorizontal }],
       },
     ],
   },

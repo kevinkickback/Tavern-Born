@@ -49,21 +49,21 @@ describe('desktop workspace navigation', () => {
     expect(screen.getByRole('link', { name: 'Class' }).getAttribute('aria-current')).toBe('page')
   })
 
-  test('keeps Adjustments in Builder while promoting Rules and Sources to top-level workspaces', () => {
+  test('keeps actions and effects with character details and folds sources into Rules', () => {
     renderSidebar('/build/adjustments')
 
     expect(screen.getByText('Core')).toBeTruthy()
     expect(screen.getByText('Details')).toBeTruthy()
-    expect(screen.getByText('Options')).toBeTruthy()
+    expect(screen.queryByText('Options')).toBeNull()
     expect(screen.queryByText('Character Core')).toBeNull()
     expect(screen.queryByText('Character Details')).toBeNull()
-    expect(screen.getByRole('link', { name: 'Adjustments' }).getAttribute('aria-current')).toBe(
-      'page',
-    )
+    expect(
+      screen.getByRole('link', { name: 'Actions & Effects' }).getAttribute('aria-current'),
+    ).toBe('page')
     expect(screen.queryByRole('link', { name: 'Rules' })).toBeNull()
     expect(screen.queryByRole('link', { name: 'Sources' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Rules' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Sources' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Sources' })).toBeNull()
   })
 
   test('keeps application settings as a primary-rail utility', async () => {
@@ -95,9 +95,6 @@ describe('desktop workspace navigation', () => {
       screen.getByRole('button', { name: 'Character Sheet' }).getAttribute('aria-disabled'),
     ).toBe('true')
     expect(screen.getByRole('button', { name: 'Rules' }).getAttribute('aria-disabled')).toBe('true')
-    expect(screen.getByRole('button', { name: 'Sources' }).getAttribute('aria-disabled')).toBe(
-      'true',
-    )
     expect(
       screen.getByRole('button', { name: 'Compendium' }).getAttribute('aria-disabled'),
     ).toBeNull()
@@ -118,23 +115,29 @@ describe('desktop workspace navigation', () => {
       screen.getByRole('button', { name: 'Character Sheet' }).getAttribute('aria-disabled'),
     ).toBeNull()
     expect(screen.getByRole('button', { name: 'Rules' }).getAttribute('aria-disabled')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Sources' }).getAttribute('aria-disabled')).toBeNull()
   })
 
-  test('orders Rules and Sources between Builder and Character Sheet', () => {
+  test('orders the combined Rules workspace between Builder and Character Sheet', () => {
     renderSidebar('/')
 
     const labels = screen
       .getByRole('navigation', { name: 'Primary workspaces' })
       .querySelectorAll('button[aria-label]')
-    expect(Array.from(labels, (button) => button.getAttribute('aria-label')).slice(0, 6)).toEqual([
+    expect(Array.from(labels, (button) => button.getAttribute('aria-label')).slice(0, 5)).toEqual([
       'Characters',
       'Builder',
       'Rules',
-      'Sources',
       'Character Sheet',
       'Compendium',
     ])
+  })
+
+  test('uses one Rules context destination for rules and source configuration', () => {
+    renderSidebar('/rules?section=sources')
+
+    expect(screen.getByRole('button', { name: 'Rules' }).getAttribute('aria-current')).toBe('page')
+    expect(screen.getByRole('link', { name: 'Rules & Sources' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Sources' })).toBeNull()
   })
 
   test('renders the permanent context pane for the compendium', () => {

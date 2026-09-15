@@ -28,9 +28,10 @@
 * Resetting one-time hints now takes effect immediately, and warning/destructive banner colors are restored
 * Character creation stays on the Characters page after Create, while Review uses character-focused completion wording
 * Armor Class and Hit Point management now separates the full calculation overview from manual changes, keeping heavily modified characters manageable
-* Rules and Sources are now first-class character workspaces beside Builder, while Adjustments uses the same functional page header as other builder sections
+* Rules now includes Sources as a character-configuration tab, while manual Actions & Effects lives with Builder Details and uses the same functional page header as other builder sections
 * Race summaries once again preview unresolved ability-bonus options and keep their ability and movement actions inside the relevant summary cells
-* Character-card actions now have clear tooltips and export icons, and character/template files consistently use the `.tbc` extension
+* Character cards now keep one clearly labeled character export action; separate template files were removed in favor of local reusable-build duplication
+* Race and background setup links now share a visible accent-outline style, and selected feat follow-up choices have clear accent feedback
 * Rest controls are reserved for a future live-play experience instead of appearing in the builder header
 * Built-in organization cards now use a neutral background so their artwork is not paired with arbitrary colors
 * PDF regression coverage now uses separate 2014 and 2024 kitchen-sink characters generated and audited against the configured 5etools corpus

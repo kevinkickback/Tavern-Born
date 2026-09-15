@@ -1,11 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import {
-  createCharacterTemplate,
-  duplicateCharacter,
-  getDuplicateCharacterName,
-  instantiateCharacterTemplate,
-  isCharacterTemplate,
-} from '@/lib/character/characterTransfer'
+import { duplicateCharacter, getDuplicateCharacterName } from '@/lib/character/characterTransfer'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 function makeUsedCharacter() {
@@ -71,34 +65,6 @@ describe('character transfer', () => {
     expect(copy.classResources).toEqual({ 'test-resource': 0 })
     expect(copy.spells.spellSlots[1]?.used).toBe(0)
     expect(copy.spells.pactSpellSlots?.[1]?.used).toBe(0)
-  })
-
-  test('exports identity-free templates and materializes canonical defaults', () => {
-    const source = makeUsedCharacter()
-    const template = createCharacterTemplate(source, '2026-09-15T00:00:00.000Z')
-
-    expect(isCharacterTemplate(template)).toBe(true)
-    expect(template.build).not.toHaveProperty('id')
-    expect(template.build).not.toHaveProperty('name')
-    expect(template.build).not.toHaveProperty('portrait')
-    expect(template.build).not.toHaveProperty('details')
-    expect(template.build).not.toHaveProperty('hitPoints')
-    expect(template.build.spells?.spellSlots[1]?.used).toBe(0)
-
-    const character = instantiateCharacterTemplate(template, {
-      id: 'from-template',
-      name: 'New Hero',
-      now: '2026-09-15T01:00:00.000Z',
-    })
-    expect(character).toMatchObject({
-      id: 'from-template',
-      name: 'New Hero',
-      race: source.race,
-      raceSource: source.raceSource,
-      hitPoints: { max: 0, current: 0, temporary: 0 },
-      details: {},
-    })
-    expect(character.portrait).toBeUndefined()
   })
 
   test('generates collision-free copy names', () => {

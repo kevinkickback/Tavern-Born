@@ -3,27 +3,6 @@ import type { Character } from '@/types/character'
 
 export type CharacterDuplicateMode = 'exact' | 'reusable-build'
 
-const CHARACTER_TEMPLATE_KIND = 'tavern-born-character-template'
-const CHARACTER_TEMPLATE_VERSION = 1
-
-export interface CharacterTemplate {
-  kind: typeof CHARACTER_TEMPLATE_KIND
-  version: typeof CHARACTER_TEMPLATE_VERSION
-  exportedAt: string
-  build: Partial<Character>
-}
-
-const RUNTIME_KEYS = [
-  'hitPoints',
-  'hitPointsInitialized',
-  'inspiration',
-  'deathSaves',
-  'conditions',
-  'exhaustion',
-  'hitDiceUsed',
-  'classResources',
-] as const
-
 function cloneCharacter(character: Character): Character {
   return structuredClone(character)
 }
@@ -95,72 +74,4 @@ export function duplicateCharacter(
     createdAt: now,
     lastModified: now,
   }
-}
-
-/** Exports build decisions while omitting identity, portrait, narrative, and live session state. */
-export function createCharacterTemplate(
-  character: Character,
-  exportedAt = new Date().toISOString(),
-): CharacterTemplate {
-  const build = cloneCharacter(character) as Character & Record<string, unknown>
-  for (const key of [
-    'id',
-    'name',
-    'portrait',
-    'portraitTransform',
-    'createdAt',
-    'lastModified',
-    'details',
-  ]) {
-    delete build[key]
-  }
-  for (const key of RUNTIME_KEYS) delete build[key]
-  build.spells = clearSlotUsage(character)
-  return {
-    kind: CHARACTER_TEMPLATE_KIND,
-    version: CHARACTER_TEMPLATE_VERSION,
-    exportedAt,
-    build,
-  }
-}
-
-export function isCharacterTemplate(value: unknown): value is CharacterTemplate {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
-  const candidate = value as Partial<CharacterTemplate>
-  return (
-    candidate.kind === CHARACTER_TEMPLATE_KIND &&
-    candidate.version === CHARACTER_TEMPLATE_VERSION &&
-    !!candidate.build &&
-    typeof candidate.build === 'object' &&
-    !Array.isArray(candidate.build)
-  )
-}
-
-/** Materializes a template through the canonical character defaults with fresh identity. */
-export function instantiateCharacterTemplate(
-  template: CharacterTemplate,
-  options: { id?: string; name?: string; now?: string } = {},
-): Character {
-  const now = options.now ?? new Date().toISOString()
-  const source = template.build as Partial<Character> & Record<string, unknown>
-  const sanitized = { ...source }
-  for (const key of [
-    'id',
-    'name',
-    'portrait',
-    'portraitTransform',
-    'createdAt',
-    'lastModified',
-    'details',
-  ]) {
-    delete sanitized[key]
-  }
-  for (const key of RUNTIME_KEYS) delete sanitized[key]
-  return createEmptyCharacter({
-    ...(sanitized as Partial<Character>),
-    id: options.id ?? crypto.randomUUID(),
-    name: options.name ?? 'Character from Template',
-    createdAt: now,
-    lastModified: now,
-  })
 }

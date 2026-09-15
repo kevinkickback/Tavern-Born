@@ -48,11 +48,8 @@ import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/wor
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
 import {
   type CharacterDuplicateMode,
-  createCharacterTemplate,
   duplicateCharacter,
   getDuplicateCharacterName,
-  instantiateCharacterTemplate,
-  isCharacterTemplate,
 } from '@/lib/character/characterTransfer'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
@@ -73,7 +70,6 @@ interface CharacterListRowProps {
   onToggleSelect: (id: string) => void
   onExport: (character: Character) => void
   onDuplicate: (character: Character) => void
-  onExportTemplate: (character: Character) => void
   onDelete: (id: string) => void
 }
 
@@ -86,7 +82,6 @@ function CharacterListRow({
   onToggleSelect,
   onExport,
   onDuplicate,
-  onExportTemplate,
   onDelete,
 }: CharacterListRowProps) {
   const name = character.name || 'Unnamed Character'
@@ -162,9 +157,6 @@ function CharacterListRow({
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onExport(character)}>
               <DownloadSimple /> Export
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onExportTemplate(character)}>
-              <DownloadSimple /> Export Template
             </DropdownMenuItem>
             <DropdownMenuItem variant="destructive" onSelect={() => onDelete(character.id)}>
               <Trash /> Delete
@@ -323,18 +315,6 @@ export function HomePage() {
     toast.success('Character exported successfully')
   }, [])
 
-  const handleExportTemplate = useCallback((character: Character) => {
-    const template = createCharacterTemplate(character)
-    const dataBlob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${character.name || 'character'}-template.tbc`
-    link.click()
-    URL.revokeObjectURL(url)
-    toast.success('Character template exported successfully')
-  }, [])
-
   const handleDuplicateCharacter = useCallback(
     (mode: CharacterDuplicateMode) => {
       if (!duplicateTarget) return
@@ -365,21 +345,14 @@ export function HomePage() {
           toast.error(`Character file exceeds the ${maxMB}MB safety limit.`)
           return
         }
-        const payload: unknown = JSON.parse(await file.text())
-        const character = isCharacterTemplate(payload)
-          ? instantiateCharacterTemplate(payload)
-          : payload
+        const character: unknown = JSON.parse(await file.text())
         const validationError = validateCharacterData(character)
         if (validationError) {
           toast.error(`Invalid character: ${validationError}`)
           return
         }
         useCharacterStore.getState().addCharacter(character as Character)
-        toast.success(
-          isCharacterTemplate(payload)
-            ? 'Character template imported successfully'
-            : 'Character imported successfully',
-        )
+        toast.success('Character imported successfully')
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error'
         toast.error(`Failed to import character: ${message}`)
@@ -397,7 +370,6 @@ export function HomePage() {
         onDelete={handleDeleteCharacter}
         onExport={handleExportCharacter}
         onDuplicate={setDuplicateTarget}
-        onExportTemplate={handleExportTemplate}
         isActive={character.id === activeCharacterId}
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}
@@ -412,7 +384,6 @@ export function HomePage() {
         onDelete={handleDeleteCharacter}
         onExport={handleExportCharacter}
         onDuplicate={setDuplicateTarget}
-        onExportTemplate={handleExportTemplate}
         isActive={character.id === activeCharacterId}
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}

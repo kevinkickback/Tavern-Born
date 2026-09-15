@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { SourcesPage } from '@/pages/sources/SourcesPage'
+import { SourcesPanel } from '@/pages/rules/SourcesPanel'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -30,7 +30,7 @@ vi.mock('@/store/gameDataStore', () => ({
     }),
 }))
 
-describe('SourcesPage layout', () => {
+describe('Rules Sources panel layout', () => {
   beforeEach(() => {
     const character = makeCharacterFixture({ allowedSources: ['PHB', 'XGE'] })
     useCharacterStore.setState({
@@ -46,16 +46,15 @@ describe('SourcesPage layout', () => {
   })
 
   test('keeps the warning constrained above the source groups', () => {
-    const { container } = render(<SourcesPage />)
+    const { container } = render(<SourcesPanel />)
 
     const warning = screen.getByText('Source configuration notes').closest('aside')
     const sourceGroup = screen.getByText('Supplements')
-    const workspaceBody = container.querySelector('[data-slot="workspace-body"]')
     const allowedSourcesHeader = screen.getByText('Allowed sources').closest('header')
     const selectedCount = container.querySelector('[data-allowed-sources-count]')
     const preferNewerToggle = screen.getByLabelText('Prefer Newer Printings')
     expect(warning).toBeTruthy()
-    expect(workspaceBody?.className).not.toContain('bg-workspace-pane')
+    expect(container.querySelector('[data-slot="workspace-body"]')).toBeNull()
     expect(container.querySelector('[data-slot="workspace-toolbar"]')).toBeNull()
     expect(selectedCount?.textContent).toBe('2')
     expect(allowedSourcesHeader?.contains(selectedCount)).toBe(true)
@@ -78,7 +77,7 @@ describe('SourcesPage layout', () => {
 
   test('updates the source note when newer printings are preferred', async () => {
     const user = userEvent.setup()
-    render(<SourcesPage />)
+    render(<SourcesPanel />)
 
     expect(screen.getByText(/Prefer Newer Printings can remove those duplicates/)).toBeTruthy()
 

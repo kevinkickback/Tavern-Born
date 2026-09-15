@@ -97,7 +97,7 @@ Derived examples (do not store as canonical):
 - electron/main.ts shows close confirmation when unsaved edits exist.
 - App preferences and home-page layout changes do not participate in character dirty-state tracking.
 
-## Library Copy and Template Transfers
+## Library Copy and Character Transfers
 
 `src/lib/character/characterTransfer.ts` owns copy/reset policy as pure transformations. An exact
 duplicate deep-clones the saved character and replaces its ID, name, and timestamps. A reusable
@@ -105,14 +105,11 @@ build copy additionally resets current/temporary HP, conditions, exhaustion, ins
 saves, hit-die use, class-resource use, and both spell-slot usage pools while retaining all
 source-qualified build selections.
 
-Character templates use a versioned `tavern-born-character-template` envelope. They omit identity,
-portrait/transform, narrative details, timestamps, and live session fields; spell profiles and
-build decisions remain, with slot usage zeroed. Import materializes the payload through
-`createEmptyCharacter()` before the existing character validation/store boundary accepts it. Copy
-and template records are independent structured clones and never share mutable nested objects.
-Full characters and reusable template envelopes both use the `.tbc` extension; import identifies
-their payload kind from the versioned schema and also permits generic `.json` files. `.tbt` is not a
-supported file type.
+File transfer exports the complete character as `.tbc`; import also permits generic `.json` files
+and validates either extension through the same character schema before adding it to the store.
+There is no separate template envelope or template import/export path. Users who want a reset copy
+of an existing build can use the local reusable-build duplicate mode, which produces an independent
+structured clone without creating a second file format.
 
 ## Dirty State and lastModified Timestamps
 

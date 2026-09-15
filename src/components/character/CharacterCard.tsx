@@ -1,4 +1,4 @@
-import { CopySimple, DownloadSimple, FileCode, Trash } from '@phosphor-icons/react'
+import { CopySimple, DownloadSimple, Trash } from '@phosphor-icons/react'
 import { memo } from 'react'
 import { CharacterCardFrame } from '@/components/character/CharacterCardFrame'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
@@ -16,7 +16,6 @@ interface CharacterCardProps {
   onDelete: (id: string) => void
   onExport: (character: Character) => void
   onDuplicate: (character: Character) => void
-  onExportTemplate: (character: Character) => void
   isActive?: boolean
   selectionMode?: boolean
   isSelected?: boolean
@@ -30,7 +29,6 @@ export const CharacterCard = memo(function CharacterCard({
   onDelete,
   onExport,
   onDuplicate,
-  onExportTemplate,
   isActive = false,
   selectionMode = false,
   isSelected = false,
@@ -93,23 +91,6 @@ export const CharacterCard = memo(function CharacterCard({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Duplicate character</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="default"
-                      aria-label={`Export ${character.name || 'character'} as template`}
-                      className={cn(actionButtonClass, 'bg-background/55 backdrop-blur-sm')}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        onExportTemplate(character)
-                      }}
-                    >
-                      <FileCode className={actionIconClass} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Export reusable template</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>

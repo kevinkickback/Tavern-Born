@@ -66,7 +66,7 @@ export function AdjustmentsPage() {
       <WorkspaceBody className="overflow-y-auto bg-workspace-pane p-4">
         <div className="mx-auto w-full max-w-5xl space-y-4">
           <div>
-            <h2 className="font-semibold">Character-specific corrections</h2>
+            <h2 className="font-semibold">Manual actions and effects</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Add only mechanics that cannot be represented safely by the configured source data.
               These changes are included in Builder calculations and character-sheet exports.

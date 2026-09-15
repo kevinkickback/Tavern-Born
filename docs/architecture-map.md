@@ -73,7 +73,7 @@ Spellcasting note:
 
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.
-- Key files: src/pages/*, src/components/*, src/pages/rules/RulesPage.tsx, src/pages/sources/SourcesPage.tsx, src/pages/details/ConditionsPage.tsx, src/components/modals/LevelUpModal.tsx, src/components/modals/HitPointsModal.tsx, src/components/modals/ArmorClassModal.tsx, src/pages/build/ability-scores/model/data.ts, src/pages/build/class/model/pageUtils.ts, src/pages/build/class/model/asi.ts, src/pages/build/class/model/levelsUtils.ts, src/lib/character/commands/classCommands.ts, src/lib/character/commands/raceCommands.ts, src/lib/character/commands/backgroundCommands.ts, src/lib/character/commands/featCommands.ts, src/lib/character/commands/spellCommands.ts, src/lib/character/commands/originSelectionCommand.ts, src/hooks/character/useUnifiedClassSelection.ts, src/pages/build/proficiencies/model/data.ts, src/pages/build/proficiencies/model/types.ts, src/pages/build/background/model/data.ts, src/pages/build/ability-scores/components/MethodPanels.tsx, src/pages/build/ability-scores/components/DetailsPanel.tsx, src/pages/build/class/components/AsiSection.tsx, src/pages/build/class/components/SpellSection.tsx, src/pages/build/class/components/SubclassSection.tsx, src/pages/build/class/components/PassiveFeatureList.tsx, src/pages/build/class/components/ProgressionChoiceCard.tsx, src/pages/build/proficiencies/components/DetailsPanel.tsx, src/pages/build/proficiencies/components/TabsPanel.tsx, src/pages/build/background/components/DetailsPanel.tsx, src/pages/compendium/CompendiumPage.tsx, src/pages/compendium/CompendiumEntryDetails.tsx, src/lib/compendiumEntries.ts, src/components/modals/FeatOptionsModal.tsx, src/components/updates/ChangelogModal.tsx, src/components/updates/UpdateProgressModal.tsx.
+- Key files: src/pages/*, src/components/*, src/pages/rules/RulesPage.tsx, src/pages/rules/SourcesPanel.tsx, src/pages/details/ConditionsPage.tsx, src/components/modals/LevelUpModal.tsx, src/components/modals/HitPointsModal.tsx, src/components/modals/ArmorClassModal.tsx, src/pages/build/ability-scores/model/data.ts, src/pages/build/class/model/pageUtils.ts, src/pages/build/class/model/asi.ts, src/pages/build/class/model/levelsUtils.ts, src/lib/character/commands/classCommands.ts, src/lib/character/commands/raceCommands.ts, src/lib/character/commands/backgroundCommands.ts, src/lib/character/commands/featCommands.ts, src/lib/character/commands/spellCommands.ts, src/lib/character/commands/originSelectionCommand.ts, src/hooks/character/useUnifiedClassSelection.ts, src/pages/build/proficiencies/model/data.ts, src/pages/build/proficiencies/model/types.ts, src/pages/build/background/model/data.ts, src/pages/build/ability-scores/components/MethodPanels.tsx, src/pages/build/ability-scores/components/DetailsPanel.tsx, src/pages/build/class/components/AsiSection.tsx, src/pages/build/class/components/SpellSection.tsx, src/pages/build/class/components/SubclassSection.tsx, src/pages/build/class/components/PassiveFeatureList.tsx, src/pages/build/class/components/ProgressionChoiceCard.tsx, src/pages/build/proficiencies/components/DetailsPanel.tsx, src/pages/build/background/components/DetailsPanel.tsx, src/pages/compendium/CompendiumPage.tsx, src/pages/compendium/CompendiumEntryDetails.tsx, src/lib/compendiumEntries.ts, src/components/modals/FeatOptionsModal.tsx, src/components/updates/ChangelogModal.tsx, src/components/updates/UpdateProgressModal.tsx.
 - Full user-facing 5etools rules text renders through `GameContent`, which applies sanitized,
   source-aware recursive previews consistently across build, selection, and Compendium detail
   surfaces. Static exports, text projections, and compact non-interactive summaries use the
@@ -81,9 +81,9 @@ Spellcasting note:
 - Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through the same interactive path; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items. The detail metadata grid is type-aware and omits irrelevant empty fields while retaining any exceptional populated statistics.
 - Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Name-only fallback is used only when the reference has no source and is deterministic.
 - Character creation uses src/hooks/data/useWizardGameData.ts as its draft-scoped data boundary. Wizard steps receive filtered collections or resolved entities and never read the raw game-data store directly.
-- Character-library duplicate and template policy lives in
-  `src/lib/character/characterTransfer.ts`; HomePage owns only file-picker/download orchestration
-  and the mode dialog. Template import reuses the canonical character factory and store validation.
+- Character-library duplicate policy lives in `src/lib/character/characterTransfer.ts`; HomePage
+  owns file-picker/download orchestration and the duplicate-mode dialog. File transfer uses complete
+  `.tbc` character records; the reusable-build reset is available only as a local duplicate mode.
 - The Feats route is a composition shell. `src/pages/feats/hooks/useFeatsPageController.ts` owns
   route-local state/derived orchestration, while `src/pages/feats/components/FeatCards.tsx` owns
   cards and the inspector. Canonical mutations remain in the feat command/provenance layers.
@@ -133,11 +133,12 @@ Current implementation notes:
   direct-history navigation, and pinning freezes the selected entry at its current viewport
   position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and
   keyboard repositioning while History and Unpin remain independent controls.
-- Per-character Adjustments remains in the Builder workspace's Options group and owns the manual
-  Effects and Actions editors through its functional page header. Rules and Sources are separate
-  character-scoped top-level workspaces because they configure the whole build and loaded catalog;
-  both remain protected until a character is active. Rules are tabbed by Ruleset, Advancement, and
-  Character Options; the selected ruleset itself remains fixed after creation.
+- Manual Actions & Effects lives in Builder's Details group and owns both editors through its
+  functional page header; Builder has no one-item Options group. Rules is a character-scoped
+  top-level workspace because it configures the whole build and loaded catalog. Its Ruleset,
+  Advancement, Character Options, and Sources tabs remain protected until a character is active;
+  `/sources` redirects to the Sources tab for compatibility. The selected ruleset remains fixed
+  after creation.
 - Ability Scores is the canonical editor for origin ability bonuses in both rulesets: 2014 race
   bonuses and 2024 background bonuses are persisted through their existing provenance commands.
   Race and Background show source context and link to that editor instead of maintaining duplicate

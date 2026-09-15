@@ -46,7 +46,7 @@ const STAT_MENUS_HINT_WIDTH = 340
 
 const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
   ['/build/review', 'Character Review', ClipboardText],
-  ['/build/adjustments', 'Adjustments', PencilSimple],
+  ['/build/adjustments', 'Actions & Effects', PencilSimple],
   ['/build/ability-scores', 'Ability Scores', Barbell],
   ['/build/proficiencies', 'Proficiencies', Certificate],
   ['/build/background', 'Background', Scroll],

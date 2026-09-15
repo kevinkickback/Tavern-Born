@@ -1,4 +1,4 @@
-import { DiceFive, SlidersHorizontal, Sparkle, Sword, Warning } from '@phosphor-icons/react'
+import { Books, DiceFive, SlidersHorizontal, Sparkle, Sword, Warning } from '@phosphor-icons/react'
 import { type ReactNode, useId } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -10,20 +10,22 @@ import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
+import { SourcesPanel } from '@/pages/rules/SourcesPanel'
 import { useCharacterStore } from '@/store/characterStore'
 import type { VariantRules } from '@/types/character'
 
 type BooleanRuleKey = Exclude<keyof VariantRules, 'abilityScoreMethod'>
-type RulesPanel = 'ruleset' | 'advancement' | 'character-options'
+type RulesPanel = 'ruleset' | 'advancement' | 'character-options' | 'sources'
 
 const RULES_PANELS = [
   { value: 'ruleset', label: 'Ruleset', icon: Sparkle },
   { value: 'advancement', label: 'Advancement', icon: DiceFive },
   { value: 'character-options', label: 'Character Options', icon: Sword },
+  { value: 'sources', label: 'Sources', icon: Books },
 ] as const
 
 function getActivePanel(panel: string | null): RulesPanel {
-  if (panel === 'advancement' || panel === 'character-options') return panel
+  if (panel === 'advancement' || panel === 'character-options' || panel === 'sources') return panel
   return 'ruleset'
 }
 
@@ -86,6 +88,7 @@ function RulesSection({
 
 export function RulesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const tabIdPrefix = useId()
   const character = useCharacterStore((state) => state.activeCharacter)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const activePanel = getActivePanel(searchParams.get('section'))
@@ -144,11 +147,11 @@ export function RulesPage() {
               return (
                 <button
                   key={value}
-                  id={`rules-tab-${value}`}
+                  id={`${tabIdPrefix}-tab-${value}`}
                   type="button"
                   role="tab"
                   aria-selected={active}
-                  aria-controls={`rules-panel-${value}`}
+                  aria-controls={`${tabIdPrefix}-panel-${value}`}
                   onClick={() => setActivePanel(value)}
                   className={cn(
                     'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',
@@ -168,128 +171,135 @@ export function RulesPage() {
           </div>
         </div>
       </WorkspacePaneHeader>
-      <WorkspaceBody>
-        <div className="mx-auto w-full max-w-4xl space-y-5 px-6 py-5">
-          <Alert className="border-warning/35 bg-warning/10 text-foreground [&>svg]:text-warning">
-            <Warning />
-            <AlertDescription>
-              Changing a rule does not remove choices already made. Review the affected Builder page
-              when changing a rule your character has already used.
-            </AlertDescription>
-          </Alert>
-
+      <WorkspaceBody className={cn(activePanel === 'sources' && 'flex flex-col overflow-hidden')}>
+        {activePanel === 'sources' ? (
           <div
-            id={`rules-panel-${activePanel}`}
+            id={`${tabIdPrefix}-panel-${activePanel}`}
             role="tabpanel"
-            aria-labelledby={`rules-tab-${activePanel}`}
+            aria-labelledby={`${tabIdPrefix}-tab-${activePanel}`}
+            className="flex min-h-0 flex-1 flex-col"
           >
-            {activePanel === 'ruleset' && (
-              <RulesSection
-                icon={<Sparkle className="size-5" weight="fill" />}
-                title="Ruleset"
-                description="The rules foundation selected when this character was created."
-              >
-                <div className="flex items-center justify-between gap-4 py-4">
-                  <div>
-                    <p className="text-sm font-medium">{rulesetLabel}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Switching rulesets requires rebuilding origin and progression choices, so it
-                      cannot be changed here.
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-full border border-accent bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
-                    Fixed
-                  </span>
-                </div>
-              </RulesSection>
-            )}
-
-            {activePanel === 'advancement' && (
-              <RulesSection
-                icon={<DiceFive className="size-5" weight="fill" />}
-                title="Advancement"
-                description="Choose how ability scores and level-up options are handled."
-              >
-                <div className="py-4">
-                  <p className="text-sm font-medium">Ability Score Method</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Changing the method does not replace your existing scores.
-                  </p>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    {abilityMethods.map((method) => {
-                      const selected = abilityMethod === method.value
-                      return (
-                        <Button
-                          key={method.value}
-                          type="button"
-                          variant="outline"
-                          aria-pressed={selected}
-                          onClick={() => updateRules({ abilityScoreMethod: method.value })}
-                          className={cn(
-                            'h-auto min-h-16 flex-col items-start gap-1 whitespace-normal px-3 py-2 text-left',
-                            selected && 'border-primary bg-surface-selected text-foreground',
-                          )}
-                        >
-                          <span className="font-semibold">{method.label}</span>
-                          <span className="text-xs font-normal text-muted-foreground">
-                            {method.description}
-                          </span>
-                        </Button>
-                      )
-                    })}
-                  </div>
-                </div>
-                <RuleRow
-                  label="Average Hit Points"
-                  description="Use the fixed average automatically when leveling up. When disabled, each level asks you to roll or enter the hit-die result. Existing level-up HP is unchanged."
-                  checked={rules.averageHitPoints !== false}
-                  onCheckedChange={(checked) => updateBooleanRule('averageHitPoints', checked)}
-                />
-                <RuleRow
-                  label="Optional Class Features"
-                  description="Show optional and replacement class features, including options introduced in Tasha's Cauldron of Everything."
-                  checked={rules.optionalClassFeatures ?? false}
-                  onCheckedChange={(checked) => updateBooleanRule('optionalClassFeatures', checked)}
-                />
-              </RulesSection>
-            )}
-
-            {activePanel === 'character-options' && (
-              <RulesSection
-                icon={<Sword className="size-5" weight="fill" />}
-                title="Character Options"
-                description="Adjust restrictions applied while choosing character options."
-              >
-                <RuleRow
-                  label="Bladesinger Any Race"
-                  description="Allow characters of any race to choose the Bladesinger Wizard subclass."
-                  checked={rules.bladesingerAnyRace ?? false}
-                  onCheckedChange={(checked) => updateBooleanRule('bladesingerAnyRace', checked)}
-                />
-                <RuleRow
-                  label="Battlerager Any Race"
-                  description="Allow characters of any race to choose the Battlerager Barbarian subclass."
-                  checked={rules.battleragerAnyRace ?? false}
-                  onCheckedChange={(checked) => updateBooleanRule('battleragerAnyRace', checked)}
-                />
-                <RuleRow
-                  label="Prefer Newer Printings"
-                  description="Hide older versions when newer printings of the same race, class, feat, spell, or item are available."
-                  checked={rules.preferNewerPrintings ?? false}
-                  onCheckedChange={(checked) => updateBooleanRule('preferNewerPrintings', checked)}
-                />
-                <RuleRow
-                  label="Ignore Equipment Restrictions"
-                  description="Allow equipment to be used even when its normal proficiency or usage requirements are not met."
-                  checked={rules.ignoreEquipRestrictions ?? false}
-                  onCheckedChange={(checked) =>
-                    updateBooleanRule('ignoreEquipRestrictions', checked)
-                  }
-                />
-              </RulesSection>
-            )}
+            <SourcesPanel />
           </div>
-        </div>
+        ) : (
+          <div className="mx-auto w-full max-w-4xl space-y-5 px-6 py-5">
+            <Alert className="border-warning/35 bg-warning/10 text-foreground [&>svg]:text-warning">
+              <Warning />
+              <AlertDescription>
+                Changing a rule does not remove choices already made. Review the affected Builder
+                page when changing a rule your character has already used.
+              </AlertDescription>
+            </Alert>
+
+            <div
+              id={`${tabIdPrefix}-panel-${activePanel}`}
+              role="tabpanel"
+              aria-labelledby={`${tabIdPrefix}-tab-${activePanel}`}
+            >
+              {activePanel === 'ruleset' && (
+                <RulesSection
+                  icon={<Sparkle className="size-5" weight="fill" />}
+                  title="Ruleset"
+                  description="The rules foundation selected when this character was created."
+                >
+                  <div className="flex items-center justify-between gap-4 py-4">
+                    <div>
+                      <p className="text-sm font-medium">{rulesetLabel}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Switching rulesets requires rebuilding origin and progression choices, so it
+                        cannot be changed here.
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded-full border border-accent bg-accent px-2.5 py-1 text-xs font-semibold text-accent-foreground">
+                      Fixed
+                    </span>
+                  </div>
+                </RulesSection>
+              )}
+
+              {activePanel === 'advancement' && (
+                <RulesSection
+                  icon={<DiceFive className="size-5" weight="fill" />}
+                  title="Advancement"
+                  description="Choose how ability scores and level-up options are handled."
+                >
+                  <div className="py-4">
+                    <p className="text-sm font-medium">Ability Score Method</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Changing the method does not replace your existing scores.
+                    </p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      {abilityMethods.map((method) => {
+                        const selected = abilityMethod === method.value
+                        return (
+                          <Button
+                            key={method.value}
+                            type="button"
+                            variant="outline"
+                            aria-pressed={selected}
+                            onClick={() => updateRules({ abilityScoreMethod: method.value })}
+                            className={cn(
+                              'h-auto min-h-16 flex-col items-start gap-1 whitespace-normal px-3 py-2 text-left',
+                              selected && 'border-primary bg-surface-selected text-foreground',
+                            )}
+                          >
+                            <span className="font-semibold">{method.label}</span>
+                            <span className="text-xs font-normal text-muted-foreground">
+                              {method.description}
+                            </span>
+                          </Button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <RuleRow
+                    label="Average Hit Points"
+                    description="Use the fixed average automatically when leveling up. When disabled, each level asks you to roll or enter the hit-die result. Existing level-up HP is unchanged."
+                    checked={rules.averageHitPoints !== false}
+                    onCheckedChange={(checked) => updateBooleanRule('averageHitPoints', checked)}
+                  />
+                  <RuleRow
+                    label="Optional Class Features"
+                    description="Show optional and replacement class features, including options introduced in Tasha's Cauldron of Everything."
+                    checked={rules.optionalClassFeatures ?? false}
+                    onCheckedChange={(checked) =>
+                      updateBooleanRule('optionalClassFeatures', checked)
+                    }
+                  />
+                </RulesSection>
+              )}
+
+              {activePanel === 'character-options' && (
+                <RulesSection
+                  icon={<Sword className="size-5" weight="fill" />}
+                  title="Character Options"
+                  description="Adjust restrictions applied while choosing character options."
+                >
+                  <RuleRow
+                    label="Bladesinger Any Race"
+                    description="Allow characters of any race to choose the Bladesinger Wizard subclass."
+                    checked={rules.bladesingerAnyRace ?? false}
+                    onCheckedChange={(checked) => updateBooleanRule('bladesingerAnyRace', checked)}
+                  />
+                  <RuleRow
+                    label="Battlerager Any Race"
+                    description="Allow characters of any race to choose the Battlerager Barbarian subclass."
+                    checked={rules.battleragerAnyRace ?? false}
+                    onCheckedChange={(checked) => updateBooleanRule('battleragerAnyRace', checked)}
+                  />
+                  <RuleRow
+                    label="Ignore Equipment Restrictions"
+                    description="Allow equipment to be used even when its normal proficiency or usage requirements are not met."
+                    checked={rules.ignoreEquipRestrictions ?? false}
+                    onCheckedChange={(checked) =>
+                      updateBooleanRule('ignoreEquipRestrictions', checked)
+                    }
+                  />
+                </RulesSection>
+              )}
+            </div>
+          </div>
+        )}
       </WorkspaceBody>
     </WorkspacePage>
   )

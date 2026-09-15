@@ -1,4 +1,4 @@
-import { Scroll, Star } from '@phosphor-icons/react'
+import { PencilSimple, Scroll, Star } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GenericEquipmentSelect } from '@/components/character/GenericEquipmentSelect'
@@ -260,16 +260,16 @@ export function BuildBackgroundPage() {
       <div className="flex items-start gap-6">
         <div className="min-w-0 flex-1">
           <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Ability Score Improvements
+            Ability Bonuses
           </div>
           {selectedBg ? (
-            <div className="mt-2 space-y-2">
-              <p className="text-xs text-muted-foreground">
-                This background supplies origin bonuses. All ability bonus choices are managed in
-                one place so displayed scores and stored selections cannot diverge.
-              </p>
-              <Button asChild size="sm" variant="outline" className="h-8 text-xs">
-                <Link to="/build/ability-scores">Manage ability bonuses</Link>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Set on Ability Scores.</span>
+              <Button asChild size="sm" variant="accentOutline" className="h-8 text-xs">
+                <Link to="/build/ability-scores">
+                  <PencilSimple className="size-3" />
+                  Edit bonuses
+                </Link>
               </Button>
             </div>
           ) : (

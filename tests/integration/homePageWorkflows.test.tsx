@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
-import { createCharacterTemplate } from '@/lib/character/characterTransfer'
 import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
 import { HomePage } from '@/pages/HomePage'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
@@ -31,7 +30,6 @@ interface MockCharacterCardProps {
   onLoad: (id: string) => void
   onDelete: (id: string) => void
   onDuplicate: (character: { id: string; name: string }) => void
-  onExportTemplate: (character: { id: string; name: string }) => void
   selectionMode?: boolean
   onToggleSelect?: (id: string) => void
 }
@@ -42,7 +40,6 @@ vi.mock('@/components/character/CharacterCard', () => ({
     onLoad,
     onDelete,
     onDuplicate,
-    onExportTemplate,
     selectionMode,
     onToggleSelect,
   }: MockCharacterCardProps) => (
@@ -56,9 +53,6 @@ vi.mock('@/components/character/CharacterCard', () => ({
       </button>
       <button type="button" onClick={() => onDuplicate(character)}>
         duplicate-{character.id}
-      </button>
-      <button type="button" onClick={() => onExportTemplate(character)}>
-        export-template-{character.id}
       </button>
       {selectionMode && (
         <button type="button" onClick={() => onToggleSelect?.(character.id)}>
@@ -295,49 +289,6 @@ describe('home page integration workflows', () => {
     await fileInput.onchange?.({ target: fileInput } as unknown as Event)
 
     expect(useCharacterStore.getState().characters).toHaveLength(2)
-  })
-
-  test('imports a character template with fresh identity and reset runtime state', async () => {
-    const user = userEvent.setup()
-    const source = makeCharacterFixture({
-      id: 'template-source',
-      name: 'Template Source',
-      race: 'Test Lineage',
-      raceSource: 'TEST',
-      portrait: 'data:image/png;base64,example',
-      hitPoints: { max: 20, current: 3, temporary: 2 },
-      conditions: ['test condition'],
-    })
-    useCharacterStore.setState({
-      characters: [source],
-      activeCharacterId: null,
-      activeCharacter: null,
-    })
-    const fileInput = mockDynamicFileInput()
-
-    render(<HomePage />)
-    await user.click(screen.getByRole('button', { name: 'Import' }))
-    const file = new File([JSON.stringify(createCharacterTemplate(source))], 'build.tbc', {
-      type: 'application/json',
-    })
-    Object.defineProperty(fileInput, 'files', {
-      configurable: true,
-      get: () => [file],
-    })
-
-    await fileInput.onchange?.({ target: fileInput } as unknown as Event)
-
-    const imported = useCharacterStore
-      .getState()
-      .characters.find((character) => character.id !== source.id)
-    expect(imported).toMatchObject({
-      name: 'Character from Template',
-      race: 'Test Lineage',
-      raceSource: 'TEST',
-      hitPoints: { max: 0, current: 0, temporary: 0 },
-    })
-    expect(imported?.portrait).toBeUndefined()
-    expect(imported?.conditions).toBeUndefined()
   })
 
   test('rejects an oversized character before reading its contents', async () => {

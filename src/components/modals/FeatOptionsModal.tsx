@@ -76,7 +76,11 @@ const SpellcastingClassStep = memo(function SpellcastingClassStep({
         </SelectTrigger>
         <SelectContent>
           {step.classOptions.map((opt) => (
-            <SelectItem key={opt.name} value={opt.name}>
+            <SelectItem
+              key={opt.name}
+              value={opt.name}
+              className="data-[state=checked]:bg-accent/10 data-[state=checked]:text-accent-foreground"
+            >
               {opt.name}
             </SelectItem>
           ))}
@@ -131,7 +135,10 @@ const SpellPickStep = memo(function SpellPickStep({
                 key={id}
                 htmlFor={checkboxId}
                 className={cn(
-                  'flex w-full items-center gap-3 px-3 py-2 hover:bg-muted/40 transition-colors',
+                  'flex w-full items-center gap-3 border-l-2 px-3 py-2 transition-colors',
+                  isSelected
+                    ? 'border-l-accent bg-accent/10 text-foreground'
+                    : 'border-l-transparent hover:bg-muted/40',
                   atLimit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
                 )}
               >
@@ -141,6 +148,7 @@ const SpellPickStep = memo(function SpellPickStep({
                   onCheckedChange={() => !atLimit && onToggle(id)}
                   disabled={atLimit}
                   tabIndex={atLimit ? -1 : 0}
+                  className="data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"
                 />
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium">{spell.name}</span>
@@ -200,7 +208,10 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
               key={name}
               htmlFor={checkboxId}
               className={cn(
-                'flex w-full items-center gap-3 px-3 py-2 hover:bg-muted/40 transition-colors',
+                'flex w-full items-center gap-3 border-l-2 px-3 py-2 transition-colors',
+                isSelected
+                  ? 'border-l-accent bg-accent/10 text-foreground'
+                  : 'border-l-transparent hover:bg-muted/40',
                 atLimit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
               )}
             >
@@ -210,6 +221,7 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
                 onCheckedChange={() => !atLimit && onToggle(name)}
                 disabled={atLimit}
                 tabIndex={atLimit ? -1 : 0}
+                className="data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"
               />
               <span className="text-sm capitalize">{name}</span>
             </label>
@@ -280,31 +292,39 @@ const OptionalFeatureStep = memo(function OptionalFeatureStep({
         {filtered.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground italic">No options found.</p>
         ) : (
-          filtered.map((f) => (
-            <label
-              key={`${f.name}|${f.source ?? ''}`}
-              className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
-            >
-              <input
-                type="radio"
-                name="optFeature"
-                checked={value === f.name}
-                onChange={() => onChange(f.name)}
-                className="accent-current"
-              />
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium">{f.name}</span>
-                {f.source && (
-                  <Badge
-                    variant="outline"
-                    className="ml-2 text-xs h-4 px-1 py-0 text-muted-foreground"
-                  >
-                    {f.source}
-                  </Badge>
+          filtered.map((f) => {
+            const isSelected = value === f.name
+            return (
+              <label
+                key={`${f.name}|${f.source ?? ''}`}
+                className={cn(
+                  'flex cursor-pointer items-center gap-3 border-l-2 px-3 py-2 transition-colors',
+                  isSelected
+                    ? 'border-l-accent bg-accent/10 text-foreground'
+                    : 'border-l-transparent hover:bg-muted/40',
                 )}
-              </div>
-            </label>
-          ))
+              >
+                <input
+                  type="radio"
+                  name="optFeature"
+                  checked={isSelected}
+                  onChange={() => onChange(f.name)}
+                  className="size-4 shrink-0 accent-[var(--color-accent-9)]"
+                />
+                <div className="min-w-0 flex-1">
+                  <span className="text-sm font-medium">{f.name}</span>
+                  {f.source && (
+                    <Badge
+                      variant="outline"
+                      className="ml-2 h-4 px-1 py-0 text-xs text-muted-foreground"
+                    >
+                      {f.source}
+                    </Badge>
+                  )}
+                </div>
+              </label>
+            )
+          })
         )}
       </div>
     </div>

@@ -139,10 +139,12 @@ Combat stats and advancement:
   management hint
 
 Rules, sources, and condition tracking:
-- src/components/layout/AppSidebar.tsx — Rules and Sources are character-scoped top-level
-  workspaces ordered between Builder and Character Sheet; Adjustments remains in Builder Options
-- src/pages/rules/RulesPage.tsx — post-creation rules review and edits, split into Ruleset, Advancement, and Character Options tabs
-- src/pages/sources/SourcesPage.tsx — per-character allowed sources and newer-printing preference
+- src/components/layout/AppSidebar.tsx — Rules is the character-configuration workspace between
+  Builder and Character Sheet; manual Actions & Effects is in Builder Details
+- src/pages/rules/RulesPage.tsx — post-creation configuration split into Ruleset, Advancement,
+  Character Options, and Sources tabs
+- src/pages/rules/SourcesPanel.tsx — reusable Sources-tab panel for per-character allowed sources
+  and newer-printing preference; `/sources` is a compatibility redirect
 - src/pages/details/ConditionsPage.tsx — Combat State, Exhaustion, Conditions, and Class Resources tabs
 - src/hooks/data/useGameData.ts — `useConditions()` supplies parsed condition records
 - src/lib/5etools/parsers/basic.ts — tags condition and disease records during ingestion so gameplay UI can exclude diseases without hardcoded lists

@@ -71,8 +71,14 @@ describe('RulesPage', () => {
 
     expect(screen.getByLabelText('Bladesinger Any Race')).toBeTruthy()
     expect(screen.getByLabelText('Battlerager Any Race')).toBeTruthy()
-    expect(screen.getByLabelText('Prefer Newer Printings')).toBeTruthy()
     expect(screen.getByLabelText('Ignore Equipment Restrictions')).toBeTruthy()
+
+    await user.click(screen.getByRole('tab', { name: 'Sources' }))
+
+    expect(screen.getByRole('tab', { name: 'Sources' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByText('Allowed sources')).toBeTruthy()
+    expect(screen.getByText(/No sources available/)).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   test('updates rules on the active character without replacing existing choices', async () => {

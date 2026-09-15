@@ -21,6 +21,7 @@ Element.prototype.scrollIntoView = () => undefined
 describe('Race page summary', () => {
   beforeEach(() => {
     const character = makeCharacterFixture({
+      originSystem: '2014',
       race: 'Choice Lineage',
       raceSource: 'TEST',
       allowedSources: ['TEST'],
@@ -63,9 +64,55 @@ describe('Race page summary', () => {
     const abilityValue = screen.getByText('Choose 1 × +2 from STR/DEX')
     const abilityCell = abilityValue.closest('div.flex.min-h-16')
     expect(abilityCell?.textContent).toContain('Choose bonuses')
+    expect(screen.getByRole('link', { name: 'Choose bonuses' }).className).toContain(
+      'border-accent',
+    )
 
     const speedValue = screen.getByText(/^walk 30 ft/i)
     const speedCell = speedValue.closest('div.flex.min-h-16')
     expect(speedCell?.textContent).toContain('Edit movement')
+    expect(screen.getByRole('button', { name: 'Edit movement' }).className).toContain(
+      'border-accent',
+    )
+  })
+
+  test('does not offer race bonus editing when revised bonuses come from the background', () => {
+    const character = makeCharacterFixture({
+      originSystem: '2024',
+      race: 'Revised Lineage',
+      raceSource: 'TEST',
+      allowedSources: ['TEST'],
+      raceAsiChoices: [],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    useGameDataStore.setState({
+      gameData: makeGameDataFixture({
+        races: [
+          makeRaceFixture({
+            name: 'Revised Lineage',
+            source: 'TEST',
+            edition: 'one',
+            ability: undefined,
+            size: ['M'],
+            speed: 30,
+          }),
+        ],
+      }),
+    })
+
+    render(
+      <TooltipProvider>
+        <MemoryRouter>
+          <BuildRacePage />
+        </MemoryRouter>
+      </TooltipProvider>,
+    )
+
+    expect(screen.getByText('Provided by background')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Choose bonuses' })).toBeNull()
   })
 })

@@ -123,13 +123,14 @@ All UI and PDF reads must use `computeEffectiveCharacterArmorClass()` or `useArm
 
 Entry points:
 - src/pages/rules/RulesPage.tsx
-- src/pages/sources/SourcesPage.tsx
+- src/pages/rules/SourcesPanel.tsx
 - src/hooks/data/useFilteredGameData.ts
 
 Flow:
-1. Character-scoped Rules and Sources are top-level workspaces after Builder and before Character
-   Sheet. They remain protected until a character is active; Builder's Options group contains only
-   character adjustments.
+1. Character-scoped Rules is the top-level configuration workspace after Builder and before
+   Character Sheet. Sources is its fourth functional tab; `/sources` redirects there for
+   compatibility. The workspace remains protected until a character is active. Manual Actions &
+   Effects lives in Builder's Details group.
 2. Rules edits patch `character.variantRules`; the selected `originSystem` is displayed but cannot be changed because switching it would require rebuilding origin and progression choices.
 3. Source edits patch `character.allowedSources`. The character's implicit PHB/XPHB ruleset source remains included in the effective filter.
 4. The Prefer Newer Printings control patches `variantRules.preferNewerPrintings` and changes the source-page warning to explain the active filtering behavior.
@@ -209,7 +210,7 @@ Tooltip note:
 
 Entry points:
 - src/components/character/wizard/steps/2-RulesStep.tsx
-- src/pages/sources/SourcesPage.tsx
+- src/pages/rules/SourcesPanel.tsx
 - src/pages/rules/RulesPage.tsx
 - src/hooks/data/useFilteredGameData.ts
 - src/hooks/data/useWizardGameData.ts
@@ -223,7 +224,8 @@ Flow:
 5. When `variantRules.preferNewerPrintings` is enabled, the shared hooks build a suppression set from 5etools `reprintedAs` metadata.
 6. DataFilter removes any entity whose `name|source` key is in the suppression set.
 7. Older printings remain available when newer reprints are not in the selected source list.
-8. After creation, `/sources` updates `allowedSources` and the newer-printing preference; `/rules` exposes the same preference alongside the other character rules.
+8. After creation, the Sources tab at `/rules?section=sources` updates `allowedSources` and owns the
+   newer-printing preference alongside the other character-wide configuration tabs.
 
 Wizard defaults:
 - New-character setup defaults `allowedSources` to the `2014-recommended` source preset (filtered to currently loaded sources).

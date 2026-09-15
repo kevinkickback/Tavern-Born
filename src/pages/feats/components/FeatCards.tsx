@@ -213,9 +213,9 @@ export const FeatDetailCard = memo(function FeatDetailCard({
             {optionsConfigured && onEditSetup && (
               <Button
                 size="sm"
-                variant="outline"
+                variant="accentOutline"
                 data-feat-edit-setup-btn="true"
-                className="pointer-events-auto mt-3 h-8 gap-1.5 border-accent/40 text-sm text-accent hover:border-accent/60 hover:bg-accent/10"
+                className="pointer-events-auto mt-3 h-8 gap-1.5 text-sm"
                 onClick={(event) => {
                   event.stopPropagation()
                   onEditSetup(
