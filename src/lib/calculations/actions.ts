@@ -1,6 +1,9 @@
 import { resolveItemReference } from '@/lib/5etools/itemResolvers'
+import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
+import { formatRange } from '@/lib/calculations/spellUtils'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
-import type { Item5e } from '@/types/5etools'
+import { renderEntriesToText } from '@/lib/entryText'
+import type { Item5e, Race5e, Spell5e } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
 import type { Character, Equipment } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
@@ -36,6 +39,95 @@ export interface WeaponActionProjectionContext {
   propertyLookup?: Readonly<Record<string, string>>
   effects?: readonly CharacterEffect[]
   effectContext?: EffectResolutionContext
+}
+
+function spellActionKind(unit: string | undefined): CharacterAction['kind'] {
+  if (unit === 'action') return 'action'
+  if (unit === 'bonus') return 'bonus-action'
+  if (unit === 'reaction') return 'reaction'
+  return 'special'
+}
+
+/** Projects known spells from structured casting-time/range fields and preserves their rules text. */
+export function deriveSpellActions(
+  character: Character,
+  spellsByKey: Readonly<Record<string, Spell5e>>,
+): CharacterAction[] {
+  const spellNames = new Set<string>()
+  const preparedNames = new Set<string>()
+  for (const profile of character.spells.spellProfiles) {
+    for (const name of [...profile.cantrips, ...profile.spellsKnown]) spellNames.add(name)
+    for (const name of [...profile.cantrips, ...profile.preparedSpells]) preparedNames.add(name)
+    if (profile.alwaysPrepared) {
+      for (const name of profile.spellsKnown) preparedNames.add(name)
+    }
+    for (const name of profile.alwaysPreparedSpells ?? []) preparedNames.add(name)
+  }
+  return [...spellNames].flatMap((reference) => {
+    const spell = resolveSpellReference(reference, spellsByKey)
+    if (!spell) return []
+    const active = preparedNames.has(reference) || preparedNames.has(spell.name)
+    return [
+      {
+        id: `spell:${encodeURIComponent(`${spell.name}|${spell.source}`)}`,
+        name: spell.name,
+        kind: spellActionKind(spell.time[0]?.unit),
+        description: renderEntriesToText([
+          ...(spell.entries ?? []),
+          ...(spell.entriesHigherLevel ?? []),
+        ]),
+        source: { kind: 'spell', name: spell.name, source: spell.source },
+        active,
+        inactiveReason: active ? undefined : 'Not prepared',
+        range: formatRange(spell.range),
+      } satisfies CharacterAction,
+    ]
+  })
+}
+
+/** Preserves unautomated feature, feat, and species rules as explicit special entries. */
+export function deriveRulesTextActions(
+  character: Character,
+  race: Race5e | undefined,
+): CharacterAction[] {
+  const featureActions = character.features.map(
+    (feature): CharacterAction => ({
+      id: `feature:${feature.id}`,
+      name: feature.name,
+      kind: 'special',
+      description: feature.description,
+      source: { kind: 'other', name: feature.name, source: feature.source, entityId: feature.id },
+      active: true,
+    }),
+  )
+  const featActions = character.feats.map(
+    (feat): CharacterAction => ({
+      id: `feat:${feat.id}`,
+      name: feat.name,
+      kind: 'special',
+      description: feat.description,
+      source: { kind: 'feat', name: feat.name, source: feat.source, entityId: feat.id },
+      active: true,
+    }),
+  )
+  const raceActions = (race?.presentationEntries ?? race?.entries ?? []).flatMap(
+    (entry, index): CharacterAction[] => {
+      if (!entry || typeof entry !== 'object') return []
+      const block = entry as { type?: string; name?: string; entries?: unknown[] }
+      if (block.type !== 'entries' || !block.name?.trim()) return []
+      return [
+        {
+          id: `race:${encodeURIComponent(`${race?.name}|${race?.source}`)}:${index}`,
+          name: block.name,
+          kind: 'special',
+          description: renderEntriesToText(block.entries),
+          source: { kind: 'race', name: race?.name ?? '', source: race?.source },
+          active: true,
+        },
+      ]
+    },
+  )
+  return [...featureActions, ...featActions, ...raceActions]
 }
 
 /** Derives weapon attacks from structured equipment and effect data without UI/PDF assumptions. */

@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'vitest'
-import { deriveWeaponActions } from '@/lib/calculations/actions'
+import { buildSpellLookup } from '@/lib/5etools/lookups'
+import {
+  deriveRulesTextActions,
+  deriveSpellActions,
+  deriveWeaponActions,
+} from '@/lib/calculations/actions'
+import type { Race5e, Spell5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('character action projection', () => {
@@ -133,5 +139,110 @@ describe('character action projection', () => {
         proficiencyBonus: 2,
       })[0],
     ).toMatchObject({ active: false, inactiveReason: 'Not equipped' })
+  })
+
+  test('uses structured spell timing and preserves unprepared spells as inactive actions', () => {
+    const reactionSpell = {
+      name: 'Test Reaction Spell',
+      source: 'TEST',
+      level: 0,
+      school: 'T',
+      time: [{ number: 1, unit: 'reaction' }],
+      range: { type: 'point', distance: { type: 'feet', amount: 30 } },
+      duration: [{ type: 'instant' }],
+      entries: ['Test reaction rules.'],
+    } as Spell5e
+    const bonusSpell = {
+      ...reactionSpell,
+      name: 'Test Bonus Spell',
+      level: 1,
+      time: [{ number: 1, unit: 'bonus' }],
+      entries: ['Test bonus rules.'],
+    } as Spell5e
+    const character = makeCharacterFixture({
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'test-profile',
+            type: 'class',
+            label: 'Test profile',
+            cantrips: [reactionSpell.name],
+            spellsKnown: [bonusSpell.name],
+            preparedSpells: [],
+          },
+        ],
+      },
+    })
+
+    const actions = deriveSpellActions(character, buildSpellLookup([reactionSpell, bonusSpell]))
+
+    expect(actions).toEqual([
+      expect.objectContaining({
+        name: reactionSpell.name,
+        kind: 'reaction',
+        active: true,
+        description: 'Test reaction rules.',
+      }),
+      expect.objectContaining({
+        name: bonusSpell.name,
+        kind: 'bonus-action',
+        active: false,
+        inactiveReason: 'Not prepared',
+      }),
+    ])
+  })
+
+  test('keeps feature, feat, and structured species entries as unautomated rules text', () => {
+    const character = makeCharacterFixture({
+      features: [
+        {
+          id: 'test-feature',
+          name: 'Test Feature',
+          source: 'TEST',
+          description: 'Test feature rules.',
+        },
+      ],
+      feats: [
+        {
+          id: 'test-feat',
+          name: 'Test Feat',
+          source: 'TEST',
+          description: 'Test feat rules.',
+        },
+      ],
+    })
+    const race = {
+      name: 'Test Species',
+      source: 'TEST',
+      entries: [
+        {
+          type: 'entries',
+          name: 'Test Trait',
+          entries: ['Test trait rules.'],
+        },
+        'Unstructured top-level prose is not treated as an action.',
+      ],
+    } as Race5e
+
+    expect(deriveRulesTextActions(character, race)).toEqual([
+      expect.objectContaining({
+        id: 'feature:test-feature',
+        name: 'Test Feature',
+        kind: 'special',
+        description: 'Test feature rules.',
+      }),
+      expect.objectContaining({
+        id: 'feat:test-feat',
+        name: 'Test Feat',
+        kind: 'special',
+        description: 'Test feat rules.',
+      }),
+      expect.objectContaining({
+        name: 'Test Trait',
+        kind: 'special',
+        description: 'Test trait rules.',
+      }),
+    ])
   })
 })

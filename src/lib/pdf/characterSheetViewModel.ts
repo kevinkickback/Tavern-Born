@@ -5,8 +5,13 @@ import {
 } from '@/lib/5etools/classRuleNormalization'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import { type EntityLookupSet, resolveClassReference } from '@/lib/5etools/entityResolvers'
+import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
-import { deriveWeaponActions } from '@/lib/calculations/actions'
+import {
+  deriveRulesTextActions,
+  deriveSpellActions,
+  deriveWeaponActions,
+} from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -33,7 +38,7 @@ import {
   getEffectiveMaxHP,
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
-import { renderEntry } from '@/lib/renderer'
+import { renderEntriesToText } from '@/lib/entryText'
 import type { Background5e, Class5e, Organization5e, Race5e, Spell5e } from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
 import type { AbilityScores, Character, Equipment } from '@/types/character'
@@ -163,22 +168,6 @@ function getClassLevelSummary(character: Character): string {
 function getRaceSummary(character: Character): string {
   if (!character.subrace) return character.race || ''
   return `${character.subrace} ${character.race}`.trim()
-}
-
-function renderEntriesToText(entries: unknown[]): string {
-  return entries
-    .map((entry) =>
-      (renderEntry(entry) ?? '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/\s+/g, ' ')
-        .trim(),
-    )
-    .filter(Boolean)
-    .join(' ')
 }
 
 function extractBackgroundFeatureBlock(
@@ -420,21 +409,6 @@ function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWea
     })
 }
 
-function resolveSpellReference(
-  reference: string,
-  spellsByKey: Readonly<Record<string, Spell5e>>,
-): Spell5e | undefined {
-  const direct = spellsByKey[reference]
-  if (direct) return direct
-  const separator = reference.lastIndexOf('|')
-  const name = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
-  const source = separator >= 0 ? reference.slice(separator + 1).trim() : ''
-  const candidates = Object.values(spellsByKey)
-    .filter((spell) => spell.name === name && (!source || spell.source === source))
-    .sort((left, right) => left.source.localeCompare(right.source))
-  return candidates[0]
-}
-
 function buildSpellRows(
   character: Character,
   spellsByKey: Readonly<Record<string, Spell5e>>,
@@ -578,14 +552,18 @@ export function createCharacterSheetViewModel(
       classData,
     ]),
   )
-  const actions = deriveWeaponActions(character, {
-    abilityModifiers,
-    proficiencyBonus,
-    itemLookup: rawLookups.itemLookup,
-    propertyLookup: rawLookups.itemPropertyByAbbr,
-    effects: calculationContext.effects.declarations,
-    effectContext: calculationContext.effects.resolutionContext,
-  })
+  const actions = [
+    ...deriveWeaponActions(character, {
+      abilityModifiers,
+      proficiencyBonus,
+      itemLookup: rawLookups.itemLookup,
+      propertyLookup: rawLookups.itemPropertyByAbbr,
+      effects: calculationContext.effects.declarations,
+      effectContext: calculationContext.effects.resolutionContext,
+    }),
+    ...deriveSpellActions(character, rawLookups.spellsByKey ?? {}),
+    ...deriveRulesTextActions(character, raceResolution.mergedRace),
+  ]
 
   return {
     character,
