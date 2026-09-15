@@ -316,6 +316,7 @@ export interface Item5e {
   dmgType?: string
   property?: string[]
   range?: string
+  mastery?: string[]
   ac?: number
   strength?: string
   stealth?: boolean

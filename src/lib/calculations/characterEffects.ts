@@ -1,3 +1,4 @@
+import { resolveItemReference } from '@/lib/5etools/itemResolvers'
 import type { Item5e, Race5e } from '@/types/5etools'
 import type {
   ArmorClassAdjustment,
@@ -131,23 +132,6 @@ function parseNumericBonus(value: string | number | undefined): number | undefin
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-function resolveItemData(
-  item: Equipment,
-  itemLookup: ReadonlyMap<string, Item5e> | undefined,
-): Item5e | undefined {
-  if (!itemLookup) return undefined
-  const candidates = [...new Set(itemLookup.values())]
-    .filter(
-      (candidate) =>
-        candidate.name === item.name && (!item.source || candidate.source === item.source),
-    )
-    .sort(
-      (left, right) =>
-        left.source.localeCompare(right.source) || left.name.localeCompare(right.name),
-    )
-  return candidates[0]
-}
-
 function itemRequirement(
   item: Equipment,
   data: Item5e,
@@ -168,7 +152,7 @@ export function deriveStructuredItemEffects(
 ): CharacterEffect[] {
   const effects: CharacterEffect[] = []
   for (const item of equipment) {
-    const data = resolveItemData(item, itemLookup)
+    const data = resolveItemReference(item, itemLookup)
     if (!data) continue
     const source = {
       kind: 'item' as const,

@@ -6,6 +6,7 @@ import {
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import { type EntityLookupSet, resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
+import { deriveWeaponActions } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -26,7 +27,6 @@ import {
   formatRange,
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
-import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import {
   getCharacterClassEntries,
@@ -35,6 +35,7 @@ import {
 } from '@/lib/characterUtils'
 import { renderEntry } from '@/lib/renderer'
 import type { Background5e, Class5e, Organization5e, Race5e, Spell5e } from '@/types/5etools'
+import type { CharacterAction } from '@/types/actions'
 import type { AbilityScores, Character, Equipment } from '@/types/character'
 
 type ModifierResult = { modifier: number; proficient: boolean }
@@ -100,6 +101,7 @@ export interface CharacterSheetViewModel {
   hitDiceRows: CharacterSheetHitDieRow[]
   classResourceRows: CharacterSheetClassResourceRow[]
   weaponRows: CharacterSheetWeaponRow[]
+  actions: CharacterAction[]
   spellRows: CharacterSheetSpellRow[]
   magicItems: Equipment[]
   resolvedClasses: readonly Class5e[]
@@ -395,51 +397,25 @@ function resolveOrganizationImage(
   )?.imagePath
 }
 
-function isWeapon(item: Equipment): boolean {
-  return !!item.dmg1 || !!item.weaponCategory || item.type === 'M' || item.type === 'R'
-}
-
-function buildWeaponRows(
-  character: Character,
-  abilityModifiers: Record<AbilityName, number>,
-  proficiencyBonus: number,
-  propertyLookup: Readonly<Record<string, string>>,
-): CharacterSheetWeaponRow[] {
-  return character.equipment
-    .filter(isWeapon)
-    .sort((left, right) => Number(right.equipped) - Number(left.equipped))
-    .map((item) => {
-      const properties = item.properties ?? []
-      const propertyKeys = properties.map((property) => property.split('|')[0].toUpperCase())
-      const abilityModifier = propertyKeys.includes('F')
-        ? Math.max(abilityModifiers.strength, abilityModifiers.dexterity)
-        : item.type === 'R'
-          ? abilityModifiers.dexterity
-          : abilityModifiers.strength
-      const attackBonus =
-        abilityModifier +
-        (isProficientWithWeapon(character.proficiencies.weapons, item) ? proficiencyBonus : 0)
-      const damageBonus =
-        abilityModifier > 0
-          ? ` + ${abilityModifier}`
-          : abilityModifier < 0
-            ? ` - ${Math.abs(abilityModifier)}`
-            : ''
-      const propertyLabels = properties.map((property) => {
-        const key = property.split('|')[0].toUpperCase()
-        return propertyLookup[key] ?? property
-      })
-      if (item.dmg2) propertyLabels.push(`Versatile ${item.dmg2}`)
+function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWeaponRow[] {
+  return actions
+    .filter((action) => action.kind === 'attack')
+    .map((action) => {
+      const damage = action.damage?.[0]
+      const damageBonus = damage?.bonus ?? 0
+      const formattedDamageBonus =
+        damageBonus > 0 ? ` + ${damageBonus}` : damageBonus < 0 ? ` - ${Math.abs(damageBonus)}` : ''
+      const masteryLabels = (action.mastery ?? []).map((mastery) => mastery.name)
       return {
-        name: item.name,
-        attackBonus: formatModifier(attackBonus),
-        damage: item.dmg1 ? `${item.dmg1}${damageBonus}` : '',
-        damageType: item.dmgType
-          ? (DAMAGE_TYPE_LABELS[item.dmgType.toUpperCase()] ?? item.dmgType)
+        name: action.name,
+        attackBonus: action.attackBonus == null ? '' : formatModifier(action.attackBonus),
+        damage: damage?.dice ? `${damage.dice}${formattedDamageBonus}` : '',
+        damageType: damage?.damageType
+          ? (DAMAGE_TYPE_LABELS[damage.damageType.toUpperCase()] ?? damage.damageType)
           : '',
-        range: item.range ?? '',
-        notes: propertyLabels.join(', '),
-        description: item.description?.trim() ?? '',
+        range: action.range ?? '',
+        notes: [...(action.properties ?? []), ...masteryLabels].join(', '),
+        description: action.description,
       }
     })
 }
@@ -602,6 +578,14 @@ export function createCharacterSheetViewModel(
       classData,
     ]),
   )
+  const actions = deriveWeaponActions(character, {
+    abilityModifiers,
+    proficiencyBonus,
+    itemLookup: rawLookups.itemLookup,
+    propertyLookup: rawLookups.itemPropertyByAbbr,
+    effects: calculationContext.effects.declarations,
+    effectContext: calculationContext.effects.resolutionContext,
+  })
 
   return {
     character,
@@ -633,12 +617,8 @@ export function createCharacterSheetViewModel(
     remainingHitDice: Math.max(0, level - Math.max(0, character.hitDiceUsed ?? 0)),
     hitDiceRows: buildHitDiceRows(character, rawLookups),
     classResourceRows: buildClassResourceRows(character, rawLookups, effectiveAbilityScores),
-    weaponRows: buildWeaponRows(
-      character,
-      abilityModifiers,
-      proficiencyBonus,
-      rawLookups.itemPropertyByAbbr ?? {},
-    ),
+    weaponRows: buildWeaponRows(actions),
+    actions,
     spellRows: buildSpellRows(character, rawLookups.spellsByKey ?? {}),
     magicItems: character.equipment.filter(isMagicItem),
     resolvedClasses,
