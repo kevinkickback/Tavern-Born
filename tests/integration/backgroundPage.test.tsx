@@ -92,7 +92,7 @@ describe('BackgroundPage', () => {
     expect(configureLink.getAttribute('href')).toBe(
       '/feats?view=character&feat=Configurable+Fixture+Feat&source=TEST&focus=feat',
     )
-    expect(configureLink.closest('div.flex.flex-col')).toBeTruthy()
+    expect(configureLink.parentElement?.className).toContain('flex-col')
     expect(screen.getByRole('link', { name: 'Edit bonuses' }).getAttribute('href')).toBe(
       '/build/ability-scores?focus=background-bonuses',
     )

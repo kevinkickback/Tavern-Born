@@ -284,18 +284,16 @@ export function BuildBackgroundPage() {
                   ? `${grant.name} (${grant.variantLabel})`
                   : grant.name
                 return (
-                  <div key={`${grant.name}|${grant.source}|${grant.variant ?? ''}`}>
+                  <div
+                    key={`${grant.name}|${grant.source}|${grant.variant ?? ''}`}
+                    className="flex flex-col items-start gap-2"
+                  >
                     <Badge variant="outline" className="w-fit gap-1 text-xs opacity-70">
                       <Star className="h-3 w-3" weight="duotone" />
                       {label}
                     </Badge>
                     {grant.feat && hasFeatOptions(grant.feat) && (
-                      <Button
-                        asChild
-                        size="sm"
-                        variant="accentOutline"
-                        className="mt-2 h-8 text-xs"
-                      >
+                      <Button asChild size="sm" variant="accentOutline" className="h-8 text-xs">
                         <Link to={getFeatLinkTarget(grant.name, grant.source)}>Configure feat</Link>
                       </Button>
                     )}

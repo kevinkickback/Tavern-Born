@@ -1,15 +1,28 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-/** Scrolls a cross-route configuration target into view when its brief highlight begins. */
+const ROUTE_FOCUS_DURATION_MS = 1_800
+
+/** Scrolls a cross-route configuration target into view and briefly identifies it. */
 export function useRouteFocusTarget<T extends HTMLElement>(active: boolean) {
   const ref = useRef<T>(null)
+  const [highlighted, setHighlighted] = useState(active)
 
   useEffect(() => {
     const element = ref.current
-    if (!active || !element || typeof element.scrollIntoView !== 'function') return
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-    element.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' })
+    if (!active) {
+      setHighlighted(false)
+      return
+    }
+
+    setHighlighted(true)
+    if (element && typeof element.scrollIntoView === 'function') {
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+      element.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' })
+    }
+
+    const timeout = window.setTimeout(() => setHighlighted(false), ROUTE_FOCUS_DURATION_MS)
+    return () => window.clearTimeout(timeout)
   }, [active])
 
-  return ref
+  return { ref, highlighted }
 }

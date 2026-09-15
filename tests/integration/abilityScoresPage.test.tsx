@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
@@ -142,12 +142,21 @@ describe('BuildAbilityScoresPage', () => {
     ).toBeTruthy()
   })
 
-  test('highlights the revised background bonus destination from its configuration link', () => {
-    renderPage('/build/ability-scores?focus=background-bonuses')
+  test('temporarily highlights the revised background bonus destination', () => {
+    vi.useFakeTimers()
+    const view = renderPage('/build/ability-scores?focus=background-bonuses')
 
-    expect(screen.getByTestId('background-ability-choices').className).toContain(
-      'animate-route-focus',
-    )
+    try {
+      const destination = screen.getByTestId('background-ability-choices')
+      expect(destination.className).toContain('animate-route-focus')
+
+      act(() => vi.advanceTimersByTime(1_800))
+
+      expect(destination.className).not.toContain('animate-route-focus')
+    } finally {
+      view.unmount()
+      vi.useRealTimers()
+    }
   })
 
   test('highlights the legacy race bonus destination from its configuration link', () => {

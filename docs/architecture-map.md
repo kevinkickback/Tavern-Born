@@ -147,10 +147,13 @@ Current implementation notes:
   weapon attacks and timed spells are supplemented only by race, feat, and class rules text that
   explicitly grants an action, bonus action, reaction, or attack replacement. Passive prose is not
   promoted to an action, and non-action casting times are omitted from the action-oriented list.
-  Source-derived and manual effect lists are independently collapsible. Actions remains the default.
+  Source-derived and manual lists are independently collapsible for both actions and effects.
+  Actions remains the default.
   Cross-page configuration links carry a presentation-only focus key so the destination card can
-  scroll into view and briefly highlight itself; the query does not change character state and
-  works for both legacy race bonuses and revised background bonuses. Review is the sole
+  scroll into view and briefly highlight itself. The route-focus hook removes that visual state
+  after 1.8 seconds, including when reduced-motion styling replaces the animation; the query does
+  not change character state and works for both legacy race bonuses and revised background
+  bonuses. Review is the sole
   destination in Builder's final Finish group after Core and Details; its header separates Needs
   Attention from the remaining Character Overview. Builder has no one-item Options group. Rules is
   a character-scoped

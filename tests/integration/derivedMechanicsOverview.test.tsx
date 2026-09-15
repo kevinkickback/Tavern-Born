@@ -38,7 +38,9 @@ describe('source-derived mechanics overview', () => {
     expect(screen.getByText('Fixture weapon')).toBeTruthy()
     expect(screen.getByText('Inactive')).toBeTruthy()
     expect(screen.queryByText('Manual fixture action')).toBeNull()
-    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.getAllByRole('button')).toEqual([
+      screen.getByRole('button', { name: /Source-derived actions/ }),
+    ])
   })
 
   test('shows source-owned effects and evaluates their current active state', () => {

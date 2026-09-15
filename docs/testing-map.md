@@ -128,13 +128,14 @@ new tests land and do not lower them to merge a change.
   tests/integration/derivedMechanicsOverview.test.tsx,
   tests/integration/manualEffectsEditor.test.tsx, and tests/integration/manualActionsEditor.test.tsx,
   including Actions-first ordering/default, Effects deep links, action-sized source filtering,
-  collapsible effect groups, read-only source-owned rows, active equipment requirements,
+  independently collapsible source/manual groups for both mechanic types, read-only source-owned
+  rows, active equipment requirements,
   manual-entry separation, and the responsive form/detail split workbench
 - Race summary coverage for parsed unresolved, completed, and fixed ability bonuses; the custom
   base-score method; shared accent-outline actions; and omission of race-bonus editing under 2024
   rules in tests/integration/racePageSummary.test.tsx
 - Cross-page configuration coverage verifies source-qualified feat focus plus legacy race-bonus and
-  revised background-bonus destination highlights.
+  revised background-bonus destination highlights, including explicit highlight expiry.
 - Race-command coverage verifies that 2024 lineage selection is independent of unfinished
   background choices; the corpus-backed kitchen-sink test requires a valid selected lineage when
   the resolved race exposes lineages.

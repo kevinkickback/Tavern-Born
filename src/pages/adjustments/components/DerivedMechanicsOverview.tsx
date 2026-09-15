@@ -1,4 +1,3 @@
-import { useId } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -92,60 +91,63 @@ function effectOperationLabel(effect: CharacterEffect): string {
 }
 
 export function SourceDerivedActions({ actions }: { actions: readonly CharacterAction[] }) {
-  const headingId = useId()
   const derivedActions = actions.filter(
     (action) => action.source.kind !== 'manual' && isActionSizedCharacterAction(action),
   )
 
   return (
-    <section aria-labelledby={headingId} className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 id={headingId} className="font-semibold">
-            Source-derived actions
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Limited to attacks and rules that explicitly grant an action, bonus action, or reaction.
-            Manage each entry at its source.
-          </p>
-        </div>
-        <Badge variant="outline">{derivedActions.length}</Badge>
-      </div>
-      {derivedActions.length === 0 ? (
-        <p className="border-y border-border py-4 text-sm text-muted-foreground">
-          No source-derived actions are currently available.
-        </p>
-      ) : (
-        <div className="divide-y divide-border border-y border-border">
-          {derivedActions.map((action) => {
-            const details = actionDetails(action)
-            return (
-              <div key={action.id} className="py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{action.name}</span>
-                  <Badge variant="secondary">{ACTION_KIND_LABELS[action.kind]}</Badge>
-                  {!action.active && <Badge variant="outline">Inactive</Badge>}
-                  <span className="text-xs text-muted-foreground">
-                    {sourceLabel(action.source)}
-                  </span>
-                </div>
-                {details.length > 0 && (
-                  <p className="mt-1 text-xs text-muted-foreground">{details.join(' · ')}</p>
-                )}
-                {action.inactiveReason && (
-                  <p className="mt-1 text-xs text-muted-foreground">{action.inactiveReason}</p>
-                )}
-                {action.description && (
-                  <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
-                    {action.description}
-                  </p>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </section>
+    <Accordion type="single" collapsible defaultValue="source-derived-actions">
+      <AccordionItem value="source-derived-actions" className="border-0">
+        <AccordionTrigger className="py-1">
+          <span className="min-w-0">
+            <span className="block font-semibold">Source-derived actions</span>
+            <span className="mt-0.5 block text-sm font-normal text-muted-foreground">
+              Limited to attacks and rules that explicitly grant an action, bonus action, or
+              reaction. Manage each entry at its source.
+            </span>
+          </span>
+          <Badge variant="outline" className="ml-auto">
+            {derivedActions.length}
+          </Badge>
+        </AccordionTrigger>
+        <AccordionContent className="pt-2 pb-0">
+          {derivedActions.length === 0 ? (
+            <p className="border-y border-border py-4 text-sm text-muted-foreground">
+              No source-derived actions are currently available.
+            </p>
+          ) : (
+            <div className="divide-y divide-border border-y border-border">
+              {derivedActions.map((action) => {
+                const details = actionDetails(action)
+                return (
+                  <div key={action.id} className="py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{action.name}</span>
+                      <Badge variant="secondary">{ACTION_KIND_LABELS[action.kind]}</Badge>
+                      {!action.active && <Badge variant="outline">Inactive</Badge>}
+                      <span className="text-xs text-muted-foreground">
+                        {sourceLabel(action.source)}
+                      </span>
+                    </div>
+                    {details.length > 0 && (
+                      <p className="mt-1 text-xs text-muted-foreground">{details.join(' · ')}</p>
+                    )}
+                    {action.inactiveReason && (
+                      <p className="mt-1 text-xs text-muted-foreground">{action.inactiveReason}</p>
+                    )}
+                    {action.description && (
+                      <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">
+                        {action.description}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }
 

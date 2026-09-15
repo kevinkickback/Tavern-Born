@@ -30,7 +30,8 @@ describe('AdjustmentsPage', () => {
     vi.clearAllMocks()
   })
 
-  test('orders Actions first and uses it as the default section', () => {
+  test('orders Actions first, uses it by default, and collapses both action groups', async () => {
+    const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={['/build/adjustments']}>
         <AdjustmentsPage />
@@ -48,6 +49,15 @@ describe('AdjustmentsPage', () => {
     expect(document.querySelector('[data-slot="split-pane"]')).toBeTruthy()
     expect(screen.getByTitle('Collapse manual form panel')).toBeTruthy()
     expect(screen.getByTitle('Collapse current mechanics panel')).toBeTruthy()
+
+    const sourceActions = screen.getByRole('button', { name: /Source-derived actions/ })
+    const manualActions = screen.getByRole('button', { name: /Manual actions/ })
+    expect(sourceActions.getAttribute('aria-expanded')).toBe('true')
+    expect(manualActions.getAttribute('aria-expanded')).toBe('true')
+    await user.click(sourceActions)
+    await user.click(manualActions)
+    expect(sourceActions.getAttribute('aria-expanded')).toBe('false')
+    expect(manualActions.getAttribute('aria-expanded')).toBe('false')
   })
 
   test('preserves an explicit Effects deep link and can switch to Actions', async () => {

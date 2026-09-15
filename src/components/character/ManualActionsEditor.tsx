@@ -1,6 +1,13 @@
 import { Plus, Sword, Trash } from '@phosphor-icons/react'
 import { useId, useState } from 'react'
 import { toast } from 'sonner'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -346,44 +353,53 @@ export function ManualActionsList() {
   const manualActions = character.manualActions ?? []
 
   return (
-    <section className="space-y-2">
-      <h3 className="text-sm font-semibold">Manual actions</h3>
-      {manualActions.length === 0 ? (
-        <p className="border-y border-border py-4 text-sm text-muted-foreground">
-          No manual actions have been added.
-        </p>
-      ) : (
-        <div className="divide-y divide-border border-y border-border">
-          {manualActions.map((action) => (
-            <div key={action.id} className="flex items-center gap-3 py-3">
-              <Switch
-                checked={action.active}
-                aria-label={`${action.active ? 'Disable' : 'Enable'} ${action.name}`}
-                onCheckedChange={(active) =>
-                  update(upsertManualActionCommand(character, { ...action, active }))
-                }
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{action.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {ACTION_KINDS.find((option) => option.value === action.kind)?.label}
-                  {action.range ? ` · ${action.range}` : ''}
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                aria-label={`Remove ${action.name}`}
-                onClick={() => update(removeManualActionCommand(character, action.id))}
-              >
-                <Trash />
-              </Button>
+    <Accordion type="single" collapsible defaultValue="manual-actions">
+      <AccordionItem value="manual-actions" className="border-0">
+        <AccordionTrigger className="py-1">
+          <span className="text-sm font-semibold">Manual actions</span>
+          <Badge variant="outline" className="ml-auto">
+            {manualActions.length}
+          </Badge>
+        </AccordionTrigger>
+        <AccordionContent className="pt-2 pb-0">
+          {manualActions.length === 0 ? (
+            <p className="border-y border-border py-4 text-sm text-muted-foreground">
+              No manual actions have been added.
+            </p>
+          ) : (
+            <div className="divide-y divide-border border-y border-border">
+              {manualActions.map((action) => (
+                <div key={action.id} className="flex items-center gap-3 py-3">
+                  <Switch
+                    checked={action.active}
+                    aria-label={`${action.active ? 'Disable' : 'Enable'} ${action.name}`}
+                    onCheckedChange={(active) =>
+                      update(upsertManualActionCommand(character, { ...action, active }))
+                    }
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{action.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {ACTION_KINDS.find((option) => option.value === action.kind)?.label}
+                      {action.range ? ` · ${action.range}` : ''}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label={`Remove ${action.name}`}
+                    onClick={() => update(removeManualActionCommand(character, action.id))}
+                  >
+                    <Trash />
+                  </Button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-    </section>
+          )}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   )
 }
 

@@ -51,8 +51,10 @@ export function BuildAbilityScoresPage() {
   const [searchParams] = useSearchParams()
   const focusRaceBonuses = searchParams.get('focus') === 'race-bonuses'
   const focusBackgroundBonuses = searchParams.get('focus') === 'background-bonuses'
-  const raceBonusesRef = useRouteFocusTarget<HTMLElement>(focusRaceBonuses)
-  const backgroundBonusesRef = useRouteFocusTarget<HTMLElement>(focusBackgroundBonuses)
+  const { ref: raceBonusesRef, highlighted: raceBonusesHighlighted } =
+    useRouteFocusTarget<HTMLElement>(focusRaceBonuses)
+  const { ref: backgroundBonusesRef, highlighted: backgroundBonusesHighlighted } =
+    useRouteFocusTarget<HTMLElement>(focusBackgroundBonuses)
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { skills } = useFilteredGameData()
@@ -344,7 +346,7 @@ export function BuildAbilityScoresPage() {
                         ref={raceBonusesRef}
                         className={cn(
                           'mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4',
-                          focusRaceBonuses && 'animate-route-focus',
+                          raceBonusesHighlighted && 'animate-route-focus',
                         )}
                         data-testid="race-ability-choices"
                       >
@@ -470,7 +472,7 @@ export function BuildAbilityScoresPage() {
                         ref={backgroundBonusesRef}
                         className={cn(
                           'mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4',
-                          focusBackgroundBonuses && 'animate-route-focus',
+                          backgroundBonusesHighlighted && 'animate-route-focus',
                         )}
                         data-testid="background-ability-choices"
                       >

@@ -69,7 +69,8 @@ export const FeatDetailCard = memo(function FeatDetailCard({
   highlighted,
   onSelect,
 }: FeatDetailCardProps) {
-  const routeFocusRef = useRouteFocusTarget<HTMLDivElement>(!!highlighted)
+  const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(!!highlighted)
   const categoryLabel =
     typeof featData?.category === 'string' && featData.category.length > 0
       ? featCategoryToFull(featData.category)
@@ -117,7 +118,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
       className={cn(
         'relative min-w-0 cursor-default rounded-xl border border-border bg-workspace-pane transition-colors hover:bg-surface-hover',
         selected && 'bg-surface-selected ring-1 ring-inset ring-primary/45',
-        highlighted && 'animate-route-focus',
+        routeFocusHighlighted && 'animate-route-focus',
       )}
     >
       <button
