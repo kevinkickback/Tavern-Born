@@ -63,6 +63,11 @@ This document describes the current Tavern-Born runtime architecture and where r
 Spellcasting note:
 - `src/hooks/character/useSpellSlots.ts` is a **read-only** derivation hook: exposes spell slots, profiles, and spellcasting detail per profile. It does not include mutations.
 - `src/hooks/character/useSpellProfileMutations.ts` owns all spell mutation callbacks (add/remove spells, toggle prepared, racial spells, profile sync). Callers that need both derived spell state and mutation callbacks must call both hooks and wire their outputs together (see `SpellsPage.tsx` for the pattern).
+- `src/hooks/character/useSpellSlotMutations.ts` is the thin store adapter for shared/Pact slot use
+  and explicit manual corrections. `src/hooks/character/useRestPreview.ts` composes current derived
+  maxima/resources/HP into `applyRest()` and commits its reviewed result as one draft patch.
+- `src/components/modals/RestPreviewDialog.tsx` is the single short/long-rest preview surface. It
+  keeps HP recovery and hit-die recovery as explicit choices when they are not automatic.
 
 8. Pages and UI composition
 - Purpose: user workflows and route-level behavior.

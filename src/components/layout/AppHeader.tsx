@@ -13,6 +13,7 @@ import {
   Image,
   Lightning,
   MagicWand,
+  MoonStars,
   PersonSimple,
   Scroll,
   Shield,
@@ -47,6 +48,12 @@ const STAT_MENUS_HINT_WIDTH = 340
 const ManualActionsModal = lazy(() =>
   import('@/components/modals/ManualActionsModal').then((module) => ({
     default: module.ManualActionsModal,
+  })),
+)
+
+const RestPreviewDialog = lazy(() =>
+  import('@/components/modals/RestPreviewDialog').then((module) => ({
+    default: module.RestPreviewDialog,
   })),
 )
 
@@ -87,6 +94,7 @@ export function AppHeader() {
   const [hitPointsOpen, setHitPointsOpen] = useState(false)
   const [manualEffectsOpen, setManualEffectsOpen] = useState(false)
   const [manualActionsOpen, setManualActionsOpen] = useState(false)
+  const [restPreviewOpen, setRestPreviewOpen] = useState(false)
   const [showStatMenusHint, setShowStatMenusHint] = useState(
     () => !isHintDismissed(STAT_MENUS_HINT_ID),
   )
@@ -286,6 +294,23 @@ export function AppHeader() {
                 variant="outline"
                 size="sm"
                 className="h-9 px-3"
+                aria-label="Preview a rest"
+                disabled={!activeCharacter}
+                onClick={() => setRestPreviewOpen(true)}
+              >
+                <MoonStars />
+                <span className="hidden 2xl:inline">Rest</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Preview short- or long-rest recovery</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-3"
                 aria-label="Manage manual actions"
                 disabled={!activeCharacter}
                 onClick={() => setManualActionsOpen(true)}
@@ -352,6 +377,11 @@ export function AppHeader() {
       {manualActionsOpen && (
         <Suspense fallback={null}>
           <ManualActionsModal open={manualActionsOpen} onOpenChange={setManualActionsOpen} />
+        </Suspense>
+      )}
+      {restPreviewOpen && (
+        <Suspense fallback={null}>
+          <RestPreviewDialog open={restPreviewOpen} onOpenChange={setRestPreviewOpen} />
         </Suspense>
       )}
     </TooltipProvider>

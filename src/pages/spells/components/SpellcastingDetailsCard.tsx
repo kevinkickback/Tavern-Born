@@ -1,5 +1,6 @@
-import { MagicWand } from '@phosphor-icons/react'
+import { MagicWand, Minus, Plus } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -8,7 +9,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatModifier, normalizeAbilityName } from '@/lib/calculations/abilityScores'
+import type { SpellSlotPool } from '@/lib/character/commands/spellSlotCommands'
 import { getClassIconUrl } from '@/lib/classIcons'
+import { cn } from '@/lib/utils'
 
 interface SpellcastingDetailLike {
   profileId: string
@@ -31,13 +34,11 @@ interface RacialProfileLike {
 interface SharedSlotLike {
   level: number
   max: number
-}
-
-interface PactSlotLike {
-  level: number
-  max: number
+  used: number
   available: number
 }
+
+type PactSlotLike = SharedSlotLike
 
 interface SpellcastingDetailsCardProps {
   isSpellcaster: boolean
@@ -47,9 +48,61 @@ interface SpellcastingDetailsCardProps {
   abilityModifiers?: Record<string, number>
   onSetRacialCastingAbility?: (profileId: string, ability: string) => void
   hasMultipleSpellcastingClasses: boolean
-  hasWarlockClass: boolean
   sharedSlots: SharedSlotLike[]
   pactSlots: PactSlotLike[]
+  onSpendSlot?: (pool: SpellSlotPool, level: number, max: number) => void
+  onRestoreSlot?: (pool: SpellSlotPool, level: number, max: number) => void
+}
+
+interface SpellSlotUseCardProps {
+  pool: SpellSlotPool
+  slot: SharedSlotLike
+  onSpendSlot?: SpellcastingDetailsCardProps['onSpendSlot']
+  onRestoreSlot?: SpellcastingDetailsCardProps['onRestoreSlot']
+}
+
+function SpellSlotUseCard({ pool, slot, onSpendSlot, onRestoreSlot }: SpellSlotUseCardProps) {
+  const poolLabel = pool === 'pact' ? 'Pact Magic' : 'shared'
+
+  return (
+    <div
+      className={cn(
+        'flex min-w-[76px] flex-col items-center rounded-lg border px-2 py-2 text-center',
+        pool === 'pact' ? 'border-warning/50 bg-warning/10' : 'border-accent/40 bg-accent/10',
+      )}
+    >
+      <span className="font-bold text-lg leading-none tabular-nums">
+        {slot.available}/{slot.max}
+      </span>
+      <span className="mt-1 text-[10px] text-muted-foreground">Lvl {slot.level} available</span>
+      <div className="mt-2 flex gap-1 border-t border-border/50 pt-1.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          disabled={slot.available === 0}
+          onClick={() => onSpendSlot?.(pool, slot.level, slot.max)}
+          aria-label={`Spend one level ${slot.level} ${poolLabel} spell slot`}
+          title="Spend one slot"
+        >
+          <Minus />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7"
+          disabled={slot.used === 0}
+          onClick={() => onRestoreSlot?.(pool, slot.level, slot.max)}
+          aria-label={`Manually restore one level ${slot.level} ${poolLabel} spell slot`}
+          title="Manually restore one slot"
+        >
+          <Plus />
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 export function SpellcastingDetailsCard({
@@ -60,9 +113,10 @@ export function SpellcastingDetailsCard({
   abilityModifiers = {},
   onSetRacialCastingAbility,
   hasMultipleSpellcastingClasses,
-  hasWarlockClass,
   sharedSlots,
   pactSlots,
+  onSpendSlot,
+  onRestoreSlot,
 }: SpellcastingDetailsCardProps) {
   const hasAnySpellcasting = isSpellcaster || racialProfiles.length > 0
 
@@ -219,45 +273,33 @@ export function SpellcastingDetailsCard({
                     <span className="text-sm text-muted-foreground">No shared slots</span>
                   ) : (
                     sharedSlots.map((slot) => (
-                      <div
+                      <SpellSlotUseCard
                         key={`shared-${slot.level}`}
-                        className="flex flex-col items-center rounded-lg border border-accent/40 bg-accent/10 px-3.5 py-2 min-w-[52px] text-center"
-                      >
-                        <span className="font-bold text-lg leading-none tabular-nums">
-                          {slot.max}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground mt-1">
-                          Lvl {slot.level}
-                        </span>
-                      </div>
+                        pool="shared"
+                        slot={slot}
+                        onSpendSlot={onSpendSlot}
+                        onRestoreSlot={onRestoreSlot}
+                      />
                     ))
                   )}
                 </div>
               </div>
 
-              {hasWarlockClass ? (
+              {pactSlots.length > 0 ? (
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
                     Pact Magic Slots
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {pactSlots.length === 0 ? (
-                      <span className="text-sm text-muted-foreground">No pact slots</span>
-                    ) : (
-                      pactSlots.map((slot) => (
-                        <div
-                          key={`pact-${slot.level}`}
-                          className="flex flex-col items-center rounded-lg border border-warning/50 bg-warning/10 px-3.5 py-2 min-w-[52px] text-center"
-                        >
-                          <span className="font-bold text-lg leading-none tabular-nums">
-                            {slot.max}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground mt-1">
-                            Lvl {slot.level}
-                          </span>
-                        </div>
-                      ))
-                    )}
+                    {pactSlots.map((slot) => (
+                      <SpellSlotUseCard
+                        key={`pact-${slot.level}`}
+                        pool="pact"
+                        slot={slot}
+                        onSpendSlot={onSpendSlot}
+                        onRestoreSlot={onRestoreSlot}
+                      />
+                    ))}
                   </div>
                 </div>
               ) : null}

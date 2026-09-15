@@ -161,6 +161,9 @@ edit.
 - Slot maxima are recalculated from class data and reconciled through the pure spell-slot command.
   Existing usage is preserved and clamped when a maximum falls, while newly gained capacity starts
   unused. Spend, restore, and manual-correction operations update only the selected pool.
+- Manual slot restore buttons are corrections, not rest shortcuts. Short/long rest recovery runs
+  through `applyRest()` and a preview dialog, then applies spells, class resources, hit dice, and HP
+  in one `updateCharacter(id, patch)` call. The resulting draft still requires the normal Save action.
 - Class-level spell source attribution is tracked in provenance spell source tags.
 - Attribution may be exact (class page level picker) or inferred (spells page lowest-eligible assignment).
 - Class-page per-level spell displays are derived from provenance attribution metadata.
@@ -308,6 +311,9 @@ factory in `src/lib/character/createCharacter.ts`.
 - Domain commands in `src/lib/character/commands/spellCommands.ts` coordinate profile updates and provenance ledger changes together.
 - `useSpellSlots()` is read-only and derives slots, profiles, and spellcasting detail.
 - `useSpellProfileMutations()` provides all spell mutation callbacks (add/remove/prepare/racial spells) for components that need spell writes outside the spell slot derivation hook.
+- `useSpellSlotMutations()` adapts the pure slot-use commands to the active-character draft.
+- `useRestPreview()` builds and commits the one-patch result from `applyRest()`; UI code never
+  sequences individual recovery writes.
 
 **Caller Impact:** Controllers should route spell changes through the command-backed hooks rather than sequencing profile and provenance updates manually.
 ```typescript

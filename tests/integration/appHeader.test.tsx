@@ -29,6 +29,11 @@ vi.mock('@/components/modals/HitPointsModal', () => ({
     open ? <div data-testid="hit-points-modal-mock" /> : null,
 }))
 
+vi.mock('@/components/modals/RestPreviewDialog', () => ({
+  RestPreviewDialog: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="rest-preview-dialog-mock" /> : null,
+}))
+
 vi.mock('@/hooks/character/useArmorClass', () => ({
   useArmorClass: () => ({
     calculatedAC: 17,
@@ -165,6 +170,18 @@ describe('app header character summary', () => {
 
     await user.click(screen.getByRole('button', { name: 'Manage Armor Class. Current 18' }))
     expect(screen.getByTestId('armor-class-modal-mock')).toBeTruthy()
+  })
+
+  test('opens the rest preview from the shared header action', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Preview a rest' }))
+    expect(await screen.findByTestId('rest-preview-dialog-mock')).toBeTruthy()
   })
 
   test('introduces the shield and heart menus once on the Race page', async () => {

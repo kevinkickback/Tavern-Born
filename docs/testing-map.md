@@ -100,7 +100,7 @@ new tests land and do not lower them to merge a change.
   source-qualified race/background choices, option retraction, and class level-down cleanup.
 - Subclass eligibility and class controller composition coverage for parsed/legacy restrictions, spell choices, ASI totals, and optional features
 - Integration workflows: home page, startup modals, and level-up modal, including rolled/manual HP validation and persistence (tests/integration/*)
-- Header HP/AC launch controls and one-time anchored hint coverage in tests/integration/appHeader.test.tsx
+- Header HP/AC/rest launch controls and one-time anchored hint coverage in tests/integration/appHeader.test.tsx
 - Character-card action behavior and consistent accent-colored level, race, and class icons in tests/integration/characterCard.test.tsx
 - Title-bar-safe collision padding and measured floating-preview positioning across supported interface scales, plus nested-only history navigation, streamlined transient controls, selected-entry pinning without a position jump, and constrained pointer/keyboard movement
 - HP and AC management modal coverage in tests/integration/hitPointsModal.test.tsx and tests/integration/armorClassModal.test.tsx
@@ -142,6 +142,12 @@ new tests land and do not lower them to merge a change.
 - Feats page Edit Setup hint coverage in tests/integration/featsPage.test.tsx (configured character and bonus feat anchors)
 - Compendium edition selector coverage in tests/integration/compendiumPage.test.tsx (Both default, rendered filtering, and isolation from active-character ruleset/source restrictions)
 - SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
+- Shared/Pact slot command and hook coverage in tests/lib/spellSlotCommands.test.ts and
+  tests/hooks/useSpellSlotMutations.test.tsx; compact availability controls in
+  tests/integration/spellcastingDetailsCard.test.tsx.
+- Atomic rest calculation, hook commit, and preview-dialog choice coverage in
+  tests/lib/restCommands.test.ts, tests/hooks/useRestPreview.test.tsx, and
+  tests/integration/restPreviewDialog.test.tsx.
 - Spell display-name coverage verifies lowercase 5etools grant tokens render with canonical parsed casing
 - Electron semver comparator coverage in tests/lib/updateManager.test.ts (major/minor/patch, pre-release ordering, stable vs pre-release)
 - Electron updater lifecycle coverage in tests/lib/updateManager.test.ts (offline short-circuit, startup schedule skip, event forwarding, destroyed-window handling, duplicate-download guard, cancellation, and completed-token cleanup)

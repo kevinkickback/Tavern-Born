@@ -53,6 +53,7 @@ test('2014 PDF replaces the organization placeholder with the selected emblem', 
 
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download PDF' }).click()
+  await page.getByRole('button', { name: 'Download Incomplete PDF' }).click()
   const download = await downloadPromise
   const outputPath = testInfo.outputPath('2014-organization-icon.pdf')
   await download.saveAs(outputPath)
