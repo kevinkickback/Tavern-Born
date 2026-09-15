@@ -12,7 +12,11 @@ vi.mock('idb-keyval', () => ({
   del: vi.fn(async () => undefined),
 }))
 
-import { readGameDataCache, writeGameDataCache } from '@/lib/storage/dataCache'
+import {
+  GAME_DATA_CACHE_SCHEMA_VERSION,
+  readGameDataCache,
+  writeGameDataCache,
+} from '@/lib/storage/dataCache'
 
 function makeGameData(seed = 'a'): GameData {
   return {
@@ -59,7 +63,7 @@ describe('writeGameDataCache', () => {
     expect(entry.lastDataChangedAt).toBeDefined()
     expect(new Date(entry.lastDataChangedAt!).getTime()).toBeGreaterThanOrEqual(before)
     expect(new Date(entry.lastDataChangedAt!).getTime()).toBeLessThanOrEqual(after)
-    expect(entry.cacheSchemaVersion).toBe(2)
+    expect(entry.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
   })
 
   test('invalidates cache entries produced by an older normalization schema', async () => {
@@ -212,6 +216,6 @@ describe('writeGameDataCache', () => {
     const entry = await writeGameDataCache(data, config)
 
     expect(entry.lastDataChangedAt).not.toBe(before)
-    expect(entry.cacheSchemaVersion).toBe(2)
+    expect(entry.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
   })
 })

@@ -26,7 +26,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 4. Data ingestion and indexing
 - Purpose: load and parse 5etools data from local or remote source, then build lookups.
-- Key files: src/lib/5etools/dataLoader.ts, src/lib/5etools/parsers/index.ts, src/lib/5etools/parsers/*, src/lib/5etools/classData.ts, src/lib/5etools/validator.ts, src/lib/5etools/schemas.ts, src/lib/5etools/lookups.ts, src/lib/5etools/entityResolvers.ts, src/lib/5etools/filters.ts, src/lib/5etools/urlUtils.ts, src/lib/5etools/sourceFallbacks.ts, src/lib/5etools/index.ts.
+- Key files: src/lib/5etools/dataLoader.ts, src/lib/5etools/parsers/index.ts, src/lib/5etools/parsers/*, src/lib/5etools/classData.ts, src/lib/5etools/classChoiceNormalization.ts, src/lib/5etools/validator.ts, src/lib/5etools/schemas.ts, src/lib/5etools/lookups.ts, src/lib/5etools/entityResolvers.ts, src/lib/5etools/filters.ts, src/lib/5etools/urlUtils.ts, src/lib/5etools/sourceFallbacks.ts, src/lib/5etools/index.ts.
 
 5. Domain logic
 - Purpose: pure calculations and game rules.

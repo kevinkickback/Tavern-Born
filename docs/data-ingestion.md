@@ -58,7 +58,11 @@ source content.
 - Condition ingestion reads both `.condition[]` and `.disease[]` from `conditionsdiseases.json`, preserves their structured `entries`, and tags each record with its source type. `useConditions()` exposes valid condition records while excluding diseases; this lets the Conditions page render names, descriptions, inline tags, and PHB/XPHB exhaustion rules from data instead of local constants.
 - Class and subclass feature references are normalized for downstream consumption. Class ingestion
   also produces `normalizedRules` for spendable resources, recovery amount and cadence, ritual
-  casting, and source-qualified ASI levels. Only known spendable resource columns are accepted from
+  casting, source-qualified ASI levels, and class-owned choices. Choice normalization consumes
+  explicit class-feature option blocks, optional-feature progressions, tagged entity filters, and
+  Weapon Mastery class-table capacity. Each descriptor has stable source-qualified ownership,
+  per-level selection counts, replacement rules, and input-field provenance; unsafe option blocks
+  remain visible in `choiceDiagnostics`. Only known spendable resource columns are accepted from
   class tables, so numeric capacities such as Weapon Mastery do not become counters. Source-qualified
   adapters cover rules that upstream exposes only through prose. Encoded reference levels take
   precedence when repeated feature names occur at more than one level.
@@ -98,7 +102,7 @@ source content.
 
 6. Caching and freshness
 - Parsed data plus source snapshot are cached in IndexedDB.
-- Cache entries carry a normalization-schema version. Changes to ingestion-owned normalized rules
+- Cache entries carry a normalization-schema version (currently 3). Changes to ingestion-owned normalized rules
   invalidate older parsed caches so corrected adapters apply immediately after an app update.
 - Cache freshness is evaluated on startup; stale cache triggers background refresh.
 

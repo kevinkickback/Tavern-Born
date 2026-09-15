@@ -1,4 +1,9 @@
 import type { Class5e, ClassFeatureReference } from '@/types/5etools'
+import {
+  type ClassChoiceDiagnostic,
+  type NormalizedCharacterChoice,
+  normalizeClassChoices,
+} from './classChoiceNormalization'
 
 export type ClassResourceMaxFormula = 'cha-mod'
 export type ClassResourceRecoveryAmount = number | 'all'
@@ -23,6 +28,8 @@ export interface NormalizedClassRules {
   resources: ClassResourceDef[]
   asiLevels: number[]
   ritualCasting: boolean
+  choices: NormalizedCharacterChoice[]
+  choiceDiagnostics: ClassChoiceDiagnostic[]
 }
 
 const ASI_FEATURE = /ability score (?:improvement|increase)|epic boon/i
@@ -290,7 +297,7 @@ function parseTableResources(
 }
 
 export function normalizeClassRules(
-  classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups'>,
+  classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups' | 'optionalfeatureProgression'>,
   refs: readonly ClassFeatureReference[],
 ): NormalizedClassRules {
   const resources = parseTableResources(classData, refs)
@@ -308,6 +315,13 @@ export function normalizeClassRules(
   const ritualCasting = refs.some(
     (ref) => /ritual casting/i.test(ref.name) || /ritual/.test(featureText(ref)),
   )
+  const normalizedChoices = normalizeClassChoices(classData, refs)
 
-  return { resources, asiLevels, ritualCasting }
+  return {
+    resources,
+    asiLevels,
+    ritualCasting,
+    choices: normalizedChoices.choices,
+    choiceDiagnostics: normalizedChoices.diagnostics,
+  }
 }

@@ -34,6 +34,9 @@ new tests land and do not lower them to merge a change.
 - HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution recalculation, lasting flat/per-level adjustments, exact overrides, legacy initialization, and current/temp HP saves
 - AC calculation and state coverage for equipment/Dexterity derivation, positive and negative lasting adjustments, exact overrides, and canonical effective reads
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
+- Class-choice normalization coverage for source-qualified feature options, optional-feature
+  progressions, Weapon Mastery table capacity, fighting-style filters, replacement rules, and
+  unsafe-shape diagnostics, including the configured 2024 core corpus.
 - Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions, deterministic source-less fallback, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
 - Renderer output in src/lib/renderer.ts
