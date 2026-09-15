@@ -17,10 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspacePaneHeader } from '@/components/workspace'
-import type {
-  ClassChoiceDiagnostic,
-  NormalizedCharacterChoice,
-} from '@/lib/5etools/classChoiceNormalization'
 import {
   featCategoryToFull,
   getOptFeatureTotal,
@@ -42,6 +38,7 @@ import type {
   CharacterClassEntry,
   Feat,
 } from '@/types/character'
+import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
 import type { ClassFeatProgression, OptionalFeatureProgression } from '../model/levelsUtils'
 import { computeLevelDisplayData } from '../model/levelsUtils'
 import { BuildClassAsiSection } from './AsiSection'

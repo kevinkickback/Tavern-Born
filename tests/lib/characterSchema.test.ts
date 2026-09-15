@@ -1,8 +1,15 @@
-import { describe, expect, test } from 'vitest'
-import { characterPersistenceSchema } from '@/types/characterSchema'
+import { describe, expect, expectTypeOf, test } from 'vitest'
+import {
+  type CharacterSchemaOutputContract,
+  characterPersistenceSchema,
+} from '@/types/characterSchema'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('characterPersistenceSchema', () => {
+  test('keeps normalized persistence output compatible with the runtime Character type', () => {
+    expectTypeOf<CharacterSchemaOutputContract>().toEqualTypeOf<true>()
+  })
+
   test('accepts a full persisted character shape', () => {
     const character = makeCharacterFixture()
     const result = characterPersistenceSchema.safeParse(character)

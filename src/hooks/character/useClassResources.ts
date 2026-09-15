@@ -4,7 +4,6 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
 import {
-  type ClassResourceRecovery,
   formatClassResourceRecovery,
   getClassResourceRecoveryAtLevel,
 } from '@/lib/5etools/classRuleNormalization'
@@ -12,6 +11,7 @@ import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
+import type { ClassResourceRecovery } from '@/types/classRules'
 
 export interface ComputedClassResource {
   id: string

@@ -74,7 +74,7 @@ export interface Class5e {
   classTableGroups?: unknown[]
   classFeatures?: string[] | ClassFeature[]
   classFeatureRefs?: ClassFeatureReference[]
-  normalizedRules?: import('@/lib/5etools/classRuleNormalization').NormalizedClassRules
+  normalizedRules?: import('./classRules').NormalizedClassRules
   subclasses?: Subclass5e[]
   isSidekick?: boolean
   spellcastingAbility?: string

@@ -1,12 +1,9 @@
 import { WarningCircle } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
-import {
-  type ClassChoiceDiagnostic,
-  getRequiredChoiceSelectionCount,
-  type NormalizedCharacterChoice,
-} from '@/lib/5etools/classChoiceNormalization'
+import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import type { ClassChoiceOptionView } from '@/lib/character/classChoiceOptions'
 import type { CharacterClassChoiceSelection } from '@/types/character'
+import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
 import type { SelectedFeatureState } from './DetailsPanel'
 import { BuildClassProgressionChoiceCard } from './ProgressionChoiceCard'
 

@@ -1,8 +1,4 @@
-import {
-  getRequiredChoiceSelectionCount,
-  type NormalizedCharacterChoice,
-  type NormalizedChoiceOptionReference,
-} from '@/lib/5etools/classChoiceNormalization'
+import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { addGrant } from '@/lib/provenance/ledger'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import { makeSourceTag } from '@/lib/provenance/sourceLabels'
@@ -14,6 +10,7 @@ import type {
   CharacterClassEntry,
   Feature,
 } from '@/types/character'
+import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { CharacterCommandResult } from './commandResult'
 
 const CLASS_CHOICE_FEATURE_ID_PREFIX = 'class-choice:'

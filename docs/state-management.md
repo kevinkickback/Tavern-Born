@@ -25,6 +25,10 @@ This document defines state ownership, mutation rules, and persistence behavior.
 
 - All three Zustand stores persist with zustand/persist using the IndexedDB adapter in src/lib/storage/idb-storage.ts.
 - Character store persistence includes `characters` only; startup always begins with no active character selected.
+- `characterPersistenceSchema` is the normalized persistence-output authority. Its compile-time
+  contract requires every parsed output to be assignable to the runtime `Character` type. The
+  reverse direction is intentionally broader because draft/migration inputs may contain partial
+  spell-slot maps; schema output fills every supported slot level before persistence.
 - gameData payload itself is cached separately in src/lib/storage/dataCache.ts.
 - gameDataStore persist payload intentionally keeps config/timestamps lightweight.
 - UI collapse/expand state (accordion sections, sidebar panels) is persisted per-section key in src/lib/storage/collapseState.ts via localStorage.

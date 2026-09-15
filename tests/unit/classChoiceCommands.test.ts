@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest'
-import type { NormalizedCharacterChoice } from '@/lib/5etools/classChoiceNormalization'
 import {
   applyClassChoiceSelectionCommand,
   applyClassChoiceSelectionWithGrantsCommand,
@@ -7,6 +6,7 @@ import {
 } from '@/lib/character/commands/classChoiceCommands'
 import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import { emptyProvenance } from '@/lib/character/createCharacter'
+import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 function choice(overrides: Partial<NormalizedCharacterChoice> = {}): NormalizedCharacterChoice {

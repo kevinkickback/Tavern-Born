@@ -2,11 +2,11 @@ import { memo, useCallback, useMemo } from 'react'
 import { GameContent } from '@/components/editor/GameContent'
 import { type CategoryLimit, SelectionModal } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
-import type { NormalizedCharacterChoice } from '@/lib/5etools/classChoiceNormalization'
 import {
   type ClassChoiceOptionView,
   getClassChoiceOptionKey,
 } from '@/lib/character/classChoiceOptions'
+import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 const ENTITY_LABELS = {
   classFeature: 'Class feature',

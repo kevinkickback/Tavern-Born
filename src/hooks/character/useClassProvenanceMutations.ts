@@ -1,9 +1,5 @@
 import { useCallback, useMemo } from 'react'
 import { useItemLookup } from '@/hooks/data/useGameData'
-import type {
-  NormalizedCharacterChoice,
-  NormalizedChoiceOptionReference,
-} from '@/lib/5etools/classChoiceNormalization'
 import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import {
   applyClassEquipmentChoiceCommand,
@@ -11,6 +7,7 @@ import {
 } from '@/lib/character/commands/classCommands'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 
 export function useClassProvenanceMutations() {
   const character = useCharacterStore((s) => s.activeCharacter)

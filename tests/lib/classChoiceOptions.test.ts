@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest'
-import type { NormalizedCharacterChoice } from '@/lib/5etools/classChoiceNormalization'
 import {
   getStandaloneClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
+import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 function choice(overrides: Partial<NormalizedCharacterChoice>): NormalizedCharacterChoice {
   return {

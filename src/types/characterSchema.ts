@@ -4,6 +4,7 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import type { Character } from './character'
 
 const sourceSchema = z
   .string()
@@ -631,3 +632,9 @@ export const characterSchema = z
   })
 
 export const characterPersistenceSchema = characterSchema
+
+type PersistedCharacter = z.output<typeof characterPersistenceSchema>
+type IsAssignable<Source, Target> = [Source] extends [Target] ? true : false
+
+/** The normalized persistence output must always be safe to use as a runtime character. */
+export type CharacterSchemaOutputContract = IsAssignable<PersistedCharacter, Character>

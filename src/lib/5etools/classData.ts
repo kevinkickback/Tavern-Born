@@ -1,4 +1,4 @@
-import { type ClassResourceDef, normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
+import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
 import {
   FEAT_CATEGORY_LABEL_FALLBACKS,
   NON_STANDARD_FEAT_SELECTION_CATEGORIES,
@@ -14,6 +14,7 @@ import type {
   SubclassFeature,
 } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
+import type { ClassResourceDef } from '@/types/classRules'
 
 export type { OptFeatureProg, OptionalFeatureLike }
 
@@ -153,8 +154,6 @@ export function getSubclassSelectionInfo(classData: Class5e | undefined): {
 // ── Class Resource Definitions ─────────────────────────────────────────────
 
 /** 'cha-mod' → max = character's Charisma modifier (min 1), computed at render time. */
-export type { ClassResourceDef }
-
 /**
  * Derives limited-use class resource definitions from 5etools class data.
  * Parsed from known resource columns in classTableGroups where possible; source-qualified adapters

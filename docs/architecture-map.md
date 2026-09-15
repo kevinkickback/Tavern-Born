@@ -34,6 +34,8 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 5. Domain logic
 - Purpose: pure calculations and game rules.
+- Shared normalized class-choice and class-resource descriptors live in
+  `src/types/classRules.ts`. The type layer must not import their parser/normalizer implementations.
 - Key files: src/lib/characterUtils.ts, src/lib/character/ids.ts, src/lib/character/equipmentHelpers.ts, src/lib/calculations/characterCalculationContext.ts, src/lib/calculations/gameRules.ts, src/lib/calculations/abilityScores.ts, src/lib/calculations/movement.ts, src/lib/calculations/spellIdentity.ts, src/lib/calculations/spellSlots.ts, src/lib/calculations/spellProfiles.ts, src/lib/calculations/spellUtils.ts, src/lib/calculations/skills.ts, src/lib/calculations/prerequisites.ts, src/lib/calculations/featChoices.ts, src/lib/calculations/subclassEligibility.ts, src/lib/calculations/raceUtils.ts, src/lib/calculations/armorClass.ts.
 
 6. Provenance system

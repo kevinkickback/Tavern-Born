@@ -1,11 +1,11 @@
+import type { ClassFeature, Feat5e, Item5e, OptionalFeatureLike } from '@/types/5etools'
+import type { CharacterClassChoiceOption } from '@/types/character'
 import type {
   ChoiceOptionEntityType,
   NormalizedCharacterChoice,
   NormalizedChoiceOptionFilter,
   NormalizedChoiceOptionReference,
-} from '@/lib/5etools/classChoiceNormalization'
-import type { ClassFeature, Feat5e, Item5e, OptionalFeatureLike } from '@/types/5etools'
-import type { CharacterClassChoiceOption } from '@/types/character'
+} from '@/types/classRules'
 
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference

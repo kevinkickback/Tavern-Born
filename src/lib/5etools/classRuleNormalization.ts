@@ -1,36 +1,10 @@
 import type { Class5e, ClassFeatureReference } from '@/types/5etools'
-import {
-  type ClassChoiceDiagnostic,
-  type NormalizedCharacterChoice,
-  normalizeClassChoices,
-} from './classChoiceNormalization'
-
-type ClassResourceMaxFormula = 'cha-mod'
-type ClassResourceRecoveryAmount = number | 'all'
-
-export interface ClassResourceRecovery {
-  shortRest?: ClassResourceRecoveryAmount
-  longRest?: ClassResourceRecoveryAmount
-}
-
-export interface ClassResourceDef {
-  id: string
-  label: string
-  maxPerLevel: readonly number[]
-  restType: 'short' | 'long'
-  restTypeByLevel?: readonly ('short' | 'long')[]
-  recovery?: ClassResourceRecovery
-  recoveryByLevel?: readonly ClassResourceRecovery[]
-  maxFormula?: ClassResourceMaxFormula
-}
-
-export interface NormalizedClassRules {
-  resources: ClassResourceDef[]
-  asiLevels: number[]
-  ritualCasting: boolean
-  choices: NormalizedCharacterChoice[]
-  choiceDiagnostics: ClassChoiceDiagnostic[]
-}
+import type {
+  ClassResourceDef,
+  ClassResourceRecovery,
+  NormalizedClassRules,
+} from '@/types/classRules'
+import { normalizeClassChoices } from './classChoiceNormalization'
 
 const ASI_FEATURE = /ability score (?:improvement|increase)|epic boon/i
 const TABLE_RESOURCE_LABELS_BY_CLASS_SOURCE: Readonly<Record<string, ReadonlySet<string>>> = {

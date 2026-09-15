@@ -1,61 +1,12 @@
 import type { Class5e, ClassFeatureReference, OptFeatureProg } from '@/types/5etools'
-
-type NormalizedCharacterChoiceKind = 'class-feature' | 'feat' | 'item' | 'optional-feature'
-
-export type ChoiceOptionEntityType = 'classFeature' | 'feat' | 'item' | 'optionalFeature'
-
-export interface NormalizedChoiceOptionReference {
-  entityType: ChoiceOptionEntityType
-  name: string
-  source?: string
-}
-
-export interface NormalizedChoiceOptionFilter {
-  entityType: ChoiceOptionEntityType
-  categories?: string[]
-  featureTypes?: string[]
-  itemTypes?: string[]
-  source?: string
-}
-
-export interface NormalizedCharacterChoice {
-  id: string
-  label: string
-  kind: NormalizedCharacterChoiceKind
-  owner: {
-    type: 'class'
-    name: string
-    source: string
-    featureName?: string
-    featureSource?: string
-  }
-  /** First class level at which this choice exists. */
-  level: number
-  minimumSelections: number
-  maximumSelections: number
-  /** Required total at class levels 1–20. */
-  selectionCountByLevel: readonly number[]
-  options: NormalizedChoiceOptionReference[]
-  optionFilter?: NormalizedChoiceOptionFilter
-  repeatable: boolean
-  replacement: {
-    cadence: 'never' | 'class-level' | 'long-rest'
-    maximumPerEvent?: number | 'all'
-  }
-  source: {
-    kind: 'class-feature-options' | 'class-table' | 'optional-feature-progression'
-    field: string
-  }
-}
-
-export interface ClassChoiceDiagnostic {
-  code: 'invalid-count' | 'unresolved-options'
-  className: string
-  classSource: string
-  featureName: string
-  level?: number
-  message: string
-}
+import type {
+  ChoiceOptionEntityType,
+  ClassChoiceDiagnostic,
+  NormalizedCharacterChoice,
+  NormalizedCharacterChoiceKind,
+  NormalizedChoiceOptionFilter,
+  NormalizedChoiceOptionReference,
+} from '@/types/classRules'
 
 interface ParsedFilterTag {
   label: string

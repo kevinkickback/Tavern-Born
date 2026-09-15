@@ -1,10 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useClassProvenanceMutations } from '@/hooks/character/useClassProvenanceMutations'
 import { useItemTypeLookup } from '@/hooks/data/useGameData'
-import {
-  getRequiredChoiceSelectionCount,
-  type NormalizedCharacterChoice,
-} from '@/lib/5etools/classChoiceNormalization'
+import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import {
   type ClassChoiceCatalogs,
   type ClassChoiceOptionView,
@@ -14,6 +11,7 @@ import {
 } from '@/lib/character/classChoiceOptions'
 import type { Class5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
+import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 interface ClassChoiceControllerParams {
   character: Character | null
