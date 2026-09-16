@@ -11,7 +11,7 @@ function restCharacter() {
     },
     classResources: { 'test-short': 0, 'test-long': 1 },
     hitDiceUsed: 3,
-    hitPoints: { max: 0, current: 4, temporary: 3 },
+    hitPoints: { current: 4, temporary: 3 },
   })
 }
 
@@ -61,7 +61,7 @@ describe('applyRest', () => {
     expect(result.patch.spells.pactSpellSlots?.[2]?.used).toBe(0)
     expect(result.patch.classResources).toEqual({ 'test-short': 2, 'test-long': 4 })
     expect(result.patch.hitDiceUsed).toBe(1)
-    expect(result.patch.hitPoints).toEqual({ max: 0, current: 12, temporary: 0 })
+    expect(result.patch.hitPoints).toEqual({ current: 12, temporary: 0 })
     expect(result.changes.map((change) => change.id)).toEqual(
       expect.arrayContaining([
         'spell-slot:shared:1',

@@ -64,7 +64,6 @@ function seedCharacterAndData(
   override?: { ritualCasting?: boolean },
 ) {
   const character = makeCharacterFixture({
-    class: classEntries[0]?.name ?? '',
     classProgression: classEntries,
     ...override,
   })

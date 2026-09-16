@@ -1,4 +1,3 @@
-import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
 import type { Character } from '@/types/character'
 
 export type CharacteristicsSection = 'identity' | 'personality' | 'story' | 'connections'
@@ -43,12 +42,6 @@ export interface CharacteristicsDraft {
 
 export function createCharacteristicsDraft(character?: Character | null): CharacteristicsDraft {
   const details = character?.details
-  const hasOrganizationState = Boolean(
-    details?.organizationSelectionKey ||
-      details?.organizationCustomName ||
-      details?.organizationCustomDescription ||
-      details?.organizationCustomImage,
-  )
 
   return {
     playerName: details?.playerName || '',
@@ -70,19 +63,11 @@ export function createCharacteristicsDraft(character?: Character | null): Charac
     fears: details?.fears || '',
     backstory: details?.backstory || '',
     appearance: details?.appearance || '',
-    organizationSelectionKey: hasOrganizationState
-      ? details?.organizationSelectionKey || ''
-      : details?.alliesAndOrganizations
-        ? CUSTOM_ORGANIZATION_KEY
-        : '',
-    organizationCustomName: hasOrganizationState ? details?.organizationCustomName || '' : '',
-    organizationCustomDescription: hasOrganizationState
-      ? details?.organizationCustomDescription || ''
-      : details?.alliesAndOrganizations || '',
-    organizationCustomImage: hasOrganizationState ? details?.organizationCustomImage || '' : '',
-    organizationCustomGradient: hasOrganizationState
-      ? details?.organizationCustomGradient || DEFAULT_CUSTOM_GRADIENT
-      : DEFAULT_CUSTOM_GRADIENT,
+    organizationSelectionKey: details?.organizationSelectionKey || '',
+    organizationCustomName: details?.organizationCustomName || '',
+    organizationCustomDescription: details?.organizationCustomDescription || '',
+    organizationCustomImage: details?.organizationCustomImage || '',
+    organizationCustomGradient: details?.organizationCustomGradient || DEFAULT_CUSTOM_GRADIENT,
   }
 }
 

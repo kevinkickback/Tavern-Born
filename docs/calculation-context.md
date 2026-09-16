@@ -9,7 +9,7 @@ the header, prerequisites, equipment, spellcasting, level changes, and PDF expor
 
 Effective ability scores are composed in this order:
 
-1. `character.abilityScores`: allocated/base scores and legacy materialized feat-option changes.
+1. `character.abilityScores`: allocated/base scores and materialized feat-option changes.
 2. Ruleset-normalized origin bonuses: race/subrace for 2014 or background for 2024.
 3. Persisted class ASI contributions from `character.asiChoices`.
 4. Active typed lasting modifiers from structured source data and labeled manual declarations.
@@ -21,8 +21,8 @@ filtered lookup does not contain a character's saved selection.
 
 Feat option commands currently continue to materialize their reversible ability changes in
 `character.abilityScores`. Their provenance records make removal deterministic, but this is a
-compatibility exception rather than the long-term model. Phase 4 should migrate these changes to
-typed contributions after defining stacking, migration, and exact-override semantics.
+temporary exception rather than the long-term model. A future format may move these changes to
+typed contributions after defining stacking and exact-override semantics.
 
 ## Field ownership
 
@@ -30,7 +30,6 @@ typed contributions after defining stacking, migration, and exact-override seman
 | --- | --- | --- |
 | Raw player choices | `abilityScores`, origin ASI selections, class ASI selections | Persisted on `Character`; calculations read them through the context. |
 | Source references | race, subrace, background, class progression and their sources | Persisted identities; resolved entities are derived in the context. |
-| Derived compatibility mirrors | legacy `armorClass`, flat class/level fields | Kept for migration/import compatibility; never treated as canonical calculated output. |
 | Mutable runtime state | current/temporary HP, used spell slots, class-resource uses, conditions | Persisted because play changes it; maxima and modifiers remain derived. |
 | Manual adjustments | HP and AC adjustment records | Persisted, labeled contributions applied after ordinary derivation. |
 | Exact overrides | maximum HP and AC overrides | Persisted only when explicitly set; applied last and visibly distinguished from derived values. |
@@ -39,8 +38,8 @@ typed contributions after defining stacking, migration, and exact-override seman
 ## Consumer contract
 
 Ordinary UI and export code must not read `character.abilityScores` directly. Score editing,
-schema migration, the context itself, reversible legacy feat commands, and the explicitly
-backward-compatible `calculateAC` adapter are the intentional exceptions. The readiness service is
+schema validation, the context itself, and reversible feat commands are the intentional exceptions.
+The readiness service is
 also an explicit boundary because score-allocation validity must inspect the persisted base scores,
 not the effective totals after origin, ASI, and effect contributions. Canonical domain APIs require
 effective scores to be passed explicitly. `tests/lib/effectiveAbilityScoreOwnership.test.ts`

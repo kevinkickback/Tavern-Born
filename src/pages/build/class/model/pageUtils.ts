@@ -8,7 +8,6 @@ interface CountAsiAndFeatSlotsParams {
   classProgression: CharacterClassEntry[]
   character: Character | null
   classLookup: Record<string, Class5e | undefined>
-  fallbackClassByName: Map<string, Class5e>
 }
 
 interface BuildLevelsToShowParams {
@@ -29,25 +28,20 @@ interface BuildFeatModalFeatsParams<T extends { name: string; source?: string }>
 function resolveClassForEntry(
   entry: Pick<CharacterClassEntry, 'name' | 'source'>,
   classLookup: Record<string, Class5e | undefined>,
-  fallbackClassByName: Map<string, Class5e>,
 ): Class5e | undefined {
-  if (entry.source) {
-    return classLookup[getEntityLookupKey(entry.name, entry.source)]
-  }
-  return fallbackClassByName.get(entry.name)
+  return classLookup[getEntityLookupKey(entry.name, entry.source)]
 }
 
 export function countTotalAsiAcrossClasses({
   classProgression,
   character,
   classLookup,
-  fallbackClassByName,
 }: CountAsiAndFeatSlotsParams): number {
   if (!character) return 0
 
   let count = 0
   for (const entry of classProgression) {
-    const cls = resolveClassForEntry(entry, classLookup, fallbackClassByName)
+    const cls = resolveClassForEntry(entry, classLookup)
     const levels = getASILevelsFromClass(cls)
     count += levels.filter((level) => level <= (entry.levels ?? 0)).length
   }
@@ -58,13 +52,12 @@ export function countTotalFeatSlots({
   classProgression,
   character,
   classLookup,
-  fallbackClassByName,
 }: CountAsiAndFeatSlotsParams): number {
   if (!character) return 0
 
   let count = 0
   for (const entry of classProgression) {
-    const cls = resolveClassForEntry(entry, classLookup, fallbackClassByName)
+    const cls = resolveClassForEntry(entry, classLookup)
     const earned = getASILevelsFromClass(cls).filter((level) => level <= (entry.levels ?? 0))
     const usedForAsi = (character.asiChoices ?? []).filter(
       (choice) => choice.className === entry.name && earned.includes(choice.level),

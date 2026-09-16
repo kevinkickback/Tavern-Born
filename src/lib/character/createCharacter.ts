@@ -1,7 +1,7 @@
 import { SPECIAL_SPELL_PROFILE_LABEL } from '@/lib/calculations/spellProfiles'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
 import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
-import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
+import { CURRENT_CHARACTER_VERSION } from '@/lib/schema/characterVersion'
 import type { Character } from '@/types/character'
 
 export function emptyProvenance(): ProvenanceLedger {
@@ -28,15 +28,14 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),
-    version: `${CURRENT_SCHEMA_VERSION}.0.0`,
+    version: CURRENT_CHARACTER_VERSION,
     name: '',
     originSystem: '2014',
     race: '',
-    class: '',
     background: '',
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
-    level: 1,
     experiencePoints: 0,
+    classProgression: [],
     abilityScores: {
       strength: 10,
       dexterity: 10,
@@ -91,13 +90,12 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
       },
     },
     equipment: [],
-    hitPoints: { max: 0, current: 0, temporary: 0 },
+    hitPoints: { current: 0, temporary: 0 },
     hitPointsInitialized: false,
     hitPointGains: [],
     hitPointAdjustments: [],
     armorClassAdjustments: [],
     initiative: 0,
-    speed: 30,
     movement: {
       speeds: {},
       source: { kind: 'manual', name: 'Unspecified movement' },

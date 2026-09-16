@@ -198,7 +198,11 @@ describe('desktop workspace navigation', () => {
 
   test('uses recent characters as a quick, functional switcher', async () => {
     const user = userEvent.setup()
-    const character = makeCharacterFixture({ name: 'Aelar', race: 'Elf', level: 3 })
+    const character = makeCharacterFixture({
+      name: 'Aelar',
+      race: 'Elf',
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 3 }],
+    })
     useCharacterStore.setState({ characters: [character] })
 
     renderSidebar('/')

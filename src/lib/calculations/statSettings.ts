@@ -51,7 +51,6 @@ export function resolveHitPointSettings(
     ...character,
     hitPointAdjustments: settings.adjustments,
     maxHitPointsOverride: normalizePositiveInteger(settings.maxOverride),
-    hitPoints: { ...character.hitPoints, max: 0 },
   }
   return resolveNumericEffect(
     calculatedMaxHP,

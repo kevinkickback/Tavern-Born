@@ -51,7 +51,6 @@ describe('movement calculations', () => {
 
   test('applies adjustments before exact overrides and formats every mode', () => {
     const effective = getEffectiveCharacterMovement({
-      speed: 30,
       movement: {
         speeds: { walk: 25, climb: 15 },
         source: { kind: 'race', name: 'Test Dwarf', source: 'HB' },
@@ -83,23 +82,12 @@ describe('movement calculations', () => {
     expect(getAdditionalMovementSummary(effective)).toBe('climb 40 ft., phase 5 ft.')
   })
 
-  test('reads legacy walking speed only when structured movement is absent', () => {
-    const effective = getEffectiveCharacterMovement({ speed: 25 })
-
-    expect(effective.speeds).toEqual({ walk: 25 })
-    expect(effective.source.kind).toBe('legacy')
-  })
-
-  test('does not invent a walking speed when legacy movement is malformed', () => {
-    const effective = getEffectiveCharacterMovement({ speed: Number.NaN })
-
-    expect(effective.speeds).toEqual({})
-    expect(getWalkingSpeed(effective)).toBe(0)
-  })
-
   test('routes typed speed effects through the same adjustment and override stack', () => {
     const effective = getEffectiveCharacterMovement({
-      speed: 20,
+      movement: {
+        speeds: { walk: 20 },
+        source: { kind: 'manual', name: 'Test' },
+      },
       manualEffects: [
         {
           id: 'walk-addition',

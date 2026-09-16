@@ -94,17 +94,13 @@ export function BuildClassPage() {
   const readinessFocus = getReadinessFocus(searchParams)
   const requestedLevelValue = Number.parseInt(searchParams.get('level') ?? '', 10)
   const requestedLevel = Number.isNaN(requestedLevelValue) ? undefined : requestedLevelValue
-  const fallbackClassByName = useMemo(
-    () => new Map((classes as Class5e[]).map((cls) => [cls.name, cls])),
-    [classes],
-  )
   const spellByName = useMemo(
     () => new Map((spells as Spell5e[]).map((s) => [s.name, s])),
     [spells],
   )
   const viewingClassData = viewingClassSource
     ? classLookup[getEntityLookupKey(viewingClass, viewingClassSource)]
-    : fallbackClassByName.get(viewingClass ?? '')
+    : undefined
   const includeClassFeatureVariants = character?.variantRules?.optionalClassFeatures ?? false
   const classChoiceCatalogs = useMemo(
     () => ({
@@ -176,9 +172,9 @@ export function BuildClassPage() {
     setCompactPane('right')
   }
 
-  const handleClassChange = (className: string, classSource?: string) => {
+  const handleClassChange = (className: string, classSource: string) => {
     if (!character) return
-    selectClass(className, classSource, classLookup, fallbackClassByName)
+    selectClass(className, classSource, classLookup)
     handleClassSelectionApplied()
   }
   const asiFeatController = useClassAsiFeatController({
@@ -186,7 +182,6 @@ export function BuildClassPage() {
     viewingClass,
     viewingClassSource,
     classLookup,
-    fallbackClassByName,
     feats: feats as Feat5e[],
   })
   const {

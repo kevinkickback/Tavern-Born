@@ -14,7 +14,7 @@ Without provenance, changing race/class/background can leave stale proficiencies
 - src/lib/provenance/normalization.ts
 - src/lib/provenance/sourceLabels.ts
 - src/lib/provenance/summaries.ts
-- src/lib/provenance/resolveRaceAsiChoices.ts — pure function that syncs `raceAsiChoices` into ledger `ChoiceRecord.selected` arrays; called by `useProvenanceLedger`/`useProvenance` before deriving rows, and by `applyRaceAsiChoices` when persisting choices
+- src/lib/provenance/resolveRaceAsiChoices.ts — pure function used by `applyRaceAsiChoices` to sync `raceAsiChoices` into ledger `ChoiceRecord.selected` arrays
 - src/lib/provenance/applyRaceGrants.ts
 - src/lib/provenance/applyClassGrants.ts
 - src/lib/provenance/applyBackgroundGrants.ts
@@ -28,7 +28,7 @@ Without provenance, changing race/class/background can leave stale proficiencies
 
 **For production pages:** use the self-contained `use*ProvenanceMutations` hooks directly — `useRaceProvenanceMutations`, `useClassProvenanceMutations`, `useBackgroundProvenanceMutations`, `useSpellProvenanceMutations`, `useFeatProvenanceMutations`, `useEquipmentProvenanceMutations`. Each reads character/store state and lookup dependencies, delegates canonical transition logic to pure commands, and applies one atomic patch.
 
-**For reading provenance rows:** use `useProvenanceLedger` (src/hooks/character/useProvenanceLedger.ts) in pages that only need to display provenance state. It normalizes the ledger via `resolveRaceAsiChoicesInLedger` before deriving rows, so all row functions receive a fully-resolved ledger.
+**For reading provenance rows:** use `useProvenanceLedger` (src/hooks/character/useProvenanceLedger.ts) in pages that only need to display provenance state. Current mutation commands persist a fully resolved ledger, so row functions consume it directly.
 
 **For tests:** `useProvenance` (src/hooks/character/useProvenance.ts) is the integration test harness. It composes all six domains via `useProvenanceMutations` (src/hooks/character/useProvenanceMutations.ts, the aggregator) and exposes mutations + provenance rows from a single hook. Use it in tests that need cross-domain provenance interactions. Do not call it from production pages.
 
@@ -57,7 +57,7 @@ variant so multiple fixed forms remain distinct. Follow-up selections for these 
 feat slots or become bonus feats. Unparameterized fixed grants use the same storage with an empty
 variant, so every fixed feat that needs setup has a stable options owner.
 
-Race and background feat choices keep their legacy display names in `ChoiceRecord.selected` and store
+Race and background feat choices keep display names in `ChoiceRecord.selected` and store
 the authoritative `name|source` identity plus follow-up selections in `ChoiceRecord.selectedRefs`.
 Class progression feats are owned separately by `character.classFeatChoices`; their provenance tags
 include the class-choice ID as `grantVariant`. Replacing a feat, changing its granting origin, removing
@@ -107,8 +107,8 @@ Origin-system normalization behavior:
 - `2014`: race/subrace retains origin ASI, background origin ASI and background origin feat are stripped.
 - `2024`: background retains origin ASI and exactly one origin feat, race/subrace origin ASI and starting feat are stripped.
 - Missing canonical origin data is synthesized only at normalization time (for example: fallback 2014 race ASI choice, fallback 2024 background ASI/feat choice).
-- Character schema v4 migrates legacy semicolon-bearing fixed feat ledger keys to canonical keys and
-  preserves the suffix in `grantVariant`.
+- Fixed feat ledger keys use canonical `name|source` identity and preserve option ownership in
+  `grantVariant`.
 
 Mutation hooks should stay separate from row-derivation hooks: grant/reconciliation callbacks belong in the mutation layer, while UI-facing source rows and collapse-state helpers belong in the derived-view layer.
 
@@ -161,9 +161,8 @@ Class and subclass spell-choice behavior:
 - Removing or replacing a class progression entry retracts materialized proficiencies that are owned
   only by that exact class printing and removes its class spell profile. Grants shared with another
   source remain materialized.
-- Legacy class progression entries without a source may resolve to a source-qualified class for
-  readiness, spell presentation, and PDF export only when exactly one matching printing is present.
-  Ambiguous names stay unresolved rather than silently choosing a rules version.
+- Every class progression entry is source-qualified; readiness, spell presentation, and PDF export
+  resolve only that exact printing.
 - The 2014 PHB Eldritch Knight and Arcane Trickster school limits are enforced in both the picker and
   spell commands. Their unrestricted choices at levels 3, 8, 14, and 20 carry
   `grantVariant: "unrestricted-school"`, so the exception follows that choice when it is swapped.
@@ -203,14 +202,15 @@ When a lineage race is selected, `applyRaceGrants` creates `ChoiceRecord` entrie
 1. Calls `resolveRaceAsiChoicesInLedger` to populate `ChoiceRecord.selected` in the ledger.
 2. Writes both `provenance` and `raceAsiChoices` to the character in a single `updateCharacter` call.
 
-For existing characters where `ChoiceRecord.selected` may be empty (e.g. created before this pattern was established), `useProvenanceLedger` and `useProvenance` apply `resolveRaceAsiChoicesInLedger` at read time using `character.raceAsiChoices` as a fallback. This ensures `getAbilityBonusRows` always receives a fully-resolved ledger without needing external parameters.
+Current mutation commands write `raceAsiChoices` and the resolved ledger together, so read hooks use
+the stored ledger directly. `getAbilityBonusRows` therefore needs no external selection parameters.
 
 ## Invariants
 
 - Every non-user-manual grant should be traceable to a source tag.
 - Reconciliation should be additive/subtractive by source, not by brittle string matching alone.
 - UI summaries should read from ledger data rather than duplicate source logic.
-- `getAbilityBonusRows(ledger)` takes only the ledger — no external `raceAsiChoices` or `backgroundAsiChoices` params. The ledger must be normalized via `resolveRaceAsiChoicesInLedger` before calling it.
+- `getAbilityBonusRows(ledger)` takes only the fully resolved ledger — no external `raceAsiChoices` or `backgroundAsiChoices` parameters.
 - Spell grants may include optional class-level attribution metadata:
 	- exact: selected from class-page level picker
 	- inferred-lowest-eligible: selected from spells page and attributed to the lowest eligible class level with remaining gain capacity

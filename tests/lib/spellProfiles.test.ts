@@ -41,9 +41,6 @@ function makeBaseProvenance() {
 describe('spellProfiles', () => {
   test('ensureSpellProfiles creates class profiles and special unrestricted profile', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [
         { name: 'Wizard', source: 'PHB', levels: 3 },
         { name: 'Cleric', source: 'PHB', levels: 2 },
@@ -79,11 +76,6 @@ describe('spellProfiles', () => {
 
   test('ensureSpellProfiles merges subclass grants into the parent class profile', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      classSource: 'PHB',
-      subclass: 'Eldritch Knight',
-      subclassSource: 'PHB',
-      level: 3,
       classProgression: [
         {
           name: 'Fighter',
@@ -159,9 +151,6 @@ describe('spellProfiles', () => {
       spellAttributionMode: 'exact' as const,
     }
     const character = makeCharacterFixture({
-      class: 'Sorcerer',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [{ name: 'Sorcerer', source: 'PHB', levels: 5 }],
       provenance: {
         ...makeBaseProvenance(),
@@ -198,11 +187,6 @@ describe('spellProfiles', () => {
 
   test('ensureSpellProfiles models Battle Smith spells as locked, always-prepared Artificer spells', () => {
     const character = makeCharacterFixture({
-      class: 'Artificer',
-      classSource: 'PHB',
-      subclass: 'Battle Smith',
-      subclassSource: 'PHB',
-      level: 3,
       classProgression: [
         {
           name: 'Artificer',
@@ -289,9 +273,6 @@ describe('spellProfiles', () => {
 
   test('collectKnownSpells includes always-prepared unrestricted spells', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 2,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
       spells: {
         spellProfiles: [
@@ -328,9 +309,6 @@ describe('spellProfiles', () => {
 
   test('calculateCharacterSpellSlots combines multiclass shared slots and keeps pact separate', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [
         { name: 'Wizard', source: 'PHB', levels: 3 },
         { name: 'Cleric', source: 'PHB', levels: 2 },
@@ -440,11 +418,6 @@ describe('spellProfiles', () => {
 
   test('calculateCharacterSpellSlots uses subclass caster progression for non-caster classes', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      classSource: 'PHB',
-      subclass: 'Eldritch Knight',
-      subclassSource: 'PHB',
-      level: 3,
       classProgression: [
         {
           name: 'Fighter',
@@ -496,11 +469,6 @@ describe('spellProfiles', () => {
 
   test('buildSpellcastingClassDetails uses known-spell limits from a 2014 casting subclass', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      classSource: 'PHB',
-      subclass: 'Eldritch Knight',
-      subclassSource: 'PHB',
-      level: 5,
       classProgression: [
         {
           name: 'Fighter',
@@ -549,11 +517,6 @@ describe('spellProfiles', () => {
 
   test('buildSpellcastingClassDetails uses prepared limits from a 2024 casting subclass', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      classSource: 'XPHB',
-      subclass: 'Eldritch Knight',
-      subclassSource: 'XPHB',
-      level: 5,
       classProgression: [
         {
           name: 'Fighter',
@@ -604,9 +567,6 @@ describe('spellProfiles', () => {
 
   test('buildSpellcastingClassDetails computes save and attack values per class', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
       abilityScores: {
         strength: 10,
@@ -736,9 +696,6 @@ describe('spellProfiles', () => {
   test('buildClassSpellSelectionsByLevel reconstructs class-level picks from provenance attribution', () => {
     const baseProvenance = makeBaseProvenance()
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
       spells: {
         spellProfiles: [
@@ -821,9 +778,6 @@ describe('spellProfiles', () => {
     // Absorb Elements has provenance at level 3 but should NOT count as a
     // level-3 selection — the swap is independent of new spell choices.
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
       spells: {
         spellProfiles: [
@@ -907,9 +861,6 @@ describe('spellProfiles', () => {
     // Scenario: Shield (picked at level 1) is swapped out at level 3 for Absorb Elements.
     // The replacement should still occupy the original level-1 spell pick slot.
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
       spells: {
         spellProfiles: [
@@ -995,9 +946,6 @@ describe('spellProfiles', () => {
     // - provenance: Shield provenance still lingers (stale closure overwrites
     //   the removal), Absorb Elements has provenance at level 3
     const rawCharacter = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
       spells: {
         spellProfiles: [
@@ -1108,9 +1056,6 @@ describe('spellProfiles', () => {
   test('buildClassSpellSelectionsByLevel excludes class-profile spells without provenance level attribution', () => {
     const baseProvenance = makeBaseProvenance()
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
       spells: {
         spellProfiles: [
@@ -1237,9 +1182,6 @@ describe('spellProfiles', () => {
 
   test('buildSpellcastingClassDetails keeps spellbook and prepared limits separate', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
       abilityScores: {
         strength: 8,

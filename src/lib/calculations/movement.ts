@@ -79,28 +79,21 @@ export function normalizeRaceMovement(race: Race5e, subrace?: Race5e): Character
   }
 }
 
-/** Reads structured movement, falling back to the legacy walking-speed mirror when necessary. */
 export function getBaseCharacterMovement(
-  character: Pick<Character, 'movement' | 'speed'>,
+  character: Pick<Character, 'movement'>,
 ): CharacterMovement {
-  if (character.movement) return character.movement
-  const legacyWalk = normalizeDistance(character.speed)
-  return {
-    speeds: legacyWalk === undefined ? {} : { walk: legacyWalk },
-    source: { kind: 'legacy', name: 'Legacy walking speed' },
-  }
+  return character.movement
 }
 
 /** Applies labeled adjustments and then exact overrides to the character's base movement. */
 export function getEffectiveCharacterMovement(
-  character: Pick<Character, 'speed'> &
+  character: Pick<Character, 'movement'> &
     Partial<
       Pick<
         Character,
         | 'effectFlags'
         | 'equipment'
         | 'manualEffects'
-        | 'movement'
         | 'movementAdjustments'
         | 'movementHoverOverride'
         | 'movementOverrides'

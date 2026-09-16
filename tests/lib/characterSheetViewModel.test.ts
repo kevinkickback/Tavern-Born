@@ -104,7 +104,7 @@ describe('createCharacterSheetViewModel', () => {
       background: 'Sage',
       backgroundSource: 'PHB',
       visions: [],
-      hitPoints: { max: 0, current: 0, temporary: 0 },
+      hitPoints: { current: 0, temporary: 0 },
     })
 
     const viewModel = createCharacterSheetViewModel(character, {
@@ -123,34 +123,6 @@ describe('createCharacterSheetViewModel', () => {
       description: 'You know where to find lore.',
     })
     expect(viewModel.maxHP).toBe(6)
-  })
-
-  test('resolves an unambiguous class printing for a legacy source-less spell profile', () => {
-    const warlock = {
-      name: 'Warlock',
-      source: 'PHB',
-      hd: { faces: 8 },
-      spellcastingAbility: 'cha',
-      casterProgression: 'pact',
-      cantripProgression: [2],
-      spellsKnownProgression: [2],
-    } as Class5e
-    const character = makeCharacterFixture({
-      class: warlock.name,
-      classSource: undefined,
-      classProgression: [{ name: warlock.name, source: undefined, levels: 1 }],
-    })
-
-    const viewModel = createCharacterSheetViewModel(character, {
-      classesByKey: buildClassLookup([warlock]),
-    })
-
-    expect(viewModel.spellcastingDetails).toHaveLength(1)
-    expect(viewModel.spellcastingDetails[0]).toMatchObject({
-      profileId: 'class:Warlock|',
-      className: 'Warlock',
-      spellcastingAbility: 'charisma',
-    })
   })
 
   test('resolves preset and custom organization images', () => {
@@ -183,7 +155,6 @@ describe('createCharacterSheetViewModel', () => {
   test('projects structured movement into both fixed PDF templates', () => {
     const viewModel = createCharacterSheetViewModel(
       makeCharacterFixture({
-        speed: 30,
         movement: {
           speeds: { walk: 25, swim: 30, fly: 40 },
           hover: true,
@@ -215,8 +186,6 @@ describe('createCharacterSheetViewModel', () => {
       hd: { faces: 8 },
     } as Class5e
     const character = makeCharacterFixture({
-      class: testClass.name,
-      classSource: testClass.source,
       classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
       abilityScores: {
         strength: 10,
@@ -226,7 +195,7 @@ describe('createCharacterSheetViewModel', () => {
         wisdom: 10,
         charisma: 10,
       },
-      hitPoints: { max: 0, current: 0, temporary: 0 },
+      hitPoints: { current: 0, temporary: 0 },
       manualEffects: [
         {
           id: 'test-strength',
@@ -300,8 +269,6 @@ describe('createCharacterSheetViewModel', () => {
       modifySpeed: { bonus: { '*': 5 } },
     }
     const character = makeCharacterFixture({
-      class: testClass.name,
-      classSource: testClass.source,
       classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
       abilityScores: {
         strength: 10,

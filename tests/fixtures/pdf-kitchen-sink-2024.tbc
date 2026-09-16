@@ -1,16 +1,11 @@
 {
   "id": "pdf-kitchen-sink-2024-character",
-  "version": "6.0.0",
   "name": "Seraphina Manypaths (2024)",
   "originSystem": "2024",
   "race": "Elf",
   "raceSource": "XPHB",
   "subrace": "Drow Lineage",
   "subraceSource": "XPHB",
-  "class": "Wizard",
-  "classSource": "XPHB",
-  "subclass": "Evoker",
-  "subclassSource": "XPHB",
   "background": "Sage",
   "backgroundSource": "XPHB",
   "currency": {
@@ -20,7 +15,6 @@
     "gp": 12450,
     "pp": 417
   },
-  "level": 20,
   "experiencePoints": 355000,
   "classProgression": [
     {
@@ -1684,11 +1678,6 @@
       "range": 30
     }
   ],
-  "hitPoints": {
-    "max": 0,
-    "current": 121,
-    "temporary": 17
-  },
   "hitPointsInitialized": true,
   "hitPointGains": [
     {
@@ -1883,7 +1872,6 @@
     }
   ],
   "maxHitPointsOverride": 168,
-  "armorClass": 10,
   "armorClassAdjustments": [
     {
       "id": "ac-adjust-cloak",
@@ -1902,7 +1890,6 @@
     }
   ],
   "initiative": 4,
-  "speed": 35,
   "damageResistances": [
     "Fire",
     "Cold",
@@ -2099,8 +2086,7 @@
     "organizationCustomName": "",
     "organizationCustomDescription": "",
     "organizationCustomImage": "",
-    "organizationCustomGradient": "linear-gradient(135deg, #312e81, #0f766e)",
-    "alliesAndOrganizations": ""
+    "organizationCustomGradient": "linear-gradient(135deg, #312e81, #0f766e)"
   },
   "portrait": "/assets/images/characters/placeholder_char_card9.jpg",
   "portraitTransform": {
@@ -2280,5 +2266,17 @@
     "spells": {},
     "equipment": {},
     "choices": []
+  },
+  "movement": {
+    "speeds": {},
+    "source": {
+      "kind": "manual",
+      "name": "Kitchen sink fixture"
+    }
+  },
+  "version": "11.0.0",
+  "hitPoints": {
+    "current": 121,
+    "temporary": 17
   }
 }

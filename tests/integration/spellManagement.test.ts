@@ -29,9 +29,6 @@ describe('Spell Management - Integration Tests', () => {
     // Create a character
     const character = makeCharacterFixture({
       id: 'spell-integration-1',
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 1,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
       spells: {
         spellProfiles: [
@@ -117,9 +114,6 @@ describe('Spell Management - Integration Tests', () => {
   test('multiclass spell slot calculation and merging', () => {
     const character = makeCharacterFixture({
       id: 'spell-integration-2',
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [
         { name: 'Wizard', source: 'PHB', levels: 3 },
         { name: 'Cleric', source: 'PHB', levels: 2 },
@@ -165,9 +159,6 @@ describe('Spell Management - Integration Tests', () => {
   test('profile syncing on class progression changes', () => {
     const character = makeCharacterFixture({
       id: 'spell-integration-3',
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 1,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
     })
 
@@ -200,9 +191,7 @@ describe('Spell Management - Integration Tests', () => {
   test('spell profile structure is valid after mutations', () => {
     const character = makeCharacterFixture({
       id: 'spell-integration-4',
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 2,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
     })
 
     useCharacterStore.setState({
@@ -227,9 +216,7 @@ describe('Spell Management - Integration Tests', () => {
   test('spell slots structure is valid after mutations', () => {
     const character = makeCharacterFixture({
       id: 'spell-integration-5',
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 1,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
     })
 
     useCharacterStore.setState({

@@ -12,7 +12,7 @@ import {
   Upload,
   Users,
 } from '@phosphor-icons/react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { CharacterCard } from '@/components/character/CharacterCard'
@@ -87,7 +87,9 @@ function CharacterListRow({
   const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(highlighted)
   const name = character.name || 'Unnamed Character'
-  const summary = [character.race, character.class].filter(Boolean).join(' · ') || 'Unspecified'
+  const summary =
+    [character.race, character.classProgression[0]?.name].filter(Boolean).join(' · ') ||
+    'Unspecified'
 
   return (
     <div
@@ -183,6 +185,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const deleteCharacter = useCharacterStore((state) => state.deleteCharacter)
   const addCharacter = useCharacterStore((state) => state.addCharacter)
+  const unsupportedCharacterCount = useCharacterStore((state) => state.unsupportedCharacterCount)
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
   const setViewMode = useAppPreferencesStore((state) => state.setCharacterViewMode)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
@@ -199,6 +202,13 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
   const focusCharacterName = readinessFocus === 'identity:name'
 
+  useEffect(() => {
+    if (!unsupportedCharacterCount) return
+    toast.warning(
+      `${unsupportedCharacterCount} character${unsupportedCharacterCount === 1 ? '' : 's'} from an unsupported beta version could not be loaded. Please create new characters.`,
+    )
+  }, [unsupportedCharacterCount])
+
   const sortedCharacters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
     const sorted = characters.filter((character) => {
@@ -206,7 +216,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       return [
         character.name,
         character.race,
-        character.class,
+        character.classProgression[0]?.name,
         character.details?.alignment,
         character.details?.playerName,
       ].some((value) => value?.toLowerCase().includes(query))
@@ -217,8 +227,8 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       }
       if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '')
       if (sortBy === 'name-desc') return (b.name || '').localeCompare(a.name || '')
-      if (sortBy === 'level-desc') return b.level - a.level
-      return a.level - b.level
+      if (sortBy === 'level-desc') return getTotalCharacterLevel(b) - getTotalCharacterLevel(a)
+      return getTotalCharacterLevel(a) - getTotalCharacterLevel(b)
     })
     return sorted
   }, [characters, searchQuery, sortBy])
@@ -230,9 +240,9 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       let key: string
       if (groupBy === 'class') {
         key =
-          (character.classProgression?.length ?? 0) > 1
+          character.classProgression.length > 1
             ? 'Multiclass'
-            : character.class || 'Unknown'
+            : character.classProgression[0]?.name || 'Unknown'
       } else if (groupBy === 'alignment') key = character.details?.alignment || 'Unknown'
       else key = character.details?.playerName || 'Unknown'
       groups.set(key, [...(groups.get(key) ?? []), character])

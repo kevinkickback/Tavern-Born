@@ -6,7 +6,6 @@ import {
 } from '@/lib/character/commands/classChoiceCommands'
 import { applyClassProgressionUpdate } from '@/lib/character/commands/classCommands'
 import { emptyProvenance } from '@/lib/character/createCharacter'
-import { addGrant, makeSourceTag } from '@/lib/provenance'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -67,9 +66,6 @@ describe('class choice commands', () => {
       selectionCountByLevel: [0, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8],
     })
     const levelTwo = makeCharacterFixture({
-      class: 'Warlock',
-      classSource: 'PHB',
-      level: 2,
       classProgression: [{ name: 'Warlock', source: 'PHB', levels: 2 }],
     })
     const earlySelections = applyClassChoiceSelectionCommand(levelTwo, invocations, [
@@ -78,7 +74,6 @@ describe('class choice commands', () => {
     ]).classChoiceSelections
     const levelFive = makeCharacterFixture({
       ...levelTwo,
-      level: 5,
       classProgression: [{ name: 'Warlock', source: 'PHB', levels: 5 }],
       classChoiceSelections: earlySelections,
     })
@@ -315,185 +310,6 @@ describe('class choice commands', () => {
     expect(Object.keys(reconciled.provenanceUpdate.features).sort()).toEqual([
       'option a',
       'option b',
-    ])
-  })
-
-  test('migrates only the legacy optional-feature pool being edited', () => {
-    const optionalChoice = choice({
-      id: 'class:test-class|test|choice:first-pool|1',
-      label: 'First Pool',
-      owner: { type: 'class', name: 'Test Class', source: 'TEST' },
-      level: 1,
-      minimumSelections: 1,
-      maximumSelections: 1,
-      selectionCountByLevel: Array(20).fill(1),
-    })
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Test Class', source: 'TEST', levels: 1 }],
-      features: [
-        { id: 'legacy-a', name: 'Legacy A', source: 'TEST', description: '' },
-        { id: 'legacy-b', name: 'Legacy B', source: 'TEST', description: '' },
-      ],
-    })
-    let ledger = addGrant(
-      emptyProvenance(),
-      'features',
-      'Legacy A',
-      makeSourceTag('class', 'Test Class', 'choice', 'TEST'),
-    )
-    ledger = addGrant(
-      ledger,
-      'features',
-      'Legacy B',
-      makeSourceTag('class', 'Test Class', 'choice', 'TEST'),
-    )
-
-    const result = applyClassChoiceSelectionWithGrantsCommand(
-      character,
-      ledger,
-      optionalChoice,
-      [{ entityType: 'optionalFeature', name: 'Replacement A', source: 'TEST' }],
-      [{ entityType: 'optionalFeature', name: 'Legacy A', source: 'TEST' }],
-    )
-
-    expect(result.characterPatch.features?.map((feature) => feature.name).sort()).toEqual([
-      'Legacy B',
-      'Replacement A',
-    ])
-    expect(result.provenanceUpdate.features['legacy a']).toBeUndefined()
-    expect(result.provenanceUpdate.features['legacy b']).toHaveLength(1)
-    expect(result.provenanceUpdate.features['replacement a']).toEqual([
-      expect.objectContaining({ grantVariant: optionalChoice.id }),
-    ])
-  })
-
-  test('migrates class-granted feats and preserves their option-compatible mirror', () => {
-    const featChoice = choice({
-      id: 'class:test-class|test|choice:style-training|1',
-      label: 'Style Training',
-      kind: 'feat',
-      owner: { type: 'class', name: 'Test Class', source: 'TEST' },
-      level: 1,
-      minimumSelections: 1,
-      maximumSelections: 1,
-      selectionCountByLevel: Array(20).fill(1),
-      optionFilter: { entityType: 'feat', categories: ['STYLE'] },
-    })
-    const legacyChoice = {
-      id: 'legacy-style-choice',
-      className: 'Test Class',
-      classSource: 'TEST',
-      progressionName: 'Style Training',
-      categories: ['STYLE'],
-      feats: [
-        {
-          id: 'legacy-style-feat',
-          name: 'Old Style',
-          source: 'TEST',
-          description: '',
-          className: 'Test Class',
-          classSource: 'TEST',
-          classLevel: 1,
-        },
-      ],
-    }
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Test Class', source: 'TEST', levels: 1 }],
-      classFeatChoices: [legacyChoice],
-    })
-    const ledger = addGrant(emptyProvenance(), 'feats', 'Old Style', {
-      ...makeSourceTag('class', 'Test Class', 'choice', 'TEST'),
-      grantVariant: legacyChoice.id,
-    })
-
-    const result = applyClassChoiceSelectionWithGrantsCommand(character, ledger, featChoice, [
-      { entityType: 'feat', name: 'New Style', source: 'TEST' },
-    ])
-
-    expect(result.characterPatch.classChoiceSelections?.[0]?.selected).toEqual([
-      expect.objectContaining({ name: 'New Style', source: 'TEST', slotLevel: 1 }),
-    ])
-    expect(result.characterPatch.classFeatChoices).toEqual([
-      expect.objectContaining({
-        id: featChoice.id,
-        progressionName: 'Style Training',
-        feats: [expect.objectContaining({ name: 'New Style', classLevel: 1 })],
-      }),
-    ])
-    expect(result.provenanceUpdate.feats['old style']).toBeUndefined()
-    expect(result.provenanceUpdate.feats['new style']).toEqual([
-      expect.objectContaining({ grantVariant: featChoice.id }),
-    ])
-  })
-
-  test('preserves configured feat effects when legacy ownership is normalized', () => {
-    const featChoice = choice({
-      id: 'class:test-class|test|choice:style-training|1',
-      label: 'Style Training',
-      kind: 'feat',
-      owner: { type: 'class', name: 'Test Class', source: 'TEST' },
-      level: 1,
-      minimumSelections: 1,
-      maximumSelections: 1,
-      selectionCountByLevel: Array(20).fill(1),
-      optionFilter: { entityType: 'feat', categories: ['STYLE'] },
-    })
-    const legacyChoiceId = 'legacy-style-choice'
-    const optionTag = {
-      ...makeSourceTag('feat', 'Configurable Style', 'choice', 'TEST'),
-      grantVariant: `class:${legacyChoiceId}`,
-    }
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Test Class', source: 'TEST', levels: 1 }],
-      classFeatChoices: [
-        {
-          id: legacyChoiceId,
-          className: 'Test Class',
-          classSource: 'TEST',
-          progressionName: 'Style Training',
-          categories: ['STYLE'],
-          feats: [
-            {
-              id: 'legacy-configurable-style',
-              name: 'Configurable Style',
-              source: 'TEST',
-              description: '',
-              options: { skills: ['Athletics'] },
-              className: 'Test Class',
-              classSource: 'TEST',
-              classLevel: 1,
-            },
-          ],
-        },
-      ],
-      proficiencies: {
-        armor: [],
-        weapons: [],
-        tools: [],
-        languages: [],
-        skills: ['athletics'],
-        savingThrows: [],
-      },
-    })
-    let ledger = addGrant(emptyProvenance(), 'feats', 'Configurable Style', {
-      ...makeSourceTag('class', 'Test Class', 'choice', 'TEST'),
-      grantVariant: legacyChoiceId,
-    })
-    ledger = addGrant(ledger, 'skills', 'Athletics', optionTag)
-
-    const result = applyClassChoiceSelectionWithGrantsCommand(character, ledger, featChoice, [
-      { entityType: 'feat', name: 'Configurable Style', source: 'TEST' },
-    ])
-
-    expect(result.characterPatch.classFeatChoices?.[0]?.feats[0]?.options).toEqual({
-      skills: ['Athletics'],
-    })
-    expect(result.characterPatch.proficiencies?.skills).toEqual(['athletics'])
-    expect(result.provenanceUpdate.feats['configurable style']).toEqual([
-      expect.objectContaining({ grantVariant: featChoice.id }),
-    ])
-    expect(result.provenanceUpdate.proficiencies.skills.athletics).toEqual([
-      expect.objectContaining({ grantVariant: `class:${featChoice.id}` }),
     ])
   })
 })

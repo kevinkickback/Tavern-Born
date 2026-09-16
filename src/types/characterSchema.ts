@@ -4,14 +4,13 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
+import { CURRENT_CHARACTER_VERSION } from '@/lib/schema/characterVersion'
 import type { Character } from './character'
 
 const sourceSchema = z
   .string()
   .min(1)
   .transform((s) => s.toUpperCase())
-
-const levelSchema = z.number().int().min(1).max(MAX_CHARACTER_LEVEL)
 
 /** Any legal ability score, including magical boosted maximums. */
 const abilityScoreSchema = z.number().int().min(ABILITY_SCORE_MIN).max(ABILITY_SCORE_ABSOLUTE_MAX)
@@ -40,7 +39,7 @@ const variantRulesSchema = z.object({
 
 const characterClassEntrySchema = z.object({
   name: z.string().min(1),
-  source: z.string().optional(),
+  source: z.string().min(1),
   levels: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
   subclass: z.string().optional(),
   subclassSource: z.string().optional(),
@@ -49,7 +48,7 @@ const characterClassEntrySchema = z.object({
 const hitPointGainSchema = z
   .object({
     className: z.string().min(1),
-    classSource: z.string().optional(),
+    classSource: z.string().min(1),
     classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
     characterLevel: z.number().int().min(2).max(MAX_CHARACTER_LEVEL),
     hitDie: z.number().int().positive(),
@@ -88,7 +87,7 @@ const characterMovementSchema = z.object({
   other: z.record(z.union([z.number().int().nonnegative(), z.boolean()])).optional(),
   unresolvedInheritedModes: z.array(movementModeSchema).optional(),
   source: z.object({
-    kind: z.enum(['race', 'legacy', 'manual']),
+    kind: z.enum(['race', 'manual']),
     name: z.string().min(1),
     source: z.string().optional(),
   }),
@@ -371,7 +370,7 @@ const featSchema = z.object({
 const classFeatChoiceSchema = z.object({
   id: z.string().min(1),
   className: z.string().min(1),
-  classSource: z.string().optional(),
+  classSource: z.string().min(1),
   progressionName: z.string().min(1),
   categories: z.array(z.string()),
   feats: z.array(featSchema),
@@ -412,7 +411,6 @@ const currencySchema = z.object({
 })
 
 const hitPointsSchema = z.object({
-  max: z.number().int().min(0),
   current: z.number().int().min(0),
   temporary: z.number().int().min(0),
 })
@@ -494,7 +492,6 @@ const characterDetailsSchema = z.object({
   organizationCustomDescription: z.string().optional(),
   organizationCustomImage: z.string().optional(),
   organizationCustomGradient: z.string().optional(),
-  alliesAndOrganizations: z.string().optional(),
 })
 
 const proficienciesSchema = z.object({
@@ -734,14 +731,14 @@ const asiChoiceSchema = z.object({
   id: z.string(),
   level: z.number().int(),
   className: z.string(),
-  classSource: z.string().optional(),
+  classSource: z.string().min(1),
   abilityChanges: z.record(z.union([z.literal(1), z.literal(2)])),
 })
 
 export const characterSchema = z
   .object({
     id: z.string().min(1),
-    version: z.string().default('6.0.0'),
+    version: z.literal(CURRENT_CHARACTER_VERSION),
     name: z
       .string()
       .min(1)
@@ -754,16 +751,11 @@ export const characterSchema = z
     raceSource: z.string().optional(),
     subrace: z.string().optional(),
     subraceSource: z.string().optional(),
-    class: z.string(),
-    classSource: z.string().optional(),
-    subclass: z.string().optional(),
-    subclassSource: z.string().optional(),
     background: z.string(),
     backgroundSource: z.string().optional(),
     currency: currencySchema.default({ cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }).optional(),
-    level: levelSchema,
     experiencePoints: z.number().int().min(0).default(0),
-    classProgression: z.array(characterClassEntrySchema).optional(),
+    classProgression: z.array(characterClassEntrySchema),
     abilityScores: abilityScoresSchema,
     proficiencies: proficienciesSchema,
     features: z.array(featureSchema),
@@ -794,12 +786,10 @@ export const characterSchema = z
     hitPointGains: z.array(hitPointGainSchema).optional(),
     hitPointAdjustments: z.array(hitPointAdjustmentSchema).optional(),
     maxHitPointsOverride: z.number().int().min(1).optional(),
-    armorClass: z.number().int().min(0).optional(),
     armorClassOverride: z.number().int().min(0).optional(),
     armorClassAdjustments: z.array(armorClassAdjustmentSchema).optional(),
     initiative: z.number().int(),
-    speed: z.number().int().nonnegative(),
-    movement: characterMovementSchema.optional(),
+    movement: characterMovementSchema,
     movementAdjustments: z.array(movementAdjustmentSchema).optional(),
     movementOverrides: z.record(z.number().int().nonnegative()).optional(),
     movementHoverOverride: z.boolean().optional(),
@@ -816,7 +806,7 @@ export const characterSchema = z
     classFeatChoices: z.array(classFeatChoiceSchema).optional(),
     classChoiceSelections: z.array(characterClassChoiceSelectionSchema).optional(),
     fixedFeatOptions: z.record(featOptionSelectionsSchema).optional(),
-    provenance: provenanceLedgerSchema.optional(),
+    provenance: provenanceLedgerSchema,
     inspiration: z.boolean().optional(),
     deathSaves: z
       .object({
@@ -836,8 +826,22 @@ export const characterSchema = z
     createdAt: z.string(),
     lastModified: z.string(),
   })
+  .strict()
   .superRefine((char, ctx) => {
-    if (char.classProgression && char.classProgression.length > 0) {
+    for (const [nameKey, sourceKey] of [
+      ['race', 'raceSource'],
+      ['subrace', 'subraceSource'],
+      ['background', 'backgroundSource'],
+    ] as const) {
+      if (char[nameKey] && !char[sourceKey]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${sourceKey} is required when ${nameKey} is selected`,
+          path: [sourceKey],
+        })
+      }
+    }
+    if (char.classProgression.length > 0) {
       const totalLevels = char.classProgression.reduce((sum, entry) => sum + entry.levels, 0)
       if (totalLevels > MAX_CHARACTER_LEVEL) {
         ctx.addIssue({

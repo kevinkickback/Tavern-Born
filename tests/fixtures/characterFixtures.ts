@@ -1,12 +1,11 @@
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
+import { CURRENT_CHARACTER_VERSION } from '@/lib/schema/characterVersion'
 import type { Character } from '@/types/character'
 
 export function makePrereqCharacterSnapshotFixture(
   overrides: Partial<PrereqCharacterSnapshot> = {},
 ): PrereqCharacterSnapshot {
   return {
-    level: 1,
-    class: 'Fighter',
     race: 'Human',
     abilityScores: {
       strength: 10,
@@ -32,12 +31,13 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
 
   return {
     id: 'character-1',
-    version: '2.0.0',
+    version: CURRENT_CHARACTER_VERSION,
     name: 'Fixture Character',
     originSystem: '2014',
     race: 'Human',
-    class: 'Fighter',
+    raceSource: 'PHB',
     background: 'Soldier',
+    backgroundSource: 'PHB',
     currency: {
       cp: 0,
       sp: 0,
@@ -45,7 +45,6 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
       gp: 0,
       pp: 0,
     },
-    level: 1,
     experiencePoints: 0,
     classProgression: [{ name: 'Fighter', levels: 1, source: 'PHB' }],
     abilityScores: {
@@ -114,12 +113,11 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
     },
     equipment: [],
     hitPoints: {
-      max: 10,
       current: 10,
       temporary: 0,
     },
     initiative: 0,
-    speed: 30,
+    movement: { speeds: { walk: 30 }, source: { kind: 'manual', name: 'Manual' } },
     savingThrows: {
       strength: { proficient: false, bonus: 0 },
       dexterity: { proficient: false, bonus: 0 },

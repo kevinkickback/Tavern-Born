@@ -183,14 +183,17 @@ export function BuildClassLevelsPanel({
     useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:class')
   const focusedClassChoice = findFocusedProvenanceChoice(
     readinessFocus,
-    character.provenance?.choices ?? [],
+    character.provenance.choices,
   )
   const focusedViewingClassChoice =
     focusedClassChoice?.sourceTag.sourceType === 'class' &&
     focusedClassChoice.sourceTag.sourceName === viewingClass
       ? focusedClassChoice
       : undefined
-  const viewingClassKey = readinessClassKey({ name: viewingClass, source: viewingClassSource })
+  const viewingClassKey = readinessClassKey({
+    name: viewingClass,
+    source: viewingClassSource ?? viewingClassData?.source ?? '',
+  })
   const focusedNormalizedChoiceId = classChoices.find(
     (choice) => readinessFocus === classChoiceReadinessId(choice.id),
   )?.id
@@ -249,7 +252,7 @@ export function BuildClassLevelsPanel({
               value={
                 selectedClassTab ||
                 (classProgression[0]
-                  ? `${classProgression[0].name}|${classProgression[0].source ?? ''}`
+                  ? `${classProgression[0].name}|${classProgression[0].source}`
                   : '')
               }
               onValueChange={(value) => onSelectClassTab(value)}
@@ -274,8 +277,8 @@ export function BuildClassLevelsPanel({
               <SelectContent align="end">
                 {classProgression.map((entry) => (
                   <SelectItem
-                    key={`${entry.name}|${entry.source ?? ''}`}
-                    value={`${entry.name}|${entry.source ?? ''}`}
+                    key={`${entry.name}|${entry.source}`}
+                    value={`${entry.name}|${entry.source}`}
                     className="text-xs"
                   >
                     {entry.name} · Level {entry.levels}
@@ -293,7 +296,7 @@ export function BuildClassLevelsPanel({
 
       <ScrollArea className="flex-1 overflow-hidden">
         <div className="p-4">
-          {!character.class ? (
+          {character.classProgression.length === 0 ? (
             <div
               ref={classPickerRef}
               className={cn(

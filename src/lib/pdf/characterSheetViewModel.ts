@@ -11,7 +11,6 @@ import { deriveCharacterActions } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
-import { buildClassProfileMap } from '@/lib/calculations/classProfileMap'
 import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
@@ -23,6 +22,7 @@ import {
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
+import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import {
   formatCastingTime,
   formatComponents,
@@ -144,15 +144,9 @@ export interface CharacterSheetViewModel {
 }
 
 function getClassSummary(character: Character): string {
-  const entries = getCharacterClassEntries(character)
-  return (
-    entries
-      .map((entry) => entry.name)
-      .filter(Boolean)
-      .join(' / ') ||
-    character.class ||
-    ''
-  )
+  return getCharacterClassEntries(character)
+    .map((entry) => entry.name)
+    .join(' / ')
 }
 
 function getSubclassSummary(character: Character): string {
@@ -163,9 +157,6 @@ function getSubclassSummary(character: Character): string {
 }
 
 function getClassLevelSummary(character: Character): string {
-  if (!Array.isArray(character.classProgression) || character.classProgression.length === 0) {
-    return character.class || ''
-  }
   return character.classProgression
     .filter((entry) => entry.name)
     .map((entry) => {
@@ -360,7 +351,10 @@ function buildHistoryAndPersonalitySummary(character: Character): string {
   ])
 }
 
-function buildAlliesAndOrganizationsSummary(character: Character): string {
+function buildAlliesAndOrganizationsSummary(
+  character: Character,
+  organizations: readonly Organization5e[],
+): string {
   const allies = character.details.allies ?? []
   const allySummary = allies
     .map((ally) => {
@@ -369,7 +363,11 @@ function buildAlliesAndOrganizationsSummary(character: Character): string {
       return `${ally.name}${relationship}${description}`
     })
     .join('\n')
-  return [character.details.alliesAndOrganizations, allySummary].filter(Boolean).join('\n\n')
+  const selectionKey = character.details.organizationSelectionKey
+  const organizationDescription = organizations.find(
+    (organization) => getOrganizationKey(organization.name, organization.source) === selectionKey,
+  )?.description
+  return [organizationDescription, allySummary].filter(Boolean).join('\n\n')
 }
 
 function buildOrganizationDetailsSummary(character: Character): string {
@@ -587,7 +585,12 @@ export function createCharacterSheetViewModel(
   const resolvedClasses = calculationContext.classes
   const raceResolution = calculationContext.raceResolution
   const background = calculationContext.background
-  const classesById = buildClassProfileMap(resolvedClasses)
+  const classesById = new Map(
+    resolvedClasses.map((classData) => [
+      toClassProfileId(classData.name, classData.source),
+      classData,
+    ]),
+  )
   const actions = deriveCharacterActions(character, {
     abilityModifiers,
     proficiencyBonus,
@@ -681,7 +684,10 @@ export function createCharacterSheetViewModel(
     sizeSummary: raceResolution.mergedRace?.size?.[0] ?? '',
     appearanceSummary: buildAppearanceSummary(character),
     historyAndPersonalitySummary: buildHistoryAndPersonalitySummary(character),
-    alliesAndOrganizationsSummary: buildAlliesAndOrganizationsSummary(character),
+    alliesAndOrganizationsSummary: buildAlliesAndOrganizationsSummary(
+      character,
+      rawLookups.organizations ?? [],
+    ),
     organizationDetailsSummary: buildOrganizationDetailsSummary(character),
     organizationImage: resolveOrganizationImage(character, rawLookups.organizations ?? []),
     defensiveTraits: buildDefensiveTraits(

@@ -164,7 +164,7 @@ describe('ArmorClassModal', () => {
         wisdom: 10,
         charisma: 10,
       },
-      hitPoints: { max: 0, current: 0, temporary: 0 },
+      hitPoints: { current: 0, temporary: 0 },
       manualEffects: [
         {
           id: 'active-test-effect',

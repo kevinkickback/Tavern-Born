@@ -3,11 +3,7 @@ import {
   deriveEffectiveRaceLanguageBlocks,
   ensureOriginLanguageBaseline,
 } from '@/lib/calculations/languageOrigin'
-import {
-  getEffectiveCharacterMovement,
-  getWalkingSpeed,
-  normalizeRaceMovement,
-} from '@/lib/calculations/movement'
+import { normalizeRaceMovement } from '@/lib/calculations/movement'
 import {
   ensureRaceOriginInvariants,
   normalizeRaceSelectionForOriginSystem,
@@ -182,7 +178,6 @@ export function applyRaceSelectionCommand(
       raceAsiBlockIndex,
       raceAsiChoices: [],
       movement,
-      speed: getWalkingSpeed(getEffectiveCharacterMovement({ ...character, movement })),
       spells: workingCharacter.spells,
       abilityScores: workingCharacter.abilityScores,
       ...buildRaceMaterializedPatch(
@@ -245,7 +240,6 @@ export function applySubraceSelectionCommand(
       subraceSource: subrace?.source || undefined,
       raceAsiChoices: [],
       movement,
-      speed: getWalkingSpeed(getEffectiveCharacterMovement({ ...character, movement })),
       spells: workingCharacter.spells,
       abilityScores: workingCharacter.abilityScores,
       ...buildRaceMaterializedPatch(

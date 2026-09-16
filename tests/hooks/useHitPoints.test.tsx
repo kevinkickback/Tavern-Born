@@ -36,9 +36,6 @@ describe('useHitPoints hook', () => {
   test('calculates max HP correctly for multiclass progression', () => {
     const character = makeCharacterFixture({
       id: 'hp-hook-multi',
-      class: 'Rogue',
-      classSource: 'PHB',
-      level: 8,
       classProgression: [
         { name: 'Rogue', source: 'PHB', levels: 5 },
         { name: 'Wizard', source: 'PHB', levels: 3 },
@@ -52,7 +49,7 @@ describe('useHitPoints hook', () => {
         charisma: 10,
       },
       variantRules: { averageHitPoints: true },
-      hitPoints: { max: 0, current: 0, temporary: 0 },
+      hitPoints: { current: 0, temporary: 0 },
     })
 
     useCharacterStore.setState({
@@ -72,11 +69,8 @@ describe('useHitPoints hook', () => {
   test('applies positive and negative permanent adjustments', () => {
     const character = makeCharacterFixture({
       id: 'hp-hook-adjustments',
-      class: 'Rogue',
-      classSource: 'PHB',
-      level: 2,
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 2 }],
-      hitPoints: { max: 0, current: 10, temporary: 0 },
+      hitPoints: { current: 10, temporary: 0 },
       hitPointAdjustments: [
         {
           id: 'blessing',
@@ -112,11 +106,8 @@ describe('useHitPoints hook', () => {
   test('saves an exact override and clamps current HP to the effective maximum', () => {
     const character = makeCharacterFixture({
       id: 'hp-hook-override',
-      class: 'Rogue',
-      classSource: 'PHB',
-      level: 1,
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
-      hitPoints: { max: 0, current: 8, temporary: 0 },
+      hitPoints: { current: 8, temporary: 0 },
     })
     useCharacterStore.setState({
       characters: [character],
@@ -137,17 +128,14 @@ describe('useHitPoints hook', () => {
     const updated = useCharacterStore.getState().activeCharacter
     expect(updated?.maxHitPointsOverride).toBe(12)
     expect(updated?.hitPointsInitialized).toBe(true)
-    expect(updated?.hitPoints).toEqual({ max: 0, current: 12, temporary: 4 })
+    expect(updated?.hitPoints).toEqual({ current: 12, temporary: 4 })
   })
 
   test('does not clamp current HP below an active typed maximum-HP effect on save', () => {
     const character = makeCharacterFixture({
       id: 'hp-hook-typed-effect',
-      class: 'Rogue',
-      classSource: 'PHB',
-      level: 1,
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
-      hitPoints: { max: 0, current: 11, temporary: 0 },
+      hitPoints: { current: 11, temporary: 0 },
       manualEffects: [
         {
           id: 'typed-hp-bonus',

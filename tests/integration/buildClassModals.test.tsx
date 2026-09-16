@@ -27,8 +27,6 @@ function renderWarlockSwap(spellSwapDrop: string | null, includeFixedSpell = fal
   const armorOfAgathys = makeSpell('Armor of Agathys', 'Warlock', 'A')
   const bless = makeSpell('Bless', 'Cleric', 'E')
   const character = makeCharacterFixture({
-    class: 'Warlock',
-    classSource: 'PHB',
     classProgression: [{ name: 'Warlock', source: 'PHB', levels: 2 }],
     spells: {
       ...makeCharacterFixture().spells,

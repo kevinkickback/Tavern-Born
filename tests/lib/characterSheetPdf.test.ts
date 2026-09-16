@@ -74,7 +74,6 @@ describe('characterSheetPdf', () => {
         { name: 'Ranger', source: 'PHB', levels: 3 },
         { name: 'Fighter', source: 'PHB', levels: 1 },
       ],
-      level: 4,
       background: 'Outlander',
       details: {
         alignment: 'Chaotic Good',
@@ -88,9 +87,8 @@ describe('characterSheetPdf', () => {
         charisma: 8,
       },
       armorClassOverride: 16,
-      speed: 35,
+      movement: { speeds: { walk: 35 }, source: { kind: 'manual', name: 'Test' } },
       hitPoints: {
-        max: 31,
         current: 24,
         temporary: 5,
       },
@@ -178,7 +176,6 @@ describe('characterSheetPdf', () => {
       skills: {
         stealth: { proficient: true, expertise: true, bonus: 0 },
       },
-      level: 5,
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 5 }],
     })
 
@@ -199,7 +196,6 @@ describe('characterSheetPdf', () => {
     const character = makeCharacterFixture({
       name: 'Bren Ironhand',
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 5 }],
-      level: 5,
       race: 'Human',
       background: 'Soldier',
       abilityScores: {
@@ -395,7 +391,6 @@ describe('characterSheetPdf', () => {
   test('2014 Spell save DC populated for spellcasting class', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
-      level: 5,
       abilityScores: {
         strength: 10,
         dexterity: 10,
@@ -425,7 +420,6 @@ describe('characterSheetPdf', () => {
   test('2014 Spell save DC empty for non-spellcasting class', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 3 }],
-      level: 3,
     })
     const classesData = [{ name: 'Fighter', source: 'PHB', hd: { faces: 10 } } as never]
 
@@ -480,7 +474,7 @@ describe('characterSheetPdf', () => {
     expect(map.textFields['Racial Traits']).not.toContain('Second Wind')
   })
 
-  test('2014 HP Max uses stored value when non-zero', () => {
+  test('2014 HP Max uses the calculated class and Constitution value', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 3 }],
       abilityScores: {
@@ -491,10 +485,10 @@ describe('characterSheetPdf', () => {
         wisdom: 10,
         charisma: 10,
       },
-      hitPoints: { max: 42, current: 30, temporary: 0 },
+      hitPoints: { current: 30, temporary: 0 },
     })
     const map = buildCharacterSheetFieldMap(character, '2014')
-    expect(map.textFields['HP Max']).toBe('42')
+    expect(map.textFields['HP Max']).toBe('24')
   })
 
   test('2014 feats populate Feat Name/Description/Note fields', () => {
@@ -803,7 +797,7 @@ describe('characterSheetPdf', () => {
         wisdom: 10,
         charisma: 10,
       },
-      hitPoints: { max: 0, current: 0, temporary: 0 },
+      hitPoints: { current: 0, temporary: 0 },
     })
     // Fighter d10, CON +2, level 1 average = 12
     const classesData = [{ name: 'Fighter', source: 'PHB', hd: { faces: 10 } } as never]
@@ -952,9 +946,7 @@ describe('characterSheetPdf', () => {
 
   test('2024 maps weapons, spellcasting, spell slots, spells, history, and inventory', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
-      level: 5,
       abilityScores: {
         strength: 8,
         dexterity: 16,
@@ -1083,7 +1075,6 @@ describe('characterSheetPdf', () => {
   test('2014 maps attacks, hit dice, defenses, armor details, and character history', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 5 }],
-      level: 5,
       hitDiceUsed: 2,
       abilityScores: {
         strength: 16,

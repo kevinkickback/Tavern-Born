@@ -27,11 +27,8 @@ vi.mock('@/hooks/data/useGameData', () => ({
 
 function resetCharacter() {
   const character = makeCharacterFixture({
-    class: 'Fighter',
-    classSource: 'PHB',
-    level: 1,
     classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
-    hitPoints: { max: 0, current: 8, temporary: 0 },
+    hitPoints: { current: 8, temporary: 0 },
     hitPointAdjustments: [],
   })
   useCharacterStore.setState({
@@ -78,11 +75,8 @@ describe('HitPointsModal', () => {
 
   test('opens an older uninitialized character at full health', async () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      classSource: 'PHB',
-      level: 1,
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
-      hitPoints: { max: 0, current: 0, temporary: 0 },
+      hitPoints: { current: 0, temporary: 0 },
       hitPointsInitialized: undefined,
     })
     useCharacterStore.setState({
@@ -156,11 +150,8 @@ describe('HitPointsModal', () => {
 
   test('shows active typed HP effects with their source', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      classSource: 'PHB',
-      level: 1,
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
-      hitPoints: { max: 0, current: 10, temporary: 0 },
+      hitPoints: { current: 10, temporary: 0 },
       manualEffects: [
         {
           id: 'test-hp-source',
@@ -188,11 +179,8 @@ describe('HitPointsModal', () => {
 
   test('includes active typed effects when creating a lasting direct maximum', async () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      classSource: 'PHB',
-      level: 1,
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
-      hitPoints: { max: 0, current: 13, temporary: 0 },
+      hitPoints: { current: 13, temporary: 0 },
       manualEffects: [
         {
           id: 'typed-hp-bonus',

@@ -1,15 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { isNormallySelectableFeat } from '@/lib/5etools/classData'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
-import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import {
   applyClassAsiChoice,
-  assignLegacyClassAsiFeats,
   isClassAsiFeatForSlot,
   resetClassAsiChoice,
 } from '@/pages/build/class/model/asi'
@@ -26,7 +24,6 @@ interface ClassAsiFeatControllerParams {
   viewingClass?: string
   viewingClassSource?: string
   classLookup: Record<string, Class5e | undefined>
-  fallbackClassByName: Map<string, Class5e>
   feats: Feat5e[]
 }
 
@@ -35,7 +32,6 @@ export function useClassAsiFeatController({
   viewingClass,
   viewingClassSource,
   classLookup,
-  fallbackClassByName,
   feats,
 }: ClassAsiFeatControllerParams) {
   const calculationContext = useCharacterCalculationContext(character)
@@ -49,47 +45,12 @@ export function useClassAsiFeatController({
     (Feat5e & { classFeatChoiceId?: string }) | null
   >(null)
   const classProgression = getCharacterClassEntries(character)
-  const earnedAsiSlots = useMemo(
-    () =>
-      classProgression.flatMap((entry) => {
-        const classData =
-          classLookup[getEntityLookupKey(entry.name, entry.source)] ??
-          fallbackClassByName.get(entry.name)
-        return getASILevelsFromClass(classData)
-          .filter((level) => level <= entry.levels)
-          .map((level) => ({ className: entry.name, classSource: entry.source, level }))
-      }),
-    [classProgression, classLookup, fallbackClassByName],
-  )
-  const effectiveFeats = useMemo(
-    () =>
-      assignLegacyClassAsiFeats(
-        character?.feats ?? [],
-        earnedAsiSlots,
-        character?.asiChoices ?? [],
-      ),
-    [character?.feats, character?.asiChoices, earnedAsiSlots],
-  )
-
-  useEffect(() => {
-    if (!character) return
-    const metadataChanged = effectiveFeats.some((feat, index) => {
-      const existing = character.feats[index]
-      return (
-        existing?.className !== feat.className ||
-        existing?.classSource !== feat.classSource ||
-        existing?.classLevel !== feat.classLevel
-      )
-    })
-    if (metadataChanged) updateCharacter(character.id, { feats: effectiveFeats })
-  }, [character, effectiveFeats, updateCharacter])
+  const effectiveFeats = character?.feats ?? []
 
   const appliedAsiChoicesForClass = useMemo(
     () =>
       (character?.asiChoices ?? []).filter(
-        (choice) =>
-          choice.className === viewingClass &&
-          (choice.classSource == null || (choice.classSource ?? '') === (viewingClassSource ?? '')),
+        (choice) => choice.className === viewingClass && choice.classSource === viewingClassSource,
       ),
     [character?.asiChoices, viewingClass, viewingClassSource],
   )
@@ -108,10 +69,9 @@ export function useClassAsiFeatController({
       buildPrerequisiteSnapshot({
         character,
         classProgression,
-        viewingClass,
         effectiveAbilityScores: calculationContext?.abilityScores.total,
       }),
-    [character, calculationContext, classProgression, viewingClass],
+    [character, calculationContext, classProgression],
   )
   const totalAsi = useMemo(
     () =>
@@ -119,9 +79,8 @@ export function useClassAsiFeatController({
         classProgression,
         character,
         classLookup,
-        fallbackClassByName,
       }),
-    [classProgression, character, classLookup, fallbackClassByName],
+    [classProgression, character, classLookup],
   )
   const featModalFeats = useMemo(() => {
     const available = feats.filter(isNormallySelectableFeat)
@@ -156,7 +115,7 @@ export function useClassAsiFeatController({
   )
 
   const confirmFeat = (selectedFeats: Feat5e[]) => {
-    if (!character || !viewingClass || featPickerLevel == null) return
+    if (!character || !viewingClass || !viewingClassSource || featPickerLevel == null) return
     const previousKeys = new Set(
       effectiveFeats.map((feat) => getEntityLookupKey(feat.name, feat.source)),
     )
@@ -187,7 +146,7 @@ export function useClassAsiFeatController({
     )
   }
   const applyAsi = (level: number, abilityChanges: Record<string, 1 | 2>) => {
-    if (!character || !viewingClass) return
+    if (!character || !viewingClass || !viewingClassSource) return
     updateCharacter(character.id, {
       asiChoices: applyClassAsiChoice({
         currentAsiChoices: character.asiChoices ?? [],
@@ -200,7 +159,7 @@ export function useClassAsiFeatController({
     setAsiPickerLevel(null)
   }
   const resetAsi = (level: number) => {
-    if (!character || !viewingClass) return
+    if (!character || !viewingClass || !viewingClassSource) return
     const asiChoices = resetClassAsiChoice({
       currentAsiChoices: character.asiChoices ?? [],
       className: viewingClass,

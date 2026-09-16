@@ -97,8 +97,6 @@ describe('useProvenance mutations', () => {
   test('applyClassSelection materializes saving throw proficiencies', () => {
     const character = makeCharacterFixture({
       id: 'class-saves',
-      class: 'Fighter',
-      classSource: 'PHB',
     })
 
     useCharacterStore.setState({

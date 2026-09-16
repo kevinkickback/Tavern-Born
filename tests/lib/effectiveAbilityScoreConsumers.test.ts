@@ -23,10 +23,7 @@ describe('effective ability score consumers', () => {
       preparedSpells: '<$level$> + <$int_mod$>',
     } as Class5e
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
-      level: 4,
       race: 'Elf',
       raceSource: 'PHB',
       abilityScores: {
@@ -65,7 +62,7 @@ describe('effective ability score consumers', () => {
           armorType: 'light',
         },
       ],
-      hitPoints: { max: 0, current: 0, temporary: 0 },
+      hitPoints: { current: 0, temporary: 0 },
     })
     const lookups = {
       classesByKey: buildClassLookup([wizard]),

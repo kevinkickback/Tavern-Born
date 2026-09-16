@@ -41,7 +41,7 @@ describe('useRestPreview', () => {
   beforeEach(() => {
     const original = makeCharacterFixture()
     const character = makeCharacterFixture({
-      hitPoints: { max: 0, current: 7, temporary: 3 },
+      hitPoints: { current: 7, temporary: 3 },
       hitDiceUsed: 2,
       classResources: { 'test-focus': 0 },
       spells: {
@@ -85,6 +85,6 @@ describe('useRestPreview', () => {
     expect(character?.spells.pactSpellSlots?.[2]?.used).toBe(0)
     expect(character?.classResources?.['test-focus']).toBe(2)
     expect(character?.hitDiceUsed).toBe(1)
-    expect(character?.hitPoints).toEqual({ max: 0, current: 18, temporary: 0 })
+    expect(character?.hitPoints).toEqual({ current: 18, temporary: 0 })
   })
 })

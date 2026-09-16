@@ -22,7 +22,7 @@ import type { ChoiceRecord } from '@/lib/provenance/types'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { countTotalFeatSlots } from '@/pages/build/class/model/pageUtils'
 import { useCharacterStore } from '@/store/characterStore'
-import type { Class5e, Feat5e, Spell5e } from '@/types/5etools'
+import type { Feat5e, Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
 
 const FEATS_EDIT_HINT_ID = 'feats-edit-setup'
@@ -58,7 +58,7 @@ export function useFeatsPageController() {
   const [searchParams] = useSearchParams()
   const character = useCharacterStore((state) => state.activeCharacter)
   const calculationContext = useCharacterCalculationContext(character)
-  const { feats, spells, classes } = useFilteredGameData()
+  const { feats, spells } = useFilteredGameData()
   const {
     replaceFeatSelections,
     replaceBonusFeatSelections,
@@ -102,13 +102,9 @@ export function useFeatsPageController() {
   }, [])
 
   const classProgression = useMemo(() => getCharacterClassEntries(character), [character])
-  const fallbackClassByName = useMemo(
-    () => new Map((classes as Class5e[]).map((classData) => [classData.name, classData])),
-    [classes],
-  )
   const totalFeatSlots = useMemo(
-    () => countTotalFeatSlots({ classProgression, character, classLookup, fallbackClassByName }),
-    [classProgression, character, classLookup, fallbackClassByName],
+    () => countTotalFeatSlots({ classProgression, character, classLookup }),
+    [classProgression, character, classLookup],
   )
   const usedASI = character?.feats?.length ?? 0
   const remainingASI = totalFeatSlots - usedASI

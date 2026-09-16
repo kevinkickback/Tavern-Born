@@ -302,7 +302,7 @@ describe('representative character consumers', () => {
     const pdf2014 = buildCharacterSheetFieldMap(viewModel, '2014')
     const pdf2024 = buildCharacterSheetFieldMap(viewModel, '2024')
 
-    expect(changed.level).toBe(5)
+    expect(changed.classProgression.reduce((sum, entry) => sum + entry.levels, 0)).toBe(5)
     expect(changed.asiChoices).toEqual([])
     expect(changed.spells.spellProfiles.map((profile) => profile.id)).toEqual(
       fixture.expected.profileIds,

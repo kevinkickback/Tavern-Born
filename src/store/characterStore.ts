@@ -1,34 +1,20 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { MAX_CHARACTER_SIZE, MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRules'
-import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCharacter'
-import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
+import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
 import {
-  CURRENT_SCHEMA_VERSION,
-  migrateCharacter,
-  semverToMigrationVersion,
-} from '@/lib/schema/migrations'
+  CURRENT_CHARACTER_VERSION,
+  UNSUPPORTED_CHARACTER_VERSION_MESSAGE,
+} from '@/lib/schema/characterVersion'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
 
 export { emptyProvenance } from '@/lib/character/createCharacter'
 
-function formatValidationErrors(character: unknown): string {
-  const result = characterPersistenceSchema.safeParse(character)
-  if (result.success) return ''
-  return result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ')
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
-}
-
-/** Ensure a persisted character has the provenance ledger, migrating gracefully. */
-export function normalizeCharacterProvenance(character: Character): Character {
-  if (character.provenance) return character
-  return { ...character, provenance: emptyProvenance() }
 }
 
 function resolveActiveCharacter(
@@ -37,7 +23,7 @@ function resolveActiveCharacter(
 ): Character | null {
   if (!activeCharacterId) return null
   const found = characters.find((character) => character.id === activeCharacterId)
-  return found ? normalizeCharacterProvenance(found) : null
+  return found ?? null
 }
 
 function ensureUniqueCharacterId(character: Character, existingIds: Set<string>): Character {
@@ -64,7 +50,7 @@ function ensureUniqueCharacterIds(characters: Character[]): Character[] {
  * All edits go to `activeCharacter` only. `characters` stays at the last saved
  * state. User edits mark the draft dirty explicitly, so multiple updates in the
  * same millisecond cannot be mistaken for a saved character. The timestamp
- * comparison remains as a compatibility check for imported/injected state.
+ * comparison also catches imported or directly injected state.
  *
  * Any code that needs the "current truth" for the active character should read
  * `activeCharacter`, not `characters.find(...)`. The latter gives stale data
@@ -75,6 +61,7 @@ interface CharacterState {
   activeCharacterId: string | null
   activeCharacter: Character | null
   isActiveCharacterDirty: boolean
+  unsupportedCharacterCount: number
   hasUnsavedChanges: () => boolean
 
   setCharacters: (characters: Character[]) => void
@@ -92,104 +79,6 @@ interface CharacterState {
 }
 
 let activeSavePromise: Promise<void> | null = null
-
-function coerceCharacterShape(character: unknown): Character | null {
-  if (!isRecord(character)) return null
-  const baseline = createEmptyCharacter()
-  const raw = character as Partial<Character> & Record<string, unknown>
-
-  const rawSpells: Record<string, unknown> = isRecord(raw.spells) ? raw.spells : {}
-  const rawSpellSlots: Record<string, unknown> = isRecord(rawSpells.spellSlots)
-    ? rawSpells.spellSlots
-    : {}
-  const rawPactSpellSlots: Record<string, unknown> = isRecord(rawSpells.pactSpellSlots)
-    ? rawSpells.pactSpellSlots
-    : {}
-
-  // Clamp spell slot usage to max to prevent validation failures when max decreases
-  const clampedSpellSlots = Object.entries({
-    ...baseline.spells.spellSlots,
-    ...rawSpellSlots,
-  }).reduce(
-    (acc, [level, slot]) => {
-      if (
-        slot &&
-        typeof slot === 'object' &&
-        'max' in slot &&
-        'used' in slot &&
-        typeof slot.max === 'number' &&
-        typeof slot.used === 'number'
-      ) {
-        acc[Number(level) as keyof typeof baseline.spells.spellSlots] = {
-          max: slot.max,
-          used: Math.min(slot.used, slot.max),
-        } as never
-      } else {
-        acc[Number(level) as keyof typeof baseline.spells.spellSlots] =
-          baseline.spells.spellSlots[Number(level) as keyof typeof baseline.spells.spellSlots]
-      }
-      return acc
-    },
-    {} as typeof baseline.spells.spellSlots,
-  )
-  const clampedPactSpellSlots = Object.entries({
-    ...baseline.spells.pactSpellSlots,
-    ...rawPactSpellSlots,
-  }).reduce(
-    (acc, [level, slot]) => {
-      if (
-        slot &&
-        typeof slot === 'object' &&
-        'max' in slot &&
-        'used' in slot &&
-        typeof slot.max === 'number' &&
-        typeof slot.used === 'number'
-      ) {
-        acc[Number(level) as keyof typeof baseline.spells.spellSlots] = {
-          max: slot.max,
-          used: Math.min(slot.used, slot.max),
-        }
-      }
-      return acc
-    },
-    { ...baseline.spells.pactSpellSlots },
-  )
-
-  return {
-    ...baseline,
-    ...raw,
-    abilityScores: {
-      ...baseline.abilityScores,
-      ...(isRecord(raw.abilityScores) ? raw.abilityScores : {}),
-    },
-    proficiencies: isRecord(raw.proficiencies)
-      ? (raw.proficiencies as Character['proficiencies'])
-      : baseline.proficiencies,
-    spells: {
-      spellProfiles: Array.isArray(rawSpells.spellProfiles)
-        ? rawSpells.spellProfiles
-        : baseline.spells.spellProfiles,
-      spellSlots: clampedSpellSlots,
-      pactSpellSlots: clampedPactSpellSlots,
-    },
-    hitPoints: {
-      ...baseline.hitPoints,
-      ...(isRecord(raw.hitPoints) ? raw.hitPoints : {}),
-    },
-    savingThrows: {
-      ...baseline.savingThrows,
-      ...(isRecord(raw.savingThrows) ? raw.savingThrows : {}),
-    },
-    skills: isRecord(raw.skills) ? (raw.skills as Character['skills']) : baseline.skills,
-    details: {
-      ...baseline.details,
-      ...(isRecord(raw.details) ? raw.details : {}),
-    },
-    portraitTransform: isRecord(raw.portraitTransform)
-      ? { ...DEFAULT_PORTRAIT_TRANSFORM, ...raw.portraitTransform }
-      : { ...DEFAULT_PORTRAIT_TRANSFORM },
-  }
-}
 
 /**
  * Check if a character object exceeds the maximum allowed serialized size.
@@ -228,44 +117,16 @@ function parseCharacterData(character: unknown): {
   data: Character | null
   error: string | null
 } {
-  // Run schema migrations before coercion so that old-format characters are
-  // upgraded to the current schema version before Zod validation.
-  let migrated = character
-  if (isRecord(character)) {
-    const rawVersion = (character as Record<string, unknown>).version
-    const hasRecognizedVersion =
-      rawVersion == null ||
-      (typeof rawVersion === 'number' && Number.isFinite(rawVersion) && rawVersion >= 0) ||
-      (typeof rawVersion === 'string' && /^\d+(?:\.\d+){0,2}$/.test(rawVersion.trim()))
-    if (!hasRecognizedVersion) {
-      return { data: null, error: 'Character schema version is not recognized' }
-    }
-    const storedVersion = semverToMigrationVersion(rawVersion)
-    if (storedVersion > CURRENT_SCHEMA_VERSION) {
-      return {
-        data: null,
-        error: `Character schema version ${storedVersion} is newer than supported version ${CURRENT_SCHEMA_VERSION}`,
-      }
-    }
-    if (storedVersion < CURRENT_SCHEMA_VERSION) {
-      try {
-        migrated = migrateCharacter(character, storedVersion)
-      } catch (err) {
-        console.error('Character migration failed:', err)
-        return {
-          data: null,
-          error: `Migration failed: ${err instanceof Error ? err.message : String(err)}`,
-        }
-      }
-    }
+  if (
+    isRecord(character) &&
+    typeof character.id === 'string' &&
+    typeof character.name === 'string' &&
+    character.version !== CURRENT_CHARACTER_VERSION
+  ) {
+    return { data: null, error: UNSUPPORTED_CHARACTER_VERSION_MESSAGE }
   }
 
-  const coerced = coerceCharacterShape(migrated)
-  if (!coerced) {
-    return { data: null, error: 'Invalid character payload' }
-  }
-
-  const result = characterPersistenceSchema.safeParse(coerced)
+  const result = characterPersistenceSchema.safeParse(character)
   if (!result.success) {
     return {
       data: null,
@@ -273,7 +134,7 @@ function parseCharacterData(character: unknown): {
     }
   }
 
-  const parsedCharacter = normalizeCharacterProvenance(result.data as Character)
+  const parsedCharacter = result.data as Character
 
   // Validate character size before returning
   const sizeError = validateCharacterSize(parsedCharacter)
@@ -304,6 +165,7 @@ export const useCharacterStore = create<CharacterState>()(
       activeCharacterId: null,
       activeCharacter: null,
       isActiveCharacterDirty: false,
+      unsupportedCharacterCount: 0,
 
       hasUnsavedChanges: () => {
         const { characters, activeCharacter, activeCharacterId, isActiveCharacterDirty } = get()
@@ -336,7 +198,7 @@ export const useCharacterStore = create<CharacterState>()(
         set((state) => {
           const parsed = parseCharacterData(character)
           if (!parsed.data) {
-            throw new Error(parsed.error ?? formatValidationErrors(character))
+            throw new Error(parsed.error ?? 'Character could not be added')
           }
 
           const existingIds = new Set(state.characters.map((existing) => existing.id))
@@ -364,10 +226,7 @@ export const useCharacterStore = create<CharacterState>()(
             if (updates.asiChoices) {
               next = {
                 ...next,
-                provenance: applyAsiChoices(
-                  next.provenance ?? emptyProvenance(),
-                  updates.asiChoices,
-                ),
+                provenance: applyAsiChoices(next.provenance, updates.asiChoices),
               }
             }
             const parsed = parseCharacterData(next)
@@ -388,10 +247,7 @@ export const useCharacterStore = create<CharacterState>()(
             if (updates.asiChoices) {
               next = {
                 ...next,
-                provenance: applyAsiChoices(
-                  next.provenance ?? emptyProvenance(),
-                  updates.asiChoices,
-                ),
+                provenance: applyAsiChoices(next.provenance, updates.asiChoices),
               }
             }
             const parsed = parseCharacterData(next)
@@ -496,10 +352,9 @@ export const useCharacterStore = create<CharacterState>()(
       setActiveCharacter: (id) =>
         set((state) => {
           const found = id ? state.characters.find((c) => c.id === id) || null : null
-          const character = found ? normalizeCharacterProvenance(found) : null
           return {
             activeCharacterId: id,
-            activeCharacter: character,
+            activeCharacter: found,
             isActiveCharacterDirty: false,
           }
         }),
@@ -613,11 +468,9 @@ export const useCharacterStore = create<CharacterState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
+          const results = state.characters.map((character) => parseCharacterData(character))
           const validatedCharacters = ensureUniqueCharacterIds(
-            state.characters
-              .map((character) => parseCharacterData(character))
-              .filter((result) => result.data)
-              .map((result) => result.data as Character),
+            results.filter((result) => result.data).map((result) => result.data as Character),
           )
 
           // Persist passes a mutable state snapshot into this callback.
@@ -626,6 +479,9 @@ export const useCharacterStore = create<CharacterState>()(
           state.activeCharacterId = null
           state.activeCharacter = null
           state.isActiveCharacterDirty = false
+          state.unsupportedCharacterCount = results.filter(
+            (result) => result.error === UNSUPPORTED_CHARACTER_VERSION_MESSAGE,
+          ).length
         }
       },
     },

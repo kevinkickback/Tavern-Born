@@ -49,7 +49,7 @@ new tests land and do not lower them to merge a change.
   and both PDF mappings from source-qualified lookups. The multiclass case also verifies active
   item effects and class-owned ASI retraction on level-down.
 - Structured movement coverage for race/subrace inheritance, alternate and unknown modes, hover,
-  legacy migration/downgrade, manual adjustments, exact overrides, and both PDF templates.
+  manual adjustments, exact overrides, and both PDF templates.
 - A focused source-ownership test prevents Builder, header-stat, prerequisite, spellcasting, and PDF
   consumers from bypassing the effective-score boundary.
 - Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts,
@@ -62,13 +62,13 @@ new tests land and do not lower them to merge a change.
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
 - HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution
   recalculation, manual flat/per-level adjustments, active typed-source display, exact overrides,
-  legacy initialization, source-aware draft previews, and current/temp HP saves without typed-effect
-  clamping drift
+  uninitialized current HP, source-aware draft previews, and current/temp HP saves without
+  typed-effect clamping drift
 - AC calculation and state coverage for equipment/Dexterity derivation, read-only equipped-source
   breakdowns, positive and negative manual adjustments, exact overrides, source-aware direct-value
   drafts, and canonical effective reads
 - Shared stat-settings coverage verifies HP, AC, and movement drafts preserve parsed source effects,
-  typed manual effects, and activation context through preview and compatibility writes.
+  typed manual effects, and activation context through preview and persisted settings writes.
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
 - Class-choice normalization coverage for source-qualified feature options, optional-feature
   progressions, generic table-backed capacity, tagged filters, replacement rules, name-independent
@@ -86,7 +86,8 @@ new tests land and do not lower them to merge a change.
   identity, retained unavailable selections, store-backed persistence, selection-card level/feature
   placement, eligibility-aware completion cards, unavailable-option selection guards, and
   unresolved-choice warnings). Shared pane tests also verify collapsed panes leave flex sizing.
-- Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions, deterministic source-less fallback, and nested subrace merging
+- Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions,
+  source-less rejection, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
 - Renderer output in src/lib/renderer.ts
 - Recursive tooltip builder, hook, and nested interaction coverage for explicit collection sets,
@@ -173,7 +174,7 @@ new tests land and do not lower them to merge a change.
 - Ability-score method descriptors are tested for both origin systems in
   tests/unit/abilityScoreMethods.test.ts.
 - Conditions tab, data-driven rule text/tooltip, whole-card toggle, and exhaustion-state coverage in tests/integration/conditionsPage.test.tsx
-- Characteristics page draft synchronization, immediate detail persistence, and legacy/custom/preset
+- Characteristics page draft synchronization, immediate detail persistence, and custom/preset
 	organization transitions in tests/integration/characteristicsPage.test.tsx
 - Import workflow integration (valid + invalid character payloads) in tests/integration/homePageWorkflows.test.tsx
 - Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
@@ -189,7 +190,7 @@ new tests land and do not lower them to merge a change.
   unique 20-level matrix for every tagged class, and reject diagnostics, incomplete progressions,
   and mismatched owners (`tests/lib/5etools/classChoiceCoverage.test.ts` and
   `tests/corpus/dataCapabilities.test.ts`).
-- Schema migrations in src/lib/schema/migrations.ts with dedicated unit coverage in tests/lib/migrations.test.ts
+- Strict current-version import and hydration rejection coverage in tests/store/characterStore.test.ts
 - Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)
 - Current workflow coverage in tests/integration/spellOperations.test.tsx, tests/integration/multiclassUpdates.test.tsx, tests/integration/contentFiltering.test.tsx, and tests/integration/armorClass.test.tsx
 - Class-page spell choice coverage in tests/unit/spellCommands.test.ts and
@@ -215,7 +216,7 @@ new tests land and do not lower them to merge a change.
 - Ingestion offline fail-fast coverage in tests/lib/5etools/dataLoader.test.ts (throws when zero top-level remote resources are reachable)
 - Feat options parser coverage in tests/lib/5etools/featOptions.test.ts (parseFeatSpellFilter, deriveFeatOptionSteps all step kinds, hasFeatOptions, deriveSpellStepsForClass)
 - Bonus feat option workflow coverage in tests/hooks/useFeatProvenanceMutations.test.tsx and tests/integration/featsPage.test.tsx (automatic configuration after selection, setup persistence, and grant cleanup on removal)
-- Parameterized fixed feat coverage in tests/lib/featGrants.test.ts, tests/lib/provenance/applyFeatGrantBlocks.test.ts, tests/lib/migrations.test.ts, tests/integration/featOptionsModal.test.tsx, and tests/integration/featsPage.test.tsx (canonical lookup, variant migration, fixed-step skipping, fixed spell-list setup, and option persistence)
+- Parameterized fixed feat coverage in tests/lib/featGrants.test.ts, tests/lib/provenance/applyFeatGrantBlocks.test.ts, tests/integration/featOptionsModal.test.tsx, and tests/integration/featsPage.test.tsx (canonical lookup, fixed-step skipping, fixed spell-list setup, and option persistence)
 - Feats page Edit Setup hint coverage in tests/integration/featsPage.test.tsx (configured character and bonus feat anchors)
 - Compendium edition selector coverage in tests/integration/compendiumPage.test.tsx (Both default, rendered filtering, and isolation from active-character ruleset/source restrictions)
 - SpellProfileManager UI behaviors in tests/integration/spellProfileManager.test.tsx (cantrip rendering, remove callback, lock icon, missing-spell badge, racial profile hide/show, empty state)
@@ -234,7 +235,7 @@ new tests land and do not lower them to merge a change.
 - Electron security boundary coverage in tests/electron/security.test.ts (renderer origins and canonical local-root containment)
 - Compiled Electron smoke coverage in tests/electron-smoke/startup.ts (sandbox isolation, preload bridge, trusted IPC)
 - Bundled asset URL coverage in tests/lib/assetUrls.test.ts and the compiled Electron smoke test,
-	including class icons, legacy portrait and organization paths, hosted base paths, and real packaged SVG loading
+	including class icons, current portrait and organization paths, hosted base paths, and real packaged SVG loading
 - Store-level empty background refresh guard in tests/store/gameDataStore.test.ts (prevents clobbering existing cache/state)
 - Character sheet PDF boundary coverage for lookup-enriched view-model projection, active typed
   defenses, unified feat ownership, organization-emblem embedding, semantic 2014/2024 mapping,
@@ -253,8 +254,8 @@ new tests land and do not lower them to merge a change.
   skill/save, attack, magic-item, inventory, narrative, and runtime coverage while a corpus audit
   requires every source-qualified entity to resolve and forbids embedded item/feat/feature prose.
 - Route-decomposition coverage keeps Feats and Characteristics behavior under their existing
-  integration suites; `tests/lib/characteristicsModel.test.ts` additionally locks legacy draft
-  compatibility and data-agnostic organization presentation.
+  integration suites; `tests/lib/characteristicsModel.test.ts` additionally locks current structured
+  organization drafts and data-agnostic organization presentation.
 
 ## High-Priority Gaps
 
@@ -272,7 +273,7 @@ new tests land and do not lower them to merge a change.
 | Spell workflows | ✅ Good | ✅ Good | Unit/integration + active-character E2E coverage now in place |
 | Provenance | ✅ Good | ✅ Good | Core logic + multiclass/mix-source edge cases tested |
 | Pages/Components | ⚠️ Minimal | ⚠️ Minimal | Mostly snapshot/smoke tested; full interaction E2E planned |
-| Schema migrations | ✅ Good | ✅ Good | Dedicated unit coverage in tests/lib/migrations.test.ts |
+| Character schema | ✅ Good | ✅ Good | Exact-version import and hydration rejection coverage |
 
 ## Practical Test Patterns
 

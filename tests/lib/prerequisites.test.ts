@@ -14,7 +14,6 @@ import {
 describe('prerequisites', () => {
   test('builds a progression-aware snapshot from canonical spell profiles', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
       classProgression: [
         { name: 'Wizard', source: 'PHB', levels: 3 },
         { name: 'Fighter', source: 'PHB', levels: 2 },
@@ -38,12 +37,9 @@ describe('prerequisites', () => {
 
     const snapshot = buildPrerequisiteSnapshot({
       character,
-      viewingClass: 'Fighter',
       effectiveAbilityScores: character.abilityScores,
     })
 
-    expect(snapshot.level).toBe(5)
-    expect(snapshot.class).toBe('Fighter')
     expect(snapshot.progression).toEqual(character.classProgression)
     expect(snapshot.spells).toEqual({
       cantrips: ['Fire Bolt'],
@@ -54,10 +50,9 @@ describe('prerequisites', () => {
 
   test('checks class-specific level when className option is provided', () => {
     const character = makePrereqCharacterSnapshotFixture({
-      level: 8,
       progression: [
-        { name: 'Fighter', levels: 5 },
-        { name: 'Wizard', levels: 3 },
+        { name: 'Fighter', source: 'PHB', levels: 5 },
+        { name: 'Wizard', source: 'PHB', levels: 3 },
       ],
     })
 
@@ -127,8 +122,8 @@ describe('prerequisites', () => {
   test('checks class prerequisite from primary class', () => {
     const character = makePrereqCharacterSnapshotFixture({
       progression: [
-        { name: 'Cleric', levels: 1 },
-        { name: 'Rogue', levels: 2 },
+        { name: 'Cleric', source: 'PHB', levels: 1 },
+        { name: 'Rogue', source: 'PHB', levels: 2 },
       ],
     })
 
@@ -154,10 +149,9 @@ describe('prerequisites', () => {
   test('checks spellcasting with spellcasting class set', () => {
     const character = makePrereqCharacterSnapshotFixture({
       progression: [
-        { name: 'Fighter', levels: 1 },
-        { name: 'Wizard', levels: 1 },
+        { name: 'Fighter', source: 'PHB', levels: 1 },
+        { name: 'Wizard', source: 'PHB', levels: 1 },
       ],
-      class: 'Fighter',
     })
 
     expect(
@@ -262,7 +256,7 @@ describe('prerequisites', () => {
 
   test('checkAllPrerequisites aggregates all failing reasons', () => {
     const character = makePrereqCharacterSnapshotFixture({
-      level: 2,
+      progression: [{ name: 'Fighter', source: 'PHB', levels: 2 }],
       race: 'Human',
       abilityScores: { strength: 10 },
     })

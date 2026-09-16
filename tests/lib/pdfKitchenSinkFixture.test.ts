@@ -22,6 +22,7 @@ import {
   buildCharacterSheetFieldMap,
   createCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
+import { CURRENT_CHARACTER_VERSION } from '@/lib/schema/characterVersion'
 import { validateCharacterData } from '@/store/characterStore'
 import type { Background5e, Class5e, Feat5e, Item5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
@@ -100,7 +101,7 @@ describe('PDF kitchen sink character fixtures', () => {
     const character = characterSchema.parse(rawCharacter)
 
     expect(validateCharacterData(rawCharacter)).toBeNull()
-    expect(character.version).toBe('6.0.0')
+    expect(character.version).toBe(CURRENT_CHARACTER_VERSION)
     expect(character.originSystem).toBe(edition)
     expect(character.classProgression).toHaveLength(3)
     expect(character.spells.spellProfiles).toHaveLength(4)

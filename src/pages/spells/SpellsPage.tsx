@@ -20,7 +20,6 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
-import { buildClassProfileMap } from '@/lib/calculations/classProfileMap'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
   buildSpellNameKeySet,
@@ -197,7 +196,12 @@ export function SpellsPage() {
     const rows: SourceRow[] = []
     if (!character) return { sourceMap, rows }
 
-    const classesById = buildClassProfileMap(calculationContext?.classes ?? [])
+    const classesById = new Map(
+      (calculationContext?.classes ?? []).map((classData) => [
+        toClassProfileId(classData.name, classData.source),
+        classData,
+      ]),
+    )
 
     for (const entry of getCharacterClassEntries(character)) {
       if (!entry.subclass) continue

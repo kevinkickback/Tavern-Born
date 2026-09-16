@@ -7,7 +7,7 @@ import {
   resolveRaceReference,
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
-import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
 import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
 import type { AbilityName, AbilityScores, Character, Equipment } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
@@ -150,7 +150,7 @@ export function deriveEffectiveAbilityScores(
   addBonuses(total, asiBonuses)
 
   if (character) {
-    const effects = getCharacterEffects(character, character.level, sourceEffects)
+    const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
     const effectContext = getCharacterEffectResolutionContext(character)
     for (const ability of Object.keys(total) as AbilityName[]) {
       total[ability] = Math.max(
@@ -230,7 +230,7 @@ export function createCharacterCalculationContext(
       primaryLookups.itemLookup ?? rawLookups.itemLookup,
     ),
   ]
-  const effects = getCharacterEffects(character, character.level, sourceEffects)
+  const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
 
   return {
     character,

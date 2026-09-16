@@ -34,7 +34,6 @@ const sourceEffects: CharacterEffect[] = [
 describe('stat settings resolution', () => {
   test('preserves source and manual typed effects in maximum-HP drafts', () => {
     const character = makeCharacterFixture({
-      level: 1,
       classProgression: [{ name: 'Fighter', source: 'TEST', levels: 1 }],
       manualEffects: [
         {
@@ -83,9 +82,8 @@ describe('stat settings resolution', () => {
     expect(resolution.value).toBe(15)
   })
 
-  test('preserves typed movement effects in draft previews and compatibility mirrors', () => {
+  test('preserves typed movement effects in draft previews', () => {
     const character = makeCharacterFixture({
-      speed: 30,
       movement: { speeds: { walk: 30 }, source: { kind: 'race', name: 'Test species' } },
     })
     const movement = resolveMovementSettings(

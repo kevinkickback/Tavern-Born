@@ -18,7 +18,7 @@ builder or deliberately download with warnings.
 
 For the legacy 2014 template, saving also replaces mapped checkbox appearances with portable vector marks, records mapped text as both the current and reset/default value, and removes the obsolete MPMB action and calculation-order entries. This is required because some desktop PDF readers do not render the template's font-dependent checkbox glyphs and can reset MPMB-managed fields even though PDF.js displays them correctly in the app preview.
 
-Bundled organization artwork remains in its native WebP format throughout the app. The PDF image adapter converts it to PNG in memory only when embedding it into the 2014 form; custom images use the same format-normalization boundary when needed. Legacy bundled `.png` paths are translated to their canonical `.webp` names so cached data and older character files continue to work.
+Bundled organization artwork remains in its native WebP format throughout the app. The PDF image adapter converts it to PNG in memory only when embedding it into the 2014 form; custom images use the same format-normalization boundary when needed.
 
 The template field names are an external contract. Some are descriptive (2014), while the 2024 template uses positional names such as `Text_61`. Never infer a positional field from its number. Inspect its widget rectangle in the actual PDF and extend the template-contract tests whenever a mapping changes.
 

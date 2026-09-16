@@ -11,7 +11,7 @@ import type { CharacterEffect } from '@/types/effects'
 import { ABILITY_NAMES } from './abilityScores'
 import type { EffectResolutionContext } from './effects'
 
-type LegacyEffectCharacter = Partial<
+type EffectSettingsCharacter = Partial<
   Pick<
     Character,
     | 'armorClassAdjustments'
@@ -39,14 +39,14 @@ function adjustmentSource(
   }
 }
 
-function projectLegacyEffects(
-  character: LegacyEffectCharacter,
+function projectSettingsEffects(
+  character: EffectSettingsCharacter,
   characterLevel: number,
 ): CharacterEffect[] {
   const effects: CharacterEffect[] = []
   for (const adjustment of character.armorClassAdjustments ?? []) {
     effects.push({
-      id: `legacy:armor-class:${adjustment.id}`,
+      id: `settings:armor-class:${adjustment.id}`,
       label: adjustment.label,
       target: { kind: 'armor-class' },
       operation: { kind: 'add', value: adjustment.amount },
@@ -55,7 +55,7 @@ function projectLegacyEffects(
   }
   if (typeof character.armorClassOverride === 'number') {
     effects.push({
-      id: 'legacy:armor-class:override',
+      id: 'settings:armor-class:override',
       label: 'Exact Armor Class override',
       target: { kind: 'armor-class' },
       operation: { kind: 'override', value: character.armorClassOverride },
@@ -64,7 +64,7 @@ function projectLegacyEffects(
   }
   for (const adjustment of character.hitPointAdjustments ?? []) {
     effects.push({
-      id: `legacy:hit-points:${adjustment.id}`,
+      id: `settings:hit-points:${adjustment.id}`,
       label: adjustment.label,
       target: { kind: 'hit-point-maximum' },
       operation: {
@@ -77,15 +77,10 @@ function projectLegacyEffects(
       source: adjustmentSource(adjustment),
     })
   }
-  const maximumHitPointsOverride =
-    typeof character.maxHitPointsOverride === 'number'
-      ? character.maxHitPointsOverride
-      : character.hitPoints && character.hitPoints.max > 0
-        ? character.hitPoints.max
-        : undefined
+  const maximumHitPointsOverride = character.maxHitPointsOverride
   if (typeof maximumHitPointsOverride === 'number') {
     effects.push({
-      id: 'legacy:hit-points:override',
+      id: 'settings:hit-points:override',
       label: 'Exact maximum Hit Points override',
       target: { kind: 'hit-point-maximum' },
       operation: { kind: 'override', value: maximumHitPointsOverride },
@@ -96,7 +91,7 @@ function projectLegacyEffects(
     const mode = adjustment.mode.trim().toLowerCase()
     if (!mode) continue
     effects.push({
-      id: `legacy:speed:${adjustment.id}`,
+      id: `settings:speed:${adjustment.id}`,
       label: adjustment.label,
       target: { kind: 'speed', mode },
       operation: { kind: 'add', value: adjustment.amount },
@@ -107,7 +102,7 @@ function projectLegacyEffects(
     const mode = rawMode.trim().toLowerCase()
     if (!mode || !Number.isFinite(value)) continue
     effects.push({
-      id: `legacy:speed:override:${mode}`,
+      id: `settings:speed:override:${mode}`,
       label: `Exact ${mode} speed override`,
       target: { kind: 'speed', mode },
       operation: { kind: 'override', value },
@@ -383,14 +378,14 @@ export function deriveStructuredFeatEffects(feats: readonly Feat5e[]): Character
 
 /** Combines runtime projections with persisted manual declarations using stable IDs. */
 export function getCharacterEffects(
-  character: LegacyEffectCharacter,
+  character: EffectSettingsCharacter,
   characterLevel = 1,
   sourceEffects: readonly CharacterEffect[] = [],
 ): CharacterEffect[] {
   const byId = new Map<string, CharacterEffect>()
   for (const effect of [
     ...sourceEffects,
-    ...projectLegacyEffects(character, characterLevel),
+    ...projectSettingsEffects(character, characterLevel),
     ...(character.manualEffects ?? []),
   ]) {
     byId.set(effect.id, effect)
@@ -399,7 +394,7 @@ export function getCharacterEffects(
 }
 
 export function getCharacterEffectResolutionContext(
-  character: LegacyEffectCharacter,
+  character: EffectSettingsCharacter,
 ): EffectResolutionContext {
   return {
     equipment: Object.fromEntries(

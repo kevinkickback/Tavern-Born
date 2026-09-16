@@ -9,7 +9,7 @@ function makeUsedCharacter() {
     race: 'Test Lineage',
     raceSource: 'TEST',
     portrait: 'data:image/png;base64,example',
-    hitPoints: { max: 24, current: 7, temporary: 3 },
+    hitPoints: { current: 7, temporary: 3 },
     hitPointsInitialized: true,
     inspiration: true,
     deathSaves: { successes: 2, failures: 1 },

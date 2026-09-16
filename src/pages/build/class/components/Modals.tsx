@@ -38,7 +38,7 @@ interface BuildClassModalsProps {
   classPickerSearch: string
   onClassPickerOpenChange: (open: boolean) => void
   onClassPickerSearchChange: (search: string) => void
-  onClassSelect: (className: string, classSource?: string) => void
+  onClassSelect: (className: string, classSource: string) => void
 
   spellPickerLevel: number | null
   onSpellPickerLevelChange: (level: number | null) => void
@@ -149,8 +149,8 @@ export function BuildClassModals({
         open={classPickerOpen}
         classes={classes}
         search={classPickerSearch}
-        selectedClassName={character.class}
-        selectedClassSource={character.classSource}
+        selectedClassName={character.classProgression[0]?.name}
+        selectedClassSource={character.classProgression[0]?.source}
         onOpenChange={(open) => {
           onClassPickerOpenChange(open)
           if (!open) onClassPickerSearchChange('')

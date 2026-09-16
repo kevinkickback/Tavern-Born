@@ -10,13 +10,11 @@ vi.mock('@/lib/storage/idb-storage', () => ({
   createIdbStorage: () => storageMocks,
 }))
 
-import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
 import {
-  emptyProvenance,
-  normalizeCharacterProvenance,
-  useCharacterStore,
-  validateCharacterData,
-} from '@/store/characterStore'
+  CURRENT_CHARACTER_VERSION,
+  UNSUPPORTED_CHARACTER_VERSION_MESSAGE,
+} from '@/lib/schema/characterVersion'
+import { useCharacterStore, validateCharacterData } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('characterStore', () => {
@@ -29,16 +27,8 @@ describe('characterStore', () => {
       activeCharacterId: null,
       activeCharacter: null,
       isActiveCharacterDirty: false,
+      unsupportedCharacterCount: 0,
     })
-  })
-
-  test('normalizeCharacterProvenance adds empty ledger when missing', () => {
-    const withoutProvenance = makeCharacterFixture()
-    delete withoutProvenance.provenance
-
-    const normalized = normalizeCharacterProvenance(withoutProvenance)
-
-    expect(normalized.provenance).toEqual(emptyProvenance())
   })
 
   test('validateCharacterData accepts full character payload', () => {
@@ -50,22 +40,34 @@ describe('characterStore', () => {
     expect(validateCharacterData({ foo: 'bar' })).toContain('Invalid character structure')
   })
 
-  test('validateCharacterData rejects characters from a newer schema without stripping data', () => {
-    const futureVersion = CURRENT_SCHEMA_VERSION + 1
-    const futureCharacter = {
-      ...makeCharacterFixture(),
-      version: `${futureVersion}.0.0`,
-      campaignState: { renown: 4 },
-    }
-
-    expect(validateCharacterData(futureCharacter)).toContain(
-      `schema version ${futureVersion} is newer than supported version ${CURRENT_SCHEMA_VERSION}`,
+  test.each(['10.0.0', '12.0.0', 'invalid'])('rejects unsupported version %s', (version) => {
+    expect(validateCharacterData({ ...makeCharacterFixture(), version })).toContain(
+      UNSUPPORTED_CHARACTER_VERSION_MESSAGE,
     )
   })
 
-  test('validateCharacterData rejects unrecognized schema versions', () => {
-    expect(validateCharacterData({ ...makeCharacterFixture(), version: '6-next' })).toContain(
-      'schema version is not recognized',
+  test('uses the exact current character version', () => {
+    expect(makeCharacterFixture().version).toBe(CURRENT_CHARACTER_VERSION)
+  })
+
+  test('rejects removed top-level class and level mirrors', () => {
+    expect(
+      validateCharacterData({
+        ...makeCharacterFixture(),
+        class: 'Fighter',
+        classSource: 'PHB',
+        level: 1,
+      }),
+    ).toContain('Unrecognized key')
+  })
+
+  test.each([
+    { raceSource: undefined },
+    { backgroundSource: undefined },
+    { subrace: 'High Elf', subraceSource: undefined },
+  ])('rejects named origin selections without exact sources: %o', (updates) => {
+    expect(validateCharacterData({ ...makeCharacterFixture(), ...updates })).toContain(
+      'is required when',
     )
   })
 
@@ -139,7 +141,7 @@ describe('characterStore', () => {
   })
 
   test('reconcileCharacter keeps a clean system correction synchronized and clean', () => {
-    const existing = makeCharacterFixture({ id: 'clean-reconciliation', speed: 30 })
+    const existing = makeCharacterFixture({ id: 'clean-reconciliation' })
     useCharacterStore.setState({
       characters: [existing],
       activeCharacterId: existing.id,
@@ -147,11 +149,13 @@ describe('characterStore', () => {
       isActiveCharacterDirty: false,
     })
 
-    useCharacterStore.getState().reconcileCharacter(existing.id, { speed: 35 })
+    useCharacterStore.getState().reconcileCharacter(existing.id, {
+      movement: { ...existing.movement, speeds: { walk: 35 } },
+    })
 
     const state = useCharacterStore.getState()
-    expect(state.activeCharacter?.speed).toBe(35)
-    expect(state.characters[0]?.speed).toBe(35)
+    expect(state.activeCharacter?.movement.speeds.walk).toBe(35)
+    expect(state.characters[0]?.movement.speeds.walk).toBe(35)
     expect(state.hasUnsavedChanges()).toBe(false)
   })
 
@@ -159,7 +163,6 @@ describe('characterStore', () => {
     const existing = makeCharacterFixture({
       id: 'dirty-reconciliation',
       name: 'Persisted Name',
-      speed: 30,
     })
     useCharacterStore.setState({
       characters: [existing],
@@ -169,13 +172,15 @@ describe('characterStore', () => {
     })
     useCharacterStore.getState().updateCharacter(existing.id, { name: 'Unsaved Name' })
 
-    useCharacterStore.getState().reconcileCharacter(existing.id, { speed: 35 })
+    useCharacterStore.getState().reconcileCharacter(existing.id, {
+      movement: { ...existing.movement, speeds: { walk: 35 } },
+    })
 
     const state = useCharacterStore.getState()
     expect(state.activeCharacter?.name).toBe('Unsaved Name')
-    expect(state.activeCharacter?.speed).toBe(35)
+    expect(state.activeCharacter?.movement.speeds.walk).toBe(35)
     expect(state.characters[0]?.name).toBe('Persisted Name')
-    expect(state.characters[0]?.speed).toBe(30)
+    expect(state.characters[0]?.movement.speeds.walk).toBe(30)
     expect(state.hasUnsavedChanges()).toBe(true)
   })
 
@@ -386,9 +391,11 @@ describe('characterStore', () => {
     expect(state.activeCharacter).toBeNull()
   })
 
-  test('persist rehydrate callback restores active character from active id', () => {
-    const persisted = makeCharacterFixture({ id: 'c8', name: 'Persisted' })
-    delete persisted.provenance
+  test('persist rehydrate drops unsupported characters and records their count', () => {
+    const persisted = {
+      ...makeCharacterFixture({ id: 'c8', name: 'Persisted' }),
+      version: '10.0.0',
+    }
 
     const storeWithPersist = useCharacterStore as unknown as {
       persist: {
@@ -398,6 +405,8 @@ describe('characterStore', () => {
                 characters: (typeof persisted)[]
                 activeCharacterId: string | null
                 activeCharacter: typeof persisted | null
+                isActiveCharacterDirty: boolean
+                unsupportedCharacterCount: number
               }) => void)
             | undefined
         }
@@ -410,17 +419,22 @@ describe('characterStore', () => {
       characters: ReturnType<typeof makeCharacterFixture>[]
       activeCharacterId: string | null
       activeCharacter: ReturnType<typeof makeCharacterFixture> | null
+      isActiveCharacterDirty: boolean
+      unsupportedCharacterCount: number
     } = {
       characters: [persisted],
       activeCharacterId: persisted.id,
       activeCharacter: null,
+      isActiveCharacterDirty: false,
+      unsupportedCharacterCount: 0,
     }
 
     onRehydrate?.(rehydrateState)
 
-    expect(rehydrateState.characters[0]?.provenance).toEqual(emptyProvenance())
+    expect(rehydrateState.characters).toEqual([])
     expect(rehydrateState.activeCharacterId).toBeNull()
     expect(rehydrateState.activeCharacter).toBeNull()
+    expect(rehydrateState.unsupportedCharacterCount).toBe(1)
   })
 
   test('persist partialize stores characters and active character id', () => {

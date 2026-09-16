@@ -60,7 +60,6 @@ describe('ClassChoiceSelectionModal', () => {
         maximumSelections={1}
         initialSelectedIds={[]}
         characterSnapshot={makePrereqCharacterSnapshotFixture({
-          class: 'Test Class',
           progression: [{ name: 'Test Class', source: 'TEST', levels: 1 }],
         })}
         className="Test Class"

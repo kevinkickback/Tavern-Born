@@ -17,7 +17,7 @@ export type AbilityName =
 
 export interface CharacterClassEntry {
   name: string
-  source?: string
+  source: string
   levels: number
   subclass?: string
   subclassSource?: string
@@ -28,7 +28,7 @@ export type HitPointGainMethod = 'average' | 'rolled' | 'manual'
 /** The raw hit-die result chosen for a level after character level 1. */
 export interface HitPointGain {
   className: string
-  classSource?: string
+  classSource: string
   classLevel: number
   characterLevel: number
   hitDie: number
@@ -70,7 +70,7 @@ export interface CharacterMovement {
   other?: Record<string, number | boolean>
   unresolvedInheritedModes?: MovementMode[]
   source: {
-    kind: 'race' | 'legacy' | 'manual'
+    kind: 'race' | 'manual'
     name: string
     source?: string
   }
@@ -115,19 +115,11 @@ export interface Character {
   raceSource?: string
   subrace?: string
   subraceSource?: string
-  /** Primary class name — always mirrors classProgression[0].name when classProgression is present */
-  class: string
-  classSource?: string
-  subclass?: string
-  subclassSource?: string
   background: string
   backgroundSource?: string
   currency?: Currency
-  /** Total character level — always mirrors sum of classProgression[*].levels when classProgression is present */
-  level: number
   experiencePoints: number
-  /** Authoritative multiclass progression. When present, class/level are derived from it. */
-  classProgression?: CharacterClassEntry[]
+  classProgression: CharacterClassEntry[]
 
   abilityScores: AbilityScores
 
@@ -148,17 +140,13 @@ export interface Character {
   hitPointAdjustments?: HitPointAdjustment[]
   /** Exact maximum HP override. When set, derived HP and adjustments do not change the maximum. */
   maxHitPointsOverride?: number
-  /** Stored AC — retained for migration compatibility only; never read for display. Use `computeEffectiveCharacterArmorClass` instead. */
-  armorClass?: number
   /** Optional manual override that takes precedence over calculated AC in UI reads. */
   armorClassOverride?: number
   /** Lasting bonuses or penalties applied to calculated AC. */
   armorClassAdjustments?: ArmorClassAdjustment[]
   initiative: number
-  /** Legacy walking-speed mirror retained for import/export compatibility. */
-  speed: number
   /** Canonical structured base movement, normally supplied by the selected race/species. */
-  movement?: CharacterMovement
+  movement: CharacterMovement
   /** Labeled additive changes applied to individual movement modes. */
   movementAdjustments?: MovementAdjustment[]
   /** Exact per-mode values applied after base movement and adjustments. */
@@ -230,7 +218,7 @@ export interface Character {
   fixedFeatOptions?: Record<string, FeatOptionSelections>
 
   /** Provenance ledger tracking the origin of every granted option. */
-  provenance?: ProvenanceLedger
+  provenance: ProvenanceLedger
 
   // ── Session state ────────────────────────────────────────────────────────
   /** Whether the character currently has inspiration. */
@@ -315,7 +303,7 @@ export interface ClassFeatChoice {
   /** Stable owner identity derived from class printing and progression metadata. */
   id: string
   className: string
-  classSource?: string
+  classSource: string
   progressionName: string
   categories: string[]
   feats: Feat[]
@@ -327,7 +315,7 @@ export interface AsiChoice {
   level: number
   /** Class name this ASI belongs to (for multiclass support). */
   className: string
-  classSource?: string
+  classSource: string
   /** Ability key → bonus applied (e.g. { strength: 2 } or { strength: 1, dexterity: 1 }). */
   abilityChanges: Record<string, 1 | 2>
 }
@@ -431,7 +419,6 @@ export interface Currency {
 }
 
 export interface HitPoints {
-  max: number
   current: number
   temporary: number
 }
@@ -490,7 +477,6 @@ interface CharacterDetails {
   organizationCustomDescription?: string
   organizationCustomImage?: string
   organizationCustomGradient?: string
-  alliesAndOrganizations?: string
 }
 
 interface Ally {

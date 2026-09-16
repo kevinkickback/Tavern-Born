@@ -1,7 +1,7 @@
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
-import { buildClassProfileMap } from '@/lib/calculations/classProfileMap'
 import { buildSpellNameKeySet, getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
+import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import {
   ensureSpellProfiles,
   getSpellProfileSelectionCounts,
@@ -90,7 +90,12 @@ export function validateSpells(
   calculation: CharacterCalculationContext,
   spellsByKey: Readonly<Record<string, Spell5e>> | undefined,
 ): CharacterReadinessIssue[] {
-  const classMap = buildClassProfileMap(calculation.classes)
+  const classMap = new Map(
+    calculation.classes.map((classData) => [
+      toClassProfileId(classData.name, classData.source),
+      classData,
+    ]),
+  )
   const details = buildSpellcastingClassDetails(
     character,
     classMap,

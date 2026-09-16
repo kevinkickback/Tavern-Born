@@ -25,7 +25,7 @@ function makeSpell(name: string, source: string): Spell5e {
 
 describe('detectSourceConflicts', () => {
   test('returns empty array when no conflicts', () => {
-    const char = makeCharacterFixture({ raceSource: 'PHB', classSource: 'PHB' })
+    const char = makeCharacterFixture({ raceSource: 'PHB' })
     expect(detectSourceConflicts(char, ['PHB'])).toEqual([])
   })
 

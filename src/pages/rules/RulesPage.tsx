@@ -114,6 +114,7 @@ export function RulesPage() {
   }
 
   const updateBooleanRule = (key: BooleanRuleKey, checked: boolean) => {
+    const selectedSubclass = character.classProgression.find((entry) => entry.subclass)?.subclass
     if (!checked && key === 'optionalClassFeatures' && hasOptionalFeatureGrants) {
       toast.warning('Existing optional class feature choices will be kept.', {
         description: 'Review the Class page if you want to replace or remove them.',
@@ -121,10 +122,10 @@ export function RulesPage() {
     }
     if (
       !checked &&
-      ((key === 'bladesingerAnyRace' && character.subclass?.toLowerCase() === 'bladesinger') ||
-        (key === 'battleragerAnyRace' && character.subclass?.toLowerCase() === 'battlerager'))
+      ((key === 'bladesingerAnyRace' && selectedSubclass?.toLowerCase() === 'bladesinger') ||
+        (key === 'battleragerAnyRace' && selectedSubclass?.toLowerCase() === 'battlerager'))
     ) {
-      toast.warning(`Your existing ${character.subclass} subclass will be kept.`, {
+      toast.warning(`Your existing ${selectedSubclass} subclass will be kept.`, {
         description: 'This rule will apply the next time you choose a subclass.',
       })
     }

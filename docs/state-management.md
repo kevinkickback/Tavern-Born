@@ -28,7 +28,7 @@ This document defines state ownership, mutation rules, and persistence behavior.
 - Character store persistence includes `characters` only; startup always begins with no active character selected.
 - `characterPersistenceSchema` is the normalized persistence-output authority. Its compile-time
   contract requires every parsed output to be assignable to the runtime `Character` type. The
-  reverse direction is intentionally broader because draft/migration inputs may contain partial
+  reverse direction is intentionally broader because draft/import inputs may contain partial
   spell-slot maps; schema output fills every supported slot level before persistence.
 - gameData payload itself is cached separately in src/lib/storage/dataCache.ts.
 - gameDataStore persist payload intentionally keeps config/timestamps lightweight.
@@ -96,8 +96,8 @@ Derived examples (do not store as canonical):
 - `hasUnsavedChanges()` is O(1): user mutations set the transient
   `isActiveCharacterDirty` flag, a durable save of the current draft revision clears it, and
   clean-draft reconciliation preserves the clean state. Pending or rejected saves remain dirty, and
-  reconciliation never clears an existing dirty state. Timestamp comparison remains as a
-  compatibility safeguard for imported or injected state.
+  reconciliation never clears an existing dirty state. Timestamp comparison also catches imported
+  or directly injected state.
 - src/main.tsx syncs unsaved state to Electron.
 - electron/main.ts shows close confirmation when unsaved edits exist.
 - App preferences and home-page layout changes do not participate in character dirty-state tracking.
@@ -116,7 +116,7 @@ There is no separate template envelope, reset-copy mode, or template import/expo
 ## Dirty State and lastModified Timestamps
 
 **Design Pattern:** Explicit transient dirty state determines whether the active draft has unsaved
-user edits. `lastModified` remains persisted metadata for display, sorting, and compatibility.
+user edits. `lastModified` remains persisted metadata for display and sorting.
 
 ### Why This Works
 
@@ -147,8 +147,8 @@ copy atomically without creating an unsaved edit.
 ## Class Progression Model
 
 - `character.classProgression` is the authoritative class progression structure for level math, multiclassing, and spell/feature derivation.
-- Top-level `character.class`, `character.classSource`, and `character.level` remain persisted mirrors used for summary display and compatibility with existing UI surfaces.
-- New code should derive progression-sensitive behavior from `classProgression`, not from the mirrored top-level fields.
+- All class identity, subclass identity, and level reads derive from `classProgression`; no top-level
+  mirrors are persisted.
 - Feats awarded by class `featProgression` blocks are stored in `character.classFeatChoices`, keyed
   by full class printing and progression identity. Their slot levels allow level-down and class
   removal to retract only the affected choices. `character.specialFeats` is reserved for unscoped
@@ -175,7 +175,7 @@ copy atomically without creating an unsaved edit.
 
 - Canonical spell state is now profile-based under `character.spells.spellProfiles`.
 - Class profiles are keyed by `class:<name>|<source>` and hold class-owned cantrips/spells/prepared flags.
-- Profile spell collections remain name strings for file compatibility. Equality is based on one
+- Profile spell collections remain name strings. Equality is based on one
   normalized, case-insensitive spell-name key; source-qualified input selects the matching catalog
   row, while two printings with the same normalized name intentionally collapse to one profile entry.
 - The unrestricted profile is `special:unrestricted` and is always prepared by definition.
@@ -197,7 +197,7 @@ copy atomically without creating an unsaved edit.
 - Class-page per-level spell displays are derived from provenance attribution metadata.
 - Class-page spell edits replace only the exact choices owned by the edited class level. The spell
   profile and provenance ledger are committed by one command, while choices from other levels and
-  compatibility-era profile entries without level attribution remain intact.
+  profile entries without level attribution remain intact.
 - Replacement-only class levels remain present in the class-page choice model even when they grant no
   new picks. Source readiness compares selected references with the catalog through the same
   normalized, case-insensitive name identity used by spell profiles.
@@ -213,7 +213,7 @@ Ability-score method labels and explanations are derived from the character's se
 `CORE_RULES_METADATA` record. The wizard and Rules page consume the same view-neutral descriptors,
 so displayed point-buy limits and standard-array values follow the selected origin system.
 
-Persisted `character.abilityScores` are raw allocated scores, with a documented compatibility
+Persisted `character.abilityScores` are raw allocated scores, with a documented temporary
 exception for reversible feat-option changes. Effective scores, modifiers, skills, saves, HP, AC,
 carrying capacity, prerequisites, and spellcasting values are derived through
 `CharacterCalculationContext` and are not persisted. See
@@ -235,92 +235,18 @@ Origin system note:
 - Existing characters can review their ruleset and edit supported variant rules from `/rules`; changing the 2014/2024 ruleset itself is intentionally unsupported because it would require rebuilding origin and progression choices.
 - Race/background provenance application must normalize selected content against `originSystem` before grants are applied.
 
-## Character Schema Versioning and Migrations
+## Character Schema Versioning
 
-**File:** `src/lib/schema/migrations.ts`
+**File:** `src/lib/schema/characterVersion.ts`
 
-The current schema version is 10. Version 8 introduced typed manual effects, version 9 introduced
-structured manual actions, and version 10 separates Pact Magic usage from shared spell-slot usage.
-The v9→v10 downgrade removes the new pool without rewriting the legacy shared pool.
+The beta supports exactly one character format. Import and IndexedDB hydration validate records
+against the strict current schema; records with an older or newer version are rejected rather than
+transformed. Hydration drops unsupported records and exposes a count so the Home page can warn the
+tester to recreate them.
 
-The migration system allows character data to be evolved safely across app versions while maintaining backwards compatibility.
-
-### Schema Version Policy
-
-Increment `CURRENT_SCHEMA_VERSION` and create a new migration when:
-
-| Change Type | Example | Requires Migration? |
-|---|---|---|
-| **Breaking structural change** | Rename/remove/restructure required field | ✅ Yes — must handle old format |
-| **New required field** | Add `spellProfiles` (v0 → v1) | ✅ Yes — must provide default or derive |
-| **New optional field** | Add optional `customData?: string` | ❌ No — code handles undefined |
-| **UI/display-only change** | Change `lastModified` format | ❌ No — doesn't affect app logic |
-| **Additive field** | Add new proficiency category | ❌ No — existing data works as-is |
-| **Internal restructure with same semantics** | Split one field into sub-object layers | ✅ Yes — must translate between formats |
-
-### Creating a New Migration
-
-1. **Increment version** in `src/lib/schema/migrations.ts`:
-   ```ts
-   export const CURRENT_SCHEMA_VERSION = 2; // was 1
-   ```
-
-2. **Register the migration**:
-   ```ts
-   registerMigration({
-     fromVersion: 1,
-     toVersion: 2,
-     description: 'Add spellProfiles and sunset legacy spellsByLevel array',
-     up: (character) => {
-       const c = character as Record<string, unknown>;
-       // Transform old structure to new structure
-       return {
-         ...c,
-         spells: {
-           spellProfiles: buildInitialProfiles(c),
-           spellSlots: c.spellSlots,
-           // legacy array no longer present
-         },
-       } as Character;
-     },
-     down: (character) => {
-       // Reverse transformation for export/rollback
-       const c = character as Record<string, unknown>;
-       return {
-         ...c,
-         spells: {
-           spellsByLevel: c.spells?.spellProfiles ?? {},
-           spellSlots: c.spells?.spellSlots,
-         },
-       };
-     },
-   });
-   ```
-
-3. **Update type definitions** as needed:
-   - `src/types/character.ts` — defines new structure
-   - `src/types/characterSchema.ts` — Zod schema for validation
-   - Make sure old data is considered invalid by the new schema (enforces migration)
-
-4. **Ensure `migrateCharacter()` is called on load**:
-   - Character import flow: `src/pages/HomePage.tsx:206`
-   - Hydration from IndexedDB: automatic via `characterPersistenceSchema`
-
-5. **Add tests** — see `tests/lib/migrations.test.ts` and `tests/lib/characterSchema.test.ts` for examples
-
-### Migration Invariants
-
-- **All migrations are chained**: app always starts at v0 (legacy) and runs all intermediate steps to reach current.
-- **No skipping versions**: if v0→v1 and v2→v3 exist but v1→v2 is missing, the chain breaks and migration fails.
-- **Both directions matter**: `up()` is used for import, `down()` is used for export/rollback.
-- **Result must be valid**: migration output runs through schema validation; invalid results throw.
-
-### Anti-Patterns
-
-❌ Don't make breaking changes without incrementing the version  
-❌ Don't assume old data structure on import — always migrate  
-❌ Don't forget the `down()` path — breaks export/compatibility  
-❌ Don't skip intermediate versions — will cause migration chain failures
+For a breaking character-format change, update the version constant, type, strict schema, factory,
+fixtures, and store tests in the same change. Do not add migrations, downgrade handlers,
+compatibility mirrors, or alternate readers while this pre-1.0 policy is active.
 
 ## Current Domain Workflows
 
@@ -381,11 +307,11 @@ persisted identity.
 ### Hit Point Ownership Model
 
 **Persisted state:**
-- `character.hitPoints.current` and `character.hitPoints.temporary` are mutable play state. `hitPoints.max` is retained as a zeroed legacy container field.
+- `character.hitPoints.current` and `character.hitPoints.temporary` are mutable play state.
 - `character.hitPointGains[]` stores the raw hit-die result and method for each character level after level 1. Constitution is applied when HP is calculated, not frozen into the record.
 - `character.hitPointAdjustments[]` stores labeled, manual flat or per-character-level bonuses and penalties.
 - `character.maxHitPointsOverride` optionally replaces the calculated maximum exactly.
-- `character.hitPointsInitialized` distinguishes a deliberate current HP value of 0 from an old character whose current HP was never initialized.
+- `character.hitPointsInitialized` distinguishes a deliberate current HP value of 0 from an uninitialized current value.
 
 **Resolution order:**
 1. Calculate class HP from the full first-level hit die and each later average or recorded die result, adding the current Constitution modifier per level and enforcing a minimum gain of 1 per level.
@@ -406,7 +332,7 @@ retained progression, rebuilding ASI provenance in the same command result. Aver
 records the fixed average automatically unless explicitly disabled; when disabled, `LevelUpModal`
 requires either a die roll or a valid manual die result.
 
-Consumers should read maximum HP through `getEffectiveMaxHP()` or `useHitPoints()` rather than `hitPoints.max`.
+Consumers read maximum HP through `getEffectiveMaxHP()` or `useHitPoints()`.
 
 ### Actions and Effects Overview Ownership
 
@@ -428,7 +354,6 @@ continue to materialize normal provenance records through the background ability
 ### Armor Class Ownership Model
 
 **Current State:**
-- `character.armorClass` — legacy migration compatibility only; it is not read for display or written by current flows.
 - `character.armorClassAdjustments[]` — labeled, manual bonuses or penalties applied after equipment/Dexterity calculation.
 - `character.armorClassOverride` — optional exact manual value.
 - `useArmorClass()` exposes calculated, adjustment, adjusted, override, and effective AC views.
@@ -451,21 +376,16 @@ remain editable/removable without discarding the calculated base.
 ### Class Progression State
 
 **Current State:**
-- `character.class`, `character.classSource` — top-level fields from legacy creation
-- `character.subclass`, `character.subclassSource` — top-level fields from legacy creation
-- `character.level` — top-level field
-- `character.classProgression[]` — array of `{ name, source, levels, subclass?, subclassSource? }`
+- `character.classProgression[]` — the source-qualified array of `{ name, source, levels, subclass?, subclassSource? }`
 
-**Current Approach:** `character.classProgression` is the authoritative progression structure for level math and class-driven derivation. The top-level class fields remain persisted mirrors for summary/compatibility surfaces.
+**Current Approach:** `character.classProgression` is the only progression structure for level math and class-driven derivation.
 
 **Mutation Workflow:**
-- Domain commands in `src/lib/character/commands/classCommands.ts` coordinate progression updates and mirrored top-level class fields.
+- Domain commands in `src/lib/character/commands/classCommands.ts` coordinate progression updates.
 - `useUnifiedClassSelection()` and Level Up flows use the command layer instead of the deleted patch-builder path.
 - Class identity, provenance, proficiencies, skills, and equipment are consolidated in `applyClassSelectionCommand`.
 
-**Schema:** characterSchema validates both, but doesn't enforce which is canonical during mutations.
-
-Progression-sensitive reads use shared selectors across class page, model, and provenance callsites, while mirrored top-level fields remain as persisted compatibility data.
+**Schema:** `characterSchema` requires source-qualified progression entries and rejects obsolete top-level mirrors.
 
 ### Class Page Controllers
 

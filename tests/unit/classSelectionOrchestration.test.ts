@@ -127,7 +127,6 @@ describe('buildInitialCharacterProficiencies', () => {
 describe('applyClassSelectionCommand', () => {
   test('adds armor proficiencies for a new class', () => {
     const character = makeCharacterFixture({
-      class: '',
       classProgression: [],
       proficiencies: {
         armor: [],
@@ -160,8 +159,6 @@ describe('applyClassSelectionCommand', () => {
 
   test('ignores non-string armor/weapons entries (e.g. Artificer firearms variant object)', () => {
     const character = makeCharacterFixture({
-      class: '',
-      classSource: '',
       classProgression: [],
     })
     const ledger = emptyProvenance()
@@ -190,7 +187,6 @@ describe('applyClassSelectionCommand', () => {
 
   test('removes old class proficiencies when switching class', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
       proficiencies: {
         armor: ['light armor', 'medium armor'],
@@ -245,7 +241,6 @@ describe('applyClassSelectionCommand', () => {
     // Wizard's saving throws are added
     expect(result.characterPatch.proficiencies?.savingThrows).toContain('intelligence')
     expect(result.characterPatch.proficiencies?.savingThrows).toContain('wisdom')
-    expect(result.characterPatch.class).toBe('Wizard')
     expect(result.characterPatch.classProgression).toEqual([
       { name: 'Wizard', source: 'PHB', levels: 1 },
     ])
@@ -253,8 +248,6 @@ describe('applyClassSelectionCommand', () => {
 
   test('removes an old class skill and synchronizes skill state when switching class', () => {
     const character = makeCharacterFixture({
-      class: 'Rogue',
-      classSource: 'PHB',
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
       proficiencies: {
         armor: [],
@@ -293,7 +286,6 @@ describe('applyClassSelectionCommand', () => {
     const lookup = buildItemLookup([dagger])
 
     const character = makeCharacterFixture({
-      class: '',
       classProgression: [],
       equipment: [],
       proficiencies: {
@@ -323,7 +315,6 @@ describe('applyClassSelectionCommand', () => {
     const lookup = buildItemLookup([dagger])
 
     const character = makeCharacterFixture({
-      class: 'Rogue',
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
       equipment: [
         {
@@ -372,7 +363,6 @@ describe('applyClassSelectionCommand', () => {
     const lookup = buildItemLookup([dagger])
 
     const character = makeCharacterFixture({
-      class: '',
       classProgression: [],
       // User already has a manually-added torch
       equipment: [
@@ -411,7 +401,6 @@ describe('applyClassSelectionCommand', () => {
 
   test('returns a provenance update', () => {
     const character = makeCharacterFixture({
-      class: '',
       classProgression: [],
       proficiencies: {
         armor: [],

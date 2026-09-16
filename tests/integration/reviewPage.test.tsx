@@ -47,8 +47,6 @@ describe('BuildReviewPage', () => {
       name: 'Test Character',
       race: race.name,
       raceSource: race.source,
-      class: testClass.name,
-      classSource: testClass.source,
       classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
       background: background.name,
       backgroundSource: background.source,

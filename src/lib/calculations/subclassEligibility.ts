@@ -25,7 +25,7 @@ export function isSubclassEligible({
   if (Array.isArray(prerequisite) && prerequisite.length > 0) {
     return checkAllPrerequisites(
       { prerequisite },
-      buildPrerequisiteSnapshot({ character, viewingClass: className, effectiveAbilityScores }),
+      buildPrerequisiteSnapshot({ character, effectiveAbilityScores }),
       { className },
     ).met
   }

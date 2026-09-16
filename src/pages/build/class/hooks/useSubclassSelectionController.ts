@@ -57,9 +57,6 @@ export function useSubclassSelectionController({
     typeof viewingClassData?.subclassTitle === 'string'
       ? viewingClassData.subclassTitle
       : 'Subclass'
-  // `getCharacterClassEntries` already folds the legacy top-level subclass into
-  // its synthesized entry. Falling back here would make every subclass-less
-  // multiclass entry display the primary class's top-level subclass.
   const viewingSubclass = viewingEntry?.subclass
   const viewingSubclassData = useSubclass(
     viewingClass ?? '',

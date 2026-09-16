@@ -123,7 +123,7 @@ source content.
 5. Entity resolution
 - `entityResolvers.ts` is the canonical class, background, and race/subrace reference API.
 - Callers may supply a filtered primary lookup and a raw fallback lookup. Resolution prefers an exact `name|source` primary match, then the exact raw match so an existing selection remains resolvable after filters change.
-- Name-only fallback is allowed only when the persisted reference has no source. It prefers primary data and uses source/name ordering for deterministic collision handling.
+- Named persisted references without a source are rejected rather than guessed across printings.
 
 6. Caching and freshness
 - Parsed data plus source snapshot are cached in IndexedDB.

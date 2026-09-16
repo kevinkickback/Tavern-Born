@@ -33,13 +33,13 @@ describe('character effect projection', () => {
     expect(effects.every((effect) => effect.source.name === race.name)).toBe(true)
   })
 
-  test('combines legacy adjustments with manual declarations and activation state', () => {
+  test('combines stat settings with manual declarations and activation state', () => {
     const character = makeCharacterFixture({
-      hitPoints: { max: 0, current: 0, temporary: 0 },
+      hitPoints: { current: 0, temporary: 0 },
       armorClassAdjustments: [
         {
-          id: 'legacy-adjustment',
-          label: 'Legacy adjustment',
+          id: 'settings-adjustment',
+          label: 'Settings adjustment',
           amount: 1,
           sourceType: 'other',
           createdAt: '2026-01-01T00:00:00.000Z',
@@ -62,7 +62,7 @@ describe('character effect projection', () => {
     })
 
     expect(getCharacterEffects(character).map((effect) => effect.id)).toEqual([
-      'legacy:armor-class:legacy-adjustment',
+      'settings:armor-class:settings-adjustment',
       'manual-adjustment',
     ])
     expect(getCharacterEffectResolutionContext(character)).toEqual({

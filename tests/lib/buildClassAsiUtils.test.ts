@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
   applyClassAsiChoice,
-  assignLegacyClassAsiFeats,
   isClassAsiFeatForSlot,
   resetClassAsiChoice,
 } from '@/pages/build/class/model/asi'
@@ -11,14 +10,16 @@ describe('buildClassAsiUtils', () => {
     const result = applyClassAsiChoice({
       currentAsiChoices: [],
       className: 'Fighter',
+      classSource: 'PHB',
       level: 4,
       abilityChanges: { strength: 2 },
     })
 
     expect(result).toEqual([
       {
-        id: 'asi-Fighter-4',
+        id: 'asi-Fighter-PHB-4',
         className: 'Fighter',
+        classSource: 'PHB',
         level: 4,
         abilityChanges: { strength: 2 },
       },
@@ -31,11 +32,13 @@ describe('buildClassAsiUtils', () => {
         {
           id: 'asi-Fighter-4',
           className: 'Fighter',
+          classSource: 'PHB',
           level: 4,
           abilityChanges: { strength: 2 },
         },
       ],
       className: 'Fighter',
+      classSource: 'PHB',
       level: 4,
       abilityChanges: { constitution: 2 },
     })
@@ -50,11 +53,13 @@ describe('buildClassAsiUtils', () => {
         {
           id: 'asi-Fighter-4',
           className: 'Fighter',
+          classSource: 'PHB',
           level: 4,
           abilityChanges: { strength: 2 },
         },
       ],
       className: 'Fighter',
+      classSource: 'PHB',
       level: 4,
     })
 
@@ -97,53 +102,5 @@ describe('buildClassAsiUtils', () => {
 
     expect(result).toHaveLength(2)
     expect(result.map((choice) => choice.classSource)).toEqual(['PHB', 'XPHB'])
-  })
-
-  test('migrates legacy feats into separate multiclass ASI slots', () => {
-    const result = assignLegacyClassAsiFeats(
-      [
-        { id: 'war-caster', name: 'War Caster', source: 'PHB', description: '' },
-        { id: 'alert', name: 'Alert', source: 'PHB', description: '' },
-      ],
-      [
-        { className: 'Artificer', classSource: 'PHB', level: 4 },
-        { className: 'Wizard', classSource: 'PHB', level: 4 },
-      ],
-      [],
-    )
-
-    expect(result[0]).toMatchObject({
-      name: 'War Caster',
-      className: 'Artificer',
-      classSource: 'PHB',
-      classLevel: 4,
-    })
-    expect(result[1]).toMatchObject({
-      name: 'Alert',
-      className: 'Wizard',
-      classSource: 'PHB',
-      classLevel: 4,
-    })
-  })
-
-  test('legacy feat migration skips slots already resolved with an ASI', () => {
-    const [feat] = assignLegacyClassAsiFeats(
-      [{ id: 'alert', name: 'Alert', source: 'PHB', description: '' }],
-      [
-        { className: 'Artificer', classSource: 'PHB', level: 4 },
-        { className: 'Wizard', classSource: 'PHB', level: 4 },
-      ],
-      [
-        {
-          id: 'asi-Artificer-PHB-4',
-          className: 'Artificer',
-          classSource: 'PHB',
-          level: 4,
-          abilityChanges: { intelligence: 2 },
-        },
-      ],
-    )
-
-    expect(feat).toMatchObject({ className: 'Wizard', classLevel: 4 })
   })
 })

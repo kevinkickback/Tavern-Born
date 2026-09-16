@@ -1,7 +1,6 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
-import { buildClassProfileMap } from '@/lib/calculations/classProfileMap'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import {
   type ClassChoiceCatalogs,
@@ -21,7 +20,7 @@ import type { CharacterReadinessIssue } from './types'
 
 function classChoiceTarget(entry: CharacterClassEntry, level: number, choiceId?: string): string {
   const params = new URLSearchParams({
-    class: `${entry.name}|${entry.source ?? ''}`,
+    class: `${entry.name}|${entry.source}`,
     level: String(level),
   })
   if (choiceId) params.set('choice', choiceId)
@@ -35,7 +34,7 @@ function isOwnedByClass(
 ): boolean {
   return (
     value.className === entry.name &&
-    (value.classSource ?? '') === (entry.source ?? '') &&
+    value.classSource === entry.source &&
     (value.level ?? value.classLevel) === level
   )
 }
@@ -47,7 +46,12 @@ export function validateClassChoices(
 ): CharacterReadinessIssue[] {
   const issues: CharacterReadinessIssue[] = []
   const entries = getCharacterClassEntries(character)
-  const classDataByKey = buildClassProfileMap(calculation.classes)
+  const classDataByKey = new Map(
+    calculation.classes.map((classData) => [
+      toClassProfileId(classData.name, classData.source),
+      classData,
+    ]),
+  )
   const selections = new Map(
     (character.classChoiceSelections ?? []).map((selection) => [selection.choiceId, selection]),
   )

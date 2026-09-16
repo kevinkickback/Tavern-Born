@@ -7,13 +7,18 @@ import {
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('characteristics model', () => {
-  test('migrates a legacy organization description into an editable custom draft', () => {
+  test('creates a draft from the current structured organization fields', () => {
     const draft = createCharacteristicsDraft(
-      makeCharacterFixture({ details: { alliesAndOrganizations: 'Legacy description' } }),
+      makeCharacterFixture({
+        details: {
+          organizationSelectionKey: '__custom__',
+          organizationCustomDescription: 'Current description',
+        },
+      }),
     )
 
     expect(draft.organizationSelectionKey).toBe('__custom__')
-    expect(draft.organizationCustomDescription).toBe('Legacy description')
+    expect(draft.organizationCustomDescription).toBe('Current description')
     expect(draft.organizationCustomGradient).toBe(DEFAULT_CUSTOM_GRADIENT)
   })
 

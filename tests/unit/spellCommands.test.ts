@@ -75,9 +75,6 @@ describe('Spell Commands', () => {
   describe('setClassSpellSelectionsAtLevel', () => {
     test('preserves earlier unattributed Wizard choices while adding later level selections', () => {
       let character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 4,
         classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
         spells: {
           spellProfiles: [
@@ -202,9 +199,6 @@ describe('Spell Commands', () => {
       const defaultSpells = makeCharacterFixture().spells
       let character = makeCharacterFixture({
         originSystem: rules === '2014' ? '2014' : '2024',
-        class: className,
-        classSource,
-        level: 5,
         classProgression: [
           { name: className, source: classSource, levels: 4 },
           { name: 'Other Caster', source: 'TEST', levels: 1 },
@@ -266,9 +260,6 @@ describe('Spell Commands', () => {
 
     test('replaces only the edited level and retains unrelated provenance', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 2,
         classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
         spells: {
           spellProfiles: [
@@ -332,9 +323,6 @@ describe('Spell Commands', () => {
 
     test('swaps a class spell and its provenance atomically', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 3,
         classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
         spells: {
           spellProfiles: [
@@ -400,9 +388,6 @@ describe('Spell Commands', () => {
 
     test('rejects replacing a fixed subclass spell without class-choice ownership', () => {
       const character = makeCharacterFixture({
-        class: 'Sorcerer',
-        classSource: 'PHB',
-        level: 3,
         classProgression: [
           {
             name: 'Sorcerer',
@@ -472,9 +457,6 @@ describe('Spell Commands', () => {
       const profileId = `class:${className}|PHB`
       const character = makeCharacterFixture({
         originSystem: '2014',
-        class: className,
-        classSource: 'PHB',
-        level: 3,
         classProgression: [
           {
             name: className,
@@ -541,9 +523,6 @@ describe('Spell Commands', () => {
     test('preserves the Arcane Trickster unrestricted-school slot across replacements', () => {
       const character = makeCharacterFixture({
         originSystem: '2014',
-        class: 'Rogue',
-        classSource: 'PHB',
-        level: 3,
         classProgression: [
           {
             name: 'Rogue',
@@ -618,9 +597,7 @@ describe('Spell Commands', () => {
   describe('addSpellToCharacter', () => {
     test('adds cantrip to profile and records provenance', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 1,
+        classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
         spells: {
           spellProfiles: [
             {
@@ -665,9 +642,7 @@ describe('Spell Commands', () => {
 
     test('adds spell known to profile with correct level assigment', () => {
       const character = makeCharacterFixture({
-        class: 'Bard',
-        classSource: 'PHB',
-        level: 3,
+        classProgression: [{ name: 'Bard', source: 'PHB', levels: 3 }],
         spells: {
           spellProfiles: [
             {
@@ -778,7 +753,7 @@ describe('Spell Commands', () => {
   describe('removeSpellFromCharacter', () => {
     test('removes spell from profile and cleans up provenance', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
+        classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
         spells: {
           spellProfiles: [
             {
@@ -848,7 +823,7 @@ describe('Spell Commands', () => {
     test('removed spell is absent and added spell is present after a swap', () => {
       const profileId = 'class:Bard|PHB'
       const character = makeCharacterFixture({
-        class: 'Bard',
+        classProgression: [{ name: 'Bard', source: 'PHB', levels: 1 }],
         spells: {
           spellProfiles: [
             {

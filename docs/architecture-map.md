@@ -83,7 +83,7 @@ Spellcasting note:
   surfaces. Static exports, text projections, and compact non-interactive summaries use the
   lower-level string renderer explicitly.
 - Equipment item details resolve immutable rules text from the game-data `itemLookup` by `name|source` and render it through the same interactive path; recursive tooltip lookup includes both `items` and `itemsBase`. Persisted descriptions are fallback content for custom and imported items. The detail metadata grid is type-aware and omits irrelevant empty fields while retaining any exceptional populated statistics.
-- Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Name-only fallback is used only when the reference has no source and is deterministic.
+- Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Named references without a source are rejected rather than guessed.
 - Character creation uses src/hooks/data/useWizardGameData.ts as its draft-scoped data boundary. Wizard steps receive filtered collections or resolved entities and never read the raw game-data store directly.
 - Character-library duplicate policy lives in `src/lib/character/characterTransfer.ts`; HomePage
   owns file-picker/download orchestration and immediately creates an independent exact copy when
@@ -128,11 +128,9 @@ Current implementation notes:
   resolver as persisted reads. The management modal's default Overview exposes equipped armor and
   shields as read-only calculation rows so equipment ownership remains on the Equipment route; its
   separate Manual changes view owns adjustments and exact overrides.
-  The legacy `character.armorClass` field is not a display source.
 - Movement reads across Builder and PDF surfaces resolve the race/subrace-owned structured base,
-  then labeled per-mode adjustments, typed source effects, and exact overrides. Modal previews and
-  the `character.speed` compatibility mirror use that canonical draft resolution; the mirror exists
-  only for legacy import/export.
+  then labeled per-mode adjustments, typed source effects, and exact overrides. Modal previews use
+  that same canonical draft resolution.
 - Lasting feat resistances and immunities resolve from the selected feat's `name|source` runtime
   record through the calculation context. Structured choice objects are deliberately not guessed;
   their rules prose remains visible and the global manual-effects editor covers the resolved choice.

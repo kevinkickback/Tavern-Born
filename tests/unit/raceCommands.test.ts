@@ -42,7 +42,6 @@ describe('race commands', () => {
       speeds: { walk: 35 },
       source: { kind: 'race', name: 'Elf', source: 'PHB' },
     })
-    expect(result.characterPatch.speed).toBe(35)
   })
 
   test('subrace selection owns identity and resets race ASI choices', () => {
@@ -145,7 +144,6 @@ describe('race commands', () => {
     })
     expect(updated.movementAdjustments).toEqual(character.movementAdjustments)
     expect(updated.movementOverrides).toEqual({ swim: 20 })
-    expect(updated.speed).toBe(35)
   })
 
   test('changing race retracts options owned by its feat choice', () => {

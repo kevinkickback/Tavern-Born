@@ -28,7 +28,7 @@ export function useSpellProvenanceMutations() {
       spellName: string,
       grantedAtLevel?: number,
     ) => {
-      if (!character) return
+      if (!character || !classSource) return
       const newLedger = applyClassSpellGrant(ledger, className, classSource, spellName, 'choice', {
         ...(grantedAtLevel ? { spellGrantedAtLevel: grantedAtLevel } : {}),
         spellAttributionMode: grantedAtLevel ? 'exact' : undefined,
@@ -71,7 +71,7 @@ export function useSpellProvenanceMutations() {
       classLevel: number,
       selections: ClassSpellSelectionInput[],
     ) => {
-      if (!character) return
+      if (!character || !classSource) return
       const result = setClassSpellSelectionsAtLevelCommand(character, ledger, {
         className,
         classSource,
@@ -95,7 +95,7 @@ export function useSpellProvenanceMutations() {
       addedName: string,
       addedSpellSchool?: string,
     ) => {
-      if (!character) return
+      if (!character || !classSource) return
       const result = swapClassSpellAtLevelCommand(character, ledger, {
         className,
         classSource,

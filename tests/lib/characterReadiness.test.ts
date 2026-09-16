@@ -10,7 +10,6 @@ describe('getCharacterReadiness', () => {
     const character = makeCharacterFixture({
       name: '',
       race: '',
-      class: '',
       classProgression: [],
       background: '',
       variantRules: {},
@@ -82,8 +81,6 @@ describe('getCharacterReadiness', () => {
       name: 'Test Character',
       race: testRace.name,
       raceSource: testRace.source,
-      class: testClass.name,
-      classSource: testClass.source,
       classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
       background: 'Test Background',
       backgroundSource: 'TEST',
@@ -215,8 +212,6 @@ describe('getCharacterReadiness', () => {
       },
     } as Class5e
     const character = makeCharacterFixture({
-      class: testClass.name,
-      classSource: testClass.source,
       classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
       classChoiceSelections: [
         {
@@ -278,8 +273,6 @@ describe('getCharacterReadiness', () => {
       name: 'Test Character',
       race: testRace.name,
       raceSource: testRace.source,
-      class: testClass.name,
-      classSource: testClass.source,
       classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
       background: 'Test Background',
       backgroundSource: 'TEST',
@@ -313,8 +306,6 @@ describe('getCharacterReadiness', () => {
       name: 'Test Character',
       race: 'Missing Race',
       raceSource: 'TEST',
-      class: 'Missing Class',
-      classSource: 'TEST',
       classProgression: [{ name: 'Missing Class', source: 'TEST', levels: 1 }],
       background: 'Missing Background',
       backgroundSource: 'TEST',
@@ -441,52 +432,6 @@ describe('getCharacterReadiness', () => {
     )
   })
 
-  test('validates spellcasting for a source-less legacy class entry', () => {
-    const arcaneTrickster = {
-      name: 'Arcane Trickster',
-      shortName: 'Arcane Trickster',
-      source: 'PHB',
-      className: 'Rogue',
-      classSource: 'PHB',
-      spellcastingAbility: 'int',
-      casterProgression: '1/3',
-      cantripProgression: [0, 0, 2],
-      spellsKnownProgression: [0, 0, 3],
-    }
-    const rogue = {
-      name: 'Rogue',
-      source: 'PHB',
-      hd: { faces: 8 },
-      subclasses: [arcaneTrickster],
-    } as Class5e
-    const character = makeCharacterFixture({
-      class: 'Rogue',
-      classSource: undefined,
-      subclass: 'Arcane Trickster',
-      subclassSource: 'PHB',
-      level: 3,
-      classProgression: [
-        {
-          name: 'Rogue',
-          source: undefined,
-          levels: 3,
-          subclass: 'Arcane Trickster',
-          subclassSource: 'PHB',
-        },
-      ],
-      spells: { ...makeCharacterFixture().spells, spellProfiles: [] },
-    })
-    const calculation = createCharacterCalculationContext(character, {
-      classesByKey: { 'Rogue|PHB': rogue },
-    })
-
-    const result = getCharacterReadiness(character, { calculation })
-
-    expect(result.blockingIssues.map((issue) => issue.id)).toEqual(
-      expect.arrayContaining(['spells:cantrips:class:Rogue|', 'spells:known:class:Rogue|']),
-    )
-  })
-
   test('validates data-driven spell profile quotas and selected spell references', () => {
     const testRace = { name: 'Test Race', source: 'TEST' } as Race5e
     const testClass = {
@@ -509,8 +454,6 @@ describe('getCharacterReadiness', () => {
       name: 'Test Character',
       race: testRace.name,
       raceSource: testRace.source,
-      class: testClass.name,
-      classSource: testClass.source,
       classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
       background: 'Test Background',
       backgroundSource: 'TEST',
@@ -576,11 +519,6 @@ describe('getCharacterReadiness', () => {
       subclasses: [arcaneTrickster],
     } as Class5e
     const character = makeCharacterFixture({
-      class: 'Rogue',
-      classSource: 'PHB',
-      subclass: 'Arcane Trickster',
-      subclassSource: 'PHB',
-      level: 3,
       classProgression: [
         {
           name: 'Rogue',
@@ -677,10 +615,7 @@ describe('getCharacterReadiness', () => {
       },
     } as Class5e
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
-      level: 1,
       abilityScores: {
         ...makeCharacterFixture().abilityScores,
         intelligence: 16,

@@ -154,14 +154,10 @@ export function CharacteristicsPage() {
     if (value === CUSTOM_ORGANIZATION_KEY) {
       updateActiveCharacterDetails({
         organizationSelectionKey: value,
-        alliesAndOrganizations: organizationCustomDescription,
       })
       return
     }
 
-    const nextOrganization = organizationOptions.find(
-      (option) => option.key === value,
-    )?.organization
     setDraft((current) => ({
       ...current,
       organizationSelectionKey: value,
@@ -176,7 +172,6 @@ export function CharacteristicsPage() {
       organizationCustomDescription: '',
       organizationCustomImage: '',
       organizationCustomGradient: DEFAULT_CUSTOM_GRADIENT,
-      alliesAndOrganizations: nextOrganization?.description || '',
     })
   }
 
@@ -770,7 +765,6 @@ export function CharacteristicsPage() {
                           setDraftField('organizationCustomDescription', value)
                           updateActiveCharacterDetails({
                             organizationCustomDescription: value,
-                            alliesAndOrganizations: value,
                           })
                         }}
                         placeholder="Describe the custom ally or organization."

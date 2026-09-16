@@ -57,7 +57,7 @@ import {
 import { getClassIconUrl } from '@/lib/classIcons'
 import { getSpellsGrantedAtLevel } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
-import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
@@ -70,7 +70,7 @@ interface LevelUpModalProps {
 interface PendingLevelUp {
   kind: 'existing' | 'multiclass'
   className: string
-  classSource?: string
+  classSource: string
   classLevel: number
   hitDie: number
 }
@@ -94,7 +94,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const [hpEntryMethod, setHpEntryMethod] = useState<'rolled' | 'manual'>('rolled')
   const [hpDieResult, setHpDieResult] = useState('')
   const [levelHistory, setLevelHistory] = useState<
-    Array<{ className: string; classSource?: string; classLevel: number }>
+    Array<{ className: string; classSource: string; classLevel: number }>
   >([])
   const ignoreRestrictionsId = useId()
   const manualHpRollId = useId()
@@ -150,8 +150,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const commitLevelUp = (pending: PendingLevelUp, hpChoice: LevelUpHitPointChoice) => {
     if (pending.kind === 'existing') {
       const targetIndex = classProgression.findIndex(
-        (entry) =>
-          entry.name === pending.className && (entry.source ?? '') === (pending.classSource ?? ''),
+        (entry) => entry.name === pending.className && entry.source === pending.classSource,
       )
       if (targetIndex < 0) {
         toast.error('Could not find the class to level up.')
@@ -160,12 +159,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       const newProgression = classProgression.map((entry, index) =>
         index === targetIndex ? { ...entry, levels: pending.classLevel } : entry,
       )
-      const result = applyLevelUp(
-        character,
-        character.provenance ?? emptyProvenance(),
-        newProgression,
-        hpChoice,
-      )
+      const result = applyLevelUp(character, character.provenance, newProgression, hpChoice)
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,
@@ -192,7 +186,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     const multiclassResult = selectedClass
       ? addMulticlass(
           character,
-          character.provenance ?? emptyProvenance(),
+          character.provenance,
           pending.className,
           selectedClass,
           selectedClass.source,
@@ -201,8 +195,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       : null
     const nextProficiencies =
       multiclassResult?.characterPatch.proficiencies ?? character.proficiencies
-    const nextProvenance =
-      multiclassResult?.provenanceUpdate ?? character.provenance ?? emptyProvenance()
+    const nextProvenance = multiclassResult?.provenanceUpdate ?? character.provenance
     const result = applyLevelUp(character, nextProvenance, newProgression, hpChoice)
 
     updateCharacter(character.id, {
@@ -296,16 +289,11 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     const lastHistoryEntry = levelHistory[levelHistory.length - 1] ?? lastRecordedGain
     const fallbackProgressionEntry = classProgression[classProgression.length - 1]
     const targetClassName = lastHistoryEntry?.className ?? fallbackProgressionEntry.name
-    const targetClassSource = lastHistoryEntry
-      ? lastHistoryEntry.classSource || undefined
-      : fallbackProgressionEntry.source
+    const targetClassSource = lastHistoryEntry?.classSource ?? fallbackProgressionEntry.source
     const targetClassLevel = lastHistoryEntry?.classLevel ?? fallbackProgressionEntry.levels
 
     const targetIndices = classProgression.flatMap((entry, index) =>
-      entry.name === targetClassName &&
-      (targetClassSource == null || entry.source === targetClassSource)
-        ? [index]
-        : [],
+      entry.name === targetClassName && entry.source === targetClassSource ? [index] : [],
     )
     if (targetIndices.length !== 1) {
       toast.error('Could not find the target class to remove a level from.')
@@ -314,7 +302,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     }
     const targetIdx = targetIndices[0]
 
-    const ledger = character.provenance ?? emptyProvenance()
+    const ledger = character.provenance
     const affectedSpells = getSpellsGrantedAtLevel(
       ledger,
       targetClassName,

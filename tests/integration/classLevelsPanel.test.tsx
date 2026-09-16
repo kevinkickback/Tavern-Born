@@ -10,9 +10,6 @@ function makeProps(
   overrides: Partial<ComponentProps<typeof BuildClassLevelsPanel>> = {},
 ): ComponentProps<typeof BuildClassLevelsPanel> {
   const character = makeCharacterFixture({
-    class: 'Artificer',
-    classSource: 'PHB',
-    level: 4,
     classProgression: [{ name: 'Artificer', source: 'PHB', levels: 4 }],
   })
 
@@ -106,9 +103,6 @@ describe('BuildClassLevelsPanel', () => {
   test('renders replacement without an empty choose action at replacement-only levels', () => {
     const onOpenSpellSwap = vi.fn()
     const character = makeCharacterFixture({
-      class: 'Bard',
-      classSource: 'PHB',
-      level: 12,
       classProgression: [{ name: 'Bard', source: 'PHB', levels: 12 }],
       spells: {
         ...makeCharacterFixture().spells,

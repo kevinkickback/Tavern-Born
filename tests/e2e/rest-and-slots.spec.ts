@@ -51,11 +51,8 @@ const emptyCharacter = makeCharacterFixture()
 const character = characterPersistenceSchema.parse(
   makeCharacterFixture({
     id: 'rest-slot-e2e-1',
-    version: '10.0.0',
+    version: '11.0.0',
     name: 'Rest Slot E2E',
-    class: 'Test Caster',
-    classSource: 'TST',
-    level: 2,
     classProgression: [{ name: 'Test Caster', source: 'TST', levels: 2 }],
     hitPointsInitialized: true,
     hitPointGains: [],

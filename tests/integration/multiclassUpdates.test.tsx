@@ -11,9 +11,6 @@ describe('Multiclass Updates', () => {
   describe('Advancing existing class levels', () => {
     test('leveling up a class within classProgression updates level', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 3,
         classProgression: [
           {
             name: 'Wizard',
@@ -32,7 +29,6 @@ describe('Multiclass Updates', () => {
       // Simulate leveling up wizard from 3 to 4
       const leveledCharacter = {
         ...character,
-        level: 4,
         classProgression: [
           {
             name: 'Wizard',
@@ -44,21 +40,16 @@ describe('Multiclass Updates', () => {
 
       act(() => {
         useCharacterStore.getState().updateCharacter(character.id, {
-          level: 4,
           classProgression: leveledCharacter.classProgression,
         })
       })
 
       const updated = useCharacterStore.getState().activeCharacter
-      expect(updated?.level).toBe(4)
       expect(updated?.classProgression?.[0].levels).toBe(4)
     })
 
     test('leveling changes spell slots for spellcasters', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 1,
         classProgression: [
           {
             name: 'Wizard',
@@ -104,7 +95,6 @@ describe('Multiclass Updates', () => {
       // Level up to 3, which adds spell slots
       const leveledCharacter = {
         ...character,
-        level: 3,
         classProgression: [
           {
             name: 'Wizard',
@@ -123,7 +113,6 @@ describe('Multiclass Updates', () => {
 
       act(() => {
         useCharacterStore.getState().updateCharacter(character.id, {
-          level: 3,
           classProgression: leveledCharacter.classProgression,
           spells: leveledCharacter.spells,
         })
@@ -138,9 +127,6 @@ describe('Multiclass Updates', () => {
   describe('Adding a new class (multiclassing)', () => {
     test('adding a class creates new entry in classProgression', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 5,
         classProgression: [
           {
             name: 'Wizard',
@@ -159,7 +145,6 @@ describe('Multiclass Updates', () => {
       // Multiclass into Cleric
       const multiclassedCharacter = {
         ...character,
-        level: 6,
         classProgression: [
           {
             name: 'Wizard',
@@ -176,7 +161,6 @@ describe('Multiclass Updates', () => {
 
       act(() => {
         useCharacterStore.getState().updateCharacter(character.id, {
-          level: 6,
           classProgression: multiclassedCharacter.classProgression,
         })
       })
@@ -189,9 +173,6 @@ describe('Multiclass Updates', () => {
 
     test('multiclassing adds spell profile for new spellcasting class', () => {
       const character = makeCharacterFixture({
-        class: 'Fighter',
-        classSource: 'PHB',
-        level: 5,
         classProgression: [
           {
             name: 'Fighter',
@@ -224,7 +205,6 @@ describe('Multiclass Updates', () => {
       // Multiclass into Wizard
       const multiclassedCharacter = {
         ...character,
-        level: 6,
         classProgression: [
           {
             name: 'Fighter',
@@ -268,7 +248,6 @@ describe('Multiclass Updates', () => {
 
       act(() => {
         useCharacterStore.getState().updateCharacter(character.id, {
-          level: 6,
           classProgression: multiclassedCharacter.classProgression,
           spells: multiclassedCharacter.spells,
         })
@@ -284,9 +263,6 @@ describe('Multiclass Updates', () => {
   describe('Removing class levels', () => {
     test('removing a class deletes it from classProgression', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 6,
         classProgression: [
           {
             name: 'Wizard',
@@ -310,7 +286,6 @@ describe('Multiclass Updates', () => {
       // Remove one level of Cleric (or entire Cleric if it was only 1 level)
       const singleClassCharacter = {
         ...character,
-        level: 5,
         classProgression: [
           {
             name: 'Wizard',
@@ -322,7 +297,6 @@ describe('Multiclass Updates', () => {
 
       act(() => {
         useCharacterStore.getState().updateCharacter(character.id, {
-          level: 5,
           classProgression: singleClassCharacter.classProgression,
         })
       })
@@ -334,9 +308,6 @@ describe('Multiclass Updates', () => {
 
     test('removing a spellcasting class removes its spell profile', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 6,
         classProgression: [
           {
             name: 'Wizard',
@@ -398,7 +369,6 @@ describe('Multiclass Updates', () => {
       // Remove Cleric class
       const wizardOnlyCharacter = {
         ...character,
-        level: 5,
         classProgression: [
           {
             name: 'Wizard',
@@ -417,7 +387,6 @@ describe('Multiclass Updates', () => {
 
       act(() => {
         useCharacterStore.getState().updateCharacter(character.id, {
-          level: 5,
           classProgression: wizardOnlyCharacter.classProgression,
           spells: wizardOnlyCharacter.spells,
         })
@@ -432,9 +401,6 @@ describe('Multiclass Updates', () => {
   describe('Proficiency reconciliation on class changes', () => {
     test('skills granted by new class are added to proficiencies', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 3,
         classProgression: [
           {
             name: 'Wizard',
@@ -461,7 +427,6 @@ describe('Multiclass Updates', () => {
       // Multiclass into Rogue (Acrobatics, Sleight of Hand, Stealth)
       const multiclassedCharacter = {
         ...character,
-        level: 4,
         classProgression: [
           {
             name: 'Wizard',
@@ -483,7 +448,6 @@ describe('Multiclass Updates', () => {
 
       act(() => {
         useCharacterStore.getState().updateCharacter(character.id, {
-          level: 4,
           classProgression: multiclassedCharacter.classProgression,
           proficiencies: multiclassedCharacter.proficiencies,
         })
@@ -492,89 +456,6 @@ describe('Multiclass Updates', () => {
       const updated = useCharacterStore.getState().activeCharacter
       expect(updated?.proficiencies.skills).toContain('acrobatics')
       expect(updated?.proficiencies.skills).toContain('arcana') // Original
-    })
-  })
-
-  describe('Hit points recalculation on class changes', () => {
-    test('legacy stored maximum HP is preserved as an explicit override', () => {
-      const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 3,
-        classProgression: [
-          {
-            name: 'Wizard',
-            source: 'PHB',
-            levels: 3,
-          },
-        ],
-        hitPoints: {
-          current: 15,
-          max: 15, // Wizard: 6 + (2 * 4 con mod) = 14, let's say 15
-          temporary: 0,
-        },
-        abilityScores: {
-          strength: 10,
-          dexterity: 14,
-          constitution: 14, // +2 modifier
-          intelligence: 15,
-          wisdom: 13,
-          charisma: 8,
-        },
-      })
-
-      useCharacterStore.setState({
-        activeCharacter: character,
-        activeCharacterId: character.id,
-        characters: [character],
-      })
-
-      // Multiclass into Barbarian (more HP per level)
-      const multiclassedCharacter = {
-        ...character,
-        level: 4,
-        classProgression: [
-          {
-            name: 'Wizard',
-            source: 'PHB',
-            levels: 3,
-          },
-          {
-            name: 'Barbarian',
-            source: 'PHB',
-            levels: 1,
-          },
-        ],
-        // HP should increase (Barbarian gets d12, Wizard gets d6)
-        hitPoints: {
-          current: 24,
-          max: 24, // Recalculated with Barbarian level
-          temporary: 0,
-        },
-      }
-
-      act(() => {
-        useCharacterStore.getState().updateCharacter(character.id, {
-          level: 4,
-          classProgression: multiclassedCharacter.classProgression,
-          hitPoints: multiclassedCharacter.hitPoints,
-        })
-      })
-
-      const updated = useCharacterStore.getState().activeCharacter
-      expect(updated?.hitPoints.max).toBe(0)
-      expect(updated?.maxHitPointsOverride).toBe(24)
-    })
-  })
-
-  describe('Known gap: Post-creation class modification tests missing', () => {
-    test('current test suite focuses on creation, not modification', () => {
-      const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-      })
-
-      expect(character.class).toBe('Wizard')
     })
   })
 })

@@ -3,7 +3,6 @@ import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCa
 import {
   getBaseCharacterMovement,
   getEffectiveCharacterMovement,
-  getWalkingSpeed,
 } from '@/lib/calculations/movement'
 import { type MovementSettings, resolveMovementSettings } from '@/lib/calculations/statSettings'
 import { useCharacterStore } from '@/store/characterStore'
@@ -12,7 +11,6 @@ import type { MovementAdjustment } from '@/types/character'
 const EMPTY_ADJUSTMENTS: MovementAdjustment[] = []
 const EMPTY_OVERRIDES: Record<string, number> = {}
 const EMPTY_MOVEMENT_CHARACTER = {
-  speed: 0,
   movement: { speeds: {}, source: { kind: 'manual' as const, name: 'Unspecified movement' } },
 }
 
@@ -46,16 +44,10 @@ export function useMovement() {
         : fallbackMovement,
     saveMovementSettings: (settings: MovementSettings) => {
       if (!character) return
-      const nextMovement = resolveMovementSettings(
-        character,
-        settings,
-        calculationContext?.effects.sourceDeclarations,
-      )
       updateCharacter(character.id, {
         movementAdjustments: settings.adjustments,
         movementOverrides: settings.overrides,
         movementHoverOverride: settings.hoverOverride,
-        speed: getWalkingSpeed(nextMovement),
       })
     },
   }

@@ -3,7 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
-import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
+import {
+  CURRENT_CHARACTER_VERSION,
+  UNSUPPORTED_CHARACTER_VERSION_MESSAGE,
+} from '@/lib/schema/characterVersion'
 import { HomePage } from '@/pages/HomePage'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
@@ -22,6 +25,7 @@ vi.mock('sonner', () => ({
     success: vi.fn(),
     info: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
   },
 }))
 
@@ -215,7 +219,7 @@ describe('home page integration workflows', () => {
     const source = makeCharacterFixture({
       id: 'source',
       name: 'Source Hero',
-      hitPoints: { max: 18, current: 4, temporary: 2 },
+      hitPoints: { current: 4, temporary: 2 },
       hitPointsInitialized: true,
       conditions: ['test condition'],
     })
@@ -314,7 +318,7 @@ describe('home page integration workflows', () => {
     expect(toast.error).toHaveBeenCalledWith('Character file exceeds the 10MB safety limit.')
   })
 
-  test('imports and migrates a legacy-version character file', async () => {
+  test('rejects a character from an unsupported beta version', async () => {
     const user = userEvent.setup()
     useCharacterStore.setState({
       characters: [makeCharacterFixture({ id: 'existing-1', name: 'Existing' })],
@@ -329,10 +333,9 @@ describe('home page integration workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Import' }))
     expect(fileInput.click).toHaveBeenCalled()
 
-    const legacyCharacter = makeCharacterFixture()
-    legacyCharacter.version = '0.0.0'
+    const oldCharacter = { ...makeCharacterFixture(), version: '10.0.0' }
 
-    const file = new File([JSON.stringify(legacyCharacter)], 'legacy.tbc', {
+    const file = new File([JSON.stringify(oldCharacter)], 'old.tbc', {
       type: 'application/json',
     })
 
@@ -343,13 +346,10 @@ describe('home page integration workflows', () => {
 
     await fileInput.onchange?.({ target: fileInput } as unknown as Event)
 
-    const imported = useCharacterStore
-      .getState()
-      .characters.find((c) => c.id === legacyCharacter.id)
-
-    expect(imported).toBeTruthy()
-    expect(imported?.version).toBe(`${CURRENT_SCHEMA_VERSION}.0.0`)
-    expect(imported?.originSystem).toBe('2014')
+    expect(useCharacterStore.getState().characters).toHaveLength(1)
+    expect(toast.error).toHaveBeenCalledWith(
+      `Invalid character: Invalid character structure: ${UNSUPPORTED_CHARACTER_VERSION_MESSAGE}`,
+    )
   })
 
   test('rejects oversized imports before reading their contents', async () => {
@@ -392,7 +392,7 @@ describe('home page integration workflows', () => {
     expect(fileInput.click).toHaveBeenCalled()
 
     const corruptedCharacter = makeCharacterFixture({ id: 'bad', name: 'Corrupted' })
-    corruptedCharacter.version = `${CURRENT_SCHEMA_VERSION}.0.0`
+    corruptedCharacter.version = CURRENT_CHARACTER_VERSION
     corruptedCharacter.proficiencies.weapons = [
       // @ts-expect-error Deliberately invalid import payload.
       { name: 'Not a valid proficiency' },

@@ -42,9 +42,6 @@ function resetCharacterStore() {
 function makeWizardCharacter() {
   return makeCharacterFixture({
     id: 'spell-hook-char',
-    class: 'Wizard',
-    classSource: 'PHB',
-    level: 2,
     classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
     spells: {
       spellProfiles: [
@@ -82,9 +79,6 @@ describe('useSpellSlots hook', () => {
   test('add/remove known spells and prepared toggles mutate class profile', () => {
     const character = makeCharacterFixture({
       id: 'spell-hook-2',
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 2,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
       spells: {
         spellProfiles: [
@@ -318,9 +312,6 @@ describe('useSpellSlots hook', () => {
   test('prevents the same spell from being prepared across profiles with different casing', () => {
     const character = makeCharacterFixture({
       id: 'spell-hook-multiclass',
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 4,
       classProgression: [
         { name: 'Wizard', source: 'PHB', levels: 2 },
         { name: 'Cleric', source: 'PHB', levels: 2 },

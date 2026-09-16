@@ -74,7 +74,7 @@ export function setClassSpellSelectionsAtLevel(
   ledger: ProvenanceLedger,
   params: {
     className: string
-    classSource?: string
+    classSource: string
     classLevel: number
     selections: ClassSpellSelectionInput[]
   },
@@ -209,7 +209,7 @@ export function swapClassSpellAtLevel(
   ledger: ProvenanceLedger,
   params: {
     className: string
-    classSource?: string
+    classSource: string
     swapAtLevel: number
     removedName: string
     addedName: string
@@ -300,7 +300,7 @@ export function rollbackClassSpellSwapsAboveLevel(
   ledger: ProvenanceLedger,
   params: {
     className: string
-    classSource?: string
+    classSource: string
     retainedLevel: number
   },
 ): SpellCommandResult {

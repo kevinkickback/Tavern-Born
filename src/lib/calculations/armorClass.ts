@@ -133,23 +133,6 @@ export function resolveArmorType(item5eType: string): ArmorCategory {
   return getNormalizedItemTraits({ type: item5eType }).armorCategory
 }
 
-/**
- * Backward-compatible AC calculator used by integration tests and legacy callers.
- *
- * `mode` is retained for compatibility and currently ignored.
- */
-export function calculateAC(
-  character: {
-    equipment?: Equipment[]
-    abilityScores?: { dexterity?: number; dex?: number }
-  },
-  _mode?: 'base' | 'stored' | string,
-): number {
-  const dexScore = character.abilityScores?.dexterity ?? character.abilityScores?.dex ?? 10
-  const dexModifier = getAbilityModifier(dexScore)
-  return computeArmorClass(character.equipment ?? [], dexModifier)
-}
-
 export function calculateArmorClassAdjustmentTotal(
   adjustments: readonly ArmorClassAdjustment[] | undefined,
 ): number {
@@ -160,15 +143,12 @@ export function calculateArmorClassAdjustmentTotal(
  * Canonical AC read for character consumers.
  *
  * Uses an explicit override when present. Otherwise, derives AC live from equipped
- * items and ability scores, then applies lasting adjustments. The stored
- * `character.armorClass` field is intentionally
- * ignored — it exists only for migration compatibility and is never written to.
+ * items and ability scores, then applies lasting adjustments.
  */
 export function computeEffectiveCharacterArmorClass(
   character: Partial<
     Pick<
       Character,
-      | 'armorClass'
       | 'armorClassAdjustments'
       | 'armorClassOverride'
       | 'effectFlags'

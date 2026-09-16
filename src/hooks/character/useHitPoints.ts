@@ -50,21 +50,15 @@ export function useHitPoints(): HitPointsState {
 
   const hitDie = useMemo(() => {
     const primary = resolvedProgression[0]
-    const name = primary?.name ?? character?.class ?? ''
-    const source = primary?.source ?? character?.classSource
+    const name = primary?.name ?? ''
+    const source = primary?.source
     const found = resolveClassReference(
       { name, source },
       { classesByKey: filteredClassLookup },
       { classesByKey: rawClassLookup },
     )
     return getHitDiceFromClass(found)
-  }, [
-    character?.class,
-    character?.classSource,
-    resolvedProgression,
-    filteredClassLookup,
-    rawClassLookup,
-  ])
+  }, [resolvedProgression, filteredClassLookup, rawClassLookup])
 
   const conMod = useMemo(
     () => getAbilityModifier(calculationContext?.abilityScores.total.constitution ?? 10),
@@ -133,7 +127,7 @@ export function useHitPoints(): HitPointsState {
     })
   }
 
-  const hitPoints = character?.hitPoints ?? { max: 0, current: 0, temporary: 0 }
+  const hitPoints = character?.hitPoints ?? { current: 0, temporary: 0 }
 
   return {
     hitPoints,
@@ -193,7 +187,6 @@ export function useHitPoints(): HitPointsState {
         hitPointsInitialized: true,
         maxHitPointsOverride: nextOverride,
         hitPoints: {
-          max: 0,
           current: Math.max(0, Math.min(Math.trunc(settings.current), nextEffectiveMaxHP)),
           temporary: Math.max(0, Math.trunc(settings.temporary)),
         },

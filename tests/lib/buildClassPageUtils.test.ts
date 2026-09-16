@@ -14,15 +14,12 @@ import { makeClassFixture } from '../fixtures/gameDataFixtures'
 
 function makeLookup(classes: Class5e[]): {
   byKey: Record<string, Class5e | undefined>
-  fallback: Map<string, Class5e>
 } {
   const byKey: Record<string, Class5e | undefined> = {}
-  const fallback = new Map<string, Class5e>()
   for (const cls of classes) {
     byKey[`${cls.name}|${cls.source ?? ''}`] = cls
-    fallback.set(cls.name, cls)
   }
-  return { byKey, fallback }
+  return { byKey }
 }
 
 describe('buildClassPageUtils', () => {
@@ -37,23 +34,8 @@ describe('buildClassPageUtils', () => {
     expect(getCharacterClassEntries(character)).toEqual(character.classProgression)
   })
 
-  test('getCharacterClassEntries falls back to primary class fields', () => {
-    const character = makeCharacterFixture({
-      class: 'Rogue',
-      classSource: 'PHB',
-      level: 4,
-      classProgression: undefined,
-    })
-
-    expect(getCharacterClassEntries(character)).toEqual([
-      { name: 'Rogue', source: 'PHB', levels: 4 },
-    ])
-  })
-
   test('countTotalAsiAcrossClasses sums ASI levels across multiclass progression', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      level: 8,
       classProgression: [
         { name: 'Fighter', source: 'PHB', levels: 6 },
         { name: 'Wizard', source: 'PHB', levels: 4 },
@@ -97,27 +79,25 @@ describe('buildClassPageUtils', () => {
       ],
     })
 
-    const { byKey, fallback } = makeLookup([fighter, wizard])
+    const { byKey } = makeLookup([fighter, wizard])
 
     expect(
       countTotalAsiAcrossClasses({
         classProgression: getCharacterClassEntries(character),
         character,
         classLookup: byKey,
-        fallbackClassByName: fallback,
       }),
     ).toBe(3)
   })
 
   test('countTotalFeatSlots subtracts ASI choices from earned ASI slots', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      level: 8,
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 8 }],
       asiChoices: [
         {
           id: 'asi-fighter-4',
           className: 'Fighter',
+          classSource: 'PHB',
           level: 4,
           abilityChanges: { strength: 2 },
         },
@@ -148,14 +128,13 @@ describe('buildClassPageUtils', () => {
         },
       ],
     })
-    const { byKey, fallback } = makeLookup([fighter])
+    const { byKey } = makeLookup([fighter])
 
     expect(
       countTotalFeatSlots({
         classProgression: getCharacterClassEntries(character),
         character,
         classLookup: byKey,
-        fallbackClassByName: fallback,
       }),
     ).toBe(2)
   })

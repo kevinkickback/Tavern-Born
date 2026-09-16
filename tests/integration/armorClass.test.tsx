@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, test } from 'vitest'
 import { useArmorClass } from '@/hooks/character/useArmorClass'
-import { calculateAC, computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
+import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -38,7 +38,7 @@ describe('Armor Class Behavior', () => {
         ],
       })
 
-      const ac = calculateAC(character, 'base')
+      const ac = computeEffectiveCharacterArmorClass(character, character.abilityScores)
       // Light armor: 11 base + 2 dex = 13
       expect(ac).toBe(13)
     })
@@ -68,7 +68,7 @@ describe('Armor Class Behavior', () => {
         ],
       })
 
-      const ac = calculateAC(character, 'base')
+      const ac = computeEffectiveCharacterArmorClass(character, character.abilityScores)
       // Medium armor: 13 base + min(+3 dex, +2) = 15
       expect(ac).toBe(15)
     })
@@ -98,7 +98,7 @@ describe('Armor Class Behavior', () => {
         ],
       })
 
-      const ac = calculateAC(character, 'base')
+      const ac = computeEffectiveCharacterArmorClass(character, character.abilityScores)
       // Heavy armor: 18 (no dex modifier)
       expect(ac).toBe(18)
     })
@@ -138,7 +138,7 @@ describe('Armor Class Behavior', () => {
         ],
       })
 
-      const ac = calculateAC(character, 'base')
+      const ac = computeEffectiveCharacterArmorClass(character, character.abilityScores)
       // Leather (11) + dex (+2) + shield (+2) = 15
       expect(ac).toBe(15)
     })
@@ -147,9 +147,7 @@ describe('Armor Class Behavior', () => {
   describe('AC with unarmored defense (special source)', () => {
     test('barbarian unarmored defense: 10 + dex + con modifiers', () => {
       const character = makeCharacterFixture({
-        class: 'Barbarian',
-        classSource: 'PHB',
-        level: 5,
+        classProgression: [{ name: 'Barbarian', source: 'PHB', levels: 5 }],
         abilityScores: {
           strength: 16, // +3 (not used for AC)
           dexterity: 12, // +1 modifier
@@ -161,15 +159,13 @@ describe('Armor Class Behavior', () => {
         equipment: [],
       })
 
-      const ac = calculateAC(character, 'base')
+      const ac = computeEffectiveCharacterArmorClass(character, character.abilityScores)
       expect(ac).toBeGreaterThanOrEqual(10)
     })
 
     test('monk unarmored defense: 10 + dex + wis modifiers', () => {
       const character = makeCharacterFixture({
-        class: 'Monk',
-        classSource: 'PHB',
-        level: 5,
+        classProgression: [{ name: 'Monk', source: 'PHB', levels: 5 }],
         abilityScores: {
           strength: 10,
           dexterity: 16, // +3 modifier
@@ -181,7 +177,7 @@ describe('Armor Class Behavior', () => {
         equipment: [],
       })
 
-      const ac = calculateAC(character, 'base')
+      const ac = computeEffectiveCharacterArmorClass(character, character.abilityScores)
       expect(ac).toBeGreaterThanOrEqual(10)
     })
   })
@@ -200,7 +196,7 @@ describe('Armor Class Behavior', () => {
         equipment: [],
       })
 
-      const ac = calculateAC(character, 'base')
+      const ac = computeEffectiveCharacterArmorClass(character, character.abilityScores)
       // No armor: 10 + 2 dex = 12
       expect(ac).toBe(12)
     })
@@ -264,7 +260,10 @@ describe('Armor Class Behavior', () => {
         ],
       })
 
-      const acLow = calculateAC(characterLowDex, 'base')
+      const acLow = computeEffectiveCharacterArmorClass(
+        characterLowDex,
+        characterLowDex.abilityScores,
+      )
       expect(acLow).toBe(11) // 11 + 0 dex
 
       const characterHighDex = {
@@ -275,7 +274,10 @@ describe('Armor Class Behavior', () => {
         },
       }
 
-      const acHigh = calculateAC(characterHighDex, 'base')
+      const acHigh = computeEffectiveCharacterArmorClass(
+        characterHighDex,
+        characterHighDex.abilityScores,
+      )
       expect(acHigh).toBe(15) // 11 + 4 dex
     })
 
@@ -304,7 +306,10 @@ describe('Armor Class Behavior', () => {
         ],
       })
 
-      const acLeather = calculateAC(characterWithLeather, 'base')
+      const acLeather = computeEffectiveCharacterArmorClass(
+        characterWithLeather,
+        characterWithLeather.abilityScores,
+      )
       expect(acLeather).toBe(13) // 11 + 2 dex
 
       // Switch to chain shirt (medium armor with +2 dex cap)
@@ -325,7 +330,10 @@ describe('Armor Class Behavior', () => {
         ],
       }
 
-      const acChainShirt = calculateAC(characterWithChainShirt, 'base')
+      const acChainShirt = computeEffectiveCharacterArmorClass(
+        characterWithChainShirt,
+        characterWithChainShirt.abilityScores,
+      )
       expect(acChainShirt).toBe(15) // 13 + min(+2 dex, +2) = 15
     })
   })

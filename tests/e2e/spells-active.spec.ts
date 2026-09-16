@@ -10,16 +10,13 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
 }) => {
   const character = {
     id: 'spells-e2e-1',
-    version: '2.0.0',
+    version: '11.0.0',
     name: 'Spell E2E',
     originSystem: '2014',
     race: 'Human',
     raceSource: 'PHB',
-    class: 'Wizard',
-    classSource: 'PHB',
     background: 'Sage',
     backgroundSource: 'PHB',
-    level: 3,
     experiencePoints: 0,
     classProgression: [
       { name: 'Wizard', source: 'PHB', levels: 2 },
@@ -90,10 +87,12 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
       },
     },
     equipment: [],
-    hitPoints: { max: 12, current: 12, temporary: 0 },
-    armorClass: 12,
+    hitPoints: { current: 12, temporary: 0 },
     initiative: 2,
-    speed: 30,
+    movement: {
+      speeds: { walk: 30 },
+      source: { kind: 'manual', name: 'E2E seed' },
+    },
     savingThrows: {
       strength: { proficient: false, bonus: 0 },
       dexterity: { proficient: false, bonus: 0 },

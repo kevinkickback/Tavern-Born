@@ -102,19 +102,10 @@ export function AppHeader() {
   const characterSummary = useMemo(() => {
     if (!activeCharacter) return { visible: '', classBreakdown: '', isCondensed: false }
 
-    const progression = activeCharacter.classProgression ?? []
-    const classNames =
-      progression.length > 0
-        ? progression.map((entry) => entry.name).filter(Boolean)
-        : [activeCharacter.class].filter((name): name is string => Boolean(name))
-    const totalLevel =
-      progression.length > 0
-        ? progression.reduce((sum, entry) => sum + entry.levels, 0)
-        : activeCharacter.level
-    const classBreakdown =
-      progression.length > 0
-        ? progression.map((entry) => `${entry.name} ${entry.levels}`).join(' · ')
-        : classNames.join(' · ')
+    const progression = activeCharacter.classProgression
+    const classNames = progression.map((entry) => entry.name)
+    const totalLevel = progression.reduce((sum, entry) => sum + entry.levels, 0) || 1
+    const classBreakdown = progression.map((entry) => `${entry.name} ${entry.levels}`).join(' · ')
     const isCondensed = classNames.length > 2
     const classLabel = isCondensed ? `${classNames.length} classes` : classNames.join(' / ')
 

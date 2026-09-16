@@ -23,7 +23,7 @@ export function useClassProvenanceMutations() {
     (
       cls: {
         name: string
-        source?: string
+        source: string
         proficiency?: string[]
         startingEquipment?: unknown
         startingProficiencies?: {
@@ -53,7 +53,7 @@ export function useClassProvenanceMutations() {
     (
       cls: {
         name: string
-        source?: string
+        source: string
         startingEquipment?: unknown
       },
       blockIndex: number,
@@ -79,19 +79,9 @@ export function useClassProvenanceMutations() {
   )
 
   const applyClassChoiceSelection = useCallback(
-    (
-      choice: NormalizedCharacterChoice,
-      selected: readonly NormalizedChoiceOptionReference[],
-      legacyOptions: readonly NormalizedChoiceOptionReference[] = [],
-    ) => {
+    (choice: NormalizedCharacterChoice, selected: readonly NormalizedChoiceOptionReference[]) => {
       if (!character) return
-      const result = applyClassChoiceSelectionWithGrantsCommand(
-        character,
-        ledger,
-        choice,
-        selected,
-        legacyOptions,
-      )
+      const result = applyClassChoiceSelectionWithGrantsCommand(character, ledger, choice, selected)
       updateCharacter(character.id, {
         ...result.characterPatch,
         provenance: result.provenanceUpdate,

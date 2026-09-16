@@ -29,7 +29,6 @@ const FIGHTER_CLASS_DATA = {
 
 function seedFighterCharacter(level: number, classResources?: Record<string, number>) {
   const character = makeCharacterFixture({
-    class: 'Fighter',
     classProgression: [{ name: 'Fighter', source: 'PHB', levels: level }],
     classResources,
   })

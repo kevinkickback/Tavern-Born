@@ -1,11 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import {
-  getLegacyClassChoiceSelection,
   getStandaloneClassChoices,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
-import { addGrant, makeSourceTag } from '@/lib/provenance'
-import { emptyProvenance } from '@/store/characterStore'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 
 function choice(overrides: Partial<NormalizedCharacterChoice>): NormalizedCharacterChoice {
@@ -259,80 +256,5 @@ describe('class choice option resolution', () => {
         normalizedRules: { choices: [standalone, optional, featProgression] },
       }),
     ).toEqual([standalone, optional, featProgression])
-  })
-
-  test('projects legacy class-owned optional features into a normalized choice', () => {
-    const optional = choice({
-      label: 'Optional Pool',
-      kind: 'optional-feature',
-      source: { kind: 'optional-feature-progression', field: 'optionalfeatureProgression[0]' },
-      optionFilter: { entityType: 'optionalFeature', featureTypes: ['CUSTOM'] },
-    })
-    const ledger = addGrant(
-      emptyProvenance(),
-      'features',
-      'Legacy Option',
-      makeSourceTag('class', 'Any', 'choice', 'HB'),
-    )
-
-    expect(
-      getLegacyClassChoiceSelection(
-        optional,
-        [
-          {
-            availability: 'eligible',
-            reference: {
-              entityType: 'optionalFeature',
-              name: 'Legacy Option',
-              source: 'HB',
-            },
-            entries: [],
-          },
-        ],
-        { provenance: ledger },
-      ),
-    ).toMatchObject({
-      choiceId: optional.id,
-      selected: [{ name: 'Legacy Option', source: 'HB', slotLevel: 1 }],
-    })
-  })
-
-  test('projects a source-qualified legacy class feat into a normalized choice', () => {
-    const feat = choice({
-      label: 'Style Training',
-      kind: 'feat',
-      optionFilter: { entityType: 'feat', categories: ['STYLE'] },
-    })
-    const option = {
-      availability: 'eligible' as const,
-      reference: { entityType: 'feat' as const, name: 'Guarded Style', source: 'HB' },
-      entries: [],
-    }
-
-    expect(
-      getLegacyClassChoiceSelection(feat, [option], {
-        classFeatChoices: [
-          {
-            id: 'legacy-style',
-            className: 'Any',
-            classSource: 'HB',
-            progressionName: 'Style Training',
-            categories: ['STYLE'],
-            feats: [
-              {
-                id: 'legacy-feat',
-                name: 'Guarded Style',
-                source: 'HB',
-                description: '',
-                classLevel: 1,
-              },
-            ],
-          },
-        ],
-      }),
-    ).toMatchObject({
-      choiceId: feat.id,
-      selected: [{ entityType: 'feat', name: 'Guarded Style', source: 'HB', slotLevel: 1 }],
-    })
   })
 })

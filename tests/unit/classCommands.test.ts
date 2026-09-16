@@ -20,8 +20,6 @@ import { makeCharacterFixture } from '../fixtures/characterFixtures'
 describe('Class Commands', () => {
   test('selectBaseClass updates top-level class fields and progression', () => {
     const character = makeCharacterFixture({
-      class: '',
-      classSource: '',
       classProgression: [],
       proficiencies: {
         armor: [],
@@ -52,30 +50,23 @@ describe('Class Commands', () => {
       'PHB',
     )
 
-    expect(result.characterPatch.class).toBe('Wizard')
     expect(result.characterPatch.classProgression?.[0]?.name).toBe('Wizard')
   })
 
   test('selectSubclass updates subclass fields', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
     })
 
     const ledger = character.provenance ?? emptyProvenance()
 
     const result = selectSubclass(character, ledger, 'Evocation', 'PHB')
-    expect(result.characterPatch.subclass).toBe('Evocation')
-    expect(result.characterPatch.subclassSource).toBe('PHB')
+    expect(result.characterPatch.classProgression?.[0]?.subclass).toBe('Evocation')
+    expect(result.characterPatch.classProgression?.[0]?.subclassSource).toBe('PHB')
   })
 
   test('selectSubclass updates viewing class entry in progression without overriding top-level subclass for other classes', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      subclass: 'Evocation',
-      subclassSource: 'PHB',
       classProgression: [
         { name: 'Wizard', source: 'PHB', levels: 5, subclass: 'Evocation', subclassSource: 'PHB' },
         { name: 'Fighter', source: 'PHB', levels: 3 },
@@ -91,28 +82,21 @@ describe('Class Commands', () => {
 
     expect(result.characterPatch.classProgression?.[1]?.subclass).toBe('Battle Master')
     expect(result.characterPatch.classProgression?.[1]?.subclassSource).toBe('PHB')
-    expect(result.characterPatch.subclass).toBeUndefined()
-    expect(result.characterPatch.subclassSource).toBeUndefined()
   })
 
   test('updateCharacterLevel updates primary class level', () => {
     const character = makeCharacterFixture({
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
     })
 
     const ledger = character.provenance ?? emptyProvenance()
     const result = updateCharacterLevel(character, ledger, 4)
 
-    expect(result.characterPatch.level).toBe(4)
     expect(result.characterPatch.classProgression?.[0]?.levels).toBe(4)
   })
 
   test('level-down reverses a spell replacement earned at the removed level', () => {
     const base = makeCharacterFixture({
-      class: 'Bard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Bard', source: 'PHB', levels: 3 }],
       spells: {
         ...makeCharacterFixture().spells,
@@ -173,9 +157,6 @@ describe('Class Commands', () => {
 
   test('level-down reverses successive spell replacements in reverse order', () => {
     const base = makeCharacterFixture({
-      class: 'Bard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [{ name: 'Bard', source: 'PHB', levels: 5 }],
       spells: {
         ...makeCharacterFixture().spells,
@@ -238,9 +219,6 @@ describe('Class Commands', () => {
 
   test('level-down does not restore a swapped spell learned above the retained level', () => {
     const base = makeCharacterFixture({
-      class: 'Bard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [{ name: 'Bard', source: 'PHB', levels: 5 }],
       spells: {
         ...makeCharacterFixture().spells,
@@ -349,27 +327,6 @@ describe('Class Commands', () => {
     )
   })
 
-  test('addMulticlass preserves an explicit empty source for progression and grants', () => {
-    const character = makeCharacterFixture({
-      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
-    })
-    const ledger = character.provenance ?? emptyProvenance()
-    const result = addMulticlass(
-      character,
-      ledger,
-      'Wizard',
-      {
-        name: 'Wizard',
-        source: 'XPHB',
-        multiclassing: { proficienciesGained: { armor: ['light armor'] } },
-      } as never,
-      '',
-    )
-
-    expect(result.characterPatch.classProgression?.[1]?.source).toBe('')
-    expect(result.provenanceUpdate.proficiencies.armor['light armor']?.[0]?.sourceRef).toBe('')
-  })
-
   test('removeMulticlass removes secondary class entry', () => {
     const character = makeCharacterFixture({
       classProgression: [
@@ -379,7 +336,7 @@ describe('Class Commands', () => {
     })
 
     const ledger = character.provenance ?? emptyProvenance()
-    const result = removeMulticlass(character, ledger, 'Fighter')
+    const result = removeMulticlass(character, ledger, 'Fighter', 'PHB')
 
     expect(result.characterPatch.classProgression).toHaveLength(1)
     expect(result.characterPatch.classProgression?.[0]?.name).toBe('Wizard')
@@ -401,11 +358,8 @@ describe('Class Commands', () => {
     ])
   })
 
-  test('applyClassProgressionUpdate syncs total level and top-level class fields', () => {
+  test('applyClassProgressionUpdate stores the canonical class progression', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
     })
 
@@ -415,15 +369,11 @@ describe('Class Commands', () => {
       { name: 'Fighter', source: 'PHB', levels: 1 },
     ])
 
-    expect(result.characterPatch.level).toBe(4)
-    expect(result.characterPatch.class).toBe('Wizard')
-    expect(result.characterPatch.classSource).toBe('PHB')
     expect(result.characterPatch.classProgression).toHaveLength(2)
   })
 
   test('applyLevelUp records the raw die result with the progression update', () => {
     const character = makeCharacterFixture({
-      level: 1,
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
       hitPointGains: [],
     })
@@ -442,7 +392,7 @@ describe('Class Commands', () => {
       },
     )
 
-    expect(result.characterPatch.level).toBe(2)
+    expect(result.characterPatch.classProgression?.[0]?.levels).toBe(2)
     expect(result.characterPatch.hitPointGains).toEqual([
       expect.objectContaining({
         className: 'Fighter',
@@ -456,7 +406,6 @@ describe('Class Commands', () => {
 
   test('level removal prunes its persisted hit-point gain', () => {
     const character = makeCharacterFixture({
-      level: 2,
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 2 }],
       hitPointGains: [
         {
@@ -481,7 +430,6 @@ describe('Class Commands', () => {
 
   test('level removal retracts ASIs that are no longer earned', () => {
     const character = makeCharacterFixture({
-      level: 4,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
       asiChoices: [
         {
@@ -503,29 +451,6 @@ describe('Class Commands', () => {
     expect(result.provenanceUpdate.abilityBonuses).toEqual([])
   })
 
-  test('level changes retain earned legacy ASIs without a class source', () => {
-    const character = makeCharacterFixture({
-      level: 4,
-      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
-      asiChoices: [
-        {
-          id: 'wizard|4',
-          level: 2,
-          className: 'wizard',
-          abilityChanges: { intelligence: 2 },
-        },
-      ],
-    })
-    const result = applyClassProgressionUpdate(
-      character,
-      character.provenance ?? emptyProvenance(),
-      [{ name: 'Wizard', source: 'PHB', levels: 3 }],
-    )
-
-    expect(result.characterPatch.asiChoices).toEqual(character.asiChoices)
-    expect(result.provenanceUpdate.abilityBonuses).toHaveLength(1)
-  })
-
   test('level removal retracts class-owned feat choices and their effects', () => {
     const choiceId = 'fighter|phb|epic boon|eb'
     const optionTag = {
@@ -537,7 +462,6 @@ describe('Class Commands', () => {
       grantVariant: choiceId,
     }
     const character = makeCharacterFixture({
-      level: 4,
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 4 }],
       classChoiceSelections: [
         {
@@ -737,7 +661,6 @@ describe('Class Commands', () => {
     const replacedChoiceId = 'class:test-class|old|choice:path|1'
     const retainedChoiceId = 'class:other-class|same|choice:path|1'
     const character = makeCharacterFixture({
-      level: 2,
       classProgression: [
         { name: 'Test Class', source: 'OLD', levels: 1 },
         { name: 'Other Class', source: 'SAME', levels: 1 },

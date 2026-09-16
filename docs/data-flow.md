@@ -102,12 +102,12 @@ Level-up flow:
 5. Removing a level prunes gain records outside the retained progression.
 
 Header management flow:
-1. The header heart opens `HitPointsModal` with the character's actual current and temporary HP. Legacy characters whose current HP was never initialized begin from their effective maximum.
+1. The header heart opens `HitPointsModal` with the character's actual current and temporary HP. An uninitialized current HP value begins from the effective maximum.
 2. The player may edit current/temp HP and add labeled flat or per-level maximum-HP bonuses or penalties. Negative adjustments are valid.
 3. An optional exact maximum overrides calculation and adjustments without deleting them.
 4. `useHitPoints().saveHitPointSettings()` applies the complete settings patch in one character-store mutation.
 
-Effective maximum HP resolves in this order: class/Constitution calculation, lasting adjustments, exact override. `hitPoints.max` is a zeroed legacy field and is not a canonical maximum-HP read.
+Effective maximum HP resolves in this order: class/Constitution calculation, lasting adjustments, exact override.
 
 ## 3b) Armor Class Management
 
@@ -123,7 +123,7 @@ Flow:
 4. An optional exact override takes final precedence without deleting saved adjustments.
 5. The modal saves adjustments and the optional override atomically.
 
-All UI and PDF reads must use `computeEffectiveCharacterArmorClass()` or `useArmorClass()`. The legacy `character.armorClass` field is retained only for migration compatibility.
+All UI and PDF reads must use `computeEffectiveCharacterArmorClass()` or `useArmorClass()`.
 
 ## 3c) Per-Character Rules and Sources
 
@@ -259,35 +259,29 @@ Flow:
 5. Exhaustion uses the loaded ruleset record: PHB table rows are displayed and highlighted cumulatively, while formula-based XPHB text is rendered directly.
 6. Only active condition names and the exhaustion level are persisted; rules text remains game data.
 
-## 6) Character Schema Versioning and Migrations
+## 6) Character Schema Versioning
 
 Entry points:
-- src/lib/schema/migrations.ts
-- src/store/characterStore.ts (on rehydrate)
+- src/lib/schema/characterVersion.ts
+- src/store/characterStore.ts
 
 Flow:
-1. Character.version field tracks the schema version of a saved character.
-2. On rehydration from IndexedDB, migrateCharacter() is called with the character's version.
-3. Migration registry applies up-migrations to bring character from its version to CURRENT_SCHEMA_VERSION.
-4. If migration chain is broken or migration fails, character is rejected and logged.
-5. Migrations are registered with up() and down() handlers for forward/backward compatibility.
-
-Current implementation note:
-- `downgradeCharacter()` is intentionally infrastructure-only today (rollback/export support) and has no runtime callers in the app flow.
-- `CURRENT_SCHEMA_VERSION` is 7. v5 adds durable per-level hit-point gain records; v6 migrates legacy maximum HP into the explicit override model and initializes lasting HP/AC adjustment collections; v7 migrates numeric walking speed into structured, source-labeled movement.
+1. `Character.version` must equal `CURRENT_CHARACTER_VERSION`.
+2. Import validates the exact current version and strict character schema before saving.
+3. IndexedDB hydration keeps valid current records and drops unsupported or malformed records.
+4. The Home page reports how many unsupported beta records were skipped.
 
 Versioning strategy:
-- Schema version is incremented only on **breaking changes** (added required fields, removed fields, restructured data).
-- Non-breaking changes (new optional fields with defaults, enum expansions) don't require versioning.
-- Migration handlers must be idempotent and testable.
-- Downgrade support (down handlers) allows rolling back if needed.
+- Increment the character version for breaking changes such as required fields, removed fields, or restructured data.
+- Non-breaking optional additions do not require a version bump.
+- Older and newer files are intentionally unsupported before 1.0; do not add conversion paths or compatibility fields.
 
-Example breaking change requiring migration:
+Example breaking change requiring a version bump:
 - Adding a required field without a safe default
 - Restructuring a nested object that changes how data is accessed
 - Removing a field that changes the interpretation of other fields
 
-See docs/contributor-start-here.md for schema migration guidelines.
+See docs/contributor-start-here.md for the beta character-format policy.
 
 
 ## 7) Auto-Update Lifecycle

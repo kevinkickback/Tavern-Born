@@ -89,9 +89,7 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
     setNewAmount('')
     setNewSource('')
     setNewMode('flat')
-    const existingOverride =
-      character.maxHitPointsOverride ??
-      (character.hitPoints.max > 0 ? character.hitPoints.max : undefined)
+    const existingOverride = character.maxHitPointsOverride
     setOverrideEnabled(existingOverride != null)
     setOverrideValue(existingOverride != null ? String(existingOverride) : '')
     setDesiredMaximum(String(effectiveMaxHP))

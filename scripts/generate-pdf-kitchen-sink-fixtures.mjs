@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const root = resolve(process.cwd())
+const CURRENT_CHARACTER_VERSION = '11.0.0'
 const dataRoot = join(root, 'data')
 const fixtureRoot = join(root, 'tests', 'fixtures')
 const legacyFixturePath = join(fixtureRoot, 'pdf-kitchen-sink-2014.tbc')
@@ -241,6 +242,7 @@ function buildProgression(seed, edition) {
 }
 
 function buildFixture(seed, edition) {
+  const seedSpeed = seed.movement.speeds.walk
   const race = editionEntity(races, seed.race, edition)
   const background = editionEntity(backgrounds, seed.background, edition)
   const progression = buildProgression(seed, edition)
@@ -360,6 +362,7 @@ function buildFixture(seed, edition) {
   const fixture = {
     ...seed,
     id: `pdf-kitchen-sink-${edition}-character`,
+    version: CURRENT_CHARACTER_VERSION,
     name: edition === '2024' ? 'Seraphina Manypaths (2024)' : 'Seraphina Manypaths (2014)',
     originSystem: edition,
     race: race.name,
@@ -367,10 +370,6 @@ function buildFixture(seed, edition) {
     ...(selectedSubrace
       ? { subrace: selectedSubrace.name, subraceSource: selectedSubrace.source }
       : { subrace: undefined, subraceSource: undefined }),
-    class: primary.name,
-    classSource: primary.source,
-    subclass: primary.subclass,
-    subclassSource: primary.subclassSource,
     background: background.name,
     backgroundSource: background.source,
     classProgression: progression,
@@ -385,6 +384,10 @@ function buildFixture(seed, edition) {
     })),
     spells: { ...seed.spells, spellProfiles: mappedProfiles },
     equipment: buildEquipment(seed, edition),
+    hitPoints: {
+      current: seed.hitPoints.current,
+      temporary: seed.hitPoints.temporary,
+    },
     hitPointGains: seed.hitPointGains.map((gain) => ({
       ...gain,
       classSource: editionEntity(classes, gain.className, edition).source,
@@ -411,13 +414,16 @@ function buildFixture(seed, edition) {
     backgroundAsiChoices: edition === '2024' ? backgroundChoices : seed.backgroundAsiChoices,
     backgroundEquipmentChoices: [],
     classEquipmentChoices: {},
+    movement: {
+      speeds: { walk: seedSpeed },
+      source: { kind: 'manual', name: 'Kitchen sink fixture' },
+    },
     details: {
       ...seed.details,
       organizationSelectionKey: '',
       organizationCustomName: '',
       organizationCustomDescription: '',
       organizationCustomImage: '',
-      alliesAndOrganizations: '',
     },
     provenance: emptyProvenance(),
   }

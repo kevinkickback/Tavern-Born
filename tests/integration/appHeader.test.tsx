@@ -39,7 +39,7 @@ vi.mock('@/hooks/character/useArmorClass', () => ({
 
 vi.mock('@/hooks/character/useHitPoints', () => ({
   useHitPoints: () => ({
-    hitPoints: { max: 42, current: 37, temporary: 0 },
+    hitPoints: { current: 37, temporary: 0 },
     calculatedMaxHP: 40,
     effectiveMaxHP: 42,
     hitDie: 10,
@@ -63,8 +63,6 @@ describe('app header character summary', () => {
     const character = makeCharacterFixture({
       name: 'Aelar',
       race: 'Elf',
-      class: 'Fighter',
-      level: 2,
       classProgression: [
         { name: 'Fighter', source: 'PHB', levels: 3 },
         { name: 'Wizard', source: 'PHB', levels: 2 },

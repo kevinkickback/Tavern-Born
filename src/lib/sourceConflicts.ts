@@ -24,14 +24,9 @@ export function detectSourceConflicts(
   flag(character.race, character.raceSource)
   if (character.subrace) flag(character.subrace, character.subraceSource)
 
-  if (character.classProgression?.length) {
-    for (const cls of character.classProgression) {
-      flag(cls.name, cls.source)
-      if (cls.subclass) flag(`${cls.subclass} (subclass)`, cls.subclassSource)
-    }
-  } else {
-    flag(character.class, character.classSource)
-    if (character.subclass) flag(`${character.subclass} (subclass)`, character.subclassSource)
+  for (const cls of character.classProgression) {
+    flag(cls.name, cls.source)
+    if (cls.subclass) flag(`${cls.subclass} (subclass)`, cls.subclassSource)
   }
 
   flag(character.background, character.backgroundSource)

@@ -80,7 +80,7 @@ export function formatCapitalized(s: unknown): string {
 export function getSpeedDisplay(race: Race5e | undefined): string {
   if (!race) return '—'
   const base = normalizeRaceMovement(race)
-  const movement = getEffectiveCharacterMovement({ speed: base.speeds.walk ?? 0, movement: base })
+  const movement = getEffectiveCharacterMovement({ movement: base })
   const parts: string[] = []
   const walk = movement.speeds.walk
   if (walk !== undefined) parts.push(`${walk} ft.`)
