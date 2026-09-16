@@ -233,22 +233,22 @@ export function SpellsPage() {
       const profile = spellProfiles.find((p) => p.id === detail.profileId)
       if (!profile || profile.type !== 'class') continue
 
-      const preparedSet = new Set((profile.preparedSpells ?? []).map(normalizeKey))
-      const fixedSet = new Set((profile.fixedSpells ?? []).map(normalizeKey))
-      const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(normalizeKey))
+      const preparedSet = new Set((profile.preparedSpells ?? []).map(getSpellNameKey))
+      const fixedSet = new Set((profile.fixedSpells ?? []).map(getSpellNameKey))
+      const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(getSpellNameKey))
 
       const available = allSpells.filter(
         (spell) =>
           spell.level > 0 &&
           spell.level <= detail.maxSpellLevel &&
           (isSpellOnClassList(spell, profile.className, profile.classSource) ||
-            fixedSet.has(normalizeKey(spell.name))),
+            fixedSet.has(getSpellNameKey(spell.name))),
       )
       available.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
       map.set(
         detail.profileId,
         available.map((spell) => {
-          const spellKey = normalizeKey(spell.name)
+          const spellKey = getSpellNameKey(spell.name)
           const alwaysPrepared = profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
           return {
             spell,
@@ -277,12 +277,12 @@ export function SpellsPage() {
 
     for (const profile of spellProfiles) {
       const detail = detailsByProfileId.get(profile.id)
-      const fixedSet = new Set((profile.fixedSpells ?? []).map(normalizeKey))
-      const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(normalizeKey))
+      const fixedSet = new Set((profile.fixedSpells ?? []).map(getSpellNameKey))
+      const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(getSpellNameKey))
 
       for (const name of profile.cantrips) {
         const spell = resolveSpellReferenceFromMap(name, spellByName)
-        const spellKey = normalizeKey(name)
+        const spellKey = getSpellNameKey(name)
         const alwaysPrepared = !!profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
         items.push({
           profileId: profile.id,
@@ -304,10 +304,11 @@ export function SpellsPage() {
 
       for (const name of profile.spellsKnown) {
         const spell = resolveSpellReferenceFromMap(name, spellByName)
-        const spellKey = normalizeKey(name)
+        const spellKey = getSpellNameKey(name)
         const alwaysPrepared = !!profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
         const prepared =
-          alwaysPrepared || profile.preparedSpells.some((item) => normalizeKey(item) === spellKey)
+          alwaysPrepared ||
+          profile.preparedSpells.some((item) => getSpellNameKey(item) === spellKey)
         items.push({
           profileId: profile.id,
           profileLabel: profile.label,

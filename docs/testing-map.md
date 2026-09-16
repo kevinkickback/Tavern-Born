@@ -156,7 +156,7 @@ new tests land and do not lower them to merge a change.
 - Cross-page configuration coverage verifies source-qualified feat focus plus legacy race-bonus and
   revised background-bonus destination highlights, including explicit highlight expiry.
 - Race-command coverage verifies that 2024 lineage selection is independent of unfinished
-  background choices; the corpus-backed kitchen-sink test requires a valid selected lineage when
+  background choices; the corpus-backed comprehensive-character test requires a valid selected lineage when
   the resolved race exposes lineages.
 - Canonical 2014 race/2024 background readiness routing and revised background-bonus editing in
   tests/lib/characterReadiness.test.ts and tests/integration/abilityScoresPage.test.tsx. The 2024
@@ -254,9 +254,9 @@ new tests land and do not lower them to merge a change.
   detail coverage also verifies 2014 known and 2024 prepared limits owned by casting subclasses;
   action activation distinguishes known and level-only prepared casters from daily prepared casters.
 - Class-rule normalization includes corpus-backed 2014 Paladin Channel Divinity progression checks.
-- Importable, ruleset-specific PDF kitchen-sink coverage in
-  tests/fixtures/pdf-kitchen-sink-2014.tbc, tests/fixtures/pdf-kitchen-sink-2024.tbc, and
-  tests/lib/pdfKitchenSinkFixture.test.ts. The fixtures retain high-capacity multiclass, spell,
+- Importable, ruleset-specific comprehensive PDF coverage in
+  tests/fixtures/comprehensive-character-2014.tbc, tests/fixtures/comprehensive-character-2024.tbc, and
+  tests/lib/comprehensiveCharacterFixture.test.ts. The fixtures retain high-capacity multiclass, spell,
   skill/save, attack, magic-item, inventory, narrative, and runtime coverage while a corpus audit
   requires every source-qualified entity to resolve and forbids embedded item/feat/feature prose.
 - Route-decomposition coverage keeps Feats and Characteristics behavior under their existing

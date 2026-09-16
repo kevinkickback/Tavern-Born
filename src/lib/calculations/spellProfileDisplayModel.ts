@@ -1,5 +1,5 @@
+import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
-import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Spell5e } from '@/types/5etools'
 import type { RaceSpellChoice } from '@/types/character'
 import { countUniqueSpellNames } from './spellProfiles.profiles'
@@ -112,17 +112,17 @@ export function buildSpellProfileDisplayModels({
       ? (preparedCasterItemsByProfile?.get(profile.id) ?? [])
       : []
     const availableClassSpells = availableClassItems.map(({ spell }) => spell)
-    const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(normalizeKey))
+    const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(getSpellNameKey))
     const preparedSet = isTruePrepared
       ? new Set(
           (profile.preparedSpells ?? [])
-            .filter((name) => !alwaysPreparedSet.has(normalizeKey(name)))
-            .map(normalizeKey),
+            .filter((name) => !alwaysPreparedSet.has(getSpellNameKey(name)))
+            .map(getSpellNameKey),
         )
       : new Set(
           items
             .filter((item) => item.kind === 'spell' && item.prepared)
-            .map((item) => normalizeKey(item.name)),
+            .map((item) => getSpellNameKey(item.name)),
         )
     const preparedCount = preparedSet.size
     const preparableCount = isTruePrepared

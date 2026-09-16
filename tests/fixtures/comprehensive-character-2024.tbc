@@ -1,12 +1,12 @@
 {
-  "id": "pdf-kitchen-sink-2024-character",
-  "name": "Seraphina Manypaths (2024)",
+  "id": "comprehensive-character-2024",
+  "name": "Comprehensive Test Character (2024)",
   "originSystem": "2024",
   "race": "Elf",
   "raceSource": "XPHB",
   "subrace": "Drow Lineage",
   "subraceSource": "XPHB",
-  "background": "Sage",
+  "background": "Criminal",
   "backgroundSource": "XPHB",
   "currency": {
     "cp": 137,
@@ -230,21 +230,30 @@
   ],
   "feats": [
     {
-      "id": "feat-alert",
-      "name": "Alert",
-      "source": "XPHB",
-      "description": "",
-      "prerequisites": "",
-      "className": "Wizard",
-      "classSource": "XPHB",
-      "classLevel": 4
-    },
-    {
       "id": "feat-war-caster",
       "name": "War Caster",
       "source": "XPHB",
       "description": "",
       "prerequisites": "",
+      "options": {
+        "abilityScore": "intelligence"
+      },
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 4
+    },
+    {
+      "id": "feat-fey-touched",
+      "name": "Fey-Touched",
+      "source": "XPHB",
+      "description": "",
+      "prerequisites": "",
+      "options": {
+        "abilityScore": "intelligence",
+        "spells": [
+          "Bless|XPHB"
+        ]
+      },
       "className": "Wizard",
       "classSource": "XPHB",
       "classLevel": 8
@@ -263,19 +272,17 @@
       "classLevel": 4
     },
     {
-      "id": "feat-skilled",
-      "name": "Skilled",
+      "id": "feat-skill-expert",
+      "name": "Skill Expert",
       "source": "XPHB",
       "description": "",
       "prerequisites": "",
       "options": {
+        "abilityScore": "wisdom",
         "skills": [
-          "performance",
-          "survival"
+          "performance"
         ],
-        "tools": [
-          "Herbalism Kit"
-        ]
+        "expertiseSkill": "performance"
       },
       "className": "Cleric",
       "classSource": "XPHB",
@@ -290,38 +297,54 @@
         "label": "Wizard (Lv 10)",
         "className": "Wizard",
         "classSource": "XPHB",
-        "castingAbility": "int",
         "cantrips": [
-          "Fire Bolt|XPHB",
-          "Mage Hand|XPHB",
-          "Minor Illusion|XPHB",
-          "Prestidigitation|XPHB"
+          "Acid Splash|XPHB",
+          "Blade Ward|XPHB",
+          "Chill Touch|XPHB",
+          "Dancing Lights|XPHB",
+          "Elementalism|XPHB"
         ],
-        "spellsKnown": [],
-        "preparedSpells": [
-          "Magic Missile|XPHB",
-          "Shield|XPHB",
-          "Detect Magic|XPHB",
-          "Misty Step|XPHB",
-          "Mirror Image|XPHB",
-          "Scorching Ray|XPHB",
+        "spellsKnown": [
+          "Alarm|XPHB",
+          "Burning Hands|XPHB",
+          "Charm Person|XPHB",
+          "Chromatic Orb|XPHB",
+          "Color Spray|XPHB",
+          "Comprehend Languages|XPHB",
+          "Alter Self|XPHB",
+          "Arcane Lock|XPHB",
+          "Arcane Vigor|XPHB",
+          "Augury|XPHB",
+          "Blindness/Deafness|XPHB",
+          "Animate Dead|XPHB",
+          "Bestow Curse|XPHB",
+          "Blink|XPHB",
+          "Clairvoyance|XPHB",
           "Counterspell|XPHB",
-          "Fireball|XPHB",
-          "Fly|XPHB",
-          "Dimension Door|XPHB",
-          "Greater Invisibility|XPHB",
-          "Wall of Force|XPHB"
+          "Arcane Eye|XPHB",
+          "Banishment|XPHB",
+          "Blight|XPHB",
+          "Charm Monster|XPHB",
+          "Animate Objects|XPHB",
+          "Bigby's Hand|XPHB",
+          "Circle of Power|XPHB",
+          "Cloudkill|XPHB"
         ],
-        "alwaysPreparedSpells": [
-          "Detect Magic|XPHB"
+        "preparedSpells": [
+          "Alarm|XPHB",
+          "Burning Hands|XPHB",
+          "Charm Person|XPHB",
+          "Alter Self|XPHB",
+          "Arcane Lock|XPHB",
+          "Arcane Vigor|XPHB",
+          "Animate Dead|XPHB",
+          "Bestow Curse|XPHB",
+          "Arcane Eye|XPHB",
+          "Banishment|XPHB",
+          "Animate Objects|XPHB",
+          "Bigby's Hand|XPHB"
         ],
-        "alwaysPrepared": false,
-        "spellSwaps": {
-          "2": {
-            "removed": "Burning Hands|XPHB",
-            "added": "Shield|XPHB"
-          }
-        }
+        "alwaysPrepared": false
       },
       {
         "id": "class:Cleric|XPHB",
@@ -329,26 +352,45 @@
         "label": "Cleric (Lv 5)",
         "className": "Cleric",
         "classSource": "XPHB",
-        "castingAbility": "wis",
-        "cantrips": [
-          "Guidance|XPHB",
-          "Sacred Flame|XPHB",
-          "Thaumaturgy|XPHB"
-        ],
-        "spellsKnown": [],
-        "preparedSpells": [
+        "fixedSpells": [
           "Bless|XPHB",
           "Cure Wounds|XPHB",
-          "Healing Word|XPHB",
+          "Lesser Restoration|XPHB",
           "Spiritual Weapon|XPHB",
-          "Aid|XPHB",
-          "Revivify|XPHB",
-          "Spirit Guardians|XPHB",
-          "Dispel Magic|XPHB"
+          "Beacon of Hope|XPHB",
+          "Revivify|XPHB"
         ],
         "alwaysPreparedSpells": [
           "Bless|XPHB",
-          "Cure Wounds|XPHB"
+          "Cure Wounds|XPHB",
+          "Lesser Restoration|XPHB",
+          "Spiritual Weapon|XPHB",
+          "Beacon of Hope|XPHB",
+          "Revivify|XPHB"
+        ],
+        "cantrips": [
+          "Guidance|XPHB",
+          "Light|XPHB",
+          "Mending|XPHB",
+          "Resistance|XPHB"
+        ],
+        "spellsKnown": [
+          "Bless|XPHB",
+          "Cure Wounds|XPHB",
+          "Lesser Restoration|XPHB",
+          "Spiritual Weapon|XPHB",
+          "Beacon of Hope|XPHB",
+          "Revivify|XPHB"
+        ],
+        "preparedSpells": [
+          "Bane|XPHB",
+          "Bless|XPHB",
+          "Command|XPHB",
+          "Aid|XPHB",
+          "Augury|XPHB",
+          "Blindness/Deafness|XPHB",
+          "Animate Dead|XPHB",
+          "Aura of Vitality|XPHB"
         ],
         "alwaysPrepared": false
       },
@@ -358,58 +400,44 @@
         "label": "Elf Racial Magic",
         "raceName": "Elf",
         "raceSource": "XPHB",
-        "castingAbility": "int",
-        "choices": [
-          {
-            "id": "high-elf-cantrip",
-            "count": 1,
-            "isCantrip": true,
-            "filter": {
-              "level": 0,
-              "classes": [
-                "Wizard"
-              ]
-            },
-            "pool": [
-              "Dancing Lights|XPHB",
-              "Light|XPHB",
-              "Ray of Frost|XPHB"
-            ],
-            "selected": [
-              "Dancing Lights|XPHB"
-            ]
-          }
+        "castingAbility": "intelligence",
+        "castingAbilityOptions": [
+          "intelligence",
+          "wisdom",
+          "charisma"
         ],
         "fixedSpells": [
           "Dancing Lights|XPHB",
-          "Darkness|XPHB",
-          "Faerie Fire|XPHB"
+          "Faerie Fire|XPHB",
+          "Darkness|XPHB"
         ],
         "cantrips": [
           "Dancing Lights|XPHB"
         ],
-        "spellsKnown": [],
+        "spellsKnown": [
+          "Faerie Fire|XPHB",
+          "Darkness|XPHB"
+        ],
         "preparedSpells": [],
         "alwaysPrepared": true
       },
       {
         "id": "special:unrestricted",
         "type": "special",
-        "label": "Special / Unrestricted",
-        "castingAbility": "cha",
-        "castingAbilityOptions": [
-          "int",
-          "wis",
-          "cha"
-        ],
+        "label": "Special (Unrestricted)",
         "fixedSpells": [
-          "Wish|XPHB"
+          "Friends|XPHB",
+          "Light|XPHB",
+          "Detect Magic|XPHB"
         ],
-        "cantrips": [],
-        "spellsKnown": [],
-        "preparedSpells": [
-          "Wish|XPHB"
+        "cantrips": [
+          "Friends|XPHB",
+          "Light|XPHB"
         ],
+        "spellsKnown": [
+          "Detect Magic|XPHB"
+        ],
+        "preparedSpells": [],
         "alwaysPrepared": true
       }
     ],
@@ -2109,60 +2137,9 @@
     "ignoreEquipRestrictions": true
   },
   "raceAsiChoices": [],
-  "raceAsiBlockIndex": 0,
-  "backgroundAsiBlockIndex": 0,
   "backgroundEquipmentChoices": [],
-  "backgroundAsiChoices": [
-    "constitution",
-    "intelligence"
-  ],
-  "backgroundCurrencyGrant": {
-    "cp": 5,
-    "sp": 10,
-    "ep": 0,
-    "gp": 50,
-    "pp": 1
-  },
   "classEquipmentChoices": {},
-  "asiChoices": [
-    {
-      "id": "asi-wizard-4",
-      "level": 4,
-      "className": "Wizard",
-      "classSource": "XPHB",
-      "abilityChanges": {
-        "intelligence": 2
-      }
-    },
-    {
-      "id": "asi-wizard-8",
-      "level": 8,
-      "className": "Wizard",
-      "classSource": "XPHB",
-      "abilityChanges": {
-        "dexterity": 1,
-        "wisdom": 1
-      }
-    },
-    {
-      "id": "asi-fighter-4",
-      "level": 4,
-      "className": "Fighter",
-      "classSource": "XPHB",
-      "abilityChanges": {
-        "constitution": 2
-      }
-    },
-    {
-      "id": "asi-cleric-4",
-      "level": 4,
-      "className": "Cleric",
-      "classSource": "XPHB",
-      "abilityChanges": {
-        "wisdom": 2
-      }
-    }
-  ],
+  "asiChoices": [],
   "specialFeats": [
     {
       "id": "special-magic-initiate",
@@ -2170,9 +2147,11 @@
       "source": "XPHB",
       "description": "",
       "options": {
-        "spellcastingClass": "Wizard",
+        "spellcastingClass": "Wizard Spells",
         "spells": [
-          "Wish|XPHB"
+          "Friends|XPHB",
+          "Light|XPHB",
+          "Detect Magic|XPHB"
         ]
       }
     },
@@ -2183,51 +2162,8 @@
       "description": ""
     }
   ],
-  "classFeatChoices": [
-    {
-      "id": "fighter|xphb|fighting style|fs",
-      "className": "Fighter",
-      "classSource": "XPHB",
-      "progressionName": "Fighting Style",
-      "categories": [
-        "FS"
-      ],
-      "feats": [
-        {
-          "id": "class-fighter-defense-xphb",
-          "name": "Defense",
-          "source": "XPHB",
-          "description": "",
-          "className": "Fighter",
-          "classSource": "XPHB",
-          "classLevel": 1
-        }
-      ]
-    }
-  ],
-  "fixedFeatOptions": {
-    "Resilient|XPHB|constitution": {
-      "abilityScore": "constitution"
-    },
-    "Skilled|XPHB|test": {
-      "skills": [
-        "performance",
-        "survival"
-      ],
-      "tools": [
-        "Herbalism Kit"
-      ]
-    },
-    "Magic Initiate|XPHB|wizard": {
-      "spellcastingClass": "Wizard",
-      "spells": [
-        "Wish|XPHB"
-      ],
-      "languages": [
-        "Primordial"
-      ]
-    }
-  },
+  "classFeatChoices": [],
+  "fixedFeatOptions": {},
   "inspiration": true,
   "deathSaves": {
     "successes": 2,
@@ -2262,7 +2198,17 @@
     },
     "abilityBonuses": [],
     "features": {},
-    "feats": {},
+    "feats": {
+      "alert": [
+        {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Criminal"
+        }
+      ]
+    },
     "spells": {},
     "equipment": {},
     "choices": []
@@ -2271,12 +2217,93 @@
     "speeds": {},
     "source": {
       "kind": "manual",
-      "name": "Kitchen sink fixture"
+      "name": "Comprehensive test fixture"
     }
   },
   "schemaVersion": 1,
   "hitPoints": {
     "current": 121,
     "temporary": 17
-  }
+  },
+  "classChoiceSelections": [
+    {
+      "choiceId": "class:fighter|xphb|choice:fighting-style|1",
+      "label": "Fighting Style",
+      "kind": "feat",
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "classLevel": 1,
+      "selected": [
+        {
+          "entityType": "feat",
+          "name": "Defense",
+          "source": "XPHB",
+          "slotLevel": 1
+        }
+      ]
+    },
+    {
+      "choiceId": "class:fighter|xphb|choice:weapon-mastery|1",
+      "label": "Weapon Mastery",
+      "kind": "item",
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "classLevel": 1,
+      "selected": [
+        {
+          "entityType": "item",
+          "name": "Battleaxe",
+          "source": "XPHB",
+          "slotLevel": 1
+        },
+        {
+          "entityType": "item",
+          "name": "Dagger",
+          "source": "XPHB",
+          "slotLevel": 1
+        },
+        {
+          "entityType": "item",
+          "name": "Greatsword",
+          "source": "XPHB",
+          "slotLevel": 1
+        },
+        {
+          "entityType": "item",
+          "name": "Longbow",
+          "source": "XPHB",
+          "slotLevel": 1
+        }
+      ]
+    },
+    {
+      "choiceId": "class:cleric|xphb|choice:divine-order|1",
+      "label": "Divine Order",
+      "kind": "class-feature",
+      "className": "Cleric",
+      "classSource": "XPHB",
+      "classLevel": 1,
+      "selected": [
+        {
+          "entityType": "classFeature",
+          "name": "Protector",
+          "source": "XPHB",
+          "slotLevel": 1
+        }
+      ]
+    }
+  ],
+  "backgroundEquipmentItemChoices": {},
+  "classEquipmentItemChoices": {},
+  "movementAdjustments": [],
+  "movementOverrides": {},
+  "manualEffects": [],
+  "suppressedEffectIds": [],
+  "effectFlags": {},
+  "manualActions": [],
+  "backgroundAsiBlockIndex": 0,
+  "backgroundAsiChoices": [
+    "dexterity",
+    "constitution"
+  ]
 }

@@ -85,8 +85,8 @@ reopens an actual generated 2014 file and verifies the resistance, armor, langua
 plus portable checkbox appearances. When replacing either template, rerun those tests and visually
 inspect every generated page before changing field names.
 
-`tests/fixtures/pdf-kitchen-sink-2014.tbc` and
-`tests/fixtures/pdf-kitchen-sink-2024.tbc` are importable level-20 regression characters dedicated
+`tests/fixtures/comprehensive-character-2014.tbc` and
+`tests/fixtures/comprehensive-character-2024.tbc` are importable level-20 regression characters dedicated
 to their respective rulesets. Each includes three corpus-valid classes/subclasses, four spell
 profiles, all skills and saves, at least six weapons, five magic items, 90 inventory rows, multiple
 defenses, runtime state, a portrait, and extensive character details. The generation script sources

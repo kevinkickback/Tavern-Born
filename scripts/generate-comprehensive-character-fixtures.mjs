@@ -5,8 +5,8 @@ const root = resolve(process.cwd())
 const CURRENT_CHARACTER_SCHEMA_VERSION = 1
 const dataRoot = join(root, 'data')
 const fixtureRoot = join(root, 'tests', 'fixtures')
-const legacyFixturePath = join(fixtureRoot, 'pdf-kitchen-sink-2014.tbc')
-const revisedFixturePath = join(fixtureRoot, 'pdf-kitchen-sink-2024.tbc')
+const fixture2014Path = join(fixtureRoot, 'comprehensive-character-2014.tbc')
+const fixture2024Path = join(fixtureRoot, 'comprehensive-character-2024.tbc')
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'))
@@ -27,6 +27,7 @@ function loadIndexedPayloads(directory) {
 
 const classPayloads = loadIndexedPayloads('class')
 const spellPayloads = loadIndexedPayloads('spells')
+const spellSourceLookup = readJson(join(dataRoot, 'generated', 'gendata-spell-source-lookup.json'))
 const classes = classPayloads.flatMap((payload) => asArray(payload.class))
 const subclasses = classPayloads.flatMap((payload) => asArray(payload.subclass))
 const classFeatures = classPayloads.flatMap((payload) => [
@@ -68,6 +69,158 @@ function sourceQualifiedReference(reference, entities, edition) {
   const name = separator >= 0 ? reference.slice(0, separator) : reference
   const entity = editionEntity(entities, name, edition)
   return key(entity)
+}
+
+function isSpellOnClassList(spell, className, classSource) {
+  const lookupEntry =
+    spellSourceLookup[String(spell.source).toLowerCase()]?.[String(spell.name).toLowerCase()]
+  return Boolean(lookupEntry?.class?.[classSource]?.[className])
+}
+
+function selectClassSpells(className, classSource, edition, countByLevel) {
+  const spellSource = edition === '2024' ? 'XPHB' : 'PHB'
+  return Object.entries(countByLevel).flatMap(([rawLevel, count]) => {
+    const level = Number(rawLevel)
+    const candidates = spells
+      .filter(
+        (spell) =>
+          spell.source === spellSource &&
+          spell.level === level &&
+          isSpellOnClassList(spell, className, classSource),
+      )
+      .sort((left, right) => left.name.localeCompare(right.name))
+    if (candidates.length < count) {
+      throw new Error(
+        `${edition} ${className} has only ${candidates.length} level-${level} spells; ${count} are required.`,
+      )
+    }
+    return candidates.slice(0, count).map(key)
+  })
+}
+
+function requireSpellReferences(names, edition) {
+  return names.map((name) => sourceQualifiedReference(name, spells, edition))
+}
+
+function buildSpellProfiles(race, progression, edition) {
+  const wizard = progression.find((entry) => entry.name === 'Wizard')
+  const cleric = progression.find((entry) => entry.name === 'Cleric')
+  if (!wizard || !cleric) throw new Error(`${edition} fixture requires Wizard and Cleric levels.`)
+
+  const wizardCantripCandidates = selectClassSpells('Wizard', wizard.source, edition, { 0: 8 })
+  const wizardCantrips = wizardCantripCandidates.slice(0, 5)
+  const wizardSpellbook = selectClassSpells('Wizard', wizard.source, edition, {
+    1: 6,
+    2: 5,
+    3: 5,
+    4: 4,
+    5: 4,
+  })
+  const wizardPrepared = [
+    ...wizardSpellbook.slice(0, 3),
+    ...wizardSpellbook.slice(6, 9),
+    ...wizardSpellbook.slice(11, 13),
+    ...wizardSpellbook.slice(16, 18),
+    ...wizardSpellbook.slice(20, 22),
+  ]
+  const clericCantrips = selectClassSpells('Cleric', cleric.source, edition, { 0: 4 })
+  const clericPrepared = selectClassSpells('Cleric', cleric.source, edition, {
+    1: 3,
+    2: 3,
+    3: 2,
+  })
+  const lifeDomainSpells = requireSpellReferences(
+    [
+      'Bless',
+      'Cure Wounds',
+      'Lesser Restoration',
+      'Spiritual Weapon',
+      'Beacon of Hope',
+      'Revivify',
+    ],
+    edition,
+  )
+  const bonusCantrips = wizardCantripCandidates.slice(-2)
+  const bonusSpell = selectClassSpells('Wizard', wizard.source, edition, { 1: 7 }).slice(-1)
+
+  const racialProfile =
+    edition === '2024'
+      ? {
+          id: `racial:${race.name}|${race.source}`,
+          type: 'racial',
+          label: `${race.name} Racial Magic`,
+          raceName: race.name,
+          raceSource: race.source,
+          castingAbility: 'intelligence',
+          castingAbilityOptions: ['intelligence', 'wisdom', 'charisma'],
+          fixedSpells: requireSpellReferences(
+            ['Dancing Lights', 'Faerie Fire', 'Darkness'],
+            edition,
+          ),
+          cantrips: requireSpellReferences(['Dancing Lights'], edition),
+          spellsKnown: requireSpellReferences(['Faerie Fire', 'Darkness'], edition),
+          preparedSpells: [],
+          alwaysPrepared: true,
+        }
+      : {
+          id: `racial:${race.name}|${race.source}`,
+          type: 'racial',
+          label: `${race.name} Racial Magic`,
+          raceName: race.name,
+          raceSource: race.source,
+          castingAbility: 'intelligence',
+          choices: [
+            {
+              id: 'high-elf-cantrip',
+              count: 1,
+              isCantrip: true,
+              filter: { level: 0, classes: ['Wizard'] },
+              selected: [wizardCantripCandidates[5]],
+            },
+          ],
+          cantrips: [wizardCantripCandidates[5]],
+          spellsKnown: [],
+          preparedSpells: [],
+          alwaysPrepared: true,
+        }
+
+  return [
+    {
+      id: `class:Wizard|${wizard.source}`,
+      type: 'class',
+      label: `Wizard (Lv ${wizard.levels})`,
+      className: 'Wizard',
+      classSource: wizard.source,
+      cantrips: wizardCantrips,
+      spellsKnown: wizardSpellbook,
+      preparedSpells: wizardPrepared,
+      alwaysPrepared: false,
+    },
+    {
+      id: `class:Cleric|${cleric.source}`,
+      type: 'class',
+      label: `Cleric (Lv ${cleric.levels})`,
+      className: 'Cleric',
+      classSource: cleric.source,
+      fixedSpells: lifeDomainSpells,
+      alwaysPreparedSpells: lifeDomainSpells,
+      cantrips: clericCantrips,
+      spellsKnown: lifeDomainSpells,
+      preparedSpells: clericPrepared,
+      alwaysPrepared: false,
+    },
+    racialProfile,
+    {
+      id: 'special:unrestricted',
+      type: 'special',
+      label: 'Special (Unrestricted)',
+      fixedSpells: [...bonusCantrips, ...bonusSpell],
+      cantrips: bonusCantrips,
+      spellsKnown: bonusSpell,
+      preparedSpells: [],
+      alwaysPrepared: true,
+    },
+  ]
 }
 
 function resolveArmorType(type) {
@@ -241,12 +394,151 @@ function buildProgression(seed, edition) {
   })
 }
 
+function buildFeatSelections(seed, edition) {
+  if (edition === '2014') return seed.feats.map((feat) => mapFeat(feat, edition))
+
+  const source = 'XPHB'
+  return [
+    {
+      id: 'feat-war-caster',
+      name: 'War Caster',
+      source,
+      description: '',
+      prerequisites: '',
+      options: { abilityScore: 'intelligence' },
+      className: 'Wizard',
+      classSource: source,
+      classLevel: 4,
+    },
+    {
+      id: 'feat-fey-touched',
+      name: 'Fey-Touched',
+      source,
+      description: '',
+      prerequisites: '',
+      options: {
+        abilityScore: 'intelligence',
+        spells: requireSpellReferences(['Bless'], edition),
+      },
+      className: 'Wizard',
+      classSource: source,
+      classLevel: 8,
+    },
+    {
+      id: 'feat-resilient',
+      name: 'Resilient',
+      source,
+      description: '',
+      prerequisites: '',
+      options: { abilityScore: 'constitution' },
+      className: 'Fighter',
+      classSource: source,
+      classLevel: 4,
+    },
+    {
+      id: 'feat-skill-expert',
+      name: 'Skill Expert',
+      source,
+      description: '',
+      prerequisites: '',
+      options: {
+        abilityScore: 'wisdom',
+        skills: ['performance'],
+        expertiseSkill: 'performance',
+      },
+      className: 'Cleric',
+      classSource: source,
+      classLevel: 4,
+    },
+  ].map((feat) => mapFeat(feat, edition))
+}
+
+function buildSpecialFeats(seed, edition, spellProfiles) {
+  const specialProfile = spellProfiles.find((profile) => profile.id === 'special:unrestricted')
+  if (!specialProfile) throw new Error(`${edition} fixture requires a special spell profile.`)
+  const [firstCantrip, secondCantrip] = specialProfile.cantrips
+  const firstSpell = specialProfile.spellsKnown[0]
+  if (!firstCantrip || !secondCantrip || !firstSpell) {
+    throw new Error(`${edition} fixture requires complete Magic Initiate spell selections.`)
+  }
+  return seed.specialFeats.map((feat) =>
+    mapFeat(
+      feat.name === 'Magic Initiate'
+        ? {
+            ...feat,
+            options: {
+              spellcastingClass: 'Wizard Spells',
+              spells: [firstCantrip, secondCantrip, firstSpell],
+            },
+          }
+        : feat,
+      edition,
+    ),
+  )
+}
+
+function buildClassChoiceSelections(edition) {
+  const source = edition === '2024' ? 'XPHB' : 'PHB'
+  const selections = [
+    {
+      choiceId: `class:fighter|${source.toLowerCase()}|choice:fighting-style|1`,
+      label: 'Fighting Style',
+      kind: edition === '2024' ? 'feat' : 'optional-feature',
+      className: 'Fighter',
+      classSource: source,
+      classLevel: 1,
+      selected: [
+        {
+          entityType: edition === '2024' ? 'feat' : 'optionalFeature',
+          name: 'Defense',
+          source,
+          slotLevel: 1,
+        },
+      ],
+    },
+  ]
+  if (edition === '2024') {
+    selections.push(
+      {
+        choiceId: 'class:fighter|xphb|choice:weapon-mastery|1',
+        label: 'Weapon Mastery',
+        kind: 'item',
+        className: 'Fighter',
+        classSource: source,
+        classLevel: 1,
+        selected: ['Battleaxe', 'Dagger', 'Greatsword', 'Longbow'].map((name) => ({
+          entityType: 'item',
+          name,
+          source,
+          slotLevel: 1,
+        })),
+      },
+      {
+        choiceId: 'class:cleric|xphb|choice:divine-order|1',
+        label: 'Divine Order',
+        kind: 'class-feature',
+        className: 'Cleric',
+        classSource: source,
+        classLevel: 1,
+        selected: [
+          {
+            entityType: 'classFeature',
+            name: 'Protector',
+            source,
+            slotLevel: 1,
+          },
+        ],
+      },
+    )
+  }
+  return selections
+}
+
 function buildFixture(seed, edition) {
   const seedSpeed = seed.movement.speeds.walk
   const race = editionEntity(races, seed.race, edition)
-  const background = editionEntity(backgrounds, seed.background, edition)
+  const background = editionEntity(backgrounds, edition === '2024' ? 'Criminal' : 'Sage', edition)
   const progression = buildProgression(seed, edition)
-  const primary = progression[0]
   const selectedSubrace =
     edition === '2014'
       ? subraces.find(
@@ -265,80 +557,10 @@ function buildFixture(seed, edition) {
             source: version.source ?? race.source,
           }))
           .find((version) => version.name)
-
-  const mappedProfiles = seed.spells.spellProfiles.map((profile) => ({
-    ...profile,
-    id:
-      profile.type === 'class'
-        ? `class:${profile.className}|${edition === '2024' ? 'XPHB' : 'PHB'}`
-        : profile.type === 'racial'
-          ? `racial:${race.name}|${race.source}`
-          : profile.id,
-    ...(profile.className
-      ? { classSource: editionEntity(classes, profile.className, edition).source }
-      : {}),
-    ...(profile.type === 'racial'
-      ? { raceName: race.name, raceSource: race.source, label: `${race.name} Racial Magic` }
-      : {}),
-    cantrips: profile.cantrips.map((spell) => sourceQualifiedReference(spell, spells, edition)),
-    spellsKnown: profile.spellsKnown.map((spell) =>
-      sourceQualifiedReference(spell, spells, edition),
-    ),
-    preparedSpells: profile.preparedSpells.map((spell) =>
-      sourceQualifiedReference(spell, spells, edition),
-    ),
-    ...(profile.fixedSpells
-      ? {
-          fixedSpells: profile.fixedSpells.map((spell) =>
-            sourceQualifiedReference(spell, spells, edition),
-          ),
-        }
-      : {}),
-    ...(profile.alwaysPreparedSpells
-      ? {
-          alwaysPreparedSpells: profile.alwaysPreparedSpells.map((spell) =>
-            sourceQualifiedReference(spell, spells, edition),
-          ),
-        }
-      : {}),
-    ...(profile.choices
-      ? {
-          choices: profile.choices.map((choice) => ({
-            ...choice,
-            ...(choice.pool
-              ? {
-                  pool: choice.pool.map((spell) =>
-                    sourceQualifiedReference(spell, spells, edition),
-                  ),
-                }
-              : {}),
-            selected: choice.selected.map((spell) =>
-              sourceQualifiedReference(spell, spells, edition),
-            ),
-          })),
-        }
-      : {}),
-    ...(profile.spellSwaps
-      ? {
-          spellSwaps: Object.fromEntries(
-            Object.entries(profile.spellSwaps).map(([level, swap]) => [
-              level,
-              {
-                removed: sourceQualifiedReference(swap.removed, spells, edition),
-                added: sourceQualifiedReference(swap.added, spells, edition),
-              },
-            ]),
-          ),
-        }
-      : {}),
-  }))
-
-  const mappedClassFeatChoices = seed.classFeatChoices.map((choice) => ({
-    ...choice,
-    id: choice.id.replaceAll('|phb|', `|${primary.source.toLowerCase()}|`),
-    classSource: editionEntity(classes, choice.className, edition).source,
-    feats: choice.feats.map((feat) => mapFeat(feat, edition)),
-  }))
+  const mappedProfiles = buildSpellProfiles(race, progression, edition)
+  const mappedFeats = buildFeatSelections(seed, edition)
+  const mappedSpecialFeats = buildSpecialFeats(seed, edition, mappedProfiles)
+  const equipment = buildEquipment(seed, edition)
 
   const abilityNames = {
     str: 'strength',
@@ -351,19 +573,24 @@ function buildFixture(seed, edition) {
   const backgroundChoices = asArray(background.ability?.[0]?.choose?.weighted?.from)
     .slice(0, 2)
     .map((ability) => abilityNames[ability])
-  const fixedFeatOptions = Object.fromEntries(
-    Object.entries(seed.fixedFeatOptions).map(([selectionKey, options]) => {
-      const [featName, , ...keyParts] = selectionKey.split('|')
-      const feat = mapFeat({ name: featName, source: 'PHB', options }, edition)
-      return [[feat.name, feat.source, ...keyParts].join('|'), feat.options ?? options]
-    }),
-  )
+  const provenance = emptyProvenance()
+  if (edition === '2024') {
+    provenance.feats.alert = [
+      {
+        sourceType: 'background',
+        sourceName: background.name,
+        sourceRef: background.source,
+        grantType: 'fixed',
+        label: background.name,
+      },
+    ]
+  }
 
   const fixture = {
     ...seed,
-    id: `pdf-kitchen-sink-${edition}-character`,
+    id: `comprehensive-character-${edition}`,
     schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
-    name: edition === '2024' ? 'Seraphina Manypaths (2024)' : 'Seraphina Manypaths (2014)',
+    name: `Comprehensive Test Character (${edition})`,
     originSystem: edition,
     race: race.name,
     raceSource: race.source,
@@ -374,16 +601,14 @@ function buildFixture(seed, edition) {
     backgroundSource: background.source,
     classProgression: progression,
     features: buildFeatureRows(progression),
-    feats: seed.feats.map((feat) => mapFeat(feat, edition)),
-    specialFeats: seed.specialFeats.map((feat) => mapFeat(feat, edition)),
-    classFeatChoices: mappedClassFeatChoices,
-    fixedFeatOptions,
-    asiChoices: seed.asiChoices.map((choice) => ({
-      ...choice,
-      classSource: editionEntity(classes, choice.className, edition).source,
-    })),
+    feats: mappedFeats,
+    specialFeats: mappedSpecialFeats,
+    classFeatChoices: [],
+    classChoiceSelections: buildClassChoiceSelections(edition),
+    fixedFeatOptions: {},
+    asiChoices: [],
     spells: { ...seed.spells, spellProfiles: mappedProfiles },
-    equipment: buildEquipment(seed, edition),
+    equipment,
     hitPoints: {
       current: seed.hitPoints.current,
       temporary: seed.hitPoints.temporary,
@@ -405,18 +630,23 @@ function buildFixture(seed, edition) {
         race.source,
         background.source,
         ...progression.map((entry) => entry.source),
-        ...seed.feats.map((feat) => editionEntity(feats, feat.name, edition).source),
-        ...buildEquipment(seed, edition).map((item) => item.source),
+        ...mappedFeats.map((feat) => feat.source),
+        ...mappedSpecialFeats.map((feat) => feat.source),
+        ...equipment.map((item) => item.source),
       ]),
     ].sort(),
     raceAsiChoices: [],
-    backgroundAsiBlockIndex: edition === '2024' ? 0 : seed.backgroundAsiBlockIndex,
-    backgroundAsiChoices: edition === '2024' ? backgroundChoices : seed.backgroundAsiChoices,
+    backgroundAsiBlockIndex: edition === '2024' ? 0 : undefined,
+    backgroundAsiChoices: edition === '2024' ? backgroundChoices : undefined,
+    backgroundCurrencyGrant: undefined,
     backgroundEquipmentChoices: [],
+    backgroundEquipmentItemChoices: {},
     classEquipmentChoices: {},
+    classEquipmentItemChoices: {},
+    raceAsiBlockIndex: undefined,
     movement: {
       speeds: { walk: seedSpeed },
-      source: { kind: 'manual', name: 'Kitchen sink fixture' },
+      source: { kind: 'manual', name: 'Comprehensive test fixture' },
     },
     details: {
       ...seed.details,
@@ -425,19 +655,25 @@ function buildFixture(seed, edition) {
       organizationCustomDescription: '',
       organizationCustomImage: '',
     },
-    provenance: emptyProvenance(),
+    provenance,
+    movementAdjustments: seed.movementAdjustments ?? [],
+    movementOverrides: seed.movementOverrides ?? {},
+    manualEffects: seed.manualEffects ?? [],
+    suppressedEffectIds: seed.suppressedEffectIds ?? [],
+    effectFlags: seed.effectFlags ?? {},
+    manualActions: seed.manualActions ?? [],
   }
 
   return JSON.parse(JSON.stringify(fixture))
 }
 
-const seed = readJson(legacyFixturePath)
-const legacy = buildFixture(seed, '2014')
-const revised = buildFixture(seed, '2024')
+const seed = readJson(fixture2014Path)
+const character2014 = buildFixture(seed, '2014')
+const character2024 = buildFixture(seed, '2024')
 
 for (const [path, fixture] of [
-  [legacyFixturePath, legacy],
-  [revisedFixturePath, revised],
+  [fixture2014Path, character2014],
+  [fixture2024Path, character2024],
 ]) {
   writeFileSync(path, `${JSON.stringify(fixture, null, 2)}\n`)
 }

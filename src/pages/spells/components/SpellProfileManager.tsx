@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import {
   buildSpellProfileDisplayModels,
   type PreparedCasterSpellItem,
@@ -22,7 +23,6 @@ import {
   formatSpellLevel,
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
-import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
 
@@ -580,7 +580,8 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                   {itemsAtLevel.map(({ spell, item }) => {
                                     const isAlwaysPrepared = !!item.alwaysPrepared
                                     const isPrepared =
-                                      isAlwaysPrepared || preparedSet.has(normalizeKey(item.name))
+                                      isAlwaysPrepared ||
+                                      preparedSet.has(getSpellNameKey(item.name))
                                     const atLimit =
                                       !isAlwaysPrepared &&
                                       !isPrepared &&

@@ -284,7 +284,7 @@ describe('spellProfiles', () => {
             classSource: 'PHB',
             cantrips: ['Mage Hand'],
             spellsKnown: ['Shield'],
-            preparedSpells: ['Shield'],
+            preparedSpells: ['Shield|PHB'],
             alwaysPrepared: false,
           },
           {
@@ -1242,11 +1242,11 @@ describe('spellProfiles', () => {
   test('counts unique player selections without fixed or always-prepared grants', () => {
     expect(
       getSpellProfileSelectionCounts({
-        cantrips: ['Fire Bolt', 'fire bolt', 'Light'],
-        spellsKnown: ['Magic Missile', 'magic missile', 'Detect Magic', 'Shield'],
-        preparedSpells: ['Magic Missile', 'magic missile', 'Shield'],
-        fixedSpells: ['Light', 'Detect Magic', 'Shield'],
-        alwaysPreparedSpells: ['Shield'],
+        cantrips: ['Fire Bolt|PHB', 'fire bolt|XPHB', 'Light|PHB'],
+        spellsKnown: ['Magic Missile|PHB', 'magic missile|XPHB', 'Detect Magic|PHB', 'Shield|PHB'],
+        preparedSpells: ['Magic Missile|PHB', 'magic missile|XPHB', 'Shield|PHB'],
+        fixedSpells: ['Light|XPHB', 'Detect Magic|XPHB', 'Shield|XPHB'],
+        alwaysPreparedSpells: ['Shield|XPHB'],
       }),
     ).toEqual({ cantrips: 1, spells: 1, prepared: 1 })
   })
