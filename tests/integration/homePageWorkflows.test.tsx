@@ -143,9 +143,9 @@ describe('home page integration workflows', () => {
 
     const unsupportedDialog = screen.getByRole('alertdialog')
     expect(unsupportedDialog).toBeTruthy()
-    expect(screen.getByText("Some older characters can't be opened")).toBeTruthy()
+    expect(screen.getByText('Character compatibility issue')).toBeTruthy()
     expect(unsupportedDialog.textContent).toContain(
-      "Tavern Born found 2 characters created with an earlier beta version. This version can't open them, so they have been removed from your character list.",
+      "Tavern Born found 2 characters saved by an older version of the app. This version can't open them.",
     )
     await user.keyboard('{Escape}')
     expect(screen.getByRole('alertdialog')).toBeTruthy()
@@ -365,7 +365,7 @@ describe('home page integration workflows', () => {
     expect(toast.error).toHaveBeenCalledWith('Character file exceeds the 10MB safety limit.')
   })
 
-  test('rejects a character from an unsupported beta version', async () => {
+  test('rejects a character from an unsupported older version', async () => {
     const user = userEvent.setup()
     useCharacterStore.setState({
       characters: [makeCharacterFixture({ id: 'existing-1', name: 'Existing' })],
