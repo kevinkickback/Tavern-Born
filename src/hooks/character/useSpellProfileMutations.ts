@@ -28,12 +28,17 @@ import type { SpellProfile } from '@/types/character'
 
 function getSpellSourceMeta(profile: SpellProfile): {
   sourceType: 'class' | 'subclass' | 'feat' | 'manual'
-  source: string
+  sourceName: string
+  sourceRef?: string
 } {
   if (profile.type === 'class') {
-    return { sourceType: 'class', source: profile.className ?? profile.label }
+    return {
+      sourceType: 'class',
+      sourceName: profile.className ?? profile.label,
+      sourceRef: profile.classSource,
+    }
   }
-  return { sourceType: 'manual', source: 'User Choice' }
+  return { sourceType: 'manual', sourceName: 'User Choice' }
 }
 
 export function useSpellProfileMutations(
@@ -78,7 +83,7 @@ export function useSpellProfileMutations(
       const profile = spellProfiles.find((p) => p.id === profileId)
       const sourceMeta = profile
         ? getSpellSourceMeta(profile)
-        : { sourceType: 'manual' as const, source: 'User Choice' }
+        : { sourceType: 'manual' as const, sourceName: 'User Choice' }
       const result = addSpellToCharacter(
         commandCharacter,
         currentLedger,

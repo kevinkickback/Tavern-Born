@@ -11,15 +11,9 @@ import {
 } from '@/components/ui/dialog'
 import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
+import { buildSpellNameKeySet, getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import {
-  buildSpellNameKeySet,
-  dedupeSpellNames,
-  getSpellNameKey,
-} from '@/lib/calculations/spellIdentity'
-import {
-  buildClassProfileLabel,
   buildClassSpellSelectionsByLevel,
-  ensureSpellProfiles,
   getKnownSpellNames,
 } from '@/lib/calculations/spellProfiles'
 import { formatSpellLevel, getOrdinalForm } from '@/lib/calculations/spellUtils'
@@ -52,19 +46,19 @@ interface BuildClassModalsProps {
   spellByName: Map<string, Spell5e>
   viewingClass?: string
   viewingClassSource?: string
-  onApplyBatchSpellSelections: (
+  onSetClassSpellSelectionsAtLevel: (
     className: string,
     classSource: string | undefined,
-    spells: Array<{ name: string; grantedAtLevel?: number }>,
+    classLevel: number,
+    selections: Array<{ name: string; spellLevel: number }>,
   ) => void
-  onRemoveSpellProvenance: (spellName: string) => void
-  onSwapSpellProvenance: (
+  onSwapClassSpellAtLevel: (
     className: string,
     classSource: string | undefined,
+    swapAtLevel: number,
     removedName: string,
     addedName: string,
   ) => void
-  onUpdateCharacter: (patch: Partial<Character>) => void
 
   spellSwapLevel: number | null
   spellSwapDrop: string | null
@@ -107,10 +101,8 @@ export function BuildClassModals({
   spellByName,
   viewingClass,
   viewingClassSource,
-  onApplyBatchSpellSelections,
-  onRemoveSpellProvenance,
-  onSwapSpellProvenance,
-  onUpdateCharacter,
+  onSetClassSpellSelectionsAtLevel,
+  onSwapClassSpellAtLevel,
   spellSwapLevel,
   spellSwapDrop,
   onSpellSwapLevelChange,
@@ -155,7 +147,7 @@ export function BuildClassModals({
           if (!gain) return null
 
           const classProfileId = `class:${viewingClass ?? ''}|${viewingClassSource ?? ''}`
-          const profiles = ensureSpellProfiles(character)
+          const profiles = character.spells.spellProfiles
           const classProfile = profiles.find((profile) => profile.id === classProfileId)
           const classProfileNames = classProfile
             ? buildSpellNameKeySet([...classProfile.cantrips, ...classProfile.spellsKnown])
@@ -240,99 +232,18 @@ export function BuildClassModals({
               initialFilters={initialFilters}
               allowedLevels={allowedLevels}
               onConfirm={(names) => {
-                const previousLevelNames = selectionsByLevel.get(spellPickerLevel) ?? []
-                const previousLevelSet = buildSpellNameKeySet(previousLevelNames)
-                const nextLevelSet = buildSpellNameKeySet(names)
-                const newSpells: Array<{ name: string; grantedAtLevel?: number }> = []
-
-                const nextSelectionsByLevel = new Map(selectionsByLevel)
-                if (names.length > 0) {
-                  nextSelectionsByLevel.set(spellPickerLevel, names)
-                } else {
-                  nextSelectionsByLevel.delete(spellPickerLevel)
-                }
-
-                const classSelectedNames = Array.from(nextSelectionsByLevel.values()).flatMap(
-                  (selected) => selected ?? [],
-                )
-                const uniqueClassSelectedNames = dedupeSpellNames(classSelectedNames)
-                const nextProfileCantrips = uniqueClassSelectedNames.filter(
-                  (name) =>
-                    (spellByName.get(name) ?? spellByName.get(getSpellNameKey(name)))?.level === 0,
-                )
-                const nextProfileKnown = uniqueClassSelectedNames.filter(
-                  (name) =>
-                    (spellByName.get(name) ?? spellByName.get(getSpellNameKey(name)))?.level !== 0,
-                )
-                const nextProfileKnownKeys = buildSpellNameKeySet(nextProfileKnown)
-
-                const mappedProfiles = profiles.map((profile) => {
-                  if (profile.id !== classProfileId) return profile
-                  return {
-                    ...profile,
-                    cantrips: nextProfileCantrips,
-                    spellsKnown: nextProfileKnown,
-                    preparedSpells: profile.preparedSpells.filter((spellName) =>
-                      nextProfileKnownKeys.has(getSpellNameKey(spellName)),
-                    ),
-                  }
-                })
-                const hasProfile = mappedProfiles.some((profile) => profile.id === classProfileId)
-                const nextProfiles = hasProfile
-                  ? mappedProfiles
-                  : [
-                      ...mappedProfiles,
-                      {
-                        id: classProfileId,
-                        type: 'class' as const,
-                        label:
-                          classProfile?.label ??
-                          buildClassProfileLabel({
-                            name: viewingClass ?? 'Class Spells',
-                            source: viewingClassSource,
-                            levels:
-                              character.classProgression?.find(
-                                (entry) =>
-                                  entry.name === viewingClass &&
-                                  (entry.source ?? '') === (viewingClassSource ?? ''),
-                              )?.levels ?? 1,
-                          }),
-                        className: viewingClass,
-                        classSource: viewingClassSource,
-                        cantrips: nextProfileCantrips,
-                        spellsKnown: nextProfileKnown,
-                        preparedSpells: [],
-                        alwaysPrepared: false,
-                      },
-                    ]
-
-                onUpdateCharacter({
-                  spells: {
-                    ...character.spells,
-                    spellProfiles: nextProfiles,
-                  },
-                })
-
-                for (const name of names) {
-                  if (previousLevelSet.has(getSpellNameKey(name))) continue
-                  if (viewingClass) {
-                    newSpells.push({ name, grantedAtLevel: spellPickerLevel })
-                  }
-                }
-                if (viewingClass && newSpells.length > 0) {
-                  onApplyBatchSpellSelections(viewingClass, viewingClassSource, newSpells)
-                }
-
-                const remainingKnownNames = buildSpellNameKeySet(
-                  nextProfiles.flatMap((profile) => [...profile.cantrips, ...profile.spellsKnown]),
-                )
-
-                for (const name of previousLevelNames) {
-                  const spellNameKey = getSpellNameKey(name)
-                  if (nextLevelSet.has(spellNameKey) || remainingKnownNames.has(spellNameKey)) {
-                    continue
-                  }
-                  onRemoveSpellProvenance(name)
+                if (viewingClass) {
+                  onSetClassSpellSelectionsAtLevel(
+                    viewingClass,
+                    viewingClassSource,
+                    spellPickerLevel,
+                    names.map((name) => ({
+                      name,
+                      spellLevel:
+                        (spellByName.get(name) ?? spellByName.get(getSpellNameKey(name)))?.level ??
+                        1,
+                    })),
+                  )
                 }
                 onSpellPickerLevelChange(null)
               }}
@@ -380,7 +291,7 @@ export function BuildClassModals({
       {spellSwapLevel !== null &&
         (() => {
           const classProfileId = `class:${viewingClass ?? ''}|${viewingClassSource ?? ''}`
-          const profiles = ensureSpellProfiles(character)
+          const profiles = character.spells.spellProfiles
           const classProfile = profiles.find((profile) => profile.id === classProfileId)
           if (!classProfile || classProfile.spellsKnown.length === 0) return null
 
@@ -484,44 +395,11 @@ export function BuildClassModals({
                   return
                 }
 
-                // Update spellsKnown: remove dropped, add replacement
-                const nextKnown = classProfile.spellsKnown
-                  .filter((name) => getSpellNameKey(name) !== getSpellNameKey(spellSwapDrop))
-                  .concat(replacement)
-
-                // Also remove from preparedSpells if dropped spell was prepared
-                const nextPrepared = classProfile.preparedSpells.filter(
-                  (name) => getSpellNameKey(name) !== getSpellNameKey(spellSwapDrop),
-                )
-
-                // Record the swap
-                const nextSwaps = {
-                  ...classProfile.spellSwaps,
-                  [spellSwapLevel]: { removed: spellSwapDrop, added: replacement },
-                }
-
-                const nextProfiles = profiles.map((profile) => {
-                  if (profile.id !== classProfileId) return profile
-                  return {
-                    ...profile,
-                    spellsKnown: nextKnown,
-                    preparedSpells: nextPrepared,
-                    spellSwaps: nextSwaps,
-                  }
-                })
-
-                onUpdateCharacter({
-                  spells: {
-                    ...character.spells,
-                    spellProfiles: nextProfiles,
-                  },
-                })
-
-                // Update provenance: atomic remove + add (no level attribution)
                 if (viewingClass) {
-                  onSwapSpellProvenance(
+                  onSwapClassSpellAtLevel(
                     viewingClass,
                     viewingClassSource,
+                    spellSwapLevel,
                     spellSwapDrop,
                     replacement,
                   )

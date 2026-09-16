@@ -9,7 +9,7 @@ import { useClassSpellChoiceController } from '@/pages/build/class/hooks/useClas
 import { useSubclassSelectionController } from '@/pages/build/class/hooks/useSubclassSelectionController'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Subclass5e } from '@/types/5etools'
+import type { Feat5e, Subclass5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 import { makeClassFixture, makeGameDataFixture } from '../fixtures/gameDataFixtures'
 
@@ -99,6 +99,185 @@ describe('class page controllers', () => {
     expect(result.current.subclass.subclasses.map((subclass) => subclass.name)).toEqual([
       'Evocation',
     ])
+  })
+
+  test('adds a later ASI feat without replacing the earlier class feat', () => {
+    const classEntity = useGameDataStore.getState().gameData?.classes[0]
+    const classLookup = useGameDataStore.getState().gameData?.lookups?.classesByKey ?? {}
+    if (!classEntity) throw new Error('Expected Wizard fixture')
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classSource: 'PHB',
+      level: 8,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 8 }],
+      feats: [
+        {
+          id: 'alert-phb',
+          name: 'Alert',
+          source: 'PHB',
+          description: '',
+          className: 'Wizard',
+          classSource: 'PHB',
+          classLevel: 4,
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    const feats: Feat5e[] = [
+      { name: 'Alert', source: 'PHB', entries: [] },
+      { name: 'Lucky', source: 'PHB', entries: [] },
+    ]
+    const { result } = renderHook(() =>
+      useClassAsiFeatController({
+        character: useCharacterStore((state) => state.activeCharacter),
+        viewingClass: 'Wizard',
+        viewingClassSource: 'PHB',
+        classLookup,
+        fallbackClassByName: new Map([[classEntity.name, classEntity]]),
+        feats,
+      }),
+    )
+
+    act(() => result.current.setFeatPickerLevel(8))
+    act(() => result.current.confirmFeat([feats[1]]))
+
+    expect(useCharacterStore.getState().activeCharacter?.feats).toEqual([
+      expect.objectContaining({ name: 'Alert', source: 'PHB', classLevel: 4 }),
+      expect.objectContaining({ name: 'Lucky', source: 'PHB', classLevel: 8 }),
+    ])
+  })
+
+  test('recognizes a same-name feat from another source as a new configurable selection', () => {
+    const classEntity = useGameDataStore.getState().gameData?.classes[0]
+    const classLookup = useGameDataStore.getState().gameData?.lookups?.classesByKey ?? {}
+    if (!classEntity) throw new Error('Expected Wizard fixture')
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classSource: 'PHB',
+      level: 8,
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 8 }],
+      feats: [
+        {
+          id: 'skilled-phb',
+          name: 'Skilled',
+          source: 'PHB',
+          description: '',
+          className: 'Wizard',
+          classSource: 'PHB',
+          classLevel: 4,
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    const configurableFeat = {
+      name: 'Skilled',
+      source: 'XPHB',
+      entries: [],
+      skillProficiencies: [{ choose: { count: 1, from: ['Arcana'] } }],
+    } satisfies Feat5e
+    const { result } = renderHook(() =>
+      useClassAsiFeatController({
+        character: useCharacterStore((state) => state.activeCharacter),
+        viewingClass: 'Wizard',
+        viewingClassSource: 'PHB',
+        classLookup,
+        fallbackClassByName: new Map([[classEntity.name, classEntity]]),
+        feats: [configurableFeat],
+      }),
+    )
+
+    act(() => result.current.setFeatPickerLevel(8))
+    act(() => result.current.confirmFeat([configurableFeat]))
+
+    expect(useCharacterStore.getState().activeCharacter?.feats).toEqual([
+      expect.objectContaining({ name: 'Skilled', source: 'PHB', classLevel: 4 }),
+      expect.objectContaining({ name: 'Skilled', source: 'XPHB', classLevel: 8 }),
+    ])
+    expect(result.current.optionsPendingFeat).toMatchObject({ name: 'Skilled', source: 'XPHB' })
+  })
+
+  test('adds a later-level spell choice without replacing earlier class-profile spells', () => {
+    const current = useCharacterStore.getState().activeCharacter
+    const classEntity = useGameDataStore.getState().gameData?.classes[0]
+    if (!current || !classEntity) throw new Error('Expected Wizard fixtures')
+    const character = makeCharacterFixture({
+      ...current,
+      spells: {
+        ...current.spells,
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard (Lv 4)',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: ['Fire Bolt', 'Mage Hand', 'Prestidigitation'],
+            spellsKnown: [
+              'Detect Magic',
+              'Feather Fall',
+              'Mage Armor',
+              'Magic Missile',
+              'Shield',
+              'Sleep',
+            ],
+            preparedSpells: ['Mage Armor', 'Magic Missile', 'Shield', 'Sleep'],
+            alwaysPrepared: false,
+          },
+          {
+            id: 'special:unrestricted',
+            type: 'special',
+            label: 'Bonus Spells',
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
+      },
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    const { result } = renderHook(() => useClassSpellChoiceController(classEntity))
+    act(() => {
+      result.current.setClassSpellSelectionsAtLevel('Wizard', 'PHB', 2, [
+        { name: 'Arcane Lock', spellLevel: 2 },
+        { name: 'Misty Step', spellLevel: 2 },
+      ])
+    })
+
+    const profile = useCharacterStore
+      .getState()
+      .activeCharacter?.spells.spellProfiles.find(
+        (candidate) => candidate.id === 'class:Wizard|PHB',
+      )
+    expect(profile?.cantrips).toEqual(['Fire Bolt', 'Mage Hand', 'Prestidigitation'])
+    expect(profile?.spellsKnown).toEqual(
+      expect.arrayContaining([
+        'Detect Magic',
+        'Feather Fall',
+        'Mage Armor',
+        'Magic Missile',
+        'Shield',
+        'Sleep',
+        'Arcane Lock',
+        'Misty Step',
+      ]),
+    )
+    expect(
+      useCharacterStore.getState().activeCharacter?.provenance?.spells['arcane lock']?.[0],
+    ).toMatchObject({ sourceRef: 'PHB', spellGrantedAtLevel: 2 })
   })
 
   test('does not inherit the primary subclass when viewing another class', () => {

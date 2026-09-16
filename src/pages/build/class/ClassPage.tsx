@@ -48,7 +48,6 @@ const LEVEL_UP_HINT_WIDTH = 320
 export function BuildClassPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
-  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const {
     classes,
     classFeatures,
@@ -133,9 +132,8 @@ export function BuildClassPage() {
     setSwapLevel: setSpellSwapLevel,
     swapDrop: spellSwapDrop,
     setSwapDrop: setSpellSwapDrop,
-    applyBatchSpellSelections,
-    removeSpellProvenance,
-    swapSpellProvenance,
+    setClassSpellSelectionsAtLevel,
+    swapClassSpellAtLevel,
   } = spellController
   const classEquipmentChoiceKey =
     viewingClass && viewingClassData ? `${viewingClass}|${viewingClassData.source ?? ''}` : ''
@@ -452,7 +450,7 @@ export function BuildClassPage() {
         spellByName={spellByName}
         viewingClass={viewingClass}
         viewingClassSource={viewingClassSource}
-        onUpdateCharacter={(patch) => updateCharacter(character.id, patch)}
+        onSetClassSpellSelectionsAtLevel={setClassSpellSelectionsAtLevel}
         subclassPickerOpen={subclassPickerOpen}
         onSubclassPickerOpenChange={setSubclassPickerOpen}
         subclassTitle={subclassTitle}
@@ -472,9 +470,7 @@ export function BuildClassPage() {
         featModalFeats={featModalFeats}
         featPickerInitialSelectedIds={featPickerInitialSelectedIds}
         onFeatConfirm={handleFeatConfirm}
-        onApplyBatchSpellSelections={applyBatchSpellSelections}
-        onRemoveSpellProvenance={removeSpellProvenance}
-        onSwapSpellProvenance={swapSpellProvenance}
+        onSwapClassSpellAtLevel={swapClassSpellAtLevel}
         spellSwapLevel={spellSwapLevel}
         spellSwapDrop={spellSwapDrop}
         onSpellSwapLevelChange={setSpellSwapLevel}

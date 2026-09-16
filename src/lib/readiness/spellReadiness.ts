@@ -1,6 +1,7 @@
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
+import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
 import { spellChoiceReadinessId, spellProfileReadinessId } from '@/lib/navigation/readinessFocus'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, SpellProfile } from '@/types/character'
@@ -14,21 +15,22 @@ function validateSpellProfile(
   detail: SpellcastingDetail,
 ): CharacterReadinessIssue[] {
   const issues: CharacterReadinessIssue[] = []
-  if (detail.cantripLimit != null && profile.cantrips.length !== detail.cantripLimit) {
+  const counts = getSpellProfileSelectionCounts(profile)
+  if (detail.cantripLimit != null && counts.cantrips !== detail.cantripLimit) {
     issues.push(
       readinessIssue(
         spellProfileReadinessId('cantrips', detail.profileId),
         'blocking',
         'spells',
         `Finish ${detail.className} cantrip choices`,
-        `${detail.cantripLimit} are required; ${profile.cantrips.length} are stored.`,
+        `${detail.cantripLimit} are required; ${counts.cantrips} are stored.`,
       ),
     )
   }
   if (
     detail.knownSpellLimit != null &&
     !detail.isTruePreparedCaster &&
-    profile.spellsKnown.length !== detail.knownSpellLimit
+    counts.spells !== detail.knownSpellLimit
   ) {
     issues.push(
       readinessIssue(
@@ -36,28 +38,25 @@ function validateSpellProfile(
         'blocking',
         'spells',
         `Finish ${detail.className} spell choices`,
-        `${detail.knownSpellLimit} are required; ${profile.spellsKnown.length} are stored.`,
+        `${detail.knownSpellLimit} are required; ${counts.spells} are stored.`,
       ),
     )
   }
-  if (
-    detail.preparedSpellLimit != null &&
-    profile.preparedSpells.length > detail.preparedSpellLimit
-  ) {
+  if (detail.preparedSpellLimit != null && counts.prepared > detail.preparedSpellLimit) {
     issues.push(
       readinessIssue(
         spellProfileReadinessId('prepared-over-limit', detail.profileId),
         'blocking',
         'spells',
         `Reduce ${detail.className} prepared spells`,
-        `${profile.preparedSpells.length} are prepared, above the current limit of ${detail.preparedSpellLimit}.`,
+        `${counts.prepared} are prepared, above the current limit of ${detail.preparedSpellLimit}.`,
       ),
     )
   }
   if (
     detail.isTruePreparedCaster &&
     (detail.preparedSpellLimit ?? 0) > 0 &&
-    profile.preparedSpells.length === 0
+    counts.prepared === 0
   ) {
     issues.push(
       readinessIssue(

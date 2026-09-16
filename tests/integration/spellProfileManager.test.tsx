@@ -217,6 +217,52 @@ describe('SpellProfileManager', () => {
     expect(screen.getByText('Spell Selection Available')).toBeTruthy()
   })
 
+  test('shows a complete level-one Wizard without confusing spellbook and prepared limits', () => {
+    const cantrips = ['Fire Bolt', 'Mage Hand', 'Ray of Frost'].map((name) =>
+      makeItem({ name, level: 0, kind: 'cantrip' }),
+    )
+    const spells = [
+      'Burning Hands',
+      'Charm Person',
+      'Find Familiar',
+      'Mage Armor',
+      'Magic Missile',
+      'Sleep',
+    ].map((name, index) => makeItem({ name, kind: 'spell', level: 1, prepared: index < 4 }))
+
+    render(
+      withTooltipProvider(
+        <SpellProfileManager
+          spellProfiles={[BASE_CLASS_PROFILE]}
+          detailsByProfileId={
+            new Map([
+              [
+                BASE_CLASS_PROFILE.id,
+                {
+                  ...BASE_DETAIL,
+                  isPreparedCaster: true,
+                  cantripLimit: 3,
+                  knownSpellLimit: 6,
+                  preparedSpellLimit: 4,
+                },
+              ],
+            ])
+          }
+          groupedItems={new Map([[BASE_CLASS_PROFILE.id, [...cantrips, ...spells]]])}
+          selectionSourceByProfileAndSpell={new Map()}
+          getSpellByName={() => undefined}
+          onTogglePrepared={vi.fn()}
+          onRemoveSpell={vi.fn()}
+          renderSpellName={({ item }) => <span>{item.name}</span>}
+        />,
+      ),
+    )
+
+    expect(screen.queryByText('Spell Selection Available')).toBeNull()
+    expect(screen.getByText('Prepared: 4/4')).toBeTruthy()
+    expect(screen.getByText('Total: 9')).toBeTruthy()
+  })
+
   test('hides racial profile when empty with no unfulfilled choices', () => {
     render(
       <SpellProfileManager

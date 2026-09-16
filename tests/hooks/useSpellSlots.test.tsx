@@ -172,6 +172,13 @@ describe('useSpellSlots hook', () => {
       .activeCharacter?.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB')
 
     expect(classProfile?.cantrips).toContain('Light')
+    expect(
+      useCharacterStore.getState().activeCharacter?.provenance?.spells.light?.[0],
+    ).toMatchObject({
+      sourceType: 'class',
+      sourceName: 'Wizard',
+      sourceRef: 'PHB',
+    })
   })
 
   test('addSpellToProfile adds a cantrip to an explicit special profile', () => {

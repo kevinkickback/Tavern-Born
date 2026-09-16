@@ -228,6 +228,39 @@ describe('feat commands', () => {
     ])
   })
 
+  test('preserves earlier class feat slots when later selections are catalog-sorted', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'XPHB', levels: 1 }],
+    })
+    const owner = {
+      className: 'Fighter',
+      classSource: 'XPHB',
+      progressionName: 'Fighting Style',
+      categories: ['FS'],
+    }
+    const first = replaceClassFeatSelectionsCommand(
+      character,
+      emptyProvenance(),
+      { ...owner, slotLevels: [1] },
+      [{ name: 'Dueling', source: 'XPHB' }],
+    )
+    const leveled = applyResult(character, first)
+    const later = replaceClassFeatSelectionsCommand(
+      leveled,
+      leveled.provenance,
+      { ...owner, slotLevels: [1, 4] },
+      [
+        { name: 'Defense', source: 'XPHB' },
+        { name: 'Dueling', source: 'XPHB' },
+      ],
+    )
+
+    expect(later.characterPatch.classFeatChoices?.[0]?.feats).toEqual([
+      expect.objectContaining({ name: 'Defense', classLevel: 4 }),
+      expect.objectContaining({ name: 'Dueling', classLevel: 1 }),
+    ])
+  })
+
   test('persists source-qualified choice options and retracts them when the feat changes', () => {
     const character = makeCharacterFixture()
     const choice = {

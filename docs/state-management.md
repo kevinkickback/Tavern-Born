@@ -154,7 +154,9 @@ edit.
 - Other normalized class choices are stored in `character.classChoiceSelections`. Every selected
   option retains its source-qualified entity identity and the class level that supplied its slot,
   so level-down and class removal retract only unavailable slots without requiring game data during
-  the state transition. The class-page choice controller resolves each descriptor against the
+  the state transition. Retained options keep that original slot when later choices are added or
+  the catalog is reordered; newly selected options receive the remaining earned slots. The
+  class-page choice controller resolves each descriptor against the
   character-filtered catalogs and writes an explicit availability state into the view projection.
   Retained unavailable references stay
   visible so the user can understand and replace them, but they are not initialized as selected and
@@ -185,6 +187,9 @@ edit.
 - Class-level spell source attribution is tracked in provenance spell source tags.
 - Attribution may be exact (class page level picker) or inferred (spells page lowest-eligible assignment).
 - Class-page per-level spell displays are derived from provenance attribution metadata.
+- Class-page spell edits replace only the exact choices owned by the edited class level. The spell
+  profile and provenance ledger are committed by one command, while choices from other levels and
+  compatibility-era profile entries without level attribution remain intact.
 - Multiclass slot derivation follows 5e caster progression rules, including Artificer using ceiling half-caster contribution.
 - Shared spell-slot maxima come from parsed PHB/XPHB full-caster progression rows. A progression containing any 2024 class uses the XPHB table; otherwise it uses PHB. Missing canonical rows produce no synthetic slots and are reported during development.
 - This is a hard cutover model; legacy spell arrays and `spellsByLevel` are not used.
@@ -344,6 +349,14 @@ addSpellToProfile(profileId, name, 'spell')
 ```
 
 **Schema/Persistence:** Spell profiles and provenance are still stored separately on the character, but normal mutation flows now update them together.
+
+Spellcasting detail keeps three capacities distinct: cantrips selected, leveled spells selected or
+recorded in a spellbook, and spells prepared. Explicit known/fixed progression owns the selectable
+spell total even when a class also has a smaller preparation limit; level-only prepared casters use
+their prepared progression as the selection total, while daily prepared casters without a spellbook
+have no finite known-spell total. Review and Spells-page completion counts are case-insensitive and
+exclude fixed class/subclass grants from player-choice quotas. Always-prepared grants do not consume
+the preparation limit.
 
 Spell profile arrays may contain lowercase 5etools reference tokens from race or subclass grants.
 Spell-page presentation resolves those tokens against parsed spell data and displays the canonical

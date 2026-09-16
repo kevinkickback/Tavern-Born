@@ -44,6 +44,42 @@ function mergeSpellNames(existing: string[], additions: string[]): string[] {
   return [...byKey.values()]
 }
 
+function uniqueSpellKeys(names: readonly string[]): Set<string> {
+  return new Set(names.map(normalizeKey).filter(Boolean))
+}
+
+export interface SpellProfileSelectionCounts {
+  cantrips: number
+  spells: number
+  prepared: number
+}
+
+/** Counts unique player-managed entries without treating derived grants as class selections. */
+export function getSpellProfileSelectionCounts(
+  profile: Pick<
+    SpellProfile,
+    'cantrips' | 'spellsKnown' | 'preparedSpells' | 'fixedSpells' | 'alwaysPreparedSpells'
+  >,
+): SpellProfileSelectionCounts {
+  const fixed = uniqueSpellKeys(profile.fixedSpells ?? [])
+  const alwaysPrepared = uniqueSpellKeys(profile.alwaysPreparedSpells ?? [])
+  const countSelectable = (names: readonly string[]) =>
+    new Set(names.map(normalizeKey).filter((key) => key && !fixed.has(key))).size
+
+  return {
+    cantrips: countSelectable(profile.cantrips),
+    spells: countSelectable(profile.spellsKnown),
+    prepared: new Set(
+      profile.preparedSpells.map(normalizeKey).filter((key) => key && !alwaysPrepared.has(key)),
+    ).size,
+  }
+}
+
+/** Counts spell identities case-insensitively for derived presentation summaries. */
+export function countUniqueSpellNames(names: readonly string[]): number {
+  return uniqueSpellKeys(names).size
+}
+
 /**
  * Build or update a racial spell profile from parsed race data.
  */

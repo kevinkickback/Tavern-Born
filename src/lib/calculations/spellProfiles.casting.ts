@@ -303,18 +303,13 @@ export function buildSpellcastingClassDetails(
         ? getPreparedSpellLimit(effectiveSpellcastingData, entry.levels, mod)
         : null
 
-      let knownSpellLimit: number | null
       const progressionKnownSpellLimit = getKnownSpellLimit(effectiveSpellcastingData, entry.levels)
-      if (preparedCaster || levelOnlyPrepared) {
-        // Prepared casters: known limit equals prepared count. Fall back to
-        // progression only when no formula is available (e.g. ability score unknown).
-        knownSpellLimit = preparedSpellLimit ?? progressionKnownSpellLimit
-      } else if (progressionKnownSpellLimit != null) {
-        // Known casters (Bard, Ranger …): use explicit spells-known progression.
-        knownSpellLimit = progressionKnownSpellLimit
-      } else {
-        knownSpellLimit = null
-      }
+      // Explicit known/fixed progression owns the selectable spell count, even when the same
+      // caster also has a smaller daily preparation limit (for example, either Wizard ruleset).
+      // Level-only prepared casters persist their selections in spellsKnown, so their prepared
+      // progression is the selection limit. True prepared casters have no finite known list.
+      const knownSpellLimit =
+        progressionKnownSpellLimit ?? (levelOnlyPrepared ? preparedSpellLimit : null)
 
       return {
         profileId,

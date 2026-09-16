@@ -10,12 +10,21 @@ import {
   dedupeSpellNames,
   getSpellNameKey,
 } from '@/lib/calculations/spellIdentity'
-import { addSpellGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
+import {
+  buildClassProfileLabel,
+  toClassProfileId,
+} from '@/lib/calculations/spellProfiles.constants'
+import { addSpellGrant, applyClassSpellGrant, makeSourceTag, normalizeKey } from '@/lib/provenance'
 import type { ProvenanceLedger, SpellSourceTag } from '@/lib/provenance/types'
 import type { Character, SpellProfile } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
 
 export interface SpellCommandResult extends CharacterCommandResult {}
+
+export interface ClassSpellSelectionInput {
+  name: string
+  spellLevel: number
+}
 
 function createSpellProfilePatch(
   character: Character,
@@ -29,6 +38,198 @@ function createSpellProfilePatch(
   }
 }
 
+function isClassChoiceTag(
+  tag: SpellSourceTag,
+  className: string,
+  classSource: string | undefined,
+): boolean {
+  return (
+    tag.sourceType === 'class' &&
+    tag.sourceName === className &&
+    (tag.sourceRef ?? '') === (classSource ?? '') &&
+    tag.grantType === 'choice'
+  )
+}
+
+function removeClassChoiceTagsAtLevel(
+  ledger: ProvenanceLedger,
+  className: string,
+  classSource: string | undefined,
+  classLevel: number,
+): ProvenanceLedger {
+  const spells: ProvenanceLedger['spells'] = {}
+  for (const [key, tags] of Object.entries(ledger.spells)) {
+    const retained = tags.filter(
+      (tag) =>
+        !(isClassChoiceTag(tag, className, classSource) && tag.spellGrantedAtLevel === classLevel),
+    )
+    if (retained.length > 0) spells[key] = retained
+  }
+  return { ...ledger, spells }
+}
+
+/** Replace one class level's spell choices without disturbing other levels or unattributed spells. */
+export function setClassSpellSelectionsAtLevel(
+  character: Character,
+  ledger: ProvenanceLedger,
+  params: {
+    className: string
+    classSource?: string
+    classLevel: number
+    selections: ClassSpellSelectionInput[]
+  },
+): SpellCommandResult {
+  const { className, classSource, classLevel } = params
+  const selections = dedupeSpellNames(params.selections.map((selection) => selection.name)).map(
+    (name) => ({
+      name,
+      spellLevel:
+        params.selections.find(
+          (selection) => getSpellNameKey(selection.name) === getSpellNameKey(name),
+        )?.spellLevel ?? 1,
+    }),
+  )
+  const profileId = toClassProfileId(className, classSource)
+  const profiles = character.spells.spellProfiles
+  const existingProfile = profiles.find((profile) => profile.id === profileId)
+  const classEntry = character.classProgression?.find(
+    (entry) => entry.name === className && (entry.source ?? '') === (classSource ?? ''),
+  )
+  const profile =
+    existingProfile ??
+    ({
+      id: profileId,
+      type: 'class',
+      label: buildClassProfileLabel(
+        classEntry ?? { name: className, source: classSource, levels: 1 },
+      ),
+      className,
+      classSource,
+      cantrips: [],
+      spellsKnown: [],
+      preparedSpells: [],
+      alwaysPrepared: false,
+    } satisfies SpellProfile)
+
+  const previousLevelKeys = new Set<string>()
+  for (const name of [...profile.cantrips, ...profile.spellsKnown]) {
+    const tags = ledger.spells[normalizeKey(name)] ?? []
+    if (
+      tags.some(
+        (tag) =>
+          isClassChoiceTag(tag, className, classSource) && tag.spellGrantedAtLevel === classLevel,
+      )
+    ) {
+      previousLevelKeys.add(getSpellNameKey(name))
+    }
+  }
+
+  const fixedKeys = buildSpellNameKeySet(profile.fixedSpells ?? [])
+  const retainedCantrips = profile.cantrips.filter(
+    (name) => !previousLevelKeys.has(getSpellNameKey(name)) || fixedKeys.has(getSpellNameKey(name)),
+  )
+  const retainedSpellsKnown = profile.spellsKnown.filter(
+    (name) => !previousLevelKeys.has(getSpellNameKey(name)) || fixedKeys.has(getSpellNameKey(name)),
+  )
+  const nextCantrips = dedupeSpellNames([
+    ...retainedCantrips,
+    ...selections.filter((selection) => selection.spellLevel === 0).map(({ name }) => name),
+  ])
+  const nextSpellsKnown = dedupeSpellNames([
+    ...retainedSpellsKnown,
+    ...selections.filter((selection) => selection.spellLevel !== 0).map(({ name }) => name),
+  ])
+  const nextKnownKeys = buildSpellNameKeySet([...nextCantrips, ...nextSpellsKnown])
+  const nextProfile: SpellProfile = {
+    ...profile,
+    cantrips: nextCantrips,
+    spellsKnown: nextSpellsKnown,
+    preparedSpells: profile.preparedSpells.filter((name) =>
+      nextKnownKeys.has(getSpellNameKey(name)),
+    ),
+  }
+  const nextProfiles = profiles.some((candidate) => candidate.id === profileId)
+    ? profiles.map((candidate) => (candidate.id === profileId ? nextProfile : candidate))
+    : [...profiles, nextProfile]
+
+  let provenanceUpdate = removeClassChoiceTagsAtLevel(ledger, className, classSource, classLevel)
+  for (const selection of selections) {
+    provenanceUpdate = applyClassSpellGrant(
+      provenanceUpdate,
+      className,
+      classSource,
+      selection.name,
+      'choice',
+      { spellGrantedAtLevel: classLevel, spellAttributionMode: 'exact' },
+    )
+  }
+
+  return {
+    characterPatch: createSpellProfilePatch(character, nextProfiles),
+    provenanceUpdate,
+  }
+}
+
+/** Replace one class-owned spell and its provenance in the same character update. */
+export function swapClassSpellAtLevel(
+  character: Character,
+  ledger: ProvenanceLedger,
+  params: {
+    className: string
+    classSource?: string
+    swapAtLevel: number
+    removedName: string
+    addedName: string
+  },
+): SpellCommandResult {
+  const { className, classSource, swapAtLevel, removedName, addedName } = params
+  const profileId = toClassProfileId(className, classSource)
+  const profiles = character.spells.spellProfiles
+  const removedKey = getSpellNameKey(removedName)
+  const removedTags = ledger.spells[normalizeKey(removedName)] ?? []
+  const removedClassTag = removedTags.find((tag) => isClassChoiceTag(tag, className, classSource))
+  const retainedTags = removedTags.filter((tag) => !isClassChoiceTag(tag, className, classSource))
+  const spells = { ...ledger.spells }
+  if (retainedTags.length > 0) spells[normalizeKey(removedName)] = retainedTags
+  else delete spells[normalizeKey(removedName)]
+
+  let provenanceUpdate: ProvenanceLedger = { ...ledger, spells }
+  provenanceUpdate = applyClassSpellGrant(
+    provenanceUpdate,
+    className,
+    classSource,
+    addedName,
+    'choice',
+    removedClassTag?.spellGrantedAtLevel
+      ? {
+          spellGrantedAtLevel: removedClassTag.spellGrantedAtLevel,
+          spellAttributionMode: removedClassTag.spellAttributionMode ?? 'exact',
+        }
+      : undefined,
+  )
+
+  const nextProfiles = profiles.map((profile) => {
+    if (profile.id !== profileId) return profile
+    return {
+      ...profile,
+      spellsKnown: dedupeSpellNames([
+        ...profile.spellsKnown.filter((name) => getSpellNameKey(name) !== removedKey),
+        addedName,
+      ]),
+      preparedSpells: profile.preparedSpells.filter((name) => getSpellNameKey(name) !== removedKey),
+      spellSwaps: {
+        ...profile.spellSwaps,
+        [swapAtLevel]: { removed: removedName, added: addedName },
+      },
+    }
+  })
+
+  return {
+    characterPatch: createSpellProfilePatch(character, nextProfiles),
+    provenanceUpdate,
+  }
+}
+
 /**
  * Add a spell (cantrip or spell) to a character's spell profile.
  *
@@ -37,7 +238,7 @@ function createSpellProfilePatch(
  * @param spellName - Name of spell to add
  * @param spellKind - Type: 'cantrip' or 'spell'
  * @param profileId - Target spell profile ID
- * @param options - Additional options (source, grantedAtLevel, attribution mode)
+ * @param options - Additional options (source identity, grantedAtLevel, attribution mode)
  * @returns { characterPatch, provenanceUpdate } - Apply both atomically
  */
 export function addSpellToCharacter(
@@ -47,7 +248,8 @@ export function addSpellToCharacter(
   spellKind: 'cantrip' | 'spell',
   profileId?: string,
   options?: {
-    source?: string
+    sourceName?: string
+    sourceRef?: string
     sourceType?: 'class' | 'subclass' | 'feat' | 'manual'
     grantedAtLevel?: number
     attributionMode?: 'exact' | 'inferred-lowest-eligible'
@@ -74,9 +276,9 @@ export function addSpellToCharacter(
   })
 
   const sourceType = options?.sourceType ?? 'manual'
-  const sourceName = options?.source ?? (sourceType === 'manual' ? 'User Choice' : 'Unknown')
+  const sourceName = options?.sourceName ?? (sourceType === 'manual' ? 'User Choice' : 'Unknown')
 
-  const baseTag = makeSourceTag(sourceType, sourceName, 'choice', options?.source)
+  const baseTag = makeSourceTag(sourceType, sourceName, 'choice', options?.sourceRef)
   const sourceTag: SpellSourceTag = {
     ...baseTag,
     ...(options?.grantedAtLevel ? { spellGrantedAtLevel: options.grantedAtLevel } : {}),

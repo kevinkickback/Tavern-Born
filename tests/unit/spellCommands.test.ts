@@ -9,13 +9,342 @@ import { describe, expect, test } from 'vitest'
 import {
   addSpellToCharacter,
   removeSpellFromCharacter,
+  setClassSpellSelectionsAtLevel,
   setProfileSpells,
+  swapClassSpellAtLevel,
   swapSpellOnCharacter,
 } from '@/lib/character/commands/spellCommands'
 import { emptyProvenance } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('Spell Commands', () => {
+  describe('setClassSpellSelectionsAtLevel', () => {
+    test('preserves earlier unattributed Wizard choices while adding later level selections', () => {
+      let character = makeCharacterFixture({
+        class: 'Wizard',
+        classSource: 'PHB',
+        level: 4,
+        classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
+        spells: {
+          spellProfiles: [
+            {
+              id: 'class:Wizard|PHB',
+              type: 'class',
+              label: 'Wizard (Lv 4)',
+              className: 'Wizard',
+              classSource: 'PHB',
+              cantrips: ['Fire Bolt', 'Mage Hand', 'Prestidigitation'],
+              spellsKnown: [
+                'Detect Magic',
+                'Feather Fall',
+                'Mage Armor',
+                'Magic Missile',
+                'Shield',
+                'Sleep',
+              ],
+              preparedSpells: ['Mage Armor', 'Magic Missile', 'Shield', 'Sleep'],
+              alwaysPrepared: false,
+            },
+          ],
+          spellSlots: makeCharacterFixture().spells.spellSlots,
+        },
+      })
+      let ledger = character.provenance ?? emptyProvenance()
+
+      const applyLevel = (classLevel: number, selections: Array<[string, number]>) => {
+        const result = setClassSpellSelectionsAtLevel(character, ledger, {
+          className: 'Wizard',
+          classSource: 'PHB',
+          classLevel,
+          selections: selections.map(([name, spellLevel]) => ({ name, spellLevel })),
+        })
+        character = {
+          ...character,
+          ...result.characterPatch,
+          provenance: result.provenanceUpdate,
+        }
+        ledger = result.provenanceUpdate
+      }
+
+      applyLevel(2, [
+        ['Arcane Lock', 2],
+        ['Misty Step', 2],
+      ])
+      applyLevel(3, [
+        ['Counterspell', 3],
+        ['Fireball', 3],
+      ])
+      applyLevel(4, [
+        ['Light', 0],
+        ['Dimension Door', 4],
+        ['Polymorph', 4],
+      ])
+
+      const profile = character.spells.spellProfiles.find(
+        (candidate) => candidate.id === 'class:Wizard|PHB',
+      )
+      expect(profile?.cantrips).toEqual(['Fire Bolt', 'Mage Hand', 'Prestidigitation', 'Light'])
+      expect(profile?.spellsKnown).toEqual([
+        'Detect Magic',
+        'Feather Fall',
+        'Mage Armor',
+        'Magic Missile',
+        'Shield',
+        'Sleep',
+        'Arcane Lock',
+        'Misty Step',
+        'Counterspell',
+        'Fireball',
+        'Dimension Door',
+        'Polymorph',
+      ])
+      expect(profile?.preparedSpells).toEqual(['Mage Armor', 'Magic Missile', 'Shield', 'Sleep'])
+      expect(ledger.spells.fireball?.[0]).toMatchObject({
+        sourceName: 'Wizard',
+        sourceRef: 'PHB',
+        spellGrantedAtLevel: 3,
+        spellAttributionMode: 'exact',
+      })
+      expect(ledger.spells.light?.[0]).toMatchObject({ spellGrantedAtLevel: 4 })
+    })
+
+    test.each([
+      { rules: '2014', className: 'Artificer', classSource: 'TCE' },
+      { rules: '2014', className: 'Bard', classSource: 'PHB' },
+      { rules: '2014', className: 'Cleric', classSource: 'PHB' },
+      { rules: '2014', className: 'Druid', classSource: 'PHB' },
+      { rules: '2014', className: 'Paladin', classSource: 'PHB' },
+      { rules: '2014', className: 'Ranger', classSource: 'PHB' },
+      { rules: '2014', className: 'Sorcerer', classSource: 'PHB' },
+      { rules: '2014', className: 'Warlock', classSource: 'PHB' },
+      { rules: '2014', className: 'Wizard', classSource: 'PHB' },
+      { rules: '2024', className: 'Bard', classSource: 'XPHB' },
+      { rules: '2024', className: 'Cleric', classSource: 'XPHB' },
+      { rules: '2024', className: 'Druid', classSource: 'XPHB' },
+      { rules: '2024', className: 'Paladin', classSource: 'XPHB' },
+      { rules: '2024', className: 'Ranger', classSource: 'XPHB' },
+      { rules: '2024', className: 'Sorcerer', classSource: 'XPHB' },
+      { rules: '2024', className: 'Warlock', classSource: 'XPHB' },
+      { rules: '2024', className: 'Wizard', classSource: 'XPHB' },
+    ])('$rules $className keeps prior level choices and unrelated profiles', ({
+      rules,
+      className,
+      classSource,
+    }) => {
+      const profileId = `class:${className}|${classSource}`
+      const earlierSpell = `${rules} ${className} Earlier Spell`
+      const laterSpell = `${rules} ${className} Later Spell`
+      const unrelatedProfile = {
+        id: 'class:Other Caster|TEST',
+        type: 'class' as const,
+        label: 'Other Caster (Lv 1)',
+        className: 'Other Caster',
+        classSource: 'TEST',
+        cantrips: ['Guidance'],
+        spellsKnown: ['Bless'],
+        preparedSpells: ['Bless'],
+        alwaysPrepared: false,
+      }
+      const defaultSpells = makeCharacterFixture().spells
+      let character = makeCharacterFixture({
+        originSystem: rules === '2014' ? '2014' : '2024',
+        class: className,
+        classSource,
+        level: 5,
+        classProgression: [
+          { name: className, source: classSource, levels: 4 },
+          { name: 'Other Caster', source: 'TEST', levels: 1 },
+        ],
+        spells: {
+          ...defaultSpells,
+          spellProfiles: [
+            {
+              id: profileId,
+              type: 'class',
+              label: `${className} (Lv 4)`,
+              className,
+              classSource,
+              cantrips: [],
+              spellsKnown: [],
+              preparedSpells: [],
+              alwaysPrepared: false,
+            },
+            unrelatedProfile,
+          ],
+        },
+      })
+      let ledger = character.provenance ?? emptyProvenance()
+
+      for (const [classLevel, name, spellLevel] of [
+        [1, earlierSpell, 1],
+        [4, laterSpell, 2],
+      ] as const) {
+        const result = setClassSpellSelectionsAtLevel(character, ledger, {
+          className,
+          classSource,
+          classLevel,
+          selections: [{ name, spellLevel }],
+        })
+        character = {
+          ...character,
+          ...result.characterPatch,
+          provenance: result.provenanceUpdate,
+        }
+        ledger = result.provenanceUpdate
+      }
+
+      const profile = character.spells.spellProfiles.find((candidate) => candidate.id === profileId)
+      expect(profile?.spellsKnown).toEqual([earlierSpell, laterSpell])
+      expect(
+        character.spells.spellProfiles.find((profile) => profile.id === unrelatedProfile.id),
+      ).toEqual(unrelatedProfile)
+      expect(ledger.spells[earlierSpell.toLowerCase()]?.[0]).toMatchObject({
+        sourceName: className,
+        sourceRef: classSource,
+        spellGrantedAtLevel: 1,
+      })
+      expect(ledger.spells[laterSpell.toLowerCase()]?.[0]).toMatchObject({
+        sourceName: className,
+        sourceRef: classSource,
+        spellGrantedAtLevel: 4,
+      })
+    })
+
+    test('replaces only the edited level and retains unrelated provenance', () => {
+      const character = makeCharacterFixture({
+        class: 'Wizard',
+        classSource: 'PHB',
+        level: 2,
+        classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
+        spells: {
+          spellProfiles: [
+            {
+              id: 'class:Wizard|PHB',
+              type: 'class',
+              label: 'Wizard (Lv 2)',
+              className: 'Wizard',
+              classSource: 'PHB',
+              cantrips: ['Fire Bolt'],
+              spellsKnown: ['Shield', 'Misty Step'],
+              preparedSpells: ['Shield', 'Misty Step'],
+              alwaysPrepared: false,
+            },
+          ],
+          spellSlots: makeCharacterFixture().spells.spellSlots,
+        },
+      })
+      const classTag = {
+        sourceType: 'class' as const,
+        sourceName: 'Wizard',
+        sourceRef: 'PHB',
+        grantType: 'choice' as const,
+        label: 'Wizard',
+        spellGrantedAtLevel: 2,
+        spellAttributionMode: 'exact' as const,
+      }
+      const featTag = {
+        sourceType: 'feat' as const,
+        sourceName: 'Fey Touched',
+        sourceRef: 'TCE',
+        grantType: 'fixed' as const,
+        label: 'Fey Touched',
+      }
+      const ledger = {
+        ...(character.provenance ?? emptyProvenance()),
+        spells: {
+          'misty step': [classTag, featTag],
+        },
+      }
+
+      const result = setClassSpellSelectionsAtLevel(character, ledger, {
+        className: 'Wizard',
+        classSource: 'PHB',
+        classLevel: 2,
+        selections: [{ name: 'Arcane Lock', spellLevel: 2 }],
+      })
+      const profile = result.characterPatch.spells?.spellProfiles.find(
+        (candidate) => candidate.id === 'class:Wizard|PHB',
+      )
+
+      expect(profile?.spellsKnown).toEqual(['Shield', 'Arcane Lock'])
+      expect(profile?.preparedSpells).toEqual(['Shield'])
+      expect(result.provenanceUpdate.spells['misty step']).toEqual([featTag])
+      expect(result.provenanceUpdate.spells['arcane lock']?.[0]).toMatchObject({
+        sourceName: 'Wizard',
+        sourceRef: 'PHB',
+        spellGrantedAtLevel: 2,
+      })
+    })
+
+    test('swaps a class spell and its provenance atomically', () => {
+      const character = makeCharacterFixture({
+        class: 'Wizard',
+        classSource: 'PHB',
+        level: 3,
+        classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
+        spells: {
+          spellProfiles: [
+            {
+              id: 'class:Wizard|PHB',
+              type: 'class',
+              label: 'Wizard (Lv 3)',
+              className: 'Wizard',
+              classSource: 'PHB',
+              cantrips: [],
+              spellsKnown: ['Shield', 'Magic Missile'],
+              preparedSpells: ['Shield'],
+              alwaysPrepared: false,
+            },
+          ],
+          spellSlots: makeCharacterFixture().spells.spellSlots,
+        },
+      })
+      const wizardTag = {
+        sourceType: 'class' as const,
+        sourceName: 'Wizard',
+        sourceRef: 'PHB',
+        grantType: 'choice' as const,
+        label: 'Wizard',
+        spellGrantedAtLevel: 1,
+        spellAttributionMode: 'exact' as const,
+      }
+      const itemTag = {
+        sourceType: 'manual' as const,
+        sourceName: 'Wand of Shielding',
+        grantType: 'fixed' as const,
+        label: 'Wand of Shielding',
+      }
+      const ledger = {
+        ...(character.provenance ?? emptyProvenance()),
+        spells: { shield: [wizardTag, itemTag] },
+      }
+
+      const result = swapClassSpellAtLevel(character, ledger, {
+        className: 'Wizard',
+        classSource: 'PHB',
+        swapAtLevel: 3,
+        removedName: 'Shield',
+        addedName: 'Absorb Elements',
+      })
+      const profile = result.characterPatch.spells?.spellProfiles.find(
+        (candidate) => candidate.id === 'class:Wizard|PHB',
+      )
+
+      expect(profile?.spellsKnown).toEqual(['Magic Missile', 'Absorb Elements'])
+      expect(profile?.preparedSpells).toEqual([])
+      expect(profile?.spellSwaps).toEqual({
+        3: { removed: 'Shield', added: 'Absorb Elements' },
+      })
+      expect(result.provenanceUpdate.spells.shield).toEqual([itemTag])
+      expect(result.provenanceUpdate.spells['absorb elements']?.[0]).toMatchObject({
+        sourceName: 'Wizard',
+        sourceRef: 'PHB',
+        spellGrantedAtLevel: 1,
+        spellAttributionMode: 'exact',
+      })
+    })
+  })
+
   describe('addSpellToCharacter', () => {
     test('adds cantrip to profile and records provenance', () => {
       const character = makeCharacterFixture({
@@ -50,7 +379,8 @@ describe('Spell Commands', () => {
         'class:Wizard|PHB',
         {
           sourceType: 'class',
-          source: 'Wizard',
+          sourceName: 'Wizard',
+          sourceRef: 'PHB',
           attributionMode: 'exact',
         },
       )
@@ -96,7 +426,8 @@ describe('Spell Commands', () => {
         'class:Bard|PHB',
         {
           sourceType: 'class',
-          source: 'Bard',
+          sourceName: 'Bard',
+          sourceRef: 'PHB',
           grantedAtLevel: 1,
           attributionMode: 'exact',
         },
@@ -273,7 +604,7 @@ describe('Spell Commands', () => {
         'Faerie Fire',
         'spell',
         profileId,
-        { sourceType: 'class', source: 'Bard', grantedAtLevel: 1 },
+        { sourceType: 'class', sourceName: 'Bard', sourceRef: 'PHB', grantedAtLevel: 1 },
       ).provenanceUpdate
 
       const result = swapSpellOnCharacter(

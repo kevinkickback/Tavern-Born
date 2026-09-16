@@ -52,7 +52,10 @@ new tests land and do not lower them to merge a change.
   legacy migration/downgrade, manual adjustments, exact overrides, and both PDF templates.
 - A focused source-ownership test prevents Builder, header-stat, prerequisite, spellcasting, and PDF
   consumers from bypassing the effective-score boundary.
-- Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts
+- Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts,
+  including independent spellbook/known, cantrip, and preparation capacities for 2014 and 2024
+  casters. Readiness and presentation regressions verify fixed or always-prepared grants and
+  case-variant duplicates do not satisfy or inflate player-choice quotas.
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
 - HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution
   recalculation, manual flat/per-level adjustments, active typed-source display, exact overrides,
@@ -176,8 +179,9 @@ new tests land and do not lower them to merge a change.
   modal hiding/locking, and mixed-case command deduplication.
 - Command-layer spell and class coverage in tests/unit/spellCommands.test.ts and tests/unit/classCommands.test.ts
 - Structured class-choice command coverage in tests/unit/classChoiceCommands.test.ts includes
-  partial drafts, cardinality/source validation, deterministic slot ownership, feature-shaped grant
-  materialization/replacement, explicit non-inference for item choices, and level/class retraction.
+  partial drafts, cardinality/source validation, identity-stable slot ownership across later
+  catalog-sorted additions, feature-shaped grant materialization/replacement, explicit
+  non-inference for item choices, and level/class retraction.
 - Source-qualified class-choice coverage tests select the upstream `srd52: true` cohort, require a
   unique 20-level matrix for every tagged class, and reject diagnostics, incomplete progressions,
   and mismatched owners (`tests/lib/5etools/classChoiceCoverage.test.ts` and
@@ -185,6 +189,11 @@ new tests land and do not lower them to merge a change.
 - Schema migrations in src/lib/schema/migrations.ts with dedicated unit coverage in tests/lib/migrations.test.ts
 - Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)
 - Current workflow coverage in tests/integration/spellOperations.test.tsx, tests/integration/multiclassUpdates.test.tsx, tests/integration/contentFiltering.test.tsx, and tests/integration/armorClass.test.tsx
+- Class-page spell choice coverage in tests/unit/spellCommands.test.ts and
+  tests/hooks/useClassPageControllers.test.tsx verifies that later-level additions and reselections
+  update profile/provenance state atomically without removing earlier or unattributed choices. The
+  command matrix covers every core 2014 and 2024 spellcasting class plus Artificer, including known,
+  prepared, spellbook, and Pact casting models.
 - Basic E2E startup/navigation smoke
 - Exhaustive no-character route-guard E2E for every protected character route, with public Settings and Compendium access checks
 - Character lifecycle E2E (import -> portrait edit -> save -> reload) in tests/e2e/lifecycle.spec.ts

@@ -2,6 +2,7 @@ import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.const
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Spell5e } from '@/types/5etools'
 import type { RaceSpellChoice } from '@/types/character'
+import { countUniqueSpellNames } from './spellProfiles.profiles'
 
 export interface SpellListItem {
   profileId: string
@@ -119,12 +120,18 @@ export function buildSpellProfileDisplayModels({
             .map(normalizeKey),
         )
       : new Set(
-          items.filter((item) => item.kind === 'spell' && item.prepared).map((item) => item.name),
+          items
+            .filter((item) => item.kind === 'spell' && item.prepared)
+            .map((item) => normalizeKey(item.name)),
         )
     const preparedCount = preparedSet.size
     const preparableCount = isTruePrepared
       ? availableClassItems.filter(({ item }) => !item.alwaysPrepared).length
-      : items.filter((item) => item.kind === 'spell' && !item.alwaysPrepared).length
+      : countUniqueSpellNames(
+          items
+            .filter((item) => item.kind === 'spell' && !item.alwaysPrepared)
+            .map((item) => item.name),
+        )
     const preparedTotal = detail?.isPreparedCaster
       ? (detail.preparedSpellLimit ?? preparableCount)
       : preparableCount
@@ -134,8 +141,12 @@ export function buildSpellProfileDisplayModels({
           (left, right) => left - right,
         )
       : []
-    const currentCantrips = items.filter((item) => item.kind === 'cantrip').length
-    const currentSpells = items.filter((item) => item.kind === 'spell' && !item.isFixed).length
+    const currentCantrips = countUniqueSpellNames(
+      items.filter((item) => item.kind === 'cantrip' && !item.isFixed).map((item) => item.name),
+    )
+    const currentSpells = countUniqueSpellNames(
+      items.filter((item) => item.kind === 'spell' && !item.isFixed).map((item) => item.name),
+    )
     const missingCantrips =
       detail?.cantripLimit == null ? 0 : Math.max(0, detail.cantripLimit - currentCantrips)
     const missingSpells =

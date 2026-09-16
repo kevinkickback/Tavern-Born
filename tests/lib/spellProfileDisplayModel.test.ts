@@ -42,6 +42,8 @@ describe('spell profile display model', () => {
           profile.id,
           [
             item({ name: 'Fire Bolt', level: 0, kind: 'cantrip' }),
+            item({ name: 'Light', level: 0, kind: 'cantrip', isFixed: true }),
+            item({ name: 'fire bolt', level: 0, kind: 'cantrip' }),
             item({ name: 'Shield', isFixed: true }),
           ],
         ],

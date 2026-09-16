@@ -7,8 +7,7 @@ export function useClassSpellChoiceController(viewingClassData?: Class5e) {
   const [pickerLevel, setPickerLevel] = useState<number | null>(null)
   const [swapLevel, setSwapLevel] = useState<number | null>(null)
   const [swapDrop, setSwapDrop] = useState<string | null>(null)
-  const { applyBatchSpellSelections, removeSpellProvenance, swapSpellProvenance } =
-    useSpellProvenanceMutations()
+  const { setClassSpellSelectionsAtLevel, swapClassSpellAtLevel } = useSpellProvenanceMutations()
   const choicesByLevel = useMemo(() => {
     const choices = new Map<
       number,
@@ -30,8 +29,7 @@ export function useClassSpellChoiceController(viewingClassData?: Class5e) {
     setSwapLevel,
     swapDrop,
     setSwapDrop,
-    applyBatchSpellSelections,
-    removeSpellProvenance,
-    swapSpellProvenance,
+    setClassSpellSelectionsAtLevel,
+    swapClassSpellAtLevel,
   }
 }

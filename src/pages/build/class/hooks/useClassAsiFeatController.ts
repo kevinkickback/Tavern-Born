@@ -157,7 +157,9 @@ export function useClassAsiFeatController({
 
   const confirmFeat = (selectedFeats: Feat5e[]) => {
     if (!character || !viewingClass || featPickerLevel == null) return
-    const previousNames = new Set(effectiveFeats.map((feat) => feat.name))
+    const previousKeys = new Set(
+      effectiveFeats.map((feat) => getEntityLookupKey(feat.name, feat.source)),
+    )
     const otherFeats = effectiveFeats.filter(
       (feat) => !isClassAsiFeatForSlot(feat, viewingClass, viewingClassSource, featPickerLevel),
     )
@@ -169,7 +171,8 @@ export function useClassAsiFeatController({
     }))
     replaceFeatSelections([...otherFeats, ...scopedSelections])
     const newlyAdded = selectedFeats.find(
-      (feat) => !previousNames.has(feat.name) && hasFeatOptions(feat),
+      (feat) =>
+        !previousKeys.has(getEntityLookupKey(feat.name, feat.source)) && hasFeatOptions(feat),
     )
     if (newlyAdded) setOptionsPendingFeat(newlyAdded)
     setFeatPickerOpen(false)

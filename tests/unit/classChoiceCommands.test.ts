@@ -54,6 +54,53 @@ describe('class choice commands', () => {
     })
   })
 
+  test('preserves Warlock invocation acquisition levels when later choices are catalog-sorted', () => {
+    const invocations = choice({
+      id: 'class:warlock|phb|choice:eldritch-invocations|2',
+      label: 'Eldritch Invocations',
+      owner: {
+        type: 'class',
+        name: 'Warlock',
+        source: 'PHB',
+        featureName: 'Eldritch Invocations',
+      },
+      selectionCountByLevel: [0, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8],
+    })
+    const levelTwo = makeCharacterFixture({
+      class: 'Warlock',
+      classSource: 'PHB',
+      level: 2,
+      classProgression: [{ name: 'Warlock', source: 'PHB', levels: 2 }],
+    })
+    const earlySelections = applyClassChoiceSelectionCommand(levelTwo, invocations, [
+      { entityType: 'optionalFeature', name: "Devil's Sight", source: 'PHB' },
+      { entityType: 'optionalFeature', name: 'Repelling Blast', source: 'PHB' },
+    ]).classChoiceSelections
+    const levelFive = makeCharacterFixture({
+      ...levelTwo,
+      level: 5,
+      classProgression: [{ name: 'Warlock', source: 'PHB', levels: 5 }],
+      classChoiceSelections: earlySelections,
+    })
+
+    const laterSelections = applyClassChoiceSelectionCommand(levelFive, invocations, [
+      { entityType: 'optionalFeature', name: 'Agonizing Blast', source: 'PHB' },
+      { entityType: 'optionalFeature', name: "Devil's Sight", source: 'PHB' },
+      { entityType: 'optionalFeature', name: 'Repelling Blast', source: 'PHB' },
+    ]).classChoiceSelections
+
+    expect(laterSelections?.[0]?.selected).toEqual([
+      expect.objectContaining({ name: 'Agonizing Blast', slotLevel: 5 }),
+      expect.objectContaining({ name: "Devil's Sight", slotLevel: 2 }),
+      expect.objectContaining({ name: 'Repelling Blast', slotLevel: 2 }),
+    ])
+    expect(
+      reconcileClassChoiceSelections(laterSelections, [
+        { name: 'Warlock', source: 'PHB', levels: 2 },
+      ])[0]?.selected.map((option) => option.name),
+    ).toEqual(["Devil's Sight", 'Repelling Blast'])
+  })
+
   test('allows incomplete drafts but rejects excess and duplicate selections', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Sorcerer', source: 'XPHB', levels: 2 }],

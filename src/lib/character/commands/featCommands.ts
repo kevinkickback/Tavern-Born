@@ -31,6 +31,7 @@ import {
   getFeatChoiceSelectedRefs,
   removeChoiceGrant,
 } from './featCommandSupport'
+import { assignProgressionSlotLevels } from './progressionSlotOwnership'
 
 export type { FeatOptionTarget, SelectedFeat } from './featCommandIdentity'
 
@@ -723,6 +724,16 @@ export function replaceClassFeatSelectionsCommand(
     provenanceUpdate = { ...provenanceUpdate, feats }
   }
 
+  const assignedSlotLevels = assignProgressionSlotLevels(
+    (existingChoice?.feats ?? []).map((feat) => ({
+      key: getFeatSelectionKey(feat),
+      slotLevel: feat.classLevel ?? 1,
+    })),
+    selectedFeats.map(getFeatSelectionKey),
+    owner.slotLevels,
+    owner.slotLevels[owner.slotLevels.length - 1] ?? 1,
+  )
+
   const feats: Feat[] = selectedFeats.map((feat, index) => {
     const existing = existingChoice?.feats.find(
       (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
@@ -736,7 +747,7 @@ export function replaceClassFeatSelectionsCommand(
       options: existing?.options,
       className: owner.className,
       classSource: owner.classSource,
-      classLevel: owner.slotLevels[index] ?? owner.slotLevels[owner.slotLevels.length - 1] ?? 1,
+      classLevel: assignedSlotLevels[index],
     }
   })
 

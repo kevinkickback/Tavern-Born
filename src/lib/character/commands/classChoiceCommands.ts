@@ -13,6 +13,7 @@ import type {
 import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 import type { CharacterCommandResult } from './commandResult'
 import { replaceClassFeatSelectionsCommand } from './featCommands'
+import { assignProgressionSlotLevels } from './progressionSlotOwnership'
 
 const CLASS_CHOICE_FEATURE_ID_PREFIX = 'class-choice:'
 
@@ -71,7 +72,18 @@ export function applyClassChoiceSelectionCommand(
   }
   validateSelectedOptions(choice, selected)
 
-  const slotLevels = getChoiceSlotLevels(choice)
+  const existingSelection = character.classChoiceSelections?.find(
+    (existing) => existing.choiceId === choice.id,
+  )
+  const slotLevels = assignProgressionSlotLevels(
+    (existingSelection?.selected ?? []).map((option) => ({
+      key: optionKey(option),
+      slotLevel: option.slotLevel,
+    })),
+    selected.map(optionKey),
+    getChoiceSlotLevels(choice).slice(0, requiredCount),
+    choice.level,
+  )
   const selection: CharacterClassChoiceSelection = {
     choiceId: choice.id,
     label: choice.label,

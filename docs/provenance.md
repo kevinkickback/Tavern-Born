@@ -148,6 +148,9 @@ Normalized class-choice behavior:
   feature-shaped grants in the same command result. Each tag is owned by the exact class printing
   and carries the normalized choice ID as `grantVariant`, so replacement and progression changes
   retract only that choice's grants.
+- Choice and class-feat slot levels are stable ownership metadata, not display positions. Retained
+  source-qualified selections keep their prior slot when sorted catalogs return a different order;
+  only newly added selections consume the remaining earned slots.
 - Class-feature and optional-feature selections can be materialized without interpreting prose.
   Feat selections require the feat-options workflow, and item selections may describe mastery or
   another relationship rather than inventory; those kinds stay persisted until their domain

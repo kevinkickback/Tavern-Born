@@ -8,6 +8,7 @@ import {
   ensureSpellProfiles,
   evaluatePreparedSpellsFormula,
   getPreparedSpellLimit,
+  getSpellProfileSelectionCounts,
   inferClassSpellAttributionLevels,
   isLevelOnlyPreparedCaster,
   isPreparedCaster,
@@ -1168,7 +1169,7 @@ describe('spellProfiles', () => {
     expect(result).toBeNull()
   })
 
-  test('buildSpellcastingClassDetails uses prepared spell formula for prepared casters', () => {
+  test('buildSpellcastingClassDetails keeps spellbook and prepared limits separate', () => {
     const character = makeCharacterFixture({
       class: 'Wizard',
       classSource: 'PHB',
@@ -1218,7 +1219,7 @@ describe('spellProfiles', () => {
           casterProgression: 'full',
           spellcastingAbility: 'int',
           preparedSpells: '<$level$> + <$int_mod$>',
-          spellsKnownProgression: [6, 8, 10, 12, 14],
+          spellsKnownProgressionFixed: [6, 2, 2, 2, 2],
         }),
       ],
     ])
@@ -1226,7 +1227,20 @@ describe('spellProfiles', () => {
     const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
     expect(details).toHaveLength(1)
     expect(details[0].isPreparedCaster).toBe(true)
-    expect(details[0].knownSpellLimit).toBe(9)
+    expect(details[0].knownSpellLimit).toBe(14)
+    expect(details[0].preparedSpellLimit).toBe(9)
+  })
+
+  test('counts unique player selections without fixed or always-prepared grants', () => {
+    expect(
+      getSpellProfileSelectionCounts({
+        cantrips: ['Fire Bolt', 'fire bolt', 'Light'],
+        spellsKnown: ['Magic Missile', 'magic missile', 'Detect Magic', 'Shield'],
+        preparedSpells: ['Magic Missile', 'magic missile', 'Shield'],
+        fixedSpells: ['Light', 'Detect Magic', 'Shield'],
+        alwaysPreparedSpells: ['Shield'],
+      }),
+    ).toEqual({ cantrips: 1, spells: 1, prepared: 1 })
   })
 
   // ── XPHB classification ────────────────────────────────────────────
@@ -1367,7 +1381,7 @@ describe('spellProfiles', () => {
       expect(details[0].isTruePreparedCaster).toBe(true)
       expect(details[0].isLevelOnlyPreparedCaster).toBe(false)
       expect(details[0].preparedSpellLimit).toBe(6) // preparedSpellsProgression[2]
-      expect(details[0].knownSpellLimit).toBe(6) // same as prepared for true-prepared
+      expect(details[0].knownSpellLimit).toBeNull()
     })
 
     test('sets isLevelOnlyPreparedCaster for XPHB Warlock with pact progression', () => {
@@ -1393,7 +1407,7 @@ describe('spellProfiles', () => {
       expect(details[0].preparedSpellLimit).toBeNull()
     })
 
-    test('preserves 2014 PHB Wizard behavior unchanged', () => {
+    test('uses the 2014 PHB Wizard spellbook total instead of its prepared total', () => {
       const character = characterPersistenceSchema.parse(
         makeCharacterFixture({
           classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
@@ -1413,14 +1427,42 @@ describe('spellProfiles', () => {
         casterProgression: 'full',
         spellcastingAbility: 'int',
         preparedSpells: '<$level$> + <$int_mod$>',
-        spellsKnownProgression: [6, 8, 10, 12, 14],
+        spellsKnownProgressionFixed: [6, 2, 2, 2, 2],
       })
       const classesById = new Map([['class:Wizard|PHB', phbWizard]])
       const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
       expect(details).toHaveLength(1)
       expect(details[0].isLevelOnlyPreparedCaster).toBe(false)
       expect(details[0].isPreparedCaster).toBe(true)
-      expect(details[0].knownSpellLimit).toBe(8) // 5 + 3
+      expect(details[0].isTruePreparedCaster).toBe(false)
+      expect(details[0].knownSpellLimit).toBe(14)
+      expect(details[0].preparedSpellLimit).toBe(8)
+    })
+
+    test('keeps 2024 Wizard spellbook and daily prepared totals independent', () => {
+      const character = characterPersistenceSchema.parse(
+        makeCharacterFixture({
+          classProgression: [{ name: 'Wizard', source: 'XPHB', levels: 5 }],
+          abilityScores: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 16,
+            wisdom: 10,
+            charisma: 10,
+          },
+        }),
+      )
+      const classesById = new Map([['class:Wizard|XPHB', makeXphbWizardFixture()]])
+      const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
+
+      expect(details[0]).toMatchObject({
+        isPreparedCaster: true,
+        isTruePreparedCaster: false,
+        isLevelOnlyPreparedCaster: false,
+        knownSpellLimit: 14,
+        preparedSpellLimit: 9,
+      })
     })
   })
 })

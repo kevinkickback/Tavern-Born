@@ -445,4 +445,68 @@ describe('getCharacterReadiness', () => {
       ]),
     )
   })
+
+  test('validates Wizard spellbook, cantrip, and prepared limits independently', () => {
+    const wizard = {
+      name: 'Wizard',
+      source: 'PHB',
+      hd: { faces: 6 },
+      spellcastingAbility: 'int',
+      casterProgression: 'full',
+      cantripProgression: [3],
+      spellsKnownProgressionFixed: [6],
+      preparedSpells: '<$level$> + <$int_mod$>',
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [],
+        choiceDiagnostics: [],
+      },
+    } as Class5e
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classSource: 'PHB',
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
+      level: 1,
+      abilityScores: {
+        ...makeCharacterFixture().abilityScores,
+        intelligence: 16,
+      },
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard (Lv 1)',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: ['Fire Bolt', 'Mage Hand', 'Ray of Frost', 'Light'],
+            spellsKnown: [
+              'Burning Hands',
+              'Charm Person',
+              'Find Familiar',
+              'Mage Armor',
+              'Magic Missile',
+              'Sleep',
+              'Detect Magic',
+              'Shield',
+            ],
+            preparedSpells: ['Burning Hands', 'Mage Armor', 'Magic Missile', 'Sleep', 'Shield'],
+            fixedSpells: ['Light', 'Detect Magic', 'Shield'],
+            alwaysPreparedSpells: ['Shield'],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      classesByKey: { 'Wizard|PHB': wizard },
+    })
+
+    const result = getCharacterReadiness(character, { calculation })
+
+    expect(result.blockingIssues.filter((issue) => issue.id.startsWith('spells:'))).toEqual([])
+  })
 })
