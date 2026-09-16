@@ -108,7 +108,7 @@ export interface CharacterClassChoiceSelection {
 
 export interface Character {
   id: string
-  version: string
+  schemaVersion: number
   name: string
   originSystem: OriginSystem
   race: string

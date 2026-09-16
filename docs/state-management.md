@@ -237,7 +237,7 @@ Origin system note:
 
 ## Character Schema Versioning
 
-**File:** `src/lib/schema/characterVersion.ts`
+**File:** `src/lib/schema/characterSchemaVersion.ts`
 
 The beta supports exactly one character format. Import and IndexedDB hydration validate records
 against the strict current schema; records with an older or newer version are rejected rather than

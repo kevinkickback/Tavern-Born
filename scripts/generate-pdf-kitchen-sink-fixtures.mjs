@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const root = resolve(process.cwd())
-const CURRENT_CHARACTER_VERSION = '11.0.0'
+const CURRENT_CHARACTER_SCHEMA_VERSION = 1
 const dataRoot = join(root, 'data')
 const fixtureRoot = join(root, 'tests', 'fixtures')
 const legacyFixturePath = join(fixtureRoot, 'pdf-kitchen-sink-2014.tbc')
@@ -362,7 +362,7 @@ function buildFixture(seed, edition) {
   const fixture = {
     ...seed,
     id: `pdf-kitchen-sink-${edition}-character`,
-    version: CURRENT_CHARACTER_VERSION,
+    schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
     name: edition === '2024' ? 'Seraphina Manypaths (2024)' : 'Seraphina Manypaths (2014)',
     originSystem: edition,
     race: race.name,

@@ -11,9 +11,9 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 }))
 
 import {
-  CURRENT_CHARACTER_VERSION,
-  UNSUPPORTED_CHARACTER_VERSION_MESSAGE,
-} from '@/lib/schema/characterVersion'
+  CURRENT_CHARACTER_SCHEMA_VERSION,
+  UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
+} from '@/lib/schema/characterSchemaVersion'
 import { useCharacterStore, validateCharacterData } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -40,14 +40,14 @@ describe('characterStore', () => {
     expect(validateCharacterData({ foo: 'bar' })).toContain('Invalid character structure')
   })
 
-  test.each(['10.0.0', '12.0.0', 'invalid'])('rejects unsupported version %s', (version) => {
-    expect(validateCharacterData({ ...makeCharacterFixture(), version })).toContain(
-      UNSUPPORTED_CHARACTER_VERSION_MESSAGE,
+  test.each([0, 2, '1', 'invalid'])('rejects unsupported schema version %s', (schemaVersion) => {
+    expect(validateCharacterData({ ...makeCharacterFixture(), schemaVersion })).toContain(
+      UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
     )
   })
 
-  test('uses the exact current character version', () => {
-    expect(makeCharacterFixture().version).toBe(CURRENT_CHARACTER_VERSION)
+  test('uses the exact current character schema version', () => {
+    expect(makeCharacterFixture().schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
   })
 
   test('rejects removed top-level class and level mirrors', () => {
@@ -394,7 +394,7 @@ describe('characterStore', () => {
   test('persist rehydrate drops unsupported characters and records their count', () => {
     const persisted = {
       ...makeCharacterFixture({ id: 'c8', name: 'Persisted' }),
-      version: '10.0.0',
+      schemaVersion: 0,
     }
 
     const storeWithPersist = useCharacterStore as unknown as {

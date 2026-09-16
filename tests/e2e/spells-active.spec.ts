@@ -10,7 +10,7 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
 }) => {
   const character = {
     id: 'spells-e2e-1',
-    version: '11.0.0',
+    schemaVersion: 1,
     name: 'Spell E2E',
     originSystem: '2014',
     race: 'Human',

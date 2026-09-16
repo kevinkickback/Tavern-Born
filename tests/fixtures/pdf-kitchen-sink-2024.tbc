@@ -2274,7 +2274,7 @@
       "name": "Kitchen sink fixture"
     }
   },
-  "version": "11.0.0",
+  "schemaVersion": 1,
   "hitPoints": {
     "current": 121,
     "temporary": 17

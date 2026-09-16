@@ -4,9 +4,9 @@ import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
 import {
-  CURRENT_CHARACTER_VERSION,
-  UNSUPPORTED_CHARACTER_VERSION_MESSAGE,
-} from '@/lib/schema/characterVersion'
+  CURRENT_CHARACTER_SCHEMA_VERSION,
+  UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
+} from '@/lib/schema/characterSchemaVersion'
 import { HomePage } from '@/pages/HomePage'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
@@ -333,7 +333,7 @@ describe('home page integration workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Import' }))
     expect(fileInput.click).toHaveBeenCalled()
 
-    const oldCharacter = { ...makeCharacterFixture(), version: '10.0.0' }
+    const oldCharacter = { ...makeCharacterFixture(), schemaVersion: undefined, version: '11.0.0' }
 
     const file = new File([JSON.stringify(oldCharacter)], 'old.tbc', {
       type: 'application/json',
@@ -348,7 +348,7 @@ describe('home page integration workflows', () => {
 
     expect(useCharacterStore.getState().characters).toHaveLength(1)
     expect(toast.error).toHaveBeenCalledWith(
-      `Invalid character: Invalid character structure: ${UNSUPPORTED_CHARACTER_VERSION_MESSAGE}`,
+      `Invalid character: Invalid character structure: ${UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE}`,
     )
   })
 
@@ -392,7 +392,7 @@ describe('home page integration workflows', () => {
     expect(fileInput.click).toHaveBeenCalled()
 
     const corruptedCharacter = makeCharacterFixture({ id: 'bad', name: 'Corrupted' })
-    corruptedCharacter.version = CURRENT_CHARACTER_VERSION
+    corruptedCharacter.schemaVersion = CURRENT_CHARACTER_SCHEMA_VERSION
     corruptedCharacter.proficiencies.weapons = [
       // @ts-expect-error Deliberately invalid import payload.
       { name: 'Not a valid proficiency' },

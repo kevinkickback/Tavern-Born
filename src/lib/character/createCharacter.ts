@@ -1,7 +1,7 @@
 import { SPECIAL_SPELL_PROFILE_LABEL } from '@/lib/calculations/spellProfiles'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
 import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
-import { CURRENT_CHARACTER_VERSION } from '@/lib/schema/characterVersion'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from '@/types/character'
 
 export function emptyProvenance(): ProvenanceLedger {
@@ -28,7 +28,7 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),
-    version: CURRENT_CHARACTER_VERSION,
+    schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
     name: '',
     originSystem: '2014',
     race: '',

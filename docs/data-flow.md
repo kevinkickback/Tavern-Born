@@ -262,17 +262,17 @@ Flow:
 ## 6) Character Schema Versioning
 
 Entry points:
-- src/lib/schema/characterVersion.ts
+- src/lib/schema/characterSchemaVersion.ts
 - src/store/characterStore.ts
 
 Flow:
-1. `Character.version` must equal `CURRENT_CHARACTER_VERSION`.
+1. `Character.schemaVersion` must equal `CURRENT_CHARACTER_SCHEMA_VERSION`.
 2. Import validates the exact current version and strict character schema before saving.
 3. IndexedDB hydration keeps valid current records and drops unsupported or malformed records.
 4. The Home page reports how many unsupported beta records were skipped.
 
 Versioning strategy:
-- Increment the character version for breaking changes such as required fields, removed fields, or restructured data.
+- Increment the integer character schema version for breaking changes such as required fields, removed fields, or restructured data.
 - Non-breaking optional additions do not require a version bump.
 - Older and newer files are intentionally unsupported before 1.0; do not add conversion paths or compatibility fields.
 

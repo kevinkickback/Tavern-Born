@@ -1,6 +1,6 @@
 {
   "id": "equipment-e2e-char",
-  "version": "11.0.0",
+  "schemaVersion": 1,
   "name": "Equipment E2E Hero",
   "originSystem": "2014",
   "race": "Human",

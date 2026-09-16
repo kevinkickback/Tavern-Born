@@ -3,6 +3,7 @@
 
 ## ✨ Changes
 
+* **⚠️ Older beta characters are no longer supported.** Characters created or exported by versions before v0.4.0 cannot be opened after updating and must be recreated. This pre-release reset removes obsolete compatibility code before the character format becomes stable.
 * **Added complete Weapon Mastery selection support to the Class builder.** Required choices now appear at the level where they are earned; Weapon Mastery offers only class-eligible weapons, derives attack type from game data, filters by mastery, weapon category, or attack type, and explains each mastery. Saved options that are no longer eligible remain available for replacement without counting as complete, choices stay with the class that granted them, and unearned benefits are removed after lowering a class level.
 * **Added an Actions & Effects workspace for equipment, spells, ancestry, feats, classes, and manual entries.** Source-derived and manual entries can be collapsed or temporarily disabled, and the same action list supplies the Action, Bonus Action, and Reaction fields on 2014 character sheets.
 * **Added Review as the final Builder section.** It provides exact links that reveal and highlight incomplete choices or diagnostics, plus a focused overview of calculated totals, movement, actions, content sources, and PDF readiness.
@@ -25,7 +26,6 @@
 * Contextual hints now return correctly after being reset or after their controls appear in a responsive layout
 * Built-in organization cards now use neutral backgrounds, and 2014 character sheets place the selected or custom emblem in the organization section
 * Remote game data now works with more hosting services, while GitHub sources accept branch names containing slashes and provide clearer guidance for ambiguous URLs
-* Character imports now clearly reject files created by a newer unsupported version instead of silently dropping unfamiliar information
 
 </details>
 

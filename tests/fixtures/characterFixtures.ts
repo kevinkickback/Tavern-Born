@@ -1,5 +1,5 @@
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
-import { CURRENT_CHARACTER_VERSION } from '@/lib/schema/characterVersion'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from '@/types/character'
 
 export function makePrereqCharacterSnapshotFixture(
@@ -31,7 +31,7 @@ export function makeCharacterFixture(overrides: Partial<Character> = {}): Charac
 
   return {
     id: 'character-1',
-    version: CURRENT_CHARACTER_VERSION,
+    schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
     name: 'Fixture Character',
     originSystem: '2014',
     race: 'Human',

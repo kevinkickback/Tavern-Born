@@ -106,7 +106,7 @@ test('malformed and schema-invalid imports show distinct errors without changing
           ...fixture,
           id: 'bad',
           name: 'Corrupted',
-          version: '11.0.0',
+          schemaVersion: 1,
           proficiencies: {
             ...(fixture.proficiencies as Record<string, unknown>),
             weapons: [{ name: 'Not a valid proficiency' }],

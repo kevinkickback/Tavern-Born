@@ -4,7 +4,7 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
-import { CURRENT_CHARACTER_VERSION } from '@/lib/schema/characterVersion'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from './character'
 
 const sourceSchema = z
@@ -738,7 +738,7 @@ const asiChoiceSchema = z.object({
 export const characterSchema = z
   .object({
     id: z.string().min(1),
-    version: z.literal(CURRENT_CHARACTER_VERSION),
+    schemaVersion: z.literal(CURRENT_CHARACTER_SCHEMA_VERSION),
     name: z
       .string()
       .min(1)

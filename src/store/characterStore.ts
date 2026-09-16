@@ -4,9 +4,9 @@ import { MAX_CHARACTER_SIZE, MAX_PORTRAIT_SIZE } from '@/lib/calculations/gameRu
 import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
 import {
-  CURRENT_CHARACTER_VERSION,
-  UNSUPPORTED_CHARACTER_VERSION_MESSAGE,
-} from '@/lib/schema/characterVersion'
+  CURRENT_CHARACTER_SCHEMA_VERSION,
+  UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
+} from '@/lib/schema/characterSchemaVersion'
 import { createIdbStorage } from '@/lib/storage/idb-storage'
 import type { Character } from '@/types/character'
 import { characterPersistenceSchema } from '@/types/characterSchema'
@@ -121,9 +121,9 @@ function parseCharacterData(character: unknown): {
     isRecord(character) &&
     typeof character.id === 'string' &&
     typeof character.name === 'string' &&
-    character.version !== CURRENT_CHARACTER_VERSION
+    character.schemaVersion !== CURRENT_CHARACTER_SCHEMA_VERSION
   ) {
-    return { data: null, error: UNSUPPORTED_CHARACTER_VERSION_MESSAGE }
+    return { data: null, error: UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE }
   }
 
   const result = characterPersistenceSchema.safeParse(character)
@@ -480,7 +480,7 @@ export const useCharacterStore = create<CharacterState>()(
           state.activeCharacter = null
           state.isActiveCharacterDirty = false
           state.unsupportedCharacterCount = results.filter(
-            (result) => result.error === UNSUPPORTED_CHARACTER_VERSION_MESSAGE,
+            (result) => result.error === UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
           ).length
         }
       },

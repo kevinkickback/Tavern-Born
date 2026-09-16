@@ -52,9 +52,9 @@ This guide is the fastest path to make safe changes in Tavern-Born.
 Tavern-Born is pre-1.0 and intentionally supports only the current character format. For a
 breaking persisted-data change:
 
-1. Update `CURRENT_CHARACTER_VERSION` in `src/lib/schema/characterVersion.ts`.
+1. Increment `CURRENT_CHARACTER_SCHEMA_VERSION` in `src/lib/schema/characterSchemaVersion.ts`.
 2. Update `Character`, `characterSchema`, and `createEmptyCharacter` together.
-3. Keep `characterSchema` strict and require the exact current version.
+3. Keep `characterSchema` strict and require the exact current integer schema version.
 4. Test current-format import and persistence plus explicit rejection of older and newer formats.
 
 Do not add migrations, downgrade paths, compatibility mirrors, or old-shape fallbacks. Testers with
