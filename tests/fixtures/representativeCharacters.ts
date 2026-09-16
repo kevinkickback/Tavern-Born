@@ -592,6 +592,7 @@ weaponMastery.optionFilter = {
   entityType: 'item',
   itemTypes: ['M', 'R'],
   requiresProficiency: true,
+  requiresMastery: true,
 }
 const fighter2024 = {
   name: 'Fighter',
@@ -705,7 +706,7 @@ const weaponMasteryData = withLookups(
         ability: [{ choose: { weighted: { from: ['str', 'dex', 'con'], weights: [2, 1] } } }],
       },
     ],
-    items: [masteryWeapon],
+    itemsBase: [masteryWeapon],
     itemProperties: [],
     sources: [{ abbreviation: 'XPHB', name: '2024 Player Handbook', group: 'Core' }],
   }),

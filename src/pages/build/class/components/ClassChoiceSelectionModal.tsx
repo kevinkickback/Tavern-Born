@@ -26,6 +26,10 @@ const ENTITY_LABELS = {
   optionalFeature: 'Optional feature',
 } as const
 
+function masteryKey(mastery: { name: string; source?: string }): string {
+  return `${mastery.name.trim().toLowerCase()}|${mastery.source?.trim().toLowerCase() ?? ''}`
+}
+
 const ChoiceOptionCard = memo(function ChoiceOptionCard({
   option,
   selected,
@@ -48,7 +52,9 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
         </span>
         <div className="flex shrink-0 gap-1">
           <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
-            {ENTITY_LABELS[option.reference.entityType]}
+            {option.reference.entityType === 'item' && (option.masteries?.length ?? 0) > 0
+              ? 'Weapon'
+              : ENTITY_LABELS[option.reference.entityType]}
           </Badge>
           {option.reference.source && (
             <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
@@ -64,6 +70,26 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
           <div className="text-xs leading-snug text-warning/90">
             {prerequisite.reasons.join(' · ')}
           </div>
+        </div>
+      )}
+      {(option.masteries?.length ?? 0) > 0 && (
+        <div className="mb-1.5 space-y-1.5">
+          {option.masteries?.map((mastery) => (
+            <div
+              key={`${mastery.name}|${mastery.source ?? ''}`}
+              className="rounded border border-border-subtle bg-surface-raised/60 px-2 py-1.5"
+            >
+              <Badge variant="secondary" className="h-5 px-1.5 py-0 text-xs">
+                Mastery: {mastery.name}
+              </Badge>
+              {mastery.entries.length > 0 && (
+                <GameContent
+                  entry={mastery.entries}
+                  className="mt-1 text-xs leading-snug text-muted-foreground"
+                />
+              )}
+            </div>
+          ))}
         </div>
       )}
       {option.entries[0] != null && (
@@ -124,28 +150,87 @@ export function ClassChoiceSelectionModal({
     }
     return { prerequisiteByOptionKey: results, hasUnmetPrerequisites: hasUnmet }
   }, [characterSnapshot, className, options])
-  const filterSections = useMemo<FilterSection[]>(
-    () =>
-      hasUnmetPrerequisites
-        ? [
-            {
-              key: 'prerequisite',
-              label: 'Prerequisites',
-              type: 'switches',
-              options: [
-                {
-                  value: 'showUnmet',
-                  label: 'Show options with unmet prerequisites',
-                },
-              ],
-            },
-          ]
-        : [],
-    [hasUnmetPrerequisites],
-  )
+  const filterSections = useMemo<FilterSection[]>(() => {
+    const sections: FilterSection[] = []
+    const masteries = new Map<string, string>()
+    for (const option of options) {
+      for (const mastery of option.masteries ?? []) {
+        masteries.set(masteryKey(mastery), mastery.name)
+      }
+    }
+    if (masteries.size > 0) {
+      sections.push({
+        key: 'mastery',
+        label: 'Mastery',
+        type: 'checkboxes',
+        columns: 1,
+        options: [...masteries]
+          .sort((left, right) => left[1].localeCompare(right[1]))
+          .map(([value, label]) => ({ value, label })),
+      })
+    }
+    const weaponCategories = [
+      ...new Set(options.flatMap((option) => option.weaponCategory ?? [])),
+    ].sort((left, right) => left.localeCompare(right))
+    if (weaponCategories.length > 1) {
+      sections.push({
+        key: 'weaponCategory',
+        label: 'Weapon category',
+        type: 'checkboxes',
+        columns: 1,
+        options: weaponCategories.map((category) => ({
+          value: category,
+          label: category.charAt(0).toUpperCase() + category.slice(1),
+        })),
+      })
+    }
+    const weaponRanges = [...new Set(options.flatMap((option) => option.weaponRange ?? []))]
+    if (weaponRanges.length > 1) {
+      sections.push({
+        key: 'weaponRange',
+        label: 'Attack type',
+        type: 'checkboxes',
+        columns: 1,
+        options: weaponRanges.map((range) => ({ value: range, label: range })),
+      })
+    }
+    if (hasUnmetPrerequisites) {
+      sections.push({
+        key: 'prerequisite',
+        label: 'Prerequisites',
+        type: 'switches',
+        options: [
+          {
+            value: 'showUnmet',
+            label: 'Show options with unmet prerequisites',
+          },
+        ],
+      })
+    }
+    return sections
+  }, [hasUnmetPrerequisites, options])
   const matchItem = useCallback(
     (option: ClassChoiceOptionView, search: string, activeFilters: ActiveFilters) => {
       if (!option.reference.name.toLowerCase().includes(search.trim().toLowerCase())) return false
+      const masteryFilters = activeFilters.mastery
+      if (
+        masteryFilters?.size &&
+        !(option.masteries ?? []).some((mastery) => masteryFilters.has(masteryKey(mastery)))
+      ) {
+        return false
+      }
+      if (
+        activeFilters.weaponCategory?.size &&
+        (!option.weaponCategory || !activeFilters.weaponCategory.has(option.weaponCategory))
+      ) {
+        return false
+      }
+      if (
+        activeFilters.weaponRange?.size &&
+        (!option.weaponRange || !activeFilters.weaponRange.has(option.weaponRange))
+      ) {
+        return false
+      }
       if (initialSelectedIds.includes(getClassChoiceOptionKey(option.reference))) return true
       if (activeFilters.prerequisite?.has('showUnmet')) return true
       return prerequisiteByOptionKey.get(getClassChoiceOptionKey(option.reference))?.met ?? true
@@ -183,7 +268,11 @@ export function ClassChoiceSelectionModal({
       onOpenChange={(open) => {
         if (!open) onClose()
       }}
-      title={`Choose ${choice.label}`}
+      title={
+        choice.optionFilter?.requiresMastery
+          ? `Choose weapons for ${choice.label}`
+          : `Choose ${choice.label}`
+      }
       items={options}
       getItemId={(option) => getClassChoiceOptionKey(option.reference)}
       renderCard={renderCard}

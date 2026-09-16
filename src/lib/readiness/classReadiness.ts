@@ -1,10 +1,24 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import {
+  type ClassChoiceCatalogs,
+  getClassChoiceOptionKey,
+  resolveClassChoiceOptions,
+} from '@/lib/character/classChoiceOptions'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import { readinessClassKey, readinessIssue } from './readinessIssue'
 import type { CharacterReadinessIssue } from './types'
+
+function classChoiceTarget(entry: CharacterClassEntry, level: number, choiceId?: string): string {
+  const params = new URLSearchParams({
+    class: `${entry.name}|${entry.source ?? ''}`,
+    level: String(level),
+  })
+  if (choiceId) params.set('choice', choiceId)
+  return `/build/class?${params.toString()}`
+}
 
 function isOwnedByClass(
   value: { className?: string; classSource?: string; level?: number; classLevel?: number },
@@ -21,6 +35,7 @@ function isOwnedByClass(
 export function validateClassChoices(
   character: Character,
   calculation: CharacterCalculationContext,
+  catalogs?: ClassChoiceCatalogs,
 ): CharacterReadinessIssue[] {
   const issues: CharacterReadinessIssue[] = []
   const entries = getCharacterClassEntries(character)
@@ -47,6 +62,7 @@ export function validateClassChoices(
           'class',
           'Choose a subclass',
           `${entry.name} requires a subclass choice at class level ${subclassInfo.subclassLevel}.`,
+          classChoiceTarget(entry, subclassInfo.subclassLevel),
         ),
       )
     }
@@ -54,7 +70,19 @@ export function validateClassChoices(
     for (const choice of classData.normalizedRules?.choices ?? []) {
       const required = getRequiredChoiceSelectionCount(choice, entry.levels)
       if (required <= 0) continue
-      const count = selections.get(choice.id)?.selected.length ?? 0
+      const storedSelection = selections.get(choice.id)?.selected ?? []
+      const eligibleOptionKeys = catalogs
+        ? new Set(
+            resolveClassChoiceOptions(choice, catalogs).map((option) =>
+              getClassChoiceOptionKey(option.reference),
+            ),
+          )
+        : undefined
+      const count = eligibleOptionKeys
+        ? storedSelection.filter((option) =>
+            eligibleOptionKeys.has(getClassChoiceOptionKey(option)),
+          ).length
+        : storedSelection.length
       if (count !== required) {
         issues.push(
           readinessIssue(
@@ -62,7 +90,8 @@ export function validateClassChoices(
             'blocking',
             'class',
             `Finish ${choice.label}`,
-            `${entry.name} requires ${required} ${required === 1 ? 'selection' : 'selections'} here; ${count} are stored.`,
+            `${entry.name} requires ${required} eligible ${required === 1 ? 'selection' : 'selections'} here; ${count} are stored.`,
+            classChoiceTarget(entry, choice.level, choice.id),
           ),
         )
       }
@@ -76,6 +105,7 @@ export function validateClassChoices(
           'class',
           `Review unresolved ${diagnostic.featureName} choice`,
           diagnostic.message,
+          classChoiceTarget(entry, diagnostic.level ?? 1),
         ),
       )
     }
@@ -96,6 +126,7 @@ export function validateClassChoices(
             'class',
             'Choose an ability increase or feat',
             `${entry.name} has an unresolved advancement choice at class level ${level}.`,
+            classChoiceTarget(entry, level),
           ),
         )
       }

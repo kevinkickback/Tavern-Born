@@ -1,5 +1,6 @@
 import { Certificate } from '@phosphor-icons/react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -10,6 +11,8 @@ import { useSavingThrows } from '@/hooks/character/useSavingThrows'
 import { useSkills } from '@/hooks/character/useSkills'
 import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { normalizeKey } from '@/lib/provenance'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
@@ -37,6 +40,7 @@ import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 import { useCharacterStore } from '@/store/characterStore'
 
 export function BuildProficienciesPage() {
+  const [searchParams] = useSearchParams()
   const character = useCharacterStore((state) => state.activeCharacter)
   const { skills: skillDefs, items, itemsBase, languages } = useFilteredGameData()
   const { skills, toggleExpertise, availableExpertiseSlots, usedExpertiseSlots } = useSkills()
@@ -50,6 +54,25 @@ export function BuildProficienciesPage() {
   const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [focused, setFocused] = useState<ProfFocus | null>(null)
   const [activeTab, setActiveTab] = useState<ProficiencyTabValue>('skills')
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedChoiceId = readinessFocus?.startsWith('choice:')
+    ? readinessFocus.slice('choice:'.length)
+    : undefined
+  const focusedChoice = ledger.choices.find((choice) => choice.id === focusedChoiceId)
+  const focusProficiencyChoice =
+    (focusedChoice?.domain === 'skills' ||
+      focusedChoice?.domain === 'languages' ||
+      focusedChoice?.domain === 'tools' ||
+      focusedChoice?.domain === 'armor' ||
+      focusedChoice?.domain === 'weapons') ??
+    false
+  const { ref: choicePanelRef, highlighted: choicePanelHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(focusProficiencyChoice)
+
+  useEffect(() => {
+    if (!focusProficiencyChoice || !focusedChoice) return
+    setActiveTab(focusedChoice.domain as ProficiencyTabValue)
+  }, [focusProficiencyChoice, focusedChoice])
 
   const { itemsByName, weaponInfoMap } = useMemo(() => {
     const byName = new Map<string, (typeof itemsBase)[0]>()
@@ -264,7 +287,13 @@ export function BuildProficienciesPage() {
                 />
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
-                <div className="mx-auto w-full max-w-5xl p-4">
+                <div
+                  ref={choicePanelRef}
+                  className={cn(
+                    'mx-auto w-full max-w-5xl rounded-lg p-4',
+                    choicePanelHighlighted && 'animate-route-focus',
+                  )}
+                >
                   <BuildProficienciesTabsPanel
                     skills={skills}
                     savingThrows={savingThrows}

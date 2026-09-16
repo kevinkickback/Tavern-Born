@@ -184,7 +184,7 @@ export function SplitPane({
             'min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-workspace-detail transition-all duration-300 ease-in-out @min-[840px]:flex @min-[840px]:border-l @min-[840px]:border-border',
             activeCompactPane === 'right' ? 'flex' : 'hidden',
             rightCollapsed
-              ? '@min-[840px]:w-0 @min-[840px]:min-w-0 @min-[840px]:pointer-events-none @min-[840px]:opacity-0'
+              ? '@min-[840px]:w-0 @min-[840px]:min-w-0 @min-[840px]:flex-none @min-[840px]:pointer-events-none @min-[840px]:opacity-0'
               : leftCollapsed || leftWidth
                 ? '@min-[840px]:min-w-0 @min-[840px]:flex-1'
                 : rightFixedWidth

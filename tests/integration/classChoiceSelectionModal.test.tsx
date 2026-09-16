@@ -1,11 +1,14 @@
-import { render } from '@testing-library/react'
-import { describe, expect, test, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import type { ClassChoiceOptionView } from '@/lib/character/classChoiceOptions'
 import { ClassChoiceSelectionModal } from '@/pages/build/class/components/ClassChoiceSelectionModal'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
 import { makePrereqCharacterSnapshotFixture } from '../fixtures/characterFixtures'
 
 const selectionModalCapture = vi.hoisted(() => ({ props: undefined as unknown }))
+
+afterEach(cleanup)
 
 vi.mock('@/components/modals/SelectionModal', () => ({
   SelectionModal: (props: unknown) => {
@@ -78,5 +81,73 @@ describe('ClassChoiceSelectionModal', () => {
     expect(props.matchItem(advanced, '', { prerequisite: new Set(['showUnmet']) })).toBe(true)
     expect(props.canSelect(advanced, new Set())).toBe(false)
     expect(props.canSelect(available, new Set())).toBe(true)
+  })
+
+  test('shows a weapon mastery property on its option card', () => {
+    const weapon: ClassChoiceOptionView = {
+      reference: { entityType: 'item', name: 'Training Blade', source: 'XPHB' },
+      entries: [],
+      masteries: [{ name: 'Sap', source: 'XPHB', entries: ['Sap mastery details'] }],
+      weaponCategory: 'Simple',
+      weaponRange: 'Melee',
+    }
+    const rangedWeapon: ClassChoiceOptionView = {
+      reference: { entityType: 'item', name: 'Training Bow', source: 'XPHB' },
+      entries: [],
+      masteries: [{ name: 'Vex', source: 'XPHB', entries: [] }],
+      weaponCategory: 'Martial',
+      weaponRange: 'Ranged',
+    }
+    render(
+      <ClassChoiceSelectionModal
+        choice={{
+          ...choice,
+          label: 'Weapon Mastery',
+          kind: 'item',
+          optionFilter: { entityType: 'item', requiresMastery: true },
+        }}
+        options={[weapon, rangedWeapon]}
+        maximumSelections={1}
+        initialSelectedIds={[]}
+        characterSnapshot={makePrereqCharacterSnapshotFixture()}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    )
+
+    const props = selectionModalCapture.props as {
+      title: string
+      filterSections: Array<{ key: string; options: Array<{ value: string; label: string }> }>
+      matchItem: (
+        item: ClassChoiceOptionView,
+        search: string,
+        filters: Record<string, Set<string>>,
+      ) => boolean
+      renderCard: (item: ClassChoiceOptionView, selected: boolean) => ReactNode
+    }
+    render(props.renderCard(weapon, false))
+    expect(props.title).toBe('Choose weapons for Weapon Mastery')
+    expect(props.filterSections).toEqual([
+      expect.objectContaining({
+        key: 'mastery',
+        options: [
+          { value: 'sap|xphb', label: 'Sap' },
+          { value: 'vex|xphb', label: 'Vex' },
+        ],
+      }),
+      expect.objectContaining({ key: 'weaponCategory' }),
+      expect.objectContaining({ key: 'weaponRange' }),
+    ])
+    expect(props.matchItem(weapon, '', { mastery: new Set(['sap|xphb']) })).toBe(true)
+    expect(props.matchItem(weapon, '', { mastery: new Set(['vex|xphb']) })).toBe(false)
+    expect(
+      props.matchItem(weapon, '', {
+        weaponCategory: new Set(['Martial']),
+      }),
+    ).toBe(false)
+    expect(props.matchItem(weapon, '', { weaponRange: new Set(['Melee']) })).toBe(true)
+    expect(screen.getByText('Weapon')).toBeTruthy()
+    expect(screen.getByText('Mastery: Sap')).toBeTruthy()
+    expect(screen.getByText('Sap mastery details')).toBeTruthy()
   })
 })

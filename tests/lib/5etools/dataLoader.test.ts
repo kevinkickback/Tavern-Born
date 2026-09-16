@@ -286,7 +286,10 @@ describe('5etools/dataLoader', () => {
       'generated/gendata-spell-source-lookup.json': {},
       'feats.json': { feat: [] },
       'items.json': { item: [] },
-      'items-base.json': { baseitem: [] },
+      'items-base.json': {
+        baseitem: [],
+        itemMastery: [{ name: 'Sap', source: 'XPHB', entries: ['Sap details'] }],
+      },
       'actions.json': { action: [] },
       'conditionsdiseases.json': { condition: [] },
       'deities.json': { deity: [] },
@@ -315,6 +318,9 @@ describe('5etools/dataLoader', () => {
 
     expect(gameData.classes.map((it) => it.name)).toEqual(['Wizard', 'Fighter'])
     expect(gameData.classFeatures.map((it) => it.name)).toEqual(['Spellcasting', 'Fighting Style'])
+    expect(gameData.itemMasteries).toEqual([
+      { name: 'Sap', source: 'XPHB', entries: ['Sap details'] },
+    ])
   })
 
   test('continues ingestion when an indexed class file is missing', async () => {

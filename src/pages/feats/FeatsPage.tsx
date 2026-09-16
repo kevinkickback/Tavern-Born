@@ -23,8 +23,10 @@ import {
   WorkspacePage,
   WorkspacePaneHeader,
 } from '@/components/workspace'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { getFixedFeatOptionKey } from '@/lib/featGrants'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import type { Feat5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
@@ -39,6 +41,9 @@ import {
 
 export function FeatsPage() {
   const [searchParams] = useSearchParams()
+  const readinessFocus = getReadinessFocus(searchParams)
+  const isFocusedFeat = (name: string, source: string) =>
+    readinessFocus?.startsWith(`feat:setup:${getEntityLookupKey(name, source)}:`) ?? false
   const controller = useFeatsPageController()
   const {
     activeFeatData,
@@ -297,6 +302,7 @@ export function FeatsPage() {
                                   feat={feat}
                                   featData={featData}
                                   characterSnapshot={characterSnapshot}
+                                  highlighted={isFocusedFeat(feat.name, feat.source)}
                                   selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
                                   onSelect={handleSelectFeat}
                                   onRemove={handleRemoveFeat}
@@ -320,6 +326,7 @@ export function FeatsPage() {
                                   feat={feat}
                                   featData={featData}
                                   characterSnapshot={characterSnapshot}
+                                  highlighted={isFocusedFeat(feat.name, feat.source)}
                                   selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
                                   onSelect={handleSelectFeat}
                                   grantedBy={`${choice.className}: ${choice.progressionName}`}
@@ -347,8 +354,9 @@ export function FeatsPage() {
                                   granted.source,
                                 )}
                                 highlighted={
-                                  searchParams.get('focus') === 'feat' &&
-                                  isSelectedFeat(selectedFeat, granted.name, granted.source)
+                                  (searchParams.get('focus') === 'feat' &&
+                                    isSelectedFeat(selectedFeat, granted.name, granted.source)) ||
+                                  isFocusedFeat(granted.name, granted.source)
                                 }
                                 onSelect={handleSelectFeat}
                                 grantedBy={granted.sourceLabel}
@@ -404,8 +412,13 @@ export function FeatsPage() {
                                       selectedSource,
                                     )}
                                     highlighted={
-                                      searchParams.get('focus') === 'feat' &&
-                                      isSelectedFeat(selectedFeat, selectedName, selectedSource)
+                                      (searchParams.get('focus') === 'feat' &&
+                                        isSelectedFeat(
+                                          selectedFeat,
+                                          selectedName,
+                                          selectedSource,
+                                        )) ||
+                                      isFocusedFeat(selectedName, selectedSource)
                                     }
                                     onSelect={handleSelectFeat}
                                     grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
@@ -441,8 +454,9 @@ export function FeatsPage() {
                                   granted.source,
                                 )}
                                 highlighted={
-                                  searchParams.get('focus') === 'feat' &&
-                                  isSelectedFeat(selectedFeat, granted.name, granted.source)
+                                  (searchParams.get('focus') === 'feat' &&
+                                    isSelectedFeat(selectedFeat, granted.name, granted.source)) ||
+                                  isFocusedFeat(granted.name, granted.source)
                                 }
                                 onSelect={handleSelectFeat}
                                 grantedBy={granted.sourceLabel}
@@ -499,8 +513,13 @@ export function FeatsPage() {
                                       selectedSource,
                                     )}
                                     highlighted={
-                                      searchParams.get('focus') === 'feat' &&
-                                      isSelectedFeat(selectedFeat, selectedName, selectedSource)
+                                      (searchParams.get('focus') === 'feat' &&
+                                        isSelectedFeat(
+                                          selectedFeat,
+                                          selectedName,
+                                          selectedSource,
+                                        )) ||
+                                      isFocusedFeat(selectedName, selectedSource)
                                     }
                                     onSelect={handleSelectFeat}
                                     grantedBy={`${choice.sourceTag.sourceType}: ${choice.sourceTag.sourceName}`}
@@ -581,6 +600,7 @@ export function FeatsPage() {
                                 feat={feat}
                                 featData={featData}
                                 characterSnapshot={characterSnapshot}
+                                highlighted={isFocusedFeat(feat.name, feat.source)}
                                 selected={isSelectedFeat(selectedFeat, feat.name, feat.source)}
                                 onSelect={handleSelectFeat}
                                 onRemove={handleRemoveBonusFeat}

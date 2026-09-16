@@ -1,4 +1,5 @@
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import type { ClassChoiceCatalogs } from '@/lib/character/classChoiceOptions'
 import type { Feat5e, Spell5e } from '@/types/5etools'
 
 export type CharacterReadinessSeverity = 'blocking' | 'recommendation'
@@ -35,6 +36,7 @@ export interface CharacterReadinessResult {
 
 export interface CharacterReadinessContext {
   calculation?: CharacterCalculationContext | null
+  classChoiceCatalogs?: ClassChoiceCatalogs
   featsByKey?: Readonly<Record<string, Feat5e>>
   spellsByKey?: Readonly<Record<string, Spell5e>>
 }

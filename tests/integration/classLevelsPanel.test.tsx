@@ -63,6 +63,20 @@ function makeProps(
 }
 
 describe('BuildClassLevelsPanel', () => {
+  test('opens and highlights the advancement control targeted from Review', async () => {
+    render(
+      <BuildClassLevelsPanel
+        {...makeProps({
+          focusLevel: 4,
+          readinessFocus: 'class:asi:Artificer|PHB:4',
+        })}
+      />,
+    )
+
+    const label = await screen.findByText('Ability Score Improvement')
+    expect(label.closest('.rounded-lg')?.className).toContain('animate-route-focus')
+  })
+
   test('marks the level choice badge complete only after its ASI choice is resolved', () => {
     const { rerender } = render(<BuildClassLevelsPanel {...makeProps()} />)
 
@@ -92,15 +106,27 @@ describe('BuildClassLevelsPanel', () => {
 
   test('surfaces required normalized choices and unsafe source-data diagnostics', () => {
     const onOpenClassChoice = vi.fn()
+    const onSelectFeature = vi.fn()
     render(
       <BuildClassLevelsPanel
         {...makeProps({
+          levelsToShow: [1, 2, 4],
+          featuresByLevel: new Map([
+            [1, [{ name: 'Training Path', source: 'PHB', entries: ['Training details'] }]],
+            [2, [{ name: 'Unresolved Training', source: 'PHB', entries: ['More details'] }]],
+          ]),
           classChoices: [
             {
               id: 'class:any|hb|choice:path|1',
               label: 'Training Path',
               kind: 'class-feature',
-              owner: { type: 'class', name: 'Artificer', source: 'PHB' },
+              owner: {
+                type: 'class',
+                name: 'Artificer',
+                source: 'PHB',
+                featureName: 'Training Path',
+                featureSource: 'PHB',
+              },
               level: 1,
               minimumSelections: 1,
               maximumSelections: 1,
@@ -122,17 +148,26 @@ describe('BuildClassLevelsPanel', () => {
             },
           ],
           onOpenClassChoice,
+          onSelectFeature,
         })}
       />,
     )
 
-    fireEvent.click(screen.getByText('Required Choices'))
+    expect(screen.queryByText('Required Choices')).toBeNull()
+    fireEvent.click(screen.getByText('Level 1 Features'))
     expect(screen.getByText('Training Path')).toBeTruthy()
-    expect(screen.getByText('Unresolved Training')).toBeTruthy()
-    expect(screen.getByText(/No rule was guessed/)).toBeTruthy()
+    expect(screen.getAllByText('Training Path')).toHaveLength(1)
+    fireEvent.click(screen.getByText('Training Path'))
+    expect(onSelectFeature).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Training Path', entries: ['Training details'] }),
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Choose' }))
     expect(onOpenClassChoice).toHaveBeenCalledWith(
       expect.objectContaining({ label: 'Training Path' }),
     )
+
+    fireEvent.click(screen.getByText('Level 2 Features'))
+    expect(screen.getByText('Unresolved Training')).toBeTruthy()
+    expect(screen.getByText(/No rule was guessed/)).toBeTruthy()
   })
 })

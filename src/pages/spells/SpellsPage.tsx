@@ -1,5 +1,6 @@
 import { MagicWand } from '@phosphor-icons/react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { SpellSelectionModal } from '@/components/modals/SpellSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { SplitPane } from '@/components/ui/SplitPane'
@@ -33,6 +34,7 @@ import {
 } from '@/lib/calculations/spellProfiles.constants'
 import { formatSpellDisplayName } from '@/lib/calculations/spellUtils'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SourceRow } from '@/lib/provenance/types'
 import {
@@ -60,6 +62,7 @@ type ClassSpellView = `class:${string}`
 type SpellView = 'all' | 'racial' | 'bonus' | ClassSpellView
 
 export function SpellsPage() {
+  const [searchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
   const calculationContext = useCharacterCalculationContext(character)
   const { getSourcesRowsBySection } = useProvenanceLedger()
@@ -115,6 +118,22 @@ export function SpellsPage() {
     pool?: string[]
     selected: string[]
   } | null>(null)
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedChoiceId = readinessFocus?.startsWith('choice:')
+    ? readinessFocus.slice('choice:'.length)
+    : undefined
+  const focusedProfile = spellProfiles.find(
+    (profile) =>
+      readinessFocus?.includes(profile.id) ||
+      profile.choices?.some((choice) => choice.id === focusedChoiceId),
+  )
+
+  useEffect(() => {
+    if (!focusedProfile) return
+    if (focusedProfile.type === 'class') setSelectedSpellView(focusedProfile.id as ClassSpellView)
+    else if (focusedProfile.type === 'racial') setSelectedSpellView('racial')
+    else setSelectedSpellView('bonus')
+  }, [focusedProfile])
 
   const allSpells = spells as Spell5e[]
   const recursiveLookup = useMemo<RecursiveLookup>(
@@ -683,6 +702,7 @@ export function SpellsPage() {
                 <div className="mx-auto w-full max-w-6xl p-4">
                   <SpellProfileManager
                     spellProfiles={visibleSpellProfiles}
+                    focusProfileId={focusedProfile?.id}
                     detailsByProfileId={detailsByProfileId}
                     groupedItems={groupedItems}
                     selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}

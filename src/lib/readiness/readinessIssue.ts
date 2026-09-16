@@ -18,7 +18,7 @@ const SECTION_TARGETS: Record<CharacterReadinessSection, string> = {
   spells: '/spells',
   equipment: '/equipment',
   portrait: '/details/portrait',
-  sources: '/sources',
+  sources: '/rules?section=sources',
 }
 
 export function readinessIssue(
@@ -27,8 +27,9 @@ export function readinessIssue(
   section: CharacterReadinessSection,
   title: string,
   explanation: string,
+  navigationTarget = SECTION_TARGETS[section],
 ): CharacterReadinessIssue {
-  return { id, severity, section, title, explanation, navigationTarget: SECTION_TARGETS[section] }
+  return { id, severity, section, title, explanation, navigationTarget }
 }
 
 export function readinessClassKey(entry: Pick<CharacterClassEntry, 'name' | 'source'>): string {

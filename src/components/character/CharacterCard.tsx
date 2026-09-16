@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import type { Character } from '@/types/character'
@@ -21,6 +22,7 @@ interface CharacterCardProps {
   isSelected?: boolean
   onToggleSelect?: (id: string) => void
   cardSize?: number
+  highlighted?: boolean
 }
 
 export const CharacterCard = memo(function CharacterCard({
@@ -34,7 +36,10 @@ export const CharacterCard = memo(function CharacterCard({
   isSelected = false,
   onToggleSelect,
   cardSize = 340,
+  highlighted = false,
 }: CharacterCardProps) {
+  const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(highlighted)
   const isSmall = cardSize <= 300
   const isMedium = cardSize > 300 && cardSize <= 380
   const actionButtonClass = isSmall
@@ -54,10 +59,12 @@ export const CharacterCard = memo(function CharacterCard({
 
   return (
     <Card
+      ref={routeFocusRef}
       className={cn(
         'group relative aspect-[3/2] cursor-pointer overflow-hidden border transition-colors hover:border-accent',
         isActive && 'border-2 border-accent',
         isSelected && 'ring-2 ring-primary/50',
+        routeFocusHighlighted && 'animate-route-focus',
       )}
       onClick={handleCardClick}
     >

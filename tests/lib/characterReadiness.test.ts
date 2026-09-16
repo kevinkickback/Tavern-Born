@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
-import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Feat5e, Item5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('getCharacterReadiness', () => {
@@ -130,6 +130,20 @@ describe('getCharacterReadiness', () => {
     expect(
       result.issues.find((entry) => entry.id === 'race:ability-choice:0')?.navigationTarget,
     ).toBe('/build/ability-scores')
+    const classChoiceTarget = result.issues.find(
+      (entry) => entry.id === 'class-choice:test-choice',
+    )?.navigationTarget
+    expect(classChoiceTarget).toBeTruthy()
+    const classChoiceParams = new URL(classChoiceTarget!, 'https://tavern-born.test').searchParams
+    expect(classChoiceParams.get('class')).toBe('Test Class|TEST')
+    expect(classChoiceParams.get('level')).toBe('1')
+    expect(classChoiceParams.get('choice')).toBe('test-choice')
+    for (const issueId of ['class:subclass:Test Class|TEST', 'class:asi:Test Class|TEST:1']) {
+      const target = result.issues.find((entry) => entry.id === issueId)?.navigationTarget
+      const params = new URL(target!, 'https://tavern-born.test').searchParams
+      expect(params.get('class')).toBe('Test Class|TEST')
+      expect(params.get('level')).toBe('1')
+    }
   })
 
   test('routes revised background ability choices to the canonical ability-score editor', () => {
@@ -163,6 +177,86 @@ describe('getCharacterReadiness', () => {
     expect(
       result.issues.find((entry) => entry.id === 'background:ability-choices')?.navigationTarget,
     ).toBe('/build/ability-scores')
+  })
+
+  test('treats a stored class choice outside its current eligibility rules as incomplete', () => {
+    const testClass = {
+      name: 'Test Barbarian',
+      source: 'TEST',
+      hd: { faces: 12 },
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choiceDiagnostics: [],
+        choices: [
+          {
+            id: 'test-mastery-choice',
+            label: 'Weapon Mastery',
+            kind: 'item',
+            owner: { type: 'class', name: 'Test Barbarian', source: 'TEST' },
+            level: 1,
+            minimumSelections: 1,
+            maximumSelections: 1,
+            selectionCountByLevel: Array.from({ length: 20 }, () => 1),
+            options: [],
+            optionFilter: {
+              entityType: 'item',
+              itemTypes: ['simple weapon', 'martial weapon'],
+              weaponRanges: ['melee'],
+              requiresMastery: true,
+            },
+            repeatable: false,
+            replacement: { cadence: 'long-rest', maximumPerEvent: 1 },
+            source: { kind: 'class-feature-options', field: 'test' },
+          },
+        ],
+      },
+    } as Class5e
+    const character = makeCharacterFixture({
+      class: testClass.name,
+      classSource: testClass.source,
+      classProgression: [{ name: testClass.name, source: testClass.source, levels: 1 }],
+      classChoiceSelections: [
+        {
+          choiceId: 'test-mastery-choice',
+          label: 'Weapon Mastery',
+          kind: 'item',
+          className: testClass.name,
+          classSource: testClass.source,
+          classLevel: 1,
+          selected: [{ entityType: 'item', name: 'Test Bow', source: 'TEST', slotLevel: 1 }],
+        },
+      ],
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      classesByKey: { [`${testClass.name}|${testClass.source}`]: testClass },
+    })
+    const testBow = {
+      name: 'Test Bow',
+      source: 'TEST',
+      type: 'R',
+      weaponCategory: 'martial',
+      mastery: ['Vex|TEST'],
+    } as Item5e
+
+    const result = getCharacterReadiness(character, {
+      calculation,
+      classChoiceCatalogs: {
+        classFeatures: [],
+        feats: [],
+        items: [],
+        itemsBase: [testBow],
+        itemMasteries: [],
+        optionalFeatures: [],
+        itemTypeByAbbr: {},
+        weaponProficiencies: ['martial weapons'],
+      },
+    })
+
+    expect(result.blockingIssues.map((entry) => entry.id)).toContain(
+      'class-choice:test-mastery-choice',
+    )
   })
 
   test('distinguishes optional recommendations from blockers for a complete data-driven character', () => {

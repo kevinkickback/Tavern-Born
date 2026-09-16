@@ -72,7 +72,7 @@ const ConditionsPage = lazy(() =>
   })),
 )
 const PortraitPage = lazy(() =>
-  import('@/pages/details/PortraitPage').then((module) => ({ default: module.PortraitPage })),
+  import('@/pages/details/PortraitPage').then((module) => ({ default: module.RoutedPortraitPage })),
 )
 const EquipmentPage = lazy(() =>
   import('@/pages/equipment/EquipmentPage').then((module) => ({ default: module.EquipmentPage })),
@@ -81,7 +81,7 @@ const FeatsPage = lazy(() =>
   import('@/pages/feats/FeatsPage').then((module) => ({ default: module.FeatsPage })),
 )
 const HomePage = lazy(() =>
-  import('@/pages/HomePage').then((module) => ({ default: module.HomePage })),
+  import('@/pages/HomePage').then((module) => ({ default: module.RoutedHomePage })),
 )
 const SettingsPage = lazy(() =>
   import('@/pages/SettingsPage').then((module) => ({ default: module.SettingsPage })),

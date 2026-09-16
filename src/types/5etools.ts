@@ -349,6 +349,12 @@ export interface Item5e {
   [key: string]: unknown
 }
 
+export interface ItemMastery5e {
+  name: string
+  source: string
+  entries?: unknown[]
+}
+
 type AbilityBonus = {
   choose?: {
     from: string[]
@@ -478,6 +484,8 @@ export interface GameData {
   itemProperties: ItemProperty5e[]
   /** Parsed from data/items-base.json → .itemType[]. */
   itemTypes: ItemType5e[]
+  /** Parsed from data/items-base.json → .itemMastery[]. */
+  itemMasteries?: ItemMastery5e[]
   classFeatures: ClassFeature[]
   actions: unknown[]
   conditions: unknown[]

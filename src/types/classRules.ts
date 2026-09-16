@@ -13,8 +13,10 @@ export interface NormalizedChoiceOptionFilter {
   categories?: string[]
   featureTypes?: string[]
   itemTypes?: string[]
+  weaponRanges?: Array<'melee' | 'ranged'>
   source?: string
   requiresProficiency?: boolean
+  requiresMastery?: boolean
 }
 
 export interface NormalizedCharacterChoice {

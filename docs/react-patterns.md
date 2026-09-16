@@ -99,6 +99,8 @@ labels. Below the shared container breakpoint, `SplitPane` shows one full-width 
 selection handlers that reveal details should control `compactPane` and select the right pane without
 changing the desktop `leftCollapsed` or `rightCollapsed` preferences. Toolbars inside a pane should
 respond to their own container width rather than the application viewport.
+On desktop, a collapsed pane must be removed from flex sizing (`flex-none` at zero width), allowing
+the visible pane to fill the workspace rather than leaving an invisible reserved column.
 
 Rules and Conditions are the reference tabbed pages. Their parent remains flat while each meaningful
 section may use its own bordered card. The Rules Sources tab is the reference for a flat

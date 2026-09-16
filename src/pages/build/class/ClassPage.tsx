@@ -1,5 +1,6 @@
 import { Sword } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { AnchoredHint, WorkspaceBody, WorkspacePage } from '@/components/workspace'
@@ -13,6 +14,7 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
@@ -44,9 +46,19 @@ const LEVEL_UP_BUTTON_SELECTOR = '[data-level-up-button="true"]'
 const LEVEL_UP_HINT_WIDTH = 320
 
 export function BuildClassPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { classes, classFeatures, optionalfeatures, spells, feats, items } = useFilteredGameData()
+  const {
+    classes,
+    classFeatures,
+    optionalfeatures,
+    spells,
+    feats,
+    items,
+    itemsBase,
+    itemMasteries,
+  } = useFilteredGameData()
   const classLookup = useClassLookup()
   const { selectClass } = useUnifiedClassSelection()
   const { applyClassEquipmentChoice } = useClassProvenanceMutations()
@@ -74,6 +86,11 @@ export function BuildClassPage() {
   const viewingClass = viewingEntry?.name
   const viewingClassSource = viewingEntry?.source
   const viewingClassLevel = viewingEntry?.levels ?? 1
+  const requestedClassKey = searchParams.get('class')
+  const requestedChoiceId = searchParams.get('choice')
+  const readinessFocus = getReadinessFocus(searchParams)
+  const requestedLevelValue = Number.parseInt(searchParams.get('level') ?? '', 10)
+  const requestedLevel = Number.isNaN(requestedLevelValue) ? undefined : requestedLevelValue
   const fallbackClassByName = useMemo(
     () => new Map((classes as Class5e[]).map((cls) => [cls.name, cls])),
     [classes],
@@ -91,11 +108,21 @@ export function BuildClassPage() {
       classFeatures: classFeatures as ClassFeature[],
       feats: feats as Feat5e[],
       items: items as Item5e[],
+      itemsBase: itemsBase as Item5e[],
+      itemMasteries,
       optionalFeatures: (
         optionalfeatures as Array<OptionalFeatureLike & { isClassFeatureVariant?: boolean }>
       ).filter((feature) => includeClassFeatureVariants || !feature.isClassFeatureVariant),
     }),
-    [classFeatures, feats, includeClassFeatureVariants, items, optionalfeatures],
+    [
+      classFeatures,
+      feats,
+      includeClassFeatureVariants,
+      itemMasteries,
+      items,
+      itemsBase,
+      optionalfeatures,
+    ],
   )
   const spellController = useClassSpellChoiceController(viewingClassData)
   const {
@@ -183,6 +210,40 @@ export function BuildClassPage() {
     onFeatOptionsRequired: (feat, choiceId) =>
       setOptionsPendingFeat({ ...feat, classFeatChoiceId: choiceId }),
   })
+  const viewingClassKey = viewingEntry
+    ? `${viewingEntry.name}|${viewingEntry.source ?? ''}`
+    : undefined
+
+  useEffect(() => {
+    if (!requestedClassKey || requestedClassKey === viewingClassKey) return
+    if (
+      classProgression.some((entry) => `${entry.name}|${entry.source ?? ''}` === requestedClassKey)
+    ) {
+      handleSelectClassTab(requestedClassKey)
+    }
+  }, [classProgression, handleSelectClassTab, requestedClassKey, viewingClassKey])
+
+  useEffect(() => {
+    if (!requestedChoiceId || (requestedClassKey && requestedClassKey !== viewingClassKey)) return
+    const requestedChoice = classChoiceController.choices.find(
+      (choice) => choice.id === requestedChoiceId,
+    )
+    if (!requestedChoice) return
+    classChoiceController.open(requestedChoice)
+    const next = new URLSearchParams(searchParams)
+    next.delete('choice')
+    next.delete('class')
+    next.delete('level')
+    setSearchParams(next, { replace: true })
+  }, [
+    classChoiceController.choices,
+    classChoiceController.open,
+    requestedChoiceId,
+    requestedClassKey,
+    searchParams,
+    setSearchParams,
+    viewingClassKey,
+  ])
   const allClassFeatures = useMemo(() => {
     if (!viewingClass) return []
     const src = viewingClassSource ?? viewingClassData?.source
@@ -217,8 +278,20 @@ export function BuildClassPage() {
         subclassLevel,
         viewingClassLevel,
         spellChoicesByLevel,
+        classChoiceLevels: [
+          ...classChoiceController.choices.map((choice) => choice.level),
+          ...classChoiceController.diagnostics.map((diagnostic) => diagnostic.level ?? 1),
+        ],
       }),
-    [allClassFeatures, asiLevels, subclassLevel, viewingClassLevel, spellChoicesByLevel],
+    [
+      allClassFeatures,
+      asiLevels,
+      subclassLevel,
+      viewingClassLevel,
+      spellChoicesByLevel,
+      classChoiceController.choices,
+      classChoiceController.diagnostics,
+    ],
   )
   const {
     pickerOpen: subclassPickerOpen,
@@ -306,6 +379,8 @@ export function BuildClassPage() {
               viewingClass={viewingClass ?? ''}
               viewingClassSource={viewingClassSource}
               viewingClassLevel={viewingClassLevel}
+              focusLevel={requestedLevel}
+              readinessFocus={readinessFocus}
               classEquipmentBlockChoices={classEquipmentBlockChoices}
               classEquipmentItemChoices={classEquipmentItemChoices}
               feats={(feats ?? []) as Feat5e[]}

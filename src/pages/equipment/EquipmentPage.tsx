@@ -14,7 +14,8 @@ import {
   Target,
   Trash,
 } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
@@ -39,9 +40,11 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useItemLookup, useItemPropertyLookup } from '@/hooks/data/useGameData'
 import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { enforceArmorEquipmentRestrictions, isEquippable } from '@/lib/calculations/itemEquippable'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
@@ -96,6 +99,7 @@ function getRarityClass(rarity: string): string {
 }
 
 export function EquipmentPage() {
+  const [searchParams] = useSearchParams()
   const [addItemOpen, setAddItemOpen] = useState(false)
   const [inventoryCollapsed, setInventoryCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
@@ -187,6 +191,23 @@ export function EquipmentPage() {
       return true
     })
   }, [equipment, itemSearch, itemTypeFilter])
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedItemId = readinessFocus?.startsWith('equipment:unresolved:')
+    ? readinessFocus.slice('equipment:unresolved:'.length)
+    : undefined
+  const { ref: focusedItemRef, highlighted: focusedItemHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(
+      focusedItemId !== undefined && equipment.some((item) => item.id === focusedItemId),
+    )
+
+  useEffect(() => {
+    if (!focusedItemId || !equipment.some((item) => item.id === focusedItemId)) return
+    setItemSearch('')
+    setItemTypeFilter('All')
+    setInventoryCollapsed(false)
+    setSelectedItemId(focusedItemId)
+    setCompactPane('left')
+  }, [equipment, focusedItemId])
   const selectedItem =
     equipment.find((item) => item.id === selectedItemId) ?? filteredEquipment[0] ?? null
   const selectedItemData = selectedItem
@@ -508,11 +529,15 @@ export function EquipmentPage() {
                           return (
                             <div
                               key={item.id}
+                              ref={item.id === focusedItemId ? focusedItemRef : undefined}
                               className={cn(
                                 'grid min-h-14 grid-cols-[minmax(16rem,1fr)_7rem_8rem_8rem_2.5rem] items-center px-3 text-sm transition-colors',
                                 selected
                                   ? 'bg-surface-selected'
                                   : 'bg-workspace-pane hover:bg-surface-hover',
+                                item.id === focusedItemId &&
+                                  focusedItemHighlighted &&
+                                  'animate-route-focus',
                               )}
                             >
                               <button

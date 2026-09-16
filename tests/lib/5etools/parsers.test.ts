@@ -4,6 +4,7 @@ import {
   extractProficiencyBlockNames,
   parseClasses,
   parseClassFeatures,
+  parseItemMasteries,
   parseItems,
   parseOrganizations,
   parseRaces,
@@ -175,6 +176,14 @@ describe('5etools/parsers', () => {
     }) as Array<{ name: string }>
 
     expect(items.map((i) => i.name)).toEqual(['Rope', 'Pack', 'Longsword'])
+  })
+
+  test('parseItemMasteries preserves data-driven mastery descriptions', () => {
+    expect(
+      parseItemMasteries({
+        itemMastery: [{ name: 'Sap', source: 'XPHB', entries: ['Sap details'] }],
+      }),
+    ).toEqual([{ name: 'Sap', source: 'XPHB', entries: ['Sap details'] }])
   })
 
   test('resolves a uniquely source-qualified feature retained by a copied subclass', () => {

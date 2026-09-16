@@ -10,6 +10,7 @@ import type {
   ClassFeature,
   Feat5e,
   Item5e,
+  ItemMastery5e,
   Language5e,
   Race5e,
   SourceBook,
@@ -40,6 +41,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         feats: [] as Feat5e[],
         items: [] as Item5e[],
         itemsBase: [] as Item5e[],
+        itemMasteries: [] as ItemMastery5e[],
         classFeatures: [] as ClassFeature[],
         optionalfeatures: [],
         sources: [] as SourceBook[],
@@ -64,6 +66,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
     const feats = gameData.feats ?? []
     const items = gameData.items ?? []
     const itemsBase = gameData.itemsBase ?? []
+    const itemMasteries = gameData.itemMasteries ?? []
     const classFeatures = gameData.classFeatures ?? []
     const optionalfeatures = gameData.optionalfeatures ?? []
     const sources = gameData.sources ?? []
@@ -79,6 +82,7 @@ export function useFilteredGameDataParams(params: FilterParams) {
         feats,
         items,
         itemsBase,
+        itemMasteries,
         classFeatures,
         optionalfeatures,
         sources,
@@ -153,6 +157,9 @@ export function useFilteredGameDataParams(params: FilterParams) {
         sources: allowedSources,
         suppressedKeys,
       }),
+      itemMasteries: itemMasteries.filter((mastery) =>
+        allowedSources.some((source) => source.toUpperCase() === mastery.source.toUpperCase()),
+      ),
       classFeatures: classFeatures.filter(
         (cf) =>
           allowedSources.some((s) => s.toUpperCase() === cf.source.toUpperCase()) &&

@@ -28,6 +28,7 @@ import {
   hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
 import { POINT_BUY_BUDGET } from '@/lib/calculations/gameRules'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { getPendingBackgroundAbilityRows } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
@@ -49,13 +50,32 @@ const EMPTY_BACKGROUND_ASI_CHOICES: string[] = []
 
 export function BuildAbilityScoresPage() {
   const [searchParams] = useSearchParams()
-  const focusRaceBonuses = searchParams.get('focus') === 'race-bonuses'
-  const focusBackgroundBonuses = searchParams.get('focus') === 'background-bonuses'
+  const character = useCharacterStore((s) => s.activeCharacter)
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedChoiceId = readinessFocus?.startsWith('choice:')
+    ? readinessFocus.slice('choice:'.length)
+    : undefined
+  const focusedAbilityChoice = character?.provenance?.choices.find(
+    (choice) => choice.id === focusedChoiceId && choice.domain === 'abilityBonuses',
+  )
+  const focusRaceBonuses =
+    searchParams.get('focus') === 'race-bonuses' ||
+    (readinessFocus?.startsWith('race:ability-choice:') ?? false) ||
+    focusedAbilityChoice?.sourceTag.sourceType === 'race' ||
+    focusedAbilityChoice?.sourceTag.sourceType === 'subrace'
+  const focusBackgroundBonuses =
+    searchParams.get('focus') === 'background-bonuses' ||
+    readinessFocus === 'background:ability-choices' ||
+    focusedAbilityChoice?.sourceTag.sourceType === 'background'
+  const focusBaseScores =
+    readinessFocus === 'rules:ability-score-method' ||
+    (readinessFocus?.startsWith('ability-scores:') ?? false)
+  const { ref: baseScoresRef, highlighted: baseScoresHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(focusBaseScores)
   const { ref: raceBonusesRef, highlighted: raceBonusesHighlighted } =
     useRouteFocusTarget<HTMLElement>(focusRaceBonuses)
   const { ref: backgroundBonusesRef, highlighted: backgroundBonusesHighlighted } =
     useRouteFocusTarget<HTMLElement>(focusBackgroundBonuses)
-  const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { skills } = useFilteredGameData()
   const skillList = useSkillList()
@@ -279,7 +299,13 @@ export function BuildAbilityScoresPage() {
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
                 <div className="p-4">
-                  <div className="mx-auto flex w-full max-w-5xl flex-col">
+                  <div
+                    ref={baseScoresRef}
+                    className={cn(
+                      'mx-auto flex w-full max-w-5xl flex-col rounded-lg',
+                      baseScoresHighlighted && 'animate-route-focus',
+                    )}
+                  >
                     <Tabs
                       value={method}
                       onValueChange={(v) =>

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { AnchoredHint, WorkspacePaneHeader } from '@/components/workspace'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import {
   countRemovedSpells,
   detectSourceConflicts,
@@ -37,11 +38,13 @@ const HINT_ID = 'sources-implicit-rulebook'
 const HINT_WIDTH = 300
 const ALLOWED_SOURCES_HEADER_SELECTOR = '[data-allowed-sources-header]'
 
-export function SourcesPanel() {
+export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | null } = {}) {
   const preferNewerId = useId()
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const gameData = useGameDataStore((s) => s.gameData)
+  const { ref: sourceControlsRef, highlighted: sourceControlsHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(readinessFocus?.startsWith('source:') ?? false)
 
   const [showHint, setShowHint] = useState(() => !isHintDismissed(HINT_ID))
   const hintPosition = useAnchoredHintPosition({
@@ -163,7 +166,13 @@ export function SourcesPanel() {
   }
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div
+      ref={sourceControlsRef}
+      className={cn(
+        'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg',
+        sourceControlsHighlighted && 'animate-route-focus',
+      )}
+    >
       <AnchoredHint
         position={showHint ? hintPosition : null}
         width={HINT_WIDTH}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { SelectedFeatureState } from '@/pages/build/class/components/DetailsPanel'
 
 export function useClassPageState() {
@@ -9,16 +9,16 @@ export function useClassPageState() {
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [selectedFeature, setSelectedFeature] = useState<SelectedFeatureState | null>(null)
 
-  const handleSelectClassTab = (value: string) => {
+  const handleSelectClassTab = useCallback((value: string) => {
     setSelectedClassTab(value)
     setSelectedFeature(null)
-  }
+  }, [])
 
-  const handleClassSelectionApplied = () => {
+  const handleClassSelectionApplied = useCallback(() => {
     setSelectedFeature(null)
     setClassPickerOpen(false)
     setClassPickerSearch('')
-  }
+  }, [])
 
   return {
     selectedClassTab,

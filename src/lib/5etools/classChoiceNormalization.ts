@@ -305,18 +305,20 @@ function inferFilteredChoiceCount(text: string, label: string): number | undefin
 function mergeFilters(tags: readonly ParsedFilterTag[]): NormalizedChoiceOptionFilter | undefined {
   const entityType = tags[0]?.entityType
   if (!entityType || tags.some((tag) => tag.entityType !== entityType)) return undefined
-  const distinct = (values: (string | undefined)[]) => [
-    ...new Set(values.filter(Boolean) as string[]),
+  const distinct = <T extends string>(values: (T | undefined)[]) => [
+    ...new Set(values.filter((value): value is T => Boolean(value))),
   ]
   const categories = distinct(tags.flatMap((tag) => tag.filter.categories ?? []))
   const featureTypes = distinct(tags.flatMap((tag) => tag.filter.featureTypes ?? []))
   const itemTypes = distinct(tags.flatMap((tag) => tag.filter.itemTypes ?? []))
+  const weaponRanges = distinct(tags.flatMap((tag) => tag.filter.weaponRanges ?? []))
   const sources = distinct(tags.map((tag) => tag.filter.source))
   return {
     entityType,
     ...(categories.length > 0 ? { categories } : {}),
     ...(featureTypes.length > 0 ? { featureTypes } : {}),
     ...(itemTypes.length > 0 ? { itemTypes } : {}),
+    ...(weaponRanges.length > 0 ? { weaponRanges } : {}),
     ...(sources.length === 1 ? { source: sources[0] } : {}),
   }
 }
@@ -325,13 +327,16 @@ function addChoiceContext(
   filter: NormalizedChoiceOptionFilter,
   text: string,
 ): NormalizedChoiceOptionFilter {
-  if (
-    filter.entityType === 'item' &&
-    /\bwith which you (?:have|gain) proficiency\b/i.test(toSearchableText(text))
-  ) {
-    return { ...filter, requiresProficiency: true }
+  if (filter.entityType !== 'item') return filter
+
+  const searchableText = toSearchableText(text)
+  const requiresProficiency = /\bwith which you (?:have|gain) proficiency\b/i.test(searchableText)
+  const requiresMastery = /\bweapon mastery properties\b/i.test(searchableText)
+  return {
+    ...filter,
+    ...(requiresProficiency ? { requiresProficiency: true } : {}),
+    ...(requiresMastery ? { requiresMastery: true } : {}),
   }
-  return filter
 }
 
 function parseFilterTags(text: string): ParsedFilterTag[] {
@@ -340,7 +345,7 @@ function parseFilterTags(text: string): ParsedFilterTag[] {
   for (const match of text.matchAll(regex)) {
     const label = match[1]?.trim() ?? ''
     const collection = match[2]?.trim().toLowerCase()
-    const clauses = (match[3] ?? '').split('|')
+    const clauses = (match[3] ?? '').split('|').flatMap((clause) => clause.split(/;(?=[^;=]+=)/))
     const entityType =
       collection === 'feats'
         ? 'feat'
@@ -364,7 +369,11 @@ function parseFilterTags(text: string): ParsedFilterTag[] {
       if (key === 'category') filter.categories = values
       else if (key === 'feature type') filter.featureTypes = values
       else if (key === 'type') filter.itemTypes = values
-      else if (key === 'source') filter.source = values[0]
+      else if (key === 'melee weapon') {
+        filter.weaponRanges = [...new Set([...(filter.weaponRanges ?? []), 'melee' as const])]
+      } else if (key === 'ranged weapon') {
+        filter.weaponRanges = [...new Set([...(filter.weaponRanges ?? []), 'ranged' as const])]
+      } else if (key === 'source') filter.source = values[0]
     }
     tags.push({ label, entityType, filter })
   }

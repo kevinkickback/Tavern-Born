@@ -8,20 +8,30 @@ export function useRouteFocusTarget<T extends HTMLElement>(active: boolean) {
   const [highlighted, setHighlighted] = useState(active)
 
   useEffect(() => {
-    const element = ref.current
     if (!active) {
       setHighlighted(false)
       return
     }
 
     setHighlighted(true)
-    if (element && typeof element.scrollIntoView === 'function') {
-      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-      element.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' })
-    }
+    let nestedFrame: number | undefined
+    const frame = window.requestAnimationFrame(() => {
+      nestedFrame = window.requestAnimationFrame(() => {
+        const element = ref.current
+        if (element && typeof element.scrollIntoView === 'function') {
+          const reduceMotion =
+            window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+          element.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' })
+        }
+      })
+    })
 
     const timeout = window.setTimeout(() => setHighlighted(false), ROUTE_FOCUS_DURATION_MS)
-    return () => window.clearTimeout(timeout)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      if (nestedFrame !== undefined) window.cancelAnimationFrame(nestedFrame)
+      window.clearTimeout(timeout)
+    }
   }, [active])
 
   return { ref, highlighted }

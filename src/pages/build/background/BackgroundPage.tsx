@@ -1,6 +1,6 @@
 import { PencilSimple, Scroll, Star } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createSearchParams, Link } from 'react-router-dom'
+import { createSearchParams, Link, useSearchParams } from 'react-router-dom'
 import { GenericEquipmentSelect } from '@/components/character/GenericEquipmentSelect'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
@@ -27,6 +27,7 @@ import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceM
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useBackgroundLookup, useItemLookup } from '@/hooks/data/useGameData'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { resolveBackgroundReference } from '@/lib/5etools/entityResolvers'
 import { buildBackgroundLookup } from '@/lib/5etools/lookups'
@@ -40,6 +41,7 @@ import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
 import { resolveFixedFeatGrant } from '@/lib/featGrants'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel'
@@ -71,6 +73,7 @@ const BACKGROUND_BONUSES_LINK = {
 }
 
 export function BuildBackgroundPage() {
+  const [searchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
   const calculationContext = useCharacterCalculationContext(character)
   const { backgrounds, feats, spells } = useFilteredGameData()
@@ -212,6 +215,21 @@ export function BuildBackgroundPage() {
     },
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedChoiceId = readinessFocus?.startsWith('choice:')
+    ? readinessFocus.slice('choice:'.length)
+    : undefined
+  const focusedBackgroundChoice = ledger.choices.find(
+    (choice) => choice.id === focusedChoiceId && choice.sourceTag.sourceType === 'background',
+  )
+  const { ref: configurationRef, highlighted: configurationHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(
+      originFeatChoices.some((choice) => choice.id === focusedChoiceId),
+    )
+  const { ref: backgroundSelectionRef, highlighted: backgroundSelectionHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:background')
+  const { ref: equipmentChoiceRef, highlighted: equipmentChoiceHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(focusedBackgroundChoice?.domain === 'equipment')
 
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
@@ -237,9 +255,14 @@ export function BuildBackgroundPage() {
   const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0
   const bgChoices = character.backgroundAsiChoices ?? []
   const backgroundAbilitySummary = getBackgroundAbilitySummary(bgAsiData, bgBlockIndex, bgChoices)
-
   const backgroundConfigurationPanel = showBackgroundAsiPanel ? (
-    <div className="mt-4 border-t border-border pt-3">
+    <div
+      ref={configurationRef}
+      className={cn(
+        'mt-4 rounded-lg border-t border-border pt-3',
+        configurationHighlighted && 'animate-route-focus',
+      )}
+    >
       <div className="flex items-start gap-6">
         <div className="min-w-0 flex-1">
           <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -411,7 +434,13 @@ export function BuildBackgroundPage() {
                 </span>
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
-                <div>
+                <div
+                  ref={backgroundSelectionRef}
+                  className={cn(
+                    'rounded-lg',
+                    backgroundSelectionHighlighted && 'animate-route-focus',
+                  )}
+                >
                   {filteredBackgrounds.map((bg) => {
                     const bgKey = `${bg.name}|${bg.source ?? ''}`
                     const isSelected = selectedBackgroundKey === bgKey
@@ -489,7 +518,13 @@ export function BuildBackgroundPage() {
                     {backgroundConfigurationPanel}
 
                     {configurableEquipmentBlocks.length > 0 && (
-                      <div className="mt-4 border-t border-border pt-3">
+                      <div
+                        ref={equipmentChoiceRef}
+                        className={cn(
+                          'mt-4 rounded-lg border-t border-border pt-3',
+                          equipmentChoiceHighlighted && 'animate-route-focus',
+                        )}
+                      >
                         <div className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Starting Equipment
                         </div>

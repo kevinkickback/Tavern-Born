@@ -71,7 +71,9 @@ source content.
   remain visible in `choiceDiagnostics`. Choice kinds come from the referenced entity collection,
   and table-backed choices are joined by source-provided feature and column labels; runtime code
   contains no class names, feature names, option catalogs, or assumed selection/replacement values.
-  Narrow replacement and singular-choice phrases are parsed only when an entity filter provides
+  Item-filter dimensions remain independent, so a source restriction such as Simple or Martial
+  Melee weapons is normalized as both a weapon-category pool and a melee-only requirement rather
+  than broadening into an either/or match. Narrow replacement and singular-choice phrases are parsed only when an entity filter provides
   the choice boundary. A bounded number-word parser also accepts plural counts only when a tagged
   entity filter and nearby "of your choice" phrase define the boundary. Optional-feature
   progressions remain the single count owner when their feature body also contains an option block,
@@ -122,7 +124,7 @@ source content.
 
 6. Caching and freshness
 - Parsed data plus source snapshot are cached in IndexedDB.
-- Cache entries carry a normalization-schema version (currently 3). Changes to ingestion-owned normalized rules
+- Cache entries carry a normalization-schema version (currently 4). Changes to ingestion-owned normalized rules
   invalidate older parsed caches so corrected adapters apply immediately after an app update.
 - Cache freshness is evaluated on startup; stale cache triggers background refresh.
 
@@ -149,6 +151,9 @@ source content.
 - 5etools proficiency blocks can include grouped tool tokens (for example: `gaming set`, `anyMusicalInstrument`, `anyTool`) in addition to concrete tool names.
 - Parsing keeps these entries as source data, while provenance normalization maps grouped aliases to canonical labels.
 - Proficiencies UI expands grouped labels into concrete tool options from item data (`itemsBase` + `items`) and then records the concrete selected tool as the final proficiency grant.
+- `items-base.json` also supplies `itemMastery` definitions. Load these separately from ordinary
+  base items so weapon-choice views can filter by mastery and render the source description without
+  embedding mastery names or rules text in UI code.
 
 ### Generic Starting Equipment
 

@@ -1,5 +1,5 @@
 import { Check, Sword } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspacePaneHeader } from '@/components/workspace'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import {
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
@@ -96,6 +98,31 @@ interface BuildClassLevelsPanelProps {
   onSetAsiModeByLevel: (levelKey: string, mode: 'asi' | 'feat') => void
   onClearFeatSelectionsForAsi: (level: number) => void
   getOrdinalForm: (n: number) => string
+  focusLevel?: number
+  readinessFocus?: string | null
+}
+
+function normalized(value: string | undefined): string {
+  return value?.trim().toLowerCase() ?? ''
+}
+
+function featureOwnsChoice(
+  feature: ClassFeatureDisplay,
+  choice: NormalizedCharacterChoice,
+): boolean {
+  if (normalized(feature.name) !== normalized(choice.owner.featureName)) return false
+  return (
+    !feature.source ||
+    !choice.owner.featureSource ||
+    normalized(feature.source) === normalized(choice.owner.featureSource)
+  )
+}
+
+function featureOwnsDiagnostic(
+  feature: ClassFeatureDisplay,
+  diagnostic: ClassChoiceDiagnostic,
+): boolean {
+  return normalized(feature.name) === normalized(diagnostic.featureName)
 }
 
 export function BuildClassLevelsPanel({
@@ -145,8 +172,42 @@ export function BuildClassLevelsPanel({
   onSetAsiModeByLevel,
   onClearFeatSelectionsForAsi,
   getOrdinalForm,
+  focusLevel,
+  readinessFocus,
 }: BuildClassLevelsPanelProps) {
   const [openSections, setOpenSections] = useState<string[]>([])
+  const { ref: classPickerRef, highlighted: classPickerHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:class')
+  const focusedChoiceId = readinessFocus?.startsWith('choice:')
+    ? readinessFocus.slice('choice:'.length)
+    : undefined
+  const focusedClassChoice = character.provenance?.choices.find(
+    (choice) =>
+      choice.id === focusedChoiceId &&
+      choice.sourceTag.sourceType === 'class' &&
+      choice.sourceTag.sourceName === viewingClass,
+  )
+  const focusedEquipmentChoice =
+    focusedClassChoice?.domain === 'equipment' ? focusedClassChoice : undefined
+  const { ref: equipmentChoiceRef, highlighted: equipmentChoiceHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(!!focusedEquipmentChoice)
+  const { ref: classChoiceRef, highlighted: classChoiceHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(
+      focusedClassChoice?.domain === 'features' || focusedClassChoice?.domain === 'feats',
+    )
+
+  useEffect(() => {
+    if (!focusLevel) return
+    const section = `level-${focusLevel}`
+    setOpenSections((current) => (current.includes(section) ? current : [...current, section]))
+  }, [focusLevel])
+
+  useEffect(() => {
+    if (!focusedEquipmentChoice) return
+    setOpenSections((current) =>
+      current.includes('starting-equipment') ? current : [...current, 'starting-equipment'],
+    )
+  }, [focusedEquipmentChoice])
 
   const spellSelectionsByLevel = buildClassSpellSelectionsByLevel({
     character,
@@ -160,7 +221,13 @@ export function BuildClassLevelsPanel({
   const swapsByLevel = classProfile?.spellSwaps ?? {}
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+    <div
+      ref={classChoiceRef}
+      className={cn(
+        'min-w-0 flex-1 flex flex-col overflow-hidden rounded-lg',
+        classChoiceHighlighted && 'animate-route-focus',
+      )}
+    >
       <WorkspacePaneHeader
         title={classProgression.length > 1 ? 'Current class' : 'Class progression'}
         className={detailCollapsed ? 'pr-20' : undefined}
@@ -216,7 +283,13 @@ export function BuildClassLevelsPanel({
       <ScrollArea className="flex-1 overflow-hidden">
         <div className="p-4">
           {!character.class ? (
-            <div className="flex flex-col items-center justify-center h-40 gap-3 text-muted-foreground">
+            <div
+              ref={classPickerRef}
+              className={cn(
+                'flex h-40 flex-col items-center justify-center gap-3 rounded-lg text-muted-foreground',
+                classPickerHighlighted && 'animate-route-focus',
+              )}
+            >
               <Sword className="h-8 w-8 opacity-30" weight="duotone" />
               <p className="text-sm">No class selected</p>
               <Button size="sm" onClick={onOpenClassPicker}>
@@ -237,7 +310,13 @@ export function BuildClassLevelsPanel({
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <div className="pt-1 pb-2 px-1">
+                    <div
+                      ref={equipmentChoiceRef}
+                      className={cn(
+                        'rounded-lg px-1 pb-2 pt-1',
+                        equipmentChoiceHighlighted && 'animate-route-focus',
+                      )}
+                    >
                       <BuildClassEquipmentSection
                         viewingClassData={viewingClassData}
                         blockChoices={classEquipmentBlockChoices}
@@ -249,32 +328,6 @@ export function BuildClassLevelsPanel({
                         onExpandDetails={onExpandDetails}
                       />
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              )}
-
-              {(classChoices.length > 0 || classChoiceDiagnostics.length > 0) && (
-                <AccordionItem value="required-class-choices">
-                  <AccordionTrigger className="px-1 text-sm hover:no-underline">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">Required Choices</span>
-                      <Badge variant="secondary" className="h-5 px-1.5 font-mono text-xs">
-                        {classChoices.length + classChoiceDiagnostics.length}
-                      </Badge>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <BuildClassChoicesSection
-                      choices={classChoices}
-                      diagnostics={classChoiceDiagnostics}
-                      classLevel={viewingClassLevel}
-                      selectionByChoiceId={classChoiceSelectionById}
-                      selectedViewsByChoiceId={selectedClassChoiceViewsById}
-                      detailCollapsed={detailCollapsed}
-                      onChoose={onOpenClassChoice}
-                      onSelectFeature={onSelectFeature}
-                      onExpandDetails={onExpandDetails}
-                    />
                   </AccordionContent>
                 </AccordionItem>
               )}
@@ -295,6 +348,12 @@ export function BuildClassLevelsPanel({
                   spellChoicesByLevel,
                   featuresByLevel,
                 })
+                const levelClassChoices = classChoices.filter((choice) => choice.level === lv)
+                const levelDiagnostics = classChoiceDiagnostics.filter(
+                  (diagnostic) => (diagnostic.level ?? 1) === lv,
+                )
+                const normalizedChoiceCount = levelClassChoices.length + levelDiagnostics.length
+                const levelChoiceCount = choiceCount + normalizedChoiceCount
 
                 const asiChoiceComplete =
                   !isASILevel ||
@@ -304,11 +363,47 @@ export function BuildClassLevelsPanel({
                 const selectedSpellCount = spellSelectionsByLevel.get(lv)?.length ?? 0
                 const spellChoiceComplete =
                   !spellGain || selectedSpellCount >= spellGain.cantrips + spellGain.spells
+                const normalizedChoicesComplete =
+                  levelDiagnostics.length === 0 &&
+                  levelClassChoices.every((choice) => {
+                    const required = getRequiredChoiceSelectionCount(choice, viewingClassLevel)
+                    return (
+                      (classChoiceSelectionById.get(choice.id)?.selected.length ?? 0) >= required
+                    )
+                  })
                 const allChoicesComplete =
-                  choiceCount > 0 &&
+                  levelChoiceCount > 0 &&
                   asiChoiceComplete &&
                   subclassChoiceComplete &&
-                  spellChoiceComplete
+                  spellChoiceComplete &&
+                  normalizedChoicesComplete
+
+                const matchedChoiceIds = new Set(
+                  passiveFeatures.flatMap((feature) =>
+                    levelClassChoices
+                      .filter((choice) => featureOwnsChoice(feature, choice))
+                      .map((choice) => choice.id),
+                  ),
+                )
+                const matchedDiagnosticKeys = new Set(
+                  passiveFeatures.flatMap((feature) =>
+                    levelDiagnostics
+                      .filter((diagnostic) => featureOwnsDiagnostic(feature, diagnostic))
+                      .map(
+                        (diagnostic) =>
+                          `${diagnostic.featureName}|${diagnostic.level ?? ''}|${diagnostic.code}|${diagnostic.message}`,
+                      ),
+                  ),
+                )
+                const unmatchedChoices = levelClassChoices.filter(
+                  (choice) => !matchedChoiceIds.has(choice.id),
+                )
+                const unmatchedDiagnostics = levelDiagnostics.filter(
+                  (diagnostic) =>
+                    !matchedDiagnosticKeys.has(
+                      `${diagnostic.featureName}|${diagnostic.level ?? ''}|${diagnostic.code}|${diagnostic.message}`,
+                    ),
+                )
 
                 return (
                   <AccordionItem key={lv} value={`level-${lv}`}>
@@ -323,7 +418,7 @@ export function BuildClassLevelsPanel({
                             {totalCount}
                           </Badge>
                         )}
-                        {choiceCount > 0 && (
+                        {levelChoiceCount > 0 && (
                           <Badge
                             className={cn(
                               'h-5 gap-1 px-1.5 text-xs pointer-events-none border',
@@ -335,7 +430,7 @@ export function BuildClassLevelsPanel({
                             {allChoicesComplete ? (
                               <Check className="h-3 w-3" weight="bold" />
                             ) : null}
-                            {choiceCount} {choiceCount === 1 ? 'choice' : 'choices'}
+                            {levelChoiceCount} {levelChoiceCount === 1 ? 'choice' : 'choices'}
                           </Badge>
                         )}
                       </div>
@@ -355,6 +450,7 @@ export function BuildClassLevelsPanel({
                             onSelectFeature={onSelectFeature}
                             onExpandDetails={onExpandDetails}
                             onOpenSubclassPicker={onOpenSubclassPicker}
+                            highlighted={readinessFocus?.startsWith('class:subclass:')}
                           />
                         )}
 
@@ -379,6 +475,10 @@ export function BuildClassLevelsPanel({
                             onOpenFeatPicker={onOpenFeatPicker}
                             onSetAsiModeByLevel={onSetAsiModeByLevel}
                             onClearFeatSelectionsForAsi={onClearFeatSelectionsForAsi}
+                            highlighted={
+                              readinessFocus?.startsWith('class:asi:') &&
+                              readinessFocus.endsWith(`:${lv}`)
+                            }
                           />
                         )}
 
@@ -406,7 +506,70 @@ export function BuildClassLevelsPanel({
                           detailCollapsed={detailCollapsed}
                           onSelectFeature={onSelectFeature}
                           onExpandDetails={onExpandDetails}
+                          renderFeature={(feature) => {
+                            const featureChoices = levelClassChoices.filter((choice) =>
+                              featureOwnsChoice(feature, choice),
+                            )
+                            if (featureChoices.length === 0) return undefined
+                            const featureDiagnostics = levelDiagnostics.filter((diagnostic) =>
+                              featureOwnsDiagnostic(feature, diagnostic),
+                            )
+                            return (
+                              <BuildClassChoicesSection
+                                choices={featureChoices}
+                                diagnostics={featureDiagnostics}
+                                classLevel={viewingClassLevel}
+                                selectionByChoiceId={classChoiceSelectionById}
+                                selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                                detailCollapsed={detailCollapsed}
+                                onChoose={onOpenClassChoice}
+                                onSelectFeature={onSelectFeature}
+                                onExpandDetails={onExpandDetails}
+                                feature={feature}
+                              />
+                            )
+                          }}
+                          renderAfterFeature={(feature) => {
+                            const featureChoices = levelClassChoices.filter((choice) =>
+                              featureOwnsChoice(feature, choice),
+                            )
+                            if (featureChoices.length > 0) return null
+                            const featureDiagnostics = levelDiagnostics.filter((diagnostic) =>
+                              featureOwnsDiagnostic(feature, diagnostic),
+                            )
+                            if (featureDiagnostics.length === 0) return null
+                            return (
+                              <BuildClassChoicesSection
+                                choices={[]}
+                                diagnostics={featureDiagnostics}
+                                classLevel={viewingClassLevel}
+                                selectionByChoiceId={classChoiceSelectionById}
+                                selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                                detailCollapsed={detailCollapsed}
+                                onChoose={onOpenClassChoice}
+                                onSelectFeature={onSelectFeature}
+                                onExpandDetails={onExpandDetails}
+                                feature={feature}
+                                className="ml-3 border-l border-border pl-3"
+                              />
+                            )
+                          }}
                         />
+
+                        {(unmatchedChoices.length > 0 || unmatchedDiagnostics.length > 0) && (
+                          <BuildClassChoicesSection
+                            choices={unmatchedChoices}
+                            diagnostics={unmatchedDiagnostics}
+                            classLevel={viewingClassLevel}
+                            selectionByChoiceId={classChoiceSelectionById}
+                            selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                            detailCollapsed={detailCollapsed}
+                            onChoose={onOpenClassChoice}
+                            onSelectFeature={onSelectFeature}
+                            onExpandDetails={onExpandDetails}
+                            readinessFocus={readinessFocus}
+                          />
+                        )}
                       </div>
                     </AccordionContent>
                   </AccordionItem>

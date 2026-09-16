@@ -17,6 +17,7 @@ interface BuildLevelsToShowParams {
   subclassLevel: number
   viewingClassLevel: number
   spellChoicesByLevel: Map<number, unknown>
+  classChoiceLevels?: number[]
 }
 
 interface BuildFeatModalFeatsParams<T extends { name: string; source?: string }> {
@@ -79,6 +80,7 @@ export function buildLevelsToShow({
   subclassLevel,
   viewingClassLevel,
   spellChoicesByLevel,
+  classChoiceLevels = [],
 }: BuildLevelsToShowParams): number[] {
   const levels = new Set<number>()
 
@@ -103,6 +105,12 @@ export function buildLevelsToShow({
       levels.add(level)
     }
   })
+
+  classChoiceLevels
+    .filter((level) => level > 0 && level <= viewingClassLevel)
+    .forEach((level) => {
+      levels.add(level)
+    })
 
   return Array.from(levels).sort((a, b) => a - b)
 }

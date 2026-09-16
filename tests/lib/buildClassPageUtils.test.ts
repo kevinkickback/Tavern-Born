@@ -170,9 +170,10 @@ describe('buildClassPageUtils', () => {
         [1, { cantrips: 2 }],
         [5, { spells: 2 }],
       ]),
+      classChoiceLevels: [2, 8, 10],
     })
 
-    expect(levels).toEqual([1, 3, 4, 5, 8])
+    expect(levels).toEqual([1, 2, 3, 4, 5, 8])
   })
 
   test('buildFeatModalFeats keeps available feats and appends selected missing feats', () => {

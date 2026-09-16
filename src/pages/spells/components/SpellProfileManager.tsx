@@ -1,5 +1,5 @@
 import { ArrowsLeftRight, BookOpen, Lock, Plus, Trash, WarningCircle } from '@phosphor-icons/react'
-import { memo, type ReactNode, useMemo } from 'react'
+import { memo, type ReactNode, useEffect, useMemo, useState } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -9,6 +9,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import {
   buildSpellProfileDisplayModels,
   type PreparedCasterSpellItem,
@@ -284,6 +285,7 @@ const KnownSpellLevelGroup = memo(function KnownSpellLevelGroup({
 
 interface SpellProfileManagerProps {
   spellProfiles: SpellProfileLike[]
+  focusProfileId?: string
   detailsByProfileId: Map<string, SpellcastingDetailLike>
   groupedItems: Map<string, SpellListItem[]>
   selectionSourceByProfileAndSpell: Map<string, string>
@@ -302,6 +304,7 @@ interface SpellProfileManagerProps {
 
 export const SpellProfileManager = memo(function SpellProfileManager({
   spellProfiles,
+  focusProfileId,
   detailsByProfileId,
   groupedItems,
   selectionSourceByProfileAndSpell,
@@ -313,6 +316,16 @@ export const SpellProfileManager = memo(function SpellProfileManager({
   onOpenRacialChoice,
   renderSpellName,
 }: SpellProfileManagerProps) {
+  const [openProfiles, setOpenProfiles] = useState(() => spellProfiles.map((profile) => profile.id))
+  const { ref: focusedProfileRef, highlighted: focusedProfileHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(!!focusProfileId)
+
+  useEffect(() => {
+    if (!focusProfileId) return
+    setOpenProfiles((current) =>
+      current.includes(focusProfileId) ? current : [...current, focusProfileId],
+    )
+  }, [focusProfileId])
   const displayModels = useMemo(
     () =>
       buildSpellProfileDisplayModels({
@@ -333,7 +346,8 @@ export const SpellProfileManager = memo(function SpellProfileManager({
       ) : (
         <Accordion
           type="multiple"
-          defaultValue={spellProfiles.map((profile) => profile.id)}
+          value={openProfiles}
+          onValueChange={setOpenProfiles}
           className="space-y-6"
         >
           {displayModels.map((model) => {
@@ -367,7 +381,13 @@ export const SpellProfileManager = memo(function SpellProfileManager({
               <AccordionItem
                 key={profile.id}
                 value={profile.id}
-                className="border-0 bg-transparent last:border-b-0"
+                ref={profile.id === focusProfileId ? focusedProfileRef : undefined}
+                className={cn(
+                  'border-0 bg-transparent last:border-b-0',
+                  profile.id === focusProfileId &&
+                    focusedProfileHighlighted &&
+                    'animate-route-focus',
+                )}
               >
                 <AccordionTrigger className="min-h-11 cursor-pointer rounded-none border-b border-border bg-transparent px-1 py-2.5 transition-colors hover:bg-surface-hover/35 hover:no-underline">
                   <div className="flex items-center gap-2 text-left w-full min-w-0">

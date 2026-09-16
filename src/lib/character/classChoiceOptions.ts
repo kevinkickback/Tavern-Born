@@ -5,6 +5,7 @@ import type {
   ClassFeature,
   Feat5e,
   Item5e,
+  ItemMastery5e,
   OptionalFeatureLike,
   Raw5ePrereq,
 } from '@/types/5etools'
@@ -23,6 +24,9 @@ import type {
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference
   entries: unknown[]
+  masteries?: Array<{ name: string; source?: string; entries: unknown[] }>
+  weaponCategory?: string
+  weaponRange?: 'Melee' | 'Ranged'
   prerequisite?: Raw5ePrereq[]
 }
 
@@ -30,6 +34,8 @@ export interface ClassChoiceCatalogs {
   classFeatures: readonly ClassFeature[]
   feats: readonly Feat5e[]
   items: readonly Item5e[]
+  itemsBase: readonly Item5e[]
+  itemMasteries: readonly ItemMastery5e[]
   optionalFeatures: readonly OptionalFeatureLike[]
   itemTypeByAbbr: Readonly<Record<string, string>>
   weaponProficiencies: readonly string[]
@@ -120,8 +126,16 @@ function getCatalog(
 ): readonly ChoiceCatalogEntity[] {
   if (entityType === 'classFeature') return catalogs.classFeatures
   if (entityType === 'feat') return catalogs.feats
-  if (entityType === 'item') return catalogs.items
+  if (entityType === 'item') return [...catalogs.itemsBase, ...catalogs.items]
   return catalogs.optionalFeatures
+}
+
+function getFilteredCatalog(
+  entityType: ChoiceOptionEntityType,
+  catalogs: ClassChoiceCatalogs,
+): readonly ChoiceCatalogEntity[] {
+  if (entityType === 'item') return catalogs.itemsBase
+  return getCatalog(entityType, catalogs)
 }
 
 function getFeatureTypes(entity: ChoiceCatalogEntity): string[] {
@@ -149,6 +163,16 @@ function getItemTypeLabels(
   ]
     .filter((value): value is string => Boolean(value))
     .map(normalized)
+}
+
+function getWeaponRanges(item: Item5e): Array<'melee' | 'ranged'> {
+  const rawTypes = Array.isArray(item.type) ? item.type : [item.type]
+  return rawTypes.flatMap((value) => {
+    const typeCode = value.split('|')[0]?.trim().toUpperCase()
+    if (typeCode === 'M') return ['melee' as const]
+    if (typeCode === 'R') return ['ranged' as const]
+    return []
+  })
 }
 
 function matchesAny(actual: readonly string[], expected: readonly string[] | undefined): boolean {
@@ -184,8 +208,21 @@ function matchesFilter(
   }
   if (
     filter.entityType === 'item' &&
+    !matchesAny(getWeaponRanges(entity as Item5e), filter.weaponRanges)
+  ) {
+    return false
+  }
+  if (
+    filter.entityType === 'item' &&
     filter.requiresProficiency &&
     !isProficientWithWeapon(weaponProficiencies, entity as Item5e)
+  ) {
+    return false
+  }
+  if (
+    filter.entityType === 'item' &&
+    filter.requiresMastery &&
+    ((entity as Item5e).mastery?.length ?? 0) === 0
   ) {
     return false
   }
@@ -195,7 +232,33 @@ function matchesFilter(
 function toView(
   entityType: ChoiceOptionEntityType,
   entity: ChoiceCatalogEntity,
+  catalogs: ClassChoiceCatalogs,
 ): ClassChoiceOptionView {
+  const item = entityType === 'item' ? (entity as Item5e) : undefined
+  const itemTypeCode = Array.isArray(item?.type)
+    ? item.type[0]?.split('|')[0]
+    : item?.type?.split('|')[0]
+  const masteries =
+    entityType === 'item'
+      ? (item?.mastery ?? []).flatMap((reference) => {
+          const [rawName, rawSource] = reference.split('|')
+          const name = rawName?.trim()
+          if (!name) return []
+          const source = rawSource?.trim()
+          const definition = catalogs.itemMasteries.find(
+            (mastery) =>
+              normalized(mastery.name) === normalized(name) &&
+              (!source || normalized(mastery.source) === normalized(source)),
+          )
+          return [
+            {
+              name,
+              ...(source ? { source } : {}),
+              entries: definition?.entries ?? [],
+            },
+          ]
+        })
+      : []
   return {
     reference: {
       entityType,
@@ -203,6 +266,13 @@ function toView(
       ...(entity.source ? { source: entity.source } : {}),
     },
     entries: Array.isArray(entity.entries) ? entity.entries : [],
+    ...(masteries.length > 0 ? { masteries } : {}),
+    ...(item?.weaponCategory ? { weaponCategory: item.weaponCategory } : {}),
+    ...(itemTypeCode === 'M'
+      ? { weaponRange: 'Melee' as const }
+      : itemTypeCode === 'R'
+        ? { weaponRange: 'Ranged' as const }
+        : {}),
     ...('prerequisite' in entity && Array.isArray(entity.prerequisite)
       ? { prerequisite: entity.prerequisite }
       : {}),
@@ -218,7 +288,16 @@ function resolveExplicitOption(
       normalized(entity.name) === normalized(option.name) &&
       (!option.source || normalized(entity.source) === normalized(option.source)),
   )
-  return match ? toView(option.entityType, match) : { reference: option, entries: [] }
+  return match
+    ? toView(option.entityType, match, catalogs)
+    : {
+        reference: {
+          entityType: option.entityType,
+          name: option.name,
+          ...(option.source ? { source: option.source } : {}),
+        },
+        entries: [],
+      }
 }
 
 /** Resolves one normalized choice against filtered catalogs without source-specific option lists. */
@@ -232,11 +311,11 @@ export function resolveClassChoiceOptions(
   if (choice.options.length > 0) {
     resolved = choice.options.map((option) => resolveExplicitOption(option, catalogs))
   } else if (filter) {
-    resolved = getCatalog(filter.entityType, catalogs)
+    resolved = getFilteredCatalog(filter.entityType, catalogs)
       .filter((entity) =>
         matchesFilter(entity, filter, catalogs.itemTypeByAbbr, catalogs.weaponProficiencies),
       )
-      .map((entity) => toView(filter.entityType, entity))
+      .map((entity) => toView(filter.entityType, entity, catalogs))
   }
 
   const byKey = new Map(
@@ -245,14 +324,19 @@ export function resolveClassChoiceOptions(
   for (const option of saved) {
     const key = getClassChoiceOptionKey(option)
     if (!byKey.has(key)) {
-      byKey.set(key, {
-        reference: {
-          entityType: option.entityType,
-          name: option.name,
-          ...(option.source ? { source: option.source } : {}),
-        },
-        entries: [],
-      })
+      const catalogEntity = getCatalog(option.entityType, catalogs).find(
+        (entity) =>
+          normalized(entity.name) === normalized(option.name) &&
+          (!option.source || normalized(entity.source) === normalized(option.source)),
+      )
+      if (
+        filter?.entityType === option.entityType &&
+        catalogEntity &&
+        !matchesFilter(catalogEntity, filter, catalogs.itemTypeByAbbr, catalogs.weaponProficiencies)
+      ) {
+        continue
+      }
+      byKey.set(key, resolveExplicitOption(option, catalogs))
     }
   }
   return [...byKey.values()].sort(

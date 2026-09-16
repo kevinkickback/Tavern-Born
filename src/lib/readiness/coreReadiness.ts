@@ -133,6 +133,33 @@ export function validateProvenanceChoices(character: Character): CharacterReadin
     equipment: 'equipment',
     featOptions: 'feats',
   } as const
+  const targetForChoice = (choice: NonNullable<Character['provenance']>['choices'][number]) => {
+    if (choice.domain === 'feats') {
+      if (choice.sourceTag.sourceType === 'race' || choice.sourceTag.sourceType === 'subrace') {
+        return '/build/race'
+      }
+      if (choice.sourceTag.sourceType === 'background') return '/build/background'
+      if (choice.sourceTag.sourceType === 'class') return '/build/class'
+    }
+    if (choice.domain === 'equipment') {
+      if (choice.sourceTag.sourceType === 'background') return '/build/background'
+      if (choice.sourceTag.sourceType === 'class') {
+        const entry = getCharacterClassEntries(character).find(
+          (candidate) =>
+            candidate.name === choice.sourceTag.sourceName &&
+            (!choice.sourceTag.sourceRef || candidate.source === choice.sourceTag.sourceRef),
+        )
+        if (entry) {
+          const params = new URLSearchParams({
+            class: `${entry.name}|${entry.source ?? ''}`,
+            level: '1',
+          })
+          return `/build/class?${params.toString()}`
+        }
+      }
+    }
+    return undefined
+  }
   return (character.provenance?.choices ?? [])
     .filter(
       (choice) =>
@@ -147,6 +174,7 @@ export function validateProvenanceChoices(character: Character): CharacterReadin
         sectionByDomain[choice.domain],
         `Finish ${choice.sourceTag.label}`,
         `${choice.sourceTag.sourceName} requires ${choice.chooseCount} ${choice.domain} ${choice.chooseCount === 1 ? 'selection' : 'selections'}; ${choice.selected.length} are stored.`,
+        targetForChoice(choice),
       ),
     )
 }

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { SourcesPanel } from '@/pages/rules/SourcesPanel'
@@ -179,7 +180,7 @@ export function RulesPage() {
             aria-labelledby={`${tabIdPrefix}-tab-${activePanel}`}
             className="flex min-h-0 flex-1 flex-col"
           >
-            <SourcesPanel />
+            <SourcesPanel readinessFocus={getReadinessFocus(searchParams)} />
           </div>
         ) : (
           <div className="mx-auto w-full max-w-4xl space-y-5 px-6 py-5">

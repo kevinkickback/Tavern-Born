@@ -48,4 +48,24 @@ describe('SplitPane responsive navigation', () => {
       '@min-[840px]:w-[var(--split-pane-right-width)]',
     )
   })
+
+  test('removes a collapsed details pane from desktop flex sizing', () => {
+    const { container } = render(
+      <SplitPane
+        left={<div>Workbench content</div>}
+        right={<div>Detail content</div>}
+        leftCollapsed={false}
+        rightCollapsed={true}
+        onLeftCollapsedChange={vi.fn()}
+        onRightCollapsedChange={vi.fn()}
+        leftWidth="24rem"
+      />,
+    )
+
+    const leftPane = container.querySelector('[data-slot="split-pane-left"]')
+    const rightPane = container.querySelector('[data-slot="split-pane-right"]')
+    expect(leftPane?.className).toContain('@min-[840px]:flex-1')
+    expect(rightPane?.className).toContain('@min-[840px]:flex-none')
+    expect(rightPane?.className).toContain('@min-[840px]:w-0')
+  })
 })

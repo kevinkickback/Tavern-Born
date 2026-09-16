@@ -70,8 +70,11 @@ new tests land and do not lower them to merge a change.
   no-guess behavior.
 - Class-choice option resolution and Builder workflow coverage in
   tests/lib/classChoiceOptions.test.ts, tests/hooks/useClassPageControllers.test.tsx, and
-  tests/integration/classLevelsPanel.test.tsx (catalog filters, source identity, filtered saved
-  selections, store-backed persistence, completion cards, and unresolved-choice warnings).
+  tests/integration/classLevelsPanel.test.tsx and
+  tests/integration/classChoiceSelectionModal.test.tsx (base-item catalog filters, parsed mastery
+  descriptions, mastery-property filtering and presentation, source identity, filtered saved
+  selections, store-backed persistence, selection-card level/feature placement, completion cards,
+  and unresolved-choice warnings). Shared pane tests also verify collapsed panes leave flex sizing.
 - Composite-key entity resolver coverage, including filtered-primary/raw fallback, source collisions, deterministic source-less fallback, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
 - Renderer output in src/lib/renderer.ts
@@ -149,7 +152,9 @@ new tests land and do not lower them to merge a change.
   covered by tests/unit/backgroundPageData.test.ts. Ability Scores integration covers unresolved
   2024 background attribution and ruleset-correct empty guidance.
 - Review-page integration coverage in tests/integration/reviewPage.test.tsx verifies the default
-  Needs Attention tab, separate Character Overview, and retained readiness navigation targets.
+  Needs Attention tab, separate Character Overview, and issue-qualified readiness navigation
+  targets. Class readiness and level-panel coverage verifies that subclass, advancement, and
+  normalized class-choice links retain their class and level and reveal the targeted control.
 - Warning/destructive palette import regression coverage in tests/lib/themeColors.test.ts
 - Combined Rules/Sources tab behavior and source-panel layout coverage in
   tests/integration/rulesPage.test.tsx and tests/integration/sourcesPanelLayout.test.tsx

@@ -36,7 +36,7 @@ export function getCharacterReadiness(
     issues.push(
       ...validateSourceReferences(character, calculation),
       ...validateOriginAbilityChoices(character, calculation),
-      ...validateClassChoices(character, calculation),
+      ...validateClassChoices(character, calculation, context.classChoiceCatalogs),
       ...validateSpells(character, calculation, context.spellsByKey),
     )
   }

@@ -1,4 +1,10 @@
-import type { Background5e, ItemProperty5e, ItemType5e, Language5e } from '@/types/5etools'
+import type {
+  Background5e,
+  ItemMastery5e,
+  ItemProperty5e,
+  ItemType5e,
+  Language5e,
+} from '@/types/5etools'
 import { normalizeBackgroundOriginRules } from '../backgroundRuleNormalization'
 import { SOURCE_FALLBACKS } from '../sourceFallbacks'
 import { asArray, asObject, type ParsedObject } from './shared'
@@ -145,6 +151,12 @@ export function parseItemProperties(data: unknown): ItemProperty5e[] {
 export function parseItemTypes(data: unknown): ItemType5e[] {
   const obj = asObject(data)
   if (obj.itemType) return asArray(obj.itemType) as ItemType5e[]
+  return []
+}
+
+export function parseItemMasteries(data: unknown): ItemMastery5e[] {
+  const obj = asObject(data)
+  if (obj.itemMastery) return asArray(obj.itemMastery) as ItemMastery5e[]
   return []
 }
 

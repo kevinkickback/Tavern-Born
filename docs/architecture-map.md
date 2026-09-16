@@ -15,7 +15,9 @@ This document describes the current Tavern-Born runtime architecture and where r
 - Key files: src/main.tsx, src/App.tsx, src/components/layout/AppLayout.tsx.
 - Shared `SplitPane` workspaces switch from side-by-side panes to a labeled, one-pane-at-a-time view
   when their own container is narrower than 840px; compact pane state is separate from the user's
-  desktop collapse choices. The secondary workspace navigation remains permanently visible.
+  desktop collapse choices. A collapsed desktop pane must use a zero-width, non-growing flex item so
+  the remaining pane reclaims the full workspace. The secondary workspace navigation remains
+  permanently visible.
 - Bundled runtime files from `public/` resolve through `src/lib/assetUrls.ts`; this preserves Vite
   dev-server URLs while producing relative URLs for packaged Electron's `file://` renderer. Class
   icons, placeholder portraits, organization artwork, the About logo, and PDF templates share this
@@ -101,7 +103,11 @@ Current implementation notes:
 - BuildClassPage arranges sections and modals; subclass, spell, ASI/feat, optional-feature, and
   normalized class-choice decisions live in focused hooks under src/pages/build/class/hooks. The
   class-choice option resolver in src/lib/character/classChoiceOptions.ts joins descriptors to
-  filtered source-qualified catalogs without embedding option lists. The class-choice controller
+  filtered source-qualified catalogs without embedding option lists; filtered item choices use the
+  ordinary base-item catalog, while explicit and saved references can still resolve against both
+  item catalogs. Weapon mastery definitions and descriptions are parsed from the `itemMastery`
+  collection in `items-base.json`. Class choices render as selection cards in place of their owning
+  passive feature at the level where they are earned, rather than in a separate global section. The class-choice controller
   delegates persistence and feature-shaped grant reconciliation to the class provenance mutation
   hook; item and feat kinds are not assigned mechanical semantics until their domain handlers own
   them. Subclass eligibility is a pure parsed-first calculation with isolated legacy fallbacks.
@@ -152,8 +158,10 @@ Current implementation notes:
   Cross-page configuration links carry a presentation-only focus key so the destination card can
   scroll into view and briefly highlight itself. The route-focus hook removes that visual state
   after 1.8 seconds, including when reduced-motion styling replaces the animation; the query does
-  not change character state and works for both legacy race bonuses and revised background
-  bonuses. Review is the sole
+  not change character state. Review adds its issue ID through
+  `src/lib/navigation/readinessFocus.ts`; destination pages use it to select the relevant tab or
+  class, expand a hidden accordion, clear a hiding inventory filter where needed, scroll the target
+  into view, and apply the same focus animation. Review is the sole
   destination in Builder's final Finish group after Core and Details; its header separates Needs
   Attention from the remaining Character Overview. Builder has no one-item Options group. Rules is
   a character-scoped

@@ -254,7 +254,7 @@ describe('class choice normalization', () => {
       [
         {
           ...featureRef('Weapon Mastery', 1, [
-            'Choose three kinds of {@filter weapons|items|type=simple weapon;martial weapon}. Whenever you finish a Long Rest, you can change one of those weapon choices.',
+            'Choose three kinds of {@filter weapons|items|type=simple weapon;martial weapon} whose Weapon Mastery properties you can use. Whenever you finish a Long Rest, you can change one of those weapon choices.',
           ]),
           ref: 'Weapon Mastery|Fighter|XPHB|1',
           className: 'Fighter',
@@ -267,11 +267,38 @@ describe('class choice normalization', () => {
       optionFilter: {
         entityType: 'item',
         itemTypes: ['simple weapon', 'martial weapon'],
+        requiresMastery: true,
       },
       replacement: { cadence: 'long-rest', maximumPerEvent: 1 },
     })
     expect(getRequiredChoiceSelectionCount(mastery!, 1)).toBe(3)
     expect(getRequiredChoiceSelectionCount(mastery!, 4)).toBe(4)
+  })
+
+  test('preserves weapon-range restrictions from item filter tags', () => {
+    const [mastery] = normalizeClassChoices(
+      {
+        name: 'Barbarian',
+        source: 'XPHB',
+        classTableGroups: [{ colLabels: ['Weapon Mastery'], rows: [[2]] }],
+      },
+      [
+        {
+          ...featureRef('Weapon Mastery', 1, [
+            'Choose two kinds of {@filter Simple|items|type=simple weapon;melee weapon=sand} or {@filter Martial Melee weapons|items|type=martial weapon;melee weapon=sand} of your choice whose Weapon Mastery properties you can use.',
+          ]),
+          ref: 'Weapon Mastery|Barbarian|XPHB|1',
+          className: 'Barbarian',
+        },
+      ],
+    ).choices
+
+    expect(mastery?.optionFilter).toEqual({
+      entityType: 'item',
+      itemTypes: ['simple weapon', 'martial weapon'],
+      weaponRanges: ['melee'],
+      requiresMastery: true,
+    })
   })
 
   test('normalizes 2024 fighting-style feat filters without guessing option names', () => {
@@ -325,6 +352,7 @@ describe('class choice normalization', () => {
     const druid = loadParsedClass('class-druid.json', 'Druid')
     const sorcerer = loadParsedClass('class-sorcerer.json', 'Sorcerer')
     const warlock = loadParsedClass('class-warlock.json', 'Warlock')
+    const barbarian = loadParsedClass('class-barbarian.json', 'Barbarian')
     const fighter = loadParsedClass('class-fighter.json', 'Fighter')
     const paladin = loadParsedClass('class-paladin.json', 'Paladin')
     const ranger = loadParsedClass('class-ranger.json', 'Ranger')
@@ -354,9 +382,24 @@ describe('class choice normalization', () => {
         }),
       ]),
     )
+    expect(barbarian.normalizedRules?.choices).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'Weapon Mastery',
+          optionFilter: expect.objectContaining({
+            weaponRanges: ['melee'],
+            requiresMastery: true,
+          }),
+        }),
+      ]),
+    )
     expect(fighter.normalizedRules?.choices).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: 'Weapon Mastery', kind: 'item' }),
+        expect.objectContaining({
+          label: 'Weapon Mastery',
+          kind: 'item',
+          optionFilter: expect.objectContaining({ requiresMastery: true }),
+        }),
         expect.objectContaining({ label: 'Fighting Style', kind: 'feat' }),
       ]),
     )
@@ -367,7 +410,10 @@ describe('class choice normalization', () => {
             label: 'Weapon Mastery',
             kind: 'item',
             maximumSelections: 2,
-            optionFilter: expect.objectContaining({ requiresProficiency: true }),
+            optionFilter: expect.objectContaining({
+              requiresProficiency: true,
+              requiresMastery: true,
+            }),
             replacement: { cadence: 'long-rest', maximumPerEvent: 'all' },
           }),
         ]),

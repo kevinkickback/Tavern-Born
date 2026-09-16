@@ -184,6 +184,8 @@ describe('class page controllers', () => {
       ],
       feats: [],
       items: [],
+      itemsBase: [],
+      itemMasteries: [],
       optionalFeatures: [],
     }
     const { result } = renderHook(() =>
@@ -287,6 +289,8 @@ describe('class page controllers', () => {
           classFeatures: [],
           feats: [],
           items: [],
+          itemsBase: [],
+          itemMasteries: [],
           optionalFeatures: [
             { name: 'Arcane Option', source: 'PHB', featureType: ['EI'] },
             { name: 'Other Arcane Option', source: 'PHB', featureType: ['OTHER'] },

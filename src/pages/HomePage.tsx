@@ -13,6 +13,7 @@ import {
   Users,
 } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { CharacterCard } from '@/components/character/CharacterCard'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
@@ -45,6 +46,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
 import {
   type CharacterDuplicateMode,
@@ -52,6 +54,7 @@ import {
   getDuplicateCharacterName,
 } from '@/lib/character/characterTransfer'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
@@ -71,6 +74,7 @@ interface CharacterListRowProps {
   onExport: (character: Character) => void
   onDuplicate: (character: Character) => void
   onDelete: (id: string) => void
+  highlighted?: boolean
 }
 
 function CharacterListRow({
@@ -83,16 +87,21 @@ function CharacterListRow({
   onExport,
   onDuplicate,
   onDelete,
+  highlighted = false,
 }: CharacterListRowProps) {
+  const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(highlighted)
   const name = character.name || 'Unnamed Character'
   const summary = [character.race, character.class].filter(Boolean).join(' · ') || 'Unspecified'
 
   return (
     <div
+      ref={routeFocusRef}
       className={cn(
         'relative flex min-h-14 items-center border-b border-border/70 px-3 transition-colors hover:bg-secondary/40',
         isActive && 'bg-secondary/60',
         isSelected && 'bg-primary/10',
+        routeFocusHighlighted && 'animate-route-focus',
       )}
     >
       {isActive && <span className="absolute inset-y-2 left-0 w-0.5 bg-primary" />}
@@ -168,7 +177,11 @@ function CharacterListRow({
   )
 }
 
-export function HomePage() {
+interface HomePageProps {
+  readinessFocus?: string | null
+}
+
+export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const characters = useCharacterStore((state) => state.characters)
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
@@ -190,6 +203,7 @@ export function HomePage() {
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
   const [duplicateTarget, setDuplicateTarget] = useState<Character | null>(null)
+  const focusCharacterName = readinessFocus === 'identity:name'
 
   const sortedCharacters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -375,6 +389,7 @@ export function HomePage() {
         isSelected={selectedCharacterIds.includes(character.id)}
         onToggleSelect={handleToggleCharacterSelection}
         cardSize={360}
+        highlighted={focusCharacterName && character.id === activeCharacterId}
       />
     ) : (
       <CharacterListRow
@@ -388,6 +403,7 @@ export function HomePage() {
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}
         onToggleSelect={handleToggleCharacterSelection}
+        highlighted={focusCharacterName && character.id === activeCharacterId}
       />
     )
 
@@ -702,4 +718,9 @@ export function HomePage() {
       </AlertDialog>
     </WorkspacePage>
   )
+}
+
+export function RoutedHomePage() {
+  const [searchParams] = useSearchParams()
+  return <HomePage readinessFocus={getReadinessFocus(searchParams)} />
 }

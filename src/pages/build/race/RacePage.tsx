@@ -9,7 +9,7 @@ import {
   Star,
 } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createSearchParams, Link } from 'react-router-dom'
+import { createSearchParams, Link, useSearchParams } from 'react-router-dom'
 import { GameContent } from '@/components/editor/GameContent'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
@@ -37,6 +37,7 @@ import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceM
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import {
@@ -58,6 +59,7 @@ import {
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -71,6 +73,7 @@ const RACE_BONUSES_LINK = {
 }
 
 export function BuildRacePage() {
+  const [searchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
   const calculationContext = useCharacterCalculationContext(character)
   const { races, feats, spells } = useFilteredGameData()
@@ -217,6 +220,16 @@ export function BuildRacePage() {
       choice.sourceTag.sourceName === selectedRace?.name ||
       choice.sourceTag.sourceName === character?.subrace,
   )
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedChoiceId = readinessFocus?.startsWith('choice:')
+    ? readinessFocus.slice('choice:'.length)
+    : undefined
+  const { ref: featChoicesRef, highlighted: featChoicesHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(
+      selectedRaceFeatChoices.some((choice) => choice.id === focusedChoiceId),
+    )
+  const { ref: raceSelectionRef, highlighted: raceSelectionHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:race')
 
   if (!character) {
     return <NoCharCard icon={<PersonSimple weight="duotone" />} noun="choose a race" />
@@ -265,7 +278,10 @@ export function BuildRacePage() {
                 </span>
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
-                <div>
+                <div
+                  ref={raceSelectionRef}
+                  className={cn('rounded-lg', raceSelectionHighlighted && 'animate-route-focus')}
+                >
                   {filteredRaces.map((race) => {
                     const raceKey = `${race.name}|${race.source ?? ''}`
                     const isSelected = selectedRaceKey === raceKey
@@ -348,7 +364,13 @@ export function BuildRacePage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-end justify-end gap-4">
+                    <div
+                      ref={featChoicesRef}
+                      className={cn(
+                        'flex flex-wrap items-end justify-end gap-4 rounded-lg',
+                        featChoicesHighlighted && 'animate-route-focus',
+                      )}
+                    >
                       {selectedRace && subraces.length > 0 && (
                         <div className="flex flex-col gap-1">
                           <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">

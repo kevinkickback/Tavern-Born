@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildGameDataLookups } from '@/lib/5etools/lookups'
 import { BuildReviewPage } from '@/pages/build/review/ReviewPage'
@@ -117,7 +117,7 @@ describe('BuildReviewPage', () => {
       <MemoryRouter initialEntries={['/build/review']}>
         <Routes>
           <Route path="/build/review" element={<BuildReviewPage />} />
-          <Route path="/build/proficiencies" element={<div>Proficiency destination</div>} />
+          <Route path="/build/proficiencies" element={<ProficiencyDestination />} />
         </Routes>
       </MemoryRouter>,
     )
@@ -142,5 +142,18 @@ describe('BuildReviewPage', () => {
 
     await user.click(screen.getByRole('button', { name: /Finish Test language choice/i }))
     expect(screen.getByText('Proficiency destination')).toBeTruthy()
+    expect(screen.getByTestId('destination-search').textContent).toBe(
+      '?attention=choice%3Atest-language-choice',
+    )
   })
 })
+
+function ProficiencyDestination() {
+  const location = useLocation()
+  return (
+    <div>
+      Proficiency destination
+      <span data-testid="destination-search">{location.search}</span>
+    </div>
+  )
+}

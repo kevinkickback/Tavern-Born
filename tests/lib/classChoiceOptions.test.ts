@@ -30,6 +30,8 @@ const emptyCatalogs = {
   classFeatures: [],
   feats: [],
   items: [],
+  itemsBase: [],
+  itemMasteries: [],
   optionalFeatures: [],
   itemTypeByAbbr: {},
   weaponProficiencies: [],
@@ -65,15 +67,32 @@ describe('class choice option resolution', () => {
       {
         ...emptyCatalogs,
         items: [
-          { name: 'Training Blade', source: 'HB', type: 'M', weaponCategory: 'simple' },
+          { name: 'Flaming Training Blade', source: 'HB', type: 'M', weaponCategory: 'simple' },
+        ],
+        itemsBase: [
+          {
+            name: 'Training Blade',
+            source: 'HB',
+            type: 'M',
+            weaponCategory: 'simple',
+            mastery: ['Sap|XPHB'],
+          },
           { name: 'Craft Kit', source: 'HB', type: 'T' },
           { name: 'Heavy Blade', source: 'HB', type: 'M', weaponCategory: 'martial' },
         ],
         itemTypeByAbbr: { T: 'Tool' },
+        itemMasteries: [{ name: 'Sap', source: 'XPHB', entries: ['Sap details'] }],
       },
     )
 
     expect(result.map((option) => option.reference.name)).toEqual(['Craft Kit', 'Training Blade'])
+    expect(result.find((option) => option.reference.name === 'Training Blade')?.masteries).toEqual([
+      { name: 'Sap', source: 'XPHB', entries: ['Sap details'] },
+    ])
+    expect(result.find((option) => option.reference.name === 'Training Blade')).toMatchObject({
+      weaponCategory: 'simple',
+      weaponRange: 'Melee',
+    })
   })
 
   test('limits proficiency-bound item choices to current weapon proficiencies', () => {
@@ -88,7 +107,7 @@ describe('class choice option resolution', () => {
       }),
       {
         ...emptyCatalogs,
-        items: [
+        itemsBase: [
           { name: 'Training Blade', source: 'HB', type: 'M', weaponCategory: 'simple' },
           { name: 'Heavy Blade', source: 'HB', type: 'M', weaponCategory: 'martial' },
         ],
@@ -97,6 +116,84 @@ describe('class choice option resolution', () => {
     )
 
     expect(result.map((option) => option.reference.name)).toEqual(['Training Blade'])
+  })
+
+  test('limits mastery choices to ordinary weapons with mastery properties', () => {
+    const result = resolveClassChoiceOptions(
+      choice({
+        kind: 'item',
+        optionFilter: {
+          entityType: 'item',
+          itemTypes: ['simple weapon', 'martial weapon'],
+          requiresMastery: true,
+        },
+      }),
+      {
+        ...emptyCatalogs,
+        itemsBase: [
+          {
+            name: 'Mastered Blade',
+            source: 'XPHB',
+            type: 'M',
+            weaponCategory: 'simple',
+            mastery: ['Sap|XPHB'],
+          },
+          { name: 'Legacy Blade', source: 'PHB', type: 'M', weaponCategory: 'simple' },
+        ],
+      },
+    )
+
+    expect(result.map((option) => option.reference.name)).toEqual(['Mastered Blade'])
+  })
+
+  test('enforces weapon-range restrictions independently from weapon category', () => {
+    const result = resolveClassChoiceOptions(
+      choice({
+        kind: 'item',
+        optionFilter: {
+          entityType: 'item',
+          itemTypes: ['simple weapon', 'martial weapon'],
+          weaponRanges: ['melee'],
+          requiresMastery: true,
+        },
+      }),
+      {
+        ...emptyCatalogs,
+        itemsBase: [
+          {
+            name: 'Simple Blade',
+            source: 'XPHB',
+            type: 'M',
+            weaponCategory: 'simple',
+            mastery: ['Sap|XPHB'],
+          },
+          {
+            name: 'Simple Bow',
+            source: 'XPHB',
+            type: 'R',
+            weaponCategory: 'simple',
+            mastery: ['Vex|XPHB'],
+          },
+          {
+            name: 'Martial Blade',
+            source: 'XPHB',
+            type: 'M',
+            weaponCategory: 'martial',
+            mastery: ['Sap|XPHB'],
+          },
+          {
+            name: 'Martial Bow',
+            source: 'XPHB',
+            type: 'R',
+            weaponCategory: 'martial',
+            mastery: ['Vex|XPHB'],
+          },
+        ],
+      },
+      [{ entityType: 'item', name: 'Martial Bow', source: 'XPHB', slotLevel: 1 }],
+    )
+
+    expect(result.map((option) => option.reference.name)).toEqual(['Martial Blade', 'Simple Blade'])
   })
 
   test('matches feat and optional-feature filters without name-based rules', () => {

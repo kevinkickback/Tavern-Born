@@ -25,6 +25,7 @@ import {
 } from '@/lib/calculations/abilityScores'
 import { getProficiencyBonus } from '@/lib/calculations/gameRules'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
+import { addReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -204,7 +205,7 @@ export function BuildReviewPage() {
                       key={issue.id}
                       type="button"
                       className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 text-left transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      onClick={() => navigate(issue.navigationTarget)}
+                      onClick={() => navigate(addReadinessFocus(issue.navigationTarget, issue.id))}
                     >
                       {issue.severity === 'blocking' ? (
                         <WarningCircle className="size-4 shrink-0 text-warning" weight="fill" />
