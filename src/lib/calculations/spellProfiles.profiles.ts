@@ -48,6 +48,19 @@ function uniqueSpellKeys(names: readonly string[]): Set<string> {
   return new Set(names.map(normalizeKey).filter(Boolean))
 }
 
+function hasIndependentClassOwnership(
+  character: Character,
+  entry: { name: string; source?: string },
+  spellName: string,
+): boolean {
+  return (character.provenance?.spells?.[normalizeKey(spellName)] ?? []).some(
+    (tag) =>
+      tag.sourceType === 'class' &&
+      tag.sourceName === entry.name &&
+      (tag.sourceRef ?? '') === (entry.source ?? ''),
+  )
+}
+
 export interface SpellProfileSelectionCounts {
   cantrips: number
   spells: number
@@ -248,12 +261,11 @@ export function ensureSpellProfiles(
     const previousFixedKeys = new Set(
       (existingProfile?.fixedSpells ?? []).map((name) => normalizeKey(name)),
     )
-    const retainedCantrips = (existingProfile?.cantrips ?? []).filter(
-      (name) => !previousFixedKeys.has(normalizeKey(name)),
-    )
-    const retainedSpellsKnown = (existingProfile?.spellsKnown ?? []).filter(
-      (name) => !previousFixedKeys.has(normalizeKey(name)),
-    )
+    const shouldRetain = (name: string) =>
+      !previousFixedKeys.has(normalizeKey(name)) ||
+      hasIndependentClassOwnership(character, entry, name)
+    const retainedCantrips = (existingProfile?.cantrips ?? []).filter(shouldRetain)
+    const retainedSpellsKnown = (existingProfile?.spellsKnown ?? []).filter(shouldRetain)
     const alwaysPreparedKeys = new Set(alwaysPreparedSubclassSpells.map(normalizeKey))
 
     next.push({

@@ -9,7 +9,11 @@ import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelec
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
-import { getClassFeatureGroups, getSubclassSelectionInfo } from '@/lib/5etools/classData'
+import {
+  getClassFeatureGroups,
+  getSelectedSubclassData,
+  getSubclassSelectionInfo,
+} from '@/lib/5etools/classData'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
@@ -123,7 +127,15 @@ export function BuildClassPage() {
       optionalfeatures,
     ],
   )
-  const spellController = useClassSpellChoiceController(viewingClassData)
+  const viewingSubclassSpellcastingData = useMemo(
+    () => (viewingEntry ? getSelectedSubclassData(viewingClassData, viewingEntry) : undefined),
+    [viewingClassData, viewingEntry],
+  )
+  const spellController = useClassSpellChoiceController(
+    viewingClassData,
+    viewingSubclassSpellcastingData,
+    classes as Class5e[],
+  )
   const {
     choicesByLevel: spellChoicesByLevel,
     pickerLevel: spellPickerLevel,
@@ -456,6 +468,7 @@ export function BuildClassPage() {
         subclassTitle={subclassTitle}
         subclasses={subclasses}
         viewingSubclass={viewingSubclass}
+        viewingSubclassSource={viewingEntry?.subclassSource}
         onSubclassConfirm={handleSubclassSelect}
         characterSnapshot={characterSnapshot}
         asiPickerLevel={asiPickerLevel}

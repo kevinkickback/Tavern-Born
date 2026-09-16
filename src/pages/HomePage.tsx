@@ -17,7 +17,6 @@ import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { CharacterCard } from '@/components/character/CharacterCard'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
-import { DuplicateCharacterDialog } from '@/components/character/DuplicateCharacterDialog'
 import { CharacterCreationWizard } from '@/components/character/wizard/CharacterCreationWizard'
 import {
   AlertDialog,
@@ -48,11 +47,7 @@ import {
 import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
-import {
-  type CharacterDuplicateMode,
-  duplicateCharacter,
-  getDuplicateCharacterName,
-} from '@/lib/character/characterTransfer'
+import { duplicateCharacter, getDuplicateCharacterName } from '@/lib/character/characterTransfer'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
@@ -202,7 +197,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
-  const [duplicateTarget, setDuplicateTarget] = useState<Character | null>(null)
   const focusCharacterName = readinessFocus === 'identity:name'
 
   const sortedCharacters = useMemo(() => {
@@ -330,20 +324,17 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   }, [])
 
   const handleDuplicateCharacter = useCallback(
-    (mode: CharacterDuplicateMode) => {
-      if (!duplicateTarget) return
-      const copy = duplicateCharacter(duplicateTarget, mode, {
+    (source: Character) => {
+      const copy = duplicateCharacter(source, {
         name: getDuplicateCharacterName(
-          duplicateTarget.name,
-          mode,
+          source.name,
           characters.map((character) => character.name),
         ),
       })
       addCharacter(copy)
-      setDuplicateTarget(null)
-      toast.success(mode === 'exact' ? 'Exact copy created' : 'Reusable build copy created')
+      toast.success('Character duplicated')
     },
-    [addCharacter, characters, duplicateTarget],
+    [addCharacter, characters],
   )
 
   const handleImportCharacter = () => {
@@ -383,7 +374,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         onLoad={handleLoadCharacter}
         onDelete={handleDeleteCharacter}
         onExport={handleExportCharacter}
-        onDuplicate={setDuplicateTarget}
+        onDuplicate={handleDuplicateCharacter}
         isActive={character.id === activeCharacterId}
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}
@@ -398,7 +389,7 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
         onLoad={handleLoadCharacter}
         onDelete={handleDeleteCharacter}
         onExport={handleExportCharacter}
-        onDuplicate={setDuplicateTarget}
+        onDuplicate={handleDuplicateCharacter}
         isActive={character.id === activeCharacterId}
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}
@@ -649,13 +640,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       </WorkspaceBody>
 
       <CharacterCreationWizard open={showCreateWizard} onOpenChange={setShowCreateWizard} />
-      <DuplicateCharacterDialog
-        character={duplicateTarget}
-        onOpenChange={(open) => {
-          if (!open) setDuplicateTarget(null)
-        }}
-        onDuplicate={handleDuplicateCharacter}
-      />
       <AlertDialog open={confirmSwitchOpen} onOpenChange={setConfirmSwitchOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

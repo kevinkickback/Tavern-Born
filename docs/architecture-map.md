@@ -86,8 +86,8 @@ Spellcasting note:
 - Character entity resolution uses src/lib/5etools/entityResolvers.ts. Source-qualified references resolve exact matches in the caller's primary lookup first, then exact raw-data fallbacks so persisted selections survive filter changes. Name-only fallback is used only when the reference has no source and is deterministic.
 - Character creation uses src/hooks/data/useWizardGameData.ts as its draft-scoped data boundary. Wizard steps receive filtered collections or resolved entities and never read the raw game-data store directly.
 - Character-library duplicate policy lives in `src/lib/character/characterTransfer.ts`; HomePage
-  owns file-picker/download orchestration and the duplicate-mode dialog. File transfer uses complete
-  `.tbc` character records; the reusable-build reset is available only as a local duplicate mode.
+  owns file-picker/download orchestration and immediately creates an independent exact copy when
+  Duplicate is selected. File transfer uses complete `.tbc` character records.
 - The Feats route is a composition shell. `src/pages/feats/hooks/useFeatsPageController.ts` owns
   route-local state/derived orchestration, while `src/pages/feats/components/FeatCards.tsx` owns
   cards and the inspector. Canonical mutations remain in the feat command/provenance layers.
@@ -162,7 +162,9 @@ Current implementation notes:
   subclass, and selected-feature rules text that explicitly grants an action, bonus action,
   reaction, or attack replacement. Persisted empty presentation descriptions are not treated as the
   canonical rules source. Passive prose is not promoted to an action, and non-action casting times
-  are omitted from the action-oriented list.
+  are omitted from the action-oriented list. Spell activity follows the effective class or subclass
+  casting model: known and level-only prepared spells are active selections, while only daily
+  prepared casters receive the Not prepared state.
   Source-derived and manual lists are independently collapsible for both actions and effects.
   Actions remains the default.
   Cross-page configuration links carry a presentation-only focus key so the destination card can

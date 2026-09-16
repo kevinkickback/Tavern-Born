@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
+const storageMocks = vi.hoisted(() => ({
+  getItem: vi.fn(async () => null),
+  setItem: vi.fn<(...args: unknown[]) => Promise<void>>(async () => undefined),
+  removeItem: vi.fn(async () => undefined),
+}))
+
 vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
+  createIdbStorage: () => storageMocks,
 }))
 
 import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
@@ -19,6 +21,9 @@ import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('characterStore', () => {
   beforeEach(() => {
+    storageMocks.getItem.mockReset().mockResolvedValue(null)
+    storageMocks.setItem.mockReset().mockResolvedValue(undefined)
+    storageMocks.removeItem.mockReset().mockResolvedValue(undefined)
     useCharacterStore.setState({
       characters: [],
       activeCharacterId: null,
@@ -174,7 +179,7 @@ describe('characterStore', () => {
     expect(state.hasUnsavedChanges()).toBe(true)
   })
 
-  test('saveActiveCharacter writes draft into persisted characters', () => {
+  test('saveActiveCharacter writes draft into persisted characters', async () => {
     const existing = makeCharacterFixture({ id: 'c2', name: 'Before Save' })
     useCharacterStore.setState({
       characters: [existing],
@@ -182,14 +187,14 @@ describe('characterStore', () => {
       activeCharacter: { ...existing, name: 'After Save' },
     })
 
-    useCharacterStore.getState().saveActiveCharacter()
+    await useCharacterStore.getState().saveActiveCharacter()
 
     const state = useCharacterStore.getState()
     expect(state.characters[0]?.name).toBe('After Save')
     expect(state.hasUnsavedChanges()).toBe(false)
   })
 
-  test('keeps an edit dirty when save and update occur in the same millisecond', () => {
+  test('keeps an edit dirty when save and update occur in the same millisecond', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
     const existing = makeCharacterFixture({
@@ -204,7 +209,7 @@ describe('characterStore', () => {
       isActiveCharacterDirty: false,
     })
 
-    useCharacterStore.getState().saveActiveCharacter()
+    await useCharacterStore.getState().saveActiveCharacter()
     useCharacterStore.getState().updateCharacter(existing.id, { name: 'After Save' })
 
     expect(useCharacterStore.getState().activeCharacter?.lastModified).toBe(
@@ -214,7 +219,7 @@ describe('characterStore', () => {
     vi.useRealTimers()
   })
 
-  test('detects an edit made in the same millisecond as a save', () => {
+  test('detects an edit made in the same millisecond as a save', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-09-13T12:00:00.000Z'))
     const existing = makeCharacterFixture({ id: 'same-millisecond', name: 'Before' })
@@ -225,13 +230,96 @@ describe('characterStore', () => {
       isActiveCharacterDirty: false,
     })
 
-    useCharacterStore.getState().saveActiveCharacter()
+    await useCharacterStore.getState().saveActiveCharacter()
     useCharacterStore.getState().updateCharacter(existing.id, { name: 'After' })
 
     const state = useCharacterStore.getState()
     expect(state.activeCharacter?.lastModified).toBe(state.characters[0]?.lastModified)
     expect(state.hasUnsavedChanges()).toBe(true)
     vi.useRealTimers()
+  })
+
+  test('keeps the draft dirty until the durable save finishes', async () => {
+    const existing = makeCharacterFixture({ id: 'pending-save', name: 'Before' })
+    const draft = { ...existing, name: 'After' }
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: draft,
+      isActiveCharacterDirty: true,
+    })
+    let finishWrite: (() => void) | undefined
+    storageMocks.setItem.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishWrite = resolve
+        }),
+    )
+
+    const save = useCharacterStore.getState().saveActiveCharacter()
+    await Promise.resolve()
+
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+    finishWrite?.()
+    await save
+    expect(useCharacterStore.getState().characters[0]?.name).toBe('After')
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+  })
+
+  test('preserves the saved snapshot and dirty draft when durable persistence fails', async () => {
+    const existing = makeCharacterFixture({ id: 'failed-save', name: 'Before' })
+    const draft = { ...existing, name: 'After' }
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: draft,
+      isActiveCharacterDirty: true,
+    })
+    storageMocks.setItem.mockRejectedValueOnce(
+      new DOMException('Storage full', 'QuotaExceededError'),
+    )
+
+    await expect(useCharacterStore.getState().saveActiveCharacter()).rejects.toMatchObject({
+      name: 'QuotaExceededError',
+    })
+
+    const state = useCharacterStore.getState()
+    expect(state.characters[0]?.name).toBe('Before')
+    expect(state.activeCharacter?.name).toBe('After')
+    expect(state.hasUnsavedChanges()).toBe(true)
+
+    await useCharacterStore.getState().saveActiveCharacter()
+    expect(useCharacterStore.getState().characters[0]?.name).toBe('After')
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+  })
+
+  test('does not clear an edit made while a save is pending', async () => {
+    const existing = makeCharacterFixture({ id: 'edit-during-save', name: 'Before' })
+    const draft = { ...existing, name: 'Saving' }
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: draft,
+      isActiveCharacterDirty: true,
+    })
+    let finishWrite: (() => void) | undefined
+    storageMocks.setItem.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishWrite = resolve
+        }),
+    )
+
+    const save = useCharacterStore.getState().saveActiveCharacter()
+    await Promise.resolve()
+    useCharacterStore.getState().updateCharacter(existing.id, { name: 'Edited Again' })
+    finishWrite?.()
+    await save
+
+    const state = useCharacterStore.getState()
+    expect(state.characters[0]?.name).toBe('Saving')
+    expect(state.activeCharacter?.name).toBe('Edited Again')
+    expect(state.hasUnsavedChanges()).toBe(true)
   })
 
   test('updateCharacter updates non-active character directly', () => {

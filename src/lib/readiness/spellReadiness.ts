@@ -1,7 +1,11 @@
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { buildSpellNameKeySet, getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
-import { getSpellProfileSelectionCounts } from '@/lib/calculations/spellProfiles.profiles'
+import {
+  ensureSpellProfiles,
+  getSpellProfileSelectionCounts,
+} from '@/lib/calculations/spellProfiles.profiles'
 import { spellChoiceReadinessId, spellProfileReadinessId } from '@/lib/navigation/readinessFocus'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, SpellProfile } from '@/types/character'
@@ -9,6 +13,14 @@ import { readinessIssue } from './readinessIssue'
 import type { CharacterReadinessIssue } from './types'
 
 type SpellcastingDetail = ReturnType<typeof buildSpellcastingClassDetails>[number]
+
+function classSpellChoiceTarget(detail: SpellcastingDetail): string {
+  const params = new URLSearchParams({
+    class: `${detail.className}|${detail.classSource ?? ''}`,
+    level: String(detail.classLevel),
+  })
+  return `/build/class?${params.toString()}`
+}
 
 function validateSpellProfile(
   profile: SpellProfile,
@@ -24,6 +36,7 @@ function validateSpellProfile(
         'spells',
         `Finish ${detail.className} cantrip choices`,
         `${detail.cantripLimit} are required; ${counts.cantrips} are stored.`,
+        classSpellChoiceTarget(detail),
       ),
     )
   }
@@ -39,6 +52,7 @@ function validateSpellProfile(
         'spells',
         `Finish ${detail.className} spell choices`,
         `${detail.knownSpellLimit} are required; ${counts.spells} are stored.`,
+        classSpellChoiceTarget(detail),
       ),
     )
   }
@@ -89,9 +103,12 @@ export function validateSpells(
     calculation.effects.declarations,
     calculation.effects.resolutionContext,
   )
-  const profileById = new Map(
-    character.spells.spellProfiles.map((profile) => [profile.id, profile]),
-  )
+  const spellProfiles = [...character.spells.spellProfiles]
+  const storedProfileIds = new Set(spellProfiles.map((profile) => profile.id))
+  for (const derivedProfile of ensureSpellProfiles(character, classMap)) {
+    if (!storedProfileIds.has(derivedProfile.id)) spellProfiles.push(derivedProfile)
+  }
+  const profileById = new Map(spellProfiles.map((profile) => [profile.id, profile]))
   const issues = details.flatMap((detail) => {
     const profile = profileById.get(detail.profileId)
     if (profile) return validateSpellProfile(profile, detail)
@@ -106,7 +123,7 @@ export function validateSpells(
     ]
   })
 
-  for (const profile of character.spells.spellProfiles) {
+  for (const profile of spellProfiles) {
     for (const choice of profile.choices ?? []) {
       if (choice.selected.length !== choice.count) {
         issues.push(
@@ -123,16 +140,21 @@ export function validateSpells(
   }
 
   if (spellsByKey) {
-    const knownNames = new Set(Object.values(spellsByKey).map((spell) => spell.name))
-    const selectedNames = character.spells.spellProfiles.flatMap((profile) => [
+    const knownNames = buildSpellNameKeySet(Object.values(spellsByKey).map((spell) => spell.name))
+    const selectedNames = spellProfiles.flatMap((profile) => [
       ...profile.cantrips,
       ...profile.spellsKnown,
       ...profile.preparedSpells,
       ...(profile.fixedSpells ?? []),
       ...(profile.alwaysPreparedSpells ?? []),
     ])
-    for (const name of new Set(selectedNames)) {
-      if (knownNames.has(name)) continue
+    const selectedByIdentity = new Map<string, string>()
+    for (const name of selectedNames) {
+      const key = getSpellNameKey(name)
+      if (key && !selectedByIdentity.has(key)) selectedByIdentity.set(key, name)
+    }
+    for (const [identity, name] of selectedByIdentity) {
+      if (knownNames.has(identity)) continue
       issues.push(
         readinessIssue(
           `source:spell:${name}`,

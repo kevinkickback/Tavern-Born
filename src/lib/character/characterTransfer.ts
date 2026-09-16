@@ -1,51 +1,15 @@
-import { createEmptyCharacter } from '@/lib/character/createCharacter'
 import type { Character } from '@/types/character'
-
-export type CharacterDuplicateMode = 'exact' | 'reusable-build'
 
 function cloneCharacter(character: Character): Character {
   return structuredClone(character)
 }
 
-function clearSlotUsage(character: Character): Character['spells'] {
-  const clear = (slots: Character['spells']['spellSlots']) =>
-    Object.fromEntries(
-      Object.entries(slots).map(([level, slot]) => [level, { ...slot, used: 0 }]),
-    ) as Character['spells']['spellSlots']
-
-  return {
-    ...character.spells,
-    spellSlots: clear(character.spells.spellSlots),
-    pactSpellSlots: character.spells.pactSpellSlots
-      ? clear(character.spells.pactSpellSlots)
-      : undefined,
-  }
-}
-
-/** Resets mutable session state while preserving build choices and source-qualified references. */
-function resetCharacterRuntimeState(character: Character): Character {
-  const baseline = createEmptyCharacter()
-  return {
-    ...cloneCharacter(character),
-    hitPoints: baseline.hitPoints,
-    hitPointsInitialized: false,
-    inspiration: false,
-    deathSaves: { successes: 0, failures: 0 },
-    conditions: [],
-    exhaustion: 0,
-    hitDiceUsed: 0,
-    classResources: {},
-    spells: clearSlotUsage(character),
-  }
-}
-
 export function getDuplicateCharacterName(
   sourceName: string,
-  mode: CharacterDuplicateMode,
   existingNames: readonly string[],
 ): string {
   const baseName = sourceName.trim() || 'Unnamed Character'
-  const suffix = mode === 'exact' ? 'Copy' : 'Build Copy'
+  const suffix = 'Copy'
   const candidate = `${baseName} (${suffix})`
   const normalizedNames = new Set(existingNames.map((name) => name.trim().toLocaleLowerCase()))
   if (!normalizedNames.has(candidate.toLocaleLowerCase())) return candidate
@@ -59,12 +23,10 @@ export function getDuplicateCharacterName(
 /** Creates an independent copy with fresh identity and timestamps. */
 export function duplicateCharacter(
   character: Character,
-  mode: CharacterDuplicateMode,
   options: { id?: string; name?: string; now?: string } = {},
 ): Character {
   const now = options.now ?? new Date().toISOString()
-  const copy =
-    mode === 'reusable-build' ? resetCharacterRuntimeState(character) : cloneCharacter(character)
+  const copy = cloneCharacter(character)
   return {
     ...copy,
     id: options.id ?? crypto.randomUUID(),

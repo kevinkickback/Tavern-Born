@@ -1,7 +1,8 @@
-import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/lib/5etools/classData'
 import { resolveItemReference } from '@/lib/5etools/itemResolvers'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
+import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import { formatRange } from '@/lib/calculations/spellUtils'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
@@ -20,6 +21,9 @@ import type { Character, Equipment, Feat, Feature } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
+import { isLevelOnlyPreparedCaster, isPreparedCaster } from './spellProfiles.casting'
+import { toClassProfileId } from './spellProfiles.constants'
+import { ensureSpellProfiles } from './spellProfiles.profiles'
 
 function isWeapon(item: Equipment): boolean {
   return !!item.dmg1 || !!item.weaponCategory || item.type === 'M' || item.type === 'R'
@@ -113,21 +117,68 @@ export function inferRulesTextActionKind(
 export function deriveSpellActions(
   character: Character,
   spellsByKey: Readonly<Record<string, Spell5e>>,
+  options: Pick<CharacterActionProjectionContext, 'classes' | 'race'> = {},
 ): CharacterAction[] {
-  const spellNames = new Set<string>()
-  const preparedNames = new Set<string>()
-  for (const profile of character.spells.spellProfiles) {
-    for (const name of [...profile.cantrips, ...profile.spellsKnown]) spellNames.add(name)
-    for (const name of [...profile.cantrips, ...profile.preparedSpells]) preparedNames.add(name)
-    if (profile.alwaysPrepared) {
-      for (const name of profile.spellsKnown) preparedNames.add(name)
-    }
-    for (const name of profile.alwaysPreparedSpells ?? []) preparedNames.add(name)
+  const classesById = new Map(
+    (options.classes ?? []).map((classData) => [
+      toClassProfileId(classData.name, classData.source),
+      classData,
+    ]),
+  )
+  const profiles =
+    classesById.size > 0 || options.race?.additionalSpells
+      ? ensureSpellProfiles(
+          character,
+          classesById,
+          options.race
+            ? {
+                name: options.race.name,
+                source: options.race.source,
+                additionalSpells: options.race.additionalSpells,
+              }
+            : undefined,
+        )
+      : character.spells.spellProfiles
+
+  const preparationRequiredByProfile = new Map<string, boolean>()
+  for (const entry of getCharacterClassEntries(character)) {
+    const classData = classesById.get(toClassProfileId(entry.name, entry.source))
+    const subclassData = getSelectedSubclassData(classData, entry)
+    const effectiveClassData = getEffectiveSpellcastingClassData(classData, subclassData)
+    if (!effectiveClassData?.spellcastingAbility) continue
+    preparationRequiredByProfile.set(
+      toClassProfileId(entry.name, entry.source),
+      isPreparedCaster(effectiveClassData) && !isLevelOnlyPreparedCaster(effectiveClassData),
+    )
   }
-  return [...spellNames].flatMap((reference) => {
+
+  const spellStates = new Map<string, { reference: string; active: boolean }>()
+  const addSpell = (reference: string, active: boolean) => {
+    const key = getSpellNameKey(reference)
+    if (!key) return
+    const existing = spellStates.get(key)
+    if (existing) existing.active ||= active
+    else spellStates.set(key, { reference, active })
+  }
+  for (const profile of profiles) {
+    const preparedKeys = new Set(
+      [...profile.preparedSpells, ...(profile.alwaysPreparedSpells ?? [])].map(getSpellNameKey),
+    )
+    const requiresPreparation = preparationRequiredByProfile.get(profile.id) ?? true
+    for (const reference of profile.cantrips) addSpell(reference, true)
+    for (const reference of profile.spellsKnown) {
+      addSpell(
+        reference,
+        !!profile.alwaysPrepared ||
+          !requiresPreparation ||
+          preparedKeys.has(getSpellNameKey(reference)),
+      )
+    }
+  }
+
+  return [...spellStates.values()].flatMap(({ reference, active }) => {
     const spell = resolveSpellReference(reference, spellsByKey)
     if (!spell) return []
-    const active = preparedNames.has(reference) || preparedNames.has(spell.name)
     return [
       {
         id: `spell:${encodeURIComponent(`${spell.name}|${spell.source}`)}`,
@@ -320,7 +371,7 @@ export function deriveCharacterActions(
   return mergeCharacterActions(
     [
       ...deriveWeaponActions(character, context),
-      ...deriveSpellActions(character, context.spellsByKey ?? {}),
+      ...deriveSpellActions(character, context.spellsByKey ?? {}, context),
       ...deriveRulesTextActions(character, context.race, context),
     ],
     character.manualActions,

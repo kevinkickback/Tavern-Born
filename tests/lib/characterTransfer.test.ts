@@ -28,7 +28,7 @@ function makeUsedCharacter() {
 describe('character transfer', () => {
   test('creates an independent exact copy with fresh identity metadata', () => {
     const source = makeUsedCharacter()
-    const copy = duplicateCharacter(source, 'exact', {
+    const copy = duplicateCharacter(source, {
       id: 'exact-copy',
       name: 'Source Hero (Copy)',
       now: '2026-09-15T00:00:00.000Z',
@@ -46,34 +46,10 @@ describe('character transfer', () => {
     expect(source.hitPoints.current).toBe(7)
   })
 
-  test('resets runtime state without losing source-qualified build choices', () => {
-    const source = makeUsedCharacter()
-    const copy = duplicateCharacter(source, 'reusable-build', {
-      id: 'build-copy',
-      name: 'Source Hero (Build Copy)',
-    })
-
-    expect(copy.race).toBe(source.race)
-    expect(copy.raceSource).toBe(source.raceSource)
-    expect(copy.hitPoints).toEqual({ max: 0, current: 0, temporary: 0 })
-    expect(copy.hitPointsInitialized).toBe(false)
-    expect(copy.inspiration).toBe(false)
-    expect(copy.deathSaves).toEqual({ successes: 0, failures: 0 })
-    expect(copy.conditions).toEqual([])
-    expect(copy.exhaustion).toBe(0)
-    expect(copy.hitDiceUsed).toBe(0)
-    expect(copy.classResources).toEqual({})
-    expect(copy.spells.spellSlots[1]?.used).toBe(0)
-    expect(copy.spells.pactSpellSlots?.[1]?.used).toBe(0)
-  })
-
   test('generates collision-free copy names', () => {
-    expect(getDuplicateCharacterName('Hero', 'exact', ['Hero (Copy)'])).toBe('Hero (Copy 2)')
-    expect(
-      getDuplicateCharacterName('Hero', 'reusable-build', [
-        'Hero (Build Copy)',
-        'Hero (Build Copy 2)',
-      ]),
-    ).toBe('Hero (Build Copy 3)')
+    expect(getDuplicateCharacterName('Hero', ['Hero (Copy)'])).toBe('Hero (Copy 2)')
+    expect(getDuplicateCharacterName('Hero', ['Hero (Copy)', 'Hero (Copy 2)'])).toBe(
+      'Hero (Copy 3)',
+    )
   })
 })

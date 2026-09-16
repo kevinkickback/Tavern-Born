@@ -103,6 +103,56 @@ describe('BuildClassLevelsPanel', () => {
     expect(completeBadge?.querySelector('svg')).toBeTruthy()
   })
 
+  test('renders replacement without an empty choose action at replacement-only levels', () => {
+    const onOpenSpellSwap = vi.fn()
+    const character = makeCharacterFixture({
+      class: 'Bard',
+      classSource: 'PHB',
+      level: 12,
+      classProgression: [{ name: 'Bard', source: 'PHB', levels: 12 }],
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Bard|PHB',
+            type: 'class',
+            label: 'Bard (Lv 12)',
+            className: 'Bard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Charm Person'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+    render(
+      <BuildClassLevelsPanel
+        {...makeProps({
+          character,
+          classProgression: character.classProgression ?? [],
+          selectedClassTab: 'Bard|PHB',
+          viewingClass: 'Bard',
+          viewingClassSource: 'PHB',
+          viewingClassLevel: 12,
+          levelsToShow: [12],
+          asiLevels: [],
+          spellChoicesByLevel: new Map([
+            [12, { cantrips: 0, spells: 0, maxSpellLevel: 6, canSwap: true }],
+          ]),
+          onOpenSpellSwap,
+        })}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Level 12 Features'))
+    expect(screen.getByText('Spell Replacement')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Replace' }))
+    expect(onOpenSpellSwap).toHaveBeenCalledWith(12)
+  })
+
   test('does not count a retained unavailable class option as complete', () => {
     render(
       <BuildClassLevelsPanel

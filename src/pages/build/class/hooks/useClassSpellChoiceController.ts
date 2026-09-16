@@ -1,9 +1,18 @@
 import { useMemo, useState } from 'react'
 import { useSpellProvenanceMutations } from '@/hooks/character/useSpellProvenanceMutations'
-import { getClassSpellGainAtLevel } from '@/lib/5etools/classData'
-import type { Class5e } from '@/types/5etools'
+import {
+  getClassSpellGainAtLevel,
+  getEffectiveSpellcastingClassData,
+} from '@/lib/5etools/classData'
+import type { Class5e, Subclass5e } from '@/types/5etools'
 
-export function useClassSpellChoiceController(viewingClassData?: Class5e) {
+const EMPTY_CLASSES: readonly Class5e[] = []
+
+export function useClassSpellChoiceController(
+  viewingClassData?: Class5e,
+  viewingSubclassData?: Subclass5e,
+  standardProgressionClasses: Iterable<Class5e> = EMPTY_CLASSES,
+) {
   const [pickerLevel, setPickerLevel] = useState<number | null>(null)
   const [swapLevel, setSwapLevel] = useState<number | null>(null)
   const [swapDrop, setSwapDrop] = useState<string | null>(null)
@@ -13,13 +22,17 @@ export function useClassSpellChoiceController(viewingClassData?: Class5e) {
       number,
       { cantrips: number; spells: number; maxSpellLevel: number; canSwap: boolean }
     >()
-    if (!viewingClassData) return choices
+    const spellcastingData = getEffectiveSpellcastingClassData(
+      viewingClassData,
+      viewingSubclassData,
+    )
+    if (!spellcastingData) return choices
     for (let level = 1; level <= 20; level += 1) {
-      const gain = getClassSpellGainAtLevel(viewingClassData, level)
-      if (gain.cantrips > 0 || gain.spells > 0) choices.set(level, gain)
+      const gain = getClassSpellGainAtLevel(spellcastingData, level, standardProgressionClasses)
+      if (gain.cantrips > 0 || gain.spells > 0 || gain.canSwap) choices.set(level, gain)
     }
     return choices
-  }, [viewingClassData])
+  }, [standardProgressionClasses, viewingClassData, viewingSubclassData])
 
   return {
     choicesByLevel,

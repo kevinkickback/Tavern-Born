@@ -40,34 +40,42 @@ export function BuildClassSpellSection({
   onExpandDetails,
   getOrdinalForm,
 }: BuildClassSpellSectionProps) {
+  const hasNewSelections = spellGain.cantrips > 0 || spellGain.spells > 0
+
   return (
     <div className="rounded-lg border border-accent-secondary/30 bg-accent-secondary/5 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5">
         <div className="flex items-center gap-2 min-w-0">
           <MagicWand className="h-4 w-4 text-accent-secondary flex-shrink-0" weight="duotone" />
           <div className="min-w-0">
-            <div className="text-sm font-semibold">Spell Selection</div>
+            <div className="text-sm font-semibold">
+              {hasNewSelections ? 'Spell Selection' : 'Spell Replacement'}
+            </div>
             <div className="text-xs text-muted-foreground">
-              {[
-                spellGain.cantrips > 0 &&
-                  `${spellGain.cantrips} cantrip${spellGain.cantrips > 1 ? 's' : ''}`,
-                spellGain.spells > 0 &&
-                  `${spellGain.spells} spell${spellGain.spells > 1 ? 's' : ''}${spellGain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(spellGain.maxSpellLevel)}-level)` : ''}`,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
+              {hasNewSelections
+                ? [
+                    spellGain.cantrips > 0 &&
+                      `${spellGain.cantrips} cantrip${spellGain.cantrips > 1 ? 's' : ''}`,
+                    spellGain.spells > 0 &&
+                      `${spellGain.spells} spell${spellGain.spells > 1 ? 's' : ''}${spellGain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(spellGain.maxSpellLevel)}-level)` : ''}`,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : 'Replace one spell you know'}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-          <Button
-            variant={chosenNames.length > 0 ? 'outline' : 'default'}
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => onOpenSpellPicker(level)}
-          >
-            {chosenNames.length > 0 ? 'Edit' : 'Choose'}
-          </Button>
+          {hasNewSelections && (
+            <Button
+              variant={chosenNames.length > 0 ? 'outline' : 'default'}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => onOpenSpellPicker(level)}
+            >
+              {chosenNames.length > 0 ? 'Edit' : 'Choose'}
+            </Button>
+          )}
           {spellGain.canSwap && hasExistingKnown && (
             <Button
               variant={swapDoneAtLevel ? 'ghost' : 'outline'}

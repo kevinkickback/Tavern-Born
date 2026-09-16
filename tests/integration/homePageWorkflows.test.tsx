@@ -210,7 +210,7 @@ describe('home page integration workflows', () => {
     expect(useCharacterStore.getState().characters.map((c) => c.id)).toEqual(['c2'])
   })
 
-  test('duplicates a reusable build with independent reset runtime state', async () => {
+  test('immediately creates an independent exact copy', async () => {
     const user = userEvent.setup()
     const source = makeCharacterFixture({
       id: 'source',
@@ -227,15 +227,14 @@ describe('home page integration workflows', () => {
 
     render(<HomePage />)
     await user.click(screen.getByRole('button', { name: 'duplicate-source' }))
-    expect(screen.getByRole('heading', { name: 'Duplicate character' })).toBeTruthy()
-    await user.click(screen.getByRole('button', { name: /Reusable build copy/ }))
 
     const copy = useCharacterStore
       .getState()
       .characters.find((character) => character.id !== source.id)
-    expect(copy?.name).toBe('Source Hero (Build Copy)')
-    expect(copy?.hitPoints).toEqual({ max: 0, current: 0, temporary: 0 })
-    expect(copy?.conditions).toEqual([])
+    expect(screen.queryByRole('heading', { name: 'Duplicate character' })).toBeNull()
+    expect(copy?.name).toBe('Source Hero (Copy)')
+    expect(copy?.hitPoints).toMatchObject({ current: 4, temporary: 2 })
+    expect(copy?.conditions).toEqual(source.conditions)
     expect(source.hitPoints.current).toBe(4)
   })
 

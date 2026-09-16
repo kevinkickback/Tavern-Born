@@ -55,7 +55,10 @@ new tests land and do not lower them to merge a change.
 - Spell profile/multiclass spellcasting calculations in src/lib/calculations/spellProfiles.ts,
   including independent spellbook/known, cantrip, and preparation capacities for 2014 and 2024
   casters. Readiness and presentation regressions verify fixed or always-prepared grants and
-  case-variant duplicates do not satisfy or inflate player-choice quotas.
+  case-variant duplicates do not satisfy or inflate player-choice quotas. Ownership regressions
+  cover class selections that overlap subclass grants, case-insensitive/source-qualified readiness,
+  replacement-only levels, reverse-order spell-swap rollback on level-down, and 2014 subclass-owned
+  spellcasting profiles and class-page choice lists.
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
 - HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution
   recalculation, manual flat/per-level adjustments, active typed-source display, exact overrides,
@@ -199,9 +202,8 @@ new tests land and do not lower them to merge a change.
 - Character lifecycle E2E (import -> portrait edit -> save -> reload) in tests/e2e/lifecycle.spec.ts
 - Complete create-character E2E (required wizard selections -> review -> create -> reload persistence)
 - Character-library E2E for metadata search, cancel/confirm deletion, persisted deletion, and distinct malformed/schema-invalid import errors
-- Character copy and transfer coverage for exact deep copies, reusable runtime reset,
-  full-capacity class-resource initialization, collision-free naming, complete-character `.tbc`
-  export, and schema-validated import.
+- Character copy and transfer coverage for immediate exact deep copies, collision-free naming,
+  complete-character `.tbc` export, and schema-validated import.
 - Active-character spell workflow E2E (profile switching, add/remove, prepared toggle) in tests/e2e/spells-active.spec.ts
 - Startup cache-branch full coverage in tests/hooks/useDataInit.test.tsx (unconfigured, stale, fresh, offline, source-changed, direct-load)
 - Provenance reconciliation edge cases in tests/lib/provenance/reconciliation.test.ts (mixed-source retention, background choice removal, multiclass-safe class reconciliation)
@@ -242,7 +244,8 @@ new tests land and do not lower them to merge a change.
   workspace-shell/preview-canvas presentation coverage
 - Action projection coverage resolves parsed class, subclass, selected-feature, and every persisted
   feat-owner container instead of relying on empty saved presentation descriptions. Spellcasting
-  detail coverage also verifies 2014 known and 2024 prepared limits owned by casting subclasses.
+  detail coverage also verifies 2014 known and 2024 prepared limits owned by casting subclasses;
+  action activation distinguishes known and level-only prepared casters from daily prepared casters.
 - Class-rule normalization includes corpus-backed 2014 Paladin Channel Divinity progression checks.
 - Importable, ruleset-specific PDF kitchen-sink coverage in
   tests/fixtures/pdf-kitchen-sink-2014.tbc, tests/fixtures/pdf-kitchen-sink-2024.tbc, and
@@ -275,7 +278,8 @@ new tests land and do not lower them to merge a change.
 
 Store tests:
 - Mock IndexedDB adapter module in test setup.
-- Assert both draft behavior and save behavior for active character lifecycle.
+- Assert draft behavior plus pending success, rejection/retry, and edits made during Save for the
+  active character lifecycle.
 
 Ingestion tests:
 - Validate schema checks and parser outputs for each supported data family.

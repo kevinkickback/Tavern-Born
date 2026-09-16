@@ -127,7 +127,7 @@ export function AppHeader() {
     }
   }, [activeCharacter])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!activeCharacter) return
 
     if (!hasUnsavedChanges) {
@@ -135,8 +135,15 @@ export function AppHeader() {
       return
     }
 
-    saveActiveCharacter()
-    toast.success('Character saved')
+    try {
+      await saveActiveCharacter()
+      toast.success('Character saved')
+    } catch (error) {
+      console.error('Failed to save character:', error)
+      toast.error('Could not save character', {
+        description: 'Your changes are still available. Check storage space and try again.',
+      })
+    }
   }
 
   const dismissStatMenusHint = () => {

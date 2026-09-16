@@ -446,6 +446,108 @@ describe('getCharacterReadiness', () => {
     )
   })
 
+  test('derives the missing class profile for a 2014 Arcane Trickster', () => {
+    const arcaneTrickster = {
+      name: 'Arcane Trickster',
+      shortName: 'Arcane Trickster',
+      source: 'PHB',
+      className: 'Rogue',
+      classSource: 'PHB',
+      spellcastingAbility: 'int',
+      casterProgression: '1/3',
+      cantripProgression: [0, 0, 2],
+      spellsKnownProgression: [0, 0, 3],
+      additionalSpells: [{ known: { '3': ['mage hand#c'] } }],
+    }
+    const rogue = {
+      name: 'Rogue',
+      source: 'PHB',
+      hd: { faces: 8 },
+      subclasses: [arcaneTrickster],
+    } as Class5e
+    const character = makeCharacterFixture({
+      class: 'Rogue',
+      classSource: 'PHB',
+      subclass: 'Arcane Trickster',
+      subclassSource: 'PHB',
+      level: 3,
+      classProgression: [
+        {
+          name: 'Rogue',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Arcane Trickster',
+          subclassSource: 'PHB',
+        },
+      ],
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [],
+      },
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      classesByKey: { 'Rogue|PHB': rogue },
+    })
+
+    const result = getCharacterReadiness(character, { calculation })
+    const spellIssues = result.blockingIssues.filter((issue) => issue.section === 'spells')
+
+    expect(spellIssues.map((issue) => issue.id)).toEqual([
+      'spells:cantrips:class:Rogue|PHB',
+      'spells:known:class:Rogue|PHB',
+    ])
+    expect(spellIssues.map((issue) => issue.explanation)).toEqual([
+      '2 are required; 0 are stored.',
+      '3 are required; 0 are stored.',
+    ])
+    for (const issue of spellIssues) {
+      const target = new URL(issue.navigationTarget, 'https://tavern-born.test')
+      expect(target.pathname).toBe('/build/class')
+      expect(target.searchParams.get('class')).toBe('Rogue|PHB')
+      expect(target.searchParams.get('level')).toBe('3')
+    }
+    expect(spellIssues.some((issue) => issue.id === 'spells:profile:class:Rogue|PHB')).toBe(false)
+  })
+
+  test('matches selected spell references case-insensitively and by name-only compatibility', () => {
+    const character = makeCharacterFixture({
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'special:unrestricted',
+            type: 'special',
+            label: 'Bonus Spells',
+            cantrips: [],
+            spellsKnown: ['dispel magic', 'DISPEL MAGIC|PHB'],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
+      },
+    })
+    const calculation = createCharacterCalculationContext(character, {})
+
+    const result = getCharacterReadiness(character, {
+      calculation,
+      spellsByKey: {
+        'Dispel Magic|PHB': {
+          name: 'Dispel Magic',
+          source: 'PHB',
+          level: 3,
+          school: 'A',
+          time: [],
+          range: { type: 'point', distance: { type: 'self' } },
+          duration: [],
+        },
+      },
+    })
+
+    expect(result.blockingIssues.filter((issue) => issue.id.startsWith('source:spell:'))).toEqual(
+      [],
+    )
+  })
+
   test('validates Wizard spellbook, cantrip, and prepared limits independently', () => {
     const wizard = {
       name: 'Wizard',

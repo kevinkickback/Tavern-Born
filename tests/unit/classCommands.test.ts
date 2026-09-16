@@ -11,6 +11,7 @@ import {
   selectSubclass,
   updateCharacterLevel,
 } from '@/lib/character/commands/classCommands'
+import { swapClassSpellAtLevel } from '@/lib/character/commands/spellCommands'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
@@ -105,6 +106,134 @@ describe('Class Commands', () => {
 
     expect(result.characterPatch.level).toBe(4)
     expect(result.characterPatch.classProgression?.[0]?.levels).toBe(4)
+  })
+
+  test('level-down reverses a spell replacement earned at the removed level', () => {
+    const base = makeCharacterFixture({
+      class: 'Bard',
+      classSource: 'PHB',
+      level: 3,
+      classProgression: [{ name: 'Bard', source: 'PHB', levels: 3 }],
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Bard|PHB',
+            type: 'class',
+            label: 'Bard (Lv 3)',
+            className: 'Bard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Charm Person'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+    const bardTag = {
+      sourceType: 'class' as const,
+      sourceName: 'Bard',
+      sourceRef: 'PHB',
+      grantType: 'choice' as const,
+      label: 'Bard',
+      spellGrantedAtLevel: 1,
+      spellAttributionMode: 'exact' as const,
+    }
+    const ledger = {
+      ...(base.provenance ?? emptyProvenance()),
+      spells: { 'charm person': [bardTag] },
+    }
+    const swapped = swapClassSpellAtLevel(base, ledger, {
+      className: 'Bard',
+      classSource: 'PHB',
+      swapAtLevel: 3,
+      removedName: 'Charm Person',
+      addedName: 'Hold Person',
+    })
+    const character = {
+      ...base,
+      ...swapped.characterPatch,
+      provenance: swapped.provenanceUpdate,
+    }
+
+    const result = applyClassProgressionUpdate(character, swapped.provenanceUpdate, [
+      { name: 'Bard', source: 'PHB', levels: 2 },
+    ])
+    const profile = result.characterPatch.spells?.spellProfiles[0]
+
+    expect(profile?.spellsKnown).toEqual(['Charm Person'])
+    expect(profile?.spellSwaps).toBeUndefined()
+    expect(result.provenanceUpdate.spells['charm person']?.[0]).toMatchObject({
+      sourceName: 'Bard',
+      spellGrantedAtLevel: 1,
+    })
+    expect(result.provenanceUpdate.spells['hold person']).toBeUndefined()
+  })
+
+  test('level-down reverses successive spell replacements in reverse order', () => {
+    const base = makeCharacterFixture({
+      class: 'Bard',
+      classSource: 'PHB',
+      level: 5,
+      classProgression: [{ name: 'Bard', source: 'PHB', levels: 5 }],
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Bard|PHB',
+            type: 'class',
+            label: 'Bard (Lv 5)',
+            className: 'Bard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Charm Person'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+    const bardTag = {
+      sourceType: 'class' as const,
+      sourceName: 'Bard',
+      sourceRef: 'PHB',
+      grantType: 'choice' as const,
+      label: 'Bard',
+      spellGrantedAtLevel: 1,
+      spellAttributionMode: 'exact' as const,
+    }
+    const first = swapClassSpellAtLevel(
+      base,
+      { ...(base.provenance ?? emptyProvenance()), spells: { 'charm person': [bardTag] } },
+      {
+        className: 'Bard',
+        classSource: 'PHB',
+        swapAtLevel: 3,
+        removedName: 'Charm Person',
+        addedName: 'Hold Person',
+      },
+    )
+    const afterFirst = { ...base, ...first.characterPatch, provenance: first.provenanceUpdate }
+    const second = swapClassSpellAtLevel(afterFirst, first.provenanceUpdate, {
+      className: 'Bard',
+      classSource: 'PHB',
+      swapAtLevel: 5,
+      removedName: 'Hold Person',
+      addedName: 'Hypnotic Pattern',
+    })
+    const character = {
+      ...afterFirst,
+      ...second.characterPatch,
+      provenance: second.provenanceUpdate,
+    }
+
+    const result = applyClassProgressionUpdate(character, second.provenanceUpdate, [
+      { name: 'Bard', source: 'PHB', levels: 2 },
+    ])
+
+    expect(result.characterPatch.spells?.spellProfiles[0]?.spellsKnown).toEqual(['Charm Person'])
+    expect(result.characterPatch.spells?.spellProfiles[0]?.spellSwaps).toBeUndefined()
   })
 
   test('addMulticlass adds a second class entry', () => {

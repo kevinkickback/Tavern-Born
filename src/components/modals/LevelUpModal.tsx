@@ -47,7 +47,6 @@ import {
   applyLevelUp,
   type LevelUpHitPointChoice,
 } from '@/lib/character/commands/classCommands'
-import { removeSpellFromCharacter } from '@/lib/character/commands/spellCommands'
 import {
   calculateHitPointAdjustmentTotal,
   calculateMaxHP,
@@ -56,12 +55,7 @@ import {
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
 import { getClassIconUrl } from '@/lib/classIcons'
-import {
-  getSpellsGrantedAtLevel,
-  normalizeKey,
-  removeSpellChoicesAtLevel,
-  removeSpellGrantsAtLevel,
-} from '@/lib/provenance'
+import { getSpellsGrantedAtLevel } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -327,33 +321,6 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       targetClassLevel,
       targetClassSource,
     )
-    let updatedLedger = removeSpellChoicesAtLevel(
-      ledger,
-      targetClassName,
-      targetClassLevel,
-      targetClassSource,
-    )
-    updatedLedger = removeSpellGrantsAtLevel(
-      updatedLedger,
-      targetClassName,
-      targetClassLevel,
-      targetClassSource,
-    )
-    let spellProfileUpdate: Parameters<typeof updateCharacter>[1] = {}
-    if (affectedSpells.length > 0) {
-      let updatedChar = character
-      for (const spellName of affectedSpells) {
-        if ((updatedLedger.spells[normalizeKey(spellName)] ?? []).length > 0) continue
-        const result = removeSpellFromCharacter(updatedChar, updatedLedger, spellName)
-        updatedChar = {
-          ...updatedChar,
-          ...result.characterPatch,
-        } as typeof character
-        updatedLedger = result.provenanceUpdate
-      }
-      spellProfileUpdate = { spells: updatedChar.spells }
-    }
-
     let newProgression = classProgression.map((e, i) =>
       i === targetIdx ? { ...e, levels: e.levels - 1 } : e,
     )
@@ -361,11 +328,10 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       newProgression = newProgression.filter((_, i) => i !== targetIdx)
     }
 
-    const progressionResult = applyClassProgressionUpdate(character, updatedLedger, newProgression)
+    const progressionResult = applyClassProgressionUpdate(character, ledger, newProgression)
     updateCharacter(character.id, {
       ...progressionResult.characterPatch,
       provenance: progressionResult.provenanceUpdate,
-      ...spellProfileUpdate,
     })
 
     setLevelHistory((prev) => prev.slice(0, -1))

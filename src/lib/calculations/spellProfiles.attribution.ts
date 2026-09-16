@@ -244,3 +244,42 @@ export function isSpellOnClassList(
     return entrySource === targetSource
   })
 }
+
+export function isSpellOnSubclassList(
+  spell: {
+    classes?: {
+      fromSubclass?: Array<{
+        class: { name?: string; source?: string }
+        subclass: { name?: string; shortName?: string; source?: string }
+      }>
+    }
+  },
+  className: string | undefined,
+  classSource: string | undefined,
+  subclassName: string | undefined,
+  subclassSource: string | undefined,
+): boolean {
+  if (!className || !subclassName) return false
+
+  const targetClassName = className.trim().toLowerCase()
+  const targetClassSource = (classSource ?? '').trim().toLowerCase()
+  const targetSubclassName = subclassName.trim().toLowerCase()
+  const targetSubclassSource = (subclassSource ?? '').trim().toLowerCase()
+
+  return (spell.classes?.fromSubclass ?? []).some((entry) => {
+    if (entry.class.name?.trim().toLowerCase() !== targetClassName) return false
+    const entryClassSource = entry.class.source?.trim().toLowerCase()
+    if (targetClassSource && entryClassSource && entryClassSource !== targetClassSource)
+      return false
+
+    const entrySubclassNames = [entry.subclass.name, entry.subclass.shortName]
+      .filter((name): name is string => typeof name === 'string')
+      .map((name) => name.trim().toLowerCase())
+    if (!entrySubclassNames.includes(targetSubclassName)) return false
+
+    const entrySubclassSource = entry.subclass.source?.trim().toLowerCase()
+    return (
+      !targetSubclassSource || !entrySubclassSource || entrySubclassSource === targetSubclassSource
+    )
+  })
+}

@@ -13,7 +13,7 @@ import {
   getSpellNameKey,
   getSpellReferenceKey,
 } from '@/lib/calculations/spellIdentity'
-import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
+import { isSpellOnClassList, isSpellOnSubclassList } from '@/lib/calculations/spellProfiles'
 import {
   formatCastingTime,
   formatComponents,
@@ -40,6 +40,8 @@ export interface SpellSelectionModalProps {
   allowedLevels?: Set<string>
   className?: string
   classSource?: string
+  subclassName?: string
+  subclassSource?: string
   classListOverrides?: Set<string>
   onConfirm: (names: string[]) => void
 }
@@ -154,6 +156,8 @@ function matchSpell(
   activeFilters: ActiveFilters,
   className: string | undefined,
   classSource: string | undefined,
+  subclassName: string | undefined,
+  subclassSource: string | undefined,
   classListOverrides: Set<string> | undefined,
   enforceClassList: boolean,
   strictLevels: boolean,
@@ -170,6 +174,7 @@ function matchSpell(
     enforceClassList &&
     className &&
     !isSpellOnClassList(spell, className, classSource) &&
+    !isSpellOnSubclassList(spell, className, classSource, subclassName, subclassSource) &&
     !classListOverrides?.has(getSpellNameKey(spell.name))
   ) {
     return false
@@ -294,6 +299,8 @@ export function SpellSelectionModal({
   allowedLevels,
   className,
   classSource,
+  subclassName,
+  subclassSource,
   classListOverrides,
   onConfirm,
 }: SpellSelectionModalProps) {
@@ -382,6 +389,8 @@ export function SpellSelectionModal({
           activeFilters,
           className,
           classSource,
+          subclassName,
+          subclassSource,
           classListOverrideKeys,
           !activeFilters.visibility?.has('ignore-class-list'),
           !!allowedLevels,

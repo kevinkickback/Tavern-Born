@@ -70,6 +70,7 @@ interface BuildClassModalsProps {
   subclassTitle: string
   subclasses: Subclass5e[]
   viewingSubclass?: string
+  viewingSubclassSource?: string
   onSubclassConfirm: (subclass: Subclass5e) => void
 
   characterSnapshot: PrereqCharacterSnapshot
@@ -112,6 +113,7 @@ export function BuildClassModals({
   subclassTitle,
   subclasses,
   viewingSubclass,
+  viewingSubclassSource,
   onSubclassConfirm,
   characterSnapshot,
   asiPickerLevel,
@@ -225,6 +227,8 @@ export function BuildClassModals({
               spells={classSpells}
               className={viewingClass}
               classSource={viewingClassSource}
+              subclassName={viewingSubclass}
+              subclassSource={viewingSubclassSource}
               initialSelectedNames={initialSelectedNames}
               lockedNames={lockedNames}
               characterSpellNames={characterSpellNames}

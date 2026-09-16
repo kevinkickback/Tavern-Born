@@ -88,8 +88,10 @@ interface CharacterState {
   deleteCharacter: (id: string) => void
   setActiveCharacter: (id: string | null) => void
   createNewCharacter: (initial: Partial<Character>) => Character
-  saveActiveCharacter: () => void
+  saveActiveCharacter: () => Promise<void>
 }
+
+let activeSavePromise: Promise<void> | null = null
 
 function coerceCharacterShape(character: unknown): Character | null {
   if (!isRecord(character)) return null
@@ -507,48 +509,101 @@ export const useCharacterStore = create<CharacterState>()(
         return get().addCharacter(character)
       },
 
-      saveActiveCharacter: () =>
-        set((state) => {
-          if (!state.activeCharacter) {
-            return {}
-          }
+      saveActiveCharacter: () => {
+        const waitForPreviousSave = activeSavePromise?.catch(() => undefined) ?? Promise.resolve()
+        const savePromise = waitForPreviousSave.then(async () => {
+          const stateAtStart = get()
+          const draftAtStart = stateAtStart.activeCharacter
+          if (!draftAtStart) return
 
-          const now = new Date().toISOString()
-          const savedCharacter = {
-            ...state.activeCharacter,
-            lastModified: now,
-          }
-          const parsed = parseCharacterData(savedCharacter)
+          const parsed = parseCharacterData({
+            ...draftAtStart,
+            lastModified: new Date().toISOString(),
+          })
           if (!parsed.data) {
             console.error('saveActiveCharacter validation failed:', {
-              id: state.activeCharacter.id,
+              id: draftAtStart.id,
               error: parsed.error,
             })
-            return {}
+            throw new Error(parsed.error ?? 'Character could not be saved')
           }
-          const validatedCharacter = parsed.data
 
-          const existingIndex = state.characters.findIndex(
-            (char) => char.id === validatedCharacter.id,
+          const validatedCharacter = parsed.data
+          const previousPersistedCharacter = stateAtStart.characters.find(
+            (character) => character.id === validatedCharacter.id,
           )
 
-          if (existingIndex === -1) {
-            return {
-              characters: [...state.characters, validatedCharacter],
-              activeCharacter: validatedCharacter,
-              isActiveCharacterDirty: false,
+          try {
+            await set((state) => {
+              const existingIndex = state.characters.findIndex(
+                (character) => character.id === validatedCharacter.id,
+              )
+              const characters = [...state.characters]
+              if (existingIndex === -1) characters.push(validatedCharacter)
+              else characters[existingIndex] = validatedCharacter
+
+              return {
+                characters,
+                // The durable write has not completed yet, so closing or switching
+                // must continue to warn about this draft.
+                isActiveCharacterDirty: true,
+              }
+            })
+          } catch (error) {
+            try {
+              await set((state) => {
+                const stagedIndex = state.characters.indexOf(validatedCharacter)
+                if (stagedIndex === -1) return {}
+
+                const characters = [...state.characters]
+                if (previousPersistedCharacter) {
+                  characters[stagedIndex] = previousPersistedCharacter
+                } else {
+                  characters.splice(stagedIndex, 1)
+                }
+                return {
+                  characters,
+                  ...(state.activeCharacterId === draftAtStart.id
+                    ? { isActiveCharacterDirty: true }
+                    : {}),
+                }
+              })
+            } catch {
+              // The failed save did not replace the durable record. Keep the
+              // recoverable draft dirty even if the best-effort rollback write fails.
             }
+            throw error
           }
 
-          const characters = [...state.characters]
-          characters[existingIndex] = validatedCharacter
-
-          return {
-            characters,
-            activeCharacter: validatedCharacter,
-            isActiveCharacterDirty: false,
+          try {
+            await set((state) => {
+              if (state.activeCharacterId !== draftAtStart.id) return {}
+              if (state.activeCharacter !== draftAtStart) {
+                return { isActiveCharacterDirty: true }
+              }
+              return {
+                activeCharacter: validatedCharacter,
+                isActiveCharacterDirty: false,
+              }
+            })
+          } catch {
+            // The character snapshot was already durably written above. This
+            // follow-up only persists the same characters array after clearing
+            // transient draft state.
           }
-        }),
+        })
+
+        activeSavePromise = savePromise
+        void savePromise.then(
+          () => {
+            if (activeSavePromise === savePromise) activeSavePromise = null
+          },
+          () => {
+            if (activeSavePromise === savePromise) activeSavePromise = null
+          },
+        )
+        return savePromise
+      },
     }),
     {
       name: 'character-storage',

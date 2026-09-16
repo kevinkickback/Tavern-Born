@@ -13,6 +13,7 @@ import {
   isLevelOnlyPreparedCaster,
   isPreparedCaster,
   isSpellOnClassList,
+  isSpellOnSubclassList,
   isTruePreparedCaster,
   SPECIAL_SPELL_PROFILE_ID,
   SPECIAL_SPELL_PROFILE_LABEL,
@@ -147,6 +148,54 @@ describe('spellProfiles', () => {
     expect(known.preparedSpells).not.toContain('mage armor')
   })
 
+  test('preserves class-owned spells and cantrips that overlap a removed subclass grant', () => {
+    const classTag = {
+      sourceType: 'class' as const,
+      sourceName: 'Sorcerer',
+      sourceRef: 'PHB',
+      grantType: 'choice' as const,
+      label: 'Sorcerer',
+      spellGrantedAtLevel: 1,
+      spellAttributionMode: 'exact' as const,
+    }
+    const character = makeCharacterFixture({
+      class: 'Sorcerer',
+      classSource: 'PHB',
+      level: 5,
+      classProgression: [{ name: 'Sorcerer', source: 'PHB', levels: 5 }],
+      provenance: {
+        ...makeBaseProvenance(),
+        spells: {
+          'dispel magic': [classTag],
+          'mage hand': [classTag],
+        },
+      },
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Sorcerer|PHB',
+            type: 'class',
+            label: 'Sorcerer (Lv 5)',
+            className: 'Sorcerer',
+            classSource: 'PHB',
+            cantrips: ['Mage Hand', 'Subclass Cantrip'],
+            spellsKnown: ['Dispel Magic', 'Subclass Spell'],
+            preparedSpells: [],
+            fixedSpells: ['mage hand', 'subclass cantrip', 'dispel magic', 'subclass spell'],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+
+    const [profile] = ensureSpellProfiles(character)
+
+    expect(profile.cantrips).toEqual(['Mage Hand'])
+    expect(profile.spellsKnown).toEqual(['Dispel Magic'])
+    expect(profile.fixedSpells).toBeUndefined()
+  })
+
   test('ensureSpellProfiles models Battle Smith spells as locked, always-prepared Artificer spells', () => {
     const character = makeCharacterFixture({
       class: 'Artificer',
@@ -219,6 +268,23 @@ describe('spellProfiles', () => {
 
   test('isSpellOnClassList does not treat missing class lists as universally available', () => {
     expect(isSpellOnClassList({}, 'Wizard', 'PHB')).toBe(false)
+  })
+
+  test('isSpellOnSubclassList matches source-qualified subclass lists', () => {
+    const spell = {
+      classes: {
+        fromSubclass: [
+          {
+            class: { name: 'Rogue', source: 'PHB' },
+            subclass: { name: 'Arcane Trickster', shortName: 'Arcane Trickster', source: 'PHB' },
+          },
+        ],
+      },
+    }
+
+    expect(isSpellOnSubclassList(spell, 'Rogue', 'PHB', 'Arcane Trickster', 'PHB')).toBe(true)
+    expect(isSpellOnSubclassList(spell, 'Rogue', 'XPHB', 'Arcane Trickster', 'PHB')).toBe(false)
+    expect(isSpellOnSubclassList(spell, 'Rogue', 'PHB', 'Thief', 'PHB')).toBe(false)
   })
 
   test('collectKnownSpells includes always-prepared unrestricted spells', () => {

@@ -8,7 +8,8 @@ This document defines state ownership, mutation rules, and persistence behavior.
 - File: src/store/characterStore.ts
 - Owns: characters collection, activeCharacterId, activeCharacter draft.
 - Primary write API: updateCharacter(id, patch).
-- Save API: saveActiveCharacter().
+- Save API: awaitable `saveActiveCharacter()`; callers report success only after IndexedDB confirms
+  the persisted character snapshot.
 
 2. Game data store
 - File: src/store/gameDataStore.ts
@@ -48,6 +49,9 @@ The character store exposes four write paths. Use the correct one for the contex
 
 Rules that apply to the three user-edit paths:
 - Active character changes are draft updates until `saveActiveCharacter()` is called.
+- Saving keeps the draft dirty while persistence is pending. A rejected write restores the prior
+  saved snapshot and leaves the draft recoverable for retry; edits made during a pending save remain
+  dirty after the earlier revision succeeds.
 - Non-active character updates patch the persisted collection directly.
 - No direct object mutation outside store reducers.
 
@@ -90,27 +94,24 @@ Derived examples (do not store as canonical):
 ## Unsaved Changes and App Close Safety
 
 - `hasUnsavedChanges()` is O(1): user mutations set the transient
-  `isActiveCharacterDirty` flag, saving clears it, and clean-draft reconciliation preserves the
-  clean state. Reconciliation never clears an existing dirty state. Timestamp comparison remains as
-  a compatibility safeguard for imported or injected state.
+  `isActiveCharacterDirty` flag, a durable save of the current draft revision clears it, and
+  clean-draft reconciliation preserves the clean state. Pending or rejected saves remain dirty, and
+  reconciliation never clears an existing dirty state. Timestamp comparison remains as a
+  compatibility safeguard for imported or injected state.
 - src/main.tsx syncs unsaved state to Electron.
 - electron/main.ts shows close confirmation when unsaved edits exist.
 - App preferences and home-page layout changes do not participate in character dirty-state tracking.
 
 ## Library Copy and Character Transfers
 
-`src/lib/character/characterTransfer.ts` owns copy/reset policy as pure transformations. An exact
-duplicate deep-clones the saved character and replaces its ID, name, and timestamps. A reusable
-build copy additionally resets current/temporary HP, conditions, exhaustion, inspiration, death
-saves, hit-die use, class-resource use, and both spell-slot usage pools while retaining all
-source-qualified build selections. Its class-resource map is cleared so the normal derived fallback
-initializes every resource at full capacity.
+`src/lib/character/characterTransfer.ts` owns duplicate policy as a pure transformation. Duplicate
+deep-clones the complete saved character and replaces its ID, collision-free copy name, and
+timestamps. Selecting Duplicate from either character-library view performs this operation
+immediately; the copy does not share nested state with its source.
 
 File transfer exports the complete character as `.tbc`; import also permits generic `.json` files
 and validates either extension through the same character schema before adding it to the store.
-There is no separate template envelope or template import/export path. Users who want a reset copy
-of an existing build can use the local reusable-build duplicate mode, which produces an independent
-structured clone without creating a second file format.
+There is no separate template envelope, reset-copy mode, or template import/export path.
 
 ## Dirty State and lastModified Timestamps
 
@@ -120,10 +121,11 @@ user edits. `lastModified` remains persisted metadata for display, sorting, and 
 ### Why This Works
 
 Every user mutation path (`updateCharacter`, `updateActiveCharacter`, and
-`updateActiveCharacterDetails`) updates `lastModified` and marks the active draft dirty. Saving writes
-the draft into `characters[]` and clears the flag. `reconcileCharacter()` is reserved for silent
-system corrections and writes the draft and persisted copy atomically without creating an unsaved
-edit.
+`updateActiveCharacterDetails`) updates `lastModified` and marks the active draft dirty. Saving stages
+the draft in `characters[]`, awaits that exact persistence write, then clears the flag only when the
+active draft revision has not changed. A failed write restores the previous saved snapshot.
+`reconcileCharacter()` is reserved for silent system corrections and writes the draft and persisted
+copy atomically without creating an unsaved edit.
 
 `lastModified` also serves UI display purposes:
 - Character cards (HomePage, PortraitCardPreview)
@@ -165,6 +167,9 @@ edit.
   materialized in `character.features` with choice-ID provenance; replacement, level-down, and
   class removal rebuild those grants atomically. Feat and item options remain persisted selections
   until their dedicated domain handlers can apply setup and effects without guessing semantics.
+- `applyClassProgressionUpdate()` owns level-down reconciliation. It retracts spell grants earned at
+  removed levels, reverses `spellSwaps` above the retained class level in descending event order, and
+  prunes those events before returning one atomic spell/provenance patch.
 
 ## Spell State Model
 
@@ -185,11 +190,21 @@ edit.
   through `applyRest()` and a preview dialog, then applies spells, class resources, hit dice, and HP
   in one `updateCharacter(id, patch)` call. The resulting draft still requires the normal Save action.
 - Class-level spell source attribution is tracked in provenance spell source tags.
+- Subclass spell projection may deduplicate a display entry with an independently class-owned spell,
+  but reconciliation consults that class provenance before retracting the previous fixed grant. The
+  independent cantrip or spell therefore survives subclass replacement, removal, and level loss.
 - Attribution may be exact (class page level picker) or inferred (spells page lowest-eligible assignment).
 - Class-page per-level spell displays are derived from provenance attribution metadata.
 - Class-page spell edits replace only the exact choices owned by the edited class level. The spell
   profile and provenance ledger are committed by one command, while choices from other levels and
   compatibility-era profile entries without level attribution remain intact.
+- Replacement-only class levels remain present in the class-page choice model even when they grant no
+  new picks. Source readiness compares selected references with the catalog through the same
+  normalized, case-insensitive name identity used by spell profiles.
+- Subclass-owned spellcasting progressions are overlaid on their base class for class-page choices
+  and Review validation. Review derives an absent class profile before checking quotas, so selecting
+  a spellcasting subclass produces actionable cantrip/spell requirements instead of a missing-profile
+  error.
 - Multiclass slot derivation follows 5e caster progression rules, including Artificer using ceiling half-caster contribution.
 - Shared spell-slot maxima come from parsed PHB/XPHB full-caster progression rows. A progression containing any 2024 class uses the XPHB table; otherwise it uses PHB. Missing canonical rows produce no synthetic slots and are reported during development.
 - This is a hard cutover model; legacy spell arrays and `spellsByLevel` are not used.
@@ -398,7 +413,9 @@ Consumers should read maximum HP through `getEffectiveMaxHP()` or `useHitPoints(
 The Actions & Effects page is a projection, not a second owner of source data. It combines
 `useCharacterActions()` output and the calculation context's typed effect declarations into
 read-only source rows. Equipment state determines whether weapon actions and item effects are
-active; race, class, feat, and spell actions remain owned by their respective builder workflows.
+active; known-caster and level-only-prepared spell selections are active without a separate daily
+preparation step, while daily prepared casters still require the spell in `preparedSpells`. Race,
+class, feat, and spell actions remain owned by their respective builder workflows.
 Only `character.manualActions[]` and `character.manualEffects[]` can be created, edited, or removed
 from this page. The split workbench places those forms on the left and the complete current lists on
 the right without changing ownership or introducing a parallel mutation path.

@@ -11,7 +11,12 @@ import {
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
 import { mergeSkillState } from '@/lib/calculations/skills'
+import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
+import {
+  removeSpellFromCharacter,
+  rollbackClassSpellSwapsAboveLevel,
+} from '@/lib/character/commands/spellCommands'
 import {
   removeSourceGrantedEquipment,
   upsertGrantedEquipment,
@@ -22,9 +27,12 @@ import {
   applyClassGrants,
   applyMulticlassGrants,
   diffProficiencyGrants,
+  getSpellsGrantedAtLevel,
   makeSourceTag,
   reconcileClassChange,
   removeGrantsBySourceRef,
+  removeSpellChoicesAtLevel,
+  removeSpellGrantsAtLevel,
   stripItemTag,
 } from '@/lib/provenance'
 import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
@@ -310,7 +318,63 @@ export function applyClassProgressionUpdate(
       ),
   )
 
+  let workingCharacter = character
   let provenanceUpdate = ledger
+
+  for (const previousEntry of previousProgression) {
+    const retainedEntry = nextProgression.find(
+      (entry) =>
+        entry.name === previousEntry.name && (entry.source ?? '') === (previousEntry.source ?? ''),
+    )
+    if (!retainedEntry || retainedEntry.levels >= previousEntry.levels) continue
+
+    for (let level = previousEntry.levels; level > retainedEntry.levels; level -= 1) {
+      const affectedSpells = getSpellsGrantedAtLevel(
+        provenanceUpdate,
+        previousEntry.name,
+        level,
+        previousEntry.source,
+      )
+      provenanceUpdate = removeSpellChoicesAtLevel(
+        provenanceUpdate,
+        previousEntry.name,
+        level,
+        previousEntry.source,
+      )
+      provenanceUpdate = removeSpellGrantsAtLevel(
+        provenanceUpdate,
+        previousEntry.name,
+        level,
+        previousEntry.source,
+      )
+
+      for (const spellName of affectedSpells) {
+        if ((provenanceUpdate.spells[normalizeKey(spellName)] ?? []).length > 0) continue
+        const result = removeSpellFromCharacter(workingCharacter, provenanceUpdate, spellName, {
+          profileId: toClassProfileId(previousEntry.name, previousEntry.source),
+        })
+        workingCharacter = {
+          ...workingCharacter,
+          ...result.characterPatch,
+          provenance: result.provenanceUpdate,
+        }
+        provenanceUpdate = result.provenanceUpdate
+      }
+    }
+
+    const swapRollback = rollbackClassSpellSwapsAboveLevel(workingCharacter, provenanceUpdate, {
+      className: previousEntry.name,
+      classSource: previousEntry.source,
+      retainedLevel: retainedEntry.levels,
+    })
+    workingCharacter = {
+      ...workingCharacter,
+      ...swapRollback.characterPatch,
+      provenance: swapRollback.provenanceUpdate,
+    }
+    provenanceUpdate = swapRollback.provenanceUpdate
+  }
+
   for (const removed of removedEntries) {
     provenanceUpdate = removeGrantsBySourceRef(
       provenanceUpdate,
@@ -320,7 +384,6 @@ export function applyClassProgressionUpdate(
     )
   }
 
-  let workingCharacter = character
   const retainedClassFeatChoices: ClassFeatChoice[] = []
   for (const choice of character.classFeatChoices ?? []) {
     const matchingEntry = nextProgression.find(

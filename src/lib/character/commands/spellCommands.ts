@@ -230,6 +230,85 @@ export function swapClassSpellAtLevel(
   }
 }
 
+/** Reverse and prune class spell replacements earned above the retained class level. */
+export function rollbackClassSpellSwapsAboveLevel(
+  character: Character,
+  ledger: ProvenanceLedger,
+  params: {
+    className: string
+    classSource?: string
+    retainedLevel: number
+  },
+): SpellCommandResult {
+  const { className, classSource, retainedLevel } = params
+  const profileId = toClassProfileId(className, classSource)
+  const existingProfile = character.spells.spellProfiles.find((profile) => profile.id === profileId)
+  const swapsToReverse = Object.entries(existingProfile?.spellSwaps ?? {})
+    .map(([level, swap]) => ({ level: Number(level), swap }))
+    .filter(({ level }) => level > retainedLevel)
+    .sort((a, b) => b.level - a.level)
+
+  if (!existingProfile || swapsToReverse.length === 0) {
+    return { characterPatch: {}, provenanceUpdate: ledger }
+  }
+
+  let profile = existingProfile
+  let provenanceUpdate = ledger
+
+  for (const { swap } of swapsToReverse) {
+    const addedKey = getSpellNameKey(swap.added)
+    if (addedKey === getSpellNameKey(swap.removed)) continue
+    const addedTags = provenanceUpdate.spells[normalizeKey(swap.added)] ?? []
+    const transferredTags = addedTags.filter((tag) => isClassChoiceTag(tag, className, classSource))
+    const retainedAddedTags = addedTags.filter(
+      (tag) => !isClassChoiceTag(tag, className, classSource),
+    )
+    const spells = { ...provenanceUpdate.spells }
+    if (retainedAddedTags.length > 0) spells[normalizeKey(swap.added)] = retainedAddedTags
+    else delete spells[normalizeKey(swap.added)]
+    provenanceUpdate = { ...provenanceUpdate, spells }
+    for (const tag of transferredTags) {
+      provenanceUpdate = addSpellGrant(provenanceUpdate, swap.removed, tag)
+    }
+
+    const fixedKeys = buildSpellNameKeySet(profile.fixedSpells ?? [])
+    const addedStillOwned = retainedAddedTags.length > 0 || fixedKeys.has(addedKey)
+    profile = {
+      ...profile,
+      spellsKnown: dedupeSpellNames([
+        ...profile.spellsKnown.filter(
+          (name) => getSpellNameKey(name) !== addedKey || addedStillOwned,
+        ),
+        swap.removed,
+      ]),
+      preparedSpells: profile.preparedSpells.filter(
+        (name) => getSpellNameKey(name) !== addedKey || addedStillOwned,
+      ),
+    }
+  }
+
+  const retainedSwaps = Object.fromEntries(
+    Object.entries(existingProfile.spellSwaps ?? {}).filter(
+      ([level]) => Number(level) <= retainedLevel,
+    ),
+  )
+  profile = {
+    ...profile,
+    ...(Object.keys(retainedSwaps).length > 0 ? { spellSwaps: retainedSwaps } : {}),
+  }
+  if (Object.keys(retainedSwaps).length === 0) delete profile.spellSwaps
+
+  return {
+    characterPatch: createSpellProfilePatch(
+      character,
+      character.spells.spellProfiles.map((candidate) =>
+        candidate.id === profileId ? profile : candidate,
+      ),
+    ),
+    provenanceUpdate,
+  }
+}
+
 /**
  * Add a spell (cantrip or spell) to a character's spell profile.
  *

@@ -101,6 +101,88 @@ describe('class page controllers', () => {
     ])
   })
 
+  test('keeps replacement-only spell levels available', () => {
+    const classEntity = makeClassFixture({
+      spellcastingAbility: 'cha',
+      cantripProgression: [2, 2],
+      spellsKnownProgression: [2, 2],
+    })
+
+    const { result } = renderHook(() => useClassSpellChoiceController(classEntity))
+
+    expect(result.current.choicesByLevel.get(2)).toMatchObject({
+      cantrips: 0,
+      spells: 0,
+      canSwap: true,
+    })
+  })
+
+  test('derives level-three spell choices from the 2014 Arcane Trickster subclass', () => {
+    const arcaneTrickster = {
+      name: 'Arcane Trickster',
+      shortName: 'Arcane Trickster',
+      source: 'PHB',
+      className: 'Rogue',
+      classSource: 'PHB',
+      spellcastingAbility: 'int',
+      casterProgression: '1/3',
+      cantripProgression: [0, 0, 2],
+      spellsKnownProgression: [0, 0, 3],
+    } as Subclass5e
+    const rogue = makeClassFixture({
+      name: 'Rogue',
+      casterProgression: undefined,
+      spellcastingAbility: undefined,
+      classTableGroups: [],
+      subclasses: [arcaneTrickster],
+    })
+    const wizard = makeClassFixture()
+
+    const { result } = renderHook(() =>
+      useClassSpellChoiceController(rogue, arcaneTrickster, [wizard]),
+    )
+
+    expect(result.current.choicesByLevel.get(3)).toMatchObject({
+      cantrips: 2,
+      spells: 3,
+      maxSpellLevel: 1,
+      canSwap: true,
+    })
+  })
+
+  test('derives level-three spell choices from the 2014 Eldritch Knight subclass', () => {
+    const eldritchKnight = {
+      name: 'Eldritch Knight',
+      shortName: 'Eldritch Knight',
+      source: 'PHB',
+      className: 'Fighter',
+      classSource: 'PHB',
+      spellcastingAbility: 'int',
+      casterProgression: '1/3',
+      cantripProgression: [0, 0, 2],
+      spellsKnownProgression: [0, 0, 3],
+    } as Subclass5e
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      casterProgression: undefined,
+      spellcastingAbility: undefined,
+      classTableGroups: [],
+      subclasses: [eldritchKnight],
+    })
+    const wizard = makeClassFixture()
+
+    const { result } = renderHook(() =>
+      useClassSpellChoiceController(fighter, eldritchKnight, [wizard]),
+    )
+
+    expect(result.current.choicesByLevel.get(3)).toMatchObject({
+      cantrips: 2,
+      spells: 3,
+      maxSpellLevel: 1,
+      canSwap: true,
+    })
+  })
+
   test('adds a later ASI feat without replacing the earlier class feat', () => {
     const classEntity = useGameDataStore.getState().gameData?.classes[0]
     const classLookup = useGameDataStore.getState().gameData?.lookups?.classesByKey ?? {}

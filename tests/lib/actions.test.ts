@@ -195,6 +195,100 @@ describe('character action projection', () => {
     ])
   })
 
+  test('keeps a 2014 Warlock known spell active without preparing it', () => {
+    const spell = {
+      name: 'Test Warlock Spell',
+      source: 'TEST',
+      level: 1,
+      school: 'T',
+      time: [{ number: 1, unit: 'bonus' }],
+      range: { type: 'point', distance: { type: 'feet', amount: 30 } },
+      duration: [{ type: 'instant' }],
+      entries: ['Test warlock rules.'],
+    } as Spell5e
+    const warlock = {
+      name: 'Warlock',
+      source: 'PHB',
+      spellcastingAbility: 'cha',
+      casterProgression: 'pact',
+      spellsKnownProgression: [2],
+    } as Class5e
+    const character = makeCharacterFixture({
+      class: 'Warlock',
+      classSource: 'PHB',
+      classProgression: [{ name: 'Warlock', source: 'PHB', levels: 1 }],
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Warlock|PHB',
+            type: 'class',
+            label: 'Warlock (Lv 1)',
+            className: 'Warlock',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: [spell.name],
+            preparedSpells: [],
+          },
+        ],
+      },
+    })
+
+    expect(
+      deriveSpellActions(character, buildSpellLookup([spell]), { classes: [warlock] }),
+    ).toEqual([
+      expect.objectContaining({
+        name: spell.name,
+        active: true,
+        inactiveReason: undefined,
+      }),
+    ])
+  })
+
+  test('still marks an unprepared spell inactive for a daily prepared caster', () => {
+    const spell = {
+      name: 'Test Prepared Spell',
+      source: 'TEST',
+      level: 1,
+      school: 'T',
+      time: [{ number: 1, unit: 'action' }],
+      range: { type: 'self' },
+      duration: [{ type: 'instant' }],
+      entries: ['Test prepared-caster rules.'],
+    } as Spell5e
+    const cleric = {
+      name: 'Cleric',
+      source: 'PHB',
+      spellcastingAbility: 'wis',
+      casterProgression: 'full',
+      preparedSpells: '<$level$> + <$wis_mod$>',
+    } as Class5e
+    const character = makeCharacterFixture({
+      class: 'Cleric',
+      classSource: 'PHB',
+      classProgression: [{ name: 'Cleric', source: 'PHB', levels: 1 }],
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Cleric|PHB',
+            type: 'class',
+            label: 'Cleric (Lv 1)',
+            className: 'Cleric',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: [spell.name],
+            preparedSpells: [],
+          },
+        ],
+      },
+    })
+
+    expect(
+      deriveSpellActions(character, buildSpellLookup([spell]), { classes: [cleric] })[0],
+    ).toMatchObject({ active: false, inactiveReason: 'Not prepared' })
+  })
+
   test('classifies explicit action grants while excluding passive feature prose', () => {
     const character = makeCharacterFixture({
       features: [

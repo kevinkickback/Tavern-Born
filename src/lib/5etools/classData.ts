@@ -79,6 +79,7 @@ export interface SpellGainAtLevel {
 export function getClassSpellGainAtLevel(
   classData: Class5e | undefined,
   level: number,
+  standardProgressionClasses: Iterable<Class5e> = [],
 ): SpellGainAtLevel {
   if (!classData?.spellcastingAbility) {
     return { cantrips: 0, spells: 0, maxSpellLevel: 0, canSwap: false }
@@ -119,7 +120,7 @@ export function getClassSpellGainAtLevel(
   return {
     cantrips: newCantrips,
     spells: newSpells,
-    maxSpellLevel: getMaxSpellLevelForClassLevel(classData, level),
+    maxSpellLevel: getMaxSpellLevelForClassLevel(classData, level, standardProgressionClasses),
     canSwap:
       level >= 2 &&
       (Array.isArray(classData.spellsKnownProgression) ||
@@ -192,6 +193,29 @@ export function getSelectedSubclassData(
     (subclass) =>
       subclass.name === entry.subclass && (subclass.source ?? '') === (entry.subclassSource ?? ''),
   )
+}
+
+/** Overlay subclass-owned spellcasting fields on the base class data. */
+export function getEffectiveSpellcastingClassData(
+  classData: Class5e | undefined,
+  subclassData: Subclass5e | undefined,
+): Class5e | undefined {
+  if (!classData || !subclassData) return classData
+  return {
+    ...classData,
+    spellcastingAbility: subclassData.spellcastingAbility ?? classData.spellcastingAbility,
+    casterProgression: subclassData.casterProgression ?? classData.casterProgression,
+    isSpellcaster: subclassData.isSpellcaster ?? classData.isSpellcaster,
+    spellSlotProgression: subclassData.spellSlotProgression ?? classData.spellSlotProgression,
+    cantripProgression: subclassData.cantripProgression ?? classData.cantripProgression,
+    spellsKnownProgression: subclassData.spellsKnownProgression ?? classData.spellsKnownProgression,
+    spellsKnownProgressionFixed:
+      subclassData.spellsKnownProgressionFixed ?? classData.spellsKnownProgressionFixed,
+    preparedSpells: subclassData.preparedSpells ?? classData.preparedSpells,
+    preparedSpellsProgression:
+      subclassData.preparedSpellsProgression ?? classData.preparedSpellsProgression,
+    preparedSpellsChange: subclassData.preparedSpellsChange ?? classData.preparedSpellsChange,
+  }
 }
 
 export function getSubclassFeatureGroups(

@@ -66,8 +66,12 @@ Flow:
 3. UI hooks derive display and computed values from activeCharacter.
 4. Edits call updateCharacter(id, patch).
 5. If id is activeCharacter, patch applies to in-memory draft.
-6. saveActiveCharacter persists draft into characters array.
-7. Persist middleware writes updated state to IndexedDB.
+6. `saveActiveCharacter()` stages the current draft revision in the characters array while keeping
+   the unsaved guard active.
+7. Persist middleware writes that snapshot to IndexedDB; the returned promise is the durability
+   boundary.
+8. Success marks only that unchanged draft revision clean. Failure restores the prior saved snapshot,
+   keeps the draft dirty, and lets the UI offer a retry.
 
 Validation behavior:
 - Imported files are validated with full character-shape checks before addCharacter.
@@ -78,6 +82,8 @@ Validation behavior:
 Unsaved changes behavior:
 - src/main.tsx syncs hasUnsavedChanges into Electron.
 - electron/main.ts blocks close with a confirmation dialog when unsaved changes exist.
+- Pending and rejected saves continue to report unsaved changes; an edit made during Save is not
+  acknowledged by the earlier write.
 - App preference changes do not flow through the character store and therefore never mark a character dirty.
 
 ## 3a) Hit Point Advancement and Management
