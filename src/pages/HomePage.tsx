@@ -186,6 +186,9 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const deleteCharacter = useCharacterStore((state) => state.deleteCharacter)
   const addCharacter = useCharacterStore((state) => state.addCharacter)
   const unsupportedCharacterCount = useCharacterStore((state) => state.unsupportedCharacterCount)
+  const consumeUnsupportedCharacterCount = useCharacterStore(
+    (state) => state.consumeUnsupportedCharacterCount,
+  )
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
   const setViewMode = useAppPreferencesStore((state) => state.setCharacterViewMode)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
@@ -204,10 +207,12 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
 
   useEffect(() => {
     if (!unsupportedCharacterCount) return
+    const count = consumeUnsupportedCharacterCount()
+    if (!count) return
     toast.warning(
-      `${unsupportedCharacterCount} character${unsupportedCharacterCount === 1 ? '' : 's'} from an unsupported beta version could not be loaded. Please create new characters.`,
+      `${count} character${count === 1 ? '' : 's'} from an unsupported beta version could not be loaded. Please create new characters.`,
     )
-  }, [unsupportedCharacterCount])
+  }, [consumeUnsupportedCharacterCount, unsupportedCharacterCount])
 
   const sortedCharacters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()

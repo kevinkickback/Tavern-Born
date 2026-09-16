@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'vitest'
 import {
   dedupeSpellNames,
+  formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
+  parseSpellReference,
+  resolveSpellReferenceFromMap,
 } from '@/lib/calculations/spellIdentity'
 
 describe('spell identity', () => {
@@ -17,7 +20,26 @@ describe('spell identity', () => {
     expect(getSpellReferenceKey('mage hand|XPHB')).toBe('mage hand|xphb')
   })
 
-  test('deduplicates persisted name-only spell collections case-insensitively', () => {
-    expect(dedupeSpellNames(['mage hand', 'Mage Hand', 'Shield'])).toEqual(['mage hand', 'Shield'])
+  test('resolves source-qualified profile references without appending an empty source', () => {
+    const xphb = { name: 'Fire Bolt', source: 'XPHB' }
+    const spells = new Map([
+      ['fire bolt|phb', { name: 'Fire Bolt', source: 'PHB' }],
+      ['fire bolt|xphb', xphb],
+    ])
+
+    expect(resolveSpellReferenceFromMap('Fire Bolt|XPHB', spells)).toBe(xphb)
+  })
+
+  test('formats source-qualified persistence references without changing display casing', () => {
+    expect(formatSpellReference('Mage Hand', 'XPHB')).toBe('Mage Hand|XPHB')
+    expect(formatSpellReference('{@spell Mage Hand|PHB}')).toBe('Mage Hand|PHB')
+    expect(parseSpellReference('Mage Hand|XPHB')).toEqual({ name: 'Mage Hand', source: 'XPHB' })
+  })
+
+  test('deduplicates persisted spell references by normalized name', () => {
+    expect(dedupeSpellNames(['mage hand|PHB', 'Mage Hand|XPHB', 'Shield|PHB'])).toEqual([
+      'mage hand|PHB',
+      'Shield|PHB',
+    ])
   })
 })

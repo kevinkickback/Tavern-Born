@@ -156,7 +156,7 @@ describe('gameDataStore', () => {
       cacheStatus: 'fresh',
     })
     loadDataFromSourceMock.mockImplementation((_config, options) => {
-      options?.onResourceFailure?.('spells/spells-phb.json')
+      options?.onResourceFailure?.('spells/spells-phb.json', { required: true })
       return Promise.resolve(makeGameDataFixture())
     })
 
@@ -171,6 +171,38 @@ describe('gameDataStore', () => {
       'Background refresh incomplete (1 resource failed); keeping existing cache',
     )
     expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+  })
+
+  test('foreground load rejects required resource failures before updating cache', async () => {
+    loadDataFromSourceMock.mockImplementation((_config, options) => {
+      options?.onResourceFailure?.('class/class-wizard.json', { required: true })
+      return Promise.resolve(makeGameDataFixture())
+    })
+
+    const contentChanged = await useGameDataStore.getState().loadGameData(config)
+
+    const state = useGameDataStore.getState()
+    expect(contentChanged).toBe(false)
+    expect(state.gameData).toBeNull()
+    expect(state.dataSourceConfig).toBeNull()
+    expect(state.error).toBe(
+      'Data load incomplete (1 required resource failed); no changes were saved',
+    )
+    expect(writeGameDataCacheMock).not.toHaveBeenCalled()
+  })
+
+  test('foreground load accepts optional presentation resource failures', async () => {
+    const data = makeGameDataFixture()
+    loadDataFromSourceMock.mockImplementation((_config, options) => {
+      options?.onResourceFailure?.('fluff-races.json', { required: false })
+      return Promise.resolve(data)
+    })
+
+    const contentChanged = await useGameDataStore.getState().loadGameData(config)
+
+    expect(contentChanged).toBe(true)
+    expect(useGameDataStore.getState().gameData).toBe(data)
+    expect(writeGameDataCacheMock).toHaveBeenCalledTimes(1)
   })
 
   test('background refresh keeps existing data when loader returns empty payload', async () => {

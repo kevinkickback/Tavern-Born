@@ -58,7 +58,9 @@ new tests land and do not lower them to merge a change.
   case-variant duplicates do not satisfy or inflate player-choice quotas. Ownership regressions
   cover class selections that overlap subclass grants, case-insensitive/source-qualified readiness,
   replacement-only levels, reverse-order spell-swap rollback on level-down, and 2014 subclass-owned
-  spellcasting profiles and class-page choice lists.
+  spellcasting profiles and class-page choice lists. Spell identity and selection coverage verifies
+  exact `Name|Source` resolution, selected-printing persistence, source-safe pruning, and clean
+  display labels.
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
 - HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution
   recalculation, manual flat/per-level adjustments, active typed-source display, exact overrides,
@@ -99,7 +101,9 @@ new tests land and do not lower them to merge a change.
 - Zustand stores in src/store/*
 - Character persistence schema validation in tests/lib/characterSchema.test.ts
 - Named game-data lookup hook coverage for stable empty defaults and ingestion-built race/background/item/metadata/skill lookups
-- Character payload validation and rehydrate safety in tests/store/characterStore.test.ts
+- Character payload validation and rehydrate safety in tests/store/characterStore.test.ts, including
+  subscriber notification and persistence of sanitized current-schema records. Home-page coverage
+  verifies unsupported-record warnings are acknowledged after one display.
 - Compile-time compatibility between normalized persistence output and the runtime `Character`
   contract in tests/lib/characterSchema.test.ts
 - Build flow extracted helpers:
@@ -236,7 +240,9 @@ new tests land and do not lower them to merge a change.
 - Compiled Electron smoke coverage in tests/electron-smoke/startup.ts (sandbox isolation, preload bridge, trusted IPC)
 - Bundled asset URL coverage in tests/lib/assetUrls.test.ts and the compiled Electron smoke test,
 	including class icons, current portrait and organization paths, hosted base paths, and real packaged SVG loading
-- Store-level empty background refresh guard in tests/store/gameDataStore.test.ts (prevents clobbering existing cache/state)
+- Store-level atomic load coverage in tests/store/gameDataStore.test.ts prevents failed background
+  refreshes and required foreground resource failures from clobbering cache/state while allowing
+  optional foreground presentation failures.
 - Character sheet PDF boundary coverage for lookup-enriched view-model projection, active typed
   defenses, unified feat ownership, organization-emblem embedding, semantic 2014/2024 mapping,
   shared field-capacity limits, export-preflight classification, real shipped-template field-name

@@ -242,8 +242,10 @@ describe('5etools/dataLoader', () => {
         },
       ]),
     )
-    expect(onResourceFailure).toHaveBeenCalledWith('fluff-races.json')
-    expect(onResourceFailure).toHaveBeenCalledWith('class/fluff-class-phb.json')
+    expect(onResourceFailure).toHaveBeenCalledWith('fluff-races.json', { required: false })
+    expect(onResourceFailure).toHaveBeenCalledWith('class/fluff-class-phb.json', {
+      required: false,
+    })
   })
 
   test('loads classes from slug-keyed class index entries without source filtering them out', async () => {
@@ -694,9 +696,15 @@ describe('5etools/dataLoader', () => {
       path: 'https://example.com/5etools-src/main',
       isValid: true,
     })
+    const onResourceFailure = vi.fn()
 
-    await expect(loader.loadAllData()).rejects.toThrow(
+    await expect(loader.loadAllData({ onResourceFailure })).rejects.toThrow(
       'Unable to load remote data source. Check internet connectivity and source URL.',
     )
+    expect(onResourceFailure).toHaveBeenCalledWith('books.json', { required: true })
+    expect(onResourceFailure).toHaveBeenCalledWith('fluff-races.json', { required: false })
+    expect(onResourceFailure).toHaveBeenCalledWith('generated/gendata-spell-source-lookup.json', {
+      required: true,
+    })
   })
 })

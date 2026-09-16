@@ -76,7 +76,7 @@ export interface RecursiveTooltipCollections {
   classFeatures?: readonly unknown[]
 }
 
-export function getEntityKey(name: string, source?: string): string {
+function getEntityKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`.toLowerCase()
 }
 

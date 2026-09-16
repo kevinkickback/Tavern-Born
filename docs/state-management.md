@@ -175,9 +175,10 @@ copy atomically without creating an unsaved edit.
 
 - Canonical spell state is now profile-based under `character.spells.spellProfiles`.
 - Class profiles are keyed by `class:<name>|<source>` and hold class-owned cantrips/spells/prepared flags.
-- Profile spell collections remain name strings. Equality is based on one
-  normalized, case-insensitive spell-name key; source-qualified input selects the matching catalog
-  row, while two printings with the same normalized name intentionally collapse to one profile entry.
+- Profile spell collections store compact string references. New selections use `Name|Source` so
+  the chosen catalog printing can be resolved exactly, while equality and choice quotas use one
+  normalized, case-insensitive spell-name key. Two printings with the same normalized name therefore
+  remain one logical profile entry without discarding the selected source.
 - The unrestricted profile is `special:unrestricted` and is always prepared by definition.
 - Shared Spellcasting and Pact Magic usage are persisted independently in
   `character.spells.spellSlots` and `character.spells.pactSpellSlots`. Both are numeric-keyed maps
@@ -242,7 +243,9 @@ Origin system note:
 The beta supports exactly one character format. Import and IndexedDB hydration validate records
 against the strict current schema; records with an older or newer version are rejected rather than
 transformed. Hydration drops unsupported records and exposes a count so the Home page can warn the
-tester to recreate them.
+tester to recreate them. The cleanup runs through a store action so subscribers are notified and the
+sanitized collection is persisted; the Home page acknowledges the count after showing the warning so
+it is not repeated during the same session.
 
 For a breaking character-format change, update the version constant, type, strict schema, factory,
 fixtures, and store tests in the same change. Do not add migrations, downgrade handlers,

@@ -65,6 +65,16 @@ describe('characterStore', () => {
     { raceSource: undefined },
     { backgroundSource: undefined },
     { subrace: 'High Elf', subraceSource: undefined },
+    {
+      classProgression: [
+        {
+          name: 'Rogue',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Arcane Trickster',
+        },
+      ],
+    },
   ])('rejects named origin selections without exact sources: %o', (updates) => {
     expect(validateCharacterData({ ...makeCharacterFixture(), ...updates })).toContain(
       'is required when',
@@ -391,7 +401,7 @@ describe('characterStore', () => {
     expect(state.activeCharacter).toBeNull()
   })
 
-  test('persist rehydrate drops unsupported characters and records their count', () => {
+  test('persist rehydrate notifies subscribers and persists unsupported-character cleanup', async () => {
     const persisted = {
       ...makeCharacterFixture({ id: 'c8', name: 'Persisted' }),
       schemaVersion: 0,
@@ -400,41 +410,34 @@ describe('characterStore', () => {
     const storeWithPersist = useCharacterStore as unknown as {
       persist: {
         getOptions: () => {
-          onRehydrateStorage?: () =>
-            | ((state?: {
-                characters: (typeof persisted)[]
-                activeCharacterId: string | null
-                activeCharacter: typeof persisted | null
-                isActiveCharacterDirty: boolean
-                unsupportedCharacterCount: number
-              }) => void)
-            | undefined
+          onRehydrateStorage?: () => (state?: ReturnType<typeof useCharacterStore.getState>) => void
         }
       }
     }
 
-    const onRehydrate = storeWithPersist.persist.getOptions().onRehydrateStorage?.()
-
-    const rehydrateState: {
-      characters: ReturnType<typeof makeCharacterFixture>[]
-      activeCharacterId: string | null
-      activeCharacter: ReturnType<typeof makeCharacterFixture> | null
-      isActiveCharacterDirty: boolean
-      unsupportedCharacterCount: number
-    } = {
-      characters: [persisted],
+    useCharacterStore.setState({
+      characters: [persisted as ReturnType<typeof makeCharacterFixture>],
       activeCharacterId: persisted.id,
-      activeCharacter: null,
-      isActiveCharacterDirty: false,
-      unsupportedCharacterCount: 0,
-    }
+      activeCharacter: persisted as ReturnType<typeof makeCharacterFixture>,
+    })
+    storageMocks.setItem.mockClear()
+    const subscriber = vi.fn()
+    const unsubscribe = useCharacterStore.subscribe(subscriber)
+    const onRehydrate = storeWithPersist.persist.getOptions().onRehydrateStorage?.()
+    onRehydrate?.(useCharacterStore.getState())
 
-    onRehydrate?.(rehydrateState)
-
-    expect(rehydrateState.characters).toEqual([])
-    expect(rehydrateState.activeCharacterId).toBeNull()
-    expect(rehydrateState.activeCharacter).toBeNull()
-    expect(rehydrateState.unsupportedCharacterCount).toBe(1)
+    const state = useCharacterStore.getState()
+    expect(state.characters).toEqual([])
+    expect(state.activeCharacterId).toBeNull()
+    expect(state.activeCharacter).toBeNull()
+    expect(state.unsupportedCharacterCount).toBe(1)
+    expect(subscriber).toHaveBeenCalled()
+    await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalled())
+    expect(storageMocks.setItem).toHaveBeenLastCalledWith(
+      'character-storage',
+      expect.objectContaining({ state: { characters: [] } }),
+    )
+    unsubscribe()
   })
 
   test('persist partialize stores characters and active character id', () => {

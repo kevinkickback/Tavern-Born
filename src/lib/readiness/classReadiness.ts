@@ -1,5 +1,5 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
-import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
+import { getSelectedSubclassData, getSubclassSelectionInfo } from '@/lib/5etools/classData'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import {
@@ -72,6 +72,18 @@ export function validateClassChoices(
           'class',
           'Choose a subclass',
           `${entry.name} requires a subclass choice at class level ${subclassInfo.subclassLevel}.`,
+          classChoiceTarget(entry, subclassInfo.subclassLevel),
+        ),
+      )
+    }
+    if (entry.subclass && !getSelectedSubclassData(classData, entry)) {
+      issues.push(
+        readinessIssue(
+          classSubclassReadinessId(readinessClassKey(entry)),
+          'blocking',
+          'class',
+          `Restore ${entry.subclass}`,
+          'The selected subclass cannot be resolved from its exact sourcebook printing.',
           classChoiceTarget(entry, subclassInfo.subclassLevel),
         ),
       )

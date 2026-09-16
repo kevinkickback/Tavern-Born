@@ -1,3 +1,4 @@
+import { getSpellNameKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SpellSourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
@@ -79,15 +80,18 @@ export function pruneSpellsForDisabledSources(
   // Build index: normalized spell name → set of source abbreviations (uppercased)
   const spellSourceIndex = new Map<string, Set<string>>()
   for (const spell of allSpells) {
-    const key = spell.name.toLowerCase().trim()
+    const key = getSpellNameKey(spell.name)
     if (!spellSourceIndex.has(key)) spellSourceIndex.set(key, new Set())
     spellSourceIndex.get(key)?.add(spell.source.toUpperCase())
   }
 
   const effectiveSet = new Set(effectiveSources.map((s) => s.toUpperCase()))
 
-  const isSpellAllowed = (name: string): boolean => {
-    const key = name.toLowerCase().trim()
+  const isSpellAllowed = (reference: string): boolean => {
+    const { source } = parseSpellReference(reference)
+    if (source) return effectiveSet.has(source.toUpperCase())
+
+    const key = getSpellNameKey(reference)
     const sources = spellSourceIndex.get(key)
     if (!sources) return true // unknown spell — keep it
     for (const src of sources) {

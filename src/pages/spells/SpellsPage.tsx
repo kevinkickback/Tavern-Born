@@ -24,7 +24,9 @@ import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/game
 import {
   buildSpellNameKeySet,
   dedupeSpellNames,
+  formatSpellReference,
   getSpellNameKey,
+  resolveSpellReferenceFromMap,
 } from '@/lib/calculations/spellIdentity'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { buildSpellSelectionSourceMap } from '@/lib/calculations/spellProfiles.attribution'
@@ -41,11 +43,7 @@ import {
 } from '@/lib/navigation/readinessFocus'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SourceRow } from '@/lib/provenance/types'
-import {
-  buildRecursiveLookup,
-  getEntityKey,
-  type RecursiveLookup,
-} from '@/lib/renderer/recursiveTooltip'
+import { buildRecursiveLookup, type RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { SpellcastingDetailsCard } from '@/pages/spells/components/SpellcastingDetailsCard'
@@ -214,7 +212,7 @@ export function SpellsPage() {
       for (const grant of grants) {
         const attribution = `Subclass: ${entry.subclass}`
         sourceMap.set(`${profileId}|${grant.spellName}`, attribution)
-        const spell = spellByName.get(getEntityKey(grant.spellName))
+        const spell = resolveSpellReferenceFromMap(grant.spellName, spellByName)
         rows.push({
           itemName: formatSpellDisplayName(grant.spellName, spell?.name),
           category: 'Spells',
@@ -259,7 +257,7 @@ export function SpellsPage() {
               profileLabel: profile.label,
               className: profile.className,
               classSource: profile.classSource,
-              name: spell.name,
+              name: formatSpellReference(spell.name, spell.source),
               level: spell.level,
               kind: 'spell',
               prepared: alwaysPrepared || preparedSet.has(spellKey),
@@ -283,7 +281,7 @@ export function SpellsPage() {
       const alwaysPreparedSet = new Set((profile.alwaysPreparedSpells ?? []).map(normalizeKey))
 
       for (const name of profile.cantrips) {
-        const spell = spellByName.get(getEntityKey(name))
+        const spell = resolveSpellReferenceFromMap(name, spellByName)
         const spellKey = normalizeKey(name)
         const alwaysPrepared = !!profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
         items.push({
@@ -305,7 +303,7 @@ export function SpellsPage() {
       }
 
       for (const name of profile.spellsKnown) {
-        const spell = spellByName.get(getEntityKey(name))
+        const spell = resolveSpellReferenceFromMap(name, spellByName)
         const spellKey = normalizeKey(name)
         const alwaysPrepared = !!profile.alwaysPrepared || alwaysPreparedSet.has(spellKey)
         const prepared =
@@ -424,7 +422,7 @@ export function SpellsPage() {
       const key = `${normalizeKey(row.itemName)}|${row.attribution}|${row.category}`
       if (seen.has(key)) return []
       seen.add(key)
-      const spell = spellByName.get(getEntityKey(row.itemName))
+      const spell = resolveSpellReferenceFromMap(row.itemName, spellByName)
       return [{ ...row, itemName: formatSpellDisplayName(row.itemName, spell?.name) }]
     })
   }, [getSourcesRowsBySection, spellByName, subclassSpellSources])
@@ -627,7 +625,7 @@ export function SpellsPage() {
     const newCantrips: string[] = []
     const newSpells: string[] = []
     for (const name of names) {
-      const spell = spellByName.get(getEntityKey(name))
+      const spell = resolveSpellReferenceFromMap(name, spellByName)
       if (spell?.level === 0) {
         newCantrips.push(name)
       } else {
@@ -718,7 +716,9 @@ export function SpellsPage() {
                     groupedItems={groupedItems}
                     selectionSourceByProfileAndSpell={selectionSourceByProfileAndSpell}
                     preparedCasterItemsByProfile={preparedCasterItemsByProfile}
-                    getSpellByName={(spellName) => spellByName.get(getEntityKey(spellName))}
+                    getSpellByName={(spellName) =>
+                      resolveSpellReferenceFromMap(spellName, spellByName)
+                    }
                     onTogglePrepared={togglePrepared}
                     onRemoveSpell={handleRemoveSpell}
                     onAddSpell={(profileId) => {

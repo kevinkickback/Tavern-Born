@@ -51,7 +51,12 @@ source content.
   are active at once, including when class and spell indexes expand into many files.
 - Every remote request has a 15-second timeout. Caller cancellation propagates through top-level,
   class, fluff, and spell requests and aborts the load instead of returning a partial cancellation.
-- Individual missing indexed files still use the existing partial-file recovery behavior.
+- Resource failures carry a required/optional classification to the store. Entity files, indexes,
+  indexed class/spell data, and the canonical spell-source lookup are required; race, background,
+  and class fluff are optional presentation resources.
+- Individual missing files remain observable to the store even when the loader can continue parsing
+  the remaining resources. Foreground loads reject required failures; background refreshes reject
+  every failure to avoid replacing a more complete cache.
 
 3. Parsing and normalization
 - parsers extract arrays and normalize structure differences.
@@ -240,7 +245,9 @@ When a user selects spells for a multiclass character:
 
 ## Failure Modes and Debugging
 
-- Missing resource file: loader warning, empty collection, degraded feature surface.
+- Missing required resource file: loader warning and atomic load rejection before store/cache commit.
+- Missing optional resource file: loader warning and a degraded presentation/enrichment surface;
+  foreground catalog loading may continue.
 - Schema mismatch: validator should surface explicit shape errors.
 - Missing PHB/XPHB full-caster or pact progression rows: development validation reports the source-qualified class data gap; spell calculations return no invented slots.
 - Source URL issues: inspect the shared HTTPS parser and normalized remote base path. Host matching
@@ -252,7 +259,8 @@ When a user selects spells for a multiclass character:
 - Lookup map usage should be preferred for exact entity fetches.
 - Keep parser output serializable and stable to reduce cache churn.
 - Background refresh is designed to reduce startup latency while keeping data fresh.
-- Background refresh reports dropped resources to the store so partial ingestion results are never committed over a complete cache.
+- Every load reports dropped resources and their required/optional status to the store. Background
+  refreshes reject any drop; foreground loads reject required drops before committing.
 - Progress callbacks are completion-based during ingestion: each completed resource increments progress, regardless of completion order.
 - Remote request count is bounded across both top-level resources and expanded index files; do not
   replace the worker pool with an unbounded `Promise.all()`.

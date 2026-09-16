@@ -23,11 +23,19 @@ Flow:
 5. useDataInit shows a toast when cached data is used without a configured source, or when enabled launch auto-refresh confirms that content changed. Successful no-change checks remain silent.
 6. On successful fetch, parsed gameData is written to cache and store.
 
+Resource failures are classified by whether they affect the canonical gameplay catalog. Foreground
+loads reject and preserve the previous store/cache when any required resource fails; optional
+presentation resources such as fluff may be absent without blocking a usable load. Background
+refreshes remain stricter and reject any dropped resource so an existing complete cache is never
+silently replaced by a less complete snapshot.
+
 Startup preference behavior:
 - Theme is applied immediately from localStorage before React renders, then reconciled with the persisted app preferences store after IndexedDB hydration.
 - Home-page card size is read from the app preferences store. The size slider is on the home page itself, not in Settings.
 - Stale cache always triggers a background refresh on startup. It remains silent unless launch auto-refresh is enabled and the content fingerprint changes.
 - Background refreshes are atomic: if any requested resource fails or the refresh returns an empty catalog, the current in-memory/cache data and update timestamps are preserved.
+- Foreground loads are atomic for required catalog resources; optional presentation failures are
+  reported but do not prevent a usable catalog from being cached.
 
 Update metadata behavior:
 - `lastUpdateCheckAt` is set only after a successful source check/fetch.

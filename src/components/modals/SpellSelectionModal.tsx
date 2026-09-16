@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   buildSpellNameKeySet,
   dedupeSpellNames,
+  formatSpellReference,
   getSpellNameKey,
   getSpellReferenceKey,
 } from '@/lib/calculations/spellIdentity'
@@ -229,6 +230,9 @@ const SpellCard = memo(function SpellCard({
           </span>
         </div>
         <div className="flex gap-1 flex-wrap flex-shrink-0">
+          <Badge variant="outline" className="h-5 px-1.5 text-xs text-muted-foreground">
+            {spell.source}
+          </Badge>
           {isRitual && (
             <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 border-info/60 text-info">
               R
@@ -402,7 +406,11 @@ export function SpellSelectionModal({
       initialSelectedIds={initialSelectedIds}
       initialFilters={effectiveInitialFilters}
       onConfirm={(_ids, selectedItems) =>
-        onConfirm(dedupeSpellNames(selectedItems.map((s) => s.name)))
+        onConfirm(
+          dedupeSpellNames(
+            selectedItems.map((spell) => formatSpellReference(spell.name, spell.source)),
+          ),
+        )
       }
     />
   )

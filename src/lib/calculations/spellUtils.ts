@@ -1,4 +1,5 @@
 import { SP_SCHOOL_ABV_TO_FULL } from '@/lib/5etools/constants'
+import { parseSpellReference } from '@/lib/calculations/spellIdentity'
 import type {
   CastingTime,
   Spell5e,
@@ -19,8 +20,8 @@ export function formatSpellDisplayName(storedName: string, canonicalName?: strin
   const canonical = canonicalName?.trim()
   if (canonical) return canonical
 
-  return storedName
-    .trim()
+  return parseSpellReference(storedName)
+    .name.trim()
     .toLocaleLowerCase()
     .replace(/(^|[\s-])([a-z])/g, (_match, prefix: string, letter: string) => {
       return `${prefix}${letter.toLocaleUpperCase()}`

@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { StrictMode } from 'react'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
@@ -78,6 +79,7 @@ function resetCharacterStore() {
     activeCharacterId: null,
     activeCharacter: null,
     isActiveCharacterDirty: false,
+    unsupportedCharacterCount: 0,
   })
 }
 
@@ -114,6 +116,23 @@ describe('home page integration workflows', () => {
     expect(screen.getByText('No Characters Yet')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'New Character' }))
     expect(screen.getByText('Character Wizard Open')).toBeTruthy()
+  })
+
+  test('shows the unsupported-character warning once and acknowledges it', async () => {
+    useCharacterStore.setState({ unsupportedCharacterCount: 2 })
+
+    const view = render(
+      <StrictMode>
+        <HomePage />
+      </StrictMode>,
+    )
+
+    await vi.waitFor(() => expect(toast.warning).toHaveBeenCalledTimes(1))
+    expect(useCharacterStore.getState().unsupportedCharacterCount).toBe(0)
+
+    view.unmount()
+    render(<HomePage />)
+    expect(toast.warning).toHaveBeenCalledTimes(1)
   })
 
   test('supports multi-select deletion workflow', async () => {

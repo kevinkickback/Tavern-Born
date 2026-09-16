@@ -236,7 +236,7 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
   await expect(page.locator('main').getByText('Wizard (Lv 2)')).toBeVisible()
   await expect(page.locator('main').getByText('Cleric (Lv 1)')).toHaveCount(0)
 
-  // Seed Magic Missile into the Bonus Spells profile via IndexedDB, then reload.
+  // Seed an exact source-qualified spell reference into the Bonus Spells profile, then reload.
   await page.evaluate(
     async ({ characterId }) => {
       await new Promise<void>((resolve, reject) => {
@@ -274,7 +274,7 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
             const bonusProfile = profiles.find((profile) => profile.id === 'special:unrestricted')
             if (bonusProfile) {
               const known = new Set(bonusProfile.spellsKnown ?? [])
-              known.add('Magic Missile')
+              known.add('Magic Missile|PHB')
               bonusProfile.spellsKnown = [...known]
             }
 

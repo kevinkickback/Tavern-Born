@@ -62,6 +62,8 @@ interface CharacterState {
   activeCharacter: Character | null
   isActiveCharacterDirty: boolean
   unsupportedCharacterCount: number
+  finishCharacterHydration: () => void
+  consumeUnsupportedCharacterCount: () => number
   hasUnsavedChanges: () => boolean
 
   setCharacters: (characters: Character[]) => void
@@ -166,6 +168,28 @@ export const useCharacterStore = create<CharacterState>()(
       activeCharacter: null,
       isActiveCharacterDirty: false,
       unsupportedCharacterCount: 0,
+
+      finishCharacterHydration: () =>
+        set((state) => {
+          const results = state.characters.map((character) => parseCharacterData(character))
+          return {
+            characters: ensureUniqueCharacterIds(
+              results.filter((result) => result.data).map((result) => result.data as Character),
+            ),
+            activeCharacterId: null,
+            activeCharacter: null,
+            isActiveCharacterDirty: false,
+            unsupportedCharacterCount: results.filter(
+              (result) => result.error === UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
+            ).length,
+          }
+        }),
+
+      consumeUnsupportedCharacterCount: () => {
+        const count = get().unsupportedCharacterCount
+        if (count > 0) set({ unsupportedCharacterCount: 0 })
+        return count
+      },
 
       hasUnsavedChanges: () => {
         const { characters, activeCharacter, activeCharacterId, isActiveCharacterDirty } = get()
@@ -467,22 +491,7 @@ export const useCharacterStore = create<CharacterState>()(
         characters: state.characters,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state) {
-          const results = state.characters.map((character) => parseCharacterData(character))
-          const validatedCharacters = ensureUniqueCharacterIds(
-            results.filter((result) => result.data).map((result) => result.data as Character),
-          )
-
-          // Persist passes a mutable state snapshot into this callback.
-          // Direct assignment here is intentional and scoped to hydration only.
-          state.characters = validatedCharacters
-          state.activeCharacterId = null
-          state.activeCharacter = null
-          state.isActiveCharacterDirty = false
-          state.unsupportedCharacterCount = results.filter(
-            (result) => result.error === UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
-          ).length
-        }
+        state?.finishCharacterHydration()
       },
     },
   ),

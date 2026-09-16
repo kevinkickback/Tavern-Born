@@ -42,8 +42,12 @@ import { parseRemoteDataSourceUrl } from './urlUtils'
 
 export interface DataLoaderOptions {
   onProgress?: (current: number, total: number, resource: string) => void
-  onResourceFailure?: (resource: string) => void
+  onResourceFailure?: (resource: string, failure: DataResourceFailure) => void
   signal?: AbortSignal
+}
+
+interface DataResourceFailure {
+  required: boolean
 }
 
 interface IndexedFileEntry {
@@ -114,12 +118,12 @@ export class FiveEToolsDataLoader {
   }
 
   async loadAllData(options?: DataLoaderOptions): Promise<GameData> {
-    const resources = [
+    const resources: Array<{ key: string; file: string; required?: boolean }> = [
       { key: 'books', file: 'books.json' },
       { key: 'adventures', file: 'adventures.json' },
       { key: 'races', file: 'races.json' },
-      { key: 'raceFluff', file: 'fluff-races.json' },
-      { key: 'backgroundFluff', file: 'fluff-backgrounds.json' },
+      { key: 'raceFluff', file: 'fluff-races.json', required: false },
+      { key: 'backgroundFluff', file: 'fluff-backgrounds.json', required: false },
       { key: 'classIndex', file: 'class/index.json' },
       { key: 'backgrounds', file: 'backgrounds.json' },
       { key: 'spellIndex', file: 'spells/index.json' },
@@ -296,7 +300,7 @@ export class FiveEToolsDataLoader {
       } catch (error) {
         if (isAbortError(error)) throw error
         console.warn(`Failed to load ${resource.file}:`, error)
-        options?.onResourceFailure?.(resource.file)
+        options?.onResourceFailure?.(resource.file, { required: resource.required !== false })
       } finally {
         completedResources += 1
         if (options?.onProgress) {
@@ -391,7 +395,7 @@ export class FiveEToolsDataLoader {
             richFluff = parseClassFluff(fluffData)
           } catch (error) {
             if (isAbortError(error)) throw error
-            options?.onResourceFailure?.(`class/${fluffFile}`)
+            options?.onResourceFailure?.(`class/${fluffFile}`, { required: false })
             fluffSummaries = []
             richFluff = []
           }
@@ -429,7 +433,7 @@ export class FiveEToolsDataLoader {
         } catch (error) {
           if (isAbortError(error)) throw error
           console.warn(`Failed to load class file ${classFile.file}:`, error)
-          options?.onResourceFailure?.(`class/${classFile.file}`)
+          options?.onResourceFailure?.(`class/${classFile.file}`, { required: true })
           return {
             classes: [] as GameData['classes'],
             features: [] as GameData['classFeatures'],
@@ -477,7 +481,7 @@ export class FiveEToolsDataLoader {
         } catch (error) {
           if (isAbortError(error)) throw error
           console.warn(`Failed to load spell file ${spellFile.file}:`, error)
-          options?.onResourceFailure?.(`spells/${spellFile.file}`)
+          options?.onResourceFailure?.(`spells/${spellFile.file}`, { required: true })
           return [] as GameData['spells']
         }
       },

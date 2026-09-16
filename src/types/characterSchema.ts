@@ -841,6 +841,15 @@ export const characterSchema = z
         })
       }
     }
+    char.classProgression.forEach((entry, index) => {
+      if (entry.subclass && !entry.subclassSource) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'subclassSource is required when subclass is selected',
+          path: ['classProgression', index, 'subclassSource'],
+        })
+      }
+    })
     if (char.classProgression.length > 0) {
       const totalLevels = char.classProgression.reduce((sum, entry) => sum + entry.levels, 0)
       if (totalLevels > MAX_CHARACTER_LEVEL) {

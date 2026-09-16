@@ -17,6 +17,32 @@ describe('characterPersistenceSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  test('requires an exact source for every selected subclass', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Rogue',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Arcane Trickster',
+        },
+      ],
+    })
+
+    const result = characterPersistenceSchema.safeParse(character)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: ['classProgression', 0, 'subclassSource'],
+          }),
+        ]),
+      )
+    }
+  })
+
   test('rejects malformed spell profiles in persisted data', () => {
     const character = makeCharacterFixture({
       spells: {

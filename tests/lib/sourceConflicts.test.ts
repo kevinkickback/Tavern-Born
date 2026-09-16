@@ -164,6 +164,54 @@ describe('pruneSpellsForDisabledSources', () => {
     expect(pruneSpellsForDisabledSources(char, ['XPHB'], allSpells)).toBeNull()
   })
 
+  test('removes a source-qualified spell when its exact printing is disabled', () => {
+    const char = makeCharacterFixture({
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Fireball|PHB'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+
+    const result = pruneSpellsForDisabledSources(char, ['XPHB'], allSpells)
+
+    expect(result?.spells.spellProfiles[0].spellsKnown).toEqual([])
+  })
+
+  test('keeps a source-qualified spell when its exact printing remains enabled', () => {
+    const char = makeCharacterFixture({
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Fireball|PHB'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+
+    expect(pruneSpellsForDisabledSources(char, ['PHB'], allSpells)).toBeNull()
+  })
+
   test('removes from cantrips and preparedSpells as well', () => {
     const char = makeCharacterFixture({
       spells: {

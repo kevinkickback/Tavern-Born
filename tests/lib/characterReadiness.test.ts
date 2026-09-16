@@ -557,6 +557,46 @@ describe('getCharacterReadiness', () => {
     expect(spellIssues.some((issue) => issue.id === 'spells:profile:class:Rogue|PHB')).toBe(false)
   })
 
+  test('blocks readiness when the selected subclass printing cannot be resolved', () => {
+    const rogue = {
+      name: 'Rogue',
+      source: 'PHB',
+      hd: { faces: 8 },
+      subclasses: [
+        {
+          name: 'Arcane Trickster',
+          shortName: 'Arcane Trickster',
+          source: 'PHB',
+          className: 'Rogue',
+          classSource: 'PHB',
+        },
+      ],
+    } as Class5e
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Rogue',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Arcane Trickster',
+          subclassSource: 'XPHB',
+        },
+      ],
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      classesByKey: { 'Rogue|PHB': rogue },
+    })
+
+    const result = getCharacterReadiness(character, { calculation })
+    const issue = result.blockingIssues.find((entry) => entry.id === 'class:subclass:Rogue|PHB')
+
+    expect(issue).toMatchObject({
+      title: 'Restore Arcane Trickster',
+      explanation: 'The selected subclass cannot be resolved from its exact sourcebook printing.',
+    })
+    expect(issue?.navigationTarget).toContain('class=Rogue%7CPHB')
+  })
+
   test('matches selected spell references case-insensitively and by name-only compatibility', () => {
     const character = makeCharacterFixture({
       spells: {
