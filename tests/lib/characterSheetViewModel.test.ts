@@ -125,6 +125,34 @@ describe('createCharacterSheetViewModel', () => {
     expect(viewModel.maxHP).toBe(6)
   })
 
+  test('resolves an unambiguous class printing for a legacy source-less spell profile', () => {
+    const warlock = {
+      name: 'Warlock',
+      source: 'PHB',
+      hd: { faces: 8 },
+      spellcastingAbility: 'cha',
+      casterProgression: 'pact',
+      cantripProgression: [2],
+      spellsKnownProgression: [2],
+    } as Class5e
+    const character = makeCharacterFixture({
+      class: warlock.name,
+      classSource: undefined,
+      classProgression: [{ name: warlock.name, source: undefined, levels: 1 }],
+    })
+
+    const viewModel = createCharacterSheetViewModel(character, {
+      classesByKey: buildClassLookup([warlock]),
+    })
+
+    expect(viewModel.spellcastingDetails).toHaveLength(1)
+    expect(viewModel.spellcastingDetails[0]).toMatchObject({
+      profileId: 'class:Warlock|',
+      className: 'Warlock',
+      spellcastingAbility: 'charisma',
+    })
+  })
+
   test('resolves preset and custom organization images', () => {
     const organizations = [
       {

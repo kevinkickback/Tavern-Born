@@ -20,6 +20,7 @@ import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
+import { buildClassProfileMap } from '@/lib/calculations/classProfileMap'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
   buildSpellNameKeySet,
@@ -56,7 +57,7 @@ import {
   SpellProfileManager,
 } from '@/pages/spells/components/SpellProfileManager'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-import type { Class5e, Spell5e } from '@/types/5etools'
+import type { Spell5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
 
 const SPELLS_PREPARE_SELECTOR = '[data-spell-prepare-toggle="true"]'
@@ -196,12 +197,7 @@ export function SpellsPage() {
     const rows: SourceRow[] = []
     if (!character) return { sourceMap, rows }
 
-    const classesById = new Map(
-      (classes as Class5e[]).map((classData) => [
-        toClassProfileId(classData.name, classData.source),
-        classData,
-      ]),
-    )
+    const classesById = buildClassProfileMap(calculationContext?.classes ?? [])
 
     for (const entry of getCharacterClassEntries(character)) {
       if (!entry.subclass) continue
@@ -226,7 +222,7 @@ export function SpellsPage() {
     }
 
     return { sourceMap, rows }
-  }, [character, classes, spellByName])
+  }, [character, calculationContext?.classes, spellByName])
 
   const preparedCasterItemsByProfile = useMemo(() => {
     const map = new Map<string, PreparedCasterSpellItem[]>()
@@ -297,7 +293,10 @@ export function SpellsPage() {
           level: spell?.level ?? 0,
           kind: 'cantrip',
           prepared: alwaysPrepared,
-          isFixed: fixedSet.has(spellKey),
+          isFixed:
+            fixedSet.has(spellKey) ||
+            (profile.type === 'special' &&
+              (ledger.spells[spellKey] ?? []).some((tag) => tag.sourceType === 'feat')),
         })
       }
 
@@ -318,7 +317,10 @@ export function SpellsPage() {
           level: spell?.level ?? 1,
           kind: 'spell',
           prepared,
-          isFixed: fixedSet.has(spellKey),
+          isFixed:
+            fixedSet.has(spellKey) ||
+            (profile.type === 'special' &&
+              (ledger.spells[spellKey] ?? []).some((tag) => tag.sourceType === 'feat')),
         })
       }
     }
@@ -333,7 +335,7 @@ export function SpellsPage() {
       if (a.level !== b.level) return a.level - b.level
       return a.name.localeCompare(b.name)
     })
-  }, [detailsByProfileId, spellByName, spellProfiles])
+  }, [detailsByProfileId, ledger.spells, spellByName, spellProfiles])
 
   const groupedItems = useMemo(() => {
     const map = new Map<string, SpellListItem[]>()

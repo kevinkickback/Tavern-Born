@@ -4,7 +4,7 @@ import {
   applyClassSelectionCommand,
   buildInitialCharacterProficiencies,
 } from '@/lib/character/commands/classCommands'
-import { applyClassGrants } from '@/lib/provenance'
+import { addGrant, applyClassGrants, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -249,6 +249,43 @@ describe('applyClassSelectionCommand', () => {
     expect(result.characterPatch.classProgression).toEqual([
       { name: 'Wizard', source: 'PHB', levels: 1 },
     ])
+  })
+
+  test('removes an old class skill and synchronizes skill state when switching class', () => {
+    const character = makeCharacterFixture({
+      class: 'Rogue',
+      classSource: 'PHB',
+      classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        skills: ['stealth'],
+        languages: [],
+        savingThrows: [],
+      },
+      skills: { stealth: { proficient: true, expertise: true, bonus: 0 } },
+    })
+    const ledger = addGrant(
+      emptyProvenance(),
+      'skills',
+      'Stealth',
+      makeSourceTag('class', 'Rogue', 'choice', 'PHB'),
+    )
+
+    const result = applyClassSelectionCommand(
+      character,
+      ledger,
+      { name: 'Wizard', source: 'PHB', startingProficiencies: {} },
+      undefined,
+      EMPTY_LOOKUP,
+    )
+
+    expect(result.characterPatch.proficiencies?.skills).toEqual([])
+    expect(result.characterPatch.skills?.stealth).toMatchObject({
+      proficient: false,
+      expertise: false,
+    })
   })
 
   test('adds starting equipment from class blocks', () => {

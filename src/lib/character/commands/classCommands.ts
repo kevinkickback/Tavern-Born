@@ -252,7 +252,7 @@ function computeClassSelectionEffects(
   let equipment = [...(character.equipment ?? [])]
 
   if (oldClassName) {
-    const domains = ['armor', 'weapons', 'tools', 'savingThrows'] as const
+    const domains = ['armor', 'weapons', 'tools', 'skills', 'savingThrows'] as const
     for (const domain of domains) {
       const { toRemove } = diffProficiencyGrants(ledger, domain, 'class', oldClassName)
       if (toRemove.length === 0) continue
@@ -337,7 +337,7 @@ function computeClassSelectionEffects(
   return {
     characterPatch: {
       proficiencies,
-      skills: { ...(character.skills ?? {}) },
+      skills: mergeSkillState(character.skills ?? {}, proficiencies.skills),
       equipment: upsertGrantedEquipment(equipment, classEquipment.items),
       classEquipmentChoices: {
         ...(character.classEquipmentChoices ?? {}),
@@ -757,9 +757,10 @@ export function applyClassSelectionCommand(
   options?: SelectSubclassOptions,
 ): ClassCommandResult {
   const effects = computeClassSelectionEffects(character, ledger, cls, subclass, itemLookup)
+  const identityCharacter = subclass ? character : { ...character, ...effects.characterPatch }
   const identity = subclass
     ? selectSubclass(character, ledger, subclass.name, subclass.source ?? '', undefined, options)
-    : selectBaseClass(character, ledger, cls.name, cls as Class5e, cls.source)
+    : selectBaseClass(identityCharacter, ledger, cls.name, cls as Class5e, cls.source)
   const identityProficiencies = identity.characterPatch.proficiencies
   const effectProficiencies = effects.characterPatch.proficiencies ?? character.proficiencies
   const selectionPatch: Partial<Character> = {

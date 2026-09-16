@@ -54,7 +54,8 @@ Fixed feat `SourceTag` values may include `grantVariant`, which preserves a para
 the canonical `magic initiate` ledger key with `grantVariant: "cleric"`. Tag identity includes the
 variant so multiple fixed forms remain distinct. Follow-up selections for these grants are stored in
 `character.fixedFeatOptions` under a normalized `name|source|variant` key; they do not consume class
-feat slots or become bonus feats.
+feat slots or become bonus feats. Unparameterized fixed grants use the same storage with an empty
+variant, so every fixed feat that needs setup has a stable options owner.
 
 Race and background feat choices keep their legacy display names in `ChoiceRecord.selected` and store
 the authoritative `name|source` identity plus follow-up selections in `ChoiceRecord.selectedRefs`.
@@ -133,6 +134,9 @@ Class equipment choice behavior:
 Feat replacement behavior:
 - Regular selected feats use normalized `name|source` identity. Replacing a feat with a same-name entity from another source retracts the old source's option effects and does not copy its stored options.
 - Feat ledger entries remain grouped by normalized name, so replacement removes only the matching manual-choice tag and preserves tags for fixed or same-name grants from other sources.
+- Spells granted by feat setup are fixed entries in the bonus spell profile. They cannot be removed
+  from the spells page, and retracting the feat releases the fixed marker only after the final
+  non-manual owner is gone.
 
 Manual equipment behavior:
 - `equipmentCommands.ts` materializes inventory and manual ledger tags together for add/remove actions.
@@ -157,6 +161,9 @@ Class and subclass spell-choice behavior:
 - Removing or replacing a class progression entry retracts materialized proficiencies that are owned
   only by that exact class printing and removes its class spell profile. Grants shared with another
   source remain materialized.
+- Legacy class progression entries without a source may resolve to a source-qualified class for
+  readiness, spell presentation, and PDF export only when exactly one matching printing is present.
+  Ambiguous names stay unresolved rather than silently choosing a rules version.
 - The 2014 PHB Eldritch Knight and Arcane Trickster school limits are enforced in both the picker and
   spell commands. Their unrestricted choices at levels 3, 8, 14, and 20 carry
   `grantVariant: "unrestricted-school"`, so the exception follows that choice when it is swapped.
@@ -187,6 +194,8 @@ Grouped tool choices:
 - Placeholder choices may carry grouped tool options (for example: `gaming set`, `musical instrument`, `artisan's tools`, `tool`).
 - Grouped entries are placeholders only; final grants are always concrete tool names selected by the user.
 - Resolving grouped tool choices updates both `ledger.choices` and `character.proficiencies.tools`; removing a choice-granted concrete tool reopens the underlying placeholder capacity.
+- Removing any proficiency choice keeps its materialized proficiency while another provenance tag
+  still owns the same grant.
 
 ## Race ASI Choices and ChoiceRecord.selected
 

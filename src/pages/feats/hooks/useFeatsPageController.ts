@@ -33,6 +33,7 @@ const EMPTY_STRINGS: string[] = []
 export type FeatView = 'all' | 'character' | 'bonus'
 export type FeatOptionsTarget = Feat5e & {
   grantVariant?: string
+  fixedGrant?: boolean
   fixedSpellcastingClass?: string
   provenanceChoiceId?: string
   classFeatChoiceId?: string
@@ -252,6 +253,7 @@ export function useFeatsPageController() {
       grantVariant?: string,
       provenanceChoiceId?: string,
       classFeatChoiceId?: string,
+      fixedGrant?: boolean,
     ) => {
       const feat5e = (feats as Feat5e[]).find(
         (feat) => feat.name === featName && (feat.source ?? '') === featSource,
@@ -260,6 +262,7 @@ export function useFeatsPageController() {
       setFeatOptionsTarget({
         ...feat5e,
         grantVariant,
+        fixedGrant,
         fixedSpellcastingClass: getFixedSpellcastingClass(feat5e, grantVariant),
         provenanceChoiceId,
         classFeatChoiceId,
@@ -282,11 +285,12 @@ export function useFeatsPageController() {
       grantVariant?: string,
       provenanceChoiceId?: string,
       classFeatChoiceId?: string,
+      fixedGrant?: boolean,
     ) => {
       const feat5e = (feats as Feat5e[]).find(
         (feat) => feat.name === featName && (feat.source ?? '') === featSource,
       )
-      const fixedOptions = grantVariant
+      const fixedOptions = fixedGrant
         ? character?.fixedFeatOptions?.[getFixedFeatOptionKey(featName, featSource, grantVariant)]
         : undefined
       const existing = (character?.feats ?? []).find(
@@ -310,6 +314,7 @@ export function useFeatsPageController() {
         feat5e: {
           ...feat5e,
           grantVariant,
+          fixedGrant,
           fixedSpellcastingClass: getFixedSpellcastingClass(feat5e, grantVariant),
           provenanceChoiceId,
           classFeatChoiceId,

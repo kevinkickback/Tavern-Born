@@ -6,6 +6,7 @@ export type FeatOptionTarget = {
   name: string
   source?: string
   grantVariant?: string
+  fixedGrant?: boolean
   provenanceChoiceId?: string
   classFeatChoiceId?: string
 }
@@ -25,7 +26,9 @@ export function getFeatOptionSourceName(feat: FeatOptionTarget): string {
 export function getFeatOptionOwnerKey(feat: FeatOptionTarget): string | undefined {
   if (feat.provenanceChoiceId) return `choice:${feat.provenanceChoiceId}`
   if (feat.classFeatChoiceId) return `class:${feat.classFeatChoiceId}`
-  return feat.grantVariant ? `fixed:${feat.grantVariant}` : undefined
+  return feat.fixedGrant || feat.grantVariant !== undefined
+    ? `fixed:${feat.grantVariant ?? ''}`
+    : undefined
 }
 
 export function getFeatOptionSourceTag(feat: FeatOptionTarget): SourceTag {

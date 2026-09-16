@@ -320,10 +320,11 @@ export function resolveProficiencyChoiceCommand(
     itemName,
     matchingChoice.sourceTag,
   )
+  const hasRemainingGrant = Boolean(provenanceUpdate.proficiencies[domain][normalized]?.length)
   if (domain === 'skills') {
-    const skills = character.proficiencies.skills.filter(
-      (entry) => normalizeKey(entry) !== normalized,
-    )
+    const skills = hasRemainingGrant
+      ? character.proficiencies.skills
+      : character.proficiencies.skills.filter((entry) => normalizeKey(entry) !== normalized)
     return {
       characterPatch: {
         proficiencies: { ...character.proficiencies, skills },
@@ -336,9 +337,9 @@ export function resolveProficiencyChoiceCommand(
     characterPatch: {
       proficiencies: {
         ...character.proficiencies,
-        [domain]: character.proficiencies[domain].filter(
-          (entry) => normalizeKey(entry) !== normalized,
-        ),
+        [domain]: hasRemainingGrant
+          ? character.proficiencies[domain]
+          : character.proficiencies[domain].filter((entry) => normalizeKey(entry) !== normalized),
       },
     },
     provenanceUpdate,
@@ -372,6 +373,13 @@ export function retractFeatOptionsCommand(
       spellsKnown: profile.spellsKnown.filter(
         (name) =>
           !removedSpells.has(normalizeKey(name)) || !!provenanceUpdate.spells[normalizeKey(name)],
+      ),
+      fixedSpells: profile.fixedSpells?.filter(
+        (name) =>
+          !removedSpells.has(normalizeKey(name)) ||
+          (provenanceUpdate.spells[normalizeKey(name)] ?? []).some(
+            (tag) => tag.sourceType !== 'manual',
+          ),
       ),
     }
   })
@@ -444,6 +452,7 @@ export function commitFeatOptionsCommand(
   )
   const cantrips = [...(existingSpecial?.cantrips ?? [])]
   const spellsKnown = [...(existingSpecial?.spellsKnown ?? [])]
+  const fixedSpells = [...(existingSpecial?.fixedSpells ?? [])]
   for (const compositeKey of selections.spells ?? []) {
     const spellName = compositeKey.split('|')[0]
     provenanceUpdate = addSpellGrant(provenanceUpdate, spellName, sourceTag)
@@ -452,10 +461,15 @@ export function commitFeatOptionsCommand(
     )
     const target = spell?.level === 0 ? cantrips : spellsKnown
     if (!target.includes(spellName)) target.push(spellName)
+    if (!fixedSpells.some((name) => normalizeKey(name) === normalizeKey(spellName))) {
+      fixedSpells.push(spellName)
+    }
   }
   const spellProfiles = existingSpecial
     ? character.spells.spellProfiles.map((profile) =>
-        profile.id === SPECIAL_SPELL_PROFILE_ID ? { ...profile, cantrips, spellsKnown } : profile,
+        profile.id === SPECIAL_SPELL_PROFILE_ID
+          ? { ...profile, cantrips, spellsKnown, fixedSpells }
+          : profile,
       )
     : [
         ...character.spells.spellProfiles,
@@ -465,6 +479,7 @@ export function commitFeatOptionsCommand(
           label: 'Special',
           cantrips,
           spellsKnown,
+          fixedSpells,
           preparedSpells: [],
           alwaysPrepared: true,
         },
@@ -566,12 +581,13 @@ export function commitFeatOptionsCommand(
         }
       : choice,
   )
-  const fixedFeatOptions = feat.grantVariant
-    ? {
-        ...(character.fixedFeatOptions ?? {}),
-        [getFixedFeatOptionKey(feat.name, feat.source ?? '', feat.grantVariant)]: selections,
-      }
-    : character.fixedFeatOptions
+  const fixedFeatOptions =
+    feat.fixedGrant || feat.grantVariant !== undefined
+      ? {
+          ...(character.fixedFeatOptions ?? {}),
+          [getFixedFeatOptionKey(feat.name, feat.source ?? '', feat.grantVariant)]: selections,
+        }
+      : character.fixedFeatOptions
 
   return {
     characterPatch: {

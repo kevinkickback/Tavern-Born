@@ -26,7 +26,7 @@ import {
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { getFixedFeatOptionKey } from '@/lib/featGrants'
-import { featSetupReadinessId, getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import type { Feat5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
@@ -103,16 +103,7 @@ export function FeatsPage() {
   } = controller
 
   const isFocusedFeat = (name: string, source: string) =>
-    [...(character?.feats ?? []), ...(character?.specialFeats ?? [])].some(
-      (feat) =>
-        getEntityLookupKey(feat.name, feat.source) === getEntityLookupKey(name, source) &&
-        readinessFocus ===
-          featSetupReadinessId(
-            getEntityLookupKey(feat.name, feat.source),
-            feat.className,
-            feat.classLevel,
-          ),
-    )
+    readinessFocus?.startsWith(`feat:setup:${getEntityLookupKey(name, source)}:`) ?? false
 
   if (!character) {
     return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />
@@ -371,6 +362,7 @@ export function FeatsPage() {
                                 onSelect={handleSelectFeat}
                                 grantedBy={granted.sourceLabel}
                                 grantVariant={granted.grantVariant}
+                                fixedGrant
                                 grantVariantLabel={granted.variantLabel}
                                 optionsPending={
                                   !!granted.featData &&
@@ -471,6 +463,7 @@ export function FeatsPage() {
                                 onSelect={handleSelectFeat}
                                 grantedBy={granted.sourceLabel}
                                 grantVariant={granted.grantVariant}
+                                fixedGrant
                                 grantVariantLabel={granted.variantLabel}
                                 optionsPending={
                                   !!granted.featData &&

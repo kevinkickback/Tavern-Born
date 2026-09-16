@@ -8,16 +8,70 @@
 import { describe, expect, test } from 'vitest'
 import {
   addSpellToCharacter,
+  removeRacialSpell,
   removeSpellFromCharacter,
+  selectRacialSpell,
   setClassSpellSelectionsAtLevel,
   setProfileSpells,
   swapClassSpellAtLevel,
   swapSpellOnCharacter,
 } from '@/lib/character/commands/spellCommands'
+import { reconcileRaceChange } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('Spell Commands', () => {
+  test('attributes a racial spell choice to the selected race for reconciliation', () => {
+    const character = makeCharacterFixture({
+      race: 'High Elf',
+      raceSource: 'PHB',
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'racial:High Elf|PHB',
+            type: 'racial',
+            label: 'Racial Spells',
+            raceName: 'High Elf',
+            raceSource: 'PHB',
+            choices: [{ id: 'choose-0', count: 1, isCantrip: true, selected: [] }],
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
+      },
+    })
+
+    const selected = selectRacialSpell(
+      character,
+      emptyProvenance(),
+      'racial:High Elf|PHB',
+      'choose-0',
+      'Mage Hand',
+    )
+
+    expect(selected.provenanceUpdate.spells['mage hand']).toEqual([
+      expect.objectContaining({ sourceType: 'race', sourceName: 'High Elf', sourceRef: 'PHB' }),
+    ])
+    expect(reconcileRaceChange(selected.provenanceUpdate, 'High Elf', undefined).spells).toEqual({})
+
+    const configured = {
+      ...character,
+      ...selected.characterPatch,
+      provenance: selected.provenanceUpdate,
+    }
+    const removed = removeRacialSpell(
+      configured,
+      selected.provenanceUpdate,
+      'racial:High Elf|PHB',
+      'choose-0',
+      'Mage Hand',
+    )
+    expect(removed.provenanceUpdate.spells).toEqual({})
+  })
+
   describe('setClassSpellSelectionsAtLevel', () => {
     test('preserves earlier unattributed Wizard choices while adding later level selections', () => {
       let character = makeCharacterFixture({

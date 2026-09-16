@@ -6,10 +6,14 @@ import {
   replaceClassFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
   resolveFeatChoiceCommand,
+  resolveProficiencyChoiceCommand,
   retractFeatOptionsCommand,
 } from '@/lib/character/commands/featCommands'
+import { getFixedFeatOptionKey } from '@/lib/featGrants'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
+import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance } from '@/store/characterStore'
+import type { Spell5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 function applyResult(
@@ -54,6 +58,92 @@ describe('feat commands', () => {
     })
     expect(retracted.characterPatch.abilityScores?.intelligence).toBe(10)
     expect(retracted.provenanceUpdate.proficiencies.skills.arcana).toBeUndefined()
+  })
+
+  test('removing a choice keeps a proficiency granted by another source', () => {
+    const classTag = makeSourceTag('class', 'Rogue', 'placeholder', 'PHB')
+    const choice = {
+      id: 'rogue-skills',
+      domain: 'skills' as const,
+      sourceTag: classTag,
+      chooseCount: 1,
+      optionPool: ['Arcana'],
+      selected: ['Arcana'],
+      status: 'resolved' as const,
+    }
+    let ledger: ProvenanceLedger = { ...emptyProvenance(), choices: [choice] }
+    ledger = addGrant(ledger, 'skills', 'Arcana', makeSourceTag('class', 'Rogue', 'choice', 'PHB'))
+    ledger = addGrant(
+      ledger,
+      'skills',
+      'Arcana',
+      makeSourceTag('background', 'Sage', 'fixed', 'PHB'),
+    )
+    const character = makeCharacterFixture({
+      proficiencies: {
+        ...makeCharacterFixture().proficiencies,
+        skills: ['arcana'],
+      },
+      skills: { arcana: { proficient: true, expertise: false, bonus: 0 } },
+    })
+
+    const result = resolveProficiencyChoiceCommand(
+      character,
+      ledger,
+      'skills',
+      'Arcana',
+      false,
+      choice.id,
+    )
+
+    expect(result.characterPatch.proficiencies?.skills).toEqual(['arcana'])
+    expect(result.characterPatch.skills?.arcana?.proficient).toBe(true)
+    expect(result.provenanceUpdate.proficiencies.skills.arcana).toEqual([
+      makeSourceTag('background', 'Sage', 'fixed', 'PHB'),
+    ])
+  })
+
+  test('marks feat-granted spells fixed and releases them when the feat grant is retracted', () => {
+    const character = makeCharacterFixture()
+    const selections = { spells: ['Magic Missile|PHB'] }
+    const committed = commitFeatOptionsCommand(
+      character,
+      emptyProvenance(),
+      { name: 'Magic Initiate', source: 'PHB' },
+      selections,
+      [{ name: 'Magic Missile', source: 'PHB', level: 1 } as Spell5e],
+    )
+    const configured = applyResult(character, committed)
+    const specialProfile = configured.spells.spellProfiles.find(
+      (profile) => profile.id === 'special:unrestricted',
+    )
+
+    expect(specialProfile?.fixedSpells).toEqual(['Magic Missile'])
+
+    const retracted = retractFeatOptionsCommand(
+      configured,
+      configured.provenance,
+      { name: 'Magic Initiate', source: 'PHB' },
+      selections,
+    )
+    const retractedProfile = retracted.characterPatch.spells?.spellProfiles.find(
+      (profile) => profile.id === 'special:unrestricted',
+    )
+    expect(retractedProfile?.spellsKnown).toEqual([])
+    expect(retractedProfile?.fixedSpells).toEqual([])
+  })
+
+  test('stores setup for an unparameterized fixed feat grant', () => {
+    const result = commitFeatOptionsCommand(
+      makeCharacterFixture(),
+      emptyProvenance(),
+      { name: 'Skilled', source: 'XPHB', fixedGrant: true },
+      { skills: ['Arcana'] },
+    )
+
+    expect(result.characterPatch.fixedFeatOptions).toEqual({
+      [getFixedFeatOptionKey('Skilled', 'XPHB')]: { skills: ['Arcana'] },
+    })
   })
 
   test('editing options retracts old grants before applying new grants', () => {

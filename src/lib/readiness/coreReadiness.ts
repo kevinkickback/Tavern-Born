@@ -2,13 +2,14 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
+import { getFixedFeatOptionKey, resolveFixedFeatGrant } from '@/lib/featGrants'
 import {
   equipmentUnresolvedReadinessId,
   featSetupReadinessId,
   provenanceChoiceReadinessId,
 } from '@/lib/navigation/readinessFocus'
 import type { Feat5e } from '@/types/5etools'
-import type { Character, Feat } from '@/types/character'
+import type { Character, FeatOptionSelections } from '@/types/character'
 import { readinessIssue } from './readinessIssue'
 import type { CharacterReadinessIssue } from './types'
 
@@ -189,20 +190,63 @@ export function validateFeatSetup(
   featsByKey: Readonly<Record<string, Feat5e>> | undefined,
 ): CharacterReadinessIssue[] {
   if (!featsByKey) return []
-  const feats: Feat[] = [...(character.feats ?? []), ...(character.specialFeats ?? [])]
-  return feats.flatMap((feat) => {
-    const data = featsByKey[getEntityLookupKey(feat.name, feat.source)]
+  const featCatalog = Object.values(featsByKey)
+  const findFeat = (name: string, source?: string) => {
+    const exact = featsByKey[getEntityLookupKey(name, source)]
+    if (exact || source) return exact
+    return featCatalog
+      .filter((feat) => feat.name === name)
+      .sort((left, right) => (left.source ?? '').localeCompare(right.source ?? ''))[0]
+  }
+  const candidates: Array<{
+    name: string
+    source?: string
+    options?: FeatOptionSelections
+    className?: string
+    classLevel?: number
+    ownerKey?: string
+  }> = [
+    ...(character.feats ?? []),
+    ...(character.specialFeats ?? []).map((feat) => ({ ...feat, ownerKey: `bonus:${feat.id}` })),
+    ...(character.classFeatChoices ?? []).flatMap((choice) =>
+      choice.feats.map((feat) => ({ ...feat, ownerKey: `class:${choice.id}` })),
+    ),
+    ...(character.provenance?.choices ?? [])
+      .filter((choice) => choice.domain === 'feats')
+      .flatMap((choice) =>
+        (choice.selectedRefs ?? choice.selected.map((name) => ({ name }))).map((selection) => ({
+          ...selection,
+          ownerKey: `choice:${choice.id}`,
+        })),
+      ),
+  ]
+
+  for (const [ledgerName, tags] of Object.entries(character.provenance?.feats ?? {})) {
+    for (const tag of tags) {
+      if (tag.grantType !== 'fixed') continue
+      const resolved = resolveFixedFeatGrant(featCatalog, ledgerName, tag)
+      candidates.push({
+        name: resolved.name,
+        source: resolved.source,
+        options:
+          character.fixedFeatOptions?.[
+            getFixedFeatOptionKey(resolved.name, resolved.source, resolved.variant)
+          ],
+        ownerKey: `fixed:${tag.sourceType}:${tag.sourceName}:${resolved.variant ?? ''}`,
+      })
+    }
+  }
+
+  return candidates.flatMap((feat) => {
+    const data = findFeat(feat.name, feat.source)
     if (!data || !hasFeatOptions(data) || feat.options) return []
+    const featKey = getEntityLookupKey(data.name, data.source)
     return [
       readinessIssue(
-        featSetupReadinessId(
-          getEntityLookupKey(feat.name, feat.source),
-          feat.className,
-          feat.classLevel,
-        ),
+        featSetupReadinessId(featKey, feat.className, feat.classLevel, feat.ownerKey),
         'blocking',
         'feats',
-        `Finish setting up ${feat.name}`,
+        `Finish setting up ${data.name}`,
         'This feat has required follow-up choices that have not been stored.',
       ),
     ]

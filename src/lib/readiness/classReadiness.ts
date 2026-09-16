@@ -1,6 +1,8 @@
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
 import { getSubclassSelectionInfo } from '@/lib/5etools/classData'
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { buildClassProfileMap } from '@/lib/calculations/classProfileMap'
+import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import {
   type ClassChoiceCatalogs,
   getClassChoiceOptionKey,
@@ -45,15 +47,13 @@ export function validateClassChoices(
 ): CharacterReadinessIssue[] {
   const issues: CharacterReadinessIssue[] = []
   const entries = getCharacterClassEntries(character)
-  const classDataByKey = new Map(
-    calculation.classes.map((classData) => [readinessClassKey(classData), classData]),
-  )
+  const classDataByKey = buildClassProfileMap(calculation.classes)
   const selections = new Map(
     (character.classChoiceSelections ?? []).map((selection) => [selection.choiceId, selection]),
   )
 
   for (const entry of entries) {
-    const classData = classDataByKey.get(readinessClassKey(entry))
+    const classData = classDataByKey.get(toClassProfileId(entry.name, entry.source))
     if (!classData) continue
     const subclassInfo = getSubclassSelectionInfo(classData)
     if (

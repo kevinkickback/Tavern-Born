@@ -653,6 +653,7 @@ export function selectRacialSpell(
   choiceId: string,
   spellName: string,
 ): SpellCommandResult {
+  const racialProfile = character.spells.spellProfiles.find((profile) => profile.id === profileId)
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (profile.id !== profileId) return profile
     const choice =
@@ -680,7 +681,12 @@ export function selectRacialSpell(
     }
   })
 
-  const sourceTag = makeSourceTag('race', choiceId.split(':')[0] ?? 'Race', 'choice')
+  const sourceType = character.subrace ? 'subrace' : 'race'
+  const sourceName = character.subrace ?? character.race ?? racialProfile?.raceName ?? 'Race'
+  const sourceRef = character.subrace
+    ? character.subraceSource
+    : (character.raceSource ?? racialProfile?.raceSource)
+  const sourceTag = makeSourceTag(sourceType, sourceName, 'choice', sourceRef)
 
   const updatedLedger = addSpellGrant(ledger, spellName, sourceTag)
 
@@ -708,6 +714,7 @@ export function removeRacialSpell(
   spellName: string,
 ): SpellCommandResult {
   const spellKey = getSpellNameKey(spellName)
+  const racialProfile = character.spells.spellProfiles.find((profile) => profile.id === profileId)
   const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
     if (profile.id !== profileId) return profile
 
@@ -729,8 +736,19 @@ export function removeRacialSpell(
 
   const normKey = spellKey
   const tags = ledger.spells[normKey] ?? []
-  const raceName = choiceId.split(':')[0] ?? 'Race'
-  const filtered = tags.filter((t) => !(t.sourceType === 'race' && t.sourceName === raceName))
+  const sourceType = character.subrace ? 'subrace' : 'race'
+  const sourceName = character.subrace ?? character.race ?? racialProfile?.raceName ?? 'Race'
+  const sourceRef = character.subrace
+    ? character.subraceSource
+    : (character.raceSource ?? racialProfile?.raceSource)
+  const filtered = tags.filter(
+    (tag) =>
+      !(
+        tag.sourceType === sourceType &&
+        tag.sourceName === sourceName &&
+        (tag.sourceRef ?? '') === (sourceRef ?? '')
+      ),
+  )
 
   const newSpells =
     filtered.length > 0

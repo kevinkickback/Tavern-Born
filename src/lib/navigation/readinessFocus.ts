@@ -71,8 +71,9 @@ export function featSetupReadinessId(
   featKey: string,
   className?: string,
   classLevel?: number,
+  ownerKey?: string,
 ): string {
-  return `feat:setup:${featKey}:${className ?? ''}:${classLevel ?? ''}`
+  return `feat:setup:${featKey}:${className ?? ''}:${classLevel ?? ''}${ownerKey ? `:${ownerKey}` : ''}`
 }
 
 export function equipmentUnresolvedReadinessId(itemId: string): string {

@@ -118,6 +118,12 @@ export function useSpellProfileMutations(
       const profile = spellProfiles.find((entry) => entry.id === profileId)
       const spellKey = normalizeKey(name)
       if (profile?.fixedSpells?.some((fixedName) => normalizeKey(fixedName) === spellKey)) return
+      if (
+        profile?.type === 'special' &&
+        (currentLedger.spells[spellKey] ?? []).some((tag) => tag.sourceType === 'feat')
+      ) {
+        return
+      }
       const result = removeSpellFromCharacter(commandCharacter, currentLedger, name, {
         spellKind: kind,
         profileId,

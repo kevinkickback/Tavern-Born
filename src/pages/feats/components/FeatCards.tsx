@@ -27,6 +27,7 @@ interface FeatDetailCardProps {
     grantVariant?: string,
     provenanceChoiceId?: string,
     classFeatChoiceId?: string,
+    fixedGrant?: boolean,
   ) => void
   onEditSetup?: (
     name: string,
@@ -34,11 +35,13 @@ interface FeatDetailCardProps {
     grantVariant?: string,
     provenanceChoiceId?: string,
     classFeatChoiceId?: string,
+    fixedGrant?: boolean,
   ) => void
   isBonus?: boolean
   isOrigin?: boolean
   grantedBy?: string
   grantVariant?: string
+  fixedGrant?: boolean
   grantVariantLabel?: string
   provenanceChoiceId?: string
   classFeatChoiceId?: string
@@ -60,6 +63,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
   isOrigin,
   grantedBy,
   grantVariant,
+  fixedGrant,
   grantVariantLabel,
   provenanceChoiceId,
   classFeatChoiceId,
@@ -210,6 +214,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
                     grantVariant,
                     provenanceChoiceId,
                     classFeatChoiceId,
+                    fixedGrant,
                   )
                 }}
               >
@@ -231,6 +236,7 @@ export const FeatDetailCard = memo(function FeatDetailCard({
                     grantVariant,
                     provenanceChoiceId,
                     classFeatChoiceId,
+                    fixedGrant,
                   )
                 }}
               >

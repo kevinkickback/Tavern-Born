@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { makeSourceTag } from '@/lib/provenance'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import type { Background5e, Class5e, Feat5e, Item5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -375,6 +376,115 @@ describe('getCharacterReadiness', () => {
     })
 
     expect(result.blockingIssues.map((entry) => entry.id)).toContain('feat:setup:Test Feat|TEST::')
+  })
+
+  test('requires setup for class, provenance-choice, and fixed feat grants', () => {
+    const feat = {
+      name: 'Test Feat',
+      source: 'TEST',
+      ability: [{ choose: { count: 1, amount: 1, from: ['str', 'dex'] } }],
+    } as Feat5e
+    const fixedTag = makeSourceTag('background', 'Test Background', 'fixed', 'TEST')
+    const character = makeCharacterFixture({
+      classFeatChoices: [
+        {
+          id: 'fighter-test-feat',
+          className: 'Fighter',
+          classSource: 'TEST',
+          progressionName: 'Test Progression',
+          categories: ['TEST'],
+          feats: [
+            {
+              id: 'class-test-feat',
+              name: 'Test Feat',
+              source: 'TEST',
+              description: '',
+              className: 'Fighter',
+              classSource: 'TEST',
+              classLevel: 1,
+            },
+          ],
+        },
+      ],
+      provenance: {
+        ...makeCharacterFixture().provenance!,
+        feats: { 'test feat': [fixedTag] },
+        choices: [
+          {
+            id: 'race-test-feat',
+            domain: 'feats',
+            sourceTag: makeSourceTag('race', 'Test Race', 'placeholder', 'TEST'),
+            chooseCount: 1,
+            optionPool: [],
+            selected: ['Test Feat'],
+            selectedRefs: [{ name: 'Test Feat', source: 'TEST' }],
+            status: 'resolved',
+          },
+        ],
+      },
+    })
+
+    const result = getCharacterReadiness(character, {
+      featsByKey: { 'Test Feat|TEST': feat },
+    })
+    const featIssueIds = result.blockingIssues
+      .map((issue) => issue.id)
+      .filter((id) => id.startsWith('feat:setup:Test Feat|TEST:'))
+
+    expect(featIssueIds).toHaveLength(3)
+    expect(featIssueIds).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('class:fighter-test-feat'),
+        expect.stringContaining('choice:race-test-feat'),
+        expect.stringContaining('fixed:background:Test Background:'),
+      ]),
+    )
+  })
+
+  test('validates spellcasting for a source-less legacy class entry', () => {
+    const arcaneTrickster = {
+      name: 'Arcane Trickster',
+      shortName: 'Arcane Trickster',
+      source: 'PHB',
+      className: 'Rogue',
+      classSource: 'PHB',
+      spellcastingAbility: 'int',
+      casterProgression: '1/3',
+      cantripProgression: [0, 0, 2],
+      spellsKnownProgression: [0, 0, 3],
+    }
+    const rogue = {
+      name: 'Rogue',
+      source: 'PHB',
+      hd: { faces: 8 },
+      subclasses: [arcaneTrickster],
+    } as Class5e
+    const character = makeCharacterFixture({
+      class: 'Rogue',
+      classSource: undefined,
+      subclass: 'Arcane Trickster',
+      subclassSource: 'PHB',
+      level: 3,
+      classProgression: [
+        {
+          name: 'Rogue',
+          source: undefined,
+          levels: 3,
+          subclass: 'Arcane Trickster',
+          subclassSource: 'PHB',
+        },
+      ],
+      spells: { ...makeCharacterFixture().spells, spellProfiles: [] },
+    })
+    const calculation = createCharacterCalculationContext(character, {
+      classesByKey: { 'Rogue|PHB': rogue },
+    })
+
+    const result = getCharacterReadiness(character, { calculation })
+
+    expect(result.blockingIssues.map((issue) => issue.id)).toEqual(
+      expect.arrayContaining(['spells:cantrips:class:Rogue|', 'spells:known:class:Rogue|']),
+    )
   })
 
   test('validates data-driven spell profile quotas and selected spell references', () => {

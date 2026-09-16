@@ -11,6 +11,7 @@ import { deriveCharacterActions } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { buildClassProfileMap } from '@/lib/calculations/classProfileMap'
 import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
@@ -22,7 +23,6 @@ import {
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
-import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
 import {
   formatCastingTime,
   formatComponents,
@@ -587,12 +587,7 @@ export function createCharacterSheetViewModel(
   const resolvedClasses = calculationContext.classes
   const raceResolution = calculationContext.raceResolution
   const background = calculationContext.background
-  const classesById = new Map(
-    resolvedClasses.map((classData) => [
-      toClassProfileId(classData.name, classData.source),
-      classData,
-    ]),
-  )
+  const classesById = buildClassProfileMap(resolvedClasses)
   const actions = deriveCharacterActions(character, {
     abilityModifiers,
     proficiencyBonus,
