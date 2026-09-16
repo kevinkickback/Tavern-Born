@@ -141,12 +141,16 @@ describe('home page integration workflows', () => {
 
     render(<HomePage />)
 
-    expect(screen.getByRole('alertdialog')).toBeTruthy()
-    expect(screen.getByText('Older characters could not be loaded')).toBeTruthy()
+    const unsupportedDialog = screen.getByRole('alertdialog')
+    expect(unsupportedDialog).toBeTruthy()
+    expect(screen.getByText("Some older characters can't be opened")).toBeTruthy()
+    expect(unsupportedDialog.textContent).toContain(
+      "Tavern Born found 2 characters created with an earlier beta version. This version can't open them, so they have been removed from your character list.",
+    )
     await user.keyboard('{Escape}')
     expect(screen.getByRole('alertdialog')).toBeTruthy()
 
-    await user.click(screen.getByRole('button', { name: 'Export Backups' }))
+    await user.click(screen.getByRole('button', { name: 'Download Backups' }))
     expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
     expect(downloadLinks.map((link) => link.download)).toEqual([
       'Old_Hero-legacy-backup-1.tbc',
@@ -154,7 +158,7 @@ describe('home page integration workflows', () => {
     ])
     expect(useCharacterStore.getState().unsupportedCharacters).toHaveLength(2)
 
-    await user.click(screen.getByRole('button', { name: 'I Understand' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
     expect(screen.queryByRole('alertdialog')).toBeNull()
     expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
   })

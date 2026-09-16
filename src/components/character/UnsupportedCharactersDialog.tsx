@@ -22,26 +22,24 @@ export function UnsupportedCharactersDialog({
   onAcknowledge,
 }: UnsupportedCharactersDialogProps) {
   const plural = count === 1 ? '' : 's'
+  const title =
+    count === 1 ? "An older character can't be opened" : "Some older characters can't be opened"
+  const description = `Tavern Born found ${count} character${plural} created with an earlier beta version. This version can't open ${count === 1 ? 'it' : 'them'}, so ${count === 1 ? 'it has' : 'they have'} been removed from your character list.`
+  const backupDescription = `You can download the original file${plural} before continuing. ${count === 1 ? 'It' : 'They'} can only be opened with a compatible older version of Tavern Born.`
 
   return (
     <AlertDialog open={count > 0}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Older character{plural} could not be loaded</AlertDialogTitle>
-          <AlertDialogDescription>
-            {count} character{plural} created by an older beta version cannot be opened in this
-            version and {count === 1 ? 'was' : 'were'} removed from your library.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
-        <p className="text-sm text-muted-foreground">
-          If you may return to an older version of Tavern Born, export the original character
-          {plural} now. These backup files cannot be imported into this version.
-        </p>
+        <p className="text-sm text-muted-foreground">{backupDescription}</p>
         <AlertDialogFooter>
           <Button variant="outline" onClick={onExport}>
-            <DownloadSimple /> Export Backup{plural}
+            <DownloadSimple /> Download Backup{plural}
           </Button>
-          <AlertDialogAction onClick={onAcknowledge}>I Understand</AlertDialogAction>
+          <AlertDialogAction onClick={onAcknowledge}>Continue</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
