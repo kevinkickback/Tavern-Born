@@ -145,7 +145,10 @@ describe('home page integration workflows', () => {
     expect(unsupportedDialog).toBeTruthy()
     expect(screen.getByText('Character compatibility issue')).toBeTruthy()
     expect(unsupportedDialog.textContent).toContain(
-      "Tavern Born found 2 characters saved by an older version of the app. This version can't open them.",
+      'Tavern Born found 2 characters created with an older version. They are incompatible with the current version and have been removed from the character list.',
+    )
+    expect(unsupportedDialog.textContent).toContain(
+      'Download the original files before continuing if you want to keep backups for use with a compatible older version of Tavern Born.',
     )
     await user.keyboard('{Escape}')
     expect(screen.getByRole('alertdialog')).toBeTruthy()

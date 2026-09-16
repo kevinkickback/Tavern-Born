@@ -22,22 +22,17 @@ export function UnsupportedCharactersDialog({
   onAcknowledge,
 }: UnsupportedCharactersDialogProps) {
   const plural = count === 1 ? '' : 's'
+  const compatibilityDescription = `Tavern Born found ${count} character${plural} created with an older version. ${count === 1 ? 'It is' : 'They are'} incompatible with the current version and ${count === 1 ? 'has' : 'have'} been removed from the character list.`
+  const backupDescription = `Download the original file${plural} before continuing if you want to keep ${count === 1 ? 'a backup' : 'backups'} for use with a compatible older version of Tavern Born.`
 
   return (
     <AlertDialog open={count > 0}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Character compatibility issue</AlertDialogTitle>
-          <AlertDialogDescription>
-            Tavern Born found {count} character{plural} saved by an older version of the app. This
-            version can't open {count === 1 ? 'it' : 'them'}.
-          </AlertDialogDescription>
+          <AlertDialogDescription>{compatibilityDescription}</AlertDialogDescription>
         </AlertDialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Download the original file{plural} before continuing if you want to keep{' '}
-          {count === 1 ? 'it' : 'them'}. {count === 1 ? 'It' : 'They'} can only be opened with a
-          compatible older version of Tavern Born.
-        </p>
+        <p className="text-sm text-muted-foreground">{backupDescription}</p>
         <AlertDialogFooter>
           <Button variant="outline" onClick={onExport}>
             <DownloadSimple /> Download Backup{plural}
