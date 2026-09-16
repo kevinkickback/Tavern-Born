@@ -9,6 +9,7 @@ import {
   getClassChoiceOptionKey,
   getLegacyClassChoiceSelection,
   getStandaloneClassChoices,
+  isClassChoiceOptionEligible,
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import type { Class5e } from '@/types/5etools'
@@ -95,13 +96,15 @@ export function useClassChoiceController({
     [choices, optionViewsByChoiceId, selectionByChoiceId],
   )
   const activeOptionViews = activeChoice ? (optionViewsByChoiceId.get(activeChoice.id) ?? []) : []
-  const activeOptionKeys = new Set(
-    activeOptionViews.map((option) => getClassChoiceOptionKey(option.reference)),
+  const activeEligibleOptionKeys = new Set(
+    activeOptionViews
+      .filter(isClassChoiceOptionEligible)
+      .map((option) => getClassChoiceOptionKey(option.reference)),
   )
   const activeInitialSelectedIds = activeChoice
     ? (selectionByChoiceId.get(activeChoice.id)?.selected ?? [])
         .map(getClassChoiceOptionKey)
-        .filter((key) => activeOptionKeys.has(key))
+        .filter((key) => activeEligibleOptionKeys.has(key))
     : []
   const activeRequiredCount = activeChoice
     ? getRequiredChoiceSelectionCount(activeChoice, viewingClassLevel)

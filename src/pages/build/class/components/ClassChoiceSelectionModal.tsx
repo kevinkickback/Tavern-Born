@@ -15,6 +15,7 @@ import {
 import {
   type ClassChoiceOptionView,
   getClassChoiceOptionKey,
+  isClassChoiceOptionEligible,
 } from '@/lib/character/classChoiceOptions'
 import { cn } from '@/lib/utils'
 import type { NormalizedCharacterChoice } from '@/types/classRules'
@@ -51,6 +52,11 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
           {option.reference.name}
         </span>
         <div className="flex shrink-0 gap-1">
+          {!isClassChoiceOptionEligible(option) && (
+            <Badge variant="outline" className="h-5 border-warning/40 px-1.5 py-0 text-xs">
+              Unavailable
+            </Badge>
+          )}
           <Badge variant="outline" className="h-5 px-1.5 py-0 text-xs text-muted-foreground">
             {option.reference.entityType === 'item' && (option.masteries?.length ?? 0) > 0
               ? 'Weapon'
@@ -64,6 +70,14 @@ const ChoiceOptionCard = memo(function ChoiceOptionCard({
           {selected && <Badge className="h-5 bg-accent px-1.5 py-0 text-xs">Selected</Badge>}
         </div>
       </div>
+      {!isClassChoiceOptionEligible(option) && (
+        <div className="mb-1.5 flex items-start gap-1.5 rounded border border-warning/20 bg-warning/10 px-2 py-1.5">
+          <Warning className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" weight="fill" />
+          <div className="text-xs leading-snug text-warning/90">
+            This saved option is no longer eligible. Choose an available replacement to continue.
+          </div>
+        </div>
+      )}
       {!prerequisite.met && prerequisite.reasons.length > 0 && (
         <div className="mb-1.5 flex items-start gap-1.5 rounded border border-warning/20 bg-warning/10 px-2 py-1.5">
           <Warning className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" weight="fill" />
@@ -255,6 +269,7 @@ export function ClassChoiceSelectionModal({
   const canSelect = useCallback(
     (option: ClassChoiceOptionView, selectedIds: Set<string>) => {
       const key = getClassChoiceOptionKey(option.reference)
+      if (!isClassChoiceOptionEligible(option)) return false
       if (selectedIds.has(key)) return true
       if (!(prerequisiteByOptionKey.get(key)?.met ?? true)) return false
       return selectedIds.size < maximumSelections

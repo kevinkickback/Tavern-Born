@@ -392,7 +392,6 @@ export function BuildClassPage() {
               totalASIAcrossClasses={totalASIAcrossClasses}
               classChoices={classChoiceController.choices}
               classChoiceDiagnostics={classChoiceController.diagnostics}
-              classChoiceSelectionById={classChoiceController.selectionByChoiceId}
               selectedClassChoiceViewsById={classChoiceController.selectedViewsByChoiceId}
               onOpenClassPicker={() => setClassPickerOpen(true)}
               onOpenSubclassPicker={() => setSubclassPickerOpen(true)}

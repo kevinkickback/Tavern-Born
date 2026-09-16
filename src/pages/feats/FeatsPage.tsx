@@ -26,7 +26,7 @@ import {
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { getFixedFeatOptionKey } from '@/lib/featGrants'
-import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { featSetupReadinessId, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import type { Feat5e } from '@/types/5etools'
 import { NoCharCard } from '../_shared'
@@ -42,8 +42,6 @@ import {
 export function FeatsPage() {
   const [searchParams] = useSearchParams()
   const readinessFocus = getReadinessFocus(searchParams)
-  const isFocusedFeat = (name: string, source: string) =>
-    readinessFocus?.startsWith(`feat:setup:${getEntityLookupKey(name, source)}:`) ?? false
   const controller = useFeatsPageController()
   const {
     activeFeatData,
@@ -103,6 +101,18 @@ export function FeatsPage() {
     showCharacterGroup,
     showEditHint,
   } = controller
+
+  const isFocusedFeat = (name: string, source: string) =>
+    [...(character?.feats ?? []), ...(character?.specialFeats ?? [])].some(
+      (feat) =>
+        getEntityLookupKey(feat.name, feat.source) === getEntityLookupKey(name, source) &&
+        readinessFocus ===
+          featSetupReadinessId(
+            getEntityLookupKey(feat.name, feat.source),
+            feat.className,
+            feat.classLevel,
+          ),
+    )
 
   if (!character) {
     return <NoCharCard icon={<Star weight="duotone" />} noun="manage feats" />

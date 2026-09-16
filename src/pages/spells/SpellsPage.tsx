@@ -34,7 +34,11 @@ import {
 } from '@/lib/calculations/spellProfiles.constants'
 import { formatSpellDisplayName } from '@/lib/calculations/spellUtils'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
-import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import {
+  findFocusedProvenanceChoice,
+  getReadinessFocus,
+  isSpellProfileReadinessFocus,
+} from '@/lib/navigation/readinessFocus'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SourceRow } from '@/lib/provenance/types'
 import {
@@ -119,13 +123,14 @@ export function SpellsPage() {
     selected: string[]
   } | null>(null)
   const readinessFocus = getReadinessFocus(searchParams)
-  const focusedChoiceId = readinessFocus?.startsWith('choice:')
-    ? readinessFocus.slice('choice:'.length)
-    : undefined
+  const focusedChoice = findFocusedProvenanceChoice(readinessFocus, ledger.choices)
   const focusedProfile = spellProfiles.find(
     (profile) =>
-      readinessFocus?.includes(profile.id) ||
-      profile.choices?.some((choice) => choice.id === focusedChoiceId),
+      isSpellProfileReadinessFocus(
+        readinessFocus,
+        profile.id,
+        profile.choices?.map((choice) => choice.id),
+      ) || profile.choices?.some((choice) => choice.id === focusedChoice?.id),
   )
 
   useEffect(() => {

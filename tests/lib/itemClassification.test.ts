@@ -6,6 +6,7 @@ import {
 import {
   getNormalizedItemTraits,
   inferArmorCategory,
+  inferWeaponRange,
   validateItemTypeFallbacks,
 } from '@/lib/calculations/itemClassification'
 
@@ -35,6 +36,19 @@ describe('item classification', () => {
     expect(getNormalizedItemTraits({ type: 'LA' }, { LA: 'Medium Armor' }).armorCategory).toBe(
       'medium',
     )
+  })
+
+  test('derives weapon range from parsed labels without relying on catalog abbreviations', () => {
+    expect(
+      getNormalizedItemTraits({ type: 'CUSTOM' }, { CUSTOM: 'Melee Weapon' }).weaponRanges,
+    ).toEqual(['melee'])
+    expect(inferWeaponRange('Ranged Weapon')).toBe('ranged')
+  })
+
+  test('uses parsed weapon-range labels before versioned code fallbacks', () => {
+    expect(getNormalizedItemTraits({ type: 'M' }, { M: 'Ranged Weapon' }).weaponRanges).toEqual([
+      'ranged',
+    ])
   })
 
   test('provides one taxonomy for weapons, tools, and consumables', () => {

@@ -105,8 +105,12 @@ Current implementation notes:
   class-choice option resolver in src/lib/character/classChoiceOptions.ts joins descriptors to
   filtered source-qualified catalogs without embedding option lists; filtered item choices use the
   ordinary base-item catalog, while explicit and saved references can still resolve against both
-  item catalogs. Weapon mastery definitions and descriptions are parsed from the `itemMastery`
-  collection in `items-base.json`. Class choices render as selection cards in place of their owning
+  item catalogs. Resolved option views distinguish currently eligible options from retained saved
+  references: retained references remain visible for recovery but cannot satisfy or re-enter a
+  selection. Weapon range comes from parsed `itemType` labels through the shared item classifier,
+  with validated catalog-code metadata used only as a compatibility fallback. Weapon mastery
+  definitions and descriptions are parsed from the `itemMastery` collection in `items-base.json`.
+  Class choices render as selection cards in place of their owning
   passive feature at the level where they are earned, rather than in a separate global section. The class-choice controller
   delegates persistence and feature-shaped grant reconciliation to the class provenance mutation
   hook; item and feat kinds are not assigned mechanical semantics until their domain handlers own
@@ -159,9 +163,11 @@ Current implementation notes:
   scroll into view and briefly highlight itself. The route-focus hook removes that visual state
   after 1.8 seconds, including when reduced-motion styling replaces the animation; the query does
   not change character state. Review adds its issue ID through
-  `src/lib/navigation/readinessFocus.ts`; destination pages use it to select the relevant tab or
-  class, expand a hidden accordion, clear a hiding inventory filter where needed, scroll the target
-  into view, and apply the same focus animation. Review is the sole
+  `src/lib/navigation/readinessFocus.ts`; issue producers and destination pages share exact ID
+  builders and match against known entities rather than parsing prefixes locally. Destinations use
+  the resolved focus to select the relevant tab or class, expand a hidden accordion, clear a hiding
+  inventory filter where needed, scroll the single target into view, and apply the same focus
+  animation. Review is the sole
   destination in Builder's final Finish group after Core and Details; its header separates Needs
   Attention from the remaining Character Overview. Builder has no one-item Options group. Rules is
   a character-scoped

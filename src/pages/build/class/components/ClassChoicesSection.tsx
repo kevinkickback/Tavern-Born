@@ -2,9 +2,11 @@ import { WarningCircle } from '@phosphor-icons/react'
 import { Badge } from '@/components/ui/badge'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
-import type { ClassChoiceOptionView } from '@/lib/character/classChoiceOptions'
+import {
+  type ClassChoiceOptionView,
+  isClassChoiceOptionEligible,
+} from '@/lib/character/classChoiceOptions'
 import { cn } from '@/lib/utils'
-import type { CharacterClassChoiceSelection } from '@/types/character'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 import { BuildClassProgressionChoiceCard } from './ProgressionChoiceCard'
@@ -13,7 +15,6 @@ interface ClassChoicesSectionProps {
   choices: NormalizedCharacterChoice[]
   diagnostics: ClassChoiceDiagnostic[]
   classLevel: number
-  selectionByChoiceId: ReadonlyMap<string, CharacterClassChoiceSelection>
   selectedViewsByChoiceId: ReadonlyMap<string, ClassChoiceOptionView[]>
   detailCollapsed: boolean
   onChoose: (choice: NormalizedCharacterChoice) => void
@@ -21,14 +22,14 @@ interface ClassChoicesSectionProps {
   onExpandDetails: () => void
   feature?: ClassFeatureDisplay
   className?: string
-  readinessFocus?: string | null
+  focusedChoiceId?: string
+  isDiagnosticFocused?: boolean
 }
 
 export function BuildClassChoicesSection({
   choices,
   diagnostics,
   classLevel,
-  selectionByChoiceId,
   selectedViewsByChoiceId,
   detailCollapsed,
   onChoose,
@@ -36,11 +37,11 @@ export function BuildClassChoicesSection({
   onExpandDetails,
   feature,
   className,
-  readinessFocus,
+  focusedChoiceId,
+  isDiagnosticFocused = false,
 }: ClassChoicesSectionProps) {
-  const focusDiagnostic = readinessFocus?.startsWith('class-choice-diagnostic:') ?? false
   const { ref: diagnosticRef, highlighted: diagnosticHighlighted } =
-    useRouteFocusTarget<HTMLDivElement>(focusDiagnostic)
+    useRouteFocusTarget<HTMLDivElement>(isDiagnosticFocused)
   return (
     <div
       ref={diagnosticRef}
@@ -53,8 +54,7 @@ export function BuildClassChoicesSection({
       {choices.map((choice) => {
         const required = getRequiredChoiceSelectionCount(choice, classLevel)
         const views = selectedViewsByChoiceId.get(choice.id) ?? []
-        const selected = selectionByChoiceId.get(choice.id)?.selected ?? []
-        const selectedCount = Math.min(selected.length, views.length)
+        const selectedCount = views.filter(isClassChoiceOptionEligible).length
         return (
           <BuildClassProgressionChoiceCard
             key={choice.id}
@@ -69,12 +69,13 @@ export function BuildClassChoicesSection({
               source: view.reference.source,
               entries: view.entries,
               masteries: view.masteries,
+              unavailable: !isClassChoiceOptionEligible(view),
             }))}
             detailCollapsed={detailCollapsed}
             onChoose={() => onChoose(choice)}
             onSelectFeature={onSelectFeature}
             onExpandDetails={onExpandDetails}
-            highlighted={readinessFocus === `class-choice:${choice.id}`}
+            highlighted={focusedChoiceId === choice.id}
           />
         )
       })}

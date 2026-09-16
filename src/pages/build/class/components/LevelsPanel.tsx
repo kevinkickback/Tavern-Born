@@ -23,16 +23,21 @@ import {
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
 } from '@/lib/calculations/spellProfiles'
-import type { ClassChoiceOptionView } from '@/lib/character/classChoiceOptions'
+import {
+  type ClassChoiceOptionView,
+  isClassChoiceOptionEligible,
+} from '@/lib/character/classChoiceOptions'
+import {
+  classAsiReadinessId,
+  classChoiceDiagnosticReadinessId,
+  classChoiceReadinessId,
+  classSubclassReadinessId,
+  findFocusedProvenanceChoice,
+} from '@/lib/navigation/readinessFocus'
+import { readinessClassKey } from '@/lib/readiness/readinessIssue'
 import { cn } from '@/lib/utils'
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
-import type {
-  AsiChoice,
-  Character,
-  CharacterClassChoiceSelection,
-  CharacterClassEntry,
-  Feat,
-} from '@/types/character'
+import type { AsiChoice, Character, CharacterClassEntry, Feat } from '@/types/character'
 import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
 import { computeLevelDisplayData } from '../model/levelsUtils'
 import { BuildClassAsiSection } from './AsiSection'
@@ -81,7 +86,6 @@ interface BuildClassLevelsPanelProps {
   totalASIAcrossClasses: number
   classChoices: NormalizedCharacterChoice[]
   classChoiceDiagnostics: ClassChoiceDiagnostic[]
-  classChoiceSelectionById: ReadonlyMap<string, CharacterClassChoiceSelection>
   selectedClassChoiceViewsById: ReadonlyMap<string, ClassChoiceOptionView[]>
   onOpenClassPicker: () => void
   onOpenSubclassPicker: () => void
@@ -155,7 +159,6 @@ export function BuildClassLevelsPanel({
   totalASIAcrossClasses,
   classChoices,
   classChoiceDiagnostics,
-  classChoiceSelectionById,
   selectedClassChoiceViewsById,
   onOpenClassPicker,
   onOpenSubclassPicker,
@@ -178,22 +181,30 @@ export function BuildClassLevelsPanel({
   const [openSections, setOpenSections] = useState<string[]>([])
   const { ref: classPickerRef, highlighted: classPickerHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:class')
-  const focusedChoiceId = readinessFocus?.startsWith('choice:')
-    ? readinessFocus.slice('choice:'.length)
-    : undefined
-  const focusedClassChoice = character.provenance?.choices.find(
-    (choice) =>
-      choice.id === focusedChoiceId &&
-      choice.sourceTag.sourceType === 'class' &&
-      choice.sourceTag.sourceName === viewingClass,
+  const focusedClassChoice = findFocusedProvenanceChoice(
+    readinessFocus,
+    character.provenance?.choices ?? [],
   )
+  const focusedViewingClassChoice =
+    focusedClassChoice?.sourceTag.sourceType === 'class' &&
+    focusedClassChoice.sourceTag.sourceName === viewingClass
+      ? focusedClassChoice
+      : undefined
+  const viewingClassKey = readinessClassKey({ name: viewingClass, source: viewingClassSource })
+  const focusedNormalizedChoiceId = classChoices.find(
+    (choice) => readinessFocus === classChoiceReadinessId(choice.id),
+  )?.id
+  const isDiagnosticFocused = (diagnostic: ClassChoiceDiagnostic) =>
+    readinessFocus ===
+    classChoiceDiagnosticReadinessId(viewingClassKey, diagnostic.featureName, diagnostic.code)
   const focusedEquipmentChoice =
-    focusedClassChoice?.domain === 'equipment' ? focusedClassChoice : undefined
+    focusedViewingClassChoice?.domain === 'equipment' ? focusedViewingClassChoice : undefined
   const { ref: equipmentChoiceRef, highlighted: equipmentChoiceHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(!!focusedEquipmentChoice)
   const { ref: classChoiceRef, highlighted: classChoiceHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(
-      focusedClassChoice?.domain === 'features' || focusedClassChoice?.domain === 'feats',
+      focusedViewingClassChoice?.domain === 'features' ||
+        focusedViewingClassChoice?.domain === 'feats',
     )
 
   useEffect(() => {
@@ -367,9 +378,10 @@ export function BuildClassLevelsPanel({
                   levelDiagnostics.length === 0 &&
                   levelClassChoices.every((choice) => {
                     const required = getRequiredChoiceSelectionCount(choice, viewingClassLevel)
-                    return (
-                      (classChoiceSelectionById.get(choice.id)?.selected.length ?? 0) >= required
-                    )
+                    const eligibleSelected = (
+                      selectedClassChoiceViewsById.get(choice.id) ?? []
+                    ).filter(isClassChoiceOptionEligible).length
+                    return eligibleSelected >= required
                   })
                 const allChoicesComplete =
                   levelChoiceCount > 0 &&
@@ -450,7 +462,9 @@ export function BuildClassLevelsPanel({
                             onSelectFeature={onSelectFeature}
                             onExpandDetails={onExpandDetails}
                             onOpenSubclassPicker={onOpenSubclassPicker}
-                            highlighted={readinessFocus?.startsWith('class:subclass:')}
+                            highlighted={
+                              readinessFocus === classSubclassReadinessId(viewingClassKey)
+                            }
                           />
                         )}
 
@@ -476,8 +490,7 @@ export function BuildClassLevelsPanel({
                             onSetAsiModeByLevel={onSetAsiModeByLevel}
                             onClearFeatSelectionsForAsi={onClearFeatSelectionsForAsi}
                             highlighted={
-                              readinessFocus?.startsWith('class:asi:') &&
-                              readinessFocus.endsWith(`:${lv}`)
+                              readinessFocus === classAsiReadinessId(viewingClassKey, lv)
                             }
                           />
                         )}
@@ -519,13 +532,14 @@ export function BuildClassLevelsPanel({
                                 choices={featureChoices}
                                 diagnostics={featureDiagnostics}
                                 classLevel={viewingClassLevel}
-                                selectionByChoiceId={classChoiceSelectionById}
                                 selectedViewsByChoiceId={selectedClassChoiceViewsById}
                                 detailCollapsed={detailCollapsed}
                                 onChoose={onOpenClassChoice}
                                 onSelectFeature={onSelectFeature}
                                 onExpandDetails={onExpandDetails}
                                 feature={feature}
+                                focusedChoiceId={focusedNormalizedChoiceId}
+                                isDiagnosticFocused={featureDiagnostics.some(isDiagnosticFocused)}
                               />
                             )
                           }}
@@ -543,7 +557,6 @@ export function BuildClassLevelsPanel({
                                 choices={[]}
                                 diagnostics={featureDiagnostics}
                                 classLevel={viewingClassLevel}
-                                selectionByChoiceId={classChoiceSelectionById}
                                 selectedViewsByChoiceId={selectedClassChoiceViewsById}
                                 detailCollapsed={detailCollapsed}
                                 onChoose={onOpenClassChoice}
@@ -551,6 +564,7 @@ export function BuildClassLevelsPanel({
                                 onExpandDetails={onExpandDetails}
                                 feature={feature}
                                 className="ml-3 border-l border-border pl-3"
+                                isDiagnosticFocused={featureDiagnostics.some(isDiagnosticFocused)}
                               />
                             )
                           }}
@@ -561,13 +575,13 @@ export function BuildClassLevelsPanel({
                             choices={unmatchedChoices}
                             diagnostics={unmatchedDiagnostics}
                             classLevel={viewingClassLevel}
-                            selectionByChoiceId={classChoiceSelectionById}
                             selectedViewsByChoiceId={selectedClassChoiceViewsById}
                             detailCollapsed={detailCollapsed}
                             onChoose={onOpenClassChoice}
                             onSelectFeature={onSelectFeature}
                             onExpandDetails={onExpandDetails}
-                            readinessFocus={readinessFocus}
+                            focusedChoiceId={focusedNormalizedChoiceId}
+                            isDiagnosticFocused={unmatchedDiagnostics.some(isDiagnosticFocused)}
                           />
                         )}
                       </div>

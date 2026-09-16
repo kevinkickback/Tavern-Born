@@ -108,6 +108,9 @@ source content.
 - Item consumers resolve raw type codes through the parsed `itemType` catalog. The manual item picker
   keeps records with unfamiliar or uncategorized codes in a data-derived Other group and displays the
   parsed type label when available, rather than using recognized categories as an inclusion gate.
+- The shared item classifier derives melee/ranged weapon range from those parsed type labels. The
+  versioned `M`/`R` metadata is a validated compatibility fallback, not the primary classification
+  path, so alternate and homebrew abbreviations work when their parsed labels carry the semantics.
 - Fixed feat references may encode a grant parameter after a semicolon, such as
   `magic initiate; cleric|xphb`. Provenance parsing stores `Magic Initiate` as the canonical entity
   identity and retains `cleric` as grant metadata; consumers must not treat the full reference as a
@@ -153,7 +156,7 @@ source content.
 - Proficiencies UI expands grouped labels into concrete tool options from item data (`itemsBase` + `items`) and then records the concrete selected tool as the final proficiency grant.
 - `items-base.json` also supplies `itemMastery` definitions. Load these separately from ordinary
   base items so weapon-choice views can filter by mastery and render the source description without
-  embedding mastery names or rules text in UI code.
+  embedding mastery names, weapon-range codes, or rules text in UI code.
 
 ### Generic Starting Equipment
 

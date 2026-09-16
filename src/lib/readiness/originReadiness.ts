@@ -1,4 +1,5 @@
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { raceAbilityChoiceReadinessId } from '@/lib/navigation/readinessFocus'
 import type { AbilityName, Character } from '@/types/character'
 import { readinessIssue } from './readinessIssue'
 import type { CharacterReadinessIssue } from './types'
@@ -16,7 +17,7 @@ export function validateOriginAbilityChoices(
     if (valid.length < choice.count) {
       issues.push(
         readinessIssue(
-          `race:ability-choice:${index}`,
+          raceAbilityChoiceReadinessId(index),
           'blocking',
           'ability-scores',
           'Finish race ability choices',

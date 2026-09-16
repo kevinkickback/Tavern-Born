@@ -163,37 +163,45 @@ describe('class choice option resolution', () => {
           {
             name: 'Simple Blade',
             source: 'XPHB',
-            type: 'M',
+            type: 'MW',
             weaponCategory: 'simple',
             mastery: ['Sap|XPHB'],
           },
           {
             name: 'Simple Bow',
             source: 'XPHB',
-            type: 'R',
+            type: 'RW',
             weaponCategory: 'simple',
             mastery: ['Vex|XPHB'],
           },
           {
             name: 'Martial Blade',
             source: 'XPHB',
-            type: 'M',
+            type: 'MW',
             weaponCategory: 'martial',
             mastery: ['Sap|XPHB'],
           },
           {
             name: 'Martial Bow',
             source: 'XPHB',
-            type: 'R',
+            type: 'RW',
             weaponCategory: 'martial',
             mastery: ['Vex|XPHB'],
           },
         ],
+        itemTypeByAbbr: { MW: 'Melee Weapon', RW: 'Ranged Weapon' },
       },
       [{ entityType: 'item', name: 'Martial Bow', source: 'XPHB', slotLevel: 1 }],
     )
 
-    expect(result.map((option) => option.reference.name)).toEqual(['Martial Blade', 'Simple Blade'])
+    expect(
+      result
+        .filter((option) => option.availability === 'eligible')
+        .map((option) => option.reference.name),
+    ).toEqual(['Martial Blade', 'Simple Blade'])
+    expect(result.find((option) => option.reference.name === 'Martial Bow')?.availability).toBe(
+      'retained',
+    )
   })
 
   test('matches feat and optional-feature filters without name-based rules', () => {
@@ -235,6 +243,7 @@ describe('class choice option resolution', () => {
       name: 'Archived Choice',
       source: 'OLD',
     })
+    expect(result[0]?.availability).toBe('retained')
   })
 
   test('routes every supported class choice through the normalized workflow', () => {
@@ -271,6 +280,7 @@ describe('class choice option resolution', () => {
         optional,
         [
           {
+            availability: 'eligible',
             reference: {
               entityType: 'optionalFeature',
               name: 'Legacy Option',
@@ -294,6 +304,7 @@ describe('class choice option resolution', () => {
       optionFilter: { entityType: 'feat', categories: ['STYLE'] },
     })
     const option = {
+      availability: 'eligible' as const,
       reference: { entityType: 'feat' as const, name: 'Guarded Style', source: 'HB' },
       entries: [],
     }

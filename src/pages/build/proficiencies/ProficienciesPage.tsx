@@ -12,7 +12,7 @@ import { useSkills } from '@/hooks/character/useSkills'
 import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
-import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { normalizeKey } from '@/lib/provenance'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
@@ -55,10 +55,7 @@ export function BuildProficienciesPage() {
   const [focused, setFocused] = useState<ProfFocus | null>(null)
   const [activeTab, setActiveTab] = useState<ProficiencyTabValue>('skills')
   const readinessFocus = getReadinessFocus(searchParams)
-  const focusedChoiceId = readinessFocus?.startsWith('choice:')
-    ? readinessFocus.slice('choice:'.length)
-    : undefined
-  const focusedChoice = ledger.choices.find((choice) => choice.id === focusedChoiceId)
+  const focusedChoice = findFocusedProvenanceChoice(readinessFocus, ledger.choices)
   const focusProficiencyChoice =
     (focusedChoice?.domain === 'skills' ||
       focusedChoice?.domain === 'languages' ||

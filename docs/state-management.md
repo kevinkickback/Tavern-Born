@@ -154,7 +154,10 @@ edit.
   option retains its source-qualified entity identity and the class level that supplied its slot,
   so level-down and class removal retract only unavailable slots without requiring game data during
   the state transition. The class-page choice controller resolves each descriptor against the
-  character-filtered catalogs, retains saved options that are temporarily filtered out, and writes
+  character-filtered catalogs and writes an explicit availability state into the view projection.
+  Retained unavailable references stay
+  visible so the user can understand and replace them, but they are not initialized as selected and
+  do not count toward the required selection total. The controller writes
   through `useClassProvenanceMutations`. Class-feature and optional-feature options are also
   materialized in `character.features` with choice-ID provenance; replacement, level-down, and
   class removal rebuild those grants atomically. Feat and item options remain persisted selections

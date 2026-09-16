@@ -2,6 +2,11 @@ import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
+import {
+  equipmentUnresolvedReadinessId,
+  featSetupReadinessId,
+  provenanceChoiceReadinessId,
+} from '@/lib/navigation/readinessFocus'
 import type { Feat5e } from '@/types/5etools'
 import type { Character, Feat } from '@/types/character'
 import { readinessIssue } from './readinessIssue'
@@ -169,7 +174,7 @@ export function validateProvenanceChoices(character: Character): CharacterReadin
     )
     .map((choice) =>
       readinessIssue(
-        `choice:${choice.id}`,
+        provenanceChoiceReadinessId(choice.id),
         'blocking',
         sectionByDomain[choice.domain],
         `Finish ${choice.sourceTag.label}`,
@@ -190,7 +195,11 @@ export function validateFeatSetup(
     if (!data || !hasFeatOptions(data) || feat.options) return []
     return [
       readinessIssue(
-        `feat:setup:${getEntityLookupKey(feat.name, feat.source)}:${feat.className ?? ''}:${feat.classLevel ?? ''}`,
+        featSetupReadinessId(
+          getEntityLookupKey(feat.name, feat.source),
+          feat.className,
+          feat.classLevel,
+        ),
         'blocking',
         'feats',
         `Finish setting up ${feat.name}`,
@@ -205,7 +214,7 @@ export function validateEquipment(character: Character): CharacterReadinessIssue
     item._unresolved
       ? [
           readinessIssue(
-            `equipment:unresolved:${item.id}`,
+            equipmentUnresolvedReadinessId(item.id),
             'blocking',
             'equipment',
             `Resolve ${item.name}`,

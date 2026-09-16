@@ -28,7 +28,12 @@ import {
   hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
 import { POINT_BUY_BUDGET } from '@/lib/calculations/gameRules'
-import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import {
+  findFocusedProvenanceChoice,
+  getReadinessFocus,
+  isBaseAbilityScoreReadinessFocus,
+  isRaceAbilityChoiceReadinessFocus,
+} from '@/lib/navigation/readinessFocus'
 import { getPendingBackgroundAbilityRows } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
@@ -52,15 +57,15 @@ export function BuildAbilityScoresPage() {
   const [searchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
   const readinessFocus = getReadinessFocus(searchParams)
-  const focusedChoiceId = readinessFocus?.startsWith('choice:')
-    ? readinessFocus.slice('choice:'.length)
-    : undefined
-  const focusedAbilityChoice = character?.provenance?.choices.find(
-    (choice) => choice.id === focusedChoiceId && choice.domain === 'abilityBonuses',
+  const focusedChoice = findFocusedProvenanceChoice(
+    readinessFocus,
+    character?.provenance?.choices ?? [],
   )
+  const focusedAbilityChoice =
+    focusedChoice?.domain === 'abilityBonuses' ? focusedChoice : undefined
   const focusRaceBonuses =
     searchParams.get('focus') === 'race-bonuses' ||
-    (readinessFocus?.startsWith('race:ability-choice:') ?? false) ||
+    isRaceAbilityChoiceReadinessFocus(readinessFocus) ||
     focusedAbilityChoice?.sourceTag.sourceType === 'race' ||
     focusedAbilityChoice?.sourceTag.sourceType === 'subrace'
   const focusBackgroundBonuses =
@@ -69,7 +74,7 @@ export function BuildAbilityScoresPage() {
     focusedAbilityChoice?.sourceTag.sourceType === 'background'
   const focusBaseScores =
     readinessFocus === 'rules:ability-score-method' ||
-    (readinessFocus?.startsWith('ability-scores:') ?? false)
+    isBaseAbilityScoreReadinessFocus(readinessFocus)
   const { ref: baseScoresRef, highlighted: baseScoresHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(focusBaseScores)
   const { ref: raceBonusesRef, highlighted: raceBonusesHighlighted } =

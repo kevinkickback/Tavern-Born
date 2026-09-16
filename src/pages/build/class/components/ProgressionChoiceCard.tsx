@@ -1,4 +1,4 @@
-import { CaretRight, Check, Sparkle } from '@phosphor-icons/react'
+import { CaretRight, Check, Sparkle, Warning } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { cn } from '@/lib/utils'
@@ -9,6 +9,7 @@ interface ChosenItem {
   source?: string
   entries?: unknown[]
   masteries?: Array<{ name: string; source?: string; entries: unknown[] }>
+  unavailable?: boolean
 }
 
 interface ProgressionChoiceCardProps {
@@ -115,14 +116,22 @@ export function BuildClassProgressionChoiceCard({
                 })
                 if (detailCollapsed) onExpandDetails()
               }}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-success/30 bg-success/5 hover:border-success/50 hover:bg-success/15 text-foreground transition-colors"
+              className={cn(
+                'inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs text-foreground transition-colors',
+                item.unavailable
+                  ? 'border-warning/30 bg-warning/5 hover:border-warning/50 hover:bg-warning/15'
+                  : 'border-success/30 bg-success/5 hover:border-success/50 hover:bg-success/15',
+              )}
+              data-availability={item.unavailable ? 'unavailable' : 'eligible'}
             >
+              {item.unavailable && <Warning className="size-3 text-warning" weight="fill" />}
               <span className="font-medium">{item.name}</span>
               {(item.masteries?.length ?? 0) > 0 && (
                 <span className="text-muted-foreground">
                   · {item.masteries?.map((mastery) => mastery.name).join(', ')}
                 </span>
               )}
+              {item.unavailable && <span className="text-warning">· Unavailable</span>}
             </button>
           ))}
         </div>

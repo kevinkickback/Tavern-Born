@@ -41,7 +41,7 @@ import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
 import { resolveFixedFeatGrant } from '@/lib/featGrants'
-import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel'
@@ -216,15 +216,12 @@ export function BuildBackgroundPage() {
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
   const readinessFocus = getReadinessFocus(searchParams)
-  const focusedChoiceId = readinessFocus?.startsWith('choice:')
-    ? readinessFocus.slice('choice:'.length)
-    : undefined
-  const focusedBackgroundChoice = ledger.choices.find(
-    (choice) => choice.id === focusedChoiceId && choice.sourceTag.sourceType === 'background',
-  )
+  const focusedChoice = findFocusedProvenanceChoice(readinessFocus, ledger.choices)
+  const focusedBackgroundChoice =
+    focusedChoice?.sourceTag.sourceType === 'background' ? focusedChoice : undefined
   const { ref: configurationRef, highlighted: configurationHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(
-      originFeatChoices.some((choice) => choice.id === focusedChoiceId),
+      originFeatChoices.some((choice) => choice.id === focusedChoice?.id),
     )
   const { ref: backgroundSelectionRef, highlighted: backgroundSelectionHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:background')

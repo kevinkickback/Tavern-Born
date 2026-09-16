@@ -59,7 +59,7 @@ import {
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
-import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -221,12 +221,13 @@ export function BuildRacePage() {
       choice.sourceTag.sourceName === character?.subrace,
   )
   const readinessFocus = getReadinessFocus(searchParams)
-  const focusedChoiceId = readinessFocus?.startsWith('choice:')
-    ? readinessFocus.slice('choice:'.length)
-    : undefined
+  const focusedChoice = findFocusedProvenanceChoice(
+    readinessFocus,
+    character?.provenance?.choices ?? [],
+  )
   const { ref: featChoicesRef, highlighted: featChoicesHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(
-      selectedRaceFeatChoices.some((choice) => choice.id === focusedChoiceId),
+      selectedRaceFeatChoices.some((choice) => choice.id === focusedChoice?.id),
     )
   const { ref: raceSelectionRef, highlighted: raceSelectionHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:race')

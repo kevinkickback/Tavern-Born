@@ -42,7 +42,6 @@ function makeProps(
     totalASIAcrossClasses: 1,
     classChoices: [],
     classChoiceDiagnostics: [],
-    classChoiceSelectionById: new Map(),
     selectedClassChoiceViewsById: new Map(),
     onOpenClassPicker: vi.fn(),
     onOpenSubclassPicker: vi.fn(),
@@ -102,6 +101,99 @@ describe('BuildClassLevelsPanel', () => {
     const completeBadge = screen.getByText(/1 choice/).closest('[data-slot="badge"]')
     expect(completeBadge?.className).toContain('text-success')
     expect(completeBadge?.querySelector('svg')).toBeTruthy()
+  })
+
+  test('does not count a retained unavailable class option as complete', () => {
+    render(
+      <BuildClassLevelsPanel
+        {...makeProps({
+          levelsToShow: [1],
+          asiLevels: [],
+          classChoices: [
+            {
+              id: 'class:any|hb|choice:path|1',
+              label: 'Training Path',
+              kind: 'class-feature',
+              owner: {
+                type: 'class',
+                name: 'Artificer',
+                source: 'PHB',
+                featureName: 'Training Path',
+                featureSource: 'PHB',
+              },
+              level: 1,
+              minimumSelections: 1,
+              maximumSelections: 1,
+              selectionCountByLevel: Array(20).fill(1),
+              options: [],
+              repeatable: false,
+              replacement: { cadence: 'never' },
+              source: { kind: 'class-feature-options', field: 'fixture' },
+            },
+          ],
+          selectedClassChoiceViewsById: new Map([
+            [
+              'class:any|hb|choice:path|1',
+              [
+                {
+                  availability: 'retained',
+                  reference: {
+                    entityType: 'classFeature',
+                    name: 'Archived Path',
+                    source: 'OLD',
+                  },
+                  entries: [],
+                },
+              ],
+            ],
+          ]),
+        })}
+      />,
+    )
+
+    const badge = screen.getByText(/1 choice/).closest('[data-slot="badge"]')
+    expect(badge?.className).toContain('text-warning')
+    fireEvent.click(screen.getByText('Level 1 Features'))
+    expect(screen.getByText(/Unavailable/)).toBeTruthy()
+  })
+
+  test('focuses only the exact feature-owned diagnostic targeted from Review', async () => {
+    const { container } = render(
+      <BuildClassLevelsPanel
+        {...makeProps({
+          levelsToShow: [1, 2],
+          asiLevels: [],
+          focusLevel: 2,
+          readinessFocus: 'class-choice-diagnostic:Artificer|PHB:Second Training:invalid-count',
+          featuresByLevel: new Map([
+            [1, [{ name: 'First Training', source: 'PHB', entries: ['First details'] }]],
+            [2, [{ name: 'Second Training', source: 'PHB', entries: ['Second details'] }]],
+          ]),
+          classChoiceDiagnostics: [
+            {
+              code: 'invalid-count',
+              className: 'Artificer',
+              classSource: 'PHB',
+              featureName: 'First Training',
+              level: 1,
+              message: 'First diagnostic',
+            },
+            {
+              code: 'invalid-count',
+              className: 'Artificer',
+              classSource: 'PHB',
+              featureName: 'Second Training',
+              level: 2,
+              message: 'Second diagnostic',
+            },
+          ],
+        })}
+      />,
+    )
+
+    await screen.findByText('Second Training')
+    expect(container.querySelectorAll('.animate-route-focus')).toHaveLength(1)
+    expect(screen.getByText(/No rule was guessed/).closest('.animate-route-focus')).toBeTruthy()
   })
 
   test('surfaces required normalized choices and unsafe source-data diagnostics', () => {

@@ -222,6 +222,77 @@ describe('class page controllers', () => {
     ])
   })
 
+  test('does not initialize a retained unavailable class option as selected', () => {
+    const normalizedChoice = {
+      id: 'class:wizard|phb|choice:study|1',
+      label: 'Field of Study',
+      kind: 'class-feature' as const,
+      owner: { type: 'class' as const, name: 'Wizard', source: 'PHB' },
+      level: 1,
+      minimumSelections: 1,
+      maximumSelections: 1,
+      selectionCountByLevel: Array(20).fill(1),
+      options: [{ entityType: 'classFeature' as const, name: 'Current Study', source: 'PHB' }],
+      repeatable: false,
+      replacement: { cadence: 'never' as const },
+      source: { kind: 'class-feature-options' as const, field: 'fixture' },
+    }
+    const classEntity = makeClassFixture({
+      normalizedRules: {
+        resources: [],
+        asiLevels: [],
+        ritualCasting: false,
+        choices: [normalizedChoice],
+        choiceDiagnostics: [],
+      },
+    })
+    const character = makeCharacterFixture({
+      class: 'Wizard',
+      classSource: 'PHB',
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 4 }],
+      classChoiceSelections: [
+        {
+          choiceId: normalizedChoice.id,
+          label: normalizedChoice.label,
+          kind: normalizedChoice.kind,
+          className: 'Wizard',
+          classSource: 'PHB',
+          classLevel: 1,
+          selected: [
+            {
+              entityType: 'classFeature',
+              name: 'Archived Study',
+              source: 'OLD',
+              slotLevel: 1,
+            },
+          ],
+        },
+      ],
+    })
+    const { result } = renderHook(() =>
+      useClassChoiceController({
+        character,
+        viewingClassData: classEntity,
+        viewingClassLevel: 4,
+        catalogs: {
+          classFeatures: [{ name: 'Current Study', source: 'PHB', entries: [] }],
+          feats: [],
+          items: [],
+          itemsBase: [],
+          itemMasteries: [],
+          optionalFeatures: [],
+        },
+      }),
+    )
+
+    act(() => result.current.open(normalizedChoice))
+    expect(result.current.activeInitialSelectedIds).toEqual([])
+    expect(
+      result.current.activeOptionViews.find((option) => option.reference.name === 'Archived Study')
+        ?.availability,
+    ).toBe('retained')
+  })
+
   test('projects and migrates legacy optional-feature grants through the normalized choice', () => {
     const normalizedChoice = {
       id: 'class:wizard|phb|choice:arcane-options|1',

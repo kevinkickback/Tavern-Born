@@ -156,10 +156,12 @@ export const RACE_STRUCTURED_ENTRY_FIELDS: Readonly<Record<string, string>> = {
 }
 
 export type NormalizedArmorCategory = 'light' | 'medium' | 'heavy' | 'shield' | 'none'
+export type NormalizedWeaponRange = 'melee' | 'ranged'
 
 export interface ItemTypeFallback {
   armorCategory?: Exclude<NormalizedArmorCategory, 'none'>
   weapon?: boolean
+  weaponRange?: NormalizedWeaponRange
   ammunition?: boolean
   gear?: boolean
   tool?: boolean
@@ -174,8 +176,8 @@ export const ITEM_TYPE_CATALOG_FALLBACKS: Readonly<Record<string, ItemTypeFallba
   MA: { armorCategory: 'medium', equippable: true },
   HA: { armorCategory: 'heavy', equippable: true },
   S: { armorCategory: 'shield', equippable: true },
-  M: { weapon: true, equippable: true },
-  R: { weapon: true, equippable: true },
+  M: { weapon: true, weaponRange: 'melee', equippable: true },
+  R: { weapon: true, weaponRange: 'ranged', equippable: true },
   A: { ammunition: true },
   G: { gear: true },
   AT: { tool: true },

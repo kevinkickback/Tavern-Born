@@ -1,6 +1,7 @@
 import type { CharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
 import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
+import { spellChoiceReadinessId, spellProfileReadinessId } from '@/lib/navigation/readinessFocus'
 import type { Spell5e } from '@/types/5etools'
 import type { Character, SpellProfile } from '@/types/character'
 import { readinessIssue } from './readinessIssue'
@@ -16,7 +17,7 @@ function validateSpellProfile(
   if (detail.cantripLimit != null && profile.cantrips.length !== detail.cantripLimit) {
     issues.push(
       readinessIssue(
-        `spells:cantrips:${detail.profileId}`,
+        spellProfileReadinessId('cantrips', detail.profileId),
         'blocking',
         'spells',
         `Finish ${detail.className} cantrip choices`,
@@ -31,7 +32,7 @@ function validateSpellProfile(
   ) {
     issues.push(
       readinessIssue(
-        `spells:known:${detail.profileId}`,
+        spellProfileReadinessId('known', detail.profileId),
         'blocking',
         'spells',
         `Finish ${detail.className} spell choices`,
@@ -45,7 +46,7 @@ function validateSpellProfile(
   ) {
     issues.push(
       readinessIssue(
-        `spells:prepared-over-limit:${detail.profileId}`,
+        spellProfileReadinessId('prepared-over-limit', detail.profileId),
         'blocking',
         'spells',
         `Reduce ${detail.className} prepared spells`,
@@ -60,7 +61,7 @@ function validateSpellProfile(
   ) {
     issues.push(
       readinessIssue(
-        `spells:prepared-empty:${detail.profileId}`,
+        spellProfileReadinessId('prepared-empty', detail.profileId),
         'recommendation',
         'spells',
         `Prepare ${detail.className} spells`,
@@ -97,7 +98,7 @@ export function validateSpells(
     if (profile) return validateSpellProfile(profile, detail)
     return [
       readinessIssue(
-        `spells:profile:${detail.profileId}`,
+        spellProfileReadinessId('profile', detail.profileId),
         'blocking',
         'spells',
         `Configure ${detail.className} spellcasting`,
@@ -111,7 +112,7 @@ export function validateSpells(
       if (choice.selected.length !== choice.count) {
         issues.push(
           readinessIssue(
-            `spells:choice:${profile.id}:${choice.id}`,
+            spellChoiceReadinessId(profile.id, choice.id),
             'blocking',
             'spells',
             `Finish ${profile.label} spell choices`,

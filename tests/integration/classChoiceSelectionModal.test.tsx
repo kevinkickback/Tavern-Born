@@ -35,6 +35,7 @@ const choice: NormalizedCharacterChoice = {
 describe('ClassChoiceSelectionModal', () => {
   test('hides unmet options by default and prevents selecting them when revealed', () => {
     const available: ClassChoiceOptionView = {
+      availability: 'eligible',
       reference: {
         entityType: 'optionalFeature' as const,
         name: 'Available Training',
@@ -43,6 +44,7 @@ describe('ClassChoiceSelectionModal', () => {
       entries: [],
     }
     const advanced: ClassChoiceOptionView = {
+      availability: 'eligible',
       reference: {
         entityType: 'optionalFeature' as const,
         name: 'Advanced Training',
@@ -85,6 +87,7 @@ describe('ClassChoiceSelectionModal', () => {
 
   test('shows a weapon mastery property on its option card', () => {
     const weapon: ClassChoiceOptionView = {
+      availability: 'eligible',
       reference: { entityType: 'item', name: 'Training Blade', source: 'XPHB' },
       entries: [],
       masteries: [{ name: 'Sap', source: 'XPHB', entries: ['Sap mastery details'] }],
@@ -92,6 +95,7 @@ describe('ClassChoiceSelectionModal', () => {
       weaponRange: 'Melee',
     }
     const rangedWeapon: ClassChoiceOptionView = {
+      availability: 'eligible',
       reference: { entityType: 'item', name: 'Training Bow', source: 'XPHB' },
       entries: [],
       masteries: [{ name: 'Vex', source: 'XPHB', entries: [] }],
@@ -149,5 +153,33 @@ describe('ClassChoiceSelectionModal', () => {
     expect(screen.getByText('Weapon')).toBeTruthy()
     expect(screen.getByText('Mastery: Sap')).toBeTruthy()
     expect(screen.getByText('Sap mastery details')).toBeTruthy()
+  })
+
+  test('keeps a retained selection visible but prevents selecting it again', () => {
+    const retained: ClassChoiceOptionView = {
+      availability: 'retained',
+      reference: { entityType: 'item', name: 'Archived Blade', source: 'OLD' },
+      entries: [],
+    }
+    render(
+      <ClassChoiceSelectionModal
+        choice={choice}
+        options={[retained]}
+        maximumSelections={1}
+        initialSelectedIds={[]}
+        characterSnapshot={makePrereqCharacterSnapshotFixture()}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    )
+
+    const props = selectionModalCapture.props as {
+      canSelect: (item: ClassChoiceOptionView, selected: Set<string>) => boolean
+      renderCard: (item: ClassChoiceOptionView, selected: boolean) => ReactNode
+    }
+    expect(props.canSelect(retained, new Set())).toBe(false)
+    render(props.renderCard(retained, false))
+    expect(screen.getByText('Unavailable')).toBeTruthy()
+    expect(screen.getByText(/no longer eligible/i)).toBeTruthy()
   })
 })

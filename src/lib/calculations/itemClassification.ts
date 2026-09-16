@@ -4,6 +4,7 @@ import {
   type ItemTypeFallback,
   LEGACY_ITEM_TYPE_FALLBACKS,
   type NormalizedArmorCategory,
+  type NormalizedWeaponRange,
 } from '@/lib/5etools/rulesetMetadata'
 
 export type ArmorCategory = NormalizedArmorCategory
@@ -23,6 +24,7 @@ export interface ClassifiableItem {
 export interface NormalizedItemTraits {
   typeCodes: readonly string[]
   armorCategory: ArmorCategory
+  weaponRanges: readonly NormalizedWeaponRange[]
   isArmor: boolean
   isWeapon: boolean
   isAmmunition: boolean
@@ -54,6 +56,13 @@ export function inferArmorCategory(label: string): ArmorCategory {
   return 'none'
 }
 
+export function inferWeaponRange(label: string): NormalizedWeaponRange | null {
+  const normalized = label.toLowerCase()
+  if (normalized.includes('melee weapon')) return 'melee'
+  if (normalized.includes('ranged weapon')) return 'ranged'
+  return null
+}
+
 export function getArmorCategoryLabel(category: ArmorCategory): string | null {
   if (category === 'light') return 'Light Armor'
   if (category === 'medium') return 'Medium Armor'
@@ -82,12 +91,22 @@ export function getNormalizedItemTraits(
   const inferredArmor = typeLabels.map(inferArmorCategory).find((category) => category !== 'none')
   const fallbackArmor = fallbacks.find((fallback) => fallback.armorCategory)?.armorCategory
   const armorCategory = item.armorType ?? inferredArmor ?? fallbackArmor ?? 'none'
+  const inferredWeaponRanges = typeLabels
+    .map(inferWeaponRange)
+    .filter((range): range is NormalizedWeaponRange => !!range)
+  const fallbackWeaponRanges = fallbacks
+    .map((fallback) => fallback.weaponRange)
+    .filter((range): range is NormalizedWeaponRange => !!range)
+  const weaponRanges = (
+    inferredWeaponRanges.length > 0 ? inferredWeaponRanges : fallbackWeaponRanges
+  ).filter((range, index, values) => values.indexOf(range) === index)
   const hasLabel = (pattern: RegExp) => typeLabels.some((label) => pattern.test(label))
   const hasFallback = (key: keyof ItemTypeFallback) =>
     fallbacks.some((fallback) => Boolean(fallback[key]))
   const isWeapon =
     Boolean(item.weaponCategory) ||
     Boolean(item.weapon) ||
+    weaponRanges.length > 0 ||
     hasLabel(/weapon/) ||
     hasFallback('weapon')
   const isArmor = Boolean(item.armor) || armorCategory !== 'none'
@@ -109,6 +128,7 @@ export function getNormalizedItemTraits(
   return {
     typeCodes,
     armorCategory,
+    weaponRanges,
     isArmor,
     isWeapon,
     isAmmunition,

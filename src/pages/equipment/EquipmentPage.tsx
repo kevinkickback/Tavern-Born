@@ -44,7 +44,7 @@ import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { enforceArmorEquipmentRestrictions, isEquippable } from '@/lib/calculations/itemEquippable'
-import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
+import { equipmentUnresolvedReadinessId, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
@@ -192,9 +192,9 @@ export function EquipmentPage() {
     })
   }, [equipment, itemSearch, itemTypeFilter])
   const readinessFocus = getReadinessFocus(searchParams)
-  const focusedItemId = readinessFocus?.startsWith('equipment:unresolved:')
-    ? readinessFocus.slice('equipment:unresolved:'.length)
-    : undefined
+  const focusedItemId = equipment.find(
+    (item) => readinessFocus === equipmentUnresolvedReadinessId(item.id),
+  )?.id
   const { ref: focusedItemRef, highlighted: focusedItemHighlighted } =
     useRouteFocusTarget<HTMLDivElement>(
       focusedItemId !== undefined && equipment.some((item) => item.id === focusedItemId),

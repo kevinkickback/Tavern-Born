@@ -1,3 +1,4 @@
+import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
@@ -23,11 +24,16 @@ import type {
 
 export interface ClassChoiceOptionView {
   reference: NormalizedChoiceOptionReference
+  availability: 'eligible' | 'retained'
   entries: unknown[]
   masteries?: Array<{ name: string; source?: string; entries: unknown[] }>
   weaponCategory?: string
   weaponRange?: 'Melee' | 'Ranged'
   prerequisite?: Raw5ePrereq[]
+}
+
+export function isClassChoiceOptionEligible(option: ClassChoiceOptionView): boolean {
+  return option.availability === 'eligible'
 }
 
 export interface ClassChoiceCatalogs {
@@ -165,16 +171,6 @@ function getItemTypeLabels(
     .map(normalized)
 }
 
-function getWeaponRanges(item: Item5e): Array<'melee' | 'ranged'> {
-  const rawTypes = Array.isArray(item.type) ? item.type : [item.type]
-  return rawTypes.flatMap((value) => {
-    const typeCode = value.split('|')[0]?.trim().toUpperCase()
-    if (typeCode === 'M') return ['melee' as const]
-    if (typeCode === 'R') return ['ranged' as const]
-    return []
-  })
-}
-
 function matchesAny(actual: readonly string[], expected: readonly string[] | undefined): boolean {
   if (!expected || expected.length === 0) return true
   const actualValues = new Set(actual.map(normalized))
@@ -208,7 +204,10 @@ function matchesFilter(
   }
   if (
     filter.entityType === 'item' &&
-    !matchesAny(getWeaponRanges(entity as Item5e), filter.weaponRanges)
+    !matchesAny(
+      getNormalizedItemTraits(entity as Item5e, itemTypeByAbbr).weaponRanges,
+      filter.weaponRanges,
+    )
   ) {
     return false
   }
@@ -233,11 +232,12 @@ function toView(
   entityType: ChoiceOptionEntityType,
   entity: ChoiceCatalogEntity,
   catalogs: ClassChoiceCatalogs,
+  availability: ClassChoiceOptionView['availability'] = 'eligible',
 ): ClassChoiceOptionView {
   const item = entityType === 'item' ? (entity as Item5e) : undefined
-  const itemTypeCode = Array.isArray(item?.type)
-    ? item.type[0]?.split('|')[0]
-    : item?.type?.split('|')[0]
+  const weaponRange = item
+    ? getNormalizedItemTraits(item, catalogs.itemTypeByAbbr).weaponRanges[0]
+    : undefined
   const masteries =
     entityType === 'item'
       ? (item?.mastery ?? []).flatMap((reference) => {
@@ -260,6 +260,7 @@ function toView(
         })
       : []
   return {
+    availability,
     reference: {
       entityType,
       name: entity.name,
@@ -268,11 +269,9 @@ function toView(
     entries: Array.isArray(entity.entries) ? entity.entries : [],
     ...(masteries.length > 0 ? { masteries } : {}),
     ...(item?.weaponCategory ? { weaponCategory: item.weaponCategory } : {}),
-    ...(itemTypeCode === 'M'
-      ? { weaponRange: 'Melee' as const }
-      : itemTypeCode === 'R'
-        ? { weaponRange: 'Ranged' as const }
-        : {}),
+    ...(weaponRange
+      ? { weaponRange: weaponRange === 'melee' ? ('Melee' as const) : ('Ranged' as const) }
+      : {}),
     ...('prerequisite' in entity && Array.isArray(entity.prerequisite)
       ? { prerequisite: entity.prerequisite }
       : {}),
@@ -282,6 +281,7 @@ function toView(
 function resolveExplicitOption(
   option: NormalizedChoiceOptionReference,
   catalogs: ClassChoiceCatalogs,
+  availability: ClassChoiceOptionView['availability'] = 'eligible',
 ): ClassChoiceOptionView {
   const match = getCatalog(option.entityType, catalogs).find(
     (entity) =>
@@ -289,8 +289,9 @@ function resolveExplicitOption(
       (!option.source || normalized(entity.source) === normalized(option.source)),
   )
   return match
-    ? toView(option.entityType, match, catalogs)
+    ? toView(option.entityType, match, catalogs, availability)
     : {
+        availability,
         reference: {
           entityType: option.entityType,
           name: option.name,
@@ -324,19 +325,7 @@ export function resolveClassChoiceOptions(
   for (const option of saved) {
     const key = getClassChoiceOptionKey(option)
     if (!byKey.has(key)) {
-      const catalogEntity = getCatalog(option.entityType, catalogs).find(
-        (entity) =>
-          normalized(entity.name) === normalized(option.name) &&
-          (!option.source || normalized(entity.source) === normalized(option.source)),
-      )
-      if (
-        filter?.entityType === option.entityType &&
-        catalogEntity &&
-        !matchesFilter(catalogEntity, filter, catalogs.itemTypeByAbbr, catalogs.weaponProficiencies)
-      ) {
-        continue
-      }
-      byKey.set(key, resolveExplicitOption(option, catalogs))
+      byKey.set(key, resolveExplicitOption(option, catalogs, 'retained'))
     }
   }
   return [...byKey.values()].sort(

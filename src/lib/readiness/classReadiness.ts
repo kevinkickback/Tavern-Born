@@ -7,6 +7,12 @@ import {
   resolveClassChoiceOptions,
 } from '@/lib/character/classChoiceOptions'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
+import {
+  classAsiReadinessId,
+  classChoiceDiagnosticReadinessId,
+  classChoiceReadinessId,
+  classSubclassReadinessId,
+} from '@/lib/navigation/readinessFocus'
 import type { Character, CharacterClassEntry } from '@/types/character'
 import { readinessClassKey, readinessIssue } from './readinessIssue'
 import type { CharacterReadinessIssue } from './types'
@@ -57,7 +63,7 @@ export function validateClassChoices(
     ) {
       issues.push(
         readinessIssue(
-          `class:subclass:${readinessClassKey(entry)}`,
+          classSubclassReadinessId(readinessClassKey(entry)),
           'blocking',
           'class',
           'Choose a subclass',
@@ -86,7 +92,7 @@ export function validateClassChoices(
       if (count !== required) {
         issues.push(
           readinessIssue(
-            `class-choice:${choice.id}`,
+            classChoiceReadinessId(choice.id),
             'blocking',
             'class',
             `Finish ${choice.label}`,
@@ -100,7 +106,11 @@ export function validateClassChoices(
       if ((diagnostic.level ?? 1) > entry.levels) continue
       issues.push(
         readinessIssue(
-          `class-choice-diagnostic:${readinessClassKey(entry)}:${diagnostic.featureName}:${diagnostic.code}`,
+          classChoiceDiagnosticReadinessId(
+            readinessClassKey(entry),
+            diagnostic.featureName,
+            diagnostic.code,
+          ),
           'blocking',
           'class',
           `Review unresolved ${diagnostic.featureName} choice`,
@@ -121,7 +131,7 @@ export function validateClassChoices(
       if (!hasAbilityIncrease && !hasFeat) {
         issues.push(
           readinessIssue(
-            `class:asi:${readinessClassKey(entry)}:${level}`,
+            classAsiReadinessId(readinessClassKey(entry), level),
             'blocking',
             'class',
             'Choose an ability increase or feat',

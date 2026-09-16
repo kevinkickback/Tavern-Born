@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch'
 import { AnchoredHint, WorkspacePaneHeader } from '@/components/workspace'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { isSourceReadinessFocus } from '@/lib/navigation/readinessFocus'
 import {
   countRemovedSpells,
   detectSourceConflicts,
@@ -44,7 +45,7 @@ export function SourcesPanel({ readinessFocus }: { readinessFocus?: string | nul
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const gameData = useGameDataStore((s) => s.gameData)
   const { ref: sourceControlsRef, highlighted: sourceControlsHighlighted } =
-    useRouteFocusTarget<HTMLDivElement>(readinessFocus?.startsWith('source:') ?? false)
+    useRouteFocusTarget<HTMLDivElement>(isSourceReadinessFocus(readinessFocus))
 
   const [showHint, setShowHint] = useState(() => !isHintDismissed(HINT_ID))
   const hintPosition = useAnchoredHintPosition({
