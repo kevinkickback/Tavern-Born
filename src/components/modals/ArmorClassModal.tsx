@@ -40,8 +40,13 @@ function formatSigned(value: number): string {
 
 export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
   const character = useCharacterStore((state) => state.activeCharacter)
-  const { baseBreakdown, calculatedAC, effectiveAC, resolution, saveArmorClassSettings } =
-    useArmorClass()
+  const {
+    baseBreakdown,
+    calculatedAC,
+    effectiveAC,
+    previewArmorClassSettings,
+    saveArmorClassSettings,
+  } = useArmorClass()
   const [adjustments, setAdjustments] = useState<ArmorClassAdjustmentDraft[]>([])
   const [newLabel, setNewLabel] = useState('')
   const [newAmount, setNewAmount] = useState('')
@@ -80,10 +85,13 @@ export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
     amount: parseInteger(adjustment.amount),
   }))
   const adjustmentTotal = calculateArmorClassAdjustmentTotal(resolvedAdjustments)
-  const adjustedAC = Math.max(0, calculatedAC + adjustmentTotal)
   const parsedOverride = parseInteger(overrideValue)
   const validOverride = !overrideEnabled || parsedOverride >= 0
-  const previewAC = overrideEnabled && validOverride ? parsedOverride : adjustedAC
+  const previewResolution = previewArmorClassSettings({
+    adjustments: resolvedAdjustments,
+    override: overrideEnabled && validOverride ? parsedOverride : undefined,
+  })
+  const previewAC = Math.max(0, Math.trunc(previewResolution.value))
 
   const addAdjustment = () => {
     const label = newLabel.trim()
@@ -125,12 +133,14 @@ export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
     const otherAdjustments = adjustments.filter(
       (adjustment) => adjustment.id !== DIRECT_ARMOR_CLASS_ADJUSTMENT_ID,
     )
-    const otherTotal = calculateArmorClassAdjustmentTotal(
-      resolvedAdjustments.filter(
-        (adjustment) => adjustment.id !== DIRECT_ARMOR_CLASS_ADJUSTMENT_ID,
-      ),
+    const otherResolvedAdjustments = resolvedAdjustments.filter(
+      (adjustment) => adjustment.id !== DIRECT_ARMOR_CLASS_ADJUSTMENT_ID,
     )
-    const amount = desired - calculatedAC - otherTotal
+    const otherArmorClass = Math.max(
+      0,
+      Math.trunc(previewArmorClassSettings({ adjustments: otherResolvedAdjustments }).value),
+    )
+    const amount = desired - otherArmorClass
     const directAdjustment: ArmorClassAdjustmentDraft = {
       id: DIRECT_ARMOR_CLASS_ADJUSTMENT_ID,
       label: 'Custom Armor Class',
@@ -139,6 +149,18 @@ export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
       createdAt:
         adjustments.find((adjustment) => adjustment.id === DIRECT_ARMOR_CLASS_ADJUSTMENT_ID)
           ?.createdAt ?? new Date().toISOString(),
+    }
+    const candidateAdjustments =
+      amount === 0
+        ? otherResolvedAdjustments
+        : [...otherResolvedAdjustments, { ...directAdjustment, amount }]
+    const candidateArmorClass = Math.max(
+      0,
+      Math.trunc(previewArmorClassSettings({ adjustments: candidateAdjustments }).value),
+    )
+    if (candidateArmorClass !== desired) {
+      toast.error('An active effect prevents that lasting total. Use the fixed Armor Class option.')
+      return
     }
     setAdjustments(amount === 0 ? otherAdjustments : [...otherAdjustments, directAdjustment])
     setOverrideEnabled(false)
@@ -196,7 +218,7 @@ export function ArmorClassModal({ open, onOpenChange }: ArmorClassModalProps) {
 
             <NumericEffectBreakdown
               title="Current calculation sources"
-              resolution={resolution}
+              resolution={previewResolution}
               baseComponents={baseBreakdown.components}
             />
             <p className="-mt-3 text-xs text-muted-foreground">

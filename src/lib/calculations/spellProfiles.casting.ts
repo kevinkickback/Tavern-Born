@@ -11,7 +11,7 @@ import {
   getStandardSpellSlotsFromClassData,
 } from '@/lib/calculations/spellSlots'
 import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
-import type { Class5e } from '@/types/5etools'
+import type { Class5e, Subclass5e } from '@/types/5etools'
 import type { AbilityScores, Character } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
@@ -48,6 +48,28 @@ function getProgressionArray(value: unknown): number[] | null {
   return Array.isArray(value) && value.every((v) => typeof v === 'number')
     ? (value as number[])
     : null
+}
+
+function getEffectiveSpellcastingData(
+  classData: Class5e | undefined,
+  subclassData: Subclass5e | undefined,
+): Class5e | undefined {
+  if (!classData || !subclassData) return classData
+  return {
+    ...classData,
+    spellcastingAbility: subclassData.spellcastingAbility ?? classData.spellcastingAbility,
+    casterProgression: subclassData.casterProgression ?? classData.casterProgression,
+    isSpellcaster: subclassData.isSpellcaster ?? classData.isSpellcaster,
+    spellSlotProgression: subclassData.spellSlotProgression ?? classData.spellSlotProgression,
+    cantripProgression: subclassData.cantripProgression ?? classData.cantripProgression,
+    spellsKnownProgression: subclassData.spellsKnownProgression ?? classData.spellsKnownProgression,
+    spellsKnownProgressionFixed:
+      subclassData.spellsKnownProgressionFixed ?? classData.spellsKnownProgressionFixed,
+    preparedSpells: subclassData.preparedSpells ?? classData.preparedSpells,
+    preparedSpellsProgression:
+      subclassData.preparedSpellsProgression ?? classData.preparedSpellsProgression,
+    preparedSpellsChange: subclassData.preparedSpellsChange ?? classData.preparedSpellsChange,
+  }
 }
 
 function hasKnownSpellProgression(classData?: Class5e): boolean {
@@ -244,6 +266,7 @@ export function buildSpellcastingClassDetails(
       const profileId = toClassProfileId(entry.name, entry.source)
       const classData = classesById.get(toClassProfileId(entry.name, entry.source))
       const subclassData = getSelectedSubclassData(classData, entry)
+      const effectiveSpellcastingData = getEffectiveSpellcastingData(classData, subclassData)
       const effectiveProgression = getEffectiveCasterProgression(classData, subclassData)
       const effectiveAbility = getEffectiveSpellcastingAbility(classData, subclassData)
       const ability = effectiveAbility ? normalizeAbilityName(effectiveAbility) : null
@@ -272,16 +295,16 @@ export function buildSpellcastingClassDetails(
               ).value,
             )
           : null
-      const preparedCaster = isPreparedCaster(classData)
-      const truePreparedCaster = isTruePreparedCaster(classData)
-      const levelOnlyPrepared = isLevelOnlyPreparedCaster(classData)
+      const preparedCaster = isPreparedCaster(effectiveSpellcastingData)
+      const truePreparedCaster = isTruePreparedCaster(effectiveSpellcastingData)
+      const levelOnlyPrepared = isLevelOnlyPreparedCaster(effectiveSpellcastingData)
 
       const preparedSpellLimit = preparedCaster
-        ? getPreparedSpellLimit(classData, entry.levels, mod)
+        ? getPreparedSpellLimit(effectiveSpellcastingData, entry.levels, mod)
         : null
 
       let knownSpellLimit: number | null
-      const progressionKnownSpellLimit = getKnownSpellLimit(classData, entry.levels)
+      const progressionKnownSpellLimit = getKnownSpellLimit(effectiveSpellcastingData, entry.levels)
       if (preparedCaster || levelOnlyPrepared) {
         // Prepared casters: known limit equals prepared count. Fall back to
         // progression only when no formula is available (e.g. ability score unknown).
@@ -303,14 +326,14 @@ export function buildSpellcastingClassDetails(
         spellSaveDC: saveDc,
         spellAttackBonus: attack,
         maxSpellLevel: getClassMaxSpellLevel(
-          classData,
+          effectiveSpellcastingData,
           entry.levels,
           normalizeProgression(effectiveProgression),
           classesById.values(),
         ),
         preparedSpellLimit: levelOnlyPrepared ? null : preparedSpellLimit,
         knownSpellLimit,
-        cantripLimit: getCantripLimit(classData, entry.levels),
+        cantripLimit: getCantripLimit(effectiveSpellcastingData, entry.levels),
         isPreparedCaster: preparedCaster,
         isTruePreparedCaster: truePreparedCaster,
         isLevelOnlyPreparedCaster: levelOnlyPrepared,

@@ -118,17 +118,21 @@ Current implementation notes:
 - Character creation composes the same origin commands through `buildInitialCharacter`; pages and hooks do not reconstruct grant pipelines.
 - Level-up HP choices are committed with class progression through `applyLevelUp`; the stored gain is the raw hit-die result so Constitution changes remain live.
 - HP reads resolve class/Constitution HP, per-level gain records, manual adjustments, active typed
-  effects, and an optional exact override in that order. The management modal's default Overview
-  shows the base and every active typed source as read-only calculation rows plus current and
-  temporary HP; its separate Manual changes view owns adjustments and exact overrides.
+  effects, and an optional exact override in that order. Draft modal settings are projected through
+  that same resolver before display or save, preserving source effects and equipment requirements.
+  The management modal's default Overview shows the base and every active typed source as read-only
+  calculation rows plus current and temporary HP; its separate Manual changes view owns adjustments
+  and exact overrides.
 - AC reads across UI and PDF surfaces resolve equipped armor and Dexterity, then manual and active
-  typed adjustments, then an optional exact override. The management modal's default Overview
-  exposes equipped armor and shields as read-only calculation rows so equipment ownership remains
-  on the Equipment route; its separate Manual changes view owns adjustments and exact overrides.
+  typed adjustments, then an optional exact override. Draft modal settings use the same source-aware
+  resolver as persisted reads. The management modal's default Overview exposes equipped armor and
+  shields as read-only calculation rows so equipment ownership remains on the Equipment route; its
+  separate Manual changes view owns adjustments and exact overrides.
   The legacy `character.armorClass` field is not a display source.
 - Movement reads across Builder and PDF surfaces resolve the race/subrace-owned structured base,
-  then labeled per-mode adjustments, then exact overrides. `character.speed` is only a walking-speed
-  compatibility mirror for legacy import/export.
+  then labeled per-mode adjustments, typed source effects, and exact overrides. Modal previews and
+  the `character.speed` compatibility mirror use that canonical draft resolution; the mirror exists
+  only for legacy import/export.
 - Lasting feat resistances and immunities resolve from the selected feat's `name|source` runtime
   record through the calculation context. Structured choice objects are deliberately not guessed;
   their rules prose remains visible and the global manual-effects editor covers the resolved choice.
@@ -154,9 +158,11 @@ Current implementation notes:
   complete current source/manual list in the larger right pane. Source-owned entries remain
   editable only through Equipment, Race, Class, Feats, Spells, and their other owning workflows;
   this page never duplicates or deletes them. Source action projection is conservative: structured
-  weapon attacks and timed spells are supplemented only by race, feat, and class rules text that
-  explicitly grants an action, bonus action, reaction, or attack replacement. Passive prose is not
-  promoted to an action, and non-action casting times are omitted from the action-oriented list.
+  weapon attacks and timed spells are supplemented only by parsed race, selected-feat, class,
+  subclass, and selected-feature rules text that explicitly grants an action, bonus action,
+  reaction, or attack replacement. Persisted empty presentation descriptions are not treated as the
+  canonical rules source. Passive prose is not promoted to an action, and non-action casting times
+  are omitted from the action-oriented list.
   Source-derived and manual lists are independently collapsible for both actions and effects.
   Actions remains the default.
   Cross-page configuration links carry a presentation-only focus key so the destination card can

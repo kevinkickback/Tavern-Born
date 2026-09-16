@@ -47,8 +47,9 @@ effective scores to be passed explicitly. `tests/lib/effectiveAbilityScoreOwners
 protects the current consumer list, and cross-surface fixtures verify the same effective totals in
 rules and both PDF mappings.
 
-The context also groups resolved classes, race/subrace, background, rules metadata, equipment state,
-and resolved typed effects. It source-qualifies runtime projections from race, feat, and item data;
+The context also groups resolved classes, selected feats, race/subrace, background, rules metadata,
+equipment state, source-only effect declarations, and the complete resolved typed-effect set. It
+source-qualifies runtime projections from race, feat, and item data;
 projects structured base movement, labeled per-mode adjustments, exact overrides, hover, and
 preserved unknown movement keys; and never stores those source declarations in a character save.
 Only unconditional scalar/list fields are automated. Choice objects and prose remain visible rules
@@ -67,6 +68,7 @@ class-owned ASIs that are no longer earned before the context performs a level-c
 `getCharacterReadiness()` consumes this context with optional feat and spell lookups. Its focused
 validators return stable issue IDs, blocking/recommendation severity, an owning Builder section, and
 a navigation target; they never repair or delete unresolved state. `deriveCharacterActions()` is
-the corresponding view-neutral action boundary: Builder review and PDF export supply this context
-and consume the same weapon, spell, rules-text, and manual action list. Rest and Play work should
+the corresponding view-neutral action boundary: Builder review and PDF export supply resolved
+classes, selected feats, and feature lookups from this context and consume the same weapon, spell,
+parsed rules-text, and manual action list. Rest and Play work should
 extend these pure projections instead of introducing page-specific rules engines.

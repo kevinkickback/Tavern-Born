@@ -196,4 +196,46 @@ describe('ArmorClassModal', () => {
     expect(screen.getByText('+2 → 14')).toBeTruthy()
     expect(screen.getByText('1 inactive adjustment')).toBeTruthy()
   })
+
+  test('includes active typed effects when creating a lasting direct Armor Class', async () => {
+    const character = makeCharacterFixture({
+      abilityScores: {
+        strength: 10,
+        dexterity: 14,
+        constitution: 10,
+        intelligence: 10,
+        wisdom: 10,
+        charisma: 10,
+      },
+      equipment: [],
+      manualEffects: [
+        {
+          id: 'typed-ac-bonus',
+          label: 'Typed AC bonus',
+          target: { kind: 'armor-class' },
+          operation: { kind: 'add', value: 2 },
+          source: { kind: 'manual', name: 'Typed AC bonus' },
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    const user = userEvent.setup()
+    render(<ArmorClassModal open={true} onOpenChange={() => {}} />)
+
+    await user.click(screen.getByRole('tab', { name: 'Manual changes' }))
+    await user.click(screen.getByText('More AC options'))
+    const directArmorClass = screen.getByLabelText('Set Armor Class directly')
+    await user.clear(directArmorClass)
+    await user.type(directArmorClass, '18')
+    await user.click(screen.getByRole('button', { name: 'Set Armor Class' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(useCharacterStore.getState().activeCharacter?.armorClassAdjustments).toEqual([
+      expect.objectContaining({ label: 'Custom Armor Class', amount: 4 }),
+    ])
+  })
 })

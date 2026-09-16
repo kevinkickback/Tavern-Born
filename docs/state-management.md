@@ -103,7 +103,8 @@ Derived examples (do not store as canonical):
 duplicate deep-clones the saved character and replaces its ID, name, and timestamps. A reusable
 build copy additionally resets current/temporary HP, conditions, exhaustion, inspiration, death
 saves, hit-die use, class-resource use, and both spell-slot usage pools while retaining all
-source-qualified build selections.
+source-qualified build selections. Its class-resource map is cleared so the normal derived fallback
+initializes every resource at full capacity.
 
 File transfer exports the complete character as `.tbc`; import also permits generic `.json` files
 and validates either extension through the same character schema before adding it to the store.
@@ -366,9 +367,10 @@ persisted identity.
 `useHitPoints()` is the UI boundary for these views and for current/temp HP mutations.
 `HitPointsModal` shows the class/level/Constitution base and active typed item, feat, spell, or manual
 effects without duplicating their ownership controls. It saves current HP, temporary HP, manual
-adjustments, and an optional override atomically. When the maximum changes and the player has not
-manually edited Current HP in the open modal, the preview moves Current HP by the same delta before
-saving.
+adjustments, and an optional override atomically. Draft settings are resolved with the same source
+effects and activation context as persisted reads before current HP is clamped. When the maximum
+changes and the player has not manually edited Current HP in the open modal, the preview moves
+Current HP by the same delta before saving.
 
 `applyLevelUp()` in `classCommands.ts` commits progression and the raw hit-die choice together.
 Removing levels prunes gain records and class-owned ASI choices that no longer belong to the
@@ -410,7 +412,8 @@ continue to materialize normal provenance records through the background ability
 **Current Behavior:** Equipment and Dexterity changes flow through automatically. `ArmorClassModal`
 shows equipped armor and shields as read-only calculation sources; equipping and unequipping remain
 Equipment-route operations so one stat dialog cannot silently alter the inventory workflow. The
-modal saves manual adjustments and the optional override atomically; manual amounts and labels
+modal previews and saves manual adjustments through the same source-aware resolver and commits the
+optional override atomically; manual amounts and labels
 remain editable/removable without discarding the calculated base.
 
 **Schema:** Adjustment amounts may be negative. Exact AC overrides must be whole numbers at least 0.

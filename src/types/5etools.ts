@@ -81,9 +81,13 @@ export interface Class5e {
   casterProgression?: string
   isSpellcaster?: boolean
   spellSlotProgression?: number[][]
+  cantripProgression?: number[]
+  spellsKnownProgression?: number[]
+  spellsKnownProgressionFixed?: number[]
   preparedSpells?: string
   preparedSpellsProgression?: number[]
   preparedSpellsChange?: string
+  edition?: string
   optionalfeatureProgression?: OptFeatureProg[]
   [key: string]: unknown
 }
@@ -136,8 +140,15 @@ export interface Subclass5e {
   levelFeatures?: Array<{ level: number; features: SubclassFeature[] }>
   spellcastingAbility?: string
   casterProgression?: string
+  isSpellcaster?: boolean
+  spellSlotProgression?: number[][]
   cantripProgression?: number[]
   spellsKnownProgression?: number[]
+  spellsKnownProgressionFixed?: number[]
+  preparedSpells?: string
+  preparedSpellsProgression?: number[]
+  preparedSpellsChange?: string
+  edition?: string
   additionalSpells?: SubclassAdditionalSpells[]
   [key: string]: unknown
 }

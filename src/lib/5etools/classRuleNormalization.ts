@@ -114,7 +114,7 @@ const PROSE_RESOURCE_FIXUPS: Readonly<Record<string, ClassResourceDef[]>> = {
     {
       id: 'paladin-channel-divinity',
       label: 'Channel Divinity',
-      maxPerLevel: [0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3],
+      maxPerLevel: [0, 0, ...Array(18).fill(1)],
       restType: 'short',
       recovery: SHORT_REST_RECOVERY,
     },

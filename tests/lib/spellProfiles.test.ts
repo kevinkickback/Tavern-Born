@@ -427,6 +427,114 @@ describe('spellProfiles', () => {
     expect(slots.shared[1]?.max).toBe(2)
   })
 
+  test('buildSpellcastingClassDetails uses known-spell limits from a 2014 casting subclass', () => {
+    const character = makeCharacterFixture({
+      class: 'Fighter',
+      classSource: 'PHB',
+      subclass: 'Eldritch Knight',
+      subclassSource: 'PHB',
+      level: 5,
+      classProgression: [
+        {
+          name: 'Fighter',
+          source: 'PHB',
+          levels: 5,
+          subclass: 'Eldritch Knight',
+          subclassSource: 'PHB',
+        },
+      ],
+      abilityScores: { ...makeCharacterFixture().abilityScores, intelligence: 16 },
+    })
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'PHB',
+      casterProgression: 'none',
+      spellcastingAbility: undefined,
+      subclasses: [
+        {
+          name: 'Eldritch Knight',
+          shortName: 'Eldritch Knight',
+          source: 'PHB',
+          className: 'Fighter',
+          classSource: 'PHB',
+          spellcastingAbility: 'int',
+          casterProgression: '1/3',
+          cantripProgression: [2, 2, 2, 2, 2],
+          spellsKnownProgression: [3, 3, 3, 4, 4],
+        },
+      ],
+    })
+
+    const details = buildSpellcastingClassDetails(
+      character,
+      new Map([['class:Fighter|PHB', fighter]]),
+      character.abilityScores,
+    )
+
+    expect(details[0]).toMatchObject({
+      casterProgression: '1/3',
+      cantripLimit: 2,
+      knownSpellLimit: 4,
+      preparedSpellLimit: null,
+      isPreparedCaster: false,
+    })
+  })
+
+  test('buildSpellcastingClassDetails uses prepared limits from a 2024 casting subclass', () => {
+    const character = makeCharacterFixture({
+      class: 'Fighter',
+      classSource: 'XPHB',
+      subclass: 'Eldritch Knight',
+      subclassSource: 'XPHB',
+      level: 5,
+      classProgression: [
+        {
+          name: 'Fighter',
+          source: 'XPHB',
+          levels: 5,
+          subclass: 'Eldritch Knight',
+          subclassSource: 'XPHB',
+        },
+      ],
+      abilityScores: { ...makeCharacterFixture().abilityScores, intelligence: 16 },
+    })
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'XPHB',
+      edition: 'one',
+      casterProgression: 'none',
+      spellcastingAbility: undefined,
+      subclasses: [
+        {
+          name: 'Eldritch Knight',
+          shortName: 'Eldritch Knight',
+          source: 'XPHB',
+          className: 'Fighter',
+          classSource: 'XPHB',
+          spellcastingAbility: 'int',
+          casterProgression: '1/3',
+          cantripProgression: [2, 2, 2, 2, 2],
+          preparedSpellsProgression: [3, 3, 3, 4, 4],
+          preparedSpellsChange: 'level',
+        },
+      ],
+    })
+
+    const details = buildSpellcastingClassDetails(
+      character,
+      new Map([['class:Fighter|XPHB', fighter]]),
+      character.abilityScores,
+    )
+
+    expect(details[0]).toMatchObject({
+      casterProgression: '1/3',
+      cantripLimit: 2,
+      knownSpellLimit: 4,
+      preparedSpellLimit: null,
+      isLevelOnlyPreparedCaster: true,
+    })
+  })
+
   test('buildSpellcastingClassDetails computes save and attack values per class', () => {
     const character = makeCharacterFixture({
       class: 'Wizard',

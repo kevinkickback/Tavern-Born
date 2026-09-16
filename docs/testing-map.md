@@ -56,9 +56,13 @@ new tests land and do not lower them to merge a change.
 - Character utilities and rules in src/lib/characterUtils.ts and src/lib/calculations/gameRules.ts
 - HP derivation and state coverage for fixed-average and recorded hit-die gains, Constitution
   recalculation, manual flat/per-level adjustments, active typed-source display, exact overrides,
-  legacy initialization, and current/temp HP saves
+  legacy initialization, source-aware draft previews, and current/temp HP saves without typed-effect
+  clamping drift
 - AC calculation and state coverage for equipment/Dexterity derivation, read-only equipped-source
-  breakdowns, positive and negative manual adjustments, exact overrides, and canonical effective reads
+  breakdowns, positive and negative manual adjustments, exact overrides, source-aware direct-value
+  drafts, and canonical effective reads
+- Shared stat-settings coverage verifies HP, AC, and movement drafts preserve parsed source effects,
+  typed manual effects, and activation context through preview and compatibility writes.
 - 5etools modules in src/lib/5etools/* (dataLoader, parsers, classData, filters, lookups, validator)
 - Class-choice normalization coverage for source-qualified feature options, optional-feature
   progressions, generic table-backed capacity, tagged filters, replacement rules, name-independent
@@ -187,7 +191,8 @@ new tests land and do not lower them to merge a change.
 - Complete create-character E2E (required wizard selections -> review -> create -> reload persistence)
 - Character-library E2E for metadata search, cancel/confirm deletion, persisted deletion, and distinct malformed/schema-invalid import errors
 - Character copy and transfer coverage for exact deep copies, reusable runtime reset,
-  collision-free naming, complete-character `.tbc` export, and schema-validated import.
+  full-capacity class-resource initialization, collision-free naming, complete-character `.tbc`
+  export, and schema-validated import.
 - Active-character spell workflow E2E (profile switching, add/remove, prepared toggle) in tests/e2e/spells-active.spec.ts
 - Startup cache-branch full coverage in tests/hooks/useDataInit.test.tsx (unconfigured, stale, fresh, offline, source-changed, direct-load)
 - Provenance reconciliation edge cases in tests/lib/provenance/reconciliation.test.ts (mixed-source retention, background choice removal, multiclass-safe class reconciliation)
@@ -226,6 +231,10 @@ new tests land and do not lower them to merge a change.
   contracts, form filling, and 2014 MPMB cleanup, plus saved-file compatibility coverage for
   resistance, armor, language, tool, and checkbox appearances and flat
   workspace-shell/preview-canvas presentation coverage
+- Action projection coverage resolves parsed class, subclass, selected-feature, and every persisted
+  feat-owner container instead of relying on empty saved presentation descriptions. Spellcasting
+  detail coverage also verifies 2014 known and 2024 prepared limits owned by casting subclasses.
+- Class-rule normalization includes corpus-backed 2014 Paladin Channel Divinity progression checks.
 - Importable, ruleset-specific PDF kitchen-sink coverage in
   tests/fixtures/pdf-kitchen-sink-2014.tbc, tests/fixtures/pdf-kitchen-sink-2024.tbc, and
   tests/lib/pdfKitchenSinkFixture.test.ts. The fixtures retain high-capacity multiclass, spell,

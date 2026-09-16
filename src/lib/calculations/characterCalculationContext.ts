@@ -8,7 +8,7 @@ import {
 } from '@/lib/5etools/entityResolvers'
 import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
-import type { Background5e, Class5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
 import type { AbilityName, AbilityScores, Character, Equipment } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import {
@@ -65,10 +65,12 @@ export interface CharacterCalculationContext {
   raceResolution: ResolvedRaceReference
   background: Background5e | undefined
   classes: readonly Class5e[]
+  feats: readonly Feat5e[]
   abilityScores: EffectiveAbilityScoreData
   equipment: CharacterEquipmentCalculationState
   movement: EffectiveMovement
   effects: {
+    sourceDeclarations: readonly CharacterEffect[]
     declarations: readonly CharacterEffect[]
     resolutionContext: EffectResolutionContext
   }
@@ -239,6 +241,7 @@ export function createCharacterCalculationContext(
     raceResolution,
     background,
     classes,
+    feats: resolvedFeats,
     abilityScores: deriveEffectiveAbilityScores(
       character,
       raceResolution.parentRace,
@@ -253,6 +256,7 @@ export function createCharacterCalculationContext(
     },
     movement: getEffectiveCharacterMovement(character, sourceEffects),
     effects: {
+      sourceDeclarations: sourceEffects,
       declarations: effects,
       resolutionContext: effectResolutionContext,
     },

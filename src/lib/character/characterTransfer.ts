@@ -34,9 +34,7 @@ function resetCharacterRuntimeState(character: Character): Character {
     conditions: [],
     exhaustion: 0,
     hitDiceUsed: 0,
-    classResources: Object.fromEntries(
-      Object.keys(character.classResources ?? {}).map((resourceId) => [resourceId, 0]),
-    ),
+    classResources: {},
     spells: clearSlotUsage(character),
   }
 }

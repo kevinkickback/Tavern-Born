@@ -61,4 +61,41 @@ describe('MovementModal', () => {
     expect(updated?.movementOverrides).toEqual({ swim: 30 })
     expect(updated?.speed).toBe(30)
   })
+
+  test('preserves active typed speed effects in the preview and compatibility mirror', async () => {
+    const character = makeCharacterFixture({
+      id: 'movement-character-with-effect',
+      speed: 25,
+      movement: {
+        speeds: { walk: 25 },
+        source: { kind: 'race', name: 'Dwarf', source: 'PHB' },
+      },
+      manualEffects: [
+        {
+          id: 'typed-speed-bonus',
+          label: 'Typed speed bonus',
+          target: { kind: 'speed', mode: 'walk' },
+          operation: { kind: 'add', value: 10 },
+          source: { kind: 'manual', name: 'Typed speed bonus' },
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    const user = userEvent.setup()
+    render(<MovementModal open={true} onOpenChange={() => {}} />)
+
+    expect(screen.getByText(/walk 35 ft\./i)).toBeTruthy()
+    await user.type(screen.getByLabelText('What caused it?'), 'Training')
+    await user.clear(screen.getByLabelText('Feet'))
+    await user.type(screen.getByLabelText('Feet'), '5')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    expect(screen.getByText(/walk 40 ft\./i)).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Save movement' }))
+
+    expect(useCharacterStore.getState().activeCharacter?.speed).toBe(40)
+  })
 })

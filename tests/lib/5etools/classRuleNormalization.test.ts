@@ -100,6 +100,18 @@ describe('class rule normalization', () => {
     )
   })
 
+  test('keeps 2014 Paladin Channel Divinity at one use at every eligible level', () => {
+    const classData = loadClassData('class-paladin.json', 'Paladin', 'PHB')
+    const channelDivinity = normalize(classData).resources.find(
+      (resource) => resource.id === 'paladin-channel-divinity',
+    )
+
+    expect(channelDivinity?.maxPerLevel[2]).toBe(1)
+    expect(channelDivinity?.maxPerLevel[5]).toBe(1)
+    expect(channelDivinity?.maxPerLevel[17]).toBe(1)
+    expect(channelDivinity?.recovery).toEqual({ shortRest: 'all', longRest: 'all' })
+  })
+
   test.each([
     ['Artificer', 'TCE', 'Infused Items'],
     ['Mystic', 'UAMystic', 'Psi Limit'],

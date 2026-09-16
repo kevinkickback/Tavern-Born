@@ -1,11 +1,22 @@
+import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { resolveItemReference } from '@/lib/5etools/itemResolvers'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { formatRange } from '@/lib/calculations/spellUtils'
 import { isProficientWithWeapon } from '@/lib/calculations/weaponProficiency'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
-import type { Item5e, Race5e, Spell5e } from '@/types/5etools'
+import type {
+  Class5e,
+  ClassFeature,
+  Feat5e,
+  Item5e,
+  OptionalFeatureLike,
+  Race5e,
+  Spell5e,
+} from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
-import type { Character, Equipment } from '@/types/character'
+import type { Character, Equipment, Feat, Feature } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
 import type { AbilityName } from './abilityScores'
 import { type EffectResolutionContext, resolveNumericEffect } from './effects'
@@ -44,6 +55,10 @@ export interface WeaponActionProjectionContext {
 export interface CharacterActionProjectionContext extends WeaponActionProjectionContext {
   spellsByKey?: Readonly<Record<string, Spell5e>>
   race?: Race5e
+  classes?: readonly Class5e[]
+  feats?: readonly Feat5e[]
+  classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
+  optionalFeaturesByKey?: Readonly<Record<string, unknown>>
 }
 
 /** Whether an action belongs in action/attack-oriented UI and fixed-sheet projections. */
@@ -131,39 +146,139 @@ export function deriveSpellActions(
   })
 }
 
+type RulesTextActionContext = Pick<
+  CharacterActionProjectionContext,
+  'classes' | 'feats' | 'classFeaturesByKey' | 'optionalFeaturesByKey'
+>
+
+function rulesTextAction(
+  id: string,
+  name: string,
+  description: string,
+  source: CharacterAction['source'],
+): CharacterAction[] {
+  const kind = inferRulesTextActionKind(description)
+  if (!kind) return []
+  return [{ id, name, kind, description, source, active: true }]
+}
+
+function resolveStoredFeatureDescription(
+  feature: Feature,
+  context: RulesTextActionContext,
+): string {
+  const key = getEntityLookupKey(feature.name, feature.source)
+  const parsed =
+    context.classFeaturesByKey?.[key] ??
+    (context.optionalFeaturesByKey?.[key] as OptionalFeatureLike | undefined)
+  const parsedDescription = renderEntriesToText(parsed?.entries)
+  return parsedDescription || feature.description
+}
+
+function deriveStoredFeatureActions(
+  character: Character,
+  context: RulesTextActionContext,
+): CharacterAction[] {
+  return character.features.flatMap((feature) =>
+    rulesTextAction(
+      `feature:${feature.id}`,
+      feature.name,
+      resolveStoredFeatureDescription(feature, context),
+      { kind: 'other', name: feature.name, source: feature.source, entityId: feature.id },
+    ),
+  )
+}
+
+function deriveFeatActions(
+  character: Character,
+  context: RulesTextActionContext,
+): CharacterAction[] {
+  const resolvedByKey = new Map(
+    (context.feats ?? []).map((feat) => [getEntityLookupKey(feat.name, feat.source), feat]),
+  )
+  const selected: Feat[] = [
+    ...character.feats,
+    ...(character.specialFeats ?? []),
+    ...(character.classFeatChoices ?? []).flatMap((choice) => choice.feats),
+  ]
+  const seen = new Set<string>()
+  return selected.flatMap((feat) => {
+    const key = getEntityLookupKey(feat.name, feat.source)
+    if (seen.has(key)) return []
+    seen.add(key)
+    const parsedDescription = renderEntriesToText(resolvedByKey.get(key)?.entries)
+    return rulesTextAction(`feat:${feat.id}`, feat.name, parsedDescription || feat.description, {
+      kind: 'feat',
+      name: feat.name,
+      source: feat.source,
+      entityId: feat.id,
+    })
+  })
+}
+
+function deriveClassFeatureActions(
+  character: Character,
+  context: RulesTextActionContext,
+): CharacterAction[] {
+  const projectedKeys = new Set(
+    character.features.map((feature) => getEntityLookupKey(feature.name, feature.source)),
+  )
+  const actions: CharacterAction[] = []
+  for (const entry of getCharacterClassEntries(character)) {
+    const classData = (context.classes ?? [])
+      .filter(
+        (candidate) =>
+          candidate.name === entry.name && (!entry.source || candidate.source === entry.source),
+      )
+      .sort((left, right) => left.source.localeCompare(right.source))[0]
+    if (!classData) continue
+
+    for (const reference of classData.classFeatureRefs ?? []) {
+      const feature = reference.feature
+      const level = reference.level ?? feature?.level ?? 0
+      if (!feature || level > entry.levels) continue
+      const key = getEntityLookupKey(feature.name, feature.source)
+      if (projectedKeys.has(key)) continue
+      projectedKeys.add(key)
+      actions.push(
+        ...rulesTextAction(
+          `class-feature:${encodeURIComponent(reference.ref || key)}`,
+          feature.name,
+          renderEntriesToText(feature.entries),
+          { kind: 'class', name: feature.name, source: feature.source },
+        ),
+      )
+    }
+
+    const subclass = getSelectedSubclassData(classData, entry)
+    for (const reference of subclass?.subclassFeatureRefs ?? []) {
+      const feature = reference.feature
+      const level = reference.level ?? feature?.level ?? 0
+      if (!feature || level > entry.levels) continue
+      const key = getEntityLookupKey(feature.name, feature.source)
+      if (projectedKeys.has(key)) continue
+      projectedKeys.add(key)
+      actions.push(
+        ...rulesTextAction(
+          `subclass-feature:${encodeURIComponent(reference.ref || key)}`,
+          feature.name,
+          renderEntriesToText(feature.entries),
+          { kind: 'subclass', name: feature.name, source: feature.source },
+        ),
+      )
+    }
+  }
+  return actions
+}
+
 /** Projects feature, feat, and species rules only when their text explicitly grants an action. */
 export function deriveRulesTextActions(
   character: Character,
   race: Race5e | undefined,
+  context: RulesTextActionContext = {},
 ): CharacterAction[] {
-  const featureActions = character.features.flatMap((feature): CharacterAction[] => {
-    const kind = inferRulesTextActionKind(feature.description)
-    if (!kind) return []
-    return [
-      {
-        id: `feature:${feature.id}`,
-        name: feature.name,
-        kind,
-        description: feature.description,
-        source: { kind: 'other', name: feature.name, source: feature.source, entityId: feature.id },
-        active: true,
-      },
-    ]
-  })
-  const featActions = character.feats.flatMap((feat): CharacterAction[] => {
-    const kind = inferRulesTextActionKind(feat.description)
-    if (!kind) return []
-    return [
-      {
-        id: `feat:${feat.id}`,
-        name: feat.name,
-        kind,
-        description: feat.description,
-        source: { kind: 'feat', name: feat.name, source: feat.source, entityId: feat.id },
-        active: true,
-      },
-    ]
-  })
+  const featureActions = deriveStoredFeatureActions(character, context)
+  const classFeatureActions = deriveClassFeatureActions(character, context)
+  const featActions = deriveFeatActions(character, context)
   const raceActions = (race?.presentationEntries ?? race?.entries ?? []).flatMap(
     (entry, index): CharacterAction[] => {
       if (!entry || typeof entry !== 'object') return []
@@ -184,7 +299,7 @@ export function deriveRulesTextActions(
       ]
     },
   )
-  return [...featureActions, ...featActions, ...raceActions]
+  return [...featureActions, ...classFeatureActions, ...featActions, ...raceActions]
 }
 
 /** Merges runtime projections with persisted manual actions by stable ID. */
@@ -206,7 +321,7 @@ export function deriveCharacterActions(
     [
       ...deriveWeaponActions(character, context),
       ...deriveSpellActions(character, context.spellsByKey ?? {}),
-      ...deriveRulesTextActions(character, context.race),
+      ...deriveRulesTextActions(character, context.race, context),
     ],
     character.manualActions,
   )

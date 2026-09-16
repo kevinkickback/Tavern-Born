@@ -139,4 +139,40 @@ describe('useHitPoints hook', () => {
     expect(updated?.hitPointsInitialized).toBe(true)
     expect(updated?.hitPoints).toEqual({ max: 0, current: 12, temporary: 4 })
   })
+
+  test('does not clamp current HP below an active typed maximum-HP effect on save', () => {
+    const character = makeCharacterFixture({
+      id: 'hp-hook-typed-effect',
+      class: 'Rogue',
+      classSource: 'PHB',
+      level: 1,
+      classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
+      hitPoints: { max: 0, current: 11, temporary: 0 },
+      manualEffects: [
+        {
+          id: 'typed-hp-bonus',
+          label: 'Typed HP bonus',
+          target: { kind: 'hit-point-maximum' },
+          operation: { kind: 'add', value: 3 },
+          source: { kind: 'manual', name: 'Typed HP bonus' },
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    const { result } = renderHook(() => useHitPoints())
+    act(() => {
+      result.current.saveHitPointSettings({
+        current: 11,
+        temporary: 0,
+        adjustments: [],
+      })
+    })
+
+    expect(useCharacterStore.getState().activeCharacter?.hitPoints.current).toBe(11)
+  })
 })

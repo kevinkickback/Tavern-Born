@@ -7,7 +7,7 @@ import {
   deriveWeaponActions,
   inferRulesTextActionKind,
 } from '@/lib/calculations/actions'
-import type { Race5e, Spell5e } from '@/types/5etools'
+import type { Class5e, ClassFeature, Feat5e, Race5e, Spell5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('character action projection', () => {
@@ -253,6 +253,124 @@ describe('character action projection', () => {
         name: 'Test Trait',
         kind: 'bonus-action',
       }),
+    ])
+  })
+
+  test('resolves selected feats and class features from canonical rules data', () => {
+    const character = makeCharacterFixture({
+      class: 'Test Class',
+      classSource: 'TEST',
+      subclass: 'Test Subclass',
+      subclassSource: 'TEST',
+      level: 3,
+      classProgression: [
+        {
+          name: 'Test Class',
+          source: 'TEST',
+          levels: 3,
+          subclass: 'Test Subclass',
+          subclassSource: 'TEST',
+        },
+      ],
+      features: [
+        { id: 'selected-feature', name: 'Selected Feature', source: 'TEST', description: '' },
+      ],
+      feats: [{ id: 'regular-feat', name: 'Regular Feat', source: 'TEST', description: '' }],
+      specialFeats: [{ id: 'bonus-feat', name: 'Bonus Feat', source: 'TEST', description: '' }],
+      classFeatChoices: [
+        {
+          id: 'class-feat-choice',
+          className: 'Test Class',
+          classSource: 'TEST',
+          progressionName: 'Test progression',
+          categories: [],
+          feats: [{ id: 'class-feat', name: 'Class Feat', source: 'TEST', description: '' }],
+        },
+      ],
+    })
+    const feats: Feat5e[] = [
+      {
+        name: 'Regular Feat',
+        source: 'TEST',
+        entries: ['As an action, use the regular feat.'],
+      },
+      {
+        name: 'Bonus Feat',
+        source: 'TEST',
+        entries: ['You can use your reaction to use the bonus feat.'],
+      },
+      {
+        name: 'Class Feat',
+        source: 'TEST',
+        entries: ['As a bonus action, use the class feat.'],
+      },
+    ]
+    const selectedFeature: ClassFeature = {
+      name: 'Selected Feature',
+      source: 'TEST',
+      entries: ['As an action, use the selected feature.'],
+    }
+    const classData = {
+      name: 'Test Class',
+      source: 'TEST',
+      classFeatureRefs: [
+        {
+          ref: 'Class Action|Test Class|TEST|2',
+          name: 'Class Action',
+          source: 'TEST',
+          className: 'Test Class',
+          classSource: 'TEST',
+          level: 2,
+          feature: {
+            name: 'Class Action',
+            source: 'TEST',
+            level: 2,
+            entries: ['As an action, use the class feature.'],
+          },
+        },
+      ],
+      subclasses: [
+        {
+          name: 'Test Subclass',
+          shortName: 'Test Subclass',
+          source: 'TEST',
+          className: 'Test Class',
+          classSource: 'TEST',
+          subclassFeatureRefs: [
+            {
+              ref: 'Subclass Reaction|Test Class|TEST|Test Subclass|TEST|3',
+              name: 'Subclass Reaction',
+              source: 'TEST',
+              className: 'Test Class',
+              classSource: 'TEST',
+              subclassShortName: 'Test Subclass',
+              subclassSource: 'TEST',
+              level: 3,
+              feature: {
+                name: 'Subclass Reaction',
+                source: 'TEST',
+                level: 3,
+                entries: ['As a reaction, use the subclass feature.'],
+              },
+            },
+          ],
+        },
+      ],
+    } satisfies Class5e
+
+    const actions = deriveRulesTextActions(character, undefined, {
+      classes: [classData],
+      feats,
+      classFeaturesByKey: { 'Selected Feature|TEST': selectedFeature },
+    })
+
+    expect(actions.map(({ name, kind }) => ({ name, kind }))).toEqual([
+      { name: 'Selected Feature', kind: 'action' },
+      { name: 'Class Action', kind: 'action' },
+      { name: 'Subclass Reaction', kind: 'reaction' },
+      { name: 'Regular Feat', kind: 'action' },
+      { name: 'Bonus Feat', kind: 'reaction' },
+      { name: 'Class Feat', kind: 'bonus-action' },
     ])
   })
 

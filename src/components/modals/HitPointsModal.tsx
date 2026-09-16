@@ -44,8 +44,13 @@ function formatSigned(value: number): string {
 
 export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
   const character = useCharacterStore((state) => state.activeCharacter)
-  const { hitPoints, calculatedMaxHP, effectiveMaxHP, resolution, saveHitPointSettings } =
-    useHitPoints()
+  const {
+    hitPoints,
+    calculatedMaxHP,
+    effectiveMaxHP,
+    previewHitPointSettings,
+    saveHitPointSettings,
+  } = useHitPoints()
   const [current, setCurrent] = useState('0')
   const [temporary, setTemporary] = useState('0')
   const [adjustments, setAdjustments] = useState<HitPointAdjustmentDraft[]>([])
@@ -110,10 +115,15 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
     amount: parseInteger(adjustment.amount),
   }))
   const adjustmentTotal = calculateHitPointAdjustmentTotal(resolvedAdjustments, characterLevel)
-  const adjustedMaxHP = Math.max(1, calculatedMaxHP + adjustmentTotal)
   const parsedOverride = parseInteger(overrideValue)
   const validOverride = !overrideEnabled || parsedOverride >= 1
-  const previewEffectiveMaxHP = overrideEnabled && validOverride ? parsedOverride : adjustedMaxHP
+  const previewResolution = previewHitPointSettings({
+    current: parseInteger(current),
+    temporary: parseInteger(temporary),
+    adjustments: resolvedAdjustments,
+    maxOverride: overrideEnabled && validOverride ? parsedOverride : undefined,
+  })
+  const previewEffectiveMaxHP = Math.max(1, Math.trunc(previewResolution.value))
   const maximumChange = previewEffectiveMaxHP - effectiveMaxHP
   const displayedCurrent = currentEdited
     ? current
@@ -160,11 +170,20 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
     const otherAdjustments = adjustments.filter(
       (adjustment) => adjustment.id !== DESIRED_MAXIMUM_ADJUSTMENT_ID,
     )
-    const otherTotal = calculateHitPointAdjustmentTotal(
-      resolvedAdjustments.filter((adjustment) => adjustment.id !== DESIRED_MAXIMUM_ADJUSTMENT_ID),
-      characterLevel,
+    const otherResolvedAdjustments = resolvedAdjustments.filter(
+      (adjustment) => adjustment.id !== DESIRED_MAXIMUM_ADJUSTMENT_ID,
     )
-    const amount = desired - calculatedMaxHP - otherTotal
+    const otherMaximum = Math.max(
+      1,
+      Math.trunc(
+        previewHitPointSettings({
+          current: parseInteger(current),
+          temporary: parseInteger(temporary),
+          adjustments: otherResolvedAdjustments,
+        }).value,
+      ),
+    )
+    const amount = desired - otherMaximum
     const desiredAdjustment: HitPointAdjustmentDraft = {
       id: DESIRED_MAXIMUM_ADJUSTMENT_ID,
       label: 'Custom maximum',
@@ -174,6 +193,24 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
       createdAt:
         adjustments.find((adjustment) => adjustment.id === DESIRED_MAXIMUM_ADJUSTMENT_ID)
           ?.createdAt ?? new Date().toISOString(),
+    }
+    const candidateAdjustments =
+      amount === 0
+        ? otherResolvedAdjustments
+        : [...otherResolvedAdjustments, { ...desiredAdjustment, amount }]
+    const candidateMaximum = Math.max(
+      1,
+      Math.trunc(
+        previewHitPointSettings({
+          current: parseInteger(current),
+          temporary: parseInteger(temporary),
+          adjustments: candidateAdjustments,
+        }).value,
+      ),
+    )
+    if (candidateMaximum !== desired) {
+      toast.error('An active effect prevents that lasting total. Use the fixed maximum option.')
+      return
     }
     setAdjustments(amount === 0 ? otherAdjustments : [...otherAdjustments, desiredAdjustment])
     setOverrideEnabled(false)
@@ -288,7 +325,7 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
 
             <NumericEffectBreakdown
               title="Current maximum-HP sources"
-              resolution={resolution}
+              resolution={previewResolution}
               baseComponents={[
                 {
                   id: 'class-levels-and-constitution',

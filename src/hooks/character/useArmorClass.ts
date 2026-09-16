@@ -7,13 +7,8 @@ import {
 } from '@/lib/calculations/armorClass'
 import { type ResolvedNumericEffect, resolveNumericEffect } from '@/lib/calculations/effects'
 import { getAbilityModifier } from '@/lib/calculations/gameRules'
+import { type ArmorClassSettings, resolveArmorClassSettings } from '@/lib/calculations/statSettings'
 import { useCharacterStore } from '@/store/characterStore'
-import type { ArmorClassAdjustment } from '@/types/character'
-
-interface ArmorClassSettings {
-  adjustments: ArmorClassAdjustment[]
-  override?: number
-}
 
 export interface ArmorClassState {
   calculatedAC: number
@@ -25,6 +20,7 @@ export interface ArmorClassState {
   baseBreakdown: ArmorClassBaseBreakdown
   setAC: (ac: number) => void
   clearOverride: () => void
+  previewArmorClassSettings: (settings: ArmorClassSettings) => ResolvedNumericEffect
   saveArmorClassSettings: (settings: ArmorClassSettings) => void
 }
 
@@ -73,6 +69,15 @@ export function useArmorClass(): ArmorClassState {
       if (!character) return
       updateCharacter(character.id, { armorClassOverride: undefined })
     },
+    previewArmorClassSettings: (settings) =>
+      character
+        ? resolveArmorClassSettings(
+            character,
+            calculatedAC,
+            settings,
+            calculationContext?.effects.sourceDeclarations,
+          )
+        : resolution,
     saveArmorClassSettings: (settings) => {
       if (!character) return
       const nextOverride =

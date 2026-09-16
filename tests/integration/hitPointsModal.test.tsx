@@ -185,4 +185,43 @@ describe('HitPointsModal', () => {
     expect(screen.queryByRole('button', { name: 'Remove Test Vitality Item' })).toBeNull()
     expect(screen.queryByLabelText('What caused it?')).toBeNull()
   })
+
+  test('includes active typed effects when creating a lasting direct maximum', async () => {
+    const character = makeCharacterFixture({
+      class: 'Fighter',
+      classSource: 'PHB',
+      level: 1,
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+      hitPoints: { max: 0, current: 13, temporary: 0 },
+      manualEffects: [
+        {
+          id: 'typed-hp-bonus',
+          label: 'Typed HP bonus',
+          target: { kind: 'hit-point-maximum' },
+          operation: { kind: 'add', value: 3 },
+          source: { kind: 'manual', name: 'Typed HP bonus' },
+        },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+    const user = userEvent.setup()
+    render(<HitPointsModal open={true} onOpenChange={() => {}} />)
+
+    await user.click(screen.getByRole('tab', { name: 'Manual changes' }))
+    await user.click(screen.getByText('More HP options'))
+    const desiredMaximum = screen.getByLabelText('Set maximum HP directly')
+    await user.clear(desiredMaximum)
+    await user.type(desiredMaximum, '18')
+    await user.click(screen.getByRole('button', { name: 'Set Maximum' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(useCharacterStore.getState().activeCharacter?.hitPointAdjustments).toEqual([
+      expect.objectContaining({ label: 'Custom maximum', amount: 5 }),
+    ])
+    expect(useCharacterStore.getState().activeCharacter?.hitPoints.current).toBe(18)
+  })
 })

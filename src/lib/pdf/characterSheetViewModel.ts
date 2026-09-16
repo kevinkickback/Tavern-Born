@@ -37,7 +37,14 @@ import {
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
 import { renderEntriesToText } from '@/lib/entryText'
-import type { Background5e, Class5e, Organization5e, Race5e, Spell5e } from '@/types/5etools'
+import type {
+  Background5e,
+  Class5e,
+  ClassFeature,
+  Organization5e,
+  Race5e,
+  Spell5e,
+} from '@/types/5etools'
 import type { CharacterAction } from '@/types/actions'
 import type { AbilityScores, Character, Equipment, Feat } from '@/types/character'
 import type { CharacterEffect } from '@/types/effects'
@@ -46,6 +53,8 @@ type ModifierResult = { modifier: number; proficient: boolean }
 
 export interface CharacterSheetLookupSet extends EntityLookupSet {
   spellsByKey?: Readonly<Record<string, Spell5e>>
+  classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
+  optionalFeaturesByKey?: Readonly<Record<string, unknown>>
   itemPropertyByAbbr?: Readonly<Record<string, string>>
   organizations?: readonly Organization5e[]
 }
@@ -593,6 +602,10 @@ export function createCharacterSheetViewModel(
     effectContext: calculationContext.effects.resolutionContext,
     spellsByKey: rawLookups.spellsByKey,
     race: raceResolution.mergedRace,
+    classes: resolvedClasses,
+    feats: calculationContext.feats,
+    classFeaturesByKey: rawLookups.classFeaturesByKey,
+    optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,
   })
 
   return {

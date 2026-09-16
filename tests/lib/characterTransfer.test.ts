@@ -62,7 +62,7 @@ describe('character transfer', () => {
     expect(copy.conditions).toEqual([])
     expect(copy.exhaustion).toBe(0)
     expect(copy.hitDiceUsed).toBe(0)
-    expect(copy.classResources).toEqual({ 'test-resource': 0 })
+    expect(copy.classResources).toEqual({})
     expect(copy.spells.spellSlots[1]?.used).toBe(0)
     expect(copy.spells.pactSpellSlots?.[1]?.used).toBe(0)
   })

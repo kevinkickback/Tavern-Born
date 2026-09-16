@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useMovement } from '@/hooks/character/useMovement'
-import { formatEffectiveMovement, getEffectiveCharacterMovement } from '@/lib/calculations/movement'
+import { formatEffectiveMovement } from '@/lib/calculations/movement'
 import { cn } from '@/lib/utils'
 import type { MovementAdjustment, MovementMode } from '@/types/character'
 
@@ -38,6 +38,7 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
     baseMovement,
     hoverOverride,
     overrides: persistedOverrides,
+    previewMovementSettings,
     saveMovementSettings,
   } = useMovement()
   const [adjustments, setAdjustments] = useState<MovementAdjustmentDraft[]>([])
@@ -93,12 +94,10 @@ export function MovementModal({ open, onOpenChange }: MovementModalProps) {
       ),
     [overrides],
   )
-  const preview = getEffectiveCharacterMovement({
-    speed: baseMovement.speeds.walk ?? 0,
-    movement: baseMovement,
-    movementAdjustments: resolvedAdjustments,
-    movementOverrides: resolvedOverrides,
-    movementHoverOverride: hoverOverrideEnabled ? hoverValue : undefined,
+  const preview = previewMovementSettings({
+    adjustments: resolvedAdjustments,
+    overrides: resolvedOverrides,
+    hoverOverride: hoverOverrideEnabled ? hoverValue : undefined,
   })
 
   const addAdjustment = () => {

@@ -6,6 +6,7 @@ import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { buildClassLookup } from '@/lib/5etools/lookups'
 import { type ResolvedNumericEffect, resolveNumericEffect } from '@/lib/calculations/effects'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
+import { type HitPointSettings, resolveHitPointSettings } from '@/lib/calculations/statSettings'
 import {
   calculateHitPointAdjustmentTotal,
   calculateHPBreakdown,
@@ -14,14 +15,7 @@ import {
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
-import type { HitPointAdjustment, HitPoints } from '@/types/character'
-
-interface HitPointSettings {
-  current: number
-  temporary: number
-  adjustments: HitPointAdjustment[]
-  maxOverride?: number
-}
+import type { HitPoints } from '@/types/character'
 
 export interface HitPointsState {
   hitPoints: HitPoints
@@ -38,6 +32,7 @@ export interface HitPointsState {
   setTempHP: (hp: number) => void
   heal: (amount: number) => void
   damage: (amount: number) => void
+  previewHitPointSettings: (settings: HitPointSettings) => ResolvedNumericEffect
   saveHitPointSettings: (settings: HitPointSettings) => void
 }
 
@@ -171,18 +166,28 @@ export function useHitPoints(): HitPointsState {
         current: Math.max(0, character.hitPoints.current - remaining),
       })
     },
+    previewHitPointSettings: (settings) =>
+      character
+        ? resolveHitPointSettings(
+            character,
+            calculatedMaxHP,
+            settings,
+            calculationContext?.effects.sourceDeclarations,
+          )
+        : resolution,
     saveHitPointSettings: (settings) => {
       if (!character) return
-      const nextAdjustmentTotal = calculateHitPointAdjustmentTotal(
-        settings.adjustments,
-        characterLevel,
-      )
-      const nextAdjustedMaxHP = Math.max(1, calculatedMaxHP + nextAdjustmentTotal)
       const nextOverride =
         typeof settings.maxOverride === 'number' && settings.maxOverride > 0
           ? Math.trunc(settings.maxOverride)
           : undefined
-      const nextEffectiveMaxHP = nextOverride ?? nextAdjustedMaxHP
+      const nextResolution = resolveHitPointSettings(
+        character,
+        calculatedMaxHP,
+        { ...settings, maxOverride: nextOverride },
+        calculationContext?.effects.sourceDeclarations,
+      )
+      const nextEffectiveMaxHP = Math.max(1, Math.trunc(nextResolution.value))
       updateCharacter(character.id, {
         hitPointAdjustments: settings.adjustments,
         hitPointsInitialized: true,
