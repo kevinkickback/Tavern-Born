@@ -3,31 +3,25 @@
 
 ## ✨ Changes
 
-* **⚠️ Older beta characters are no longer supported.** Characters created or exported by versions before v0.4.0 cannot be opened after updating and must be recreated. This pre-release reset removes obsolete compatibility code before the character format becomes stable.
-* **Added complete Weapon Mastery selection support to the Class builder.** Required choices now appear at the level where they are earned; Weapon Mastery offers only class-eligible weapons, derives attack type from game data, filters by mastery, weapon category, or attack type, and explains each mastery. Saved options that are no longer eligible remain available for replacement without counting as complete, choices stay with the class that granted them, and unearned benefits are removed after lowering a class level.
-* **Added an Actions & Effects workspace for equipment, spells, ancestry, feats, classes, and manual entries.** Source-derived and manual entries can be collapsed or temporarily disabled, and the same action list supplies the Action, Bonus Action, and Reaction fields on 2014 character sheets.
-* **Added Review as the final Builder section.** It provides exact links that reveal and highlight incomplete choices or diagnostics, plus a focused overview of calculated totals, movement, actions, content sources, and PDF readiness.
-* **PDF export now warns about incomplete choices, missing content, unsupported mechanics, and entries that will not fit on the selected sheet before downloading.**
-* **The Spells page now gives each class its own tab and handles multiclass and Pact Magic slots separately.** Existing spell names are recognized regardless of capitalization while preserving the selected sourcebook version, and selecting spells gained at later levels no longer removes earlier class spell choices.
-* **Spell selections now retain and display their exact sourcebook printing throughout selection, preparation, source filtering, and character reloads.** Subclass references also require an exact source so missing catalog content is reported instead of resolving ambiguously.
-* **Game-data updates no longer save incomplete core catalogs.** Required resource failures preserve the previous data, while optional descriptive content can degrade gracefully; skipped unsupported beta characters now produce one clear warning per load.
-* **Level-up choices now remain attached to the class level that granted them.** Adding later feats, Fighting Styles, Eldritch Invocations, Metamagic, or other normalized class choices no longer lets catalog sorting reassign an earlier choice to a later slot, so lowering a level removes the correct benefit.
-* **Character calculations now apply ability-score, equipment, and feat bonuses consistently** across totals, prerequisites, spellcasting, movement, carrying capacity, and exported sheets.
-* **Movement management now supports walking, climbing, swimming, flying, burrowing, hover, custom movement modes, situational changes, and exact overrides** without replacing ancestry-based speeds.
-* **Character cards now support both exact duplication and reusable build copies.** Reusable builds reset current HP, conditions, used resources, and spell-slot usage; cards also offer a clearly labeled export action, and creating a character now returns to the Characters page.
-* Refreshed the light theme with softer neutral backgrounds, clearer borders, and stronger contrast
-* Tooltip and entry previews no longer collide with window controls; previews can now be pinned, dragged by their title, and revisited through their history
-* List-and-detail pages now switch to a focused single-pane view in narrow windows, keep page navigation available, and let the remaining pane reclaim the full workspace when its companion is collapsed
-* Equipment summaries and filters now adapt to smaller windows, item details show only relevant fields, and Add Item includes spellcasting foci and unfamiliar or homebrew item types
-* Class resource trackers now distinguish partial short-rest recovery from full recovery and use corrected 2024 Bard, Fighter, Paladin, and Wizard rules
-* Class, race, and background feat choices now retain their selected sourcebook printing and follow-up setup; feat details, changes, and removal distinguish between printings with the same name
-* Stat-management previews now retain active typed effects, subclass spellcasting limits follow the selected subclass, Wizard spellbook and prepared-spell totals are validated independently, reusable build copies begin with full class resources, 2014 Paladin Channel Divinity uses the correct capacity, and action lists resolve class and feat rules from loaded source data
-* Armor Class and Hit Point management now separates calculation breakdowns from manual changes, making every contributing source visible without overwhelming heavily modified characters
-* Sources now lives alongside other character settings in Rules, and choosing no optional sources during creation correctly keeps only the core sourcebook for the selected ruleset
-* Race and background setup now previews unresolved ability and movement choices, keeps feat and ability setup on their dedicated pages, links directly to remaining choices, and safely handles incomplete 2024 species lineages
-* Contextual hints now return correctly after being reset or after their controls appear in a responsive layout
-* Built-in organization cards now use neutral backgrounds, and 2014 character sheets place the selected or custom emblem in the organization section
-* Remote game data now works with more hosting services, while GitHub sources accept branch names containing slashes and provide clearer guidance for ambiguous URLs
+* Support for Weapon Masteries in 5.5e (2024) rulesets added
+* Custom Actions & Effects page added
+* Character Review page added to the Builder
+* PDF export now checks for incomplete or unsupported character data
+* Spells page improved for multiclass characters, Pact Magic, and spell preparation
+* Level-up choices and subclass spellcasting improved
+* Character calculations, movement, Hit Points, and Armor Class management improved
+* One-click character duplication and clearer export actions added
+* Equipment browsing, filtering, and item details improved
+* Character rules and sourcebook settings moved into one page
+* Race, background, class, and feat setup improved
+* Class resource tracking and rest recovery corrected
+* Light theme, tooltips, contextual hints, and small-window layouts improved
+* Organization emblems added to 2014 character sheets
+* Remote game-data loading and update reliability improved
+
+## ⚠️ Important
+
+* Characters created before v0.4.0 are no longer supported and must be recreated. When incompatible characters are found, Tavern Born offers to export their original `.tbc` files before you acknowledge their removal.
 
 </details>
 

@@ -103,7 +103,7 @@ new tests land and do not lower them to merge a change.
 - Named game-data lookup hook coverage for stable empty defaults and ingestion-built race/background/item/metadata/skill lookups
 - Character payload validation and rehydrate safety in tests/store/characterStore.test.ts, including
   subscriber notification and persistence of sanitized current-schema records. Home-page coverage
-  verifies unsupported-record warnings are acknowledged after one display.
+  verifies unsupported records require acknowledgment and remain exportable until dismissed.
 - Compile-time compatibility between normalized persistence output and the runtime `Character`
   contract in tests/lib/characterSchema.test.ts
 - Build flow extracted helpers:

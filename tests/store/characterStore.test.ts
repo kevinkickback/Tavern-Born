@@ -27,7 +27,7 @@ describe('characterStore', () => {
       activeCharacterId: null,
       activeCharacter: null,
       isActiveCharacterDirty: false,
-      unsupportedCharacterCount: 0,
+      unsupportedCharacters: [],
     })
   })
 
@@ -430,13 +430,15 @@ describe('characterStore', () => {
     expect(state.characters).toEqual([])
     expect(state.activeCharacterId).toBeNull()
     expect(state.activeCharacter).toBeNull()
-    expect(state.unsupportedCharacterCount).toBe(1)
+    expect(state.unsupportedCharacters).toEqual([persisted])
     expect(subscriber).toHaveBeenCalled()
     await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalled())
     expect(storageMocks.setItem).toHaveBeenLastCalledWith(
       'character-storage',
       expect.objectContaining({ state: { characters: [] } }),
     )
+    state.dismissUnsupportedCharacters()
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
     unsubscribe()
   })
 

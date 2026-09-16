@@ -61,9 +61,9 @@ interface CharacterState {
   activeCharacterId: string | null
   activeCharacter: Character | null
   isActiveCharacterDirty: boolean
-  unsupportedCharacterCount: number
+  unsupportedCharacters: unknown[]
   finishCharacterHydration: () => void
-  consumeUnsupportedCharacterCount: () => number
+  dismissUnsupportedCharacters: () => void
   hasUnsavedChanges: () => boolean
 
   setCharacters: (characters: Character[]) => void
@@ -167,7 +167,7 @@ export const useCharacterStore = create<CharacterState>()(
       activeCharacterId: null,
       activeCharacter: null,
       isActiveCharacterDirty: false,
-      unsupportedCharacterCount: 0,
+      unsupportedCharacters: [],
 
       finishCharacterHydration: () =>
         set((state) => {
@@ -179,17 +179,14 @@ export const useCharacterStore = create<CharacterState>()(
             activeCharacterId: null,
             activeCharacter: null,
             isActiveCharacterDirty: false,
-            unsupportedCharacterCount: results.filter(
-              (result) => result.error === UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
-            ).length,
+            unsupportedCharacters: state.characters.filter(
+              (_character, index) =>
+                results[index]?.error === UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
+            ),
           }
         }),
 
-      consumeUnsupportedCharacterCount: () => {
-        const count = get().unsupportedCharacterCount
-        if (count > 0) set({ unsupportedCharacterCount: 0 })
-        return count
-      },
+      dismissUnsupportedCharacters: () => set({ unsupportedCharacters: [] }),
 
       hasUnsavedChanges: () => {
         const { characters, activeCharacter, activeCharacterId, isActiveCharacterDirty } = get()

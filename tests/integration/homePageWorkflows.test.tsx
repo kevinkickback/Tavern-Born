@@ -1,6 +1,5 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { StrictMode } from 'react'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
@@ -79,7 +78,7 @@ function resetCharacterStore() {
     activeCharacterId: null,
     activeCharacter: null,
     isActiveCharacterDirty: false,
-    unsupportedCharacterCount: 0,
+    unsupportedCharacters: [],
   })
 }
 
@@ -118,21 +117,46 @@ describe('home page integration workflows', () => {
     expect(screen.getByText('Character Wizard Open')).toBeTruthy()
   })
 
-  test('shows the unsupported-character warning once and acknowledges it', async () => {
-    useCharacterStore.setState({ unsupportedCharacterCount: 2 })
+  test('requires acknowledgment and can export unsupported-character backups', async () => {
+    const user = userEvent.setup()
+    useCharacterStore.setState({
+      unsupportedCharacters: [
+        { ...makeCharacterFixture({ name: 'Old/Hero' }), schemaVersion: 0 },
+        { ...makeCharacterFixture({ name: 'Second Hero' }), schemaVersion: 0 },
+      ],
+    })
+    const originalCreateElement = document.createElement.bind(document)
+    const downloadLinks: HTMLAnchorElement[] = []
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+      const element = originalCreateElement(tagName)
+      if (tagName === 'a') {
+        const link = element as HTMLAnchorElement
+        link.click = vi.fn()
+        downloadLinks.push(link)
+      }
+      return element
+    }) as typeof document.createElement)
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:legacy-character')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
 
-    const view = render(
-      <StrictMode>
-        <HomePage />
-      </StrictMode>,
-    )
-
-    await vi.waitFor(() => expect(toast.warning).toHaveBeenCalledTimes(1))
-    expect(useCharacterStore.getState().unsupportedCharacterCount).toBe(0)
-
-    view.unmount()
     render(<HomePage />)
-    expect(toast.warning).toHaveBeenCalledTimes(1)
+
+    expect(screen.getByRole('alertdialog')).toBeTruthy()
+    expect(screen.getByText('Older characters could not be loaded')).toBeTruthy()
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('alertdialog')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Export Backups' }))
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
+    expect(downloadLinks.map((link) => link.download)).toEqual([
+      'Old_Hero-legacy-backup-1.tbc',
+      'Second Hero-legacy-backup-2.tbc',
+    ])
+    expect(useCharacterStore.getState().unsupportedCharacters).toHaveLength(2)
+
+    await user.click(screen.getByRole('button', { name: 'I Understand' }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
   })
 
   test('supports multi-select deletion workflow', async () => {

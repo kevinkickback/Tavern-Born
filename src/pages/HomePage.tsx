@@ -12,11 +12,12 @@ import {
   Upload,
   Users,
 } from '@phosphor-icons/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { CharacterCard } from '@/components/character/CharacterCard'
 import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
+import { UnsupportedCharactersDialog } from '@/components/character/UnsupportedCharactersDialog'
 import { CharacterCreationWizard } from '@/components/character/wizard/CharacterCreationWizard'
 import {
   AlertDialog,
@@ -58,6 +59,16 @@ import type { Character } from '@/types/character'
 
 type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'level-desc' | 'level-asc'
 type GroupByOption = 'none' | 'class' | 'alignment' | 'player'
+
+function downloadJsonFile(data: unknown, filename: string) {
+  const dataBlob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(dataBlob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 interface CharacterListRowProps {
   character: Character
@@ -185,9 +196,9 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const deleteCharacter = useCharacterStore((state) => state.deleteCharacter)
   const addCharacter = useCharacterStore((state) => state.addCharacter)
-  const unsupportedCharacterCount = useCharacterStore((state) => state.unsupportedCharacterCount)
-  const consumeUnsupportedCharacterCount = useCharacterStore(
-    (state) => state.consumeUnsupportedCharacterCount,
+  const unsupportedCharacters = useCharacterStore((state) => state.unsupportedCharacters)
+  const dismissUnsupportedCharacters = useCharacterStore(
+    (state) => state.dismissUnsupportedCharacters,
   )
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
   const setViewMode = useAppPreferencesStore((state) => state.setCharacterViewMode)
@@ -204,15 +215,6 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
   const focusCharacterName = readinessFocus === 'identity:name'
-
-  useEffect(() => {
-    if (!unsupportedCharacterCount) return
-    const count = consumeUnsupportedCharacterCount()
-    if (!count) return
-    toast.warning(
-      `${count} character${count === 1 ? '' : 's'} from an unsupported beta version could not be loaded. Please create new characters.`,
-    )
-  }, [consumeUnsupportedCharacterCount, unsupportedCharacterCount])
 
   const sortedCharacters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -328,15 +330,25 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
   }
 
   const handleExportCharacter = useCallback((character: Character) => {
-    const dataBlob = new Blob([JSON.stringify(character, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${character.name || 'character'}.tbc`
-    link.click()
-    URL.revokeObjectURL(url)
+    downloadJsonFile(character, `${character.name || 'character'}.tbc`)
     toast.success('Character exported successfully')
   }, [])
+
+  const handleExportUnsupportedCharacters = useCallback(() => {
+    unsupportedCharacters.forEach((character, index) => {
+      const record =
+        typeof character === 'object' && character !== null
+          ? (character as Record<string, unknown>)
+          : null
+      const rawName = typeof record?.name === 'string' ? record.name.trim() : ''
+      const safeName = (rawName || 'character').replace(/[<>:"/\\|?*]/g, '_')
+      const suffix = unsupportedCharacters.length === 1 ? '' : `-${index + 1}`
+      downloadJsonFile(character, `${safeName}-legacy-backup${suffix}.tbc`)
+    })
+    toast.success(
+      `${unsupportedCharacters.length} character backup${unsupportedCharacters.length === 1 ? '' : 's'} exported`,
+    )
+  }, [unsupportedCharacters])
 
   const handleDuplicateCharacter = useCallback(
     (source: Character) => {
@@ -655,6 +667,11 @@ export function HomePage({ readinessFocus }: HomePageProps = {}) {
       </WorkspaceBody>
 
       <CharacterCreationWizard open={showCreateWizard} onOpenChange={setShowCreateWizard} />
+      <UnsupportedCharactersDialog
+        count={unsupportedCharacters.length}
+        onExport={handleExportUnsupportedCharacters}
+        onAcknowledge={dismissUnsupportedCharacters}
+      />
       <AlertDialog open={confirmSwitchOpen} onOpenChange={setConfirmSwitchOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -277,7 +277,9 @@ Flow:
 1. `Character.schemaVersion` must equal `CURRENT_CHARACTER_SCHEMA_VERSION`.
 2. Import validates the exact current version and strict character schema before saving.
 3. IndexedDB hydration keeps valid current records and drops unsupported or malformed records.
-4. The Home page reports how many unsupported beta records were skipped.
+4. Unsupported-version records are quarantined in memory until the Home page requires the user to
+   acknowledge their removal. The dialog can export each original record as a `.tbc` backup for use
+   with a compatible older app version.
 
 Versioning strategy:
 - Increment the integer character schema version for breaking changes such as required fields, removed fields, or restructured data.
