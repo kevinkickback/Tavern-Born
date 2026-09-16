@@ -152,6 +152,18 @@ Normalized class-choice behavior:
   source-qualified selections keep their prior slot when sorted catalogs return a different order;
   only newly added selections consume the remaining earned slots.
 - Class-feature and optional-feature selections can be materialized without interpreting prose.
+
+Class and subclass spell-choice behavior:
+- Removing or replacing a class progression entry retracts materialized proficiencies that are owned
+  only by that exact class printing and removes its class spell profile. Grants shared with another
+  source remain materialized.
+- The 2014 PHB Eldritch Knight and Arcane Trickster school limits are enforced in both the picker and
+  spell commands. Their unrestricted choices at levels 3, 8, 14, and 20 carry
+  `grantVariant: "unrestricted-school"`, so the exception follows that choice when it is swapped.
+- A class spell can be swapped only when the spell profile and ledger both identify it as a choice
+  owned by that exact class/subclass. Fixed subclass spells are never eligible replacement sources.
+- Level rollback restores a swapped-out spell only while its original class-choice grant still
+  exists; removing the originating level must not resurrect it.
   Feat selections require the feat-options workflow, and item selections may describe mastery or
   another relationship rather than inventory; those kinds stay persisted until their domain
   handlers can apply them explicitly.

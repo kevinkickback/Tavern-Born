@@ -6,6 +6,15 @@
  */
 
 import {
+  getClassChoiceSpellTag,
+  getClassSpellRuleContext,
+  getClassSpellSchoolRule,
+  getMaximumUnrestrictedSchoolChoices,
+  isClassChoiceSpellTag,
+  isSpellInRestrictedSchools,
+  UNRESTRICTED_SCHOOL_CHOICE_VARIANT,
+} from '@/lib/calculations/classSpellChoiceRules'
+import {
   buildSpellNameKeySet,
   dedupeSpellNames,
   getSpellNameKey,
@@ -24,6 +33,7 @@ export interface SpellCommandResult extends CharacterCommandResult {}
 export interface ClassSpellSelectionInput {
   name: string
   spellLevel: number
+  school?: string
 }
 
 function createSpellProfilePatch(
@@ -38,19 +48,6 @@ function createSpellProfilePatch(
   }
 }
 
-function isClassChoiceTag(
-  tag: SpellSourceTag,
-  className: string,
-  classSource: string | undefined,
-): boolean {
-  return (
-    tag.sourceType === 'class' &&
-    tag.sourceName === className &&
-    (tag.sourceRef ?? '') === (classSource ?? '') &&
-    tag.grantType === 'choice'
-  )
-}
-
 function removeClassChoiceTagsAtLevel(
   ledger: ProvenanceLedger,
   className: string,
@@ -61,7 +58,10 @@ function removeClassChoiceTagsAtLevel(
   for (const [key, tags] of Object.entries(ledger.spells)) {
     const retained = tags.filter(
       (tag) =>
-        !(isClassChoiceTag(tag, className, classSource) && tag.spellGrantedAtLevel === classLevel),
+        !(
+          isClassChoiceSpellTag(tag, className, classSource) &&
+          tag.spellGrantedAtLevel === classLevel
+        ),
     )
     if (retained.length > 0) spells[key] = retained
   }
@@ -87,6 +87,9 @@ export function setClassSpellSelectionsAtLevel(
         params.selections.find(
           (selection) => getSpellNameKey(selection.name) === getSpellNameKey(name),
         )?.spellLevel ?? 1,
+      school: params.selections.find(
+        (selection) => getSpellNameKey(selection.name) === getSpellNameKey(name),
+      )?.school,
     }),
   )
   const profileId = toClassProfileId(className, classSource)
@@ -95,6 +98,29 @@ export function setClassSpellSelectionsAtLevel(
   const classEntry = character.classProgression?.find(
     (entry) => entry.name === className && (entry.source ?? '') === (classSource ?? ''),
   )
+  const schoolRule = getClassSpellSchoolRule(
+    getClassSpellRuleContext(character.originSystem, classEntry),
+  )
+  const leveledSelections = selections.filter((selection) => selection.spellLevel > 0)
+  const unrestrictedSelections = schoolRule
+    ? leveledSelections.filter((selection) => {
+        if (!selection.school) {
+          throw new Error(
+            `Spell school is required for ${classEntry?.subclass ?? className} choices.`,
+          )
+        }
+        return !isSpellInRestrictedSchools(selection.school, schoolRule)
+      })
+    : []
+  const maximumUnrestricted = getMaximumUnrestrictedSchoolChoices(schoolRule, classLevel)
+  if (unrestrictedSelections.length > maximumUnrestricted) {
+    throw new Error(
+      `${classEntry?.subclass ?? className} allows ${maximumUnrestricted} unrestricted-school spell choice${maximumUnrestricted === 1 ? '' : 's'} at level ${classLevel}.`,
+    )
+  }
+  const unrestrictedSelectionKey = schoolRule?.unrestrictedGrantLevels.has(classLevel)
+    ? getSpellNameKey(unrestrictedSelections[0]?.name ?? leveledSelections[0]?.name ?? '')
+    : ''
   const profile =
     existingProfile ??
     ({
@@ -117,7 +143,8 @@ export function setClassSpellSelectionsAtLevel(
     if (
       tags.some(
         (tag) =>
-          isClassChoiceTag(tag, className, classSource) && tag.spellGrantedAtLevel === classLevel,
+          isClassChoiceSpellTag(tag, className, classSource) &&
+          tag.spellGrantedAtLevel === classLevel,
       )
     ) {
       previousLevelKeys.add(getSpellNameKey(name))
@@ -160,7 +187,13 @@ export function setClassSpellSelectionsAtLevel(
       classSource,
       selection.name,
       'choice',
-      { spellGrantedAtLevel: classLevel, spellAttributionMode: 'exact' },
+      {
+        spellGrantedAtLevel: classLevel,
+        spellAttributionMode: 'exact',
+        ...(getSpellNameKey(selection.name) === unrestrictedSelectionKey
+          ? { grantVariant: UNRESTRICTED_SCHOOL_CHOICE_VARIANT }
+          : {}),
+      },
     )
   }
 
@@ -180,15 +213,43 @@ export function swapClassSpellAtLevel(
     swapAtLevel: number
     removedName: string
     addedName: string
+    addedSpellSchool?: string
   },
 ): SpellCommandResult {
-  const { className, classSource, swapAtLevel, removedName, addedName } = params
+  const { className, classSource, swapAtLevel, removedName, addedName, addedSpellSchool } = params
   const profileId = toClassProfileId(className, classSource)
   const profiles = character.spells.spellProfiles
   const removedKey = getSpellNameKey(removedName)
+  const profile = profiles.find((candidate) => candidate.id === profileId)
   const removedTags = ledger.spells[normalizeKey(removedName)] ?? []
-  const removedClassTag = removedTags.find((tag) => isClassChoiceTag(tag, className, classSource))
-  const retainedTags = removedTags.filter((tag) => !isClassChoiceTag(tag, className, classSource))
+  const removedClassTag = getClassChoiceSpellTag(ledger, removedName, className, classSource)
+  if (
+    !profile?.spellsKnown.some((name) => getSpellNameKey(name) === removedKey) ||
+    !removedClassTag
+  ) {
+    throw new Error(`${removedName} is not an owned ${className} spell choice.`)
+  }
+  const classEntry = character.classProgression?.find(
+    (entry) => entry.name === className && (entry.source ?? '') === (classSource ?? ''),
+  )
+  const schoolRule = getClassSpellSchoolRule(
+    getClassSpellRuleContext(character.originSystem, classEntry),
+  )
+  if (schoolRule) {
+    if (!addedSpellSchool) {
+      throw new Error(`Spell school is required for ${classEntry?.subclass ?? className} choices.`)
+    }
+    const canUseUnrestrictedSchool =
+      removedClassTag.grantVariant === UNRESTRICTED_SCHOOL_CHOICE_VARIANT
+    if (!canUseUnrestrictedSchool && !isSpellInRestrictedSchools(addedSpellSchool, schoolRule)) {
+      throw new Error(
+        `${classEntry?.subclass ?? className} replacement violates its school restriction.`,
+      )
+    }
+  }
+  const retainedTags = removedTags.filter(
+    (tag) => !isClassChoiceSpellTag(tag, className, classSource),
+  )
   const spells = { ...ledger.spells }
   if (retainedTags.length > 0) spells[normalizeKey(removedName)] = retainedTags
   else delete spells[normalizeKey(removedName)]
@@ -200,12 +261,15 @@ export function swapClassSpellAtLevel(
     classSource,
     addedName,
     'choice',
-    removedClassTag?.spellGrantedAtLevel
+    removedClassTag.spellGrantedAtLevel
       ? {
           spellGrantedAtLevel: removedClassTag.spellGrantedAtLevel,
           spellAttributionMode: removedClassTag.spellAttributionMode ?? 'exact',
+          ...(removedClassTag.grantVariant ? { grantVariant: removedClassTag.grantVariant } : {}),
         }
-      : undefined,
+      : removedClassTag.grantVariant
+        ? { grantVariant: removedClassTag.grantVariant }
+        : undefined,
   )
 
   const nextProfiles = profiles.map((profile) => {
@@ -259,9 +323,11 @@ export function rollbackClassSpellSwapsAboveLevel(
     const addedKey = getSpellNameKey(swap.added)
     if (addedKey === getSpellNameKey(swap.removed)) continue
     const addedTags = provenanceUpdate.spells[normalizeKey(swap.added)] ?? []
-    const transferredTags = addedTags.filter((tag) => isClassChoiceTag(tag, className, classSource))
+    const transferredTags = addedTags.filter((tag) =>
+      isClassChoiceSpellTag(tag, className, classSource),
+    )
     const retainedAddedTags = addedTags.filter(
-      (tag) => !isClassChoiceTag(tag, className, classSource),
+      (tag) => !isClassChoiceSpellTag(tag, className, classSource),
     )
     const spells = { ...provenanceUpdate.spells }
     if (retainedAddedTags.length > 0) spells[normalizeKey(swap.added)] = retainedAddedTags
@@ -279,7 +345,7 @@ export function rollbackClassSpellSwapsAboveLevel(
         ...profile.spellsKnown.filter(
           (name) => getSpellNameKey(name) !== addedKey || addedStillOwned,
         ),
-        swap.removed,
+        ...(transferredTags.length > 0 ? [swap.removed] : []),
       ]),
       preparedSpells: profile.preparedSpells.filter(
         (name) => getSpellNameKey(name) !== addedKey || addedStillOwned,

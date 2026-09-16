@@ -343,6 +343,222 @@ describe('Spell Commands', () => {
         spellAttributionMode: 'exact',
       })
     })
+
+    test('rejects replacing a fixed subclass spell without class-choice ownership', () => {
+      const character = makeCharacterFixture({
+        class: 'Sorcerer',
+        classSource: 'PHB',
+        level: 3,
+        classProgression: [
+          {
+            name: 'Sorcerer',
+            source: 'PHB',
+            levels: 3,
+            subclass: 'Clockwork Soul',
+            subclassSource: 'TCE',
+          },
+        ],
+        spells: {
+          ...makeCharacterFixture().spells,
+          spellProfiles: [
+            {
+              id: 'class:Sorcerer|PHB',
+              type: 'class',
+              label: 'Sorcerer (Lv 3)',
+              className: 'Sorcerer',
+              classSource: 'PHB',
+              cantrips: [],
+              spellsKnown: ['Alarm'],
+              preparedSpells: [],
+              fixedSpells: ['Alarm'],
+              alwaysPrepared: false,
+            },
+          ],
+        },
+      })
+      const subclassTag = {
+        sourceType: 'subclass' as const,
+        sourceName: 'Clockwork Soul',
+        sourceRef: 'TCE',
+        grantType: 'fixed' as const,
+        label: 'Clockwork Soul',
+      }
+      const ledger = {
+        ...(character.provenance ?? emptyProvenance()),
+        spells: { alarm: [subclassTag] },
+      }
+
+      expect(() =>
+        swapClassSpellAtLevel(character, ledger, {
+          className: 'Sorcerer',
+          classSource: 'PHB',
+          swapAtLevel: 3,
+          removedName: 'Alarm',
+          addedName: 'Shield',
+        }),
+      ).toThrow('is not an owned Sorcerer spell choice')
+    })
+
+    test.each([
+      {
+        className: 'Fighter',
+        subclass: 'Eldritch Knight',
+        restrictedSchools: ['A', 'V'],
+      },
+      {
+        className: 'Rogue',
+        subclass: 'Arcane Trickster',
+        restrictedSchools: ['E', 'I'],
+      },
+    ])('enforces 2014 $subclass school quotas while preserving one unrestricted level-3 choice', ({
+      className,
+      subclass,
+      restrictedSchools,
+    }) => {
+      const profileId = `class:${className}|PHB`
+      const character = makeCharacterFixture({
+        originSystem: '2014',
+        class: className,
+        classSource: 'PHB',
+        level: 3,
+        classProgression: [
+          {
+            name: className,
+            source: 'PHB',
+            levels: 3,
+            subclass,
+            subclassSource: 'PHB',
+          },
+        ],
+        spells: {
+          ...makeCharacterFixture().spells,
+          spellProfiles: [
+            {
+              id: profileId,
+              type: 'class',
+              label: `${className} (Lv 3)`,
+              className,
+              classSource: 'PHB',
+              cantrips: [],
+              spellsKnown: [],
+              preparedSpells: [],
+              alwaysPrepared: false,
+            },
+          ],
+        },
+      })
+      const ledger = character.provenance ?? emptyProvenance()
+      const accepted = setClassSpellSelectionsAtLevel(character, ledger, {
+        className,
+        classSource: 'PHB',
+        classLevel: 3,
+        selections: [
+          { name: 'Restricted One', spellLevel: 1, school: restrictedSchools[0] },
+          { name: 'Restricted Two', spellLevel: 1, school: restrictedSchools[1] },
+          { name: 'Unrestricted Choice', spellLevel: 1, school: 'C' },
+        ],
+      })
+
+      expect(accepted.provenanceUpdate.spells['unrestricted choice']?.[0]?.grantVariant).toBe(
+        'unrestricted-school',
+      )
+      expect(() =>
+        setClassSpellSelectionsAtLevel(character, ledger, {
+          className,
+          classSource: 'PHB',
+          classLevel: 3,
+          selections: [
+            { name: 'Restricted', spellLevel: 1, school: restrictedSchools[0] },
+            { name: 'Off School One', spellLevel: 1, school: 'C' },
+            { name: 'Off School Two', spellLevel: 1, school: 'N' },
+          ],
+        }),
+      ).toThrow('allows 1 unrestricted-school spell choice')
+      expect(() =>
+        setClassSpellSelectionsAtLevel(character, ledger, {
+          className,
+          classSource: 'PHB',
+          classLevel: 4,
+          selections: [{ name: 'Off School', spellLevel: 1, school: 'C' }],
+        }),
+      ).toThrow('allows 0 unrestricted-school spell choices')
+    })
+
+    test('preserves the Arcane Trickster unrestricted-school slot across replacements', () => {
+      const character = makeCharacterFixture({
+        originSystem: '2014',
+        class: 'Rogue',
+        classSource: 'PHB',
+        level: 3,
+        classProgression: [
+          {
+            name: 'Rogue',
+            source: 'PHB',
+            levels: 3,
+            subclass: 'Arcane Trickster',
+            subclassSource: 'PHB',
+          },
+        ],
+        spells: {
+          ...makeCharacterFixture().spells,
+          spellProfiles: [
+            {
+              id: 'class:Rogue|PHB',
+              type: 'class',
+              label: 'Rogue (Lv 3)',
+              className: 'Rogue',
+              classSource: 'PHB',
+              cantrips: [],
+              spellsKnown: [],
+              preparedSpells: [],
+              alwaysPrepared: false,
+            },
+          ],
+        },
+      })
+      const selected = setClassSpellSelectionsAtLevel(
+        character,
+        character.provenance ?? emptyProvenance(),
+        {
+          className: 'Rogue',
+          classSource: 'PHB',
+          classLevel: 3,
+          selections: [
+            { name: 'Charm Person', spellLevel: 1, school: 'E' },
+            { name: 'Silent Image', spellLevel: 1, school: 'I' },
+            { name: 'Find Familiar', spellLevel: 1, school: 'C' },
+          ],
+        },
+      )
+      const selectedCharacter = {
+        ...character,
+        ...selected.characterPatch,
+        provenance: selected.provenanceUpdate,
+      }
+
+      expect(() =>
+        swapClassSpellAtLevel(selectedCharacter, selected.provenanceUpdate, {
+          className: 'Rogue',
+          classSource: 'PHB',
+          swapAtLevel: 4,
+          removedName: 'Charm Person',
+          addedName: 'Fog Cloud',
+          addedSpellSchool: 'C',
+        }),
+      ).toThrow('replacement violates its school restriction')
+
+      const swapped = swapClassSpellAtLevel(selectedCharacter, selected.provenanceUpdate, {
+        className: 'Rogue',
+        classSource: 'PHB',
+        swapAtLevel: 4,
+        removedName: 'Find Familiar',
+        addedName: 'Fog Cloud',
+        addedSpellSchool: 'C',
+      })
+      expect(swapped.provenanceUpdate.spells['fog cloud']?.[0]?.grantVariant).toBe(
+        'unrestricted-school',
+      )
+    })
   })
 
   describe('addSpellToCharacter', () => {

@@ -119,12 +119,12 @@ export function deriveSpellActions(
   spellsByKey: Readonly<Record<string, Spell5e>>,
   options: Pick<CharacterActionProjectionContext, 'classes' | 'race'> = {},
 ): CharacterAction[] {
-  const classesById = new Map(
-    (options.classes ?? []).map((classData) => [
-      toClassProfileId(classData.name, classData.source),
-      classData,
-    ]),
-  )
+  const classesById = new Map<string, Class5e>()
+  for (const classData of options.classes ?? []) {
+    classesById.set(toClassProfileId(classData.name, classData.source), classData)
+    const sourceLessId = toClassProfileId(classData.name)
+    if (!classesById.has(sourceLessId)) classesById.set(sourceLessId, classData)
+  }
   const profiles =
     classesById.size > 0 || options.race?.additionalSpells
       ? ensureSpellProfiles(

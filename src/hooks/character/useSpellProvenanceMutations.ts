@@ -93,6 +93,7 @@ export function useSpellProvenanceMutations() {
       swapAtLevel: number,
       removedName: string,
       addedName: string,
+      addedSpellSchool?: string,
     ) => {
       if (!character) return
       const result = swapClassSpellAtLevelCommand(character, ledger, {
@@ -101,6 +102,7 @@ export function useSpellProvenanceMutations() {
         swapAtLevel,
         removedName,
         addedName,
+        addedSpellSchool,
       })
       updateCharacter(character.id, {
         ...result.characterPatch,

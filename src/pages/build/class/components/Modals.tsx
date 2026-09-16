@@ -10,6 +10,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
+import {
+  getClassChoiceSpellTag,
+  getClassSpellRuleContext,
+  getClassSpellSchoolRule,
+  getMaximumUnrestrictedSchoolChoices,
+  isSpellInRestrictedSchools,
+  UNRESTRICTED_SCHOOL_CHOICE_VARIANT,
+} from '@/lib/calculations/classSpellChoiceRules'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
 import { buildSpellNameKeySet, getSpellNameKey } from '@/lib/calculations/spellIdentity'
 import {
@@ -17,6 +25,7 @@ import {
   getKnownSpellNames,
 } from '@/lib/calculations/spellProfiles'
 import { formatSpellLevel, getOrdinalForm } from '@/lib/calculations/spellUtils'
+import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { AsiPickerDialog } from '@/pages/build/class/components/AsiPickerDialog'
 import { ClassSelectionDialog } from '@/pages/build/class/components/ClassSelectionDialog'
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
@@ -50,7 +59,7 @@ interface BuildClassModalsProps {
     className: string,
     classSource: string | undefined,
     classLevel: number,
-    selections: Array<{ name: string; spellLevel: number }>,
+    selections: Array<{ name: string; spellLevel: number; school?: string }>,
   ) => void
   onSwapClassSpellAtLevel: (
     className: string,
@@ -58,6 +67,7 @@ interface BuildClassModalsProps {
     swapAtLevel: number,
     removedName: string,
     addedName: string,
+    addedSpellSchool?: string,
   ) => void
 
   spellSwapLevel: number | null
@@ -127,6 +137,12 @@ export function BuildClassModals({
   onFeatConfirm,
 }: BuildClassModalsProps) {
   const { total: totalAbilityScores } = useTotalAbilityScores(character)
+  const viewingClassEntry = getCharacterClassEntries(character).find(
+    (entry) => entry.name === viewingClass && (entry.source ?? '') === (viewingClassSource ?? ''),
+  )
+  const spellSchoolRule = getClassSpellSchoolRule(
+    getClassSpellRuleContext(character.originSystem, viewingClassEntry),
+  )
   return (
     <>
       <ClassSelectionDialog
@@ -216,6 +232,26 @@ export function BuildClassModals({
             school: new Set(),
             type: new Set(),
           }
+          const maximumUnrestrictedSchoolChoices = getMaximumUnrestrictedSchoolChoices(
+            spellSchoolRule,
+            spellPickerLevel,
+          )
+          const selectableSpells =
+            spellSchoolRule && maximumUnrestrictedSchoolChoices === 0
+              ? classSpells.filter(
+                  (spell) =>
+                    spell.level === 0 || isSpellInRestrictedSchools(spell.school, spellSchoolRule),
+                )
+              : classSpells
+          if (spellSchoolRule && maximumUnrestrictedSchoolChoices > 0) {
+            categories.push({
+              key: 'unrestricted-school',
+              label: 'outside the usual schools',
+              max: maximumUnrestrictedSchoolChoices,
+              test: (spell) =>
+                spell.level > 0 && !isSpellInRestrictedSchools(spell.school, spellSchoolRule),
+            })
+          }
 
           return (
             <SpellSelectionModal
@@ -224,7 +260,7 @@ export function BuildClassModals({
                 if (!open) onSpellPickerLevelChange(null)
               }}
               title={title}
-              spells={classSpells}
+              spells={selectableSpells}
               className={viewingClass}
               classSource={viewingClassSource}
               subclassName={viewingSubclass}
@@ -246,6 +282,8 @@ export function BuildClassModals({
                       spellLevel:
                         (spellByName.get(name) ?? spellByName.get(getSpellNameKey(name)))?.level ??
                         1,
+                      school: (spellByName.get(name) ?? spellByName.get(getSpellNameKey(name)))
+                        ?.school,
                     })),
                   )
                 }
@@ -298,6 +336,16 @@ export function BuildClassModals({
           const profiles = character.spells.spellProfiles
           const classProfile = profiles.find((profile) => profile.id === classProfileId)
           if (!classProfile || classProfile.spellsKnown.length === 0) return null
+          const swappableSpellNames = classProfile.spellsKnown.filter(
+            (name) =>
+              !!getClassChoiceSpellTag(
+                character.provenance,
+                name,
+                viewingClass ?? '',
+                viewingClassSource,
+              ),
+          )
+          if (swappableSpellNames.length === 0) return null
 
           const maxSpellLevel = (() => {
             const gain = spellChoicesByLevel.get(spellSwapLevel)
@@ -329,7 +377,7 @@ export function BuildClassModals({
                     Select a spell to replace. You may swap one spell each time you gain a level.
                   </p>
                   <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
-                    {classProfile.spellsKnown.map((name) => {
+                    {swappableSpellNames.map((name) => {
                       const spell = spellByName.get(name)
                       return (
                         <button
@@ -377,6 +425,20 @@ export function BuildClassModals({
             school: new Set(),
             type: new Set(),
           }
+          const removedChoiceTag = getClassChoiceSpellTag(
+            character.provenance,
+            spellSwapDrop,
+            viewingClass ?? '',
+            viewingClassSource,
+          )
+          const canUseUnrestrictedSchool =
+            removedChoiceTag?.grantVariant === UNRESTRICTED_SCHOOL_CHOICE_VARIANT
+          const replacementSpells =
+            spellSchoolRule && !canUseUnrestrictedSchool
+              ? classSpells.filter((spell) =>
+                  isSpellInRestrictedSchools(spell.school, spellSchoolRule),
+                )
+              : classSpells
 
           return (
             <SpellSelectionModal
@@ -385,7 +447,11 @@ export function BuildClassModals({
                 if (!open) closeSwap()
               }}
               title={`Replace: ${spellSwapDrop}`}
-              spells={classSpells}
+              spells={replacementSpells}
+              className={viewingClass}
+              classSource={viewingClassSource}
+              subclassName={viewingSubclass}
+              subclassSource={viewingSubclassSource}
               initialSelectedNames={[]}
               lockedNames={lockedNames}
               characterSpellNames={characterSpellNames}
@@ -400,12 +466,15 @@ export function BuildClassModals({
                 }
 
                 if (viewingClass) {
+                  const replacementSpell =
+                    spellByName.get(replacement) ?? spellByName.get(getSpellNameKey(replacement))
                   onSwapClassSpellAtLevel(
                     viewingClass,
                     viewingClassSource,
                     spellSwapLevel,
                     spellSwapDrop,
                     replacement,
+                    replacementSpell?.school,
                   )
                 }
 

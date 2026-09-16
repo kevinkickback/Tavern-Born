@@ -94,6 +94,63 @@ function getClassChoiceKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`
 }
 
+function isExactClassTag(
+  tag: SourceTag,
+  className: string,
+  classSource: string | undefined,
+): boolean {
+  return (
+    tag.sourceType === 'class' &&
+    tag.sourceName === className &&
+    (tag.sourceRef ?? '') === (classSource ?? '')
+  )
+}
+
+function retractRemovedClassMaterializedState(
+  character: Character,
+  ledger: ProvenanceLedger,
+  removed: CharacterClassEntry,
+): Character {
+  let proficiencies = { ...character.proficiencies }
+  for (const domain of [
+    'armor',
+    'weapons',
+    'tools',
+    'skills',
+    'languages',
+    'savingThrows',
+  ] as const) {
+    const exclusivelyOwnedKeys = new Set(
+      Object.entries(ledger.proficiencies[domain])
+        .filter(
+          ([, tags]) =>
+            tags.length > 0 &&
+            tags.every((tag) => isExactClassTag(tag, removed.name, removed.source)),
+        )
+        .map(([key]) => key),
+    )
+    if (exclusivelyOwnedKeys.size === 0) continue
+    proficiencies = {
+      ...proficiencies,
+      [domain]: proficiencies[domain].filter((name) => {
+        const key = domain === 'savingThrows' ? normalizeSavingThrowName(name) : normalizeKey(name)
+        return !exclusivelyOwnedKeys.has(key)
+      }),
+    }
+  }
+
+  const profileId = toClassProfileId(removed.name, removed.source)
+  return {
+    ...character,
+    proficiencies,
+    skills: mergeSkillState(character.skills ?? {}, proficiencies.skills),
+    spells: {
+      ...character.spells,
+      spellProfiles: character.spells.spellProfiles.filter((profile) => profile.id !== profileId),
+    },
+  }
+}
+
 function replaceClassEquipmentGrants(
   ledger: ProvenanceLedger,
   className: string,
@@ -376,6 +433,11 @@ export function applyClassProgressionUpdate(
   }
 
   for (const removed of removedEntries) {
+    workingCharacter = retractRemovedClassMaterializedState(
+      workingCharacter,
+      provenanceUpdate,
+      removed,
+    )
     provenanceUpdate = removeGrantsBySourceRef(
       provenanceUpdate,
       'class',
@@ -477,7 +539,7 @@ export function applyClassProgressionUpdate(
     classProgression: nextProgression,
     level: newTotalLevel,
     class: nextProgression[0]?.name ?? character.class,
-    classSource: nextProgression[0]?.source ?? character.classSource,
+    classSource: nextProgression[0] ? nextProgression[0].source : character.classSource,
     hitPointGains,
     classFeatChoices: retainedClassFeatChoices,
     classChoiceSelections,
@@ -595,16 +657,15 @@ export function selectBaseClass(
     ],
   }
 
-  const existingClassIndex =
-    character.classProgression?.findIndex((c) => c.name === className) ?? -1
   const updatedProgression = [...(character.classProgression ?? [])]
-
-  if (existingClassIndex >= 0) {
-    updatedProgression[existingClassIndex] = {
-      ...updatedProgression[existingClassIndex],
+  if (updatedProgression.length > 0) {
+    updatedProgression[0] = {
+      ...updatedProgression[0],
       name: className,
       source: classSource ?? classEntity.source ?? undefined,
-      levels: updatedProgression[existingClassIndex].levels ?? 1,
+      levels: updatedProgression[0].levels ?? 1,
+      subclass: undefined,
+      subclassSource: undefined,
     }
   } else {
     updatedProgression.push({
@@ -616,7 +677,7 @@ export function selectBaseClass(
 
   const characterPatch: Partial<Character> = {
     class: className,
-    classSource: classSource ?? undefined,
+    classSource: classSource ?? classEntity.source ?? undefined,
     subclass: undefined,
     subclassSource: undefined,
     proficiencies: updatedProficiencies,

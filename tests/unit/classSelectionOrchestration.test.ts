@@ -245,6 +245,10 @@ describe('applyClassSelectionCommand', () => {
     // Wizard's saving throws are added
     expect(result.characterPatch.proficiencies?.savingThrows).toContain('intelligence')
     expect(result.characterPatch.proficiencies?.savingThrows).toContain('wisdom')
+    expect(result.characterPatch.class).toBe('Wizard')
+    expect(result.characterPatch.classProgression).toEqual([
+      { name: 'Wizard', source: 'PHB', levels: 1 },
+    ])
   })
 
   test('adds starting equipment from class blocks', () => {

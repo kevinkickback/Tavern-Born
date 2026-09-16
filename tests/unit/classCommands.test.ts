@@ -236,6 +236,64 @@ describe('Class Commands', () => {
     expect(result.characterPatch.spells?.spellProfiles[0]?.spellSwaps).toBeUndefined()
   })
 
+  test('level-down does not restore a swapped spell learned above the retained level', () => {
+    const base = makeCharacterFixture({
+      class: 'Bard',
+      classSource: 'PHB',
+      level: 5,
+      classProgression: [{ name: 'Bard', source: 'PHB', levels: 5 }],
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Bard|PHB',
+            type: 'class',
+            label: 'Bard (Lv 5)',
+            className: 'Bard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Hold Person'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+    const bardTag = {
+      sourceType: 'class' as const,
+      sourceName: 'Bard',
+      sourceRef: 'PHB',
+      grantType: 'choice' as const,
+      label: 'Bard',
+      spellGrantedAtLevel: 3,
+      spellAttributionMode: 'exact' as const,
+    }
+    const swapped = swapClassSpellAtLevel(
+      base,
+      { ...(base.provenance ?? emptyProvenance()), spells: { 'hold person': [bardTag] } },
+      {
+        className: 'Bard',
+        classSource: 'PHB',
+        swapAtLevel: 5,
+        removedName: 'Hold Person',
+        addedName: 'Hypnotic Pattern',
+      },
+    )
+    const character = {
+      ...base,
+      ...swapped.characterPatch,
+      provenance: swapped.provenanceUpdate,
+    }
+
+    const result = applyClassProgressionUpdate(character, swapped.provenanceUpdate, [
+      { name: 'Bard', source: 'PHB', levels: 2 },
+    ])
+
+    expect(result.characterPatch.spells?.spellProfiles[0]?.spellsKnown).toEqual([])
+    expect(result.provenanceUpdate.spells['hold person']).toBeUndefined()
+    expect(result.provenanceUpdate.spells['hypnotic pattern']).toBeUndefined()
+  })
+
   test('addMulticlass adds a second class entry', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
@@ -573,6 +631,106 @@ describe('Class Commands', () => {
     ])
 
     expect(result.provenanceUpdate.proficiencies.armor.shield).toBeUndefined()
+  })
+
+  test('removing a class retracts its materialized proficiencies and spell profile', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 3 },
+        { name: 'Fighter', source: 'PHB', levels: 1 },
+      ],
+      proficiencies: {
+        armor: ['shields'],
+        weapons: [],
+        tools: [],
+        languages: ['Elvish'],
+        skills: ['athletics'],
+        savingThrows: [],
+      },
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard (Lv 3)',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+          {
+            id: 'class:Fighter|PHB',
+            type: 'class',
+            label: 'Fighter (Lv 1)',
+            className: 'Fighter',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Shield'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+    const fighterTag = makeSourceTag('class', 'Fighter', 'fixed', 'PHB')
+    const ledger = {
+      ...(character.provenance ?? emptyProvenance()),
+      proficiencies: {
+        ...(character.provenance?.proficiencies ?? emptyProvenance().proficiencies),
+        armor: { shields: [fighterTag] },
+        skills: { athletics: [fighterTag] },
+        languages: { elvish: [fighterTag] },
+      },
+      spells: { shield: [{ ...fighterTag, grantType: 'choice' as const }] },
+    }
+
+    const result = removeMulticlass(character, ledger, 'Fighter', 'PHB')
+
+    expect(result.characterPatch.proficiencies?.armor).toEqual([])
+    expect(result.characterPatch.proficiencies?.skills).toEqual([])
+    expect(result.characterPatch.proficiencies?.languages).toEqual([])
+    expect(result.characterPatch.spells?.spellProfiles.map((profile) => profile.id)).toEqual([
+      'class:Wizard|PHB',
+    ])
+    expect(result.provenanceUpdate.spells.shield).toBeUndefined()
+  })
+
+  test('removing a class preserves a proficiency that another source still owns', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 3 },
+        { name: 'Fighter', source: 'PHB', levels: 1 },
+      ],
+      proficiencies: {
+        armor: ['shields'],
+        weapons: [],
+        tools: [],
+        languages: [],
+        skills: [],
+        savingThrows: [],
+      },
+    })
+    const ledger = {
+      ...(character.provenance ?? emptyProvenance()),
+      proficiencies: {
+        ...(character.provenance?.proficiencies ?? emptyProvenance().proficiencies),
+        armor: {
+          shields: [
+            makeSourceTag('class', 'Fighter', 'fixed', 'PHB'),
+            makeSourceTag('feat', 'Moderately Armored', 'fixed', 'PHB'),
+          ],
+        },
+      },
+    }
+
+    const result = removeMulticlass(character, ledger, 'Fighter', 'PHB')
+
+    expect(result.characterPatch.proficiencies?.armor).toEqual(['shields'])
+    expect(result.provenanceUpdate.proficiencies.armor.shields).toHaveLength(1)
+    expect(result.provenanceUpdate.proficiencies.armor.shields?.[0]?.sourceType).toBe('feat')
   })
 
   test('changing a class source retracts only choices owned by the replaced printing', () => {

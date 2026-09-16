@@ -245,6 +245,49 @@ describe('character action projection', () => {
     ])
   })
 
+  test('keeps source-less legacy Warlock spells active after class fallback resolution', () => {
+    const spell = {
+      name: 'Legacy Warlock Spell',
+      source: 'PHB',
+      level: 1,
+      school: 'E',
+      time: [{ number: 1, unit: 'action' }],
+      range: { type: 'self' },
+      duration: [{ type: 'instant' }],
+      entries: ['Legacy rules.'],
+    } as Spell5e
+    const warlock = {
+      name: 'Warlock',
+      source: 'PHB',
+      spellcastingAbility: 'cha',
+      casterProgression: 'pact',
+      spellsKnownProgression: [2],
+    } as Class5e
+    const character = makeCharacterFixture({
+      class: 'Warlock',
+      classSource: undefined,
+      classProgression: [{ name: 'Warlock', levels: 1 }],
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Warlock|',
+            type: 'class',
+            label: 'Warlock (Lv 1)',
+            className: 'Warlock',
+            cantrips: [],
+            spellsKnown: [spell.name],
+            preparedSpells: [],
+          },
+        ],
+      },
+    })
+
+    expect(
+      deriveSpellActions(character, buildSpellLookup([spell]), { classes: [warlock] })[0],
+    ).toMatchObject({ active: true, inactiveReason: undefined })
+  })
+
   test('still marks an unprepared spell inactive for a daily prepared caster', () => {
     const spell = {
       name: 'Test Prepared Spell',
