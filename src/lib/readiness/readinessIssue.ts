@@ -18,7 +18,7 @@ const SECTION_TARGETS: Record<CharacterReadinessSection, string> = {
   spells: '/spells',
   equipment: '/equipment',
   portrait: '/details/portrait',
-  sources: '/rules?section=sources',
+  sources: '/sources',
 }
 
 export function readinessIssue(

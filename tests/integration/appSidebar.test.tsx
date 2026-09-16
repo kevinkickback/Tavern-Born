@@ -128,7 +128,7 @@ describe('desktop workspace navigation', () => {
     expect(screen.getByRole('button', { name: 'Rules' }).getAttribute('aria-disabled')).toBeNull()
   })
 
-  test('orders the combined Rules workspace between Builder and Character Sheet', () => {
+  test('orders the Rules workspace between Builder and Character Sheet', () => {
     renderSidebar('/')
 
     const labels = screen
@@ -143,11 +143,14 @@ describe('desktop workspace navigation', () => {
     ])
   })
 
-  test('uses one Rules context destination for rules and source configuration', () => {
-    renderSidebar('/rules?section=sources')
+  test('uses separate Character Rules and Sources pages in the Rules navigation', () => {
+    renderSidebar('/sources')
 
     expect(screen.getByRole('button', { name: 'Rules' }).getAttribute('aria-current')).toBe('page')
-    expect(screen.getByRole('link', { name: 'Rules & Sources' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Character Rules' }).getAttribute('aria-current')).toBe(
+      null,
+    )
+    expect(screen.getByRole('link', { name: 'Sources' }).getAttribute('aria-current')).toBe('page')
     expect(screen.queryByRole('button', { name: 'Sources' })).toBeNull()
   })
 

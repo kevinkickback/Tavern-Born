@@ -177,10 +177,10 @@ Current implementation notes:
   destination in Builder's final Finish group after Core and Details; its header separates Needs
   Attention from the remaining Character Overview. Builder has no one-item Options group. Rules is
   a character-scoped
-  top-level workspace because it configures the whole build and loaded catalog. Its Ruleset,
-  Advancement, Character Options, and Sources tabs remain protected until a character is active;
-  `/sources` redirects to the Sources tab for compatibility. The selected ruleset remains fixed
-  after creation.
+  top-level workspace because it configures the whole build and loaded catalog. Its Rules
+  navigation contains separate Character Rules and Sources pages, both protected until a character
+  is active. Character Rules contains the Ruleset, Advancement, and Character Options tabs. The
+  selected ruleset remains fixed after creation.
 - Ability Scores is the canonical editor for origin ability bonuses in both rulesets: 2014 race
   bonuses and 2024 background bonuses are persisted through their existing provenance commands.
   Race shows that link only while a parsed 2014 race choice remains unresolved; fixed and completed

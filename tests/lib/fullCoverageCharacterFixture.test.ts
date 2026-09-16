@@ -2,7 +2,12 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
-import { getClassResourceDefs } from '@/lib/5etools/classData'
+import {
+  getClassResourceDefs,
+  getClassSpellGainAtLevel,
+  getEffectiveSpellcastingClassData,
+  getSelectedSubclassData,
+} from '@/lib/5etools/classData'
 import {
   buildBackgroundLookup,
   buildClassLookup,
@@ -27,7 +32,10 @@ import type { SpellSourceLookup } from '@/lib/5etools/parsers/spells'
 import { buildItemLookup } from '@/lib/5etools/startingEquipment'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
 import { parseSpellReference, resolveSpellReferenceFromMap } from '@/lib/calculations/spellIdentity'
-import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
+import {
+  buildClassSpellSelectionsByLevel,
+  isSpellOnClassList,
+} from '@/lib/calculations/spellProfiles'
 import {
   type ClassChoiceCatalogs,
   getClassChoiceOptionKey,
@@ -37,6 +45,15 @@ import {
   buildCharacterSheetFieldMap,
   createCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
+import {
+  getAbilityBonusRows,
+  getAllProficiencyRows,
+  getEquipmentRows,
+  getFeatRows,
+  getFeatureRows,
+  getSpellRows,
+} from '@/lib/provenance'
+import { getSourcesRowsBySectionId } from '@/lib/provenance/sectionRows'
 import { getCharacterReadiness } from '@/lib/readiness/characterReadiness'
 import { buildRecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
@@ -59,8 +76,8 @@ import { characterSchema } from '@/types/characterSchema'
 const dataRoot = join(process.cwd(), 'data')
 const fixtureRoot = join(process.cwd(), 'tests', 'fixtures')
 const fixturePaths = {
-  '2014': join(fixtureRoot, 'comprehensive-character-2014.tbc'),
-  '2024': join(fixtureRoot, 'comprehensive-character-2024.tbc'),
+  '2014': join(fixtureRoot, 'full-coverage-character-2014.tbc'),
+  '2024': join(fixtureRoot, 'full-coverage-character-2024.tbc'),
 } as const
 
 function readJson(path: string): unknown {
@@ -120,7 +137,9 @@ const lookups = {
   itemLookup: buildItemLookup(allItems),
 }
 const featureKeys = new Set(
-  rawClassFeatures.map((feature) => getEntityLookupKey(feature.name, feature.source)),
+  [...rawClassFeatures, ...optionalFeatures].map((feature) =>
+    getEntityLookupKey(feature.name, feature.source),
+  ),
 )
 
 function loadFixture(edition: keyof typeof fixturePaths): Character {
@@ -178,7 +197,7 @@ function getStoredSpellReferences(character: Character): Array<{
   })
 }
 
-describe('comprehensive character fixtures', () => {
+describe('full-coverage character fixtures', () => {
   test.each([
     '2014',
     '2024',
@@ -192,7 +211,7 @@ describe('comprehensive character fixtures', () => {
     expect(character.classProgression).toHaveLength(3)
     expect(character.spells.spellProfiles).toHaveLength(4)
     expect(character.equipment).toHaveLength(90)
-    expect(character.features).toHaveLength(17)
+    expect(character.features).toHaveLength(18)
     expect(character.proficiencies.skills).toHaveLength(18)
     expect(character.details.allies).toHaveLength(3)
     expect(character.hitPointGains).toHaveLength(19)
@@ -209,6 +228,48 @@ describe('comprehensive character fixtures', () => {
       readiness.blockingIssues,
       readiness.blockingIssues.map((issue) => `${issue.title}: ${issue.explanation}`).join('\n'),
     ).toEqual([])
+
+    const ledger = character.provenance
+    const proficiencyRows = getAllProficiencyRows(ledger)
+    const abilityBonusRows = getAbilityBonusRows(ledger)
+    const featRows = getFeatRows(ledger)
+    const featureRows = getFeatureRows(ledger)
+    const spellRows = getSpellRows(ledger)
+    const equipmentRows = getEquipmentRows(ledger)
+    expect(abilityBonusRows.length).toBeGreaterThan(0)
+    expect(
+      Object.values(proficiencyRows)
+        .flat()
+        .filter((row) => !row.isPending).length,
+    ).toBeGreaterThan(0)
+    expect(featRows.length).toBeGreaterThan(0)
+    expect(featureRows.length).toBeGreaterThan(0)
+    expect(spellRows.length).toBeGreaterThan(0)
+    expect(equipmentRows.length).toBeGreaterThan(0)
+    for (const sectionId of [
+      'build-race',
+      'build-background',
+      'build-class',
+      'build-proficiencies',
+      'build-ability-scores',
+      'feats',
+      'features',
+      'spells',
+      'equipment',
+    ]) {
+      expect(
+        getSourcesRowsBySectionId({
+          sectionId,
+          proficiencyRows,
+          abilityBonusRows,
+          featRows,
+          featureRows,
+          spellRows,
+          equipmentRows,
+        }).length,
+        `Missing Sources footer rows for ${sectionId}`,
+      ).toBeGreaterThan(0)
+    }
 
     expectCorpusReference(lookups.racesByKey, character.race, character.raceSource)
     const resolvedRace =
@@ -309,6 +370,24 @@ describe('comprehensive character fixtures', () => {
       )
       expect(entry, `Missing progression for ${classData.name}|${classData.source}`).toBeDefined()
       if (!entry) continue
+
+      const subclassData = getSelectedSubclassData(classData, entry)
+      const spellcastingData = getEffectiveSpellcastingClassData(classData, subclassData)
+      const spellSelectionsByLevel = buildClassSpellSelectionsByLevel({
+        character,
+        className: entry.name,
+        classSource: entry.source,
+      })
+      for (let level = 1; level <= entry.levels; level += 1) {
+        const spellGain = getClassSpellGainAtLevel(spellcastingData, level, calculation.classes)
+        const requiredSpellChoices = spellGain.cantrips + spellGain.spells
+        if (requiredSpellChoices === 0) continue
+        expect(
+          spellSelectionsByLevel.get(level),
+          `Incomplete ${entry.name} spell choices at level ${level}`,
+        ).toHaveLength(requiredSpellChoices)
+      }
+
       for (const choice of classData.normalizedRules?.choices ?? []) {
         const required = getRequiredChoiceSelectionCount(choice, entry.levels)
         if (required === 0) continue
@@ -324,6 +403,27 @@ describe('comprehensive character fixtures', () => {
             eligible.has(getClassChoiceOptionKey(option)),
             `Ineligible ${choice.label} option ${option.name}|${option.source}`,
           ).toBe(true)
+
+          if (option.entityType === 'feat') {
+            expect(
+              character.classFeatChoices?.some(
+                (featChoice) =>
+                  featChoice.id === choice.id &&
+                  featChoice.feats.some(
+                    (feat) => feat.name === option.name && feat.source === option.source,
+                  ),
+              ),
+              `Missing materialized feat choice ${option.name}|${option.source}`,
+            ).toBe(true)
+          }
+          if (option.entityType === 'classFeature' || option.entityType === 'optionalFeature') {
+            expect(
+              character.features.some(
+                (feature) => feature.name === option.name && feature.source === option.source,
+              ),
+              `Missing materialized feature choice ${option.name}|${option.source}`,
+            ).toBe(true)
+          }
         }
       }
     }

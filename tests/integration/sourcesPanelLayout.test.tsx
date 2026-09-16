@@ -1,6 +1,8 @@
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { SourcesPage } from '@/pages/rules/SourcesPage'
 import { SourcesPanel } from '@/pages/rules/SourcesPanel'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -73,6 +75,18 @@ describe('Rules Sources panel layout', () => {
     expect(
       (warning?.compareDocumentPosition(sourceGroup) ?? 0) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
+  })
+
+  test('renders as its own page in the Rules workspace', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <SourcesPage />
+      </MemoryRouter>,
+    )
+
+    expect(container.querySelector('[data-slot="workspace-body"]')).toBeTruthy()
+    expect(screen.getByText('Allowed sources')).toBeTruthy()
+    expect(screen.queryByRole('tablist', { name: 'Rules category' })).toBeNull()
   })
 
   test('updates the source note when newer printings are preferred', async () => {

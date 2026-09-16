@@ -5,8 +5,8 @@ const root = resolve(process.cwd())
 const CURRENT_CHARACTER_SCHEMA_VERSION = 1
 const dataRoot = join(root, 'data')
 const fixtureRoot = join(root, 'tests', 'fixtures')
-const fixture2014Path = join(fixtureRoot, 'comprehensive-character-2014.tbc')
-const fixture2024Path = join(fixtureRoot, 'comprehensive-character-2024.tbc')
+const fixture2014Path = join(fixtureRoot, 'full-coverage-character-2014.tbc')
+const fixture2024Path = join(fixtureRoot, 'full-coverage-character-2024.tbc')
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'))
@@ -77,8 +77,9 @@ function isSpellOnClassList(spell, className, classSource) {
   return Boolean(lookupEntry?.class?.[classSource]?.[className])
 }
 
-function selectClassSpells(className, classSource, edition, countByLevel) {
+function selectClassSpells(className, classSource, edition, countByLevel, excludedReferences = []) {
   const spellSource = edition === '2024' ? 'XPHB' : 'PHB'
+  const excludedNames = new Set(excludedReferences.map((reference) => spellName(reference)))
   return Object.entries(countByLevel).flatMap(([rawLevel, count]) => {
     const level = Number(rawLevel)
     const candidates = spells
@@ -86,6 +87,7 @@ function selectClassSpells(className, classSource, edition, countByLevel) {
         (spell) =>
           spell.source === spellSource &&
           spell.level === level &&
+          !excludedNames.has(spell.name) &&
           isSpellOnClassList(spell, className, classSource),
       )
       .sort((left, right) => left.name.localeCompare(right.name))
@@ -102,6 +104,10 @@ function requireSpellReferences(names, edition) {
   return names.map((name) => sourceQualifiedReference(name, spells, edition))
 }
 
+function spellName(reference) {
+  return reference.split('|')[0].trim()
+}
+
 function buildSpellProfiles(race, progression, edition) {
   const wizard = progression.find((entry) => entry.name === 'Wizard')
   const cleric = progression.find((entry) => entry.name === 'Cleric')
@@ -109,26 +115,35 @@ function buildSpellProfiles(race, progression, edition) {
 
   const wizardCantripCandidates = selectClassSpells('Wizard', wizard.source, edition, { 0: 8 })
   const wizardCantrips = wizardCantripCandidates.slice(0, 5)
-  const wizardSpellbook = selectClassSpells('Wizard', wizard.source, edition, {
-    1: 6,
-    2: 5,
-    3: 5,
-    4: 4,
-    5: 4,
-  })
+  const wizardSpellsByLevel = {
+    1: selectClassSpells('Wizard', wizard.source, edition, { 1: 8 }),
+    2: selectClassSpells('Wizard', wizard.source, edition, { 2: 4 }),
+    3: selectClassSpells('Wizard', wizard.source, edition, { 3: 4 }),
+    4: selectClassSpells('Wizard', wizard.source, edition, { 4: 4 }),
+    5: selectClassSpells('Wizard', wizard.source, edition, { 5: 4 }),
+  }
+  const wizardSelectionsByClassLevel = new Map([
+    [1, [...wizardCantrips.slice(0, 3), ...wizardSpellsByLevel[1].slice(0, 6)]],
+    [2, wizardSpellsByLevel[1].slice(6, 8)],
+    [3, wizardSpellsByLevel[2].slice(0, 2)],
+    [4, [wizardCantrips[3], ...wizardSpellsByLevel[2].slice(2, 4)]],
+    [5, wizardSpellsByLevel[3].slice(0, 2)],
+    [6, wizardSpellsByLevel[3].slice(2, 4)],
+    [7, wizardSpellsByLevel[4].slice(0, 2)],
+    [8, wizardSpellsByLevel[4].slice(2, 4)],
+    [9, wizardSpellsByLevel[5].slice(0, 2)],
+    [10, [wizardCantrips[4], ...wizardSpellsByLevel[5].slice(2, 4)]],
+  ])
+  const wizardSpellbook = [...wizardSelectionsByClassLevel.values()]
+    .flat()
+    .filter((reference) => !wizardCantrips.includes(reference))
   const wizardPrepared = [
-    ...wizardSpellbook.slice(0, 3),
-    ...wizardSpellbook.slice(6, 9),
-    ...wizardSpellbook.slice(11, 13),
-    ...wizardSpellbook.slice(16, 18),
-    ...wizardSpellbook.slice(20, 22),
+    ...wizardSpellsByLevel[1].slice(0, 4),
+    ...wizardSpellsByLevel[2].slice(0, 2),
+    ...wizardSpellsByLevel[3].slice(0, 2),
+    ...wizardSpellsByLevel[4].slice(0, 2),
+    ...wizardSpellsByLevel[5].slice(0, 2),
   ]
-  const clericCantrips = selectClassSpells('Cleric', cleric.source, edition, { 0: 4 })
-  const clericPrepared = selectClassSpells('Cleric', cleric.source, edition, {
-    1: 3,
-    2: 3,
-    3: 2,
-  })
   const lifeDomainSpells = requireSpellReferences(
     [
       'Bless',
@@ -140,8 +155,83 @@ function buildSpellProfiles(race, progression, edition) {
     ],
     edition,
   )
+  const clericCantrips = selectClassSpells('Cleric', cleric.source, edition, { 0: 4 })
+  const clericPreparedByClassLevel =
+    edition === '2024'
+      ? new Map([
+          [1, selectClassSpells('Cleric', cleric.source, edition, { 1: 4 }, lifeDomainSpells)],
+          [
+            2,
+            selectClassSpells('Cleric', cleric.source, edition, { 1: 5 }, lifeDomainSpells).slice(
+              4,
+              5,
+            ),
+          ],
+          [3, selectClassSpells('Cleric', cleric.source, edition, { 2: 1 }, lifeDomainSpells)],
+          [
+            4,
+            selectClassSpells('Cleric', cleric.source, edition, { 2: 2 }, lifeDomainSpells).slice(
+              1,
+              2,
+            ),
+          ],
+          [5, selectClassSpells('Cleric', cleric.source, edition, { 3: 2 }, lifeDomainSpells)],
+        ])
+      : new Map()
+  const clericPrepared =
+    edition === '2024'
+      ? [...clericPreparedByClassLevel.values()].flat()
+      : selectClassSpells('Cleric', cleric.source, edition, { 1: 3, 2: 3, 3: 2 }, lifeDomainSpells)
   const bonusCantrips = wizardCantripCandidates.slice(-2)
   const bonusSpell = selectClassSpells('Wizard', wizard.source, edition, { 1: 7 }).slice(-1)
+  const spellAttributions = [
+    ...[...wizardSelectionsByClassLevel.entries()].flatMap(([classLevel, references]) =>
+      references.map((reference) => ({
+        reference,
+        sourceType: 'class',
+        sourceName: wizard.name,
+        sourceRef: wizard.source,
+        grantType: 'choice',
+        spellGrantedAtLevel: classLevel,
+        spellAttributionMode: 'exact',
+      })),
+    ),
+    ...clericCantrips.map((reference, index) => ({
+      reference,
+      sourceType: 'class',
+      sourceName: cleric.name,
+      sourceRef: cleric.source,
+      grantType: 'choice',
+      spellGrantedAtLevel: index < 3 ? 1 : 4,
+      spellAttributionMode: 'exact',
+    })),
+    ...(edition === '2024'
+      ? [...clericPreparedByClassLevel.entries()].flatMap(([classLevel, references]) =>
+          references.map((reference) => ({
+            reference,
+            sourceType: 'class',
+            sourceName: cleric.name,
+            sourceRef: cleric.source,
+            grantType: 'choice',
+            spellGrantedAtLevel: classLevel,
+            spellAttributionMode: 'exact',
+          })),
+        )
+      : clericPrepared.map((reference) => ({
+          reference,
+          sourceType: 'class',
+          sourceName: cleric.name,
+          sourceRef: cleric.source,
+          grantType: 'choice',
+        }))),
+    ...lifeDomainSpells.map((reference) => ({
+      reference,
+      sourceType: 'subclass',
+      sourceName: 'Life Domain',
+      sourceRef: cleric.subclassSource,
+      grantType: 'fixed',
+    })),
+  ]
 
   const racialProfile =
     edition === '2024'
@@ -184,7 +274,7 @@ function buildSpellProfiles(race, progression, edition) {
           alwaysPrepared: true,
         }
 
-  return [
+  const profiles = [
     {
       id: `class:Wizard|${wizard.source}`,
       type: 'class',
@@ -205,7 +295,7 @@ function buildSpellProfiles(race, progression, edition) {
       fixedSpells: lifeDomainSpells,
       alwaysPreparedSpells: lifeDomainSpells,
       cantrips: clericCantrips,
-      spellsKnown: lifeDomainSpells,
+      spellsKnown: edition === '2024' ? [...lifeDomainSpells, ...clericPrepared] : lifeDomainSpells,
       preparedSpells: clericPrepared,
       alwaysPrepared: false,
     },
@@ -221,6 +311,26 @@ function buildSpellProfiles(race, progression, edition) {
       alwaysPrepared: true,
     },
   ]
+
+  const racialReferences = [...racialProfile.cantrips, ...racialProfile.spellsKnown]
+  spellAttributions.push(
+    ...racialReferences.map((reference) => ({
+      reference,
+      sourceType: 'subrace',
+      sourceName: edition === '2024' ? 'Drow Lineage' : 'High',
+      sourceRef: race.source,
+      grantType: edition === '2024' ? 'fixed' : 'choice',
+    })),
+    ...[...bonusCantrips, ...bonusSpell].map((reference) => ({
+      reference,
+      sourceType: 'feat',
+      sourceName: 'Magic Initiate',
+      sourceRef: edition === '2024' ? 'XPHB' : 'PHB',
+      grantType: 'choice',
+    })),
+  )
+
+  return { profiles, spellAttributions }
 }
 
 function resolveArmorType(type) {
@@ -307,6 +417,277 @@ function emptyProvenance() {
     equipment: {},
     choices: [],
   }
+}
+
+function normalizeLedgerKey(value) {
+  return spellName(value).trim().toLowerCase()
+}
+
+function makeTag(sourceType, sourceName, grantType, sourceRef, extras = {}) {
+  return {
+    sourceType,
+    sourceName,
+    sourceRef,
+    grantType,
+    label: sourceType === 'manual' ? 'User Choice' : sourceName,
+    ...extras,
+  }
+}
+
+function addLedgerGrant(map, name, tag) {
+  const ledgerKey = normalizeLedgerKey(name)
+  const existing = map[ledgerKey] ?? []
+  const duplicate = existing.some(
+    (candidate) =>
+      candidate.sourceType === tag.sourceType &&
+      candidate.sourceName === tag.sourceName &&
+      candidate.sourceRef === tag.sourceRef &&
+      candidate.grantType === tag.grantType &&
+      candidate.grantVariant === tag.grantVariant &&
+      candidate.spellGrantedAtLevel === tag.spellGrantedAtLevel,
+  )
+  if (!duplicate) map[ledgerKey] = [...existing, tag]
+}
+
+function buildClassChoiceState(features, selections) {
+  const materializedFeatures = [...features]
+  const classFeatChoices = []
+
+  for (const selection of selections) {
+    const featureOptions = selection.selected.filter((option) =>
+      ['classFeature', 'optionalFeature'].includes(option.entityType),
+    )
+    for (const option of featureOptions) {
+      if (
+        materializedFeatures.some(
+          (feature) => feature.name === option.name && feature.source === option.source,
+        )
+      ) {
+        continue
+      }
+      materializedFeatures.push({
+        id: `class-choice:${encodeURIComponent(selection.choiceId)}:${encodeURIComponent(`${option.name}|${option.source ?? ''}`)}`,
+        name: option.name,
+        source: option.source ?? '',
+        description: '',
+        level: option.slotLevel,
+      })
+    }
+
+    const featOptions = selection.selected.filter((option) => option.entityType === 'feat')
+    if (featOptions.length === 0) continue
+    classFeatChoices.push({
+      id: selection.choiceId,
+      className: selection.className,
+      classSource: selection.classSource,
+      progressionName: selection.label,
+      categories: ['FS'],
+      feats: featOptions.map((option) => ({
+        id: `class-${selection.choiceId}-${option.name}-${option.source ?? ''}`,
+        name: option.name,
+        source: option.source ?? '',
+        description: '',
+        className: selection.className,
+        classSource: selection.classSource,
+        classLevel: option.slotLevel,
+      })),
+    })
+  }
+
+  return { features: materializedFeatures, classFeatChoices }
+}
+
+function buildFixtureProvenance({
+  edition,
+  race,
+  selectedSubrace,
+  background,
+  progression,
+  features,
+  feats: selectedFeats,
+  specialFeats,
+  classFeatChoices,
+  classChoiceSelections,
+  spellAttributions,
+  equipment,
+  proficiencies,
+  backgroundChoices,
+}) {
+  const provenance = emptyProvenance()
+  const wizard = progression.find((entry) => entry.name === 'Wizard')
+  const fighter = progression.find((entry) => entry.name === 'Fighter')
+  const cleric = progression.find((entry) => entry.name === 'Cleric')
+  if (!wizard || !fighter || !cleric) throw new Error('Fixture provenance requires all classes.')
+
+  const wizardTag = makeTag('class', wizard.name, 'choice', wizard.source)
+  const fighterTag = makeTag('class', fighter.name, 'choice', fighter.source)
+  const clericTag = makeTag('class', cleric.name, 'choice', cleric.source)
+  const backgroundTag = makeTag('background', background.name, 'choice', background.source)
+  const raceTag = makeTag('race', race.name, 'fixed', race.source)
+  const subraceTag = makeTag(
+    'subrace',
+    selectedSubrace?.name ?? race.name,
+    'fixed',
+    selectedSubrace?.source ?? race.source,
+  )
+  const manualTag = makeTag('manual', 'Full-coverage test fixture', 'choice')
+
+  const proficiencyOwners = {
+    armor: new Map([
+      ['light armor', fighterTag],
+      ['medium armor', fighterTag],
+      ['shields', fighterTag],
+    ]),
+    weapons: new Map([
+      ['simple weapons', fighterTag],
+      ['martial weapons', fighterTag],
+      ['longsword', edition === '2014' ? subraceTag : fighterTag],
+      ['longbow', edition === '2014' ? subraceTag : fighterTag],
+      ['dagger', wizardTag],
+      ['light crossbow', wizardTag],
+    ]),
+    tools: new Map([
+      ["thieves' tools", backgroundTag],
+      ['dice set', backgroundTag],
+      ["calligrapher's supplies", fighterTag],
+      ['herbalism kit', clericTag],
+    ]),
+    skills: new Map([
+      ['arcana', backgroundTag],
+      ['history', backgroundTag],
+      ['investigation', wizardTag],
+      ['athletics', fighterTag],
+      ['perception', fighterTag],
+      ['insight', clericTag],
+      ['religion', clericTag],
+      ['deception', edition === '2024' ? backgroundTag : manualTag],
+      ['stealth', edition === '2024' ? backgroundTag : manualTag],
+    ]),
+    languages: new Map([
+      ['common', raceTag],
+      ['elvish', raceTag],
+      ['draconic', backgroundTag],
+      ['dwarvish', backgroundTag],
+    ]),
+    savingThrows: new Map([
+      ['intelligence', wizardTag],
+      ['wisdom', wizardTag],
+    ]),
+  }
+  for (const domain of Object.keys(provenance.proficiencies)) {
+    for (const name of proficiencies[domain]) {
+      addLedgerGrant(
+        provenance.proficiencies[domain],
+        name,
+        proficiencyOwners[domain].get(name.toLowerCase()) ?? manualTag,
+      )
+    }
+  }
+
+  for (const feature of features) {
+    const definition = classFeatures.find(
+      (candidate) => candidate.name === feature.name && candidate.source === feature.source,
+    )
+    const owner = progression.find(
+      (entry) => entry.name === definition?.className && entry.source === definition?.classSource,
+    )
+    const isSubclass = Boolean(definition?.subclassShortName)
+    addLedgerGrant(
+      provenance.features,
+      feature.name,
+      owner
+        ? makeTag(
+            isSubclass ? 'subclass' : 'class',
+            isSubclass ? (owner.subclass ?? owner.name) : owner.name,
+            'fixed',
+            isSubclass ? owner.subclassSource : owner.source,
+          )
+        : manualTag,
+    )
+  }
+
+  for (const feat of selectedFeats) {
+    addLedgerGrant(
+      provenance.feats,
+      feat.name,
+      makeTag('class', feat.className, 'choice', feat.classSource),
+    )
+  }
+  for (const feat of specialFeats) addLedgerGrant(provenance.feats, feat.name, manualTag)
+  for (const choice of classFeatChoices) {
+    for (const feat of choice.feats) {
+      addLedgerGrant(
+        provenance.feats,
+        feat.name,
+        makeTag('class', choice.className, 'choice', choice.classSource, {
+          grantVariant: choice.id,
+        }),
+      )
+    }
+  }
+  if (edition === '2024') {
+    addLedgerGrant(
+      provenance.feats,
+      'Alert',
+      makeTag('background', background.name, 'fixed', background.source),
+    )
+  }
+
+  for (const selection of classChoiceSelections) {
+    for (const option of selection.selected) {
+      if (!['classFeature', 'optionalFeature'].includes(option.entityType)) continue
+      addLedgerGrant(
+        provenance.features,
+        option.name,
+        makeTag('class', selection.className, 'choice', selection.classSource, {
+          grantVariant: selection.choiceId,
+        }),
+      )
+    }
+  }
+
+  for (const attribution of spellAttributions) {
+    addLedgerGrant(
+      provenance.spells,
+      attribution.reference,
+      makeTag(
+        attribution.sourceType,
+        attribution.sourceName,
+        attribution.grantType,
+        attribution.sourceRef,
+        {
+          ...(attribution.spellGrantedAtLevel
+            ? { spellGrantedAtLevel: attribution.spellGrantedAtLevel }
+            : {}),
+          ...(attribution.spellAttributionMode
+            ? { spellAttributionMode: attribution.spellAttributionMode }
+            : {}),
+        },
+      ),
+    )
+  }
+
+  equipment.forEach((item, index) => {
+    const owner = index < 8 ? fighterTag : manualTag
+    addLedgerGrant(provenance.equipment, item.name, owner)
+  })
+
+  if (edition === '2014') {
+    provenance.abilityBonuses.push(
+      { ability: 'dexterity', value: 2, sourceTag: raceTag },
+      { ability: 'intelligence', value: 1, sourceTag: subraceTag },
+    )
+  } else {
+    backgroundChoices.forEach((ability, index) => {
+      provenance.abilityBonuses.push({
+        ability,
+        value: index === 0 ? 2 : 1,
+        sourceTag: backgroundTag,
+      })
+    })
+  }
+
+  return provenance
 }
 
 function buildFeatureRows(progression, limit = 17) {
@@ -557,10 +938,19 @@ function buildFixture(seed, edition) {
             source: version.source ?? race.source,
           }))
           .find((version) => version.name)
-  const mappedProfiles = buildSpellProfiles(race, progression, edition)
+  const { profiles: mappedProfiles, spellAttributions } = buildSpellProfiles(
+    race,
+    progression,
+    edition,
+  )
   const mappedFeats = buildFeatSelections(seed, edition)
   const mappedSpecialFeats = buildSpecialFeats(seed, edition, mappedProfiles)
   const equipment = buildEquipment(seed, edition)
+  const classChoiceSelections = buildClassChoiceSelections(edition)
+  const classChoiceState = buildClassChoiceState(
+    buildFeatureRows(progression),
+    classChoiceSelections,
+  )
 
   const abilityNames = {
     str: 'strength',
@@ -573,24 +963,28 @@ function buildFixture(seed, edition) {
   const backgroundChoices = asArray(background.ability?.[0]?.choose?.weighted?.from)
     .slice(0, 2)
     .map((ability) => abilityNames[ability])
-  const provenance = emptyProvenance()
-  if (edition === '2024') {
-    provenance.feats.alert = [
-      {
-        sourceType: 'background',
-        sourceName: background.name,
-        sourceRef: background.source,
-        grantType: 'fixed',
-        label: background.name,
-      },
-    ]
-  }
+  const provenance = buildFixtureProvenance({
+    edition,
+    race,
+    selectedSubrace,
+    background,
+    progression,
+    features: classChoiceState.features,
+    feats: mappedFeats,
+    specialFeats: mappedSpecialFeats,
+    classFeatChoices: classChoiceState.classFeatChoices,
+    classChoiceSelections,
+    spellAttributions,
+    equipment,
+    proficiencies: seed.proficiencies,
+    backgroundChoices,
+  })
 
   const fixture = {
     ...seed,
-    id: `comprehensive-character-${edition}`,
+    id: `full-coverage-character-${edition}`,
     schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
-    name: `Comprehensive Test Character (${edition})`,
+    name: `Full-Coverage Test Character (${edition})`,
     originSystem: edition,
     race: race.name,
     raceSource: race.source,
@@ -600,11 +994,11 @@ function buildFixture(seed, edition) {
     background: background.name,
     backgroundSource: background.source,
     classProgression: progression,
-    features: buildFeatureRows(progression),
+    features: classChoiceState.features,
     feats: mappedFeats,
     specialFeats: mappedSpecialFeats,
-    classFeatChoices: [],
-    classChoiceSelections: buildClassChoiceSelections(edition),
+    classFeatChoices: classChoiceState.classFeatChoices,
+    classChoiceSelections,
     fixedFeatOptions: {},
     asiChoices: [],
     spells: { ...seed.spells, spellProfiles: mappedProfiles },
@@ -646,7 +1040,7 @@ function buildFixture(seed, edition) {
     raceAsiBlockIndex: undefined,
     movement: {
       speeds: { walk: seedSpeed },
-      source: { kind: 'manual', name: 'Comprehensive test fixture' },
+      source: { kind: 'manual', name: 'Full-coverage test fixture' },
     },
     details: {
       ...seed.details,

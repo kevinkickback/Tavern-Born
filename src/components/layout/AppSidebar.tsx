@@ -130,7 +130,10 @@ const workspaces: Workspace[] = [
     groups: [
       {
         label: 'Character Configuration',
-        items: [{ label: 'Rules & Sources', path: '/rules', icon: SlidersHorizontal }],
+        items: [
+          { label: 'Character Rules', path: '/rules', icon: SlidersHorizontal },
+          { label: 'Sources', path: '/sources', icon: Books },
+        ],
       },
     ],
   },

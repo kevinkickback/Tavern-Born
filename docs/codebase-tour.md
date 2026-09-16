@@ -151,10 +151,11 @@ Rules, sources, and condition tracking:
   final Builder Finish group
 - src/pages/build/review/ReviewPage.tsx — header-tabbed readiness issues and calculated character
   overview
-- src/pages/rules/RulesPage.tsx — post-creation configuration split into Ruleset, Advancement,
-  Character Options, and Sources tabs
-- src/pages/rules/SourcesPanel.tsx — reusable Sources-tab panel for per-character allowed sources
-  and newer-printing preference; `/sources` is a compatibility redirect
+- src/pages/rules/RulesPage.tsx — Character Rules configuration split into Ruleset, Advancement,
+  and Character Options tabs
+- src/pages/rules/SourcesPage.tsx — route-level Sources page in the Rules navigation
+- src/pages/rules/SourcesPanel.tsx — reusable per-character allowed-sources and newer-printing
+  preference content
 - src/pages/details/ConditionsPage.tsx — Combat State, Exhaustion, Conditions, and Class Resources tabs
 - src/hooks/data/useGameData.ts — `useConditions()` supplies parsed condition records
 - src/lib/5etools/parsers/basic.ts — tags condition and disease records during ingestion so gameplay UI can exclude diseases without hardcoded lists

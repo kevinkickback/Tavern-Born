@@ -12,7 +12,7 @@
 * Character calculations, movement, Hit Points, and Armor Class management improved
 * One-click character duplication and clearer export actions added
 * Equipment browsing, filtering, and item details improved
-* Character rules and sourcebook settings moved into one page
+* Character Rules and Sources pages added to Rules navigation
 * Race, background, class, and feat setup improved
 * Class resource tracking and rest recovery corrected
 * Light theme, tooltips, contextual hints, and small-window layouts improved

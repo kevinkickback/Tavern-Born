@@ -20,7 +20,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "generate:test-fixtures": "node scripts/generate-comprehensive-character-fixtures.mjs",
+    "generate:test-fixtures": "node scripts/generate-full-coverage-character-fixtures.mjs",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:boundaries": "depcruise --config .dependency-cruiser.cjs src electron",
     "check:dead-code": "knip --no-progress --exclude duplicates",
