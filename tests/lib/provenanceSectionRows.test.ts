@@ -60,4 +60,32 @@ describe('provenanceSectionRows', () => {
 
     expect(result.map((r) => r.itemName)).toEqual(['Light Armor'])
   })
+
+  test('keeps the unblocked attribution from a mixed-source row', () => {
+    const result = getSourcesRowsBySectionId({
+      sectionId: 'build-class',
+      proficiencyRows: {
+        skills: [row('Perception', ['class', 'background'])],
+        savingThrows: [],
+        armor: [],
+        weapons: [],
+        tools: [],
+        languages: [],
+        pendingChoices: [],
+      },
+      abilityBonusRows: [],
+      featRows: [],
+      featureRows: [],
+      spellRows: [],
+      equipmentRows: [],
+    })
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        itemName: 'Perception',
+        attribution: 'background',
+        sourceTypes: ['background'],
+      }),
+    ])
+  })
 })

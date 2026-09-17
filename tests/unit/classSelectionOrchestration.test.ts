@@ -125,6 +125,51 @@ describe('buildInitialCharacterProficiencies', () => {
 // ---------------------------------------------------------------------------
 
 describe('applyClassSelectionCommand', () => {
+  test('selecting a subclass preserves base-class grants and provenance', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 3 }],
+      proficiencies: {
+        armor: ['light armor'],
+        weapons: ['martial weapons'],
+        tools: [],
+        skills: [],
+        languages: [],
+        savingThrows: ['strength', 'constitution'],
+      },
+    })
+    const ledger = addGrant(
+      emptyProvenance(),
+      'armor',
+      'light armor',
+      makeSourceTag('class', 'Fighter', 'fixed', 'PHB'),
+    )
+
+    const result = applyClassSelectionCommand(
+      character,
+      ledger,
+      { name: 'Fighter', source: 'PHB' },
+      { name: 'Battle Master', source: 'PHB' },
+      EMPTY_LOOKUP,
+      {
+        classProgression: character.classProgression,
+        viewingEntry: character.classProgression[0],
+      },
+    )
+
+    expect(result.characterPatch).toEqual({
+      classProgression: [
+        {
+          name: 'Fighter',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Battle Master',
+          subclassSource: 'PHB',
+        },
+      ],
+    })
+    expect(result.provenanceUpdate).toBe(ledger)
+  })
+
   test('adds armor proficiencies for a new class', () => {
     const character = makeCharacterFixture({
       classProgression: [],

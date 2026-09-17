@@ -78,7 +78,7 @@ interface BuildClassLevelsPanelProps {
   classEquipmentBlockChoices: string[]
   classEquipmentItemChoices?: Readonly<Record<string, string>>
   feats: Feat5e[]
-  spellByName: Map<string, Spell5e>
+  spellByReference: Map<string, Spell5e>
   appliedAsiChoicesForClass: AsiChoice[]
   classAsiFeats: Feat[]
   asiModeByLevel: Record<string, 'asi' | 'feat'>
@@ -151,7 +151,7 @@ export function BuildClassLevelsPanel({
   classEquipmentBlockChoices,
   classEquipmentItemChoices = {},
   feats,
-  spellByName,
+  spellByReference,
   appliedAsiChoicesForClass,
   classAsiFeats,
   asiModeByLevel,
@@ -503,7 +503,7 @@ export function BuildClassLevelsPanel({
                             level={lv}
                             spellGain={spellGain}
                             chosenNames={spellSelectionsByLevel.get(lv) ?? []}
-                            spellByName={spellByName}
+                            spellByReference={spellByReference}
                             detailCollapsed={detailCollapsed}
                             hasExistingKnown={hasExistingKnown}
                             swapDoneAtLevel={!!swapsByLevel[lv]}

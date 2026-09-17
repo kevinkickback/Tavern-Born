@@ -6,6 +6,7 @@ import {
   getSpellReferenceKey,
   parseSpellReference,
   resolveSpellReferenceFromMap,
+  resolveSpellSelectionMetadata,
 } from '@/lib/calculations/spellIdentity'
 
 describe('spell identity', () => {
@@ -28,6 +29,17 @@ describe('spell identity', () => {
     ])
 
     expect(resolveSpellReferenceFromMap('Fire Bolt|XPHB', spells)).toBe(xphb)
+  })
+
+  test('resolves source-qualified selection metadata from the exact catalog entry', () => {
+    const spells = new Map([
+      ['mage hand|phb', { level: 0, school: 'A' }],
+      ['mage hand|xphb', { level: 0, school: 'P' }],
+    ])
+
+    expect(resolveSpellSelectionMetadata(['Mage Hand|PHB'], spells)).toEqual([
+      { name: 'Mage Hand|PHB', spellLevel: 0, school: 'A' },
+    ])
   })
 
   test('formats source-qualified persistence references without changing display casing', () => {

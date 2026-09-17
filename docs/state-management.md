@@ -25,7 +25,10 @@ This document defines state ownership, mutation rules, and persistence behavior.
 ## Persistence
 
 - All three Zustand stores persist with zustand/persist using the IndexedDB adapter in src/lib/storage/idb-storage.ts.
-- Character store persistence includes `characters` only; startup always begins with no active character selected.
+- Character store persistence includes the supported `characters` collection and the raw
+  `unsupportedCharacters` quarantine; startup always begins with no active character selected.
+  Unsupported records remain durable but hidden from the character list until the compatibility
+  dialog is acknowledged, so closing the app cannot destroy the user's only exportable copy.
 - `characterPersistenceSchema` is the normalized persistence-output authority. Its compile-time
   contract requires every parsed output to be assignable to the runtime `Character` type. The
   reverse direction is intentionally broader because draft/import inputs may contain partial
@@ -170,6 +173,9 @@ copy atomically without creating an unsaved edit.
 - `applyClassProgressionUpdate()` owns level-down reconciliation. It retracts spell grants earned at
   removed levels, reverses `spellSwaps` above the retained class level in descending event order, and
   prunes those events before returning one atomic spell/provenance patch.
+- Subclass selection changes only the source-qualified subclass identity on its owning progression
+  entry. It never runs base-class replacement reconciliation; class grants remain owned by the
+  unchanged class printing.
 
 ## Spell State Model
 
@@ -179,6 +185,9 @@ copy atomically without creating an unsaved edit.
   the chosen catalog printing can be resolved exactly, while equality and choice quotas use one
   normalized, case-insensitive spell-name key. Two printings with the same normalized name therefore
   remain one logical profile entry without discarding the selected source.
+- Class-page display and selection code resolves those references through the same source-qualified
+  lookup before reading spell level, school, or rules text. It does not maintain a parallel
+  name-only spell map.
 - The unrestricted profile is `special:unrestricted` and is always prepared by definition.
 - Shared Spellcasting and Pact Magic usage are persisted independently in
   `character.spells.spellSlots` and `character.spells.pactSpellSlots`. Both are numeric-keyed maps

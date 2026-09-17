@@ -172,6 +172,10 @@ export const useCharacterStore = create<CharacterState>()(
       finishCharacterHydration: () =>
         set((state) => {
           const results = state.characters.map((character) => parseCharacterData(character))
+          const newlyUnsupportedCharacters = state.characters.filter(
+            (_character, index) =>
+              results[index]?.error === UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
+          )
           return {
             characters: ensureUniqueCharacterIds(
               results.filter((result) => result.data).map((result) => result.data as Character),
@@ -179,10 +183,7 @@ export const useCharacterStore = create<CharacterState>()(
             activeCharacterId: null,
             activeCharacter: null,
             isActiveCharacterDirty: false,
-            unsupportedCharacters: state.characters.filter(
-              (_character, index) =>
-                results[index]?.error === UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
-            ),
+            unsupportedCharacters: [...state.unsupportedCharacters, ...newlyUnsupportedCharacters],
           }
         }),
 
@@ -486,6 +487,7 @@ export const useCharacterStore = create<CharacterState>()(
       storage: createIdbStorage(),
       partialize: (state) => ({
         characters: state.characters,
+        unsupportedCharacters: state.unsupportedCharacters,
       }),
       onRehydrateStorage: () => (state) => {
         state?.finishCharacterHydration()

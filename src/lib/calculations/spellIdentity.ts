@@ -36,6 +36,26 @@ export function resolveSpellReferenceFromMap<T>(
   return spellsByReference.get(getSpellReferenceKey(reference))
 }
 
+export interface SpellSelectionMetadata {
+  name: string
+  spellLevel: number
+  school?: string
+}
+
+export function resolveSpellSelectionMetadata<T extends { level: number; school?: string }>(
+  references: readonly string[],
+  spellsByReference: ReadonlyMap<string, T>,
+): SpellSelectionMetadata[] {
+  return references.map((name) => {
+    const spell = resolveSpellReferenceFromMap(name, spellsByReference)
+    return {
+      name,
+      spellLevel: spell?.level ?? 1,
+      school: spell?.school,
+    }
+  })
+}
+
 export function buildSpellNameKeySet(values: Iterable<string>): Set<string> {
   return new Set(Array.from(values, getSpellNameKey).filter(Boolean))
 }

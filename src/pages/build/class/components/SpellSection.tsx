@@ -1,5 +1,6 @@
 import { ArrowsClockwise, MagicWand } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { resolveSpellReferenceFromMap } from '@/lib/calculations/spellIdentity'
 import { formatSpellLevel } from '@/lib/calculations/spellUtils'
 import type { Spell5e } from '@/types/5etools'
 import type { SelectedFeatureState } from './DetailsPanel'
@@ -15,7 +16,7 @@ interface BuildClassSpellSectionProps {
   level: number
   spellGain: SpellGain
   chosenNames: string[]
-  spellByName: Map<string, Spell5e>
+  spellByReference: Map<string, Spell5e>
   detailCollapsed: boolean
   hasExistingKnown: boolean
   swapDoneAtLevel: boolean
@@ -30,7 +31,7 @@ export function BuildClassSpellSection({
   level,
   spellGain,
   chosenNames,
-  spellByName,
+  spellByReference,
   detailCollapsed,
   hasExistingKnown,
   swapDoneAtLevel,
@@ -92,7 +93,7 @@ export function BuildClassSpellSection({
       {chosenNames.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-accent-secondary/20 pt-2">
           {chosenNames.map((name) => {
-            const spell = spellByName.get(name)
+            const spell = resolveSpellReferenceFromMap(name, spellByReference)
             return (
               <button
                 key={spell ? `${spell.name}|${spell.source ?? ''}` : name}
@@ -108,7 +109,7 @@ export function BuildClassSpellSection({
                 }}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-accent-secondary/30 bg-accent-secondary/5 hover:border-accent-secondary/50 hover:bg-accent-secondary/15 text-foreground transition-colors"
               >
-                <span className="font-medium">{name}</span>
+                <span className="font-medium">{spell?.name ?? name}</span>
                 {spell && (
                   <span className="text-muted-foreground opacity-80">
                     {formatSpellLevel(spell.level)}

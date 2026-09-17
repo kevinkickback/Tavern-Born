@@ -12,7 +12,7 @@ import type {
   SourceType,
 } from './types'
 
-function formatSourceType(type: SourceType): string {
+export function formatSourceType(type: SourceType): string {
   switch (type) {
     case 'optionalFeature':
       return 'optional feature'

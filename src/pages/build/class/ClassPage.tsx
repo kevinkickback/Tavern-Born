@@ -16,6 +16,7 @@ import {
 } from '@/lib/5etools/classData'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { getASILevelsFromClass } from '@/lib/calculations/gameRules'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { getOrdinalForm } from '@/lib/calculations/spellUtils'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
@@ -94,8 +95,14 @@ export function BuildClassPage() {
   const readinessFocus = getReadinessFocus(searchParams)
   const requestedLevelValue = Number.parseInt(searchParams.get('level') ?? '', 10)
   const requestedLevel = Number.isNaN(requestedLevelValue) ? undefined : requestedLevelValue
-  const spellByName = useMemo(
-    () => new Map((spells as Spell5e[]).map((s) => [s.name, s])),
+  const spellByReference = useMemo(
+    () =>
+      new Map(
+        (spells as Spell5e[]).map((spell) => [
+          getSpellReferenceKey(spell.name, spell.source),
+          spell,
+        ]),
+      ),
     [spells],
   )
   const viewingClassData = viewingClassSource
@@ -389,7 +396,7 @@ export function BuildClassPage() {
               classEquipmentBlockChoices={classEquipmentBlockChoices}
               classEquipmentItemChoices={classEquipmentItemChoices}
               feats={(feats ?? []) as Feat5e[]}
-              spellByName={spellByName}
+              spellByReference={spellByReference}
               appliedAsiChoicesForClass={appliedAsiChoicesForClass}
               classAsiFeats={classAsiFeats}
               asiModeByLevel={asiModeByLevel}
@@ -454,7 +461,7 @@ export function BuildClassPage() {
         onSpellPickerLevelChange={setSpellPickerLevel}
         spellChoicesByLevel={spellChoicesByLevel}
         classSpells={allSpells}
-        spellByName={spellByName}
+        spellByReference={spellByReference}
         viewingClass={viewingClass}
         viewingClassSource={viewingClassSource}
         onSetClassSpellSelectionsAtLevel={setClassSpellSelectionsAtLevel}

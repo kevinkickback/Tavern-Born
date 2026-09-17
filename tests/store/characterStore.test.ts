@@ -401,7 +401,7 @@ describe('characterStore', () => {
     expect(state.activeCharacter).toBeNull()
   })
 
-  test('persist rehydrate notifies subscribers and persists unsupported-character cleanup', async () => {
+  test('persist rehydrate durably quarantines unsupported characters until acknowledgment', async () => {
     const persisted = {
       ...makeCharacterFixture({ id: 'c8', name: 'Persisted' }),
       schemaVersion: 0,
@@ -431,18 +431,30 @@ describe('characterStore', () => {
     expect(state.activeCharacterId).toBeNull()
     expect(state.activeCharacter).toBeNull()
     expect(state.unsupportedCharacters).toEqual([persisted])
+    onRehydrate?.(useCharacterStore.getState())
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([persisted])
     expect(subscriber).toHaveBeenCalled()
     await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalled())
     expect(storageMocks.setItem).toHaveBeenLastCalledWith(
       'character-storage',
-      expect.objectContaining({ state: { characters: [] } }),
+      expect.objectContaining({
+        state: { characters: [], unsupportedCharacters: [persisted] },
+      }),
     )
+    storageMocks.setItem.mockClear()
     state.dismissUnsupportedCharacters()
     expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+    await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalled())
+    expect(storageMocks.setItem).toHaveBeenLastCalledWith(
+      'character-storage',
+      expect.objectContaining({
+        state: { characters: [], unsupportedCharacters: [] },
+      }),
+    )
     unsubscribe()
   })
 
-  test('persist partialize stores characters and active character id', () => {
+  test('persist partialize stores characters and the durable unsupported quarantine', () => {
     const fixture = makeCharacterFixture({ id: 'persist-id', name: 'Persist' })
     useCharacterStore.setState({
       characters: [fixture],
@@ -455,16 +467,16 @@ describe('characterStore', () => {
         getOptions: () => {
           partialize?: (state: {
             characters: (typeof fixture)[]
-            activeCharacterId: string | null
+            unsupportedCharacters: unknown[]
           }) => {
             characters: (typeof fixture)[]
-            activeCharacterId: string | null
+            unsupportedCharacters: unknown[]
           }
         }
       }
       getState: () => {
         characters: (typeof fixture)[]
-        activeCharacterId: string | null
+        unsupportedCharacters: unknown[]
       }
     }
 
@@ -472,6 +484,6 @@ describe('characterStore', () => {
     expect(partialize).toBeTypeOf('function')
 
     const persisted = partialize?.(storeWithPersist.getState())
-    expect(persisted).toEqual({ characters: [fixture] })
+    expect(persisted).toEqual({ characters: [fixture], unsupportedCharacters: [] })
   })
 })

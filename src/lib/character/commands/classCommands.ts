@@ -721,11 +721,20 @@ export function applyClassSelectionCommand(
   itemLookup: Map<string, Item5e>,
   options?: SelectSubclassOptions,
 ): ClassCommandResult {
+  if (subclass) {
+    return selectSubclass(
+      character,
+      ledger,
+      subclass.name,
+      subclass.source ?? '',
+      undefined,
+      options,
+    )
+  }
+
   const effects = computeClassSelectionEffects(character, ledger, cls, subclass, itemLookup)
-  const identityCharacter = subclass ? character : { ...character, ...effects.characterPatch }
-  const identity = subclass
-    ? selectSubclass(character, ledger, subclass.name, subclass.source ?? '', undefined, options)
-    : selectBaseClass(identityCharacter, ledger, cls.name, cls as Class5e, cls.source)
+  const identityCharacter = { ...character, ...effects.characterPatch }
+  const identity = selectBaseClass(identityCharacter, ledger, cls.name, cls as Class5e, cls.source)
   const identityProficiencies = identity.characterPatch.proficiencies
   const effectProficiencies = effects.characterPatch.proficiencies ?? character.proficiencies
   const selectionPatch: Partial<Character> = {
@@ -742,7 +751,7 @@ export function applyClassSelectionCommand(
       : {}),
   }
   const nextProgression = identity.characterPatch.classProgression
-  if (subclass || !nextProgression) {
+  if (!nextProgression) {
     return {
       classEntity: cls as Class5e,
       characterPatch: selectionPatch,

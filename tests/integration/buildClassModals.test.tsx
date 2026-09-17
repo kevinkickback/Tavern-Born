@@ -1,5 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, test, vi } from 'vitest'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+import { getSpellReferenceKey } from '@/lib/calculations/spellIdentity'
 import { BuildClassModals } from '@/pages/build/class/components/Modals'
 import type { Spell5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -7,6 +8,8 @@ import { makeCharacterFixture } from '../fixtures/characterFixtures'
 vi.mock('@/hooks/character/useTotalAbilityScores', () => ({
   useTotalAbilityScores: () => ({ total: makeCharacterFixture().abilityScores }),
 }))
+
+afterEach(cleanup)
 
 function makeSpell(name: string, className: string, school: string = 'A'): Spell5e {
   return {
@@ -90,7 +93,14 @@ function renderWarlockSwap(spellSwapDrop: string | null, includeFixedSpell = fal
         new Map([[2, { cantrips: 0, spells: 1, maxSpellLevel: 1, canSwap: true }]])
       }
       classSpells={[armorOfAgathys, bless]}
-      spellByName={new Map([hex, armorOfAgathys, bless].map((spell) => [spell.name, spell]))}
+      spellByReference={
+        new Map(
+          [hex, armorOfAgathys, bless].map((spell) => [
+            getSpellReferenceKey(spell.name, spell.source),
+            spell,
+          ]),
+        )
+      }
       viewingClass="Warlock"
       viewingClassSource="PHB"
       onSetClassSpellSelectionsAtLevel={vi.fn()}

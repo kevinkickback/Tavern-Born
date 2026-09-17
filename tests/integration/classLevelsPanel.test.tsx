@@ -31,7 +31,7 @@ function makeProps(
     viewingClassLevel: 4,
     classEquipmentBlockChoices: [],
     feats: [],
-    spellByName: new Map(),
+    spellByReference: new Map(),
     appliedAsiChoicesForClass: [],
     classAsiFeats: [],
     asiModeByLevel: {},

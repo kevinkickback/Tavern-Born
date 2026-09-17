@@ -112,6 +112,10 @@ Origin-system normalization behavior:
 
 Mutation hooks should stay separate from row-derivation hooks: grant/reconciliation callbacks belong in the mutation layer, while UI-facing source rows and collapse-state helpers belong in the derived-view layer.
 
+Section-specific source summaries remove only the attribution types owned by that section. If an
+item has mixed ownership (for example, a skill granted by both class and background), the remaining
+external attribution stays visible instead of dropping the entire row.
+
 ## Reconciliation Pattern
 
 When source entity changes:

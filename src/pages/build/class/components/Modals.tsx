@@ -19,7 +19,12 @@ import {
   UNRESTRICTED_SCHOOL_CHOICE_VARIANT,
 } from '@/lib/calculations/classSpellChoiceRules'
 import type { PrereqCharacterSnapshot } from '@/lib/calculations/prerequisites'
-import { buildSpellNameKeySet, getSpellNameKey } from '@/lib/calculations/spellIdentity'
+import {
+  buildSpellNameKeySet,
+  getSpellNameKey,
+  resolveSpellReferenceFromMap,
+  resolveSpellSelectionMetadata,
+} from '@/lib/calculations/spellIdentity'
 import {
   buildClassSpellSelectionsByLevel,
   getKnownSpellNames,
@@ -52,7 +57,7 @@ interface BuildClassModalsProps {
     }
   >
   classSpells: Spell5e[]
-  spellByName: Map<string, Spell5e>
+  spellByReference: Map<string, Spell5e>
   viewingClass?: string
   viewingClassSource?: string
   onSetClassSpellSelectionsAtLevel: (
@@ -109,7 +114,7 @@ export function BuildClassModals({
   onSpellPickerLevelChange,
   spellChoicesByLevel,
   classSpells,
-  spellByName,
+  spellByReference,
   viewingClass,
   viewingClassSource,
   onSetClassSpellSelectionsAtLevel,
@@ -277,14 +282,7 @@ export function BuildClassModals({
                     viewingClass,
                     viewingClassSource,
                     spellPickerLevel,
-                    names.map((name) => ({
-                      name,
-                      spellLevel:
-                        (spellByName.get(name) ?? spellByName.get(getSpellNameKey(name)))?.level ??
-                        1,
-                      school: (spellByName.get(name) ?? spellByName.get(getSpellNameKey(name)))
-                        ?.school,
-                    })),
+                    resolveSpellSelectionMetadata(names, spellByReference),
                   )
                 }
                 onSpellPickerLevelChange(null)
@@ -378,7 +376,7 @@ export function BuildClassModals({
                   </p>
                   <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
                     {swappableSpellNames.map((name) => {
-                      const spell = spellByName.get(name)
+                      const spell = resolveSpellReferenceFromMap(name, spellByReference)
                       return (
                         <button
                           key={spell ? `${spell.name}|${spell.source ?? ''}` : name}
@@ -466,8 +464,10 @@ export function BuildClassModals({
                 }
 
                 if (viewingClass) {
-                  const replacementSpell =
-                    spellByName.get(replacement) ?? spellByName.get(getSpellNameKey(replacement))
+                  const replacementSpell = resolveSpellReferenceFromMap(
+                    replacement,
+                    spellByReference,
+                  )
                   onSwapClassSpellAtLevel(
                     viewingClass,
                     viewingClassSource,
