@@ -169,17 +169,20 @@ describe('spellSlots', () => {
     const calculated = {
       1: { max: 4, used: 0 },
       2: { max: 2, used: 0 },
+      10: { max: 1, used: 0 },
     }
 
     const merged = mergeSpellSlots(calculated, {
       1: 3,
       2: 5,
       3: 1,
+      10: 2,
     })
 
     expect(merged).toEqual({
       1: { max: 4, used: 3 },
       2: { max: 2, used: 2 },
+      10: { max: 1, used: 1 },
     })
   })
 })

@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { AnchoredHint } from '@/components/workspace'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
+import { ABILITY_NAMES } from '@/lib/calculations/abilityScores'
 import { normalizeKey } from '@/lib/provenance'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
@@ -190,15 +191,6 @@ interface BuildProficienciesTabsPanelProps {
   weaponInfoMap: Map<string, { category?: string; ranged?: boolean }>
 }
 
-const SKILL_ABILITY_ORDER = [
-  'strength',
-  'dexterity',
-  'constitution',
-  'intelligence',
-  'wisdom',
-  'charisma',
-]
-
 export function BuildProficienciesTabsPanel({
   skills,
   savingThrows,
@@ -243,7 +235,6 @@ export function BuildProficienciesTabsPanel({
   const expertiseHintPos = useAnchoredHintPosition({
     enabled: showExpertiseHint && availableExpertiseSlots > 0,
     selector: EXPERTISE_HINT_SELECTOR,
-    width: EXPERTISE_HINT_WIDTH,
   })
 
   const handleDismissExpertiseHint = () => {
@@ -267,7 +258,7 @@ export function BuildProficienciesTabsPanel({
         ...(notProficient.length > 0 ? [{ label: 'Not Proficient', skills: notProficient }] : []),
       ]
     }
-    return SKILL_ABILITY_ORDER.flatMap((ability) => {
+    return ABILITY_NAMES.flatMap((ability) => {
       const group = skills.filter((s) => s.ability === ability)
       return group.length > 0 ? [{ label: ability, skills: group }] : []
     })

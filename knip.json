@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "electron/main.ts",
+    "electron/preload.ts",
+    "public/theme-init.js",
+    "scripts/**/*.{js,mjs,ts}",
+    "tests/**/*.{test,spec}.{ts,tsx}",
+    "vite.config.e2e.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx}",
+    "src/**/*.css",
+    "electron/**/*.ts",
+    "public/**/*.js",
+    "scripts/**/*.{js,mjs,ts}",
+    "tests/**/*.{ts,tsx}",
+    "*.config.ts"
+  ]
+}

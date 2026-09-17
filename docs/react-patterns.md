@@ -94,7 +94,24 @@ Only suppress the Biome exhaustive-deps rule when the pattern is intentional and
 
 Workbench-style pages use `WorkspacePage` as the flat parent surface. If a page has functional tabs or controls, place them in a full-width `WorkspacePaneHeader`, then put the scrolling content in `WorkspaceBody` with a centered max-width inner container.
 
-Rules and Conditions are the reference tabbed pages. Their parent remains flat while each meaningful section may use its own bordered card. Sources is the reference for a flat configuration page with controls placed directly inside its constrained content area. Avoid wrapping the entire content area in a second card unless the page intentionally uses the dual-pane/workbench pattern.
+List/detail workspaces use the shared `SplitPane`. Give both compact panes concise, page-specific
+labels. Below the shared container breakpoint, `SplitPane` shows one full-width pane at a time;
+selection handlers that reveal details should control `compactPane` and select the right pane without
+changing the desktop `leftCollapsed` or `rightCollapsed` preferences. Toolbars inside a pane should
+respond to their own container width rather than the application viewport.
+On desktop, a collapsed pane must be removed from flex sizing (`flex-none` at zero width), allowing
+the visible pane to fill the workspace rather than leaving an invisible reserved column.
+
+Character Rules and Conditions are the reference tabbed pages. Their parent remains flat while each
+meaningful section may use its own bordered card. The Sources page is the reference for a flat
+configuration panel with controls placed directly inside its constrained content area. Avoid
+wrapping the entire content area in a second card unless the page intentionally uses the
+dual-pane/workbench pattern.
+
+Use the shared `Button` `accentOutline` variant for compact edit/configure affordances that lead to
+an existing setup workflow. It provides an accent border and text without a filled resting state.
+Incomplete or destructive actions retain their warning/destructive semantic variants instead of
+using `accentOutline`.
 
 Settings and Compendium retain their established route-specific containers. Character cards and the sidebar remain full-bleed by design.
 
@@ -108,5 +125,22 @@ functions, and exposes command-backed actions. Keep the route responsible for se
 pane state, and cross-domain presentation only.
 
 `BuildClassPage` is the reference: subclass, spell, ASI/feat, and optional-feature controllers live
-under `src/pages/build/class/hooks/`. Do not move canonical rules into a controller; rules remain
-pure calculations or commands.
+under `src/pages/build/class/hooks/`. Its generic class-choice controller also resolves normalized
+choice descriptors into source-qualified view models while the pure resolver remains in
+`src/lib/character/classChoiceOptions.ts`. Do not move canonical rules into a controller; rules
+remain pure calculations or commands.
+
+---
+
+## Recursive Preview Roots
+
+Rules-entry and spell-name previews use `useRecursivePreviewController` for their shared history,
+pinning, close timing, Escape behavior, and navigation state. The root portal is rendered through
+`RecursivePreviewShell`; content-specific metadata and bodies remain in the calling feature.
+
+Do not create a second preview state machine in a page component. Recursive children remain owned by
+`RecursiveTooltipChain`, while pinned movement stays in `useDraggablePreview`. The visible title area
+is the pointer and keyboard drag handle, and pinning freezes only the selected preview in place.
+
+The first preview intentionally omits history and close controls. History becomes visible only after
+a child preview exists, and the history selector is the single way to return to an earlier preview.

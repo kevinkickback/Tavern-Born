@@ -1,3 +1,4 @@
+export * from './capabilityReport'
 export * from './classData'
 export * from './constants'
 export * from './dataLoader'

@@ -1,3 +1,9 @@
+import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
+import {
+  FEAT_CATEGORY_LABEL_FALLBACKS,
+  NON_STANDARD_FEAT_SELECTION_CATEGORIES,
+  OPTIONAL_FEATURE_TYPE_LABEL_FALLBACKS,
+} from '@/lib/5etools/rulesetMetadata'
 import { getMaxSpellLevelForClassLevel } from '@/lib/calculations/spellSlots'
 import type {
   Class5e,
@@ -8,6 +14,7 @@ import type {
   SubclassFeature,
 } from '@/types/5etools'
 import type { CharacterClassEntry } from '@/types/character'
+import type { ClassResourceDef } from '@/types/classRules'
 
 export type { OptFeatureProg, OptionalFeatureLike }
 
@@ -19,27 +26,7 @@ export type { OptFeatureProg, OptionalFeatureLike }
  * defined only in the 5etools JS source. Remove and replace with a parsed
  * source if one becomes available.
  */
-export const OPT_FEATURE_TYPE_TO_FULL: Readonly<Record<string, string>> = {
-  AI: 'Artificer Infusion',
-  ED: 'Elemental Discipline',
-  EI: 'Eldritch Invocation',
-  'EI:PB': 'Eldritch Invocation (Pact of the Blade)',
-  MM: 'Metamagic',
-  MV: 'Maneuver',
-  'MV:B': 'Maneuver, Battle Master',
-  AS: 'Arcane Shot',
-  OTH: 'Other',
-  'FS:F': 'Fighting Style; Fighter',
-  'FS:B': 'Fighting Style; Bard',
-  'FS:P': 'Fighting Style; Paladin',
-  'FS:R': 'Fighting Style; Ranger',
-  PB: 'Pact Boon',
-  OR: 'Onomancy Resonant',
-  RN: 'Rune Knight Rune',
-  AF: 'Alchemical Formula',
-  TT: "Traveler's Trick",
-  RP: 'Renown Perk',
-}
+const OPT_FEATURE_TYPE_TO_FULL = OPTIONAL_FEATURE_TYPE_LABEL_FALLBACKS
 
 /** Convert a 5etools optional feature type abbreviation to its full display name. */
 export function optFeatureTypeToFull(type: string): string {
@@ -57,17 +44,7 @@ export function optFeatureTypeToFull(type: string): string {
  * defined only in the 5etools JS source. Remove and replace with a parsed
  * source if one becomes available.
  */
-export const FEAT_CATEGORY_TO_FULL: Readonly<Record<string, string>> = {
-  D: 'Dragonmark',
-  G: 'General',
-  O: 'Origin',
-  FS: 'Fighting Style',
-  'FS:P': 'Fighting Style Replacement (Paladin)',
-  'FS:R': 'Fighting Style Replacement (Ranger)',
-  EB: 'Epic Boon',
-}
-
-const NON_STANDARD_FEAT_SELECTION_CATEGORIES = new Set(['O', 'EB', 'FS:P', 'FS:R'])
+const FEAT_CATEGORY_TO_FULL = FEAT_CATEGORY_LABEL_FALLBACKS
 
 /** Convert a 5etools feat category abbreviation to its full display name. */
 export function featCategoryToFull(category: string): string {
@@ -102,6 +79,7 @@ export interface SpellGainAtLevel {
 export function getClassSpellGainAtLevel(
   classData: Class5e | undefined,
   level: number,
+  standardProgressionClasses: Iterable<Class5e> = [],
 ): SpellGainAtLevel {
   if (!classData?.spellcastingAbility) {
     return { cantrips: 0, spells: 0, maxSpellLevel: 0, canSwap: false }
@@ -142,7 +120,7 @@ export function getClassSpellGainAtLevel(
   return {
     cantrips: newCantrips,
     spells: newSpells,
-    maxSpellLevel: getMaxSpellLevelForClassLevel(classData, level),
+    maxSpellLevel: getMaxSpellLevelForClassLevel(classData, level, standardProgressionClasses),
     canSwap:
       level >= 2 &&
       (Array.isArray(classData.spellsKnownProgression) ||
@@ -177,171 +155,10 @@ export function getSubclassSelectionInfo(classData: Class5e | undefined): {
 // ── Class Resource Definitions ─────────────────────────────────────────────
 
 /** 'cha-mod' → max = character's Charisma modifier (min 1), computed at render time. */
-export type ClassResourceMaxFormula = 'cha-mod'
-
-export interface ClassResourceDef {
-  id: string
-  label: string
-  /** Max uses at each level (index 0 = level 1). Length 20.
-   *  When `maxFormula` is set this serves as a fallback minimum. */
-  maxPerLevel: readonly number[]
-  restType: 'short' | 'long'
-  /** Per-level rest type (length 20). When set, takes precedence over `restType`. */
-  restTypeByLevel?: readonly ('short' | 'long')[]
-  /** When set, max is computed from character state instead of `maxPerLevel`. */
-  maxFormula?: ClassResourceMaxFormula
-}
-
-/** Table column labels that are not limited-use resources (bonuses, dice, spell filters). */
-const RESOURCE_SKIP_LABELS = new Set([
-  'Martial Arts',
-  'Unarmored Movement',
-  'Rage Damage',
-  'Sneak Attack',
-  'Spell Slots',
-  'Slot Level',
-])
-
-/** Rest type for resources parsed from classTableGroups, keyed by column label. */
-const TABLE_RESOURCE_REST_TYPE: Record<string, 'short' | 'long'> = {
-  'Ki Points': 'short',
-  'Sorcery Points': 'long',
-  Rages: 'long',
-  'Infused Items': 'long',
-}
-
-/**
- * Source-specific hardcoded resources. Key format: `"ClassName|source"`.
- * Checked before HARDCODED_RESOURCES; both sets are merged (source-specific first).
- */
-const HARDCODED_RESOURCES_BY_SOURCE: Partial<Record<string, ClassResourceDef[]>> = {
-  'Bard|PHB': [
-    {
-      id: 'bard-bardic-inspiration',
-      label: 'Bardic Inspiration',
-      // Fallback max = 1; actual max is computed from Cha modifier in useClassResources.
-      maxPerLevel: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      maxFormula: 'cha-mod',
-      // Long rest lv 1–4; short rest lv 5–20 (Font of Inspiration).
-      restTypeByLevel: [
-        'long',
-        'long',
-        'long',
-        'long',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-        'short',
-      ],
-      restType: 'long',
-    },
-  ],
-  'Bard|XPHB': [
-    {
-      id: 'bard-bardic-inspiration',
-      label: 'Bardic Inspiration',
-      // Uses = Proficiency Bonus (2024 PHB). Short rest from level 1.
-      maxPerLevel: [2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6],
-      restType: 'short',
-    },
-  ],
-  'Wizard|PHB': [
-    {
-      id: 'wizard-arcane-recovery',
-      label: 'Arcane Recovery',
-      maxPerLevel: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      restType: 'long',
-    },
-  ],
-  'Wizard|XPHB': [
-    {
-      id: 'wizard-arcane-recovery',
-      label: 'Arcane Recovery',
-      maxPerLevel: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      restType: 'short',
-    },
-  ],
-}
-
-/** Hardcoded resource tables for classes whose limited resources aren't in classTableGroups. */
-const HARDCODED_RESOURCES: Partial<Record<string, ClassResourceDef[]>> = {
-  Fighter: [
-    {
-      id: 'fighter-second-wind',
-      label: 'Second Wind',
-      maxPerLevel: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-      restType: 'short',
-    },
-    {
-      id: 'fighter-action-surge',
-      label: 'Action Surge',
-      maxPerLevel: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
-      restType: 'short',
-    },
-    {
-      id: 'fighter-indomitable',
-      label: 'Indomitable',
-      maxPerLevel: [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
-      restType: 'long',
-    },
-  ],
-  Paladin: [
-    {
-      id: 'paladin-channel-divinity',
-      label: 'Channel Divinity',
-      maxPerLevel: [0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3],
-      restType: 'short',
-    },
-    {
-      id: 'paladin-lay-on-hands',
-      label: 'Lay on Hands (HP)',
-      maxPerLevel: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
-      restType: 'long',
-    },
-  ],
-  Cleric: [
-    {
-      id: 'cleric-channel-divinity',
-      label: 'Channel Divinity',
-      maxPerLevel: [0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3],
-      restType: 'short',
-    },
-  ],
-  Druid: [
-    {
-      id: 'druid-wild-shape',
-      label: 'Wild Shape',
-      maxPerLevel: [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-      restType: 'short',
-    },
-  ],
-}
-
-function parseResourceValue(value: unknown): number | null {
-  if (typeof value === 'number') return value
-  if (typeof value === 'string') {
-    if (value.toLowerCase() === 'unlimited') return 999
-    const n = Number(value)
-    return Number.isNaN(n) ? null : n
-  }
-  return null
-}
-
 /**
  * Derives limited-use class resource definitions from 5etools class data.
- * Parsed from classTableGroups where possible; falls back to hardcoded tables.
+ * Parsed from known resource columns in classTableGroups where possible; source-qualified adapters
+ * fill resources that the upstream records expose only through prose.
  * Returns only resources with max > 0 at the given level.
  */
 export function getClassResourceDefs(
@@ -349,79 +166,21 @@ export function getClassResourceDefs(
   level: number,
 ): ClassResourceDef[] {
   if (!classData) return []
-  const clampedLevel = Math.max(1, Math.min(20, level))
-  const idx = clampedLevel - 1
-  const results: ClassResourceDef[] = []
-  const seenIds = new Set<string>()
-
-  // Parse numeric columns from classTableGroups
-  const tableGroups = Array.isArray(classData.classTableGroups)
-    ? (classData.classTableGroups as unknown[])
-    : []
-
-  for (const group of tableGroups) {
-    if (typeof group !== 'object' || group === null) continue
-    const g = group as Record<string, unknown>
-    const colLabels = Array.isArray(g.colLabels) ? (g.colLabels as unknown[]) : []
-    const rows = Array.isArray(g.rows) ? (g.rows as unknown[][]) : []
-    if (rows.length < 20) continue
-
-    colLabels.forEach((rawLabel, colIdx) => {
-      const label = typeof rawLabel === 'string' ? rawLabel : ''
-      if (!label || label.includes('{@') || RESOURCE_SKIP_LABELS.has(label)) return
-
-      const values = rows.map((row) => parseResourceValue(row[colIdx]))
-      if (values.some((v) => v === null)) return
-      const maxValues = values as number[]
-      if (maxValues.every((v) => v === 0)) return
-
-      const id = `${classData.name.toLowerCase()}-${label
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9-]/g, '')}`
-      if (seenIds.has(id)) return
-      seenIds.add(id)
-
-      results.push({
-        id,
-        label,
-        maxPerLevel: maxValues,
-        restType: TABLE_RESOURCE_REST_TYPE[label] ?? 'long',
-      })
-    })
-  }
-
-  // Add hardcoded resources: source-specific entries take precedence, then name-only.
-  const sourceKey = `${classData.name}|${classData.source ?? ''}`
-  const sourceSpecific = HARDCODED_RESOURCES_BY_SOURCE[sourceKey] ?? []
-  const nameOnly = HARDCODED_RESOURCES[classData.name] ?? []
-  for (const def of [...sourceSpecific, ...nameOnly]) {
-    if (!seenIds.has(def.id)) {
-      seenIds.add(def.id)
-      results.push(def)
-    }
-  }
-
-  // Return only resources that have max > 0 at the requested level
-  return results.filter((def) => (def.maxPerLevel[idx] ?? 0) > 0)
+  const normalized =
+    classData.normalizedRules ?? normalizeClassRules(classData, classData.classFeatureRefs ?? [])
+  const maximumLevel = Math.max(
+    1,
+    ...normalized.resources.map((resource) => resource.maxPerLevel.length),
+  )
+  const idx = Math.max(1, Math.min(maximumLevel, level)) - 1
+  return normalized.resources.filter((resource) => (resource.maxPerLevel[idx] ?? 0) > 0)
 }
 
-/** Classes that gain Ritual Casting as a class feature (2014 PHB). */
-const RITUAL_CASTING_CLASSES = new Set(['Bard', 'Cleric', 'Druid', 'Ranger', 'Wizard', 'Artificer'])
-
-/**
- * Returns true when the class grants Ritual Casting, either by detecting the
- * feature in classFeatureRefs or by matching the known hardcoded set.
- */
 export function getClassHasRitualCasting(classData: Class5e | undefined): boolean {
   if (!classData) return false
-  if (classData.classFeatureRefs) {
-    const found = classData.classFeatureRefs.some((ref) =>
-      ref.name.toLowerCase().includes('ritual casting'),
-    )
-    if (found) return true
-  }
-  return RITUAL_CASTING_CLASSES.has(classData.name)
+  return (
+    classData.normalizedRules ?? normalizeClassRules(classData, classData.classFeatureRefs ?? [])
+  ).ritualCasting
 }
 
 export function getSelectedSubclassData(
@@ -434,6 +193,29 @@ export function getSelectedSubclassData(
     (subclass) =>
       subclass.name === entry.subclass && (subclass.source ?? '') === (entry.subclassSource ?? ''),
   )
+}
+
+/** Overlay subclass-owned spellcasting fields on the base class data. */
+export function getEffectiveSpellcastingClassData(
+  classData: Class5e | undefined,
+  subclassData: Subclass5e | undefined,
+): Class5e | undefined {
+  if (!classData || !subclassData) return classData
+  return {
+    ...classData,
+    spellcastingAbility: subclassData.spellcastingAbility ?? classData.spellcastingAbility,
+    casterProgression: subclassData.casterProgression ?? classData.casterProgression,
+    isSpellcaster: subclassData.isSpellcaster ?? classData.isSpellcaster,
+    spellSlotProgression: subclassData.spellSlotProgression ?? classData.spellSlotProgression,
+    cantripProgression: subclassData.cantripProgression ?? classData.cantripProgression,
+    spellsKnownProgression: subclassData.spellsKnownProgression ?? classData.spellsKnownProgression,
+    spellsKnownProgressionFixed:
+      subclassData.spellsKnownProgressionFixed ?? classData.spellsKnownProgressionFixed,
+    preparedSpells: subclassData.preparedSpells ?? classData.preparedSpells,
+    preparedSpellsProgression:
+      subclassData.preparedSpellsProgression ?? classData.preparedSpellsProgression,
+    preparedSpellsChange: subclassData.preparedSpellsChange ?? classData.preparedSpellsChange,
+  }
 }
 
 export function getSubclassFeatureGroups(

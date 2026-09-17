@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo } from 'react'
+import { GameContent } from '@/components/editor/GameContent'
 import { type ActiveFilters, SelectionModal } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -12,8 +13,12 @@ interface SubclassCardProps {
 }
 
 const SubclassCard = memo(function SubclassCard({ subclass, isSelected }: SubclassCardProps) {
-  const introText: string | undefined = Array.isArray(subclass.entries)
-    ? (subclass.entries.find((e) => typeof e === 'string') as string | undefined)
+  const introEntry: unknown = Array.isArray(subclass.entries)
+    ? subclass.entries.find(
+        (entry) =>
+          (typeof entry === 'string' && entry.trim().length > 0) ||
+          (typeof entry === 'object' && entry !== null),
+      )
     : undefined
 
   return (
@@ -31,7 +36,9 @@ const SubclassCard = memo(function SubclassCard({ subclass, isSelected }: Subcla
           )}
         </div>
       </div>
-      {introText && <p className="text-sm text-muted-foreground leading-snug">{introText}</p>}
+      {introEntry !== undefined && (
+        <GameContent entry={introEntry} className="text-sm text-muted-foreground leading-snug" />
+      )}
     </div>
   )
 })

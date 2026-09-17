@@ -201,17 +201,20 @@ describe('getRaceTraits', () => {
     expect(getRaceTraits(undefined)).toEqual([])
   })
 
-  test('filters out Age/Alignment/Size/Speed/Languages entries', () => {
+  test('renders the presentation entries normalized during ingestion', () => {
     const race = makeRace({
       entries: [
         { type: 'entries', name: 'Age', entries: ['...'] },
         { type: 'entries', name: 'Darkvision', entries: ['See in dark.'] },
         { type: 'entries', name: 'Size', entries: ['...'] },
       ],
+      presentationEntries: [
+        { type: 'entries', name: 'Age', entries: ['...'] },
+        { type: 'entries', name: 'Darkvision', entries: ['See in dark.'] },
+      ],
     })
     const traits = getRaceTraits(race)
-    expect(traits).toHaveLength(1)
-    expect(traits[0].name).toBe('Darkvision')
+    expect(traits.map((trait) => trait.name)).toEqual(['Age', 'Darkvision'])
   })
 
   test('synthesizes darkvision trait when not in entries', () => {

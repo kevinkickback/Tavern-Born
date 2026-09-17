@@ -164,6 +164,7 @@ export function applyClassSpellGrant(
   options?: {
     spellGrantedAtLevel?: number
     spellAttributionMode?: 'exact' | 'inferred-lowest-eligible'
+    grantVariant?: string
   },
 ): ProvenanceLedger {
   const normSpell = normalizeKey(spellName)
@@ -185,6 +186,7 @@ export function applyClassSpellGrant(
   const nextLedger = { ...ledger, spells: nextSpells }
   const tag: SpellSourceTag = {
     ...makeSourceTag('class', className, grantType, classSource),
+    ...(options?.grantVariant ? { grantVariant: options.grantVariant } : {}),
     ...(options?.spellGrantedAtLevel ? { spellGrantedAtLevel: options.spellGrantedAtLevel } : {}),
     ...(options?.spellAttributionMode
       ? { spellAttributionMode: options.spellAttributionMode }

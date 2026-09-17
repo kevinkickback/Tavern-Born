@@ -5,6 +5,7 @@ import {
   getRaceAbilityData,
   hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
+import { getEffectiveCharacterMovement, normalizeRaceMovement } from '@/lib/calculations/movement'
 import type { Race5e } from '@/types/5etools'
 
 type RaceTraitEntry = {
@@ -28,6 +29,12 @@ export function mergeRaceWithSubrace(parent: Race5e, subrace: Race5e): Race5e {
     entries: isVersion
       ? (subrace.entries ?? [])
       : [...(parent.entries ?? []), ...(subrace.entries ?? [])],
+    presentationEntries: isVersion
+      ? (subrace.presentationEntries ?? subrace.entries ?? [])
+      : [
+          ...(parent.presentationEntries ?? parent.entries ?? []),
+          ...(subrace.presentationEntries ?? subrace.entries ?? []),
+        ],
     size: subrace.size ?? parent.size,
     speed: subrace.speed ?? parent.speed,
     darkvision: subrace.darkvision ?? parent.darkvision,
@@ -71,32 +78,34 @@ export function formatCapitalized(s: unknown): string {
 }
 
 export function getSpeedDisplay(race: Race5e | undefined): string {
-  if (!race?.speed) return '—'
-  if (typeof race.speed === 'number') return `${race.speed} ft.`
-  if (typeof race.speed === 'object') {
-    const walk = race.speed.walk ?? 30
-    const parts = [`${walk} ft.`]
+  if (!race) return '—'
+  const base = normalizeRaceMovement(race)
+  const movement = getEffectiveCharacterMovement({ movement: base })
+  const parts: string[] = []
+  const walk = movement.speeds.walk
+  if (walk !== undefined) parts.push(`${walk} ft.`)
 
-    const movementModes: Array<{ label: string; value: number | boolean | undefined }> = [
-      { label: 'fly', value: race.speed.fly },
-      { label: 'swim', value: race.speed.swim },
-      { label: 'climb', value: race.speed.climb },
-      { label: 'burrow', value: race.speed.burrow },
-    ]
-
-    for (const mode of movementModes) {
-      if (mode.value === true) {
-        parts.push(`${mode.label} ${walk} ft.`)
-        continue
-      }
-      if (typeof mode.value === 'number' && mode.value > 0) {
-        parts.push(`${mode.label} ${mode.value} ft.`)
-      }
-    }
-
-    return parts.join(', ')
+  const displayedModes = new Set<string>(['walk'])
+  for (const mode of ['fly', 'swim', 'climb', 'burrow']) {
+    displayedModes.add(mode)
+    const value = movement.speeds[mode]
+    if (value === undefined) continue
+    parts.push(`${mode} ${value} ft.${mode === 'fly' && movement.hover ? ' (hover)' : ''}`)
   }
-  return '—'
+  for (const [mode, value] of Object.entries(movement.speeds).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    if (!displayedModes.has(mode)) parts.push(`${mode} ${value} ft.`)
+  }
+  for (const [mode, value] of Object.entries(movement.other).sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    if (value === true) parts.push(`${mode} (special)`)
+  }
+  for (const mode of movement.unresolvedInheritedModes) {
+    parts.push(`${mode} (inherits an unresolved walking speed)`)
+  }
+  return parts.join(', ') || '—'
 }
 
 export function getDarkvisionDisplay(race: Race5e | undefined): string {
@@ -196,25 +205,17 @@ export function getDamageTraitDisplay(values?: unknown[]): string {
 
 /**
  * Extract displayable racial traits from a race's entries.
- * Filters out informational sections (Age, Alignment, etc.) and synthesizes
- * Darkvision and Tool Proficiency traits when present as tags.
+ * Uses entries normalized during ingestion and synthesizes Darkvision and Tool
+ * Proficiency traits when present as structured fields.
  */
 export function getRaceTraits(
   race: Race5e | undefined,
 ): { key: string; name: string; entries: unknown[] }[] {
   if (!race) return []
-  const skip = new Set(['Age', 'Alignment', 'Size', 'Speed', 'Languages', 'Names'])
-
-  const traits = ((race.entries as unknown[]) ?? [])
+  const traits = (race.presentationEntries ?? race.entries ?? [])
     .filter((e) => {
       const entry = e as RaceTraitEntry
-      return (
-        typeof e === 'object' &&
-        entry.type === 'entries' &&
-        typeof entry.name === 'string' &&
-        !skip.has(entry.name) &&
-        !entry.name.includes('Names')
-      )
+      return typeof e === 'object' && entry.type === 'entries' && typeof entry.name === 'string'
     })
     .map((e) => {
       const entry = e as RaceTraitEntry

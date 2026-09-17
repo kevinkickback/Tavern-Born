@@ -25,7 +25,7 @@ export function useWizardGameData({
   preferNewerPrintings = false,
 }: WizardGameDataParams) {
   const effectiveSources = useMemo(() => {
-    if (!allowedSources || allowedSources.length === 0) return allowedSources
+    if (!allowedSources) return undefined
     const implicit = getImplicitSource(originSystem || '2014')
     return allowedSources.includes(implicit) ? allowedSources : [...allowedSources, implicit]
   }, [allowedSources, originSystem])

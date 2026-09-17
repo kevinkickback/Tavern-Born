@@ -8,7 +8,6 @@ interface CountAsiAndFeatSlotsParams {
   classProgression: CharacterClassEntry[]
   character: Character | null
   classLookup: Record<string, Class5e | undefined>
-  fallbackClassByName: Map<string, Class5e>
 }
 
 interface BuildLevelsToShowParams {
@@ -17,12 +16,7 @@ interface BuildLevelsToShowParams {
   subclassLevel: number
   viewingClassLevel: number
   spellChoicesByLevel: Map<number, unknown>
-  optFeatureProgressions: Array<{
-    progression: number[] | Record<string, number>
-  }>
-  classFeatProgressions: Array<{
-    progression: number[] | Record<string, number>
-  }>
+  classChoiceLevels?: number[]
 }
 
 interface BuildFeatModalFeatsParams<T extends { name: string; source?: string }> {
@@ -34,42 +28,20 @@ interface BuildFeatModalFeatsParams<T extends { name: string; source?: string }>
 function resolveClassForEntry(
   entry: Pick<CharacterClassEntry, 'name' | 'source'>,
   classLookup: Record<string, Class5e | undefined>,
-  fallbackClassByName: Map<string, Class5e>,
 ): Class5e | undefined {
-  if (entry.source) {
-    return classLookup[getEntityLookupKey(entry.name, entry.source)]
-  }
-  return fallbackClassByName.get(entry.name)
-}
-
-function getOptFeatureTotalAtLevel(
-  progression: number[] | Record<string, number>,
-  level: number,
-): number {
-  if (Array.isArray(progression)) {
-    return progression[Math.max(0, level - 1)] ?? 0
-  }
-
-  let total = 0
-  for (const [key, value] of Object.entries(progression)) {
-    if (Number(key) <= level) {
-      total = Math.max(total, Number(value))
-    }
-  }
-  return total
+  return classLookup[getEntityLookupKey(entry.name, entry.source)]
 }
 
 export function countTotalAsiAcrossClasses({
   classProgression,
   character,
   classLookup,
-  fallbackClassByName,
 }: CountAsiAndFeatSlotsParams): number {
   if (!character) return 0
 
   let count = 0
   for (const entry of classProgression) {
-    const cls = resolveClassForEntry(entry, classLookup, fallbackClassByName)
+    const cls = resolveClassForEntry(entry, classLookup)
     const levels = getASILevelsFromClass(cls)
     count += levels.filter((level) => level <= (entry.levels ?? 0)).length
   }
@@ -80,13 +52,12 @@ export function countTotalFeatSlots({
   classProgression,
   character,
   classLookup,
-  fallbackClassByName,
 }: CountAsiAndFeatSlotsParams): number {
   if (!character) return 0
 
   let count = 0
   for (const entry of classProgression) {
-    const cls = resolveClassForEntry(entry, classLookup, fallbackClassByName)
+    const cls = resolveClassForEntry(entry, classLookup)
     const earned = getASILevelsFromClass(cls).filter((level) => level <= (entry.levels ?? 0))
     const usedForAsi = (character.asiChoices ?? []).filter(
       (choice) => choice.className === entry.name && earned.includes(choice.level),
@@ -102,8 +73,7 @@ export function buildLevelsToShow({
   subclassLevel,
   viewingClassLevel,
   spellChoicesByLevel,
-  optFeatureProgressions,
-  classFeatProgressions,
+  classChoiceLevels = [],
 }: BuildLevelsToShowParams): number[] {
   const levels = new Set<number>()
 
@@ -129,27 +99,11 @@ export function buildLevelsToShow({
     }
   })
 
-  for (const progression of optFeatureProgressions) {
-    for (let level = 1; level <= viewingClassLevel; level++) {
-      if (
-        getOptFeatureTotalAtLevel(progression.progression, level) >
-        getOptFeatureTotalAtLevel(progression.progression, level - 1)
-      ) {
-        levels.add(level)
-      }
-    }
-  }
-
-  for (const progression of classFeatProgressions) {
-    for (let level = 1; level <= viewingClassLevel; level++) {
-      if (
-        getOptFeatureTotalAtLevel(progression.progression, level) >
-        getOptFeatureTotalAtLevel(progression.progression, level - 1)
-      ) {
-        levels.add(level)
-      }
-    }
-  }
+  classChoiceLevels
+    .filter((level) => level > 0 && level <= viewingClassLevel)
+    .forEach((level) => {
+      levels.add(level)
+    })
 
   return Array.from(levels).sort((a, b) => a - b)
 }

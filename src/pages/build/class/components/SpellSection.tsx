@@ -1,5 +1,6 @@
 import { ArrowsClockwise, MagicWand } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { resolveSpellReferenceFromMap } from '@/lib/calculations/spellIdentity'
 import { formatSpellLevel } from '@/lib/calculations/spellUtils'
 import type { Spell5e } from '@/types/5etools'
 import type { SelectedFeatureState } from './DetailsPanel'
@@ -15,9 +16,10 @@ interface BuildClassSpellSectionProps {
   level: number
   spellGain: SpellGain
   chosenNames: string[]
-  spellByName: Map<string, Spell5e>
+  spellByReference: Map<string, Spell5e>
   detailCollapsed: boolean
   hasExistingKnown: boolean
+  requiredSelectionsComplete: boolean
   swapDoneAtLevel: boolean
   onOpenSpellPicker: (level: number) => void
   onOpenSpellSwap: (level: number) => void
@@ -30,9 +32,10 @@ export function BuildClassSpellSection({
   level,
   spellGain,
   chosenNames,
-  spellByName,
+  spellByReference,
   detailCollapsed,
   hasExistingKnown,
+  requiredSelectionsComplete,
   swapDoneAtLevel,
   onOpenSpellPicker,
   onOpenSpellSwap,
@@ -40,43 +43,56 @@ export function BuildClassSpellSection({
   onExpandDetails,
   getOrdinalForm,
 }: BuildClassSpellSectionProps) {
+  const hasNewSelections = spellGain.cantrips > 0 || spellGain.spells > 0
+
   return (
     <div className="rounded-lg border border-accent-secondary/30 bg-accent-secondary/5 overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5">
         <div className="flex items-center gap-2 min-w-0">
           <MagicWand className="h-4 w-4 text-accent-secondary flex-shrink-0" weight="duotone" />
           <div className="min-w-0">
-            <div className="text-sm font-semibold">Spell Selection</div>
+            <div className="text-sm font-semibold">
+              {hasNewSelections ? 'Spell Selection' : 'Spell Replacement'}
+            </div>
             <div className="text-xs text-muted-foreground">
-              {[
-                spellGain.cantrips > 0 &&
-                  `${spellGain.cantrips} cantrip${spellGain.cantrips > 1 ? 's' : ''}`,
-                spellGain.spells > 0 &&
-                  `${spellGain.spells} spell${spellGain.spells > 1 ? 's' : ''}${spellGain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(spellGain.maxSpellLevel)}-level)` : ''}`,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
+              {hasNewSelections
+                ? [
+                    spellGain.cantrips > 0 &&
+                      `${spellGain.cantrips} cantrip${spellGain.cantrips > 1 ? 's' : ''}`,
+                    spellGain.spells > 0 &&
+                      `${spellGain.spells} spell${spellGain.spells > 1 ? 's' : ''}${spellGain.maxSpellLevel > 0 ? ` (up to ${getOrdinalForm(spellGain.maxSpellLevel)}-level)` : ''}`,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : 'Replace one spell you know'}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-          <Button
-            variant={chosenNames.length > 0 ? 'outline' : 'default'}
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => onOpenSpellPicker(level)}
-          >
-            {chosenNames.length > 0 ? 'Edit' : 'Choose'}
-          </Button>
-          {spellGain.canSwap && hasExistingKnown && (
+          {hasNewSelections && (
+            <Button
+              variant={chosenNames.length > 0 ? 'outline' : 'default'}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => onOpenSpellPicker(level)}
+            >
+              {chosenNames.length > 0 ? 'Edit' : 'Choose'}
+            </Button>
+          )}
+          {spellGain.canSwap && hasExistingKnown && requiredSelectionsComplete && (
             <Button
               variant={swapDoneAtLevel ? 'ghost' : 'outline'}
               size="sm"
               className="h-7 text-xs gap-1"
+              aria-label={
+                swapDoneAtLevel
+                  ? `Change spell replacement for level ${level}`
+                  : `Replace a spell for level ${level}`
+              }
               onClick={() => onOpenSpellSwap(level)}
             >
               <ArrowsClockwise className="h-3 w-3" />
-              {swapDoneAtLevel ? 'Swapped' : 'Replace'}
+              {swapDoneAtLevel ? 'Change replacement' : 'Replace a spell'}
             </Button>
           )}
         </div>
@@ -84,7 +100,7 @@ export function BuildClassSpellSection({
       {chosenNames.length > 0 && (
         <div className="flex flex-wrap gap-1.5 px-3 pb-2.5 border-t border-accent-secondary/20 pt-2">
           {chosenNames.map((name) => {
-            const spell = spellByName.get(name)
+            const spell = resolveSpellReferenceFromMap(name, spellByReference)
             return (
               <button
                 key={spell ? `${spell.name}|${spell.source ?? ''}` : name}
@@ -100,7 +116,7 @@ export function BuildClassSpellSection({
                 }}
                 className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border border-accent-secondary/30 bg-accent-secondary/5 hover:border-accent-secondary/50 hover:bg-accent-secondary/15 text-foreground transition-colors"
               >
-                <span className="font-medium">{name}</span>
+                <span className="font-medium">{spell?.name ?? name}</span>
                 {spell && (
                   <span className="text-muted-foreground opacity-80">
                     {formatSpellLevel(spell.level)}

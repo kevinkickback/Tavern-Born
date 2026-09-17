@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useSkillList } from '@/hooks/data/useGameData'
 import { getFeatureTypes } from '@/lib/5etools/classData'
 import {
   deriveFeatOptionSteps,
@@ -26,21 +27,12 @@ import {
   type FeatOptionStep,
   parseFeatSpellFilter,
 } from '@/lib/5etools/parsers/featOptions'
-import { ALL_SKILLS } from '@/lib/calculations/skills'
+import { ABILITY_ABBREV_TO_TITLE } from '@/lib/calculations/abilityNames'
 import { isSpellOnClassList } from '@/lib/calculations/spellProfiles'
 import { getSchoolName } from '@/lib/calculations/spellUtils'
 import { cn } from '@/lib/utils'
 import type { Feat5e, Language5e, OptionalFeatureLike, Spell5e } from '@/types/5etools'
 import type { FeatOptionSelections } from '@/types/character'
-
-const ABILITY_LABELS: Record<string, string> = {
-  str: 'Strength',
-  dex: 'Dexterity',
-  con: 'Constitution',
-  int: 'Intelligence',
-  wis: 'Wisdom',
-  cha: 'Charisma',
-}
 
 type StepSelections = Record<number, string | string[]>
 
@@ -84,7 +76,11 @@ const SpellcastingClassStep = memo(function SpellcastingClassStep({
         </SelectTrigger>
         <SelectContent>
           {step.classOptions.map((opt) => (
-            <SelectItem key={opt.name} value={opt.name}>
+            <SelectItem
+              key={opt.name}
+              value={opt.name}
+              className="data-[state=checked]:bg-accent/10 data-[state=checked]:text-accent-foreground"
+            >
               {opt.name}
             </SelectItem>
           ))}
@@ -139,7 +135,10 @@ const SpellPickStep = memo(function SpellPickStep({
                 key={id}
                 htmlFor={checkboxId}
                 className={cn(
-                  'flex w-full items-center gap-3 px-3 py-2 hover:bg-muted/40 transition-colors',
+                  'flex w-full items-center gap-3 border-l-2 px-3 py-2 transition-colors',
+                  isSelected
+                    ? 'border-l-accent bg-accent/10 text-foreground'
+                    : 'border-l-transparent hover:bg-muted/40',
                   atLimit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
                 )}
               >
@@ -149,6 +148,7 @@ const SpellPickStep = memo(function SpellPickStep({
                   onCheckedChange={() => !atLimit && onToggle(id)}
                   disabled={atLimit}
                   tabIndex={atLimit ? -1 : 0}
+                  className="data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"
                 />
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium">{spell.name}</span>
@@ -171,20 +171,22 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
   selected,
   onToggle,
   languages,
+  skillNames,
 }: {
   step: Extract<FeatOptionStep, { kind: 'proficiency' }>
   selected: string[]
   onToggle: (name: string) => void
   languages: Language5e[]
+  skillNames: readonly string[]
 }) {
   const pool = useMemo(() => {
     if (step.optionPool && step.optionPool.length > 0) return step.optionPool
-    if (step.domain === 'skills') return ALL_SKILLS as string[]
+    if (step.domain === 'skills') return [...skillNames]
     if (step.domain === 'languages') {
       return [...new Set(languages.map((l) => l.name))].sort()
     }
     return []
-  }, [step.domain, step.optionPool, languages])
+  }, [step.domain, step.optionPool, languages, skillNames])
 
   return (
     <div className="space-y-3">
@@ -206,7 +208,10 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
               key={name}
               htmlFor={checkboxId}
               className={cn(
-                'flex w-full items-center gap-3 px-3 py-2 hover:bg-muted/40 transition-colors',
+                'flex w-full items-center gap-3 border-l-2 px-3 py-2 transition-colors',
+                isSelected
+                  ? 'border-l-accent bg-accent/10 text-foreground'
+                  : 'border-l-transparent hover:bg-muted/40',
                 atLimit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
               )}
             >
@@ -216,6 +221,7 @@ const ProficiencyPickStep = memo(function ProficiencyPickStep({
                 onCheckedChange={() => !atLimit && onToggle(name)}
                 disabled={atLimit}
                 tabIndex={atLimit ? -1 : 0}
+                className="data-[state=checked]:border-accent data-[state=checked]:bg-accent data-[state=checked]:text-accent-foreground"
               />
               <span className="text-sm capitalize">{name}</span>
             </label>
@@ -240,7 +246,7 @@ const AbilityScoreStep = memo(function AbilityScoreStep({
       <p className="text-sm text-muted-foreground">{step.label}</p>
       <div className="flex flex-wrap gap-2">
         {step.from.map((abilityKey) => {
-          const label = ABILITY_LABELS[abilityKey] ?? abilityKey
+          const label = ABILITY_ABBREV_TO_TITLE[abilityKey] ?? abilityKey
           const isSelected = value === abilityKey
           return (
             <button
@@ -286,31 +292,39 @@ const OptionalFeatureStep = memo(function OptionalFeatureStep({
         {filtered.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground italic">No options found.</p>
         ) : (
-          filtered.map((f) => (
-            <label
-              key={`${f.name}|${f.source ?? ''}`}
-              className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
-            >
-              <input
-                type="radio"
-                name="optFeature"
-                checked={value === f.name}
-                onChange={() => onChange(f.name)}
-                className="accent-current"
-              />
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium">{f.name}</span>
-                {f.source && (
-                  <Badge
-                    variant="outline"
-                    className="ml-2 text-xs h-4 px-1 py-0 text-muted-foreground"
-                  >
-                    {f.source}
-                  </Badge>
+          filtered.map((f) => {
+            const isSelected = value === f.name
+            return (
+              <label
+                key={`${f.name}|${f.source ?? ''}`}
+                className={cn(
+                  'flex cursor-pointer items-center gap-3 border-l-2 px-3 py-2 transition-colors',
+                  isSelected
+                    ? 'border-l-accent bg-accent/10 text-foreground'
+                    : 'border-l-transparent hover:bg-muted/40',
                 )}
-              </div>
-            </label>
-          ))
+              >
+                <input
+                  type="radio"
+                  name="optFeature"
+                  checked={isSelected}
+                  onChange={() => onChange(f.name)}
+                  className="size-4 shrink-0 accent-[var(--color-accent-9)]"
+                />
+                <div className="min-w-0 flex-1">
+                  <span className="text-sm font-medium">{f.name}</span>
+                  {f.source && (
+                    <Badge
+                      variant="outline"
+                      className="ml-2 h-4 px-1 py-0 text-xs text-muted-foreground"
+                    >
+                      {f.source}
+                    </Badge>
+                  )}
+                </div>
+              </label>
+            )
+          })
         )}
       </div>
     </div>
@@ -322,13 +336,15 @@ const ExpertiseStep = memo(function ExpertiseStep({
   value,
   onChange,
   proficientSkillNames,
+  skillNames,
 }: {
   step: Extract<FeatOptionStep, { kind: 'expertise' }>
   value: string
   onChange: (v: string) => void
   proficientSkillNames: string[]
+  skillNames: readonly string[]
 }) {
-  const pool = proficientSkillNames.length > 0 ? proficientSkillNames : (ALL_SKILLS as string[])
+  const pool = proficientSkillNames.length > 0 ? proficientSkillNames : skillNames
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">{step.label}</p>
@@ -470,6 +486,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
   onDismiss,
 }: FeatOptionsModalProps) {
   const { spells, optionalfeatures, languages } = useFilteredGameData()
+  const skillNames = useSkillList()
   const validatedFixedSpellcastingClass = validateFixedSpellcastingClass(
     feat,
     fixedSpellcastingClass,
@@ -640,6 +657,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
               selected={Array.isArray(currentValue) ? currentValue : []}
               onToggle={(name) => toggleMulti(stepIndex, name, currentStep.count)}
               languages={languages}
+              skillNames={skillNames}
             />
           )}
           {currentStep.kind === 'abilityScore' && (
@@ -663,6 +681,7 @@ export const FeatOptionsModal = memo(function FeatOptionsModal({
               value={typeof currentValue === 'string' ? currentValue : ''}
               onChange={(v) => setSingle(stepIndex, v)}
               proficientSkillNames={proficientSkillNames}
+              skillNames={skillNames}
             />
           )}
         </div>

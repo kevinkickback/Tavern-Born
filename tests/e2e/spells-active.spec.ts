@@ -10,18 +10,18 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
 }) => {
   const character = {
     id: 'spells-e2e-1',
-    version: '2.0.0',
+    schemaVersion: 2,
     name: 'Spell E2E',
     originSystem: '2014',
     race: 'Human',
     raceSource: 'PHB',
-    class: 'Wizard',
-    classSource: 'PHB',
     background: 'Sage',
     backgroundSource: 'PHB',
-    level: 2,
     experiencePoints: 0,
-    classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
+    classProgression: [
+      { name: 'Wizard', source: 'PHB', levels: 2 },
+      { name: 'Cleric', source: 'PHB', levels: 1 },
+    ],
     abilityScores: {
       strength: 8,
       dexterity: 14,
@@ -35,6 +35,7 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
       weapons: [],
       tools: [],
       skills: [],
+      expertise: [],
       languages: ['Common'],
       savingThrows: [],
     },
@@ -47,6 +48,17 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
           type: 'class',
           label: 'Wizard (Lv 2)',
           className: 'Wizard',
+          classSource: 'PHB',
+          cantrips: [],
+          spellsKnown: [],
+          preparedSpells: [],
+          alwaysPrepared: false,
+        },
+        {
+          id: 'class:Cleric|PHB',
+          type: 'class',
+          label: 'Cleric (Lv 1)',
+          className: 'Cleric',
           classSource: 'PHB',
           cantrips: [],
           spellsKnown: [],
@@ -76,19 +88,11 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
       },
     },
     equipment: [],
-    hitPoints: { max: 12, current: 12, temporary: 0 },
-    armorClass: 12,
-    initiative: 2,
-    speed: 30,
-    savingThrows: {
-      strength: { proficient: false, bonus: 0 },
-      dexterity: { proficient: false, bonus: 0 },
-      constitution: { proficient: false, bonus: 0 },
-      intelligence: { proficient: false, bonus: 0 },
-      wisdom: { proficient: false, bonus: 0 },
-      charisma: { proficient: false, bonus: 0 },
+    hitPoints: { current: 12, temporary: 0 },
+    movement: {
+      speeds: { walk: 30 },
+      source: { kind: 'manual', name: 'E2E seed' },
     },
-    skills: {},
     details: {},
     provenance: {
       proficiencies: {
@@ -121,6 +125,16 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
         casterProgression: 'full',
         spellcastingAbility: 'intelligence',
         spellSlotProgression: [[2], [3]],
+      },
+      {
+        name: 'Cleric',
+        source: 'PHB',
+        classFeatures: [],
+        classFeatureRefs: [],
+        casterProgression: 'full',
+        spellcastingAbility: 'wisdom',
+        preparedSpells: '<$level$> + <$wis_mod$>',
+        spellSlotProgression: [[2]],
       },
     ],
     backgrounds: [],
@@ -166,7 +180,6 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
     skills: [],
     senses: [],
     languages: [],
-    magicvariants: [],
     optionalfeatures: [],
     variantrules: [],
     trapHazards: [],
@@ -196,7 +209,24 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
 
   await expect(page.getByRole('heading', { name: 'Spells', exact: true })).toBeVisible()
 
-  // Seed Magic Missile into the Bonus Spells profile via IndexedDB, then reload.
+  const spellViewTabs = page.getByRole('tablist', { name: 'Spell view' })
+  const wizardTab = spellViewTabs.getByRole('tab', { name: /Wizard/ })
+  const clericTab = spellViewTabs.getByRole('tab', { name: /Cleric/ })
+  await expect(wizardTab).toBeVisible()
+  await expect(clericTab).toBeVisible()
+  await expect(spellViewTabs.getByRole('tab', { name: /^Class(?:\s+\d+)?$/ })).toHaveCount(0)
+
+  await clericTab.click()
+  await expect(clericTab).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('main').getByText('Cleric (Lv 1)')).toBeVisible()
+  await expect(page.locator('main').getByText('Wizard (Lv 2)')).toHaveCount(0)
+
+  await wizardTab.click()
+  await expect(wizardTab).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('main').getByText('Wizard (Lv 2)')).toBeVisible()
+  await expect(page.locator('main').getByText('Cleric (Lv 1)')).toHaveCount(0)
+
+  // Seed an exact source-qualified spell reference into the Bonus Spells profile, then reload.
   await page.evaluate(
     async ({ characterId }) => {
       await new Promise<void>((resolve, reject) => {
@@ -234,7 +264,7 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
             const bonusProfile = profiles.find((profile) => profile.id === 'special:unrestricted')
             if (bonusProfile) {
               const known = new Set(bonusProfile.spellsKnown ?? [])
-              known.add('Magic Missile')
+              known.add('Magic Missile|PHB')
               bonusProfile.spellsKnown = [...known]
             }
 

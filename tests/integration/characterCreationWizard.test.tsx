@@ -130,7 +130,6 @@ describe('character creation and proficiencies validation', () => {
         skills: [],
         senses: [],
         languages: [],
-        magicvariants: [],
         optionalfeatures: [],
         variantrules: [],
         trapHazards: [],
@@ -150,8 +149,7 @@ describe('character creation and proficiencies validation', () => {
       name: 'Haldir',
       race: 'Elf',
       raceSource: 'PHB',
-      class: 'Fighter',
-      classSource: 'PHB',
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
       background: 'Soldier',
       backgroundSource: 'PHB',
       proficiencies: {
@@ -159,6 +157,7 @@ describe('character creation and proficiencies validation', () => {
         weapons: ['simple melee weapons', 'martial melee weapons'],
         tools: [],
         skills: [],
+        expertise: [],
         languages: ['Common'],
         savingThrows: [],
       },
@@ -176,7 +175,7 @@ describe('character creation and proficiencies validation', () => {
     expect(character).toBeTruthy()
     expect(character.name).toBe('Haldir')
     expect(character.race).toBe('Elf')
-    expect(character.class).toBe('Fighter')
+    expect(character.classProgression[0]?.name).toBe('Fighter')
     expect(character.background).toBe('Soldier')
 
     // Crucial validation: proficiencies must be arrays of strings, not objects
@@ -234,6 +233,7 @@ describe('character creation and proficiencies validation', () => {
           weapons: [{ name: 'Longsword' }],
           tools: [],
           skills: [],
+          expertise: [],
           languages: ['Common'],
           savingThrows: [],
         },

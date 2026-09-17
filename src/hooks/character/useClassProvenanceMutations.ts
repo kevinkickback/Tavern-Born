@@ -1,11 +1,13 @@
 import { useCallback, useMemo } from 'react'
 import { useItemLookup } from '@/hooks/data/useGameData'
+import { applyClassChoiceSelectionWithGrantsCommand } from '@/lib/character/commands/classChoiceCommands'
 import {
   applyClassEquipmentChoiceCommand,
   applyClassSelectionCommand,
 } from '@/lib/character/commands/classCommands'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import type { NormalizedCharacterChoice, NormalizedChoiceOptionReference } from '@/types/classRules'
 
 export function useClassProvenanceMutations() {
   const character = useCharacterStore((s) => s.activeCharacter)
@@ -21,7 +23,7 @@ export function useClassProvenanceMutations() {
     (
       cls: {
         name: string
-        source?: string
+        source: string
         proficiency?: string[]
         startingEquipment?: unknown
         startingProficiencies?: {
@@ -51,11 +53,12 @@ export function useClassProvenanceMutations() {
     (
       cls: {
         name: string
-        source?: string
+        source: string
         startingEquipment?: unknown
       },
       blockIndex: number,
       choice: string,
+      genericSelections?: Readonly<Record<string, string>>,
     ) => {
       if (!character) return
       const result = applyClassEquipmentChoiceCommand(
@@ -65,6 +68,7 @@ export function useClassProvenanceMutations() {
         blockIndex,
         choice,
         itemLookup,
+        genericSelections,
       )
       updateCharacter(character.id, {
         ...result.characterPatch,
@@ -74,5 +78,17 @@ export function useClassProvenanceMutations() {
     [character, ledger, itemLookup, updateCharacter],
   )
 
-  return { applyClassSelection, applyClassEquipmentChoice }
+  const applyClassChoiceSelection = useCallback(
+    (choice: NormalizedCharacterChoice, selected: readonly NormalizedChoiceOptionReference[]) => {
+      if (!character) return
+      const result = applyClassChoiceSelectionWithGrantsCommand(character, ledger, choice, selected)
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    },
+    [character, ledger, updateCharacter],
+  )
+
+  return { applyClassSelection, applyClassEquipmentChoice, applyClassChoiceSelection }
 }

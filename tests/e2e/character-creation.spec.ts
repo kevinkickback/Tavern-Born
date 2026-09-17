@@ -130,6 +130,7 @@ test('creates a complete character and persists it across a full reload', async 
     await expect(dialog.getByText('5e Legacy (2014)', { exact: true })).toBeVisible()
     await dialog.getByRole('button', { name: 'Create' }).click()
     await expect(dialog).toBeHidden()
+    await expect(page).toHaveURL(/\/$/)
   })
 
   await expect(page.getByText('E2E Created Hero').first()).toBeVisible()

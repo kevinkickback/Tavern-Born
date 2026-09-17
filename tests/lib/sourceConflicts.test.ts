@@ -25,8 +25,13 @@ function makeSpell(name: string, source: string): Spell5e {
 
 describe('detectSourceConflicts', () => {
   test('returns empty array when no conflicts', () => {
-    const char = makeCharacterFixture({ raceSource: 'PHB', classSource: 'PHB' })
+    const char = makeCharacterFixture({ raceSource: 'PHB' })
     expect(detectSourceConflicts(char, ['PHB'])).toEqual([])
+  })
+
+  test('matches source identifiers without regard to casing', () => {
+    const char = makeCharacterFixture({ race: 'Moon Elf', raceSource: 'FRHoF' })
+    expect(detectSourceConflicts(char, ['PHB', 'FRHOF'])).toEqual([])
   })
 
   test('flags race from disabled source', () => {
@@ -73,6 +78,39 @@ describe('detectSourceConflicts', () => {
     const vgmConflict = detectSourceConflicts(char2, ['PHB'])
     const xgeConflict = vgmConflict.find((c) => c.source === 'XGE')
     expect(xgeConflict?.items).toEqual(['Squat Nimbleness', 'Wood Elf Magic'])
+  })
+
+  test('includes class-owned feat and feature-option selections', () => {
+    const char = makeCharacterFixture({
+      classFeatChoices: [
+        {
+          id: 'fighter-feat',
+          className: 'Fighter',
+          classSource: 'PHB',
+          progressionName: 'Ability Score Improvement',
+          categories: [],
+          feats: [{ id: 'f1', name: 'Skill Expert', source: 'TCE', description: '' }],
+        },
+      ],
+      classChoiceSelections: [
+        {
+          choiceId: 'artificer-plan',
+          label: 'Replicate Magic Item',
+          kind: 'item',
+          className: 'Artificer',
+          classSource: 'EFA',
+          classLevel: 2,
+          selected: [{ entityType: 'item', name: 'Manifold Tool', source: 'EFA', slotLevel: 2 }],
+        },
+      ],
+    })
+
+    expect(detectSourceConflicts(char, ['PHB'])).toEqual(
+      expect.arrayContaining([
+        { source: 'TCE', items: ['Skill Expert'] },
+        { source: 'EFA', items: ['Manifold Tool'] },
+      ]),
+    )
   })
 })
 
@@ -164,6 +202,54 @@ describe('pruneSpellsForDisabledSources', () => {
     expect(pruneSpellsForDisabledSources(char, ['XPHB'], allSpells)).toBeNull()
   })
 
+  test('removes a source-qualified spell when its exact printing is disabled', () => {
+    const char = makeCharacterFixture({
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Fireball|PHB'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+
+    const result = pruneSpellsForDisabledSources(char, ['XPHB'], allSpells)
+
+    expect(result?.spells.spellProfiles[0].spellsKnown).toEqual([])
+  })
+
+  test('keeps a source-qualified spell when its exact printing remains enabled', () => {
+    const char = makeCharacterFixture({
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Fireball|PHB'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+
+    expect(pruneSpellsForDisabledSources(char, ['PHB'], allSpells)).toBeNull()
+  })
+
   test('removes from cantrips and preparedSpells as well', () => {
     const char = makeCharacterFixture({
       spells: {
@@ -231,20 +317,17 @@ describe('pruneSpellsForDisabledSources', () => {
             label: 'Cleric',
             className: 'Cleric',
             classSource: 'PHB',
-            cantrips: [],
-            spellsKnown: [],
+            cantrips: ['Control Flames'],
+            spellsKnown: ['Frostbite'],
             preparedSpells: ['Frostbite'],
-            fixedSpells: ['Control Flames'], // auto-granted; must survive
+            fixedSpells: ['Control Flames', 'Frostbite'],
             alwaysPrepared: false,
           },
         ],
       },
     })
     const result = pruneSpellsForDisabledSources(char, ['PHB'], allSpells)
-    expect(result).not.toBeNull()
-    // preparedSpells removed, fixedSpells untouched
-    expect(result!.spells.spellProfiles[0].preparedSpells).toEqual([])
-    expect(result!.spells.spellProfiles[0].fixedSpells).toEqual(['Control Flames'])
+    expect(result).toBeNull()
   })
 
   test('keeps unknown spells (not in any game-data source)', () => {
@@ -371,6 +454,6 @@ describe('countRemovedSpells', () => {
       preparedSpells: [], // removed Frostbite
       choices: [{ id: 'c1', count: 1, isCantrip: false, selected: [] }], // removed Control Flames
     }))
-    expect(countRemovedSpells(char, newProfiles)).toBe(4)
+    expect(countRemovedSpells(char, newProfiles)).toBe(2)
   })
 })

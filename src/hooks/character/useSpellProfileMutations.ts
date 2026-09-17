@@ -19,6 +19,7 @@ import {
   selectRacialSpell as selectRacialSpellCommand,
   setProfileSpells as setProfileSpellsCommand,
   setRacialCastingAbility as setRacialCastingAbilityCommand,
+  setRacialSpellChoice as setRacialSpellChoiceCommand,
   syncSpellProfiles,
   toggleSpellPrepared,
 } from '@/lib/character/commands/spellCommands'
@@ -28,12 +29,17 @@ import type { SpellProfile } from '@/types/character'
 
 function getSpellSourceMeta(profile: SpellProfile): {
   sourceType: 'class' | 'subclass' | 'feat' | 'manual'
-  source: string
+  sourceName: string
+  sourceRef?: string
 } {
   if (profile.type === 'class') {
-    return { sourceType: 'class', source: profile.className ?? profile.label }
+    return {
+      sourceType: 'class',
+      sourceName: profile.className ?? profile.label,
+      sourceRef: profile.classSource,
+    }
   }
-  return { sourceType: 'manual', source: 'User Choice' }
+  return { sourceType: 'manual', sourceName: 'User Choice' }
 }
 
 export function useSpellProfileMutations(
@@ -78,7 +84,7 @@ export function useSpellProfileMutations(
       const profile = spellProfiles.find((p) => p.id === profileId)
       const sourceMeta = profile
         ? getSpellSourceMeta(profile)
-        : { sourceType: 'manual' as const, source: 'User Choice' }
+        : { sourceType: 'manual' as const, sourceName: 'User Choice' }
       const result = addSpellToCharacter(
         commandCharacter,
         currentLedger,
@@ -113,6 +119,12 @@ export function useSpellProfileMutations(
       const profile = spellProfiles.find((entry) => entry.id === profileId)
       const spellKey = normalizeKey(name)
       if (profile?.fixedSpells?.some((fixedName) => normalizeKey(fixedName) === spellKey)) return
+      if (
+        profile?.type === 'special' &&
+        (currentLedger.spells[spellKey] ?? []).some((tag) => tag.sourceType === 'feat')
+      ) {
+        return
+      }
       const result = removeSpellFromCharacter(commandCharacter, currentLedger, name, {
         spellKind: kind,
         profileId,
@@ -145,7 +157,9 @@ export function useSpellProfileMutations(
 
       if (!isPrepared) {
         const conflict = spellProfiles.find(
-          (p) => p.id !== profileId && p.preparedSpells.includes(name),
+          (p) =>
+            p.id !== profileId &&
+            p.preparedSpells.some((preparedName) => normalizeKey(preparedName) === spellKey),
         )
         if (conflict) {
           toast.warning(`Already prepared by ${conflict.label}`, {
@@ -218,6 +232,22 @@ export function useSpellProfileMutations(
     [character, commandCharacter, currentLedger, applySpellCommand],
   )
 
+  const setRacialSpellChoice = useCallback(
+    (profileId: string, choiceId: string, selectedSpells: string[]) => {
+      if (!character || !commandCharacter) return
+      applySpellCommand(
+        setRacialSpellChoiceCommand(
+          commandCharacter,
+          currentLedger,
+          profileId,
+          choiceId,
+          selectedSpells,
+        ),
+      )
+    },
+    [character, commandCharacter, currentLedger, applySpellCommand],
+  )
+
   const setRacialCastingAbility = useCallback(
     (profileId: string, ability: string) => {
       if (!character || !commandCharacter) return
@@ -236,6 +266,7 @@ export function useSpellProfileMutations(
     togglePrepared,
     selectRacialSpell,
     removeRacialSpell,
+    setRacialSpellChoice,
     setRacialCastingAbility,
   }
 }

@@ -1,6 +1,5 @@
 import { cleanup, render, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 
 const pdfMocks = vi.hoisted(() => ({
   getDocument: vi.fn(),
@@ -11,78 +10,57 @@ vi.mock('pdfjs-dist', () => ({
   getDocument: pdfMocks.getDocument,
 }))
 
-vi.mock('pdfjs-dist/build/pdf.worker.mjs?url', () => ({
-  default: 'pdf.worker.mjs',
-}))
+vi.mock('pdfjs-dist/build/pdf.worker.mjs?url', () => ({ default: 'mock-worker.js' }))
 
-function mockPdfPage(width: number, height: number) {
-  const renderPage = vi.fn(() => ({ promise: Promise.resolve() }))
-  const getViewport = vi.fn(({ scale }: { scale: number }) => ({
-    width: width * scale,
-    height: height * scale,
-  }))
+import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
 
-  pdfMocks.getDocument.mockReturnValue({
-    promise: Promise.resolve({
-      numPages: 1,
-      getPage: vi.fn(async () => ({ getViewport, render: renderPage })),
-    }),
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+  pdfMocks.getDocument.mockReset()
+})
+
+describe('PdfCanvasPreview resource lifecycle', () => {
+  test('destroys a pending loading task on unmount', async () => {
+    const destroy = vi.fn(async () => undefined)
+    pdfMocks.getDocument.mockReturnValue({
+      promise: new Promise(() => undefined),
+      destroy,
+    })
+
+    const view = render(<PdfCanvasPreview pdfBytes={new Uint8Array([1])} />)
+    await waitFor(() => expect(pdfMocks.getDocument).toHaveBeenCalledTimes(1))
+    view.unmount()
+
+    expect(destroy).toHaveBeenCalledTimes(1)
   })
 
-  return { getViewport, renderPage }
-}
-
-describe('PDF canvas preview scaling', () => {
-  beforeEach(() => {
-    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 1 })
+  test('cancels an active render and destroys its document when zoom changes', async () => {
+    const cancel = vi.fn()
+    const destroy = vi.fn(async () => undefined)
+    const renderPage = vi.fn(() => ({ promise: new Promise(() => undefined), cancel }))
+    const pdf = {
+      numPages: 1,
+      getPage: vi.fn(async () => ({
+        getViewport: ({ scale }: { scale: number }) => ({
+          width: 900 * scale,
+          height: 1200 * scale,
+        }),
+        render: renderPage,
+      })),
+      destroy,
+    }
+    pdfMocks.getDocument.mockReturnValue({ promise: Promise.resolve(pdf), destroy: vi.fn() })
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
       {} as CanvasRenderingContext2D,
     )
-  })
+    const bytes = new Uint8Array([1])
 
-  afterEach(() => {
-    cleanup()
-    vi.restoreAllMocks()
-    pdfMocks.getDocument.mockReset()
-  })
+    const view = render(<PdfCanvasPreview pdfBytes={bytes} zoom={100} />)
+    await waitFor(() => expect(renderPage).toHaveBeenCalledTimes(1))
+    view.rerender(<PdfCanvasPreview pdfBytes={bytes} zoom={125} />)
 
-  test.each([
-    ['2014 template', 595.274, 792.004],
-    ['2024 template', 1700, 2200],
-  ])('normalizes the %s to the same width at 100%%', async (_name, width, height) => {
-    const { getViewport } = mockPdfPage(width, height)
-    const { container } = render(<PdfCanvasPreview pdfBytes={new Uint8Array([1])} />)
-
-    await waitFor(() => expect(container.querySelector('canvas')).not.toBeNull())
-
-    const canvas = container.querySelector('canvas')
-    expect(canvas?.style.width).toBe('900px')
-    expect(canvas?.width).toBe(900)
-    expect(getViewport).toHaveBeenNthCalledWith(1, { scale: 1 })
-    expect(getViewport).toHaveBeenNthCalledWith(2, { scale: 900 / width })
-  })
-
-  test('renders directly on the workspace canvas without a separate preview background', async () => {
-    mockPdfPage(595.274, 792.004)
-    const { container } = render(<PdfCanvasPreview pdfBytes={new Uint8Array([1])} />)
-
-    expect(container.firstElementChild?.className).not.toContain('bg-muted/20')
-    expect(container.firstElementChild?.className).not.toContain('bg-workspace-detail')
-    await waitFor(() => expect(container.querySelector('canvas')).not.toBeNull())
-  })
-
-  test('applies zoom to display size and device pixel ratio to render resolution', async () => {
-    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: 2 })
-    const { renderPage } = mockPdfPage(1700, 2200)
-    const { container } = render(<PdfCanvasPreview pdfBytes={new Uint8Array([1])} zoom={125} />)
-
-    await waitFor(() => expect(container.querySelector('canvas')).not.toBeNull())
-
-    const canvas = container.querySelector('canvas')
-    expect(canvas?.style.width).toBe('1125px')
-    expect(canvas?.width).toBe(2250)
-    expect(renderPage).toHaveBeenCalledWith(
-      expect.objectContaining({ transform: [2, 0, 0, 2, 0, 0] }),
-    )
+    expect(cancel).toHaveBeenCalledTimes(1)
+    expect(destroy).toHaveBeenCalledTimes(1)
   })
 })

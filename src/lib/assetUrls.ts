@@ -15,7 +15,7 @@ export function getBundledFileUrl(path: string, baseUrl = DEFAULT_BASE_URL): str
   return `${normalizeBaseUrl(baseUrl)}${relativePath}`
 }
 
-/** Rewrites legacy root-relative bundled asset paths without changing user or remote images. */
+/** Resolves root-relative bundled asset paths without changing user or remote images. */
 export function resolveBundledAssetSrc(src: string, baseUrl = DEFAULT_BASE_URL): string {
   return BUNDLED_ASSET_PATTERN.test(src) ? getBundledFileUrl(src, baseUrl) : src
 }

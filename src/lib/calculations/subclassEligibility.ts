@@ -1,45 +1,40 @@
+import { LEGACY_SUBCLASS_PREREQUISITE_FIXUPS } from '@/lib/5etools/rulesetMetadata'
 import { buildPrerequisiteSnapshot, checkAllPrerequisites } from '@/lib/calculations/prerequisites'
 import type { Raw5ePrereq, Subclass5e } from '@/types/5etools'
-import type { Character } from '@/types/character'
+import type { AbilityScores, Character } from '@/types/character'
 
 interface SubclassEligibilityParams {
   subclass: Subclass5e
   className: string
   character: Character
+  effectiveAbilityScores?: AbilityScores
 }
 
-type LegacyRestriction = {
+interface LegacyRestriction {
   variantOverride: 'bladesingerAnyRace' | 'battleragerAnyRace'
-  allowedRace: (raceName: string) => boolean
-}
-
-const LEGACY_RESTRICTIONS: Record<string, LegacyRestriction> = {
-  'wizard|bladesinger': {
-    variantOverride: 'bladesingerAnyRace',
-    allowedRace: (raceName) => raceName.includes('elf'),
-  },
-  'barbarian|battlerager': {
-    variantOverride: 'battleragerAnyRace',
-    allowedRace: (raceName) => raceName.includes('dwarf'),
-  },
+  allowedRaceKeyword: string
 }
 
 export function isSubclassEligible({
   subclass,
   className,
   character,
+  effectiveAbilityScores,
 }: SubclassEligibilityParams): boolean {
   const prerequisite = subclass.prerequisite as Raw5ePrereq[] | undefined
   if (Array.isArray(prerequisite) && prerequisite.length > 0) {
     return checkAllPrerequisites(
       { prerequisite },
-      buildPrerequisiteSnapshot({ character, viewingClass: className }),
+      buildPrerequisiteSnapshot({ character, effectiveAbilityScores }),
       { className },
     ).met
   }
 
-  const restriction = LEGACY_RESTRICTIONS[`${className}|${subclass.name}`.toLowerCase()]
+  const key = `${className}|${subclass.classSource ?? ''}|${subclass.shortName}|${subclass.source}`
+  const restriction = (
+    LEGACY_SUBCLASS_PREREQUISITE_FIXUPS as Readonly<Record<string, LegacyRestriction>>
+  )[key]
   if (!restriction) return true
   if (character.variantRules?.[restriction.variantOverride]) return true
-  return restriction.allowedRace((character.race ?? '').toLowerCase())
+  return (character.race ?? '').toLowerCase().includes(restriction.allowedRaceKeyword)
 }

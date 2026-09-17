@@ -14,15 +14,7 @@ export const PLACEHOLDER_PORTRAITS = [
   getBundledFileUrl('assets/images/characters/placeholder_char_card11.jpg'),
 ]
 
-/**
- * Resolves a portrait path to a URL safe for use as an img `src`.
- *
- * Legacy characters may have paths stored as `/assets/...` (absolute). With
- * `base: './'` in vite.config.ts, production Electron builds load via
- * `file://` and `/assets/...` resolves to the filesystem root rather than
- * the app bundle. This function converts those absolute paths to
- * BASE_URL-relative equivalents so they resolve correctly in all contexts.
- */
+/** Resolves a portrait path to a URL safe for dev and packaged Electron runtimes. */
 export function resolvePortraitSrc(src: string, baseUrl?: string): string {
   return resolveBundledAssetSrc(src, baseUrl)
 }

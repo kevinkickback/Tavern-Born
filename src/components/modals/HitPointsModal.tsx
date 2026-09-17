@@ -1,6 +1,7 @@
 import { Heart, Plus, Trash } from '@phosphor-icons/react'
 import { useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
+import { NumericEffectBreakdown } from '@/components/effects/NumericEffectBreakdown'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -13,8 +14,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
-import { calculateHitPointAdjustmentTotal, getTotalCharacterLevel } from '@/lib/characterUtils'
+import {
+  calculateHitPointAdjustmentTotal,
+  getCharacterClassEntries,
+  getTotalCharacterLevel,
+} from '@/lib/characterUtils'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { HitPointAdjustment } from '@/types/character'
@@ -38,7 +44,13 @@ function formatSigned(value: number): string {
 
 export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
   const character = useCharacterStore((state) => state.activeCharacter)
-  const { hitPoints, calculatedMaxHP, effectiveMaxHP, saveHitPointSettings } = useHitPoints()
+  const {
+    hitPoints,
+    calculatedMaxHP,
+    effectiveMaxHP,
+    previewHitPointSettings,
+    saveHitPointSettings,
+  } = useHitPoints()
   const [current, setCurrent] = useState('0')
   const [temporary, setTemporary] = useState('0')
   const [adjustments, setAdjustments] = useState<HitPointAdjustmentDraft[]>([])
@@ -77,9 +89,7 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
     setNewAmount('')
     setNewSource('')
     setNewMode('flat')
-    const existingOverride =
-      character.maxHitPointsOverride ??
-      (character.hitPoints.max > 0 ? character.hitPoints.max : undefined)
+    const existingOverride = character.maxHitPointsOverride
     setOverrideEnabled(existingOverride != null)
     setOverrideValue(existingOverride != null ? String(existingOverride) : '')
     setDesiredMaximum(String(effectiveMaxHP))
@@ -95,15 +105,23 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
   if (!character) return null
 
   const characterLevel = getTotalCharacterLevel(character)
+  const classSummary = getCharacterClassEntries(character)
+    .map((entry) => `${entry.name} ${entry.levels}`)
+    .join(' · ')
   const resolvedAdjustments: HitPointAdjustment[] = adjustments.map((adjustment) => ({
     ...adjustment,
     amount: parseInteger(adjustment.amount),
   }))
   const adjustmentTotal = calculateHitPointAdjustmentTotal(resolvedAdjustments, characterLevel)
-  const adjustedMaxHP = Math.max(1, calculatedMaxHP + adjustmentTotal)
   const parsedOverride = parseInteger(overrideValue)
   const validOverride = !overrideEnabled || parsedOverride >= 1
-  const previewEffectiveMaxHP = overrideEnabled && validOverride ? parsedOverride : adjustedMaxHP
+  const previewResolution = previewHitPointSettings({
+    current: parseInteger(current),
+    temporary: parseInteger(temporary),
+    adjustments: resolvedAdjustments,
+    maxOverride: overrideEnabled && validOverride ? parsedOverride : undefined,
+  })
+  const previewEffectiveMaxHP = Math.max(1, Math.trunc(previewResolution.value))
   const maximumChange = previewEffectiveMaxHP - effectiveMaxHP
   const displayedCurrent = currentEdited
     ? current
@@ -150,11 +168,20 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
     const otherAdjustments = adjustments.filter(
       (adjustment) => adjustment.id !== DESIRED_MAXIMUM_ADJUSTMENT_ID,
     )
-    const otherTotal = calculateHitPointAdjustmentTotal(
-      resolvedAdjustments.filter((adjustment) => adjustment.id !== DESIRED_MAXIMUM_ADJUSTMENT_ID),
-      characterLevel,
+    const otherResolvedAdjustments = resolvedAdjustments.filter(
+      (adjustment) => adjustment.id !== DESIRED_MAXIMUM_ADJUSTMENT_ID,
     )
-    const amount = desired - calculatedMaxHP - otherTotal
+    const otherMaximum = Math.max(
+      1,
+      Math.trunc(
+        previewHitPointSettings({
+          current: parseInteger(current),
+          temporary: parseInteger(temporary),
+          adjustments: otherResolvedAdjustments,
+        }).value,
+      ),
+    )
+    const amount = desired - otherMaximum
     const desiredAdjustment: HitPointAdjustmentDraft = {
       id: DESIRED_MAXIMUM_ADJUSTMENT_ID,
       label: 'Custom maximum',
@@ -164,6 +191,24 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
       createdAt:
         adjustments.find((adjustment) => adjustment.id === DESIRED_MAXIMUM_ADJUSTMENT_ID)
           ?.createdAt ?? new Date().toISOString(),
+    }
+    const candidateAdjustments =
+      amount === 0
+        ? otherResolvedAdjustments
+        : [...otherResolvedAdjustments, { ...desiredAdjustment, amount }]
+    const candidateMaximum = Math.max(
+      1,
+      Math.trunc(
+        previewHitPointSettings({
+          current: parseInteger(current),
+          temporary: parseInteger(temporary),
+          adjustments: candidateAdjustments,
+        }).value,
+      ),
+    )
+    if (candidateMaximum !== desired) {
+      toast.error('An active effect prevents that lasting total. Use the fixed maximum option.')
+      return
     }
     setAdjustments(amount === 0 ? otherAdjustments : [...otherAdjustments, desiredAdjustment])
     setOverrideEnabled(false)
@@ -195,249 +240,276 @@ export function HitPointsModal({ open, onOpenChange }: HitPointsModalProps) {
             Manage Hit Points
           </DialogTitle>
           <DialogDescription>
-            Track your health and add lasting bonuses or penalties to your maximum HP.
+            Track your health, review every active maximum-HP source, and add manual bonuses or
+            penalties.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
-          <section className="overflow-hidden rounded-lg border border-border bg-workspace-pane">
-            <div className="grid sm:grid-cols-3">
-              <div className="space-y-2 p-4 text-center">
-                <Label htmlFor={currentHpId} className="text-sm text-muted-foreground">
-                  Current HP
-                </Label>
-                <Input
-                  id={currentHpId}
-                  type="number"
-                  min={0}
-                  value={displayedCurrent}
-                  onChange={(event) => {
-                    setCurrent(event.target.value)
-                    setCurrentEdited(true)
-                  }}
-                  className="h-12 text-center text-2xl font-semibold tabular-nums"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    setCurrent(String(previewEffectiveMaxHP))
-                    setCurrentEdited(true)
-                  }}
-                >
-                  Restore to full
+        <Tabs defaultValue="overview" className="min-h-0">
+          <TabsList className="grid w-full grid-cols-2" aria-label="Hit Point management view">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="manual">Manual changes</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-5">
+            <section className="overflow-hidden rounded-lg border border-border bg-workspace-pane">
+              <div className="grid sm:grid-cols-3">
+                <div className="space-y-2 p-4 text-center">
+                  <Label htmlFor={currentHpId} className="text-sm text-muted-foreground">
+                    Current HP
+                  </Label>
+                  <Input
+                    id={currentHpId}
+                    type="number"
+                    min={0}
+                    value={displayedCurrent}
+                    onChange={(event) => {
+                      setCurrent(event.target.value)
+                      setCurrentEdited(true)
+                    }}
+                    className="h-12 text-center text-2xl font-semibold tabular-nums"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setCurrent(String(previewEffectiveMaxHP))
+                      setCurrentEdited(true)
+                    }}
+                  >
+                    Restore to full
+                  </Button>
+                </div>
+
+                <div className="flex flex-col justify-center border-y border-border p-4 text-center sm:border-x sm:border-y-0">
+                  <p className="text-sm text-muted-foreground">Maximum HP</p>
+                  <p className="mt-1 text-4xl font-semibold tabular-nums text-red-500">
+                    {previewEffectiveMaxHP}
+                  </p>
+                </div>
+
+                <div className="space-y-2 p-4 text-center">
+                  <Label htmlFor={temporaryHpId} className="text-sm text-muted-foreground">
+                    Temporary HP
+                  </Label>
+                  <Input
+                    id={temporaryHpId}
+                    type="number"
+                    min={0}
+                    value={temporary}
+                    onChange={(event) => setTemporary(event.target.value)}
+                    className="h-12 text-center text-2xl font-semibold tabular-nums"
+                  />
+                  <p className="h-7 text-xs leading-7 text-muted-foreground">Extra protection</p>
+                </div>
+              </div>
+
+              <div className="border-t border-border px-4 py-2 text-center">
+                {overrideEnabled ? (
+                  <p className="text-xs text-muted-foreground">
+                    Using a fixed maximum; manual changes are saved but do not change this number.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {calculatedMaxHP} from class, level, and Constitution
+                    {adjustmentTotal !== 0 &&
+                      ` ${formatSigned(adjustmentTotal)} from manual changes`}
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <NumericEffectBreakdown
+              title="Current maximum-HP sources"
+              resolution={previewResolution}
+              baseComponents={[
+                {
+                  id: 'class-levels-and-constitution',
+                  label: 'Class levels and Constitution',
+                  detail: classSummary || 'No class progression',
+                  value: calculatedMaxHP,
+                },
+              ]}
+            />
+            <p className="-mt-3 text-xs text-muted-foreground">
+              Active item, spell, feat, and other typed effects appear above when their source data
+              declares a maximum-HP effect. Rules prose is never guessed.
+            </p>
+          </TabsContent>
+
+          <TabsContent value="manual" className="space-y-5">
+            <section className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold">Add a manual HP change</h3>
+                <p className="text-xs text-muted-foreground">
+                  Use a positive number for a bonus or a negative number for a penalty.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_auto] sm:items-end">
+                <div className="space-y-1.5">
+                  <Label htmlFor={newLabelId}>What caused it?</Label>
+                  <Input
+                    id={newLabelId}
+                    placeholder="Divine blessing"
+                    value={newLabel}
+                    onChange={(event) => setNewLabel(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={newAmountId}>HP change</Label>
+                  <Input
+                    id={newAmountId}
+                    type="number"
+                    placeholder="+5"
+                    value={newAmount}
+                    onChange={(event) => setNewAmount(event.target.value)}
+                  />
+                </div>
+                <Button type="button" onClick={addAdjustment}>
+                  <Plus />
+                  Add
                 </Button>
               </div>
 
-              <div className="flex flex-col justify-center border-y border-border p-4 text-center sm:border-x sm:border-y-0">
-                <p className="text-sm text-muted-foreground">Maximum HP</p>
-                <p className="mt-1 text-4xl font-semibold tabular-nums text-red-500">
-                  {previewEffectiveMaxHP}
-                </p>
-              </div>
+              <details className="text-xs text-muted-foreground">
+                <summary className="w-fit cursor-pointer hover:text-foreground">
+                  More options for this change
+                </summary>
+                <div className="mt-2 grid gap-3 rounded-md border border-border p-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor={newModeId}>How often does it apply?</Label>
+                    <select
+                      id={newModeId}
+                      value={newMode}
+                      onChange={(event) =>
+                        setNewMode(event.target.value as HitPointAdjustment['mode'])
+                      }
+                      className="h-[var(--control-height-md)] w-full rounded-md border border-border-strong bg-surface-raised/55 px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    >
+                      <option value="flat">Once</option>
+                      <option value="per-level">At every character level</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`${newModeId}-note`}>Note (optional)</Label>
+                    <Input
+                      id={`${newModeId}-note`}
+                      placeholder="Gift from Amaunator"
+                      value={newSource}
+                      onChange={(event) => setNewSource(event.target.value)}
+                    />
+                  </div>
+                </div>
+              </details>
+            </section>
 
-              <div className="space-y-2 p-4 text-center">
-                <Label htmlFor={temporaryHpId} className="text-sm text-muted-foreground">
-                  Temporary HP
-                </Label>
-                <Input
-                  id={temporaryHpId}
-                  type="number"
-                  min={0}
-                  value={temporary}
-                  onChange={(event) => setTemporary(event.target.value)}
-                  className="h-12 text-center text-2xl font-semibold tabular-nums"
-                />
-                <p className="h-7 text-xs leading-7 text-muted-foreground">Extra protection</p>
-              </div>
-            </div>
-
-            <div className="border-t border-border px-4 py-2 text-center">
-              {overrideEnabled ? (
-                <p className="text-xs text-muted-foreground">
-                  Using a fixed maximum; lasting changes are saved but do not change this number.
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold">Manual changes</h3>
+              {adjustments.length === 0 ? (
+                <p className="rounded-md border border-dashed border-border p-3 text-center text-sm text-muted-foreground">
+                  None yet.
                 </p>
               ) : (
-                <p className="text-xs text-muted-foreground">
-                  {calculatedMaxHP} from class, level, and Constitution
-                  {adjustmentTotal !== 0 &&
-                    ` ${formatSigned(adjustmentTotal)} from lasting changes`}
-                </p>
-              )}
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold">Add a lasting HP change</h3>
-              <p className="text-xs text-muted-foreground">
-                Use a positive number for a bonus or a negative number for a penalty.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_auto] sm:items-end">
-              <div className="space-y-1.5">
-                <Label htmlFor={newLabelId}>What caused it?</Label>
-                <Input
-                  id={newLabelId}
-                  placeholder="Divine blessing"
-                  value={newLabel}
-                  onChange={(event) => setNewLabel(event.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor={newAmountId}>HP change</Label>
-                <Input
-                  id={newAmountId}
-                  type="number"
-                  placeholder="+5"
-                  value={newAmount}
-                  onChange={(event) => setNewAmount(event.target.value)}
-                />
-              </div>
-              <Button type="button" onClick={addAdjustment}>
-                <Plus />
-                Add
-              </Button>
-            </div>
-
-            <details className="text-xs text-muted-foreground">
-              <summary className="w-fit cursor-pointer hover:text-foreground">
-                More options for this change
-              </summary>
-              <div className="mt-2 grid gap-3 rounded-md border border-border p-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor={newModeId}>How often does it apply?</Label>
-                  <select
-                    id={newModeId}
-                    value={newMode}
-                    onChange={(event) =>
-                      setNewMode(event.target.value as HitPointAdjustment['mode'])
-                    }
-                    className="h-[var(--control-height-md)] w-full rounded-md border border-border-strong bg-surface-raised/55 px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  >
-                    <option value="flat">Once</option>
-                    <option value="per-level">At every character level</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor={`${newModeId}-note`}>Note (optional)</Label>
-                  <Input
-                    id={`${newModeId}-note`}
-                    placeholder="Gift from Amaunator"
-                    value={newSource}
-                    onChange={(event) => setNewSource(event.target.value)}
-                  />
-                </div>
-              </div>
-            </details>
-          </section>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-semibold">Lasting changes</h3>
-            {adjustments.length === 0 ? (
-              <p className="rounded-md border border-dashed border-border p-3 text-center text-sm text-muted-foreground">
-                None yet.
-              </p>
-            ) : (
-              <div className="divide-y divide-border overflow-hidden rounded-md border border-border bg-workspace-pane">
-                {adjustments.map((adjustment) => {
-                  const amount = parseInteger(adjustment.amount)
-                  const total = adjustment.mode === 'per-level' ? amount * characterLevel : amount
-                  return (
-                    <div key={adjustment.id} className="flex items-center gap-3 px-3 py-2.5">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{adjustment.label}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {adjustment.mode === 'per-level'
-                            ? `${formatSigned(amount)} at each level (${formatSigned(total)} now)`
-                            : adjustment.sourceRef || 'Applies once'}
-                        </p>
+                <div className="divide-y divide-border overflow-hidden rounded-md border border-border bg-workspace-pane">
+                  {adjustments.map((adjustment) => {
+                    const amount = parseInteger(adjustment.amount)
+                    const total = adjustment.mode === 'per-level' ? amount * characterLevel : amount
+                    return (
+                      <div key={adjustment.id} className="flex items-center gap-3 px-3 py-2.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{adjustment.label}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {adjustment.mode === 'per-level'
+                              ? `${formatSigned(amount)} at each level (${formatSigned(total)} now)`
+                              : adjustment.sourceRef || 'Applies once'}
+                          </p>
+                        </div>
+                        <span
+                          className={cn(
+                            'font-semibold tabular-nums',
+                            total < 0 ? 'text-destructive' : 'text-primary',
+                          )}
+                        >
+                          {formatSigned(total)} HP
+                        </span>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Remove ${adjustment.label}`}
+                          onClick={() =>
+                            setAdjustments((currentAdjustments) =>
+                              currentAdjustments.filter((entry) => entry.id !== adjustment.id),
+                            )
+                          }
+                        >
+                          <Trash className="text-destructive" />
+                        </Button>
                       </div>
-                      <span
-                        className={cn(
-                          'font-semibold tabular-nums',
-                          total < 0 ? 'text-destructive' : 'text-primary',
-                        )}
-                      >
-                        {formatSigned(total)} HP
-                      </span>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        aria-label={`Remove ${adjustment.label}`}
-                        onClick={() =>
-                          setAdjustments((currentAdjustments) =>
-                            currentAdjustments.filter((entry) => entry.id !== adjustment.id),
-                          )
-                        }
-                      >
-                        <Trash className="text-destructive" />
-                      </Button>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </section>
-
-          <details className="rounded-md border border-border bg-workspace-pane">
-            <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">
-              More HP options
-            </summary>
-            <div className="space-y-5 border-t border-border p-3">
-              <section className="space-y-2">
-                <div>
-                  <h4 className="text-sm font-medium">Set the maximum directly</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Your maximum will still increase normally when you gain levels.
-                  </p>
+                    )
+                  })}
                 </div>
-                <div className="flex gap-2">
-                  <Input
-                    id={desiredMaximumId}
-                    aria-label="Set maximum HP directly"
-                    type="number"
-                    min={1}
-                    value={desiredMaximum}
-                    onChange={(event) => setDesiredMaximum(event.target.value)}
-                  />
-                  <Button type="button" variant="outline" onClick={applyDesiredMaximum}>
-                    Set Maximum
-                  </Button>
-                </div>
-              </section>
+              )}
+            </section>
 
-              <section className="space-y-3 border-t border-border pt-4">
-                <div className="flex items-center justify-between gap-3">
+            <details className="rounded-md border border-border bg-workspace-pane">
+              <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">
+                More HP options
+              </summary>
+              <div className="space-y-5 border-t border-border p-3">
+                <section className="space-y-2">
                   <div>
-                    <Label htmlFor={overrideId}>Keep maximum HP fixed</Label>
+                    <h4 className="text-sm font-medium">Set the maximum directly</h4>
                     <p className="text-xs text-muted-foreground">
-                      A fixed maximum will not increase when you level up.
+                      Your maximum will still increase normally when you gain levels.
                     </p>
                   </div>
-                  <Switch
-                    id={overrideId}
-                    checked={overrideEnabled}
-                    onCheckedChange={setOverrideEnabled}
-                  />
-                </div>
-                {overrideEnabled && (
-                  <Input
-                    type="number"
-                    min={1}
-                    aria-label="Fixed maximum HP"
-                    value={overrideValue}
-                    aria-invalid={!validOverride}
-                    onChange={(event) => setOverrideValue(event.target.value)}
-                  />
-                )}
-              </section>
-            </div>
-          </details>
-        </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id={desiredMaximumId}
+                      aria-label="Set maximum HP directly"
+                      type="number"
+                      min={1}
+                      value={desiredMaximum}
+                      onChange={(event) => setDesiredMaximum(event.target.value)}
+                    />
+                    <Button type="button" variant="outline" onClick={applyDesiredMaximum}>
+                      Set Maximum
+                    </Button>
+                  </div>
+                </section>
+
+                <section className="space-y-3 border-t border-border pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <Label htmlFor={overrideId}>Keep maximum HP fixed</Label>
+                      <p className="text-xs text-muted-foreground">
+                        A fixed maximum will not increase when you level up.
+                      </p>
+                    </div>
+                    <Switch
+                      id={overrideId}
+                      checked={overrideEnabled}
+                      onCheckedChange={setOverrideEnabled}
+                    />
+                  </div>
+                  {overrideEnabled && (
+                    <Input
+                      type="number"
+                      min={1}
+                      aria-label="Fixed maximum HP"
+                      value={overrideValue}
+                      aria-invalid={!validOverride}
+                      onChange={(event) => setOverrideValue(event.target.value)}
+                    />
+                  )}
+                </section>
+              </div>
+            </details>
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

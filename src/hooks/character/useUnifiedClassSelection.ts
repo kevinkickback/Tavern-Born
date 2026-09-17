@@ -18,17 +18,10 @@ export function useUnifiedClassSelection() {
   const itemLookup = useItemLookup()
 
   const selectClass = useCallback(
-    (
-      className: string,
-      classSource: string | undefined,
-      classLookup: Record<string, Class5e | undefined>,
-      fallbackClassByName: Map<string, Class5e>,
-    ) => {
+    (className: string, classSource: string, classLookup: Record<string, Class5e | undefined>) => {
       if (!character) return
 
-      const cls = classSource
-        ? classLookup[getEntityLookupKey(className, classSource)]
-        : fallbackClassByName.get(className)
+      const cls = classLookup[getEntityLookupKey(className, classSource)]
 
       if (!cls) return
 

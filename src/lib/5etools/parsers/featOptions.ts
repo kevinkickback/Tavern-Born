@@ -2,7 +2,7 @@ import type { Feat5e } from '@/types/5etools'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export interface FeatAdditionalSpellEntry {
+interface FeatAdditionalSpellEntry {
   name?: string
   ability?: string
   innate?: unknown

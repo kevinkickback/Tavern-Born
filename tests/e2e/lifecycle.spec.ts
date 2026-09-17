@@ -16,14 +16,14 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
 
   const baseCharacter = {
     id: 'lifecycle-seed-1',
-    version: '2.0.0',
+    schemaVersion: 2,
     name: 'Seed Character',
     originSystem: '2014',
     race: 'Human',
-    class: 'Fighter',
+    raceSource: 'PHB',
     background: 'Soldier',
+    backgroundSource: 'PHB',
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
-    level: 1,
     experiencePoints: 0,
     classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
     abilityScores: {
@@ -39,6 +39,7 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
       weapons: [],
       tools: [],
       skills: [],
+      expertise: [],
       languages: ['Common'],
       savingThrows: [],
     },
@@ -69,19 +70,11 @@ test('import -> edit portrait -> save -> reload persists character changes', asy
       },
     },
     equipment: [],
-    hitPoints: { max: 10, current: 10, temporary: 0 },
-    armorClass: 10,
-    initiative: 0,
-    speed: 30,
-    savingThrows: {
-      strength: { proficient: false, bonus: 0 },
-      dexterity: { proficient: false, bonus: 0 },
-      constitution: { proficient: false, bonus: 0 },
-      intelligence: { proficient: false, bonus: 0 },
-      wisdom: { proficient: false, bonus: 0 },
-      charisma: { proficient: false, bonus: 0 },
+    hitPoints: { current: 10, temporary: 0 },
+    movement: {
+      speeds: { walk: 30 },
+      source: { kind: 'manual', name: 'E2E seed' },
     },
-    skills: {},
     details: {},
     provenance: {
       proficiencies: {

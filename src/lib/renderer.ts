@@ -166,7 +166,7 @@ export function renderEntry(entry: unknown): string {
   return sanitizeRenderedHtml('')
 }
 
-export function renderTags(text: string): string {
+function renderTags(text: string): string {
   if (!text) return ''
 
   let result = text
@@ -486,8 +486,4 @@ export function renderTags(text: string): string {
   result = `<p>${result}</p>`
 
   return sanitizeRenderedHtml(result)
-}
-
-export function getEntryWithHoverTitles(entry: unknown): string {
-  return renderTags(renderEntry(entry))
 }

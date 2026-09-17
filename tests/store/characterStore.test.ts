@@ -1,37 +1,34 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
+const storageMocks = vi.hoisted(() => ({
+  getItem: vi.fn(async () => null),
+  setItem: vi.fn<(...args: unknown[]) => Promise<void>>(async () => undefined),
+  removeItem: vi.fn(async () => undefined),
+}))
+
 vi.mock('@/lib/storage/idb-storage', () => ({
-  createIdbStorage: () => ({
-    getItem: vi.fn(async () => null),
-    setItem: vi.fn(async () => undefined),
-    removeItem: vi.fn(async () => undefined),
-  }),
+  createIdbStorage: () => storageMocks,
 }))
 
 import {
-  emptyProvenance,
-  normalizeCharacterProvenance,
-  useCharacterStore,
-  validateCharacterData,
-} from '@/store/characterStore'
+  CURRENT_CHARACTER_SCHEMA_VERSION,
+  UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
+} from '@/lib/schema/characterSchemaVersion'
+import { useCharacterStore, validateCharacterData } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('characterStore', () => {
   beforeEach(() => {
+    storageMocks.getItem.mockReset().mockResolvedValue(null)
+    storageMocks.setItem.mockReset().mockResolvedValue(undefined)
+    storageMocks.removeItem.mockReset().mockResolvedValue(undefined)
     useCharacterStore.setState({
       characters: [],
       activeCharacterId: null,
       activeCharacter: null,
+      isActiveCharacterDirty: false,
+      unsupportedCharacters: [],
     })
-  })
-
-  test('normalizeCharacterProvenance adds empty ledger when missing', () => {
-    const withoutProvenance = makeCharacterFixture()
-    delete withoutProvenance.provenance
-
-    const normalized = normalizeCharacterProvenance(withoutProvenance)
-
-    expect(normalized.provenance).toEqual(emptyProvenance())
   })
 
   test('validateCharacterData accepts full character payload', () => {
@@ -41,6 +38,47 @@ describe('characterStore', () => {
 
   test('validateCharacterData rejects malformed payload', () => {
     expect(validateCharacterData({ foo: 'bar' })).toContain('Invalid character structure')
+  })
+
+  test.each([0, 1, 3, '2', 'invalid'])('rejects unsupported schema version %s', (schemaVersion) => {
+    expect(validateCharacterData({ ...makeCharacterFixture(), schemaVersion })).toContain(
+      UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
+    )
+  })
+
+  test('uses the exact current character schema version', () => {
+    expect(makeCharacterFixture().schemaVersion).toBe(CURRENT_CHARACTER_SCHEMA_VERSION)
+  })
+
+  test('rejects removed top-level class and level mirrors', () => {
+    expect(
+      validateCharacterData({
+        ...makeCharacterFixture(),
+        class: 'Fighter',
+        classSource: 'PHB',
+        level: 1,
+      }),
+    ).toContain('Unrecognized key')
+  })
+
+  test.each([
+    { raceSource: undefined },
+    { backgroundSource: undefined },
+    { subrace: 'High Elf', subraceSource: undefined },
+    {
+      classProgression: [
+        {
+          name: 'Rogue',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Arcane Trickster',
+        },
+      ],
+    },
+  ])('rejects named origin selections without exact sources: %o', (updates) => {
+    expect(validateCharacterData({ ...makeCharacterFixture(), ...updates })).toContain(
+      'is required when',
+    )
   })
 
   test('validateCharacterData rejects payloads missing proficiencies.skills', () => {
@@ -112,7 +150,51 @@ describe('characterStore', () => {
     expect(state.hasUnsavedChanges()).toBe(true)
   })
 
-  test('saveActiveCharacter writes draft into persisted characters', () => {
+  test('reconcileCharacter keeps a clean system correction synchronized and clean', () => {
+    const existing = makeCharacterFixture({ id: 'clean-reconciliation' })
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: existing,
+      isActiveCharacterDirty: false,
+    })
+
+    useCharacterStore.getState().reconcileCharacter(existing.id, {
+      movement: { ...existing.movement, speeds: { walk: 35 } },
+    })
+
+    const state = useCharacterStore.getState()
+    expect(state.activeCharacter?.movement.speeds.walk).toBe(35)
+    expect(state.characters[0]?.movement.speeds.walk).toBe(35)
+    expect(state.hasUnsavedChanges()).toBe(false)
+  })
+
+  test('reconcileCharacter never persists a system correction over an existing dirty draft', () => {
+    const existing = makeCharacterFixture({
+      id: 'dirty-reconciliation',
+      name: 'Persisted Name',
+    })
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: existing,
+      isActiveCharacterDirty: false,
+    })
+    useCharacterStore.getState().updateCharacter(existing.id, { name: 'Unsaved Name' })
+
+    useCharacterStore.getState().reconcileCharacter(existing.id, {
+      movement: { ...existing.movement, speeds: { walk: 35 } },
+    })
+
+    const state = useCharacterStore.getState()
+    expect(state.activeCharacter?.name).toBe('Unsaved Name')
+    expect(state.activeCharacter?.movement.speeds.walk).toBe(35)
+    expect(state.characters[0]?.name).toBe('Persisted Name')
+    expect(state.characters[0]?.movement.speeds.walk).toBe(30)
+    expect(state.hasUnsavedChanges()).toBe(true)
+  })
+
+  test('saveActiveCharacter writes draft into persisted characters', async () => {
     const existing = makeCharacterFixture({ id: 'c2', name: 'Before Save' })
     useCharacterStore.setState({
       characters: [existing],
@@ -120,11 +202,139 @@ describe('characterStore', () => {
       activeCharacter: { ...existing, name: 'After Save' },
     })
 
-    useCharacterStore.getState().saveActiveCharacter()
+    await useCharacterStore.getState().saveActiveCharacter()
 
     const state = useCharacterStore.getState()
     expect(state.characters[0]?.name).toBe('After Save')
     expect(state.hasUnsavedChanges()).toBe(false)
+  })
+
+  test('keeps an edit dirty when save and update occur in the same millisecond', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+    const existing = makeCharacterFixture({
+      id: 'same-millisecond',
+      name: 'Before Save',
+      lastModified: new Date().toISOString(),
+    })
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: existing,
+      isActiveCharacterDirty: false,
+    })
+
+    await useCharacterStore.getState().saveActiveCharacter()
+    useCharacterStore.getState().updateCharacter(existing.id, { name: 'After Save' })
+
+    expect(useCharacterStore.getState().activeCharacter?.lastModified).toBe(
+      useCharacterStore.getState().characters[0]?.lastModified,
+    )
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+    vi.useRealTimers()
+  })
+
+  test('detects an edit made in the same millisecond as a save', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-13T12:00:00.000Z'))
+    const existing = makeCharacterFixture({ id: 'same-millisecond', name: 'Before' })
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: existing,
+      isActiveCharacterDirty: false,
+    })
+
+    await useCharacterStore.getState().saveActiveCharacter()
+    useCharacterStore.getState().updateCharacter(existing.id, { name: 'After' })
+
+    const state = useCharacterStore.getState()
+    expect(state.activeCharacter?.lastModified).toBe(state.characters[0]?.lastModified)
+    expect(state.hasUnsavedChanges()).toBe(true)
+    vi.useRealTimers()
+  })
+
+  test('keeps the draft dirty until the durable save finishes', async () => {
+    const existing = makeCharacterFixture({ id: 'pending-save', name: 'Before' })
+    const draft = { ...existing, name: 'After' }
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: draft,
+      isActiveCharacterDirty: true,
+    })
+    let finishWrite: (() => void) | undefined
+    storageMocks.setItem.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishWrite = resolve
+        }),
+    )
+
+    const save = useCharacterStore.getState().saveActiveCharacter()
+    await Promise.resolve()
+
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(true)
+    finishWrite?.()
+    await save
+    expect(useCharacterStore.getState().characters[0]?.name).toBe('After')
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+  })
+
+  test('preserves the saved snapshot and dirty draft when durable persistence fails', async () => {
+    const existing = makeCharacterFixture({ id: 'failed-save', name: 'Before' })
+    const draft = { ...existing, name: 'After' }
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: draft,
+      isActiveCharacterDirty: true,
+    })
+    storageMocks.setItem.mockRejectedValueOnce(
+      new DOMException('Storage full', 'QuotaExceededError'),
+    )
+
+    await expect(useCharacterStore.getState().saveActiveCharacter()).rejects.toMatchObject({
+      name: 'QuotaExceededError',
+    })
+
+    const state = useCharacterStore.getState()
+    expect(state.characters[0]?.name).toBe('Before')
+    expect(state.activeCharacter?.name).toBe('After')
+    expect(state.hasUnsavedChanges()).toBe(true)
+
+    await useCharacterStore.getState().saveActiveCharacter()
+    expect(useCharacterStore.getState().characters[0]?.name).toBe('After')
+    expect(useCharacterStore.getState().hasUnsavedChanges()).toBe(false)
+  })
+
+  test('does not clear an edit made while a save is pending', async () => {
+    const existing = makeCharacterFixture({ id: 'edit-during-save', name: 'Before' })
+    const draft = { ...existing, name: 'Saving' }
+    useCharacterStore.setState({
+      characters: [existing],
+      activeCharacterId: existing.id,
+      activeCharacter: draft,
+      isActiveCharacterDirty: true,
+    })
+    let finishWrite: (() => void) | undefined
+    storageMocks.setItem.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishWrite = resolve
+        }),
+    )
+
+    const save = useCharacterStore.getState().saveActiveCharacter()
+    await Promise.resolve()
+    useCharacterStore.getState().updateCharacter(existing.id, { name: 'Edited Again' })
+    finishWrite?.()
+    await save
+
+    const state = useCharacterStore.getState()
+    expect(state.characters[0]?.name).toBe('Saving')
+    expect(state.activeCharacter?.name).toBe('Edited Again')
+    expect(state.hasUnsavedChanges()).toBe(true)
   })
 
   test('updateCharacter updates non-active character directly', () => {
@@ -191,44 +401,81 @@ describe('characterStore', () => {
     expect(state.activeCharacter).toBeNull()
   })
 
-  test('persist rehydrate callback restores active character from active id', () => {
-    const persisted = makeCharacterFixture({ id: 'c8', name: 'Persisted' })
-    delete persisted.provenance
+  test('persist rehydrate durably quarantines unsupported characters until acknowledgment', async () => {
+    const persisted = {
+      ...makeCharacterFixture({ id: 'c8', name: 'Persisted' }),
+      schemaVersion: 0,
+    }
 
     const storeWithPersist = useCharacterStore as unknown as {
       persist: {
         getOptions: () => {
-          onRehydrateStorage?: () =>
-            | ((state?: {
-                characters: (typeof persisted)[]
-                activeCharacterId: string | null
-                activeCharacter: typeof persisted | null
-              }) => void)
-            | undefined
+          onRehydrateStorage?: () => (state?: ReturnType<typeof useCharacterStore.getState>) => void
         }
       }
     }
 
-    const onRehydrate = storeWithPersist.persist.getOptions().onRehydrateStorage?.()
-
-    const rehydrateState: {
-      characters: ReturnType<typeof makeCharacterFixture>[]
-      activeCharacterId: string | null
-      activeCharacter: ReturnType<typeof makeCharacterFixture> | null
-    } = {
-      characters: [persisted],
+    useCharacterStore.setState({
+      characters: [persisted as ReturnType<typeof makeCharacterFixture>],
       activeCharacterId: persisted.id,
-      activeCharacter: null,
-    }
+      activeCharacter: persisted as ReturnType<typeof makeCharacterFixture>,
+    })
+    storageMocks.setItem.mockClear()
+    const subscriber = vi.fn()
+    const unsubscribe = useCharacterStore.subscribe(subscriber)
+    const onRehydrate = storeWithPersist.persist.getOptions().onRehydrateStorage?.()
+    onRehydrate?.(useCharacterStore.getState())
 
-    onRehydrate?.(rehydrateState)
-
-    expect(rehydrateState.characters[0]?.provenance).toEqual(emptyProvenance())
-    expect(rehydrateState.activeCharacterId).toBeNull()
-    expect(rehydrateState.activeCharacter).toBeNull()
+    const state = useCharacterStore.getState()
+    expect(state.characters).toEqual([])
+    expect(state.activeCharacterId).toBeNull()
+    expect(state.activeCharacter).toBeNull()
+    expect(state.unsupportedCharacters).toEqual([persisted])
+    onRehydrate?.(useCharacterStore.getState())
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([persisted])
+    expect(subscriber).toHaveBeenCalled()
+    await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalled())
+    expect(storageMocks.setItem).toHaveBeenLastCalledWith(
+      'character-storage',
+      expect.objectContaining({
+        state: { characters: [], unsupportedCharacters: [persisted] },
+      }),
+    )
+    storageMocks.setItem.mockClear()
+    state.dismissUnsupportedCharacters()
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
+    await vi.waitFor(() => expect(storageMocks.setItem).toHaveBeenCalled())
+    expect(storageMocks.setItem).toHaveBeenLastCalledWith(
+      'character-storage',
+      expect.objectContaining({
+        state: { characters: [], unsupportedCharacters: [] },
+      }),
+    )
+    unsubscribe()
   })
 
-  test('persist partialize stores characters and active character id', () => {
+  test('persist rehydrate quarantines malformed current-version characters', () => {
+    const malformed = {
+      ...makeCharacterFixture({ id: 'malformed-current', name: 'Malformed Current' }),
+      proficiencies: { armor: [] },
+    }
+
+    useCharacterStore.setState({
+      characters: [malformed as unknown as ReturnType<typeof makeCharacterFixture>],
+      activeCharacterId: malformed.id,
+      activeCharacter: malformed as unknown as ReturnType<typeof makeCharacterFixture>,
+    })
+
+    useCharacterStore.getState().finishCharacterHydration()
+
+    const state = useCharacterStore.getState()
+    expect(state.characters).toEqual([])
+    expect(state.activeCharacterId).toBeNull()
+    expect(state.activeCharacter).toBeNull()
+    expect(state.unsupportedCharacters).toEqual([malformed])
+  })
+
+  test('persist partialize stores characters and the durable unsupported quarantine', () => {
     const fixture = makeCharacterFixture({ id: 'persist-id', name: 'Persist' })
     useCharacterStore.setState({
       characters: [fixture],
@@ -241,16 +488,16 @@ describe('characterStore', () => {
         getOptions: () => {
           partialize?: (state: {
             characters: (typeof fixture)[]
-            activeCharacterId: string | null
+            unsupportedCharacters: unknown[]
           }) => {
             characters: (typeof fixture)[]
-            activeCharacterId: string | null
+            unsupportedCharacters: unknown[]
           }
         }
       }
       getState: () => {
         characters: (typeof fixture)[]
-        activeCharacterId: string | null
+        unsupportedCharacters: unknown[]
       }
     }
 
@@ -258,6 +505,6 @@ describe('characterStore', () => {
     expect(partialize).toBeTypeOf('function')
 
     const persisted = partialize?.(storeWithPersist.getState())
-    expect(persisted).toEqual({ characters: [fixture] })
+    expect(persisted).toEqual({ characters: [fixture], unsupportedCharacters: [] })
   })
 })

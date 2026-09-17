@@ -127,28 +127,7 @@ describe('CharacteristicsPage', () => {
     expect(useCharacterStore.getState().activeCharacter?.details.playerName).toBe('Updated Player')
   })
 
-  test('maps legacy organization text to the custom organization draft', async () => {
-    const legacyCharacter = makeCharacterFixture({
-      details: { alliesAndOrganizations: 'Legacy alliance details' },
-    })
-    setActiveCharacter(legacyCharacter)
-    const user = userEvent.setup()
-    render(<CharacteristicsPage />)
-
-    await user.click(screen.getByRole('tab', { name: 'Connections' }))
-
-    await waitFor(() => {
-      expect(inputValue('Organization name')).toBe('')
-      expect(inputValue('Describe the custom ally or organization.')).toBe(
-        'Legacy alliance details',
-      )
-    })
-    expect(useCharacterStore.getState().activeCharacter?.details.organizationSelectionKey).toBe(
-      undefined,
-    )
-  })
-
-  test('selecting a preset organization clears custom fields and persists its description', async () => {
+  test('selecting a preset organization clears custom fields', async () => {
     const customCharacter = makeCharacterFixture({
       details: {
         organizationSelectionKey: CUSTOM_ORGANIZATION_KEY,
@@ -172,7 +151,6 @@ describe('CharacteristicsPage', () => {
         organizationCustomDescription: '',
         organizationCustomImage: '',
         organizationCustomGradient: 'indigo',
-        alliesAndOrganizations: 'A covert network that opposes tyranny.',
       })
     })
   })

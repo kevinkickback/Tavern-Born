@@ -21,6 +21,11 @@ describe('Electron security boundaries', () => {
       isTrustedRendererUrl(pathToFileURL(resolve('other', 'index.html')).href, rendererRoot),
     ).toBe(false)
     expect(isTrustedRendererUrl('https://example.com/index.html', rendererRoot)).toBe(false)
+    expect(isTrustedRendererUrl(`${rendererRoot}../secrets.html`, rendererRoot)).toBe(false)
+    expect(
+      isTrustedRendererUrl(`${rendererRoot.slice(0, -1)}-lookalike/index.html`, rendererRoot),
+    ).toBe(false)
+    expect(isTrustedRendererUrl('not a url', rendererRoot)).toBe(false)
   })
 
   test('uses exact development origins', () => {
@@ -34,5 +39,8 @@ describe('Electron security boundaries', () => {
     expect(isTrustedRendererUrl('https://127.0.0.1:5173/settings', rendererRoot, devServer)).toBe(
       false,
     )
+    expect(
+      isTrustedRendererUrl('http://127.0.0.1:5173@evil.example/', rendererRoot, devServer),
+    ).toBe(false)
   })
 })

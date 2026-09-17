@@ -4,14 +4,13 @@ import {
   ABILITY_SCORE_MIN,
   MAX_CHARACTER_LEVEL,
 } from '@/lib/calculations/gameRules'
-import { ALL_SKILLS } from '@/lib/calculations/skills'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
+import type { Character } from './character'
 
-export const sourceSchema = z
+const sourceSchema = z
   .string()
   .min(1)
   .transform((s) => s.toUpperCase())
-
-const levelSchema = z.number().int().min(1).max(MAX_CHARACTER_LEVEL)
 
 /** Any legal ability score, including magical boosted maximums. */
 const abilityScoreSchema = z.number().int().min(ABILITY_SCORE_MIN).max(ABILITY_SCORE_ABSOLUTE_MAX)
@@ -27,15 +26,6 @@ const abilityScoresSchema = z.object({
   charisma: abilityScoreSchema,
 })
 
-const proficiencyTypeSchema = z.enum([
-  'armor',
-  'weapons',
-  'tools',
-  'skills',
-  'languages',
-  'savingThrows',
-])
-
 const variantRulesSchema = z.object({
   optionalClassFeatures: z.boolean().default(false),
   averageHitPoints: z.boolean().default(true),
@@ -49,7 +39,7 @@ const variantRulesSchema = z.object({
 
 const characterClassEntrySchema = z.object({
   name: z.string().min(1),
-  source: z.string().optional(),
+  source: z.string().min(1),
   levels: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
   subclass: z.string().optional(),
   subclassSource: z.string().optional(),
@@ -58,7 +48,7 @@ const characterClassEntrySchema = z.object({
 const hitPointGainSchema = z
   .object({
     className: z.string().min(1),
-    classSource: z.string().optional(),
+    classSource: z.string().min(1),
     classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
     characterLevel: z.number().int().min(2).max(MAX_CHARACTER_LEVEL),
     hitDie: z.number().int().positive(),
@@ -87,6 +77,226 @@ const armorClassAdjustmentSchema = z.object({
   sourceType: z.enum(['manual', 'item', 'feat', 'other']),
   sourceRef: z.string().optional(),
   createdAt: z.string(),
+})
+
+const movementModeSchema = z.enum(['walk', 'climb', 'swim', 'fly', 'burrow'])
+
+const characterMovementSchema = z.object({
+  speeds: z.record(movementModeSchema, z.number().int().nonnegative()),
+  hover: z.boolean().optional(),
+  other: z.record(z.union([z.number().int().nonnegative(), z.boolean()])).optional(),
+  unresolvedInheritedModes: z.array(movementModeSchema).optional(),
+  source: z.object({
+    kind: z.enum(['race', 'manual']),
+    name: z.string().min(1),
+    source: z.string().optional(),
+  }),
+})
+
+const movementAdjustmentSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  mode: z.string().min(1),
+  amount: z.number().int(),
+  sourceType: z.enum(['manual', 'item', 'feat', 'other']),
+  sourceRef: z.string().optional(),
+  createdAt: z.string(),
+})
+
+const numericEffectTargetSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('ability-score'),
+    ability: z.enum([
+      'strength',
+      'dexterity',
+      'constitution',
+      'intelligence',
+      'wisdom',
+      'charisma',
+    ]),
+  }),
+  z.object({
+    kind: z.literal('ability-check-modifier'),
+    ability: z.enum([
+      'strength',
+      'dexterity',
+      'constitution',
+      'intelligence',
+      'wisdom',
+      'charisma',
+    ]),
+  }),
+  z.object({ kind: z.literal('skill-modifier'), skill: z.string().min(1) }),
+  z.object({
+    kind: z.literal('saving-throw-modifier'),
+    ability: z.enum([
+      'strength',
+      'dexterity',
+      'constitution',
+      'intelligence',
+      'wisdom',
+      'charisma',
+    ]),
+  }),
+  z.object({ kind: z.literal('initiative') }),
+  z.object({ kind: z.literal('armor-class') }),
+  z.object({ kind: z.literal('hit-point-maximum') }),
+  z.object({ kind: z.literal('speed'), mode: z.string().min(1).optional() }),
+  z.object({ kind: z.literal('carrying-capacity') }),
+  z.object({ kind: z.literal('attack-roll'), attackId: z.string().min(1).optional() }),
+  z.object({
+    kind: z.literal('damage'),
+    attackId: z.string().min(1).optional(),
+    damageType: z.string().min(1).optional(),
+  }),
+  z.object({ kind: z.literal('spell-attack'), profileId: z.string().min(1).optional() }),
+  z.object({ kind: z.literal('spell-save-dc'), profileId: z.string().min(1).optional() }),
+  z.object({ kind: z.literal('sense'), sense: z.string().min(1) }),
+  z.object({ kind: z.literal('resource-maximum'), resourceId: z.string().min(1) }),
+])
+
+const traitEffectTargetSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('damage-resistance'), damageType: z.string().min(1) }),
+  z.object({ kind: z.literal('damage-immunity'), damageType: z.string().min(1) }),
+  z.object({ kind: z.literal('condition-immunity'), condition: z.string().min(1) }),
+])
+
+const numericEffectOperationSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('base'), value: z.number().finite() }),
+  z.object({ kind: z.literal('set'), value: z.number().finite() }),
+  z.object({ kind: z.literal('add'), value: z.number().finite() }),
+  z.object({ kind: z.literal('multiply'), value: z.number().finite() }),
+  z.object({ kind: z.literal('minimum'), value: z.number().finite() }),
+  z.object({ kind: z.literal('maximum'), value: z.number().finite() }),
+  z.object({ kind: z.literal('override'), value: z.number().finite() }),
+])
+
+const conditionalNoteOperationSchema = z.object({
+  kind: z.literal('conditional-note'),
+  note: z.string().min(1),
+})
+
+const characterEffectSourceSchema = z.object({
+  kind: z.enum([
+    'race',
+    'subrace',
+    'class',
+    'subclass',
+    'background',
+    'feat',
+    'spell',
+    'item',
+    'condition',
+    'manual',
+    'other',
+  ]),
+  name: z.string().min(1),
+  source: z.string().min(1).optional(),
+  entityId: z.string().min(1).optional(),
+  provenance: z
+    .object({
+      choiceId: z.string().min(1).optional(),
+      grantVariant: z.string().min(1).optional(),
+    })
+    .optional(),
+})
+
+const characterEffectRequirementSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('equipment'),
+    itemId: z.string().min(1),
+    state: z.enum(['equipped', 'attuned', 'equipped-and-attuned']),
+  }),
+  z.object({ kind: z.literal('flag'), key: z.string().min(1), expected: z.boolean() }),
+])
+
+const characterEffectBaseSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  source: characterEffectSourceSchema,
+  priority: z.number().int().optional(),
+  requirements: z.array(characterEffectRequirementSchema).optional(),
+  condition: z.string().min(1).optional(),
+})
+
+const characterEffectSchema = z.union([
+  characterEffectBaseSchema.extend({
+    target: numericEffectTargetSchema,
+    operation: z.union([numericEffectOperationSchema, conditionalNoteOperationSchema]),
+  }),
+  characterEffectBaseSchema.extend({
+    target: traitEffectTargetSchema,
+    operation: z.discriminatedUnion('kind', [
+      z.object({ kind: z.literal('grant') }),
+      conditionalNoteOperationSchema,
+    ]),
+  }),
+])
+
+const manualActionSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  kind: z.enum(['action', 'bonus-action', 'reaction', 'passive', 'special', 'attack']),
+  description: z.string(),
+  source: z.object({
+    kind: z.literal('manual'),
+    name: z.string().min(1),
+    source: z.string().optional(),
+    entityId: z.string().optional(),
+  }),
+  active: z.boolean(),
+  inactiveReason: z.string().optional(),
+  ability: z
+    .enum(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'])
+    .optional(),
+  proficient: z.boolean().optional(),
+  attackBonus: z.number().int().optional(),
+  save: z
+    .object({
+      ability: z
+        .enum(['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'])
+        .optional(),
+      dc: z.number().int().nonnegative(),
+    })
+    .optional(),
+  range: z.string().optional(),
+  damage: z
+    .array(
+      z.object({
+        dice: z.string().min(1).optional(),
+        bonus: z.number().int(),
+        damageType: z.string().min(1).optional(),
+      }),
+    )
+    .optional(),
+  properties: z.array(z.string()).optional(),
+  mastery: z.array(z.object({ name: z.string().min(1), source: z.string().optional() })).optional(),
+  resourceCost: z
+    .object({ resourceId: z.string().min(1), amount: z.number().int().positive() })
+    .optional(),
+  recharge: z
+    .object({
+      rest: z.enum(['short', 'long']).optional(),
+      note: z.string().min(1).optional(),
+    })
+    .optional(),
+})
+
+const characterClassChoiceSelectionSchema = z.object({
+  choiceId: z.string().min(1),
+  label: z.string().min(1),
+  kind: z.enum(['class-feature', 'feat', 'item', 'optional-feature']),
+  className: z.string().min(1),
+  classSource: z.string().min(1),
+  classLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+  selected: z.array(
+    z.object({
+      entityType: z.enum(['classFeature', 'feat', 'item', 'optionalFeature']),
+      name: z.string().min(1),
+      source: z.string().optional(),
+      slotLevel: z.number().int().min(1).max(MAX_CHARACTER_LEVEL),
+    }),
+  ),
 })
 
 const featureSchema = z.object({
@@ -118,6 +328,15 @@ const featSchema = z.object({
   className: z.string().optional(),
   classSource: z.string().optional(),
   classLevel: z.number().int().min(1).optional(),
+})
+
+const classFeatChoiceSchema = z.object({
+  id: z.string().min(1),
+  className: z.string().min(1),
+  classSource: z.string().min(1),
+  progressionName: z.string().min(1),
+  categories: z.array(z.string()),
+  feats: z.array(featSchema),
 })
 
 const equipmentSchema = z.object({
@@ -155,34 +374,8 @@ const currencySchema = z.object({
 })
 
 const hitPointsSchema = z.object({
-  max: z.number().int().min(0),
   current: z.number().int().min(0),
   temporary: z.number().int().min(0),
-})
-
-const savingThrowEntrySchema = z.object({
-  proficient: z.boolean(),
-  bonus: z.number().int(),
-})
-
-const savingThrowsSchema = z.object({
-  strength: savingThrowEntrySchema,
-  dexterity: savingThrowEntrySchema,
-  constitution: savingThrowEntrySchema,
-  intelligence: savingThrowEntrySchema,
-  wisdom: savingThrowEntrySchema,
-  charisma: savingThrowEntrySchema,
-})
-
-const skillEntrySchema = z.object({
-  proficient: z.boolean(),
-  expertise: z.boolean(),
-  bonus: z.number().int(),
-})
-
-const skillsSchema = z.record(skillEntrySchema).transform((record) => {
-  const validKeySet = new Set<string>(ALL_SKILLS)
-  return Object.fromEntries(Object.entries(record).filter(([key]) => validKeySet.has(key)))
 })
 
 const portraitTransformSchema = z.object({
@@ -240,7 +433,6 @@ const characterDetailsSchema = z.object({
   organizationCustomDescription: z.string().optional(),
   organizationCustomImage: z.string().optional(),
   organizationCustomGradient: z.string().optional(),
-  alliesAndOrganizations: z.string().optional(),
 })
 
 const proficienciesSchema = z.object({
@@ -248,6 +440,7 @@ const proficienciesSchema = z.object({
   weapons: z.array(z.string()),
   tools: z.array(z.string()),
   skills: z.array(z.string()),
+  expertise: z.array(z.string()),
   languages: z.array(z.string()),
   savingThrows: z.array(z.string()),
 })
@@ -308,6 +501,15 @@ const choiceRecordSchema = z.object({
   chooseCount: z.number().int().min(1),
   optionPool: z.array(z.string()),
   selected: z.array(z.string()),
+  selectedRefs: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        source: z.string().optional(),
+        options: featOptionSelectionsSchema.optional(),
+      }),
+    )
+    .optional(),
   status: choiceStatusSchema,
 })
 
@@ -443,6 +645,7 @@ const spellSelectionSchema = z
   .object({
     spellProfiles: z.array(spellProfileSchema).min(1, 'At least one spell profile must exist'),
     spellSlots: spellSlotsSchema,
+    pactSpellSlots: spellSlotsSchema.default({}),
   })
   .refine(
     (selection) => {
@@ -470,14 +673,14 @@ const asiChoiceSchema = z.object({
   id: z.string(),
   level: z.number().int(),
   className: z.string(),
-  classSource: z.string().optional(),
+  classSource: z.string().min(1),
   abilityChanges: z.record(z.union([z.literal(1), z.literal(2)])),
 })
 
 export const characterSchema = z
   .object({
     id: z.string().min(1),
-    version: z.string().default('6.0.0'),
+    schemaVersion: z.literal(CURRENT_CHARACTER_SCHEMA_VERSION),
     name: z
       .string()
       .min(1)
@@ -490,16 +693,11 @@ export const characterSchema = z
     raceSource: z.string().optional(),
     subrace: z.string().optional(),
     subraceSource: z.string().optional(),
-    class: z.string(),
-    classSource: z.string().optional(),
-    subclass: z.string().optional(),
-    subclassSource: z.string().optional(),
     background: z.string(),
     backgroundSource: z.string().optional(),
     currency: currencySchema.default({ cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 }).optional(),
-    level: levelSchema,
     experiencePoints: z.number().int().min(0).default(0),
-    classProgression: z.array(characterClassEntrySchema).optional(),
+    classProgression: z.array(characterClassEntrySchema),
     abilityScores: abilityScoresSchema,
     proficiencies: proficienciesSchema,
     features: z.array(featureSchema),
@@ -510,9 +708,11 @@ export const characterSchema = z
     raceAsiBlockIndex: z.union([z.literal(0), z.literal(1)]).optional(),
     backgroundAsiBlockIndex: z.number().int().nonnegative().optional(),
     backgroundEquipmentChoices: z.array(z.string()).optional(),
+    backgroundEquipmentItemChoices: z.record(z.string()).optional(),
     backgroundAsiChoices: z.array(z.string()).optional(),
     backgroundCurrencyGrant: currencySchema.optional(),
     classEquipmentChoices: z.record(z.array(z.string())).optional(),
+    classEquipmentItemChoices: z.record(z.record(z.string())).optional(),
     spells: spellSelectionSchema,
     equipment: z.array(equipmentSchema),
     visions: z
@@ -528,23 +728,24 @@ export const characterSchema = z
     hitPointGains: z.array(hitPointGainSchema).optional(),
     hitPointAdjustments: z.array(hitPointAdjustmentSchema).optional(),
     maxHitPointsOverride: z.number().int().min(1).optional(),
-    armorClass: z.number().int().min(0).optional(),
     armorClassOverride: z.number().int().min(0).optional(),
     armorClassAdjustments: z.array(armorClassAdjustmentSchema).optional(),
-    initiative: z.number().int(),
-    speed: z.number().int(),
+    movement: characterMovementSchema,
+    movementAdjustments: z.array(movementAdjustmentSchema).optional(),
+    movementOverrides: z.record(z.number().int().nonnegative()).optional(),
+    movementHoverOverride: z.boolean().optional(),
     damageResistances: z.array(z.string()).optional(),
     damageImmunities: z.array(z.string()).optional(),
     conditionImmunities: z.array(z.string()).optional(),
-    savingThrows: savingThrowsSchema,
-    skills: skillsSchema,
     details: characterDetailsSchema,
     portrait: z.string().optional(),
     portraitTransform: portraitTransformSchema.optional(),
     asiChoices: z.array(asiChoiceSchema).optional(),
     specialFeats: z.array(featSchema).optional(),
+    classFeatChoices: z.array(classFeatChoiceSchema).optional(),
+    classChoiceSelections: z.array(characterClassChoiceSelectionSchema).optional(),
     fixedFeatOptions: z.record(featOptionSelectionsSchema).optional(),
-    provenance: provenanceLedgerSchema.optional(),
+    provenance: provenanceLedgerSchema,
     inspiration: z.boolean().optional(),
     deathSaves: z
       .object({
@@ -553,15 +754,42 @@ export const characterSchema = z
       })
       .optional(),
     conditions: z.array(z.string()).optional(),
-    exhaustion: z.number().int().min(0).max(6).optional(),
-    hitDiceUsed: z.number().int().min(0).optional(),
+    exhaustion: z.number().int().min(0).optional(),
+    hitDiceUsed: z.record(z.number().int().min(0)).optional(),
     ritualCasting: z.boolean().optional(),
     classResources: z.record(z.number().int().min(0)).optional(),
+    manualEffects: z.array(characterEffectSchema).optional(),
+    suppressedEffectIds: z.array(z.string().min(1)).optional(),
+    effectFlags: z.record(z.boolean()).optional(),
+    manualActions: z.array(manualActionSchema).optional(),
     createdAt: z.string(),
     lastModified: z.string(),
   })
+  .strict()
   .superRefine((char, ctx) => {
-    if (char.classProgression && char.classProgression.length > 0) {
+    for (const [nameKey, sourceKey] of [
+      ['race', 'raceSource'],
+      ['subrace', 'subraceSource'],
+      ['background', 'backgroundSource'],
+    ] as const) {
+      if (char[nameKey] && !char[sourceKey]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${sourceKey} is required when ${nameKey} is selected`,
+          path: [sourceKey],
+        })
+      }
+    }
+    char.classProgression.forEach((entry, index) => {
+      if (entry.subclass && !entry.subclassSource) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'subclassSource is required when subclass is selected',
+          path: ['classProgression', index, 'subclassSource'],
+        })
+      }
+    })
+    if (char.classProgression.length > 0) {
       const totalLevels = char.classProgression.reduce((sum, entry) => sum + entry.levels, 0)
       if (totalLevels > MAX_CHARACTER_LEVEL) {
         ctx.addIssue({
@@ -578,12 +806,8 @@ export const characterSchema = z
 
 export const characterPersistenceSchema = characterSchema
 
-export type AbilityName = import('./character').AbilityName
-export type AbilityScores = z.infer<typeof abilityScoresSchema>
-export type AbilityScoreMethod = z.infer<typeof abilityScoreMethodSchema>
-export type ProficiencyType = z.infer<typeof proficiencyTypeSchema>
-export type CharacterImport = z.infer<typeof characterSchema>
-export type SpellSlotLevel = z.infer<typeof spellSlotLevelSchema>
-export type SpellSlots = z.infer<typeof spellSlotsSchema>
-export type SpellProfile = z.infer<typeof spellProfileSchema>
-export type SpellSelection = z.infer<typeof spellSelectionSchema>
+type PersistedCharacter = z.output<typeof characterPersistenceSchema>
+type IsAssignable<Source, Target> = [Source] extends [Target] ? true : false
+
+/** The normalized persistence output must always be safe to use as a runtime character. */
+export type CharacterSchemaOutputContract = IsAssignable<PersistedCharacter, Character>

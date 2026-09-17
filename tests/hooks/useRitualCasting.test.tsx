@@ -37,7 +37,6 @@ function makeMinimalGameData(classes: unknown[]) {
     skills: [],
     senses: [],
     languages: [],
-    magicvariants: [],
     optionalfeatures: [],
     variantrules: [],
     trapHazards: [],
@@ -48,13 +47,22 @@ function makeMinimalGameData(classes: unknown[]) {
   }
 }
 
+function ritualClass(name: string) {
+  return {
+    name,
+    source: 'PHB',
+    classFeatureRefs: [
+      { name: 'Spellcasting', level: 1, feature: { entries: ['You can cast spells as rituals.'] } },
+    ],
+  }
+}
+
 function seedCharacterAndData(
   classEntries: Array<{ name: string; source: string; levels: number }>,
   classes: unknown[],
   override?: { ritualCasting?: boolean },
 ) {
   const character = makeCharacterFixture({
-    class: classEntries[0]?.name ?? '',
     classProgression: classEntries,
     ...override,
   })
@@ -85,39 +93,36 @@ describe('useRitualCasting', () => {
     expect(result.current).toBe(false)
   })
 
-  test('returns true for Wizard (in hardcoded ritual casting set)', () => {
-    const classes = [{ name: 'Wizard', source: 'PHB' }]
+  test('returns true for Wizard from its parsed ritual rules', () => {
+    const classes = [ritualClass('Wizard')]
     seedCharacterAndData([{ name: 'Wizard', source: 'PHB', levels: 3 }], classes)
     const { result } = renderHook(() => useRitualCasting())
     expect(result.current).toBe(true)
   })
 
   test('returns true for Cleric', () => {
-    const classes = [{ name: 'Cleric', source: 'PHB' }]
+    const classes = [ritualClass('Cleric')]
     seedCharacterAndData([{ name: 'Cleric', source: 'PHB', levels: 3 }], classes)
     const { result } = renderHook(() => useRitualCasting())
     expect(result.current).toBe(true)
   })
 
   test('returns true for Druid', () => {
-    const classes = [{ name: 'Druid', source: 'PHB' }]
+    const classes = [ritualClass('Druid')]
     seedCharacterAndData([{ name: 'Druid', source: 'PHB', levels: 3 }], classes)
     const { result } = renderHook(() => useRitualCasting())
     expect(result.current).toBe(true)
   })
 
   test('returns true for Bard', () => {
-    const classes = [{ name: 'Bard', source: 'PHB' }]
+    const classes = [ritualClass('Bard')]
     seedCharacterAndData([{ name: 'Bard', source: 'PHB', levels: 3 }], classes)
     const { result } = renderHook(() => useRitualCasting())
     expect(result.current).toBe(true)
   })
 
   test('returns true for multiclass character with at least one ritual-casting class', () => {
-    const classes = [
-      { name: 'Fighter', source: 'PHB' },
-      { name: 'Wizard', source: 'PHB' },
-    ]
+    const classes = [{ name: 'Fighter', source: 'PHB' }, ritualClass('Wizard')]
     seedCharacterAndData(
       [
         { name: 'Fighter', source: 'PHB', levels: 5 },
@@ -141,7 +146,7 @@ describe('useRitualCasting', () => {
 
   test('manual override false takes precedence over class data', () => {
     // Wizard would normally return true, but the override forces false
-    const classes = [{ name: 'Wizard', source: 'PHB' }]
+    const classes = [ritualClass('Wizard')]
     seedCharacterAndData([{ name: 'Wizard', source: 'PHB', levels: 5 }], classes, {
       ritualCasting: false,
     })

@@ -48,7 +48,6 @@ describe('useFeatProvenanceMutations bonus feats', () => {
       abilityScore: 'int',
     })
     expect(updated?.proficiencies.skills).toEqual(['arcana'])
-    expect(updated?.skills.arcana).toMatchObject({ proficient: true })
     expect(updated?.abilityScores.intelligence).toBe(11)
     expect(updated?.provenance?.proficiencies.skills.arcana).toHaveLength(1)
 
@@ -69,7 +68,7 @@ describe('useFeatProvenanceMutations bonus feats', () => {
     updated = useCharacterStore.getState().activeCharacter
     expect(updated?.specialFeats).toEqual([])
     expect(updated?.proficiencies.skills).toEqual([])
-    expect(updated?.skills.arcana).toMatchObject({ proficient: false, expertise: false })
+    expect(updated?.proficiencies.expertise).toEqual([])
     expect(updated?.abilityScores.intelligence).toBe(10)
     expect(updated?.provenance?.proficiencies.skills.arcana).toBeUndefined()
   })

@@ -1,8 +1,9 @@
 import { Barbell, Coins, ListNumbers, PencilSimple } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Progress } from '@/components/ui/progress'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -14,17 +15,26 @@ import {
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useAbilityScores } from '@/hooks/character/useAbilityScores'
+import { useBackgroundProvenanceMutations } from '@/hooks/character/useBackgroundProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
 import { useTotalAbilityScores } from '@/hooks/character/useTotalAbilityScores'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useSkillList, useSkillToAbilityMap } from '@/hooks/data/useGameData'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import {
   ABILITY_ABBREVIATIONS,
   type AbilityName,
   hasFlexibleRaceOriginAsi,
 } from '@/lib/calculations/abilityScores'
 import { POINT_BUY_BUDGET } from '@/lib/calculations/gameRules'
-import { ALL_SKILLS, getSkillAbility } from '@/lib/calculations/skills'
+import {
+  findFocusedProvenanceChoice,
+  getReadinessFocus,
+  isBaseAbilityScoreReadinessFocus,
+  isRaceAbilityChoiceReadinessFocus,
+} from '@/lib/navigation/readinessFocus'
+import { getPendingBackgroundAbilityRows } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildAbilityScoresDetailsPanel } from '@/pages/build/ability-scores/components/DetailsPanel'
@@ -41,17 +51,54 @@ import {
 import { useCharacterStore } from '@/store/characterStore'
 
 const EMPTY_RACE_ASI_CHOICES: string[][] = []
+const EMPTY_BACKGROUND_ASI_CHOICES: string[] = []
 
 export function BuildAbilityScoresPage() {
+  const [searchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedChoice = findFocusedProvenanceChoice(
+    readinessFocus,
+    character?.provenance?.choices ?? [],
+  )
+  const focusedAbilityChoice =
+    focusedChoice?.domain === 'abilityBonuses' ? focusedChoice : undefined
+  const focusRaceBonuses =
+    searchParams.get('focus') === 'race-bonuses' ||
+    isRaceAbilityChoiceReadinessFocus(readinessFocus) ||
+    focusedAbilityChoice?.sourceTag.sourceType === 'race' ||
+    focusedAbilityChoice?.sourceTag.sourceType === 'subrace'
+  const focusBackgroundBonuses =
+    searchParams.get('focus') === 'background-bonuses' ||
+    readinessFocus === 'background:ability-choices' ||
+    focusedAbilityChoice?.sourceTag.sourceType === 'background'
+  const focusBaseScores =
+    readinessFocus === 'rules:ability-score-method' ||
+    isBaseAbilityScoreReadinessFocus(readinessFocus)
+  const { ref: baseScoresRef, highlighted: baseScoresHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(focusBaseScores)
+  const { ref: raceBonusesRef, highlighted: raceBonusesHighlighted } =
+    useRouteFocusTarget<HTMLElement>(focusRaceBonuses)
+  const { ref: backgroundBonusesRef, highlighted: backgroundBonusesHighlighted } =
+    useRouteFocusTarget<HTMLElement>(focusBackgroundBonuses)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { skills } = useFilteredGameData()
+  const skillList = useSkillList()
+  const skillToAbilityMap = useSkillToAbilityMap()
   const { scores, setScore, setAllScores, pointBuyTotal, pointBuyRemaining } = useAbilityScores()
   const { getSourcesRowsBySection } = useProvenanceLedger()
   const { applyRaceSelection, applyRaceAsiChoices } = useRaceProvenanceMutations()
+  const { applyBackgroundAbilityChoices, reconcileBackgroundAbilityChoices } =
+    useBackgroundProvenanceMutations()
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [selectedAbility, setSelectedAbility] = useState<AbilityName>('charisma')
+
+  const handleSelectAbility = (ability: AbilityName) => {
+    setSelectedAbility(ability)
+    setCompactPane('right')
+  }
 
   const method = character?.variantRules?.abilityScoreMethod ?? 'standard-array'
 
@@ -60,6 +107,8 @@ export function BuildAbilityScoresPage() {
     raceAsiData,
     racialBonuses,
     backgroundBonuses,
+    bgAsiData,
+    normalizedBackground,
     selectedRace,
     subraceData,
     raceAsiBlockIndex,
@@ -67,6 +116,59 @@ export function BuildAbilityScoresPage() {
 
   const raceAsiChoices: string[][] = character?.raceAsiChoices ?? EMPTY_RACE_ASI_CHOICES
   const isLineageRaceAsiFallback = hasFlexibleRaceOriginAsi(normalizedRaceSelection.race)
+  const backgroundAbilityEntity = useMemo(
+    () =>
+      character && normalizedBackground
+        ? {
+            name: character.background,
+            source: character.backgroundSource,
+            ability: normalizedBackground.ability,
+          }
+        : null,
+    [character, normalizedBackground],
+  )
+  const backgroundBlockIndex = character?.backgroundAsiBlockIndex ?? 0
+  const backgroundChoices = character?.backgroundAsiChoices ?? EMPTY_BACKGROUND_ASI_CHOICES
+  const currentBackgroundBlock = bgAsiData.blocks[backgroundBlockIndex] ?? bgAsiData.blocks[0]
+  const hasFixedBackgroundAssignment =
+    !!currentBackgroundBlock &&
+    currentBackgroundBlock.from.length === currentBackgroundBlock.weights.length
+  const abilitySourceRows = useMemo(() => {
+    const rows = getSourcesRowsBySection('build-ability-scores')
+    if (character?.originSystem !== '2024' || !backgroundAbilityEntity) return rows
+    return [
+      ...rows,
+      ...getPendingBackgroundAbilityRows(bgAsiData, backgroundBlockIndex, backgroundChoices),
+    ]
+  }, [
+    backgroundAbilityEntity,
+    backgroundBlockIndex,
+    backgroundChoices,
+    bgAsiData,
+    character?.originSystem,
+    getSourcesRowsBySection,
+  ])
+
+  useEffect(() => {
+    if (!backgroundAbilityEntity || !currentBackgroundBlock || !hasFixedBackgroundAssignment) {
+      return
+    }
+    const alreadySet = currentBackgroundBlock.from.every(
+      (ability, index) => backgroundChoices[index] === ability,
+    )
+    if (!alreadySet) {
+      reconcileBackgroundAbilityChoices(backgroundAbilityEntity, backgroundBlockIndex, [
+        ...currentBackgroundBlock.from,
+      ])
+    }
+  }, [
+    backgroundAbilityEntity,
+    backgroundBlockIndex,
+    backgroundChoices,
+    currentBackgroundBlock,
+    hasFixedBackgroundAssignment,
+    reconcileBackgroundAbilityChoices,
+  ])
 
   const asiBonuses = useMemo(() => {
     const bonuses: Partial<Record<AbilityName, number>> = {}
@@ -96,8 +198,8 @@ export function BuildAbilityScoresPage() {
   const skillDetailsMap = useMemo(() => buildSkillDetailsMap(skills), [skills])
 
   const selectedSkills = useMemo(
-    () => ALL_SKILLS.filter((skill) => getSkillAbility(skill) === selectedAbility),
-    [selectedAbility],
+    () => skillList.filter((skill) => skillToAbilityMap[skill] === selectedAbility),
+    [selectedAbility, skillList, skillToAbilityMap],
   )
 
   const selectedSkillDetails = useMemo(
@@ -144,6 +246,10 @@ export function BuildAbilityScoresPage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Ability scores"
+          compactRightLabel="Ability details"
           rightFixedWidth="var(--workspace-master-width)"
           left={
             <>
@@ -198,7 +304,13 @@ export function BuildAbilityScoresPage() {
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
                 <div className="p-4">
-                  <div className="mx-auto flex w-full max-w-5xl flex-col">
+                  <div
+                    ref={baseScoresRef}
+                    className={cn(
+                      'mx-auto flex w-full max-w-5xl flex-col rounded-lg',
+                      baseScoresHighlighted && 'animate-route-focus',
+                    )}
+                  >
                     <Tabs
                       value={method}
                       onValueChange={(v) =>
@@ -236,7 +348,7 @@ export function BuildAbilityScoresPage() {
                           pointBuyRemaining={pointBuyRemaining}
                           setScore={setScore}
                           selectedAbility={selectedAbility}
-                          onSelectAbility={setSelectedAbility}
+                          onSelectAbility={handleSelectAbility}
                         />
                       </TabsContent>
 
@@ -246,7 +358,7 @@ export function BuildAbilityScoresPage() {
                           racialBonuses={displayBonuses}
                           setAllScores={setAllScores}
                           selectedAbility={selectedAbility}
-                          onSelectAbility={setSelectedAbility}
+                          onSelectAbility={handleSelectAbility}
                         />
                       </TabsContent>
 
@@ -256,12 +368,19 @@ export function BuildAbilityScoresPage() {
                           racialBonuses={displayBonuses}
                           setScore={setScore}
                           selectedAbility={selectedAbility}
-                          onSelectAbility={setSelectedAbility}
+                          onSelectAbility={handleSelectAbility}
                         />
                       </TabsContent>
                     </Tabs>
                     {raceAsiData.choices.length > 0 && (
-                      <section className="mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4">
+                      <section
+                        ref={raceBonusesRef}
+                        className={cn(
+                          'mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4',
+                          raceBonusesHighlighted && 'animate-route-focus',
+                        )}
+                        data-testid="race-ability-choices"
+                      >
                         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
                           <div className="min-w-0">
                             <h3 className="text-sm font-semibold text-foreground">
@@ -379,6 +498,117 @@ export function BuildAbilityScoresPage() {
                         </div>
                       </section>
                     )}
+                    {backgroundAbilityEntity && bgAsiData.blocks.length > 0 && (
+                      <section
+                        ref={backgroundBonusesRef}
+                        className={cn(
+                          'mx-auto mt-6 w-full max-w-2xl rounded-lg border border-border-subtle bg-surface-raised/35 p-4',
+                          backgroundBonusesHighlighted && 'animate-route-focus',
+                        )}
+                        data-testid="background-ability-choices"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              Background bonuses
+                            </h3>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              Assign the origin ability increases supplied by the selected
+                              background.
+                            </p>
+                          </div>
+                          {bgAsiData.blocks.length > 1 && (
+                            <fieldset
+                              className="inline-flex w-fit shrink-0 gap-1 rounded-md border border-border bg-background/45 p-1"
+                              aria-label="Background bonus distribution"
+                            >
+                              {bgAsiData.blocks.map((block, blockIndex) => {
+                                const active = backgroundBlockIndex === blockIndex
+                                return (
+                                  <button
+                                    // biome-ignore lint/suspicious/noArrayIndexKey: source ability blocks are positional alternatives
+                                    key={`${block.weights.join('|')}|${blockIndex}`}
+                                    type="button"
+                                    onClick={() =>
+                                      applyBackgroundAbilityChoices(
+                                        backgroundAbilityEntity,
+                                        blockIndex,
+                                        block.from.length === block.weights.length
+                                          ? [...block.from]
+                                          : [],
+                                      )
+                                    }
+                                    className={cn(
+                                      'flex h-8 items-center rounded px-3 text-xs font-semibold transition-colors',
+                                      active
+                                        ? 'bg-secondary text-foreground'
+                                        : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                                    )}
+                                  >
+                                    {block.weights.map((weight) => `+${weight}`).join(' / ')}
+                                  </button>
+                                )
+                              })}
+                            </fieldset>
+                          )}
+                        </div>
+                        {currentBackgroundBlock && (
+                          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                            {currentBackgroundBlock.weights.map((weight, slotIndex) => {
+                              const selected = backgroundChoices[slotIndex] ?? ''
+                              return (
+                                <div
+                                  // biome-ignore lint/suspicious/noArrayIndexKey: duplicate bonus weights are distinct positional slots
+                                  key={`${weight}|${slotIndex}`}
+                                  className="flex min-w-44 items-center gap-2 rounded-md border border-border bg-background/35 p-1 pl-3"
+                                >
+                                  <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                                    +{weight}
+                                  </span>
+                                  <Select
+                                    value={selected}
+                                    disabled={hasFixedBackgroundAssignment}
+                                    onValueChange={(ability) => {
+                                      const nextChoices = Array.from<string>({
+                                        length: currentBackgroundBlock.weights.length,
+                                      }).map((_, index) => backgroundChoices[index] ?? '')
+                                      nextChoices[slotIndex] = ability
+                                      applyBackgroundAbilityChoices(
+                                        backgroundAbilityEntity,
+                                        backgroundBlockIndex,
+                                        nextChoices,
+                                      )
+                                    }}
+                                  >
+                                    <SelectTrigger
+                                      className="h-8 flex-1 border-0 bg-transparent px-2 text-xs shadow-none focus:ring-0"
+                                      aria-label={`Background ability bonus +${weight}`}
+                                    >
+                                      <SelectValue placeholder="Ability…" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {currentBackgroundBlock.from.map((ability) => (
+                                        <SelectItem
+                                          key={ability}
+                                          value={ability}
+                                          disabled={
+                                            backgroundChoices.includes(ability) &&
+                                            selected !== ability
+                                          }
+                                          className="text-xs"
+                                        >
+                                          {ABILITY_ABBREVIATIONS[ability]}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </section>
+                    )}
                   </div>
                 </div>
               </ScrollArea>
@@ -387,8 +617,8 @@ export function BuildAbilityScoresPage() {
                 <SourcesAccordion
                   sectionId="build-ability-scores"
                   title="Sources"
-                  rows={getSourcesRowsBySection('build-ability-scores')}
-                  emptyText="No ability bonus sources recorded. Select a race to get started."
+                  rows={abilitySourceRows}
+                  emptyText={`No ability bonus sources recorded. Select a ${character.originSystem === '2024' ? 'background' : 'race'} to get started.`}
                 />
               </div>
             </>
@@ -396,6 +626,7 @@ export function BuildAbilityScoresPage() {
           right={
             <BuildAbilityScoresDetailsPanel
               selectedAbility={selectedAbility}
+              selectedSkillNames={selectedSkills}
               selectedSkillDetails={selectedSkillDetails}
             />
           }

@@ -1,5 +1,5 @@
 import { resolveArmorType } from '@/lib/calculations/armorClass'
-import { mergeSkillState } from '@/lib/calculations/skills'
+import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { generateEquipmentId } from '@/lib/character/ids'
 import { addGrant, makeSourceTag } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
@@ -27,6 +27,7 @@ function buildEquipment(item: Item5e): Equipment {
     attuned: false,
     description: '',
     weight: item.weight,
+    value: item.value,
     rarity: item.rarity,
     reqAttune: Boolean(item.reqAttune),
     ac: item.ac,
@@ -134,10 +135,7 @@ export function applyManualProficiencyCommand(
 
   return {
     characterPatch: {
-      proficiencies,
-      ...(domain === 'skills'
-        ? { skills: mergeSkillState(character.skills ?? {}, proficiencies.skills) }
-        : {}),
+      proficiencies: domain === 'skills' ? reconcileSkillExpertise(proficiencies) : proficiencies,
     },
     provenanceUpdate,
   }

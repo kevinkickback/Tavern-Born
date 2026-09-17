@@ -56,7 +56,6 @@ describe('wizard 2024 origin-system ability display', () => {
         skills: [],
         senses: [],
         languages: [],
-        magicvariants: [],
         optionalfeatures: [],
         variantrules: [],
         trapHazards: [],

@@ -7,7 +7,14 @@ import {
   sortByName,
 } from '@/lib/5etools'
 import { useGameDataStore } from '@/store/gameDataStore'
-import type { Background5e, Condition5e, Item5e, Race5e, Subclass5e } from '@/types/5etools'
+import type {
+  Background5e,
+  Condition5e,
+  Item5e,
+  Organization5e,
+  Race5e,
+  Subclass5e,
+} from '@/types/5etools'
 
 const EMPTY_RACE_LOOKUP: Readonly<Record<string, Race5e>> = {}
 const EMPTY_BACKGROUND_LOOKUP: Readonly<Record<string, Background5e>> = {}
@@ -15,6 +22,7 @@ const EMPTY_ITEM_LOOKUP = new Map<string, Item5e>()
 const EMPTY_STRING_LOOKUP: Readonly<Record<string, string>> = {}
 const EMPTY_STRING_LIST: readonly string[] = []
 const EMPTY_CONDITION_LIST: readonly Condition5e[] = []
+const EMPTY_ORGANIZATION_LIST: readonly Organization5e[] = []
 
 /**
  * Raw unfiltered class list. Does NOT apply `allowedSources` or `preferNewerPrintings`.
@@ -61,6 +69,10 @@ export function useBackgroundLookup() {
   )
 }
 
+export function useOrganizations(): readonly Organization5e[] {
+  return useGameDataStore((state) => state.gameData?.organizations) ?? EMPTY_ORGANIZATION_LIST
+}
+
 export function useItemLookup() {
   return useGameDataStore((state) => state.gameData?.lookups?.itemLookup) ?? EMPTY_ITEM_LOOKUP
 }
@@ -85,15 +97,6 @@ export function useSpellLookup() {
   const gameData = useGameDataStore((state) => state.gameData)
 
   return useMemo(() => gameData?.lookups?.spellsByKey ?? {}, [gameData?.lookups?.spellsByKey])
-}
-
-export function useOptionalFeatureLookup() {
-  const gameData = useGameDataStore((state) => state.gameData)
-
-  return useMemo(
-    () => gameData?.lookups?.optionalFeaturesByKey ?? {},
-    [gameData?.lookups?.optionalFeaturesByKey],
-  )
 }
 
 function useSubclassLookup() {

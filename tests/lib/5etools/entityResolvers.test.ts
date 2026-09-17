@@ -30,16 +30,11 @@ describe('entity resolvers', () => {
     expect(resolveClassReference({ name: 'Wizard', source: 'PHB' }, lookups)).toBeUndefined()
   })
 
-  test('uses a deterministic primary-first name fallback only when source is unavailable', () => {
-    const primaryLaterSource = { name: 'Wizard', source: 'XPHB' } as Class5e
-    const primaryEarlierSource = { name: 'Wizard', source: 'PHB' } as Class5e
-    const rawEarlierSource = { name: 'Wizard', source: 'AAG' } as Class5e
-    const primary = {
-      classesByKey: buildClassLookup([primaryLaterSource, primaryEarlierSource]),
-    }
-    const raw = { classesByKey: buildClassLookup([rawEarlierSource]) }
+  test('does not guess an entity when its source is unavailable', () => {
+    const wizard = { name: 'Wizard', source: 'PHB' } as Class5e
+    const lookups = { classesByKey: buildClassLookup([wizard]) }
 
-    expect(resolveClassReference({ name: 'Wizard' }, primary, raw)).toBe(primaryEarlierSource)
+    expect(resolveClassReference({ name: 'Wizard' }, lookups)).toBeUndefined()
   })
 
   test('resolves backgrounds from raw data after filtered data', () => {

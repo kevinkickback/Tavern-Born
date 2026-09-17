@@ -1,34 +1,27 @@
-/**
- * Map of 5etools ability-score abbreviations to lowercase full names.
- *
- * FALLBACK: 5etools has no standalone ability-score list JSON file; these
- * abbreviations are embedded in skill/class/item entries. Validated in DEV
- * mode against data/skills.json via validateSkillToAbilityMap() in skills.ts.
- * Remove and replace with a parsed source if one becomes available.
- */
-export const ABILITY_ABBREV_TO_FULL: Readonly<Record<string, string>> = {
-  str: 'strength',
-  dex: 'dexterity',
-  con: 'constitution',
-  int: 'intelligence',
-  wis: 'wisdom',
-  cha: 'charisma',
-}
+import { ABILITY_CATALOG_FALLBACK } from '@/lib/5etools/rulesetMetadata'
 
-export const ABILITY_ABBREV_ORDER = ['str', 'dex', 'con', 'int', 'wis', 'cha'] as const
+export const ABILITY_ABBREV_TO_FULL: Readonly<Record<string, string>> = Object.fromEntries(
+  ABILITY_CATALOG_FALLBACK.map((ability) => [ability.abbreviation, ability.name]),
+)
 
-export const ABILITY_ABBREV_TO_TITLE: Readonly<Record<string, string>> = {
-  str: 'Strength',
-  dex: 'Dexterity',
-  con: 'Constitution',
-  int: 'Intelligence',
-  wis: 'Wisdom',
-  cha: 'Charisma',
-}
+export const ABILITY_ABBREV_ORDER = ABILITY_CATALOG_FALLBACK.map((ability) => ability.abbreviation)
+
+export const ABILITY_ABBREV_TO_TITLE: Readonly<Record<string, string>> = Object.fromEntries(
+  ABILITY_CATALOG_FALLBACK.map((ability) => [ability.abbreviation, ability.title]),
+)
+
+export const ABILITY_FULL_TO_ABBREV: Readonly<Record<string, string>> = Object.fromEntries(
+  ABILITY_CATALOG_FALLBACK.map((ability) => [ability.name, ability.abbreviation]),
+)
 
 export function toAbilityAbbrev(key: string): string | null {
   const lower = key.toLowerCase()
   if (ABILITY_ABBREV_TO_TITLE[lower]) return lower
   const fromFull = Object.entries(ABILITY_ABBREV_TO_FULL).find(([, full]) => full === lower)
   return fromFull?.[0] ?? null
+}
+
+export function toAbilityName(key: string): string | null {
+  const abbreviation = toAbilityAbbrev(key.trim())
+  return abbreviation ? (ABILITY_ABBREV_TO_FULL[abbreviation] ?? null) : null
 }

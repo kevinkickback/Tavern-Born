@@ -4,7 +4,11 @@ import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { useWizardGameData } from '@/hooks/data/useWizardGameData'
-import { ABILITY_SCORE_MIN, POINT_BUY_MIN, STANDARD_ARRAY } from '@/lib/calculations/gameRules'
+import {
+  makeDefaultAbilityScores,
+  makeDefaultStandardArrayAssignment,
+} from '@/lib/calculations/abilityScores'
+import { ABILITY_SCORE_MIN, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
 import { buildInitialCharacter } from '@/lib/character/commands/originSelectionCommand'
 import { resolveRaceGrantFilterOptions } from '@/lib/provenance'
 import { SOURCE_PRESETS } from '@/lib/sourcePresets'
@@ -31,37 +35,10 @@ interface CharacterCreationWizardProps {
   onOpenChange: (open: boolean) => void
 }
 
-const ABILITY_ORDER = [
-  'strength',
-  'dexterity',
-  'constitution',
-  'intelligence',
-  'wisdom',
-  'charisma',
-] as const
-
-function buildUniformAbilityScores(value: number): Record<string, number> {
-  return ABILITY_ORDER.reduce(
-    (scores, ability) => {
-      scores[ability] = value
-      return scores
-    },
-    {} as Record<string, number>,
-  )
-}
-
 function getDefaultAbilityScoresForMethod(method: string): Record<string, number> {
-  if (method === 'standard-array') {
-    return ABILITY_ORDER.reduce(
-      (scores, ability, index) => {
-        scores[ability] = STANDARD_ARRAY[index] ?? POINT_BUY_MIN
-        return scores
-      },
-      {} as Record<string, number>,
-    )
-  }
-  if (method === 'custom') return buildUniformAbilityScores(ABILITY_SCORE_MIN)
-  return buildUniformAbilityScores(POINT_BUY_MIN)
+  if (method === 'standard-array') return makeDefaultStandardArrayAssignment()
+  if (method === 'custom') return makeDefaultAbilityScores(ABILITY_SCORE_MIN)
+  return makeDefaultAbilityScores(POINT_BUY_MIN)
 }
 
 export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreationWizardProps) {
@@ -154,7 +131,7 @@ export function CharacterCreationWizard({ open, onOpenChange }: CharacterCreatio
     addCharacter(character)
     setActiveCharacter(character.id)
     handleClose()
-    toast.success('Character created successfully')
+    toast.success('Character created')
   }
 
   const handleNext = () => {

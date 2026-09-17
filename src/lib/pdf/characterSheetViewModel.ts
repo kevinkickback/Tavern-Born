@@ -1,14 +1,26 @@
 import { getClassResourceDefs } from '@/lib/5etools/classData'
-import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
 import {
-  type EntityLookupSet,
-  resolveBackgroundReference,
-  resolveClassReference,
-  resolveRaceReference,
-} from '@/lib/5etools/entityResolvers'
+  formatClassResourceRecovery,
+  getClassResourceRecoveryAtLevel,
+} from '@/lib/5etools/classRuleNormalization'
+import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
+import { type EntityLookupSet, resolveClassReference } from '@/lib/5etools/entityResolvers'
+import { resolveSpellReference } from '@/lib/5etools/spellResolvers'
 import { type AbilityName, formatModifier } from '@/lib/calculations/abilityScores'
+import { deriveCharacterActions } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
+import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
+import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { getEffectiveClassResourceMaximum } from '@/lib/calculations/classResources'
+import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
+import { getHitDiceUsedTotal, getHitDiePoolId } from '@/lib/calculations/hitDice'
+import {
+  type EffectiveMovement,
+  formatEffectiveMovement,
+  getAdditionalMovementSummary,
+  getWalkingSpeed,
+} from '@/lib/calculations/movement'
 import { getRaceTraits } from '@/lib/calculations/raceUtils'
 import { deriveAllSavingThrows, deriveAllSkills } from '@/lib/calculations/skills'
 import { buildSpellcastingClassDetails } from '@/lib/calculations/spellProfiles.casting'
@@ -20,24 +32,36 @@ import {
   formatRange,
   isRitualSpell,
 } from '@/lib/calculations/spellUtils'
-import { CUSTOM_ORGANIZATION_KEY } from '@/lib/character/organizationConstants'
+import { CUSTOM_ORGANIZATION_KEY, getOrganizationKey } from '@/lib/character/organizationConstants'
 import {
   getCharacterClassEntries,
   getEffectiveMaxHP,
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
-import { renderEntry } from '@/lib/renderer'
-import type { Background5e, Class5e, Race5e, Spell5e } from '@/types/5etools'
-import type { Character, Equipment } from '@/types/character'
+import { renderEntriesToText } from '@/lib/entryText'
+import type {
+  Background5e,
+  Class5e,
+  ClassFeature,
+  Organization5e,
+  Race5e,
+  Spell5e,
+} from '@/types/5etools'
+import type { CharacterAction } from '@/types/actions'
+import type { AbilityScores, Character, Equipment, Feat } from '@/types/character'
+import type { CharacterEffect } from '@/types/effects'
 
 type ModifierResult = { modifier: number; proficient: boolean }
 
 export interface CharacterSheetLookupSet extends EntityLookupSet {
   spellsByKey?: Readonly<Record<string, Spell5e>>
+  classFeaturesByKey?: Readonly<Record<string, ClassFeature>>
+  optionalFeaturesByKey?: Readonly<Record<string, unknown>>
   itemPropertyByAbbr?: Readonly<Record<string, string>>
+  organizations?: readonly Organization5e[]
 }
 
-export interface CharacterSheetWeaponRow {
+interface CharacterSheetWeaponRow {
   name: string
   attackBonus: string
   damage: string
@@ -47,7 +71,7 @@ export interface CharacterSheetWeaponRow {
   description: string
 }
 
-export interface CharacterSheetSpellRow {
+interface CharacterSheetSpellRow {
   name: string
   level: string
   castingTimeAndDuration: string
@@ -57,14 +81,14 @@ export interface CharacterSheetSpellRow {
   material: boolean
 }
 
-export interface CharacterSheetClassResourceRow {
+interface CharacterSheetClassResourceRow {
   label: string
   max: number
   used: number
   recovery: string
 }
 
-export interface CharacterSheetHitDieRow {
+interface CharacterSheetHitDieRow {
   level: number
   die: string
   used: number | null
@@ -72,21 +96,29 @@ export interface CharacterSheetHitDieRow {
 
 export interface CharacterSheetViewModel {
   character: Character
+  feats: Feat[]
   level: number
   classSummary: string
   subclassSummary: string
   classLevelSummary: string
   raceSummary: string
   proficiencyBonus: number
+  effectiveAbilityScores: AbilityScores
   abilityModifiers: Record<AbilityName, number>
+  initiativeModifier: number
   skillByName: ReadonlyMap<string, ModifierResult>
   savingThrowByAbility: ReadonlyMap<AbilityName, ModifierResult>
   effectiveArmorClass: number
   maxHP: number
+  movement: EffectiveMovement
+  movementSummary: string
+  additionalMovementSummary: string
+  walkingSpeed: number
   remainingHitDice: number
   hitDiceRows: CharacterSheetHitDieRow[]
   classResourceRows: CharacterSheetClassResourceRow[]
   weaponRows: CharacterSheetWeaponRow[]
+  actions: CharacterAction[]
   spellRows: CharacterSheetSpellRow[]
   magicItems: Equipment[]
   resolvedClasses: readonly Class5e[]
@@ -104,24 +136,20 @@ export interface CharacterSheetViewModel {
   featsSummary: string
   customOrganizationSummary: string
   carriedWeight: string
+  carryingCapacity: number
   sizeSummary: string
   appearanceSummary: string
   historyAndPersonalitySummary: string
   alliesAndOrganizationsSummary: string
   organizationDetailsSummary: string
+  organizationImage?: string
   defensiveTraits: string[]
 }
 
 function getClassSummary(character: Character): string {
-  const entries = getCharacterClassEntries(character)
-  return (
-    entries
-      .map((entry) => entry.name)
-      .filter(Boolean)
-      .join(' / ') ||
-    character.class ||
-    ''
-  )
+  return getCharacterClassEntries(character)
+    .map((entry) => entry.name)
+    .join(' / ')
 }
 
 function getSubclassSummary(character: Character): string {
@@ -132,9 +160,6 @@ function getSubclassSummary(character: Character): string {
 }
 
 function getClassLevelSummary(character: Character): string {
-  if (!Array.isArray(character.classProgression) || character.classProgression.length === 0) {
-    return character.class || ''
-  }
   return character.classProgression
     .filter((entry) => entry.name)
     .map((entry) => {
@@ -147,22 +172,6 @@ function getClassLevelSummary(character: Character): string {
 function getRaceSummary(character: Character): string {
   if (!character.subrace) return character.race || ''
   return `${character.subrace} ${character.race}`.trim()
-}
-
-function renderEntriesToText(entries: unknown[]): string {
-  return entries
-    .map((entry) =>
-      (renderEntry(entry) ?? '')
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/\s+/g, ' ')
-        .trim(),
-    )
-    .filter(Boolean)
-    .join(' ')
 }
 
 function extractBackgroundFeatureBlock(
@@ -189,16 +198,13 @@ function extractBackgroundFeatureBlock(
   }
 }
 
-function buildVisionSummary(character: Character, mergedRace?: Race5e): string {
-  if (character.visions?.length) {
-    return character.visions
-      .map((vision) => {
-        const label = vision.type.charAt(0).toUpperCase() + vision.type.slice(1)
-        return vision.range != null ? `${label} ${vision.range} ft.` : label
-      })
-      .join(', ')
-  }
-  return mergedRace?.darkvision ? `Darkvision ${mergedRace.darkvision} ft.` : ''
+function buildVisionSummary(senses: readonly { type: string; range?: number }[]): string {
+  return senses
+    .map((sense) => {
+      const label = sense.type.charAt(0).toUpperCase() + sense.type.slice(1)
+      return sense.range != null ? `${label} ${sense.range} ft.` : label
+    })
+    .join(', ')
 }
 
 function buildRacialTraitsSummary(character: Character, mergedRace?: Race5e): string {
@@ -345,7 +351,10 @@ function buildHistoryAndPersonalitySummary(character: Character): string {
   ])
 }
 
-function buildAlliesAndOrganizationsSummary(character: Character): string {
+function buildAlliesAndOrganizationsSummary(
+  character: Character,
+  organizations: readonly Organization5e[],
+): string {
   const allies = character.details.allies ?? []
   const allySummary = allies
     .map((ally) => {
@@ -354,7 +363,11 @@ function buildAlliesAndOrganizationsSummary(character: Character): string {
       return `${ally.name}${relationship}${description}`
     })
     .join('\n')
-  return [character.details.alliesAndOrganizations, allySummary].filter(Boolean).join('\n\n')
+  const selectionKey = character.details.organizationSelectionKey
+  const organizationDescription = organizations.find(
+    (organization) => getOrganizationKey(organization.name, organization.source) === selectionKey,
+  )?.description
+  return [organizationDescription, allySummary].filter(Boolean).join('\n\n')
 }
 
 function buildOrganizationDetailsSummary(character: Character): string {
@@ -368,79 +381,40 @@ function buildOrganizationDetailsSummary(character: Character): string {
   ])
 }
 
-function isWeapon(item: Equipment): boolean {
-  return !!item.dmg1 || !!item.weaponCategory || item.type === 'M' || item.type === 'R'
-}
-
-function isProficientWithWeapon(character: Character, item: Equipment): boolean {
-  const proficiencies = character.proficiencies.weapons.map((value) => value.toLowerCase())
-  const name = item.name.toLowerCase()
-  const category = item.weaponCategory?.toLowerCase()
-  return proficiencies.some(
-    (proficiency) =>
-      proficiency === name ||
-      (category != null &&
-        (proficiency === category || proficiency.includes(`${category} weapon`))),
-  )
-}
-
-function buildWeaponRows(
+function resolveOrganizationImage(
   character: Character,
-  abilityModifiers: Record<AbilityName, number>,
-  proficiencyBonus: number,
-  propertyLookup: Readonly<Record<string, string>>,
-): CharacterSheetWeaponRow[] {
-  return character.equipment
-    .filter(isWeapon)
-    .sort((left, right) => Number(right.equipped) - Number(left.equipped))
-    .map((item) => {
-      const properties = item.properties ?? []
-      const propertyKeys = properties.map((property) => property.split('|')[0].toUpperCase())
-      const abilityModifier = propertyKeys.includes('F')
-        ? Math.max(abilityModifiers.strength, abilityModifiers.dexterity)
-        : item.type === 'R'
-          ? abilityModifiers.dexterity
-          : abilityModifiers.strength
-      const attackBonus =
-        abilityModifier + (isProficientWithWeapon(character, item) ? proficiencyBonus : 0)
-      const damageBonus =
-        abilityModifier > 0
-          ? ` + ${abilityModifier}`
-          : abilityModifier < 0
-            ? ` - ${Math.abs(abilityModifier)}`
-            : ''
-      const propertyLabels = properties.map((property) => {
-        const key = property.split('|')[0].toUpperCase()
-        return propertyLookup[key] ?? property
-      })
-      if (item.dmg2) propertyLabels.push(`Versatile ${item.dmg2}`)
+  organizations: readonly Organization5e[],
+): string | undefined {
+  const selectionKey = character.details.organizationSelectionKey
+  if (selectionKey === CUSTOM_ORGANIZATION_KEY) {
+    return character.details.organizationCustomImage?.trim() || undefined
+  }
+  return organizations.find(
+    (organization) => getOrganizationKey(organization.name, organization.source) === selectionKey,
+  )?.imagePath
+}
+
+function buildWeaponRows(actions: readonly CharacterAction[]): CharacterSheetWeaponRow[] {
+  return actions
+    .filter((action) => action.kind === 'attack')
+    .map((action) => {
+      const damage = action.damage?.[0]
+      const damageBonus = damage?.bonus ?? 0
+      const formattedDamageBonus =
+        damageBonus > 0 ? ` + ${damageBonus}` : damageBonus < 0 ? ` - ${Math.abs(damageBonus)}` : ''
+      const masteryLabels = (action.mastery ?? []).map((mastery) => mastery.name)
       return {
-        name: item.name,
-        attackBonus: formatModifier(attackBonus),
-        damage: item.dmg1 ? `${item.dmg1}${damageBonus}` : '',
-        damageType: item.dmgType
-          ? (DAMAGE_TYPE_LABELS[item.dmgType.toUpperCase()] ?? item.dmgType)
+        name: action.name,
+        attackBonus: action.attackBonus == null ? '' : formatModifier(action.attackBonus),
+        damage: damage?.dice ? `${damage.dice}${formattedDamageBonus}` : '',
+        damageType: damage?.damageType
+          ? (DAMAGE_TYPE_LABELS[damage.damageType.toUpperCase()] ?? damage.damageType)
           : '',
-        range: item.range ?? '',
-        notes: propertyLabels.join(', '),
-        description: item.description?.trim() ?? '',
+        range: action.range ?? '',
+        notes: [...(action.properties ?? []), ...masteryLabels].join(', '),
+        description: action.description,
       }
     })
-}
-
-function resolveSpellReference(
-  reference: string,
-  spellsByKey: Readonly<Record<string, Spell5e>>,
-): Spell5e | undefined {
-  const direct = spellsByKey[reference]
-  if (direct) return direct
-  const separator = reference.lastIndexOf('|')
-  const name = (separator >= 0 ? reference.slice(0, separator) : reference).trim()
-  const source = separator >= 0 ? reference.slice(separator + 1).trim() : ''
-  const candidates = Object.values(spellsByKey)
-    .filter((spell) => spell.name === name && (!source || spell.source === source))
-    .sort((left, right) => left.source.localeCompare(right.source))
-  return candidates[0]
 }
 
 function buildSpellRows(
@@ -491,10 +465,10 @@ function buildHitDiceRows(
     return {
       level: entry.levels,
       die: classData?.hd?.faces ? `d${classData.hd.faces}` : '',
-      used:
-        entries.length === 1
-          ? Math.min(entry.levels, Math.max(0, character.hitDiceUsed ?? 0))
-          : null,
+      used: Math.min(
+        entry.levels,
+        Math.max(0, character.hitDiceUsed?.[getHitDiePoolId(entry)] ?? 0),
+      ),
     }
   })
 }
@@ -502,34 +476,70 @@ function buildHitDiceRows(
 function buildClassResourceRows(
   character: Character,
   rawLookups: CharacterSheetLookupSet,
+  effectiveAbilityScores: AbilityScores,
+  effects: readonly CharacterEffect[],
+  effectContext: EffectResolutionContext,
 ): CharacterSheetClassResourceRow[] {
   const stored = character.classResources ?? {}
-  const charismaModifier = Math.max(1, getAbilityModifier(character.abilityScores.charisma))
+  const charismaModifier = getAbilityModifier(effectiveAbilityScores.charisma)
   return getCharacterClassEntries(character).flatMap((entry) => {
     const classData = resolveClassReference(entry, rawLookups)
     const levelIndex = Math.max(0, Math.min(19, entry.levels - 1))
     return getClassResourceDefs(classData, entry.levels).map((definition) => {
-      const max =
-        definition.maxFormula === 'cha-mod'
-          ? charismaModifier
-          : (definition.maxPerLevel[levelIndex] ?? 0)
-      const current = stored[definition.id] ?? max
-      const restType = definition.restTypeByLevel?.[levelIndex] ?? definition.restType
+      const max = getEffectiveClassResourceMaximum(
+        definition,
+        levelIndex,
+        charismaModifier,
+        effects,
+        effectContext,
+      )
+      const current = Math.max(0, Math.min(max, stored[definition.id] ?? max))
+      const recovery = getClassResourceRecoveryAtLevel(definition, levelIndex)
       return {
         label: definition.label,
         max,
         used: Math.max(0, max - current),
-        recovery: restType === 'short' ? 'Short rest' : 'Long rest',
+        recovery: formatClassResourceRecovery(recovery),
       }
     })
   })
 }
 
-function buildDefensiveTraits(character: Character): string[] {
-  return [
+function buildDefensiveTraits(
+  character: Character,
+  effects: readonly CharacterEffect[],
+  effectContext: EffectResolutionContext,
+): string[] {
+  const traits = [
     ...(character.damageResistances ?? []).map((value) => `${value} resistance`),
     ...(character.damageImmunities ?? []).map((value) => `${value} immunity`),
     ...(character.conditionImmunities ?? []).map((value) => `${value} condition immunity`),
+  ]
+  for (const effect of effects) {
+    if (effect.operation.kind !== 'grant' || !isCharacterEffectActive(effect, effectContext))
+      continue
+    if (effect.target.kind === 'damage-resistance') {
+      traits.push(`${effect.target.damageType} resistance`)
+    } else if (effect.target.kind === 'damage-immunity') {
+      traits.push(`${effect.target.damageType} immunity`)
+    } else if (effect.target.kind === 'condition-immunity') {
+      traits.push(`${effect.target.condition} condition immunity`)
+    }
+  }
+  const seen = new Set<string>()
+  return traits.filter((trait) => {
+    const key = trait.trim().toLocaleLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function getSelectedFeats(character: Character): Feat[] {
+  return [
+    ...(character.feats ?? []),
+    ...(character.specialFeats ?? []),
+    ...(character.classFeatChoices ?? []).flatMap((choice) => choice.feats),
   ]
 }
 
@@ -547,22 +557,23 @@ export function createCharacterSheetViewModel(
   character: Character,
   rawLookups: CharacterSheetLookupSet,
 ): CharacterSheetViewModel {
+  const calculationContext = createCharacterCalculationContext(character, rawLookups)
+  const feats = getSelectedFeats(character)
+  const effectiveAbilityScores = calculationContext.abilityScores.total
   const level = getTotalCharacterLevel(character) || 1
   const proficiencyBonus = getProficiencyBonus(level)
-  const abilityModifiers = Object.fromEntries(
-    (['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const).map(
-      (ability) => [ability, getAbilityModifier(character.abilityScores[ability])],
-    ),
-  ) as Record<AbilityName, number>
-  const expertiseSkills = Object.entries(character.skills)
-    .filter(([, value]) => value?.expertise)
-    .map(([name]) => name.toLowerCase())
+  const abilityModifiers = calculationContext.abilityScores.modifiers
+  const expertiseSkills = character.proficiencies.expertise
   const skillByName = new Map(
     deriveAllSkills(
       abilityModifiers,
       character.proficiencies.skills,
       expertiseSkills,
       proficiencyBonus,
+      undefined,
+      undefined,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
     ).map((skill) => [skill.name, skill] as const),
   )
   const savingThrowByAbility = new Map(
@@ -570,61 +581,87 @@ export function createCharacterSheetViewModel(
       abilityModifiers,
       character.proficiencies.savingThrows,
       proficiencyBonus,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
     ).map((save) => [save.ability, save] as const),
   )
-  const resolvedClasses = getCharacterClassEntries(character).flatMap((entry) => {
-    const resolved = resolveClassReference(entry, rawLookups)
-    return resolved ? [resolved] : []
-  })
-  const raceResolution = resolveRaceReference(
-    {
-      name: character.race,
-      source: character.raceSource,
-      subraceName: character.subrace,
-      subraceSource: character.subraceSource,
-    },
-    rawLookups,
-  )
-  const background = resolveBackgroundReference(
-    { name: character.background, source: character.backgroundSource },
-    rawLookups,
-  )
+  const resolvedClasses = calculationContext.classes
+  const raceResolution = calculationContext.raceResolution
+  const background = calculationContext.background
   const classesById = new Map(
     resolvedClasses.map((classData) => [
       toClassProfileId(classData.name, classData.source),
       classData,
     ]),
   )
+  const actions = deriveCharacterActions(character, {
+    abilityModifiers,
+    proficiencyBonus,
+    itemLookup: rawLookups.itemLookup,
+    propertyLookup: rawLookups.itemPropertyByAbbr,
+    effects: calculationContext.effects.declarations,
+    effectContext: calculationContext.effects.resolutionContext,
+    spellsByKey: rawLookups.spellsByKey,
+    race: raceResolution.mergedRace,
+    classes: resolvedClasses,
+    feats: calculationContext.feats,
+    classFeaturesByKey: rawLookups.classFeaturesByKey,
+    optionalFeaturesByKey: rawLookups.optionalFeaturesByKey,
+  })
 
   return {
     character,
+    feats,
     level,
     classSummary: getClassSummary(character),
     subclassSummary: getSubclassSummary(character),
     classLevelSummary: getClassLevelSummary(character),
     raceSummary: getRaceSummary(character),
     proficiencyBonus,
+    effectiveAbilityScores,
     abilityModifiers,
+    initiativeModifier: calculationContext.initiativeModifier,
     skillByName,
     savingThrowByAbility,
-    effectiveArmorClass: computeEffectiveCharacterArmorClass(character),
-    maxHP: getEffectiveMaxHP(character, resolvedClasses),
-    remainingHitDice: Math.max(0, level - Math.max(0, character.hitDiceUsed ?? 0)),
-    hitDiceRows: buildHitDiceRows(character, rawLookups),
-    classResourceRows: buildClassResourceRows(character, rawLookups),
-    weaponRows: buildWeaponRows(
+    effectiveArmorClass: computeEffectiveCharacterArmorClass(
       character,
-      abilityModifiers,
-      proficiencyBonus,
-      rawLookups.itemPropertyByAbbr ?? {},
+      effectiveAbilityScores,
+      calculationContext.effects.declarations,
     ),
+    maxHP: getEffectiveMaxHP(
+      character,
+      resolvedClasses,
+      effectiveAbilityScores,
+      calculationContext.effects.declarations,
+    ),
+    movement: calculationContext.movement,
+    movementSummary: formatEffectiveMovement(calculationContext.movement),
+    additionalMovementSummary: getAdditionalMovementSummary(calculationContext.movement),
+    walkingSpeed: getWalkingSpeed(calculationContext.movement),
+    remainingHitDice: Math.max(0, level - getHitDiceUsedTotal(character.hitDiceUsed)),
+    hitDiceRows: buildHitDiceRows(character, rawLookups),
+    classResourceRows: buildClassResourceRows(
+      character,
+      rawLookups,
+      effectiveAbilityScores,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
+    ),
+    weaponRows: buildWeaponRows(actions),
+    actions,
     spellRows: buildSpellRows(character, rawLookups.spellsByKey ?? {}),
     magicItems: character.equipment.filter(isMagicItem),
     resolvedClasses,
     mergedRace: raceResolution.mergedRace,
     background,
-    spellcastingDetails: buildSpellcastingClassDetails(character, classesById),
-    visionSummary: buildVisionSummary(character, raceResolution.mergedRace),
+    spellcastingDetails: buildSpellcastingClassDetails(
+      character,
+      classesById,
+      effectiveAbilityScores,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
+    ),
+    visionSummary: buildVisionSummary(calculationContext.senses),
     racialTraitsSummary: buildRacialTraitsSummary(character, raceResolution.mergedRace),
     backgroundFeature: getBackgroundFeature(character, background),
     classFeaturesSummary2014: buildClassFeaturesSummary(character),
@@ -634,7 +671,7 @@ export function createCharacterSheetViewModel(
       .join('\n'),
     proficienciesSummary: buildProficienciesSummary(character),
     languagesSummary: character.proficiencies.languages.join(', '),
-    featsSummary: character.feats
+    featsSummary: feats
       .map((feat) => {
         const body = feat.description?.trim()
         return body ? `${feat.name}: ${body}` : feat.name
@@ -649,12 +686,25 @@ export function createCharacterSheetViewModel(
     carriedWeight: character.equipment
       .reduce((sum, item) => sum + (item.weight ?? 0) * (item.quantity ?? 1), 0)
       .toFixed(1),
+    carryingCapacity: getEffectiveCarryCapacity(
+      effectiveAbilityScores.strength,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
+    ),
     sizeSummary: raceResolution.mergedRace?.size?.[0] ?? '',
     appearanceSummary: buildAppearanceSummary(character),
     historyAndPersonalitySummary: buildHistoryAndPersonalitySummary(character),
-    alliesAndOrganizationsSummary: buildAlliesAndOrganizationsSummary(character),
+    alliesAndOrganizationsSummary: buildAlliesAndOrganizationsSummary(
+      character,
+      rawLookups.organizations ?? [],
+    ),
     organizationDetailsSummary: buildOrganizationDetailsSummary(character),
-    defensiveTraits: buildDefensiveTraits(character),
+    organizationImage: resolveOrganizationImage(character, rawLookups.organizations ?? []),
+    defensiveTraits: buildDefensiveTraits(
+      character,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
+    ),
   }
 }
 

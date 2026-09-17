@@ -49,16 +49,32 @@ describe('desktop workspace navigation', () => {
     expect(screen.getByRole('link', { name: 'Class' }).getAttribute('aria-current')).toBe('page')
   })
 
-  test('organizes Builder navigation into Core, Details, and Options', () => {
-    renderSidebar('/rules')
+  test('keeps actions and effects with character details and folds sources into Rules', () => {
+    renderSidebar('/build/adjustments')
 
     expect(screen.getByText('Core')).toBeTruthy()
     expect(screen.getByText('Details')).toBeTruthy()
-    expect(screen.getByText('Options')).toBeTruthy()
+    expect(screen.getByText('Finish')).toBeTruthy()
+    expect(screen.queryByText('Options')).toBeNull()
     expect(screen.queryByText('Character Core')).toBeNull()
     expect(screen.queryByText('Character Details')).toBeNull()
-    expect(screen.getByRole('link', { name: 'Rules' }).getAttribute('aria-current')).toBe('page')
-    expect(screen.getByRole('link', { name: 'Sources' })).toBeTruthy()
+    expect(
+      screen.getByRole('link', { name: 'Actions & Effects' }).getAttribute('aria-current'),
+    ).toBe('page')
+    expect(screen.queryByRole('link', { name: 'Rules' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Sources' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Rules' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Sources' })).toBeNull()
+  })
+
+  test('places Review in a final section after Core and Details', () => {
+    renderSidebar('/build/review')
+
+    const navigation = screen.getByRole('navigation', { name: 'Workspace pages' })
+    const text = navigation.textContent ?? ''
+    expect(text.indexOf('Core')).toBeLessThan(text.indexOf('Details'))
+    expect(text.indexOf('Details')).toBeLessThan(text.indexOf('Finish'))
+    expect(screen.getByRole('link', { name: /^Review/ }).getAttribute('aria-current')).toBe('page')
   })
 
   test('keeps application settings as a primary-rail utility', async () => {
@@ -89,6 +105,7 @@ describe('desktop workspace navigation', () => {
     expect(
       screen.getByRole('button', { name: 'Character Sheet' }).getAttribute('aria-disabled'),
     ).toBe('true')
+    expect(screen.getByRole('button', { name: 'Rules' }).getAttribute('aria-disabled')).toBe('true')
     expect(
       screen.getByRole('button', { name: 'Compendium' }).getAttribute('aria-disabled'),
     ).toBeNull()
@@ -108,6 +125,33 @@ describe('desktop workspace navigation', () => {
     expect(
       screen.getByRole('button', { name: 'Character Sheet' }).getAttribute('aria-disabled'),
     ).toBeNull()
+    expect(screen.getByRole('button', { name: 'Rules' }).getAttribute('aria-disabled')).toBeNull()
+  })
+
+  test('orders the Rules workspace between Builder and Character Sheet', () => {
+    renderSidebar('/')
+
+    const labels = screen
+      .getByRole('navigation', { name: 'Primary workspaces' })
+      .querySelectorAll('button[aria-label]')
+    expect(Array.from(labels, (button) => button.getAttribute('aria-label')).slice(0, 5)).toEqual([
+      'Characters',
+      'Builder',
+      'Rules',
+      'Character Sheet',
+      'Compendium',
+    ])
+  })
+
+  test('uses separate Character Rules and Sources pages in the Rules navigation', () => {
+    renderSidebar('/sources')
+
+    expect(screen.getByRole('button', { name: 'Rules' }).getAttribute('aria-current')).toBe('page')
+    expect(screen.getByRole('link', { name: 'Character Rules' }).getAttribute('aria-current')).toBe(
+      null,
+    )
+    expect(screen.getByRole('link', { name: 'Sources' }).getAttribute('aria-current')).toBe('page')
+    expect(screen.queryByRole('button', { name: 'Sources' })).toBeNull()
   })
 
   test('renders the permanent context pane for the compendium', () => {
@@ -157,7 +201,11 @@ describe('desktop workspace navigation', () => {
 
   test('uses recent characters as a quick, functional switcher', async () => {
     const user = userEvent.setup()
-    const character = makeCharacterFixture({ name: 'Aelar', race: 'Elf', level: 3 })
+    const character = makeCharacterFixture({
+      name: 'Aelar',
+      race: 'Elf',
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 3 }],
+    })
     useCharacterStore.setState({ characters: [character] })
 
     renderSidebar('/')

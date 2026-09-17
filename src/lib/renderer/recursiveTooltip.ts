@@ -1,7 +1,7 @@
 import { renderEntry } from '@/lib/renderer'
 import type { Spell5e } from '@/types/5etools'
 
-export interface TooltipEntityLike {
+interface TooltipEntityLike {
   name?: string
   shortName?: string
   source?: string
@@ -30,8 +30,6 @@ export interface RecursiveTooltipData {
 }
 
 export interface RecursiveHintState extends RecursiveTooltipData {
-  x: number
-  y: number
   triggerElement: HTMLElement
 }
 
@@ -78,7 +76,7 @@ export interface RecursiveTooltipCollections {
   classFeatures?: readonly unknown[]
 }
 
-export function getEntityKey(name: string, source?: string): string {
+function getEntityKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`.toLowerCase()
 }
 
@@ -442,54 +440,6 @@ export function getRecursiveTooltipData(
     subtitle: `${kindLabels[normalizedKind] ?? normalizedKind}${entity.source ? ` • ${entity.source}` : ''}${entity.page ? ` p. ${entity.page}` : ''}`,
     html: getPreviewHtml(entity.entries),
   }
-}
-
-export function getRecursiveHintPosition(
-  target: HTMLElement,
-  hasBody: boolean,
-): { x: number; y: number } {
-  const rect = target.getBoundingClientRect()
-  const container = target.closest('[data-recursive-tooltip-depth]') as HTMLElement | null
-
-  const containerRect = container?.getBoundingClientRect() || {
-    left: 0,
-    top: 0,
-    right: window.innerWidth,
-    bottom: window.innerHeight,
-  }
-  const tooltipWidthEstimate = 320
-  const tooltipHeightEstimate = hasBody ? 220 : 88
-  const gap = 8
-  const margin = 8
-  const overlapStagger = 24
-  const rightFits = containerRect.right + gap + tooltipWidthEstimate <= window.innerWidth - margin
-  const leftFits = containerRect.left - gap - tooltipWidthEstimate >= margin
-  const viewportX = rightFits
-    ? containerRect.right + gap
-    : leftFits
-      ? containerRect.left - gap - tooltipWidthEstimate
-      : Math.max(
-          margin,
-          Math.min(
-            containerRect.left + overlapStagger,
-            window.innerWidth - tooltipWidthEstimate - margin,
-          ),
-        )
-  const x = viewportX - containerRect.left
-
-  const overlapsParent =
-    viewportX < containerRect.right && viewportX + tooltipWidthEstimate > containerRect.left
-  const centeredViewportY = rect.top + rect.height / 2 - tooltipHeightEstimate / 2
-  const staggeredViewportY = overlapsParent
-    ? Math.max(centeredViewportY, containerRect.top + overlapStagger)
-    : centeredViewportY
-  const viewportY = Math.max(
-    margin,
-    Math.min(staggeredViewportY, window.innerHeight - tooltipHeightEstimate - margin),
-  )
-  const y = viewportY - containerRect.top
-
-  return { x, y }
 }
 
 export function markRecursiveTooltipReferences(html: string): string {

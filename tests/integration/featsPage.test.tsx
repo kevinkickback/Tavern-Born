@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { FeatsPage } from '@/pages/feats/FeatsPage'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
@@ -21,6 +22,12 @@ const configurableFeat = {
   entries: ['Gain proficiency in one skill.'],
 } as Feat5e
 
+const configurableFeat2024 = {
+  ...configurableFeat,
+  source: 'XPHB',
+  entries: ['Gain proficiency using the revised printing.'],
+} as Feat5e
+
 const magicInitiate = {
   name: 'Magic Initiate',
   source: 'XPHB',
@@ -35,7 +42,7 @@ const magicInitiate = {
 
 vi.mock('@/hooks/data/useFilteredGameData', () => ({
   useFilteredGameData: () => ({
-    feats: [configurableFeat, magicInitiate],
+    feats: [configurableFeat, configurableFeat2024, magicInitiate],
     spells: [],
     classes: [],
   }),
@@ -47,7 +54,7 @@ vi.mock('@/hooks/data/useGameData', () => ({
 
 vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
   useAnchoredHintPosition: ({ enabled }: { enabled: boolean }) =>
-    enabled ? { top: 40, left: 40, arrowLeft: 20, anchorTop: 20, gap: 12 } : null,
+    enabled ? { reference: document.body, gap: 12, placement: 'bottom' } : null,
 }))
 
 vi.mock('@/components/modals/FeatSelectionModal', () => ({
@@ -96,6 +103,13 @@ vi.mock('@/components/modals/FeatOptionsModal', () => ({
 }))
 
 describe('FeatsPage bonus feat configuration', () => {
+  const renderPage = (initialEntry = '/feats') =>
+    render(
+      <MemoryRouter initialEntries={[initialEntry]}>
+        <FeatsPage />
+      </MemoryRouter>,
+    )
+
   beforeEach(() => {
     const character = makeCharacterFixture({ specialFeats: [] })
     useCharacterStore.setState({
@@ -111,10 +125,12 @@ describe('FeatsPage bonus feat configuration', () => {
   })
 
   test('automatically configures a newly selected bonus feat', () => {
-    render(<FeatsPage />)
+    renderPage()
 
     expect(screen.queryByRole('tab', { name: /Needs Setup/ })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Add Bonus Feat' }))
+    const addBonusFeat = screen.getByRole('button', { name: 'Add Bonus Feat' })
+    expect(addBonusFeat.className).toContain('bg-primary')
+    fireEvent.click(addBonusFeat)
     fireEvent.click(screen.getByRole('button', { name: 'Select Skilled' }))
 
     expect(screen.queryByRole('dialog', { name: 'Select bonus feat' })).toBeNull()
@@ -150,7 +166,7 @@ describe('FeatsPage bonus feat configuration', () => {
       activeCharacter: character,
     })
 
-    render(<FeatsPage />)
+    renderPage()
 
     const editButtons = screen.getAllByRole('button', { name: 'Edit Setup' })
     expect(editButtons).toHaveLength(2)
@@ -159,6 +175,9 @@ describe('FeatsPage bonus feat configuration', () => {
       expect(button.className).toContain('text-accent')
       expect(button.getAttribute('data-feat-edit-setup-btn')).toBe('true')
     }
+    const addFeatButton = screen.getByRole('button', { name: 'Add Feat' })
+    expect(addFeatButton.className).toContain('bg-primary')
+    expect(addFeatButton.parentElement?.parentElement?.className).toContain('pb-2')
     expect(screen.getByRole('status').textContent).toContain(
       "You can revise a configured feat's spells, skills, or other choices later.",
     )
@@ -184,10 +203,14 @@ describe('FeatsPage bonus feat configuration', () => {
       activeCharacter: character,
     })
 
-    render(<FeatsPage />)
+    renderPage('/feats?view=character&feat=Magic+Initiate&source=XPHB&focus=feat')
 
-    expect(screen.getByText('You gain the following benefits.')).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Feats' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getAllByText('You gain the following benefits.').length).toBeGreaterThan(0)
     expect(screen.getByText('Cleric')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Select Magic Initiate' }).parentElement?.className,
+    ).toContain('animate-route-focus')
     fireEvent.click(screen.getByRole('button', { name: 'Complete Setup' }))
     expect(screen.getByRole('dialog', { name: 'Configure Magic Initiate' }).textContent).toContain(
       'Cleric Spells',
@@ -202,5 +225,42 @@ describe('FeatsPage bonus feat configuration', () => {
         'magic initiate|xphb|cleric'
       ],
     ).toEqual({ spellcastingClass: 'Cleric Spells' })
+  })
+
+  test('selects and removes regular feats by name and source', () => {
+    const character = makeCharacterFixture({
+      feats: [
+        { id: 'skilled-phb', name: 'Skilled', source: 'PHB', description: '' },
+        { id: 'skilled-xphb', name: 'Skilled', source: 'XPHB', description: '' },
+      ],
+    })
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    renderPage()
+
+    const selectButtons = screen.getAllByRole('button', { name: 'Select Skilled' })
+    fireEvent.click(selectButtons[1])
+    expect(selectButtons[0].getAttribute('aria-pressed')).toBe('false')
+    expect(selectButtons[1].getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getAllByText('XPHB').length).toBeGreaterThan(0)
+
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove Skilled' })
+    act(() => fireEvent.click(removeButtons[0]))
+    expect(useCharacterStore.getState().activeCharacter?.feats).toEqual([
+      expect.objectContaining({ name: 'Skilled', source: 'XPHB' }),
+    ])
+  })
+
+  test('opens a source-qualified feat from a route deep link', () => {
+    renderPage('/feats?view=character&feat=Skilled&source=XPHB')
+
+    expect(screen.getByRole('tab', { name: /^Character/ }).getAttribute('aria-selected')).toBe(
+      'true',
+    )
+    expect(screen.getByText('Gain proficiency using the revised printing.')).toBeTruthy()
   })
 })

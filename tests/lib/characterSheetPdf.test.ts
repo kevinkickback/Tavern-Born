@@ -14,6 +14,7 @@ import {
   generateFilledCharacterSheetPdf as fillCharacterSheetViewModel,
   buildCharacterSheetFieldMap as mapCharacterSheetViewModel,
 } from '@/lib/pdf/characterSheetPdf'
+import { asFieldWithInternals } from '@/lib/pdf/pdfFieldInternals'
 import type { Background5e, Class5e, Race5e, Spell5e } from '@/types/5etools'
 import type { Character } from '@/types/character'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -73,7 +74,6 @@ describe('characterSheetPdf', () => {
         { name: 'Ranger', source: 'PHB', levels: 3 },
         { name: 'Fighter', source: 'PHB', levels: 1 },
       ],
-      level: 4,
       background: 'Outlander',
       details: {
         alignment: 'Chaotic Good',
@@ -87,19 +87,19 @@ describe('characterSheetPdf', () => {
         charisma: 8,
       },
       armorClassOverride: 16,
-      speed: 35,
+      movement: { speeds: { walk: 35 }, source: { kind: 'manual', name: 'Test' } },
       hitPoints: {
-        max: 31,
         current: 24,
         temporary: 5,
       },
-      hitDiceUsed: 1,
+      hitDiceUsed: { 'fighter|phb': 1 },
       proficiencies: {
         armor: [],
         weapons: [],
         tools: [],
         languages: ['Common', 'Elvish'],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
       feats: [
@@ -164,6 +164,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: ['Common'],
         skills: ['stealth', 'perception'],
+        expertise: ['stealth'],
         savingThrows: ['dexterity', 'wisdom'],
       },
       abilityScores: {
@@ -174,10 +175,6 @@ describe('characterSheetPdf', () => {
         wisdom: 14,
         charisma: 10,
       },
-      skills: {
-        stealth: { proficient: true, expertise: true, bonus: 0 },
-      },
-      level: 5,
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 5 }],
     })
 
@@ -198,7 +195,6 @@ describe('characterSheetPdf', () => {
     const character = makeCharacterFixture({
       name: 'Bren Ironhand',
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 5 }],
-      level: 5,
       race: 'Human',
       background: 'Soldier',
       abilityScores: {
@@ -215,6 +211,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: ['Common'],
         skills: ['athletics', 'perception'],
+        expertise: [],
         savingThrows: ['strength', 'constitution'],
       },
     })
@@ -245,6 +242,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: ['Common', 'Elvish', 'Dwarvish'],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })
@@ -265,6 +263,7 @@ describe('characterSheetPdf', () => {
         tools: ["Thieves' Tools", 'Dice Set'],
         languages: [],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })
@@ -284,6 +283,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: [],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })
@@ -308,6 +308,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: [],
         skills: [],
+        expertise: [],
         savingThrows: [],
       },
     })
@@ -394,7 +395,6 @@ describe('characterSheetPdf', () => {
   test('2014 Spell save DC populated for spellcasting class', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
-      level: 5,
       abilityScores: {
         strength: 10,
         dexterity: 10,
@@ -424,7 +424,6 @@ describe('characterSheetPdf', () => {
   test('2014 Spell save DC empty for non-spellcasting class', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 3 }],
-      level: 3,
     })
     const classesData = [{ name: 'Fighter', source: 'PHB', hd: { faces: 10 } } as never]
 
@@ -479,7 +478,7 @@ describe('characterSheetPdf', () => {
     expect(map.textFields['Racial Traits']).not.toContain('Second Wind')
   })
 
-  test('2014 HP Max uses stored value when non-zero', () => {
+  test('2014 HP Max uses the calculated class and Constitution value', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 3 }],
       abilityScores: {
@@ -490,10 +489,10 @@ describe('characterSheetPdf', () => {
         wisdom: 10,
         charisma: 10,
       },
-      hitPoints: { max: 42, current: 30, temporary: 0 },
+      hitPoints: { current: 30, temporary: 0 },
     })
     const map = buildCharacterSheetFieldMap(character, '2014')
-    expect(map.textFields['HP Max']).toBe('42')
+    expect(map.textFields['HP Max']).toBe('24')
   })
 
   test('2014 feats populate Feat Name/Description/Note fields', () => {
@@ -802,7 +801,7 @@ describe('characterSheetPdf', () => {
         wisdom: 10,
         charisma: 10,
       },
-      hitPoints: { max: 0, current: 0, temporary: 0 },
+      hitPoints: { current: 0, temporary: 0 },
     })
     // Fighter d10, CON +2, level 1 average = 12
     const classesData = [{ name: 'Fighter', source: 'PHB', hd: { faces: 10 } } as never]
@@ -877,6 +876,35 @@ describe('characterSheetPdf', () => {
     expect(outputPortraitButton.acroField.getWidgets()[0].getRectangle().width).toBe(120)
   })
 
+  test('embeds a custom organization image into the 2014 symbol field', async () => {
+    const templateDoc = await PDFDocument.create()
+    const page = templateDoc.addPage([600, 800])
+    const symbol = templateDoc.getForm().createButton('Symbol')
+    symbol.addToPage('Click Here To Change This Icon', page, {
+      x: 400,
+      y: 500,
+      width: 150,
+      height: 120,
+    })
+    const templateBytes = await templateDoc.save()
+    const imageBytes = readFileSync(
+      join(process.cwd(), 'public', 'assets', 'images', 'ui', 'logo.png'),
+    )
+    const organizationCustomImage = `data:image/png;base64,${imageBytes.toString('base64')}`
+    const character = makeCharacterFixture({
+      details: {
+        organizationSelectionKey: '__custom__',
+        organizationCustomImage,
+      },
+    })
+
+    const filledBytes = await generateFilledCharacterSheetPdf(character, templateBytes, '2014')
+    const outputDoc = await PDFDocument.load(filledBytes)
+    const outputSymbol = asFieldWithInternals(outputDoc.getForm().getButton('Symbol'))
+
+    expect(outputSymbol?.acroField.getWidgets()[0]?.getRectangle().width).toBe(0)
+  })
+
   test('2014 equipment populates Adventuring Gear row fields', () => {
     const character = makeCharacterFixture({
       equipment: [
@@ -922,9 +950,7 @@ describe('characterSheetPdf', () => {
 
   test('2024 maps weapons, spellcasting, spell slots, spells, history, and inventory', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
-      level: 5,
       abilityScores: {
         strength: 8,
         dexterity: 16,
@@ -939,6 +965,7 @@ describe('characterSheetPdf', () => {
         tools: ["Calligrapher's Supplies"],
         languages: ['Common', 'Draconic'],
         skills: ['arcana'],
+        expertise: [],
         savingThrows: ['intelligence', 'wisdom'],
       },
       equipment: [
@@ -1053,8 +1080,7 @@ describe('characterSheetPdf', () => {
   test('2014 maps attacks, hit dice, defenses, armor details, and character history', () => {
     const character = makeCharacterFixture({
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 5 }],
-      level: 5,
-      hitDiceUsed: 2,
+      hitDiceUsed: { 'fighter|phb': 2 },
       abilityScores: {
         strength: 16,
         dexterity: 14,
@@ -1069,6 +1095,7 @@ describe('characterSheetPdf', () => {
         tools: [],
         languages: ['Common'],
         skills: [],
+        expertise: [],
         savingThrows: ['strength', 'constitution'],
       },
       equipment: [
@@ -1142,6 +1169,90 @@ describe('characterSheetPdf', () => {
     expect(map.textFields.Background_History).toContain('Held the bridge at dawn')
     expect(map.textFields['Background_Faction.Text']).toBe('The Harpers')
     expect(map.textFields['Background_FactionRank.Text']).toBe('Watcher')
+  })
+
+  test('projects active typed defensive effects without duplicating persisted traits', () => {
+    const character = makeCharacterFixture({
+      damageResistances: ['test damage'],
+      manualEffects: [
+        {
+          id: 'effect-active-duplicate',
+          label: 'Duplicate defense',
+          source: { kind: 'manual', name: 'Test adjustment' },
+          target: { kind: 'damage-resistance', damageType: 'test damage' },
+          operation: { kind: 'grant' },
+        },
+        {
+          id: 'effect-active-immunity',
+          label: 'Additional defense',
+          source: { kind: 'manual', name: 'Test adjustment' },
+          target: { kind: 'condition-immunity', condition: 'test condition' },
+          operation: { kind: 'grant' },
+        },
+        {
+          id: 'effect-suppressed',
+          label: 'Suppressed defense',
+          source: { kind: 'manual', name: 'Test adjustment' },
+          target: { kind: 'damage-immunity', damageType: 'suppressed damage' },
+          operation: { kind: 'grant' },
+        },
+      ],
+      suppressedEffectIds: ['effect-suppressed'],
+    })
+
+    const viewModel = prepareViewModel(character)
+
+    expect(viewModel.defensiveTraits).toEqual([
+      'test damage resistance',
+      'test condition condition immunity',
+    ])
+  })
+
+  test('projects regular, bonus, and class-owned feats through one ordered PDF list', () => {
+    const regularFeat = {
+      id: 'feat-regular',
+      name: 'Regular Test Feat',
+      source: 'TEST',
+      description: 'Regular selection.',
+    }
+    const bonusFeat = {
+      id: 'feat-bonus',
+      name: 'Bonus Test Feat',
+      source: 'TEST',
+      description: 'Bonus selection.',
+    }
+    const classFeat = {
+      id: 'feat-class',
+      name: 'Class Test Feat',
+      source: 'TEST',
+      description: 'Class-owned selection.',
+    }
+    const viewModel = prepareViewModel(
+      makeCharacterFixture({
+        feats: [regularFeat],
+        specialFeats: [bonusFeat],
+        classFeatChoices: [
+          {
+            id: 'class-choice',
+            className: 'Test Class',
+            classSource: 'TEST',
+            progressionName: 'Test Progression',
+            categories: [],
+            feats: [classFeat],
+          },
+        ],
+      }),
+    )
+    const map = mapCharacterSheetViewModel(viewModel, '2014')
+
+    expect(viewModel.feats.map((feat) => feat.id)).toEqual([
+      'feat-regular',
+      'feat-bonus',
+      'feat-class',
+    ])
+    expect(map.textFields['Feat Name 1']).toBe('Regular Test Feat')
+    expect(map.textFields['Feat Name 2']).toBe('Bonus Test Feat')
+    expect(map.textFields['Feat Name 3']).toBe('Class Test Feat')
   })
 
   test.each([

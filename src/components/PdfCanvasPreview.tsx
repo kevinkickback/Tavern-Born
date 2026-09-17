@@ -1,4 +1,5 @@
 import { Sparkle } from '@phosphor-icons/react'
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'
 import { useEffect, useRef, useState } from 'react'
@@ -19,6 +20,9 @@ export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps
 
   useEffect(() => {
     let canceled = false
+    let loadingTask: PDFDocumentLoadingTask | null = null
+    let pdf: PDFDocumentProxy | null = null
+    let renderTask: RenderTask | null = null
     const container = containerRef.current
     if (!container) return
 
@@ -28,7 +32,15 @@ export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps
 
     const render = async () => {
       try {
-        const pdf = await pdfjsLib.getDocument({ data: pdfBytes.slice() }).promise
+        loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() })
+        pdf = await loadingTask.promise
+        loadingTask = null
+
+        if (canceled) {
+          await pdf.destroy()
+          pdf = null
+          return
+        }
 
         for (let i = 1; i <= pdf.numPages; i++) {
           if (canceled) return
@@ -50,17 +62,21 @@ export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps
           const ctx = canvas.getContext('2d')
           if (!ctx) continue
 
-          await page.render({
+          renderTask = page.render({
             canvasContext: ctx,
             transform: outputScale === 1 ? undefined : [outputScale, 0, 0, outputScale, 0, 0],
             viewport,
-          }).promise
+          })
+          await renderTask.promise
+          renderTask = null
 
           if (canceled) return
           container.appendChild(canvas)
         }
       } catch (err) {
-        if (!canceled) {
+        const isExpectedCancellation =
+          err instanceof Error && err.name === 'RenderingCancelledException'
+        if (!canceled && !isExpectedCancellation) {
           setError(err instanceof Error ? err.message : 'Failed to render PDF.')
         }
       } finally {
@@ -72,6 +88,12 @@ export function PdfCanvasPreview({ pdfBytes, zoom = 100 }: PdfCanvasPreviewProps
 
     return () => {
       canceled = true
+      renderTask?.cancel()
+      if (loadingTask) {
+        void loadingTask.destroy().catch(() => undefined)
+      } else if (pdf) {
+        void pdf.destroy().catch(() => undefined)
+      }
     }
   }, [pdfBytes, zoom])
 

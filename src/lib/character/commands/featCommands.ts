@@ -1,13 +1,13 @@
 import { normalizeAbilityName } from '@/lib/calculations/abilityScores'
-import { mergeSkillState } from '@/lib/calculations/skills'
+import { reconcileSkillExpertise } from '@/lib/calculations/skills'
 import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
+import { type ClassFeatChoiceOwner, getClassFeatChoiceId } from '@/lib/character/classFeatChoices'
 import { getFixedFeatOptionKey } from '@/lib/featGrants'
 import {
   addAbilityBonus,
   addGrant,
   addSpellGrant,
   applyFeatGrant,
-  applyOptionalFeatureGrant,
   makeSourceTag,
   removeGrantsBySourceRef,
   resolveChoice,
@@ -15,64 +15,67 @@ import {
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ChoiceDomain, ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
-import type { Character, FeatOptionSelections } from '@/types/character'
+import type { Character, Feat, FeatOptionSelections } from '@/types/character'
 import type { CharacterCommandResult } from './commandResult'
+import {
+  type FeatOptionTarget,
+  getFeatOptionOwnerKey,
+  getFeatOptionSourceName,
+  getFeatOptionSourceTag,
+  getFeatSelectionKey,
+  isSameGrantSource,
+  type SelectedFeat,
+} from './featCommandIdentity'
+import {
+  applyCharacterCommandResult as applyResult,
+  getFeatChoiceSelectedRefs,
+  removeChoiceGrant,
+} from './featCommandSupport'
+import { assignProgressionSlotLevels } from './progressionSlotOwnership'
 
-export type FeatOptionTarget = { name: string; source?: string; grantVariant?: string }
+export type { FeatOptionTarget, SelectedFeat } from './featCommandIdentity'
 
-export interface SelectedFeat {
-  name: string
-  source?: string
-  className?: string
-  classSource?: string
-  classLevel?: number
-}
-
-function getFeatOptionSourceName(feat: FeatOptionTarget): string {
-  return feat.grantVariant ? `${feat.name}; ${feat.grantVariant}` : feat.name
-}
-
-function getFeatSelectionKey(feat: { name: string; source?: string }): string {
-  return `${normalizeKey(feat.name)}|${normalizeKey(feat.source ?? '')}`
-}
-
-function isSameGrantSource(tag: SourceTag, sourceTag: SourceTag): boolean {
-  return (
-    tag.sourceType === sourceTag.sourceType &&
-    tag.sourceName === sourceTag.sourceName &&
-    (tag.sourceRef ?? '') === (sourceTag.sourceRef ?? '')
-  )
-}
-
-function applyResult(character: Character, result: CharacterCommandResult): Character {
-  return {
-    ...character,
-    ...result.characterPatch,
-    provenance: result.provenanceUpdate,
-  }
-}
-
-function removeChoiceGrant(
+export function retractFeatChoiceOptionsForSources(
+  character: Character,
   ledger: ProvenanceLedger,
-  domain: ChoiceDomain,
-  itemName: string,
-  sourceTag: SourceTag,
-): ProvenanceLedger {
-  const normalized = normalizeKey(itemName)
-  const map = ledger.proficiencies[domain as keyof typeof ledger.proficiencies] as
-    | Record<string, SourceTag[]>
-    | undefined
-  if (!map) return ledger
-  const retained = (map[normalized] ?? []).filter(
-    (tag) => !(tag.grantType === 'choice' && isSameGrantSource(tag, sourceTag)),
-  )
-  const nextMap =
-    retained.length > 0
-      ? { ...map, [normalized]: retained }
-      : Object.fromEntries(Object.entries(map).filter(([key]) => key !== normalized))
+  sources: Array<{ sourceType: SourceTag['sourceType']; sourceName?: string }>,
+): CharacterCommandResult {
+  let workingCharacter = character
+  let provenanceUpdate = ledger
+  for (const choice of ledger.choices) {
+    const matches =
+      choice.domain === 'feats' &&
+      sources.some(
+        (source) =>
+          source.sourceName != null &&
+          choice.sourceTag.sourceType === source.sourceType &&
+          choice.sourceTag.sourceName === source.sourceName,
+      )
+    if (!matches) continue
+    const selectedRefs = getFeatChoiceSelectedRefs(choice)
+    for (const selection of selectedRefs) {
+      if (!selection.options) continue
+      const result = retractFeatOptionsCommand(
+        workingCharacter,
+        provenanceUpdate,
+        {
+          name: selection.name,
+          source: selection.source,
+          provenanceChoiceId: choice.id,
+        },
+        selection.options,
+      )
+      workingCharacter = applyResult(workingCharacter, result)
+      provenanceUpdate = result.provenanceUpdate
+    }
+  }
   return {
-    ...ledger,
-    proficiencies: { ...ledger.proficiencies, [domain]: nextMap },
+    characterPatch: {
+      spells: workingCharacter.spells,
+      proficiencies: workingCharacter.proficiencies,
+      abilityScores: workingCharacter.abilityScores,
+    },
+    provenanceUpdate,
   }
 }
 
@@ -96,88 +99,8 @@ export function removeFeatProvenanceCommand(
   return { characterPatch: {}, provenanceUpdate: { ...ledger, feats } }
 }
 
-export function applyOptionalFeatureSelectionCommand(
-  ledger: ProvenanceLedger,
-  featureName: string,
-  featureSource: string | undefined,
-  grantingSourceName: string,
-  grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
-): CharacterCommandResult {
-  return {
-    characterPatch: {},
-    provenanceUpdate: applyOptionalFeatureGrant(
-      ledger,
-      featureName,
-      featureSource,
-      grantingSourceName,
-      grantingSourceType,
-    ),
-  }
-}
-
-interface OptionalFeatureSelection {
-  name: string
-  source?: string
-}
-
-export function replaceOptionalFeatureSelectionsCommand(
-  character: Character,
-  ledger: ProvenanceLedger,
-  replacedFeatures: OptionalFeatureSelection[],
-  selectedFeatures: OptionalFeatureSelection[],
-  grantingSourceName: string,
-  grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
-): CharacterCommandResult {
-  const replacedKeys = new Set(
-    replacedFeatures.map((feature) => `${normalizeKey(feature.name)}|${feature.source ?? ''}`),
-  )
-  const retainedFeatures = character.features.filter(
-    (feature) => !replacedKeys.has(`${normalizeKey(feature.name)}|${feature.source ?? ''}`),
-  )
-  let provenanceUpdate = ledger
-  for (const feature of replacedFeatures) {
-    const key = normalizeKey(feature.name)
-    const retainedTags = (provenanceUpdate.features[key] ?? []).filter(
-      (tag) =>
-        !(
-          tag.sourceType === grantingSourceType &&
-          tag.sourceName === grantingSourceName &&
-          tag.grantType === 'choice'
-        ),
-    )
-    const features = { ...provenanceUpdate.features }
-    if (retainedTags.length > 0) features[key] = retainedTags
-    else delete features[key]
-    provenanceUpdate = { ...provenanceUpdate, features }
-  }
-
-  for (const feature of selectedFeatures) {
-    provenanceUpdate = applyOptionalFeatureGrant(
-      provenanceUpdate,
-      feature.name,
-      feature.source,
-      grantingSourceName,
-      grantingSourceType,
-    )
-  }
-
-  return {
-    characterPatch: {
-      features: [
-        ...retainedFeatures,
-        ...selectedFeatures.map((feature) => ({
-          id: `${feature.name}-opt`,
-          name: feature.name,
-          source: feature.source ?? '',
-          description: '',
-        })),
-      ],
-    },
-    provenanceUpdate,
-  }
-}
-
 export function resolveFeatChoiceCommand(
+  character: Character,
   ledger: ProvenanceLedger,
   choiceId: string,
   feat: { name: string; source?: string },
@@ -185,10 +108,26 @@ export function resolveFeatChoiceCommand(
   const choice = ledger.choices.find((entry) => entry.id === choiceId && entry.domain === 'feats')
   if (!choice) return { characterPatch: {}, provenanceUpdate: ledger }
 
+  let workingCharacter = character
   let provenanceUpdate = ledger
+  const previousRefs = getFeatChoiceSelectedRefs(choice)
   if (choice.selected.length > 0) {
-    for (const previousName of choice.selected) {
-      const normalized = normalizeKey(previousName)
+    for (const previous of previousRefs) {
+      if (previous.options) {
+        const retracted = retractFeatOptionsCommand(
+          workingCharacter,
+          provenanceUpdate,
+          {
+            name: previous.name,
+            source: previous.source,
+            provenanceChoiceId: choiceId,
+          },
+          previous.options,
+        )
+        workingCharacter = applyResult(workingCharacter, retracted)
+        provenanceUpdate = retracted.provenanceUpdate
+      }
+      const normalized = normalizeKey(previous.name)
       const retained = (provenanceUpdate.feats[normalized] ?? []).filter(
         (tag) => !(tag.grantType === 'choice' && isSameGrantSource(tag, choice.sourceTag)),
       )
@@ -209,6 +148,14 @@ export function resolveFeatChoiceCommand(
     return { characterPatch: {}, provenanceUpdate: ledger }
   }
 
+  const nextRefs = choice.selected.length > 0 ? [feat] : [...previousRefs, feat]
+  provenanceUpdate = {
+    ...provenanceUpdate,
+    choices: provenanceUpdate.choices.map((entry) =>
+      entry.id === choiceId ? { ...entry, selectedRefs: nextRefs } : entry,
+    ),
+  }
+
   const tag = makeSourceTag(
     choice.sourceTag.sourceType,
     choice.sourceTag.sourceName,
@@ -216,20 +163,57 @@ export function resolveFeatChoiceCommand(
     choice.sourceTag.sourceRef,
   )
   return {
-    characterPatch: {},
+    characterPatch: {
+      spells: workingCharacter.spells,
+      proficiencies: workingCharacter.proficiencies,
+      abilityScores: workingCharacter.abilityScores,
+    },
     provenanceUpdate: addGrant(provenanceUpdate, 'feats', feat.name, tag),
   }
 }
 
 export function removeFeatChoiceCommand(
+  character: Character,
   ledger: ProvenanceLedger,
   choiceId: string,
   featName: string,
+  featSource?: string,
 ): CharacterCommandResult {
   const choice = ledger.choices.find((entry) => entry.id === choiceId && entry.domain === 'feats')
   if (!choice) return { characterPatch: {}, provenanceUpdate: ledger }
-  const selected = choice.selected.filter((entry) => normalizeKey(entry) !== normalizeKey(featName))
-  let provenanceUpdate = resolveChoice(ledger, choiceId, selected)
+  const refs = getFeatChoiceSelectedRefs(choice)
+  const removed = refs.find(
+    (entry) =>
+      normalizeKey(entry.name) === normalizeKey(featName) &&
+      (featSource == null || (entry.source ?? '') === featSource),
+  )
+  let workingCharacter = character
+  let provenanceUpdate = ledger
+  if (removed?.options) {
+    const retracted = retractFeatOptionsCommand(
+      workingCharacter,
+      provenanceUpdate,
+      { name: removed.name, source: removed.source, provenanceChoiceId: choiceId },
+      removed.options,
+    )
+    workingCharacter = applyResult(workingCharacter, retracted)
+    provenanceUpdate = retracted.provenanceUpdate
+  }
+  const remainingRefs = refs.filter(
+    (entry) =>
+      !(
+        normalizeKey(entry.name) === normalizeKey(featName) &&
+        (featSource == null || (entry.source ?? '') === featSource)
+      ),
+  )
+  const selected = remainingRefs.map((entry) => entry.name)
+  provenanceUpdate = resolveChoice(provenanceUpdate, choiceId, selected)
+  provenanceUpdate = {
+    ...provenanceUpdate,
+    choices: provenanceUpdate.choices.map((entry) =>
+      entry.id === choiceId ? { ...entry, selectedRefs: remainingRefs } : entry,
+    ),
+  }
   const normalized = normalizeKey(featName)
   const retained = (provenanceUpdate.feats[normalized] ?? []).filter(
     (tag) => !(tag.grantType === 'choice' && isSameGrantSource(tag, choice.sourceTag)),
@@ -243,7 +227,14 @@ export function removeFeatChoiceCommand(
             Object.entries(provenanceUpdate.feats).filter(([key]) => key !== normalized),
           ),
   }
-  return { characterPatch: {}, provenanceUpdate }
+  return {
+    characterPatch: {
+      spells: workingCharacter.spells,
+      proficiencies: workingCharacter.proficiencies,
+      abilityScores: workingCharacter.abilityScores,
+    },
+    provenanceUpdate,
+  }
 }
 
 export function resolveProficiencyChoiceCommand(
@@ -303,7 +294,6 @@ export function resolveProficiencyChoiceCommand(
       return {
         characterPatch: {
           proficiencies: { ...character.proficiencies, skills },
-          skills: mergeSkillState(character.skills ?? {}, skills),
         },
         provenanceUpdate,
       }
@@ -326,14 +316,14 @@ export function resolveProficiencyChoiceCommand(
     itemName,
     matchingChoice.sourceTag,
   )
+  const hasRemainingGrant = Boolean(provenanceUpdate.proficiencies[domain][normalized]?.length)
   if (domain === 'skills') {
-    const skills = character.proficiencies.skills.filter(
-      (entry) => normalizeKey(entry) !== normalized,
-    )
+    const skills = hasRemainingGrant
+      ? character.proficiencies.skills
+      : character.proficiencies.skills.filter((entry) => normalizeKey(entry) !== normalized)
     return {
       characterPatch: {
-        proficiencies: { ...character.proficiencies, skills },
-        skills: mergeSkillState(character.skills ?? {}, skills),
+        proficiencies: reconcileSkillExpertise({ ...character.proficiencies, skills }),
       },
       provenanceUpdate,
     }
@@ -342,9 +332,9 @@ export function resolveProficiencyChoiceCommand(
     characterPatch: {
       proficiencies: {
         ...character.proficiencies,
-        [domain]: character.proficiencies[domain].filter(
-          (entry) => normalizeKey(entry) !== normalized,
-        ),
+        [domain]: hasRemainingGrant
+          ? character.proficiencies[domain]
+          : character.proficiencies[domain].filter((entry) => normalizeKey(entry) !== normalized),
       },
     },
     provenanceUpdate,
@@ -362,6 +352,7 @@ export function retractFeatOptionsCommand(
     'feat',
     getFeatOptionSourceName(feat),
     feat.source,
+    getFeatOptionOwnerKey(feat),
   )
   const removedSpells = new Set(
     (selections.spells ?? []).map((key) => normalizeKey(key.split('|')[0])),
@@ -378,10 +369,16 @@ export function retractFeatOptionsCommand(
         (name) =>
           !removedSpells.has(normalizeKey(name)) || !!provenanceUpdate.spells[normalizeKey(name)],
       ),
+      fixedSpells: profile.fixedSpells?.filter(
+        (name) =>
+          !removedSpells.has(normalizeKey(name)) ||
+          (provenanceUpdate.spells[normalizeKey(name)] ?? []).some(
+            (tag) => tag.sourceType !== 'manual',
+          ),
+      ),
     }
   })
   let proficiencies = { ...character.proficiencies }
-  const skills = { ...(character.skills ?? {}) }
 
   for (const skillName of selections.skills ?? []) {
     const normalized = normalizeKey(skillName)
@@ -390,8 +387,9 @@ export function retractFeatOptionsCommand(
       ...proficiencies,
       skills: proficiencies.skills.filter((name) => normalizeKey(name) !== normalized),
     }
-    const existing = skills[normalized]
-    skills[normalized] = { proficient: false, expertise: false, bonus: existing?.bonus ?? 0 }
+    proficiencies.expertise = proficiencies.expertise.filter(
+      (name) => normalizeKey(name) !== normalized,
+    )
   }
   for (const language of selections.languages ?? []) {
     if (provenanceUpdate.proficiencies.languages[normalizeKey(language)]) continue
@@ -415,19 +413,15 @@ export function retractFeatOptionsCommand(
   }
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
-    const existing = skills[normalized]
-    skills[normalized] = {
-      proficient: existing?.proficient ?? false,
-      expertise: false,
-      bonus: existing?.bonus ?? 0,
-    }
+    proficiencies.expertise = proficiencies.expertise.filter(
+      (name) => normalizeKey(name) !== normalized,
+    )
   }
 
   return {
     characterPatch: {
       spells: { ...character.spells, spellProfiles },
-      proficiencies,
-      skills,
+      proficiencies: reconcileSkillExpertise(proficiencies),
       abilityScores,
     },
     provenanceUpdate,
@@ -442,13 +436,14 @@ export function commitFeatOptionsCommand(
   allSpells?: Spell5e[],
 ): CharacterCommandResult {
   const sourceName = getFeatOptionSourceName(feat)
-  const sourceTag = makeSourceTag('feat', sourceName, 'choice', feat.source)
+  const sourceTag = getFeatOptionSourceTag(feat)
   let provenanceUpdate = ledger
   const existingSpecial = character.spells.spellProfiles.find(
     (profile) => profile.id === SPECIAL_SPELL_PROFILE_ID,
   )
   const cantrips = [...(existingSpecial?.cantrips ?? [])]
   const spellsKnown = [...(existingSpecial?.spellsKnown ?? [])]
+  const fixedSpells = [...(existingSpecial?.fixedSpells ?? [])]
   for (const compositeKey of selections.spells ?? []) {
     const spellName = compositeKey.split('|')[0]
     provenanceUpdate = addSpellGrant(provenanceUpdate, spellName, sourceTag)
@@ -457,10 +452,15 @@ export function commitFeatOptionsCommand(
     )
     const target = spell?.level === 0 ? cantrips : spellsKnown
     if (!target.includes(spellName)) target.push(spellName)
+    if (!fixedSpells.some((name) => normalizeKey(name) === normalizeKey(spellName))) {
+      fixedSpells.push(spellName)
+    }
   }
   const spellProfiles = existingSpecial
     ? character.spells.spellProfiles.map((profile) =>
-        profile.id === SPECIAL_SPELL_PROFILE_ID ? { ...profile, cantrips, spellsKnown } : profile,
+        profile.id === SPECIAL_SPELL_PROFILE_ID
+          ? { ...profile, cantrips, spellsKnown, fixedSpells }
+          : profile,
       )
     : [
         ...character.spells.spellProfiles,
@@ -470,24 +470,19 @@ export function commitFeatOptionsCommand(
           label: 'Special',
           cantrips,
           spellsKnown,
+          fixedSpells,
           preparedSpells: [],
           alwaysPrepared: true,
         },
       ]
 
   let proficiencies = { ...character.proficiencies }
-  const skills = { ...(character.skills ?? {}) }
   for (const skillName of selections.skills ?? []) {
     const normalized = normalizeKey(skillName)
     provenanceUpdate = addGrant(provenanceUpdate, 'skills', skillName, sourceTag)
     proficiencies = {
       ...proficiencies,
       skills: [...new Set([...proficiencies.skills, normalized])],
-    }
-    skills[normalized] = {
-      proficient: true,
-      expertise: skills[normalized]?.expertise ?? false,
-      bonus: skills[normalized]?.bonus ?? 0,
     }
   }
   for (const language of selections.languages ?? []) {
@@ -519,23 +514,34 @@ export function commitFeatOptionsCommand(
   }
   if (selections.expertiseSkill) {
     const normalized = normalizeKey(selections.expertiseSkill)
-    skills[normalized] = {
-      proficient: skills[normalized]?.proficient ?? true,
-      expertise: true,
-      bonus: skills[normalized]?.bonus ?? 0,
+    proficiencies = {
+      ...proficiencies,
+      skills: [...new Set([...proficiencies.skills, normalized])],
+      expertise: [...new Set([...proficiencies.expertise, normalized])],
     }
   }
   provenanceUpdate = {
     ...provenanceUpdate,
-    choices: provenanceUpdate.choices.filter(
-      (choice) =>
-        !(
-          choice.domain === 'featOptions' &&
-          choice.sourceTag.sourceType === 'feat' &&
-          choice.sourceTag.sourceName === sourceName &&
-          (choice.sourceTag.sourceRef ?? '') === (feat.source ?? '')
-        ),
-    ),
+    choices: provenanceUpdate.choices
+      .filter(
+        (choice) =>
+          !(
+            choice.domain === 'featOptions' &&
+            choice.sourceTag.sourceType === 'feat' &&
+            choice.sourceTag.sourceName === sourceName &&
+            (choice.sourceTag.sourceRef ?? '') === (feat.source ?? '')
+          ),
+      )
+      .map((choice) => {
+        if (choice.id !== feat.provenanceChoiceId) return choice
+        const selectedRefs = getFeatChoiceSelectedRefs(choice).map((selected) =>
+          normalizeKey(selected.name) === normalizeKey(feat.name) &&
+          (selected.source ?? '') === (feat.source ?? '')
+            ? { ...selected, source: feat.source, options: selections }
+            : selected,
+        )
+        return { ...choice, selectedRefs }
+      }),
   }
 
   const feats = character.feats.map((entry) =>
@@ -548,21 +554,34 @@ export function commitFeatOptionsCommand(
       ? { ...entry, options: selections }
       : entry,
   )
-  const fixedFeatOptions = feat.grantVariant
-    ? {
-        ...(character.fixedFeatOptions ?? {}),
-        [getFixedFeatOptionKey(feat.name, feat.source ?? '', feat.grantVariant)]: selections,
-      }
-    : character.fixedFeatOptions
+  const classFeatChoices = character.classFeatChoices?.map((choice) =>
+    choice.id === feat.classFeatChoiceId
+      ? {
+          ...choice,
+          feats: choice.feats.map((entry) =>
+            entry.name === feat.name && entry.source === (feat.source ?? '')
+              ? { ...entry, options: selections }
+              : entry,
+          ),
+        }
+      : choice,
+  )
+  const fixedFeatOptions =
+    feat.fixedGrant || feat.grantVariant !== undefined
+      ? {
+          ...(character.fixedFeatOptions ?? {}),
+          [getFixedFeatOptionKey(feat.name, feat.source ?? '', feat.grantVariant)]: selections,
+        }
+      : character.fixedFeatOptions
 
   return {
     characterPatch: {
       feats,
       specialFeats,
+      classFeatChoices,
       fixedFeatOptions,
       spells: { ...character.spells, spellProfiles },
       proficiencies,
-      skills,
       abilityScores,
     },
     provenanceUpdate,
@@ -637,7 +656,6 @@ export function replaceFeatSelectionsCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      skills: workingCharacter.skills,
       abilityScores: workingCharacter.abilityScores,
       feats: selectedFeats.map((feat) => {
         const existing = character.feats.find(
@@ -654,6 +672,106 @@ export function replaceFeatSelectionsCommand(
           classLevel: feat.classLevel ?? existing?.classLevel,
         }
       }),
+    },
+    provenanceUpdate,
+  }
+}
+
+export function replaceClassFeatSelectionsCommand(
+  character: Character,
+  ledger: ProvenanceLedger,
+  owner: ClassFeatChoiceOwner & { slotLevels: number[] },
+  selectedFeats: Array<{ name: string; source?: string }>,
+): CharacterCommandResult {
+  const choiceId = getClassFeatChoiceId(owner)
+  const existingChoice = character.classFeatChoices?.find((choice) => choice.id === choiceId)
+  const selectedKeys = new Set(selectedFeats.map(getFeatSelectionKey))
+  let workingCharacter = character
+  let provenanceUpdate = ledger
+
+  for (const feat of (existingChoice?.feats ?? []).filter(
+    (entry) => entry.options != null && !selectedKeys.has(getFeatSelectionKey(entry)),
+  )) {
+    const result = retractFeatOptionsCommand(
+      workingCharacter,
+      provenanceUpdate,
+      { name: feat.name, source: feat.source, classFeatChoiceId: choiceId },
+      feat.options as FeatOptionSelections,
+    )
+    workingCharacter = applyResult(workingCharacter, result)
+    provenanceUpdate = result.provenanceUpdate
+  }
+
+  const ownerTag: SourceTag = {
+    ...makeSourceTag('class', owner.className, 'choice', owner.classSource),
+    grantVariant: choiceId,
+  }
+  for (const previous of existingChoice?.feats ?? []) {
+    const key = normalizeKey(previous.name)
+    const retained = (provenanceUpdate.feats[key] ?? []).filter(
+      (tag) =>
+        !(
+          tag.sourceType === ownerTag.sourceType &&
+          tag.sourceName === ownerTag.sourceName &&
+          tag.sourceRef === ownerTag.sourceRef &&
+          tag.grantVariant === ownerTag.grantVariant
+        ),
+    )
+    const feats = { ...provenanceUpdate.feats }
+    if (retained.length > 0) feats[key] = retained
+    else delete feats[key]
+    provenanceUpdate = { ...provenanceUpdate, feats }
+  }
+
+  const assignedSlotLevels = assignProgressionSlotLevels(
+    (existingChoice?.feats ?? []).map((feat) => ({
+      key: getFeatSelectionKey(feat),
+      slotLevel: feat.classLevel ?? 1,
+    })),
+    selectedFeats.map(getFeatSelectionKey),
+    owner.slotLevels,
+    owner.slotLevels[owner.slotLevels.length - 1] ?? 1,
+  )
+
+  const feats: Feat[] = selectedFeats.map((feat, index) => {
+    const existing = existingChoice?.feats.find(
+      (entry) => getFeatSelectionKey(entry) === getFeatSelectionKey(feat),
+    )
+    provenanceUpdate = addGrant(provenanceUpdate, 'feats', feat.name, ownerTag)
+    return {
+      id: existing?.id ?? `class-${choiceId}-${feat.name}-${feat.source ?? ''}`,
+      name: feat.name,
+      source: feat.source ?? '',
+      description: existing?.description ?? '',
+      options: existing?.options,
+      className: owner.className,
+      classSource: owner.classSource,
+      classLevel: assignedSlotLevels[index],
+    }
+  })
+
+  const retainedChoices = (character.classFeatChoices ?? []).filter(
+    (choice) => choice.id !== choiceId,
+  )
+  return {
+    characterPatch: {
+      spells: workingCharacter.spells,
+      proficiencies: workingCharacter.proficiencies,
+      abilityScores: workingCharacter.abilityScores,
+      classFeatChoices:
+        feats.length > 0
+          ? [
+              ...retainedChoices,
+              {
+                id: choiceId,
+                className: owner.className,
+                classSource: owner.classSource,
+                progressionName: owner.progressionName,
+                categories: owner.categories,
+                feats,
+              },
+            ]
+          : retainedChoices,
     },
     provenanceUpdate,
   }
@@ -684,7 +802,6 @@ export function replaceBonusFeatSelectionsCommand(
     characterPatch: {
       spells: workingCharacter.spells,
       proficiencies: workingCharacter.proficiencies,
-      skills: workingCharacter.skills,
       abilityScores: workingCharacter.abilityScores,
       specialFeats: selectedFeats.map((feat) => {
         const existing = character.specialFeats?.find(

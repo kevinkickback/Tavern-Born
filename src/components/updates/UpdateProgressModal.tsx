@@ -1,5 +1,5 @@
 import { SpinnerGap, X } from '@phosphor-icons/react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -33,6 +33,7 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
   const [transferred, setTransferred] = useState(0)
   const [restartCountdown, setRestartCountdown] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const cancelledRef = useRef(false)
 
   const beginDownload = useCallback(async () => {
     const api = window.electronAPI
@@ -42,6 +43,7 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
       return
     }
 
+    cancelledRef.current = false
     setPhase('downloading')
     setPercentage(0)
     setBytesPerSecond(0)
@@ -51,11 +53,12 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
 
     try {
       const result = await api.downloadUpdate()
-      if (!result.success) {
+      if (!result.success && !cancelledRef.current) {
         setPhase('error')
         setError(result.error ?? 'The update download could not be started.')
       }
     } catch (downloadError) {
+      if (cancelledRef.current) return
       setPhase('error')
       setError(
         downloadError instanceof Error
@@ -67,6 +70,7 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
 
   useEffect(() => {
     if (!open) {
+      cancelledRef.current = false
       setPhase('downloading')
       setPercentage(0)
       setBytesPerSecond(0)
@@ -82,6 +86,7 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
     if (window.electronAPI) {
       unsubs.push(
         window.electronAPI.onDownloadProgress((data) => {
+          if (cancelledRef.current) return
           setPhase('downloading')
           setPercentage(data.percentage)
           setBytesPerSecond(data.bytesPerSecond)
@@ -92,6 +97,7 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
 
       unsubs.push(
         window.electronAPI.onUpdateDownloaded(() => {
+          if (cancelledRef.current) return
           setPhase('downloaded')
           setRestartCountdown(3)
         }),
@@ -99,6 +105,7 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
 
       unsubs.push(
         window.electronAPI.onUpdateError((data) => {
+          if (cancelledRef.current) return
           setPhase('error')
           setError(data.message)
         }),
@@ -106,6 +113,7 @@ export function UpdateProgressModal({ open, version, onOpenChange }: UpdateProgr
 
       unsubs.push(
         window.electronAPI.onUpdateCancelled(() => {
+          cancelledRef.current = true
           setPhase('cancelled')
         }),
       )

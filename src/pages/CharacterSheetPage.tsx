@@ -9,13 +9,18 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { PdfCanvasPreview } from '@/components/PdfCanvasPreview'
+import { ExportPreflightDialog } from '@/components/pdf/ExportPreflightDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
+import { useCharacterReadiness } from '@/hooks/character/useCharacterReadiness'
 import {
   useBackgroundLookup,
   useClassLookup,
+  useItemLookup,
   useItemPropertyLookup,
+  useOrganizations,
   useRaceLookup,
   useSpellLookup,
 } from '@/hooks/data/useGameData'
@@ -26,6 +31,7 @@ import {
   generateFilledCharacterSheetPdf,
   getCharacterSheetTemplate,
 } from '@/lib/pdf/characterSheetPdf'
+import { getPdfExportPreflight } from '@/lib/pdf/exportPreflight'
 import { useCharacterStore } from '@/store/characterStore'
 import { NoCharCard } from './_shared'
 
@@ -43,13 +49,18 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const racesByKey = useRaceLookup()
   const backgroundsByKey = useBackgroundLookup()
   const spellsByKey = useSpellLookup()
+  const itemLookup = useItemLookup()
   const itemPropertyByAbbr = useItemPropertyLookup()
+  const organizations = useOrganizations()
   const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [zoom, setZoom] = useState(100)
+  const [exportPreflightOpen, setExportPreflightOpen] = useState(false)
   const cancelRef = useRef<{ canceled: boolean } | null>(null)
   const selectedTemplate = useMemo(() => getCharacterSheetTemplate(templateId), [templateId])
+  const readiness = useCharacterReadiness(character)
+  const calculation = useCharacterCalculationContext(character)
   const viewModel = useMemo(
     () =>
       character
@@ -58,10 +69,21 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
             racesByKey,
             backgroundsByKey,
             spellsByKey,
+            itemLookup,
             itemPropertyByAbbr,
+            organizations,
           })
         : null,
-    [backgroundsByKey, character, classesByKey, itemPropertyByAbbr, racesByKey, spellsByKey],
+    [
+      backgroundsByKey,
+      character,
+      classesByKey,
+      itemPropertyByAbbr,
+      itemLookup,
+      organizations,
+      racesByKey,
+      spellsByKey,
+    ],
   )
 
   useEffect(() => {
@@ -74,6 +96,25 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
   const downloadName = useMemo(
     () => `${getSafeFileName(characterName)}_${templateId}_character_sheet.pdf`,
     [characterName, templateId],
+  )
+  const exportPreflight = useMemo(
+    () =>
+      viewModel
+        ? getPdfExportPreflight(
+            templateId,
+            viewModel,
+            readiness,
+            calculation?.effects.declarations ?? [],
+            calculation?.effects.resolutionContext,
+          )
+        : { issues: [], blockingCount: 0, warningCount: 0 },
+    [
+      calculation?.effects.declarations,
+      calculation?.effects.resolutionContext,
+      readiness,
+      templateId,
+      viewModel,
+    ],
   )
 
   const handleGenerate = useCallback(async () => {
@@ -113,7 +154,7 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
     }
   }, [character, selectedTemplate, templateId, viewModel])
 
-  const handleDownload = () => {
+  const downloadPdf = () => {
     if (!pdfBytes) {
       toast.error('Generate a preview before downloading the sheet.')
       return
@@ -130,6 +171,14 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
     URL.revokeObjectURL(url)
 
     toast.success('Character sheet PDF downloaded.')
+  }
+
+  const handleDownload = () => {
+    if (!pdfBytes) {
+      toast.error('Generate a preview before downloading the sheet.')
+      return
+    }
+    setExportPreflightOpen(true)
   }
 
   if (!character) {
@@ -149,6 +198,13 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
           <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning">
             <Warning className="size-3.5" />
             Different from character ruleset
+          </Badge>
+        )}
+
+        {readiness?.status === 'incomplete' && (
+          <Badge variant="outline" className="ml-2 h-6 shrink-0 gap-1.5 text-warning">
+            <Warning className="size-3.5" />
+            {readiness.blockingIssues.length} required
           </Badge>
         )}
 
@@ -255,6 +311,16 @@ export function CharacterSheetPage({ templateId }: CharacterSheetPageProps) {
           )}
         </div>
       </WorkspaceBody>
+
+      <ExportPreflightDialog
+        open={exportPreflightOpen}
+        onOpenChange={setExportPreflightOpen}
+        result={exportPreflight}
+        onConfirm={() => {
+          setExportPreflightOpen(false)
+          downloadPdf()
+        }}
+      />
     </WorkspacePage>
   )
 }

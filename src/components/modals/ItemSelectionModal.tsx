@@ -5,8 +5,9 @@ import {
   SelectionModal,
 } from '@/components/modals/SelectionModal'
 import { Badge } from '@/components/ui/badge'
-import { useItemPropertyLookup } from '@/hooks/data/useGameData'
+import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { RARITY_COLORS, RARITY_ORDER } from '@/lib/5etools/constants'
+import { getNormalizedItemTraits } from '@/lib/calculations/itemClassification'
 import { renderEntryCached } from '@/lib/entryRenderCache'
 import { cn } from '@/lib/utils'
 import type { Item5e } from '@/types/5etools'
@@ -19,7 +20,7 @@ export interface ItemSelectionModalProps {
   onConfirm: (items: Item5e[]) => void
 }
 
-type ItemCategory =
+export type ItemCategory =
   | 'weapons'
   | 'armor'
   | 'ammunition'
@@ -28,8 +29,9 @@ type ItemCategory =
   | 'wondrous'
   | 'potions'
   | 'scrolls'
+  | 'other'
 
-const TYPE_OPTIONS: Array<{ value: ItemCategory; label: string }> = [
+const CORE_TYPE_OPTIONS: Array<{ value: ItemCategory; label: string }> = [
   { value: 'weapons', label: 'Weapons' },
   { value: 'armor', label: 'Armor' },
   { value: 'ammunition', label: 'Ammunition' },
@@ -63,19 +65,20 @@ function toPlainText(html: string): string {
     .trim()
 }
 
-function getArmorStatSummary(item: Item5e): string {
-  const typeCode = String(item.type ?? '')
-    .split('|')[0]
-    .toUpperCase()
+function getArmorStatSummary(
+  item: Item5e,
+  itemTypeByAbbr: Readonly<Record<string, string>>,
+): string {
+  const armorCategory = getNormalizedItemTraits(item, itemTypeByAbbr).armorCategory
   const parts: string[] = []
 
-  if (typeCode === 'S' && item.ac !== undefined) {
+  if (armorCategory === 'shield' && item.ac !== undefined) {
     parts.push(`Shield — +${item.ac} to AC while wielded.`)
-  } else if (typeCode === 'LA' && item.ac !== undefined) {
+  } else if (armorCategory === 'light' && item.ac !== undefined) {
     parts.push(`Light Armor — AC ${item.ac} + Dex modifier.`)
-  } else if (typeCode === 'MA' && item.ac !== undefined) {
+  } else if (armorCategory === 'medium' && item.ac !== undefined) {
     parts.push(`Medium Armor — AC ${item.ac} + Dex modifier (max +2).`)
-  } else if (typeCode === 'HA' && item.ac !== undefined) {
+  } else if (armorCategory === 'heavy' && item.ac !== undefined) {
     parts.push(`Heavy Armor — AC ${item.ac}.`)
   }
 
@@ -85,7 +88,10 @@ function getArmorStatSummary(item: Item5e): string {
   return parts.join(' ')
 }
 
-function getItemDescription(item: Item5e): string {
+function getItemDescription(
+  item: Item5e,
+  itemTypeByAbbr: Readonly<Record<string, string>>,
+): string {
   const entries = Array.isArray(item.entries) ? item.entries : []
   if (entries.length > 0) {
     const rendered = renderEntryCached(entries[0])
@@ -93,52 +99,34 @@ function getItemDescription(item: Item5e): string {
     return plain.length > 180 ? `${plain.slice(0, 177)}...` : plain
   }
 
-  return getArmorStatSummary(item)
+  return getArmorStatSummary(item, itemTypeByAbbr)
 }
 
-function getItemTypeCodes(item: Item5e): string[] {
-  const type = item.type
-  if (Array.isArray(type)) {
-    return type.map((t) => String(t).split('|')[0].toUpperCase())
-  }
-  return [
-    String(type ?? '')
-      .split('|')[0]
-      .toUpperCase(),
-  ].filter(Boolean)
-}
-
-function getItemCategories(item: Item5e): Set<ItemCategory> {
+export function getItemCategories(
+  item: Item5e,
+  itemTypeByAbbr: Readonly<Record<string, string>>,
+): Set<ItemCategory> {
   const categories = new Set<ItemCategory>()
-  const typeCodes = getItemTypeCodes(item)
+  const traits = getNormalizedItemTraits(item, itemTypeByAbbr)
 
-  const isWeapon =
-    Boolean(item.weaponCategory) ||
-    Boolean((item as { weapon?: unknown }).weapon) ||
-    typeCodes.some((code) => code === 'M' || code === 'R')
-
-  if (isWeapon) categories.add('weapons')
-
-  if (
-    Boolean((item as { armor?: unknown }).armor) ||
-    typeCodes.some((code) => code === 'LA' || code === 'MA' || code === 'HA' || code === 'S')
-  ) {
-    categories.add('armor')
-  }
-
-  if (typeCodes.includes('A')) categories.add('ammunition')
-  if (typeCodes.includes('G')) categories.add('adventuring-gear')
-  if (typeCodes.includes('P')) categories.add('potions')
-  if (typeCodes.includes('SC')) categories.add('scrolls')
-  if (typeCodes.some((code) => code === 'INS' || code === 'AT' || code === 'GS' || code === 'T'))
-    categories.add('tools')
-  if (item.wondrous) categories.add('wondrous')
+  if (traits.isWeapon) categories.add('weapons')
+  if (traits.isArmor) categories.add('armor')
+  if (traits.isAmmunition) categories.add('ammunition')
+  if (traits.isGear) categories.add('adventuring-gear')
+  if (traits.isTool) categories.add('tools')
+  if (traits.isWondrous) categories.add('wondrous')
+  if (traits.isPotion) categories.add('potions')
+  if (traits.isScroll) categories.add('scrolls')
+  if (categories.size === 0) categories.add('other')
 
   return categories
 }
 
-function getPrimaryCategoryLabel(item: Item5e): string {
-  const categories = getItemCategories(item)
+function getPrimaryCategoryLabel(
+  item: Item5e,
+  itemTypeByAbbr: Readonly<Record<string, string>>,
+): string {
+  const categories = getItemCategories(item, itemTypeByAbbr)
   const ordered: ItemCategory[] = [
     'weapons',
     'armor',
@@ -148,22 +136,30 @@ function getPrimaryCategoryLabel(item: Item5e): string {
     'wondrous',
     'potions',
     'scrolls',
+    'other',
   ]
 
   const primary = ordered.find((category) => categories.has(category))
-  return TYPE_OPTIONS.find((option) => option.value === primary)?.label ?? 'Item'
+  if (primary === 'other') {
+    const labels = getNormalizedItemTraits(item, itemTypeByAbbr)
+      .typeCodes.map((code) => itemTypeByAbbr[code])
+      .filter((label): label is string => Boolean(label))
+    return labels.join(', ') || 'Other'
+  }
+  return CORE_TYPE_OPTIONS.find((option) => option.value === primary)?.label ?? 'Other'
 }
 
-function matchItem(item: Item5e, search: string, activeFilters: ActiveFilters): boolean {
+function matchItem(
+  item: Item5e,
+  search: string,
+  activeFilters: ActiveFilters,
+  itemTypeByAbbr: Readonly<Record<string, string>>,
+): boolean {
   if (search && !item.name.toLowerCase().includes(search.toLowerCase())) {
     return false
   }
 
-  const categories = getItemCategories(item)
-  if (categories.size === 0) {
-    return false
-  }
-
+  const categories = getItemCategories(item, itemTypeByAbbr)
   if ((item.rarity ?? '').toLowerCase() === 'varies') {
     return false
   }
@@ -186,7 +182,7 @@ function matchItem(item: Item5e, search: string, activeFilters: ActiveFilters): 
 
   const propertySet = activeFilters.property
   if (propertySet && propertySet.size > 0) {
-    const typeCodes = getItemTypeCodes(item)
+    const traits = getNormalizedItemTraits(item, itemTypeByAbbr)
     const hasAnyMatch = Array.from(propertySet).some((property) => {
       if (property === 'attunement') {
         return Boolean(item.reqAttune)
@@ -195,7 +191,7 @@ function matchItem(item: Item5e, search: string, activeFilters: ActiveFilters): 
         return Boolean(item.rarity && item.rarity.toLowerCase() !== 'none')
       }
       if (property === 'consumable') {
-        return typeCodes.includes('P') || typeCodes.includes('SC') || typeCodes.includes('$')
+        return traits.isConsumable || traits.typeCodes.includes('$')
       }
       if (property === 'cursed') {
         return Boolean((item as { curse?: unknown }).curse)
@@ -218,7 +214,8 @@ interface ItemCardProps {
 
 const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
   const properties = item.property ?? []
-  const description = getItemDescription(item)
+  const itemTypeByAbbr = useItemTypeLookup()
+  const description = getItemDescription(item, itemTypeByAbbr)
   const normalizedRarity =
     item.rarity && item.rarity.toLowerCase() === 'unknown (magic)' ? 'unknown' : (item.rarity ?? '')
   const rarityColorClass = RARITY_COLORS[normalizedRarity.toLowerCase()] ?? ''
@@ -235,7 +232,7 @@ const ItemCard = memo(function ItemCard({ item, isSelected }: ItemCardProps) {
         </div>
       </div>
       <div className="flex items-center gap-1.5 flex-wrap text-xs text-muted-foreground">
-        <Badge variant="outline">{getPrimaryCategoryLabel(item)}</Badge>
+        <Badge variant="outline">{getPrimaryCategoryLabel(item, itemTypeByAbbr)}</Badge>
         {normalizedRarity && normalizedRarity.toLowerCase() !== 'none' && (
           <Badge
             variant="outline"
@@ -297,14 +294,24 @@ export function ItemSelectionModal({
   items,
   onConfirm,
 }: ItemSelectionModalProps) {
+  const itemTypeByAbbr = useItemTypeLookup()
   const filteredItems = useMemo(
     () =>
       items.filter((item) => {
         if (Array.isArray((item as { items?: unknown }).items)) return false
-        return getItemCategories(item).size > 0
+        return true
       }),
     [items],
   )
+
+  const typeOptions = useMemo(() => {
+    const hasOther = filteredItems.some((item) =>
+      getItemCategories(item, itemTypeByAbbr).has('other'),
+    )
+    return hasOther
+      ? [...CORE_TYPE_OPTIONS, { value: 'other' as const, label: 'Other' }]
+      : CORE_TYPE_OPTIONS
+  }, [filteredItems, itemTypeByAbbr])
 
   const rarityOptions = useMemo(() => {
     const seen = new Set<string>()
@@ -312,13 +319,20 @@ export function ItemSelectionModal({
       const r = (item.rarity ?? '').toLowerCase()
       if (r && r !== 'none') seen.add(r === 'unknown (magic)' ? 'unknown' : r)
     }
-    return RARITY_ORDER.filter((r) => seen.has(r)).map((r) => ({
-      value: r,
-      label: r
-        .split(' ')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' '),
-    }))
+    const rarityRank = new Map<string, number>(RARITY_ORDER.map((rarity, index) => [rarity, index]))
+    return [...seen]
+      .sort((left, right) => {
+        const leftRank = rarityRank.get(left) ?? Number.POSITIVE_INFINITY
+        const rightRank = rarityRank.get(right) ?? Number.POSITIVE_INFINITY
+        return leftRank - rightRank || left.localeCompare(right)
+      })
+      .map((r) => ({
+        value: r,
+        label: r
+          .split(' ')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' '),
+      }))
   }, [filteredItems])
 
   const filterSections: FilterSection[] = [
@@ -327,7 +341,7 @@ export function ItemSelectionModal({
       label: 'Type',
       type: 'checkboxes',
       columns: 1,
-      options: TYPE_OPTIONS,
+      options: typeOptions,
     },
     {
       key: 'rarity',
@@ -353,7 +367,9 @@ export function ItemSelectionModal({
       items={filteredItems}
       getItemId={(item) => `${item.name}|${item.source ?? ''}`}
       renderCard={(item, isSelected) => <ItemCard item={item} isSelected={isSelected} />}
-      matchItem={(item, search, activeFilters) => matchItem(item, search, activeFilters)}
+      matchItem={(item, search, activeFilters) =>
+        matchItem(item, search, activeFilters, itemTypeByAbbr)
+      }
       filterSections={filterSections}
       onConfirm={(_ids, selectedItems) => onConfirm(selectedItems)}
     />

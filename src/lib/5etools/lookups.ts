@@ -4,6 +4,7 @@ import type {
   Background5e,
   Class5e,
   ClassFeature,
+  Feat5e,
   GameData,
   GameDataLookups,
   ItemProperty5e,
@@ -59,6 +60,10 @@ export function buildRaceLookup(races: Race5e[]): Record<string, Race5e> {
 
 export function buildBackgroundLookup(backgrounds: Background5e[]): Record<string, Background5e> {
   return buildEntityLookup(backgrounds)
+}
+
+export function buildFeatLookup(feats: Feat5e[]): Record<string, Feat5e> {
+  return buildEntityLookup(feats)
 }
 
 function buildEntityLookup<T extends { name: string; source: string }>(
@@ -124,6 +129,7 @@ export function buildGameDataLookups(gameData: GameData): GameDataLookups {
     classesByKey: buildClassLookup(gameData.classes),
     racesByKey: buildRaceLookup(gameData.races),
     backgroundsByKey: buildBackgroundLookup(gameData.backgrounds),
+    featsByKey: buildFeatLookup(gameData.feats),
     classFeaturesByKey: buildClassFeatureLookup(gameData.classFeatures),
     spellsByKey: buildSpellLookup(gameData.spells),
     optionalFeaturesByKey: buildOptionalFeatureLookup(gameData.optionalfeatures),

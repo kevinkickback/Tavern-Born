@@ -1,5 +1,6 @@
 import {
   CheckSquare,
+  CopySimple,
   DotsThreeVertical,
   DownloadSimple,
   Funnel,
@@ -12,8 +13,11 @@ import {
   Users,
 } from '@phosphor-icons/react'
 import { useCallback, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { CharacterCard } from '@/components/character/CharacterCard'
+import { CharacterReadinessBadge } from '@/components/character/CharacterReadinessBadge'
+import { UnsupportedCharactersDialog } from '@/components/character/UnsupportedCharactersDialog'
 import { CharacterCreationWizard } from '@/components/character/wizard/CharacterCreationWizard'
 import {
   AlertDialog,
@@ -42,7 +46,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspaceBody, WorkspacePage, WorkspaceToolbar } from '@/components/workspace'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
+import { duplicateCharacter, getDuplicateCharacterName } from '@/lib/character/characterTransfer'
 import { getTotalCharacterLevel } from '@/lib/characterUtils'
+import { getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
@@ -52,6 +60,16 @@ import type { Character } from '@/types/character'
 type SortOption = 'recent' | 'name-asc' | 'name-desc' | 'level-desc' | 'level-asc'
 type GroupByOption = 'none' | 'class' | 'alignment' | 'player'
 
+function downloadJsonFile(data: unknown, filename: string) {
+  const dataBlob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(dataBlob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 interface CharacterListRowProps {
   character: Character
   isActive: boolean
@@ -60,7 +78,9 @@ interface CharacterListRowProps {
   onLoad: (id: string) => void
   onToggleSelect: (id: string) => void
   onExport: (character: Character) => void
+  onDuplicate: (character: Character) => void
   onDelete: (id: string) => void
+  highlighted?: boolean
 }
 
 function CharacterListRow({
@@ -71,17 +91,25 @@ function CharacterListRow({
   onLoad,
   onToggleSelect,
   onExport,
+  onDuplicate,
   onDelete,
+  highlighted = false,
 }: CharacterListRowProps) {
+  const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(highlighted)
   const name = character.name || 'Unnamed Character'
-  const summary = [character.race, character.class].filter(Boolean).join(' · ') || 'Unspecified'
+  const summary =
+    [character.race, character.classProgression[0]?.name].filter(Boolean).join(' · ') ||
+    'Unspecified'
 
   return (
     <div
+      ref={routeFocusRef}
       className={cn(
         'relative flex min-h-14 items-center border-b border-border/70 px-3 transition-colors hover:bg-secondary/40',
         isActive && 'bg-secondary/60',
         isSelected && 'bg-primary/10',
+        routeFocusHighlighted && 'animate-route-focus',
       )}
     >
       {isActive && <span className="absolute inset-y-2 left-0 w-0.5 bg-primary" />}
@@ -117,6 +145,7 @@ function CharacterListRow({
                 Active
               </span>
             )}
+            {isActive && <CharacterReadinessBadge character={character} />}
           </div>
           <p className="truncate text-xs text-muted-foreground">{summary}</p>
         </div>
@@ -140,6 +169,9 @@ function CharacterListRow({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onSelect={() => onDuplicate(character)}>
+              <CopySimple /> Duplicate
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => onExport(character)}>
               <DownloadSimple /> Export
             </DropdownMenuItem>
@@ -153,12 +185,21 @@ function CharacterListRow({
   )
 }
 
-export function HomePage() {
+interface HomePageProps {
+  readinessFocus?: string | null
+}
+
+export function HomePage({ readinessFocus }: HomePageProps = {}) {
   const characters = useCharacterStore((state) => state.characters)
   const activeCharacterId = useCharacterStore((state) => state.activeCharacterId)
   const hasUnsavedChanges = useCharacterStore((state) => state.hasUnsavedChanges())
   const setActiveCharacter = useCharacterStore((state) => state.setActiveCharacter)
   const deleteCharacter = useCharacterStore((state) => state.deleteCharacter)
+  const addCharacter = useCharacterStore((state) => state.addCharacter)
+  const unsupportedCharacters = useCharacterStore((state) => state.unsupportedCharacters)
+  const dismissUnsupportedCharacters = useCharacterStore(
+    (state) => state.dismissUnsupportedCharacters,
+  )
   const viewMode = useAppPreferencesStore((state) => state.characterViewMode)
   const setViewMode = useAppPreferencesStore((state) => state.setCharacterViewMode)
   const [showCreateWizard, setShowCreateWizard] = useState(false)
@@ -173,6 +214,7 @@ export function HomePage() {
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>([])
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
+  const focusCharacterName = readinessFocus === 'identity:name'
 
   const sortedCharacters = useMemo(() => {
     const query = searchQuery.trim().toLowerCase()
@@ -181,7 +223,7 @@ export function HomePage() {
       return [
         character.name,
         character.race,
-        character.class,
+        character.classProgression[0]?.name,
         character.details?.alignment,
         character.details?.playerName,
       ].some((value) => value?.toLowerCase().includes(query))
@@ -192,8 +234,8 @@ export function HomePage() {
       }
       if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '')
       if (sortBy === 'name-desc') return (b.name || '').localeCompare(a.name || '')
-      if (sortBy === 'level-desc') return b.level - a.level
-      return a.level - b.level
+      if (sortBy === 'level-desc') return getTotalCharacterLevel(b) - getTotalCharacterLevel(a)
+      return getTotalCharacterLevel(a) - getTotalCharacterLevel(b)
     })
     return sorted
   }, [characters, searchQuery, sortBy])
@@ -205,9 +247,9 @@ export function HomePage() {
       let key: string
       if (groupBy === 'class') {
         key =
-          (character.classProgression?.length ?? 0) > 1
+          character.classProgression.length > 1
             ? 'Multiclass'
-            : character.class || 'Unknown'
+            : character.classProgression[0]?.name || 'Unknown'
       } else if (groupBy === 'alignment') key = character.details?.alignment || 'Unknown'
       else key = character.details?.playerName || 'Unknown'
       groups.set(key, [...(groups.get(key) ?? []), character])
@@ -288,15 +330,39 @@ export function HomePage() {
   }
 
   const handleExportCharacter = useCallback((character: Character) => {
-    const dataBlob = new Blob([JSON.stringify(character, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${character.name || 'character'}.tbc`
-    link.click()
-    URL.revokeObjectURL(url)
+    downloadJsonFile(character, `${character.name || 'character'}.tbc`)
     toast.success('Character exported successfully')
   }, [])
+
+  const handleExportUnsupportedCharacters = useCallback(() => {
+    unsupportedCharacters.forEach((character, index) => {
+      const record =
+        typeof character === 'object' && character !== null
+          ? (character as Record<string, unknown>)
+          : null
+      const rawName = typeof record?.name === 'string' ? record.name.trim() : ''
+      const safeName = (rawName || 'character').replace(/[<>:"/\\|?*]/g, '_')
+      const suffix = unsupportedCharacters.length === 1 ? '' : `-${index + 1}`
+      downloadJsonFile(character, `${safeName}-legacy-backup${suffix}.tbc`)
+    })
+    toast.success(
+      `${unsupportedCharacters.length} character backup${unsupportedCharacters.length === 1 ? '' : 's'} exported`,
+    )
+  }, [unsupportedCharacters])
+
+  const handleDuplicateCharacter = useCallback(
+    (source: Character) => {
+      const copy = duplicateCharacter(source, {
+        name: getDuplicateCharacterName(
+          source.name,
+          characters.map((character) => character.name),
+        ),
+      })
+      addCharacter(copy)
+      toast.success('Character duplicated')
+    },
+    [addCharacter, characters],
+  )
 
   const handleImportCharacter = () => {
     const input = document.createElement('input')
@@ -306,13 +372,18 @@ export function HomePage() {
       const file = (event.target as HTMLInputElement).files?.[0]
       if (!file) return
       try {
-        const character = JSON.parse(await file.text())
+        if (file.size > MAX_CHARACTER_SIZE) {
+          const maxMB = (MAX_CHARACTER_SIZE / (1024 * 1024)).toFixed(0)
+          toast.error(`Character file exceeds the ${maxMB}MB safety limit.`)
+          return
+        }
+        const character: unknown = JSON.parse(await file.text())
         const validationError = validateCharacterData(character)
         if (validationError) {
           toast.error(`Invalid character: ${validationError}`)
           return
         }
-        useCharacterStore.getState().addCharacter(character)
+        useCharacterStore.getState().addCharacter(character as Character)
         toast.success('Character imported successfully')
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error'
@@ -330,11 +401,13 @@ export function HomePage() {
         onLoad={handleLoadCharacter}
         onDelete={handleDeleteCharacter}
         onExport={handleExportCharacter}
+        onDuplicate={handleDuplicateCharacter}
         isActive={character.id === activeCharacterId}
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}
         onToggleSelect={handleToggleCharacterSelection}
         cardSize={360}
+        highlighted={focusCharacterName && character.id === activeCharacterId}
       />
     ) : (
       <CharacterListRow
@@ -343,10 +416,12 @@ export function HomePage() {
         onLoad={handleLoadCharacter}
         onDelete={handleDeleteCharacter}
         onExport={handleExportCharacter}
+        onDuplicate={handleDuplicateCharacter}
         isActive={character.id === activeCharacterId}
         selectionMode={selectionMode}
         isSelected={selectedCharacterIds.includes(character.id)}
         onToggleSelect={handleToggleCharacterSelection}
+        highlighted={focusCharacterName && character.id === activeCharacterId}
       />
     )
 
@@ -592,6 +667,11 @@ export function HomePage() {
       </WorkspaceBody>
 
       <CharacterCreationWizard open={showCreateWizard} onOpenChange={setShowCreateWizard} />
+      <UnsupportedCharactersDialog
+        count={unsupportedCharacters.length}
+        onExport={handleExportUnsupportedCharacters}
+        onAcknowledge={dismissUnsupportedCharacters}
+      />
       <AlertDialog open={confirmSwitchOpen} onOpenChange={setConfirmSwitchOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -654,4 +734,9 @@ export function HomePage() {
       </AlertDialog>
     </WorkspacePage>
   )
+}
+
+export function RoutedHomePage() {
+  const [searchParams] = useSearchParams()
+  return <HomePage readinessFocus={getReadinessFocus(searchParams)} />
 }

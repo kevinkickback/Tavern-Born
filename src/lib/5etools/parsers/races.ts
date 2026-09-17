@@ -1,4 +1,18 @@
+import { RACE_STRUCTURED_ENTRY_FIELDS } from '@/lib/5etools/rulesetMetadata'
 import { asArray, asObject } from './shared'
+
+function normalizeRacePresentationEntries(race: Record<string, unknown>): Record<string, unknown> {
+  const entries = asArray(race.entries)
+  const presentationEntries = entries.filter((entry) => {
+    const entryObject = asObject(entry)
+    const field =
+      typeof entryObject.name === 'string'
+        ? RACE_STRUCTURED_ENTRY_FIELDS[entryObject.name]
+        : undefined
+    return !field || race[field] === undefined
+  })
+  return { ...race, presentationEntries }
+}
 
 export function parseRaces(data: unknown): unknown[] {
   const obj = asObject(data)
@@ -52,18 +66,23 @@ export function parseRaces(data: unknown): unknown[] {
       ...(nested ?? []).map((subrace) => {
         const subraceObj = asObject(subrace)
         if (typeof subraceObj.name === 'string' && subraceObj.name.trim().length > 0) {
-          return subraceObj
+          return normalizeRacePresentationEntries(subraceObj)
         }
         // Nameless entries become 'Default'. Tag metadata-only ones so the display
         // layer can suppress a lone Default that adds nothing to the base race.
         const hasGameplay = Object.keys(subraceObj).some((k) => GAMEPLAY_KEYS.has(k))
-        return { ...subraceObj, name: 'Default', _isMetadataDefault: !hasGameplay }
+        return normalizeRacePresentationEntries({
+          ...subraceObj,
+          name: 'Default',
+          _isMetadataDefault: !hasGameplay,
+        })
       }),
-      ...versionSubraces,
+      ...versionSubraces.map((version) => normalizeRacePresentationEntries(asObject(version))),
     ]
 
-    if (allSubraces.length === 0) return race
-    return { ...raceObj, subraces: allSubraces }
+    const normalizedRace = normalizeRacePresentationEntries(raceObj)
+    if (allSubraces.length === 0) return normalizedRace
+    return { ...normalizedRace, subraces: allSubraces }
   })
 }
 

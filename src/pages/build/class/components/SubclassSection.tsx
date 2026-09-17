@@ -1,5 +1,6 @@
 import { CaretRight, Check, Star } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getSubclassFeatureGroups, resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
 import { cn } from '@/lib/utils'
 import type { Class5e, Subclass5e } from '@/types/5etools'
@@ -17,6 +18,7 @@ interface BuildClassSubclassSectionProps {
   onSelectFeature: (feature: SelectedFeatureState) => void
   onExpandDetails: () => void
   onOpenSubclassPicker: () => void
+  highlighted?: boolean
 }
 
 export function BuildClassSubclassSection({
@@ -31,7 +33,10 @@ export function BuildClassSubclassSection({
   onSelectFeature,
   onExpandDetails,
   onOpenSubclassPicker,
+  highlighted = false,
 }: BuildClassSubclassSectionProps) {
+  const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(highlighted)
   const subclassFeature = subclassFeatureName
     ? (featuresByLevel.get(level) ?? []).find((feature) => feature.name === subclassFeatureName)
     : undefined
@@ -40,9 +45,11 @@ export function BuildClassSubclassSection({
 
   return (
     <div
+      ref={routeFocusRef}
       className={cn(
         'rounded-lg border overflow-hidden',
         viewingSubclass ? 'border-success/30 bg-success/5' : 'border-warning/30 bg-warning/5',
+        routeFocusHighlighted && 'animate-route-focus',
       )}
     >
       <div className="flex items-center justify-between px-3 py-2.5">

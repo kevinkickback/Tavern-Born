@@ -27,14 +27,11 @@ lerna-debug.log*
 *.local
 
 # Tooling/CI artifacts
-docs/desktop-ui-redesign.md
-docs/review/
+docs/review
 
 # Temp folders
 /temp/
 /.tmp/
-/release-review/
-/release-review-final/
 /test-results
 /coverage
 /playwright-report

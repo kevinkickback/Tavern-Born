@@ -1,0 +1,4180 @@
+{
+  "id": "full-coverage-character-2024",
+  "name": "Full-Coverage Test Character (2024)",
+  "originSystem": "2024",
+  "race": "Elf",
+  "raceSource": "XPHB",
+  "subrace": "Drow Lineage",
+  "subraceSource": "XPHB",
+  "background": "Criminal",
+  "backgroundSource": "XPHB",
+  "currency": {
+    "cp": 137,
+    "sp": 88,
+    "ep": 23,
+    "gp": 12450,
+    "pp": 417
+  },
+  "experiencePoints": 355000,
+  "classProgression": [
+    {
+      "name": "Wizard",
+      "source": "XPHB",
+      "levels": 10,
+      "subclass": "Evoker",
+      "subclassSource": "XPHB"
+    },
+    {
+      "name": "Fighter",
+      "source": "XPHB",
+      "levels": 5,
+      "subclass": "Battle Master",
+      "subclassSource": "XPHB"
+    },
+    {
+      "name": "Cleric",
+      "source": "XPHB",
+      "levels": 5,
+      "subclass": "Life Domain",
+      "subclassSource": "XPHB"
+    }
+  ],
+  "abilityScores": {
+    "strength": 13,
+    "dexterity": 18,
+    "constitution": 14,
+    "intelligence": 20,
+    "wisdom": 16,
+    "charisma": 12
+  },
+  "proficiencies": {
+    "armor": [
+      "Light Armor",
+      "Medium Armor",
+      "Heavy Armor",
+      "Shields"
+    ],
+    "weapons": [
+      "Simple Weapons",
+      "Martial Weapons",
+      "Longsword",
+      "Longbow",
+      "Dagger",
+      "Light Crossbow"
+    ],
+    "tools": [
+      "Calligrapher's Supplies",
+      "Herbalism Kit",
+      "Thieves' Tools",
+      "Navigator's Tools",
+      "Disguise Kit",
+      "Dice Set"
+    ],
+    "skills": [
+      "acrobatics",
+      "animal handling",
+      "arcana",
+      "athletics",
+      "deception",
+      "history",
+      "insight",
+      "intimidation",
+      "investigation",
+      "medicine",
+      "nature",
+      "perception",
+      "performance",
+      "persuasion",
+      "religion",
+      "sleight of hand",
+      "stealth",
+      "survival"
+    ],
+    "languages": [
+      "Common",
+      "Elvish",
+      "Draconic",
+      "Dwarvish",
+      "Celestial",
+      "Infernal"
+    ],
+    "savingThrows": [
+      "strength",
+      "dexterity",
+      "constitution",
+      "intelligence",
+      "wisdom",
+      "charisma"
+    ],
+    "expertise": [
+      "acrobatics",
+      "arcana",
+      "deception",
+      "investigation",
+      "performance",
+      "stealth"
+    ]
+  },
+  "features": [
+    {
+      "id": "corpus-feature-1",
+      "name": "Arcane Recovery",
+      "source": "XPHB",
+      "description": "",
+      "level": 1
+    },
+    {
+      "id": "corpus-feature-2",
+      "name": "Ritual Adept",
+      "source": "XPHB",
+      "description": "",
+      "level": 1
+    },
+    {
+      "id": "corpus-feature-3",
+      "name": "Spellcasting",
+      "source": "XPHB",
+      "description": "",
+      "level": 1
+    },
+    {
+      "id": "corpus-feature-4",
+      "name": "Scholar",
+      "source": "XPHB",
+      "description": "",
+      "level": 2
+    },
+    {
+      "id": "corpus-feature-5",
+      "name": "Wizard Subclass",
+      "source": "XPHB",
+      "description": "",
+      "level": 3
+    },
+    {
+      "id": "corpus-feature-6",
+      "name": "Evoker",
+      "source": "XPHB",
+      "description": "",
+      "level": 3
+    },
+    {
+      "id": "corpus-feature-7",
+      "name": "Evocation Savant",
+      "source": "XPHB",
+      "description": "",
+      "level": 3
+    },
+    {
+      "id": "corpus-feature-8",
+      "name": "Potent Cantrip",
+      "source": "XPHB",
+      "description": "",
+      "level": 3
+    },
+    {
+      "id": "corpus-feature-9",
+      "name": "Ability Score Improvement",
+      "source": "XPHB",
+      "description": "",
+      "level": 4
+    },
+    {
+      "id": "corpus-feature-10",
+      "name": "Memorize Spell",
+      "source": "XPHB",
+      "description": "",
+      "level": 5
+    },
+    {
+      "id": "corpus-feature-11",
+      "name": "Subclass Feature",
+      "source": "XPHB",
+      "description": "",
+      "level": 6
+    },
+    {
+      "id": "corpus-feature-12",
+      "name": "Sculpt Spells",
+      "source": "XPHB",
+      "description": "",
+      "level": 6
+    },
+    {
+      "id": "corpus-feature-13",
+      "name": "Empowered Evocation",
+      "source": "XPHB",
+      "description": "",
+      "level": 10
+    },
+    {
+      "id": "corpus-feature-14",
+      "name": "Fighting Style",
+      "source": "XPHB",
+      "description": "",
+      "level": 1
+    },
+    {
+      "id": "corpus-feature-15",
+      "name": "Second Wind",
+      "source": "XPHB",
+      "description": "",
+      "level": 1
+    },
+    {
+      "id": "corpus-feature-16",
+      "name": "Weapon Mastery",
+      "source": "XPHB",
+      "description": "",
+      "level": 1
+    },
+    {
+      "id": "corpus-feature-17",
+      "name": "Action Surge",
+      "source": "XPHB",
+      "description": "",
+      "level": 2
+    },
+    {
+      "id": "class-choice:class%3Acleric%7Cxphb%7Cchoice%3Adivine-order%7C1:Protector%7CXPHB",
+      "name": "Protector",
+      "source": "XPHB",
+      "description": "",
+      "level": 1
+    }
+  ],
+  "feats": [
+    {
+      "id": "feat-war-caster",
+      "name": "War Caster",
+      "source": "XPHB",
+      "description": "",
+      "prerequisites": "",
+      "options": {
+        "abilityScore": "intelligence"
+      },
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 4
+    },
+    {
+      "id": "feat-fey-touched",
+      "name": "Fey-Touched",
+      "source": "XPHB",
+      "description": "",
+      "prerequisites": "",
+      "options": {
+        "abilityScore": "intelligence",
+        "spells": [
+          "Bless|XPHB"
+        ]
+      },
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 8
+    },
+    {
+      "id": "feat-resilient",
+      "name": "Resilient",
+      "source": "XPHB",
+      "description": "",
+      "prerequisites": "",
+      "options": {
+        "abilityScore": "constitution"
+      },
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "classLevel": 4
+    },
+    {
+      "id": "feat-skill-expert",
+      "name": "Skill Expert",
+      "source": "XPHB",
+      "description": "",
+      "prerequisites": "",
+      "options": {
+        "abilityScore": "wisdom",
+        "skills": [
+          "performance"
+        ],
+        "expertiseSkill": "performance"
+      },
+      "className": "Cleric",
+      "classSource": "XPHB",
+      "classLevel": 4
+    }
+  ],
+  "spells": {
+    "spellProfiles": [
+      {
+        "id": "class:Wizard|XPHB",
+        "type": "class",
+        "label": "Wizard (Lv 10)",
+        "className": "Wizard",
+        "classSource": "XPHB",
+        "cantrips": [
+          "Acid Splash|XPHB",
+          "Blade Ward|XPHB",
+          "Chill Touch|XPHB",
+          "Dancing Lights|XPHB",
+          "Elementalism|XPHB"
+        ],
+        "spellsKnown": [
+          "Alarm|XPHB",
+          "Burning Hands|XPHB",
+          "Charm Person|XPHB",
+          "Chromatic Orb|XPHB",
+          "Color Spray|XPHB",
+          "Comprehend Languages|XPHB",
+          "Detect Magic|XPHB",
+          "Disguise Self|XPHB",
+          "Alter Self|XPHB",
+          "Arcane Lock|XPHB",
+          "Arcane Vigor|XPHB",
+          "Augury|XPHB",
+          "Animate Dead|XPHB",
+          "Bestow Curse|XPHB",
+          "Blink|XPHB",
+          "Clairvoyance|XPHB",
+          "Arcane Eye|XPHB",
+          "Banishment|XPHB",
+          "Blight|XPHB",
+          "Charm Monster|XPHB",
+          "Animate Objects|XPHB",
+          "Bigby's Hand|XPHB",
+          "Circle of Power|XPHB",
+          "Cloudkill|XPHB"
+        ],
+        "preparedSpells": [
+          "Alarm|XPHB",
+          "Burning Hands|XPHB",
+          "Charm Person|XPHB",
+          "Chromatic Orb|XPHB",
+          "Alter Self|XPHB",
+          "Arcane Lock|XPHB",
+          "Animate Dead|XPHB",
+          "Bestow Curse|XPHB",
+          "Arcane Eye|XPHB",
+          "Banishment|XPHB",
+          "Animate Objects|XPHB",
+          "Bigby's Hand|XPHB"
+        ],
+        "alwaysPrepared": false
+      },
+      {
+        "id": "class:Cleric|XPHB",
+        "type": "class",
+        "label": "Cleric (Lv 5)",
+        "className": "Cleric",
+        "classSource": "XPHB",
+        "fixedSpells": [
+          "Bless|XPHB",
+          "Cure Wounds|XPHB",
+          "Lesser Restoration|XPHB",
+          "Spiritual Weapon|XPHB",
+          "Beacon of Hope|XPHB",
+          "Revivify|XPHB"
+        ],
+        "alwaysPreparedSpells": [
+          "Bless|XPHB",
+          "Cure Wounds|XPHB",
+          "Lesser Restoration|XPHB",
+          "Spiritual Weapon|XPHB",
+          "Beacon of Hope|XPHB",
+          "Revivify|XPHB"
+        ],
+        "cantrips": [
+          "Guidance|XPHB",
+          "Light|XPHB",
+          "Mending|XPHB",
+          "Resistance|XPHB"
+        ],
+        "spellsKnown": [
+          "Bless|XPHB",
+          "Cure Wounds|XPHB",
+          "Lesser Restoration|XPHB",
+          "Spiritual Weapon|XPHB",
+          "Beacon of Hope|XPHB",
+          "Revivify|XPHB",
+          "Bane|XPHB",
+          "Command|XPHB",
+          "Create or Destroy Water|XPHB",
+          "Detect Evil and Good|XPHB",
+          "Detect Magic|XPHB",
+          "Aid|XPHB",
+          "Augury|XPHB",
+          "Animate Dead|XPHB",
+          "Aura of Vitality|XPHB"
+        ],
+        "preparedSpells": [
+          "Bane|XPHB",
+          "Command|XPHB",
+          "Create or Destroy Water|XPHB",
+          "Detect Evil and Good|XPHB",
+          "Detect Magic|XPHB",
+          "Aid|XPHB",
+          "Augury|XPHB",
+          "Animate Dead|XPHB",
+          "Aura of Vitality|XPHB"
+        ],
+        "alwaysPrepared": false
+      },
+      {
+        "id": "racial:Elf|XPHB",
+        "type": "racial",
+        "label": "Elf Racial Magic",
+        "raceName": "Elf",
+        "raceSource": "XPHB",
+        "castingAbility": "intelligence",
+        "castingAbilityOptions": [
+          "intelligence",
+          "wisdom",
+          "charisma"
+        ],
+        "fixedSpells": [
+          "Dancing Lights|XPHB",
+          "Faerie Fire|XPHB",
+          "Darkness|XPHB"
+        ],
+        "cantrips": [
+          "Dancing Lights|XPHB"
+        ],
+        "spellsKnown": [
+          "Faerie Fire|XPHB",
+          "Darkness|XPHB"
+        ],
+        "preparedSpells": [],
+        "alwaysPrepared": true
+      },
+      {
+        "id": "special:unrestricted",
+        "type": "special",
+        "label": "Special (Unrestricted)",
+        "fixedSpells": [
+          "Friends|XPHB",
+          "Light|XPHB",
+          "Detect Magic|XPHB"
+        ],
+        "cantrips": [
+          "Friends|XPHB",
+          "Light|XPHB"
+        ],
+        "spellsKnown": [
+          "Detect Magic|XPHB"
+        ],
+        "preparedSpells": [],
+        "alwaysPrepared": true
+      }
+    ],
+    "spellSlots": {
+      "1": {
+        "max": 4,
+        "used": 3
+      },
+      "2": {
+        "max": 3,
+        "used": 2
+      },
+      "3": {
+        "max": 3,
+        "used": 1
+      },
+      "4": {
+        "max": 3,
+        "used": 2
+      },
+      "5": {
+        "max": 2,
+        "used": 1
+      },
+      "6": {
+        "max": 1,
+        "used": 1
+      },
+      "7": {
+        "max": 1,
+        "used": 0
+      },
+      "8": {
+        "max": 1,
+        "used": 1
+      },
+      "9": {
+        "max": 0,
+        "used": 0
+      }
+    }
+  },
+  "equipment": [
+    {
+      "id": "corpus-item-2024-1",
+      "name": "Longsword",
+      "type": "M|XPHB",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false,
+      "description": "",
+      "weight": 3,
+      "value": 1500,
+      "rarity": "none",
+      "weaponCategory": "martial",
+      "dmg1": "1d8",
+      "dmg2": "1d10",
+      "dmgType": "S",
+      "properties": [
+        "V|XPHB"
+      ],
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-item-2024-2",
+      "name": "Longbow",
+      "type": "R|XPHB",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 5000,
+      "rarity": "none",
+      "weaponCategory": "martial",
+      "dmg1": "1d8",
+      "dmgType": "P",
+      "properties": [
+        "A|XPHB",
+        "H|XPHB",
+        "2H|XPHB"
+      ],
+      "range": "150/600",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-item-2024-3",
+      "name": "Dagger",
+      "type": "M|XPHB",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false,
+      "description": "",
+      "weight": 1,
+      "value": 200,
+      "rarity": "none",
+      "weaponCategory": "simple",
+      "dmg1": "1d4",
+      "dmgType": "P",
+      "properties": [
+        "F|XPHB",
+        "L|XPHB",
+        "T|XPHB"
+      ],
+      "range": "20/60",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-item-2024-4",
+      "name": "Light Crossbow",
+      "type": "R|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 5,
+      "value": 2500,
+      "rarity": "none",
+      "weaponCategory": "simple",
+      "dmg1": "1d8",
+      "dmgType": "P",
+      "properties": [
+        "A|XPHB",
+        "LD|XPHB",
+        "2H|XPHB"
+      ],
+      "range": "80/320",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-item-2024-5",
+      "name": "Quarterstaff",
+      "type": "M|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 4,
+      "value": 20,
+      "rarity": "none",
+      "weaponCategory": "simple",
+      "dmg1": "1d6",
+      "dmg2": "1d8",
+      "dmgType": "B",
+      "properties": [
+        "V|XPHB"
+      ],
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-item-2024-6",
+      "name": "Battleaxe",
+      "type": "M|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 4,
+      "value": 1000,
+      "rarity": "none",
+      "weaponCategory": "martial",
+      "dmg1": "1d8",
+      "dmg2": "1d10",
+      "dmgType": "S",
+      "properties": [
+        "V|XPHB"
+      ],
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-item-2024-7",
+      "name": "Half Plate Armor",
+      "type": "MA|XPHB",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false,
+      "description": "",
+      "weight": 40,
+      "value": 75000,
+      "rarity": "none",
+      "ac": 15,
+      "armorType": "medium",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-item-2024-8",
+      "name": "Shield",
+      "type": "S|XPHB",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": false,
+      "description": "",
+      "weight": 6,
+      "value": 1000,
+      "rarity": "none",
+      "ac": 2,
+      "armorType": "shield",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-item-2024-9",
+      "name": "Staff of Power",
+      "type": "M|XPHB",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": true,
+      "description": "",
+      "weight": 4,
+      "rarity": "very rare",
+      "reqAttune": true,
+      "weaponCategory": "simple",
+      "dmg1": "1d6",
+      "dmg2": "1d8",
+      "dmgType": "B",
+      "properties": [
+        "V|XPHB"
+      ],
+      "source": "XDMG"
+    },
+    {
+      "id": "corpus-item-2024-10",
+      "name": "Cloak of Protection",
+      "type": "G",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": true,
+      "description": "",
+      "rarity": "uncommon",
+      "reqAttune": true,
+      "source": "XDMG",
+      "wondrous": true
+    },
+    {
+      "id": "corpus-item-2024-11",
+      "name": "Ring of Spell Storing",
+      "type": "RG|XDMG",
+      "quantity": 1,
+      "equipped": true,
+      "attuned": true,
+      "description": "",
+      "rarity": "rare",
+      "reqAttune": true,
+      "source": "XDMG"
+    },
+    {
+      "id": "corpus-item-2024-12",
+      "name": "Bag of Holding",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 5,
+      "rarity": "uncommon",
+      "source": "XDMG",
+      "wondrous": true
+    },
+    {
+      "id": "corpus-item-2024-13",
+      "name": "Boots of Elvenkind",
+      "type": "G",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "rarity": "uncommon",
+      "source": "XDMG",
+      "wondrous": true
+    },
+    {
+      "id": "corpus-gear-2024-1",
+      "name": "Acid",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 1,
+      "value": 2500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-2",
+      "name": "Airship",
+      "type": "AIR|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 4000000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-3",
+      "name": "Alchemist's Fire",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 1,
+      "value": 5000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-4",
+      "name": "Alchemist's Supplies",
+      "type": "AT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 8,
+      "value": 5000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-5",
+      "name": "Ale (mug)",
+      "type": "FD|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 4,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-6",
+      "name": "Amulet",
+      "type": "SCF|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 1,
+      "value": 500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-7",
+      "name": "Antitoxin",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 5000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-8",
+      "name": "Arrow",
+      "type": "A|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 0.05,
+      "value": 5,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-9",
+      "name": "Arrows (20)",
+      "type": "A|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 1,
+      "value": 100,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-10",
+      "name": "Backpack",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 5,
+      "value": 200,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-11",
+      "name": "Bagpipes",
+      "type": "INS|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 6,
+      "value": 3000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-12",
+      "name": "Ball Bearings",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 100,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-13",
+      "name": "Barrel",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 70,
+      "value": 200,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-14",
+      "name": "Basic Poison",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 10000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-15",
+      "name": "Basket",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 40,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-16",
+      "name": "Bedroll",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 7,
+      "value": 100,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-17",
+      "name": "Bell",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 100,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-18",
+      "name": "Blanket",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 3,
+      "value": 50,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-19",
+      "name": "Block and Tackle",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 5,
+      "value": 100,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-20",
+      "name": "Bolt",
+      "type": "A|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 0.075,
+      "value": 5,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-21",
+      "name": "Bolts (20)",
+      "type": "A|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 1.5,
+      "value": 100,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-22",
+      "name": "Book",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 5,
+      "value": 2500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-23",
+      "name": "Bread (loaf)",
+      "type": "FD|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 2,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-24",
+      "name": "Brewer's Supplies",
+      "type": "AT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 9,
+      "value": 2000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-25",
+      "name": "Bucket",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 5,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-26",
+      "name": "Bullseye Lantern",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 1000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-27",
+      "name": "Burglar's Pack",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 47.5,
+      "value": 1600,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-28",
+      "name": "Calligrapher's Supplies",
+      "type": "AT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 5,
+      "value": 1000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-29",
+      "name": "Caltrops",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 100,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-30",
+      "name": "Camel",
+      "type": "MNT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 5000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-31",
+      "name": "Candle",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 1,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-32",
+      "name": "Carpenter's Tools",
+      "type": "AT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 6,
+      "value": 800,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-33",
+      "name": "Carriage",
+      "type": "VEH|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 600,
+      "value": 10000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-34",
+      "name": "Cart",
+      "type": "VEH|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 200,
+      "value": 1500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-35",
+      "name": "Cartographer's Tools",
+      "type": "AT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 6,
+      "value": 1500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-36",
+      "name": "Chain",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 10,
+      "value": 500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-37",
+      "name": "Chariot",
+      "type": "VEH|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 100,
+      "value": 25000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-38",
+      "name": "Cheese (wedge)",
+      "type": "FD|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 10,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-39",
+      "name": "Chest",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 25,
+      "value": 500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-40",
+      "name": "Climber's Kit",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 12,
+      "value": 2500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-41",
+      "name": "Cobbler's Tools",
+      "type": "AT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 5,
+      "value": 500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-42",
+      "name": "Common Wine (bottle)",
+      "type": "FD|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 20,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-43",
+      "name": "Component Pouch",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 2500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-44",
+      "name": "Cook's Utensils",
+      "type": "AT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 8,
+      "value": 100,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-45",
+      "name": "Costume",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 4,
+      "value": 500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-46",
+      "name": "Crossbow Bolt Case",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 1,
+      "value": 100,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-47",
+      "name": "Crowbar",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 5,
+      "value": 200,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-48",
+      "name": "Crystal",
+      "type": "SCF|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 1,
+      "value": 1000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-49",
+      "name": "Dice Set",
+      "type": "GS|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 10,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-50",
+      "name": "Diplomat's Pack",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 39,
+      "value": 3900,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-51",
+      "name": "Disguise Kit",
+      "type": "T|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 3,
+      "value": 2500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-52",
+      "name": "Draft Horse",
+      "type": "MNT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 5000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-53",
+      "name": "Dragonchess Set",
+      "type": "GS|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 100,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-54",
+      "name": "Drum",
+      "type": "INS|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 3,
+      "value": 600,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-55",
+      "name": "Dulcimer",
+      "type": "INS|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 10,
+      "value": 2500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-56",
+      "name": "Dungeoneer's Pack",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 55,
+      "value": 1200,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-57",
+      "name": "Elephant",
+      "type": "MNT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 20000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-58",
+      "name": "Emblem",
+      "type": "SCF|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-59",
+      "name": "Entertainer's Pack",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 58.5,
+      "value": 4000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-60",
+      "name": "Exotic Saddle",
+      "type": "TAH|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 40,
+      "value": 6000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-61",
+      "name": "Explorer's Pack",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 55,
+      "value": 1000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-62",
+      "name": "Feed (per day)",
+      "type": "TAH|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 10,
+      "value": 5,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-63",
+      "name": "Fine Clothes",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 6,
+      "value": 1500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-64",
+      "name": "Fine Wine (bottle)",
+      "type": "FD|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 1000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-65",
+      "name": "Firearm Bullet",
+      "type": "A|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 0.2,
+      "value": 30,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-66",
+      "name": "Firearm Bullets (10)",
+      "type": "A|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 300,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-67",
+      "name": "Flask",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 1,
+      "value": 2,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-68",
+      "name": "Flute",
+      "type": "INS|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 1,
+      "value": 200,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-69",
+      "name": "Forgery Kit",
+      "type": "T|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 5,
+      "value": 1500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-70",
+      "name": "Galley",
+      "type": "SHP|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "value": 3000000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-71",
+      "name": "Glass Bottle",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 200,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-72",
+      "name": "Glassblower's Tools",
+      "type": "AT|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 5,
+      "value": 3000,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-73",
+      "name": "Grappling Hook",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 4,
+      "value": 200,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-74",
+      "name": "Healer's Kit",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 3,
+      "value": 500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-75",
+      "name": "Herbalism Kit",
+      "type": "T|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 3,
+      "value": 500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-76",
+      "name": "Holy Water",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 1,
+      "value": 2500,
+      "rarity": "none",
+      "source": "XPHB"
+    },
+    {
+      "id": "corpus-gear-2024-77",
+      "name": "Hooded Lantern",
+      "type": "G|XPHB",
+      "quantity": 1,
+      "equipped": false,
+      "attuned": false,
+      "description": "",
+      "weight": 2,
+      "value": 500,
+      "rarity": "none",
+      "source": "XPHB"
+    }
+  ],
+  "visions": [
+    {
+      "type": "Darkvision",
+      "range": 60
+    },
+    {
+      "type": "Blindsight",
+      "range": 10
+    },
+    {
+      "type": "Truesight",
+      "range": 30
+    }
+  ],
+  "hitPointsInitialized": true,
+  "hitPointGains": [
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 2,
+      "characterLevel": 2,
+      "hitDie": 6,
+      "dieResult": 4,
+      "method": "rolled"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 3,
+      "characterLevel": 3,
+      "hitDie": 6,
+      "dieResult": 5,
+      "method": "average"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 4,
+      "characterLevel": 4,
+      "hitDie": 6,
+      "dieResult": 3,
+      "method": "manual"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 5,
+      "characterLevel": 5,
+      "hitDie": 6,
+      "dieResult": 6,
+      "method": "rolled"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 6,
+      "characterLevel": 6,
+      "hitDie": 6,
+      "dieResult": 4,
+      "method": "average"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 7,
+      "characterLevel": 7,
+      "hitDie": 6,
+      "dieResult": 2,
+      "method": "manual"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 8,
+      "characterLevel": 8,
+      "hitDie": 6,
+      "dieResult": 5,
+      "method": "rolled"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 9,
+      "characterLevel": 9,
+      "hitDie": 6,
+      "dieResult": 4,
+      "method": "average"
+    },
+    {
+      "className": "Wizard",
+      "classSource": "XPHB",
+      "classLevel": 10,
+      "characterLevel": 10,
+      "hitDie": 6,
+      "dieResult": 6,
+      "method": "manual"
+    },
+    {
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "classLevel": 1,
+      "characterLevel": 11,
+      "hitDie": 10,
+      "dieResult": 8,
+      "method": "rolled"
+    },
+    {
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "classLevel": 2,
+      "characterLevel": 12,
+      "hitDie": 10,
+      "dieResult": 6,
+      "method": "average"
+    },
+    {
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "classLevel": 3,
+      "characterLevel": 13,
+      "hitDie": 10,
+      "dieResult": 10,
+      "method": "rolled"
+    },
+    {
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "classLevel": 4,
+      "characterLevel": 14,
+      "hitDie": 10,
+      "dieResult": 7,
+      "method": "average"
+    },
+    {
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "classLevel": 5,
+      "characterLevel": 15,
+      "hitDie": 10,
+      "dieResult": 5,
+      "method": "rolled"
+    },
+    {
+      "className": "Cleric",
+      "classSource": "XPHB",
+      "classLevel": 1,
+      "characterLevel": 16,
+      "hitDie": 8,
+      "dieResult": 6,
+      "method": "manual"
+    },
+    {
+      "className": "Cleric",
+      "classSource": "XPHB",
+      "classLevel": 2,
+      "characterLevel": 17,
+      "hitDie": 8,
+      "dieResult": 5,
+      "method": "average"
+    },
+    {
+      "className": "Cleric",
+      "classSource": "XPHB",
+      "classLevel": 3,
+      "characterLevel": 18,
+      "hitDie": 8,
+      "dieResult": 8,
+      "method": "manual"
+    },
+    {
+      "className": "Cleric",
+      "classSource": "XPHB",
+      "classLevel": 4,
+      "characterLevel": 19,
+      "hitDie": 8,
+      "dieResult": 4,
+      "method": "average"
+    },
+    {
+      "className": "Cleric",
+      "classSource": "XPHB",
+      "classLevel": 5,
+      "characterLevel": 20,
+      "hitDie": 8,
+      "dieResult": 7,
+      "method": "manual"
+    }
+  ],
+  "hitPointAdjustments": [
+    {
+      "id": "hp-adjust-tough",
+      "label": "Tough feat test bonus",
+      "amount": 2,
+      "mode": "per-level",
+      "sourceType": "feat",
+      "sourceRef": "Tough|XPHB",
+      "createdAt": "2026-09-11T12:00:00.000Z"
+    },
+    {
+      "id": "hp-adjust-blessing",
+      "label": "Temple blessing",
+      "amount": 5,
+      "mode": "flat",
+      "sourceType": "other",
+      "createdAt": "2026-09-11T12:00:00.000Z"
+    }
+  ],
+  "maxHitPointsOverride": 168,
+  "armorClassAdjustments": [
+    {
+      "id": "ac-adjust-cloak",
+      "label": "Cloak of Protection",
+      "amount": 1,
+      "sourceType": "item",
+      "sourceRef": "Cloak of Protection|DMG",
+      "createdAt": "2026-09-11T12:00:00.000Z"
+    },
+    {
+      "id": "ac-adjust-defense",
+      "label": "Defense fighting style",
+      "amount": 1,
+      "sourceType": "other",
+      "createdAt": "2026-09-11T12:00:00.000Z"
+    }
+  ],
+  "damageResistances": [
+    "Fire",
+    "Cold",
+    "Lightning",
+    "Necrotic",
+    "Radiant",
+    "Psychic"
+  ],
+  "damageImmunities": [
+    "Poison",
+    "Acid",
+    "Thunder"
+  ],
+  "conditionImmunities": [
+    "Charmed",
+    "Frightened",
+    "Poisoned",
+    "Paralyzed"
+  ],
+  "details": {
+    "playerName": "PDF Regression Tester",
+    "gender": "Woman",
+    "alignment": "Neutral Good",
+    "faith": "Mystra",
+    "lifestyle": "Aristocratic",
+    "personalityTraits": "I collect obscure facts and answer every question with another question.",
+    "personality": "Curious, patient, and unnervingly prepared.",
+    "ideals": "Knowledge must be preserved and shared responsibly.",
+    "bonds": "My missing mentor left a cipher only I can solve.",
+    "flaws": "I cannot resist a sealed archive or forbidden library.",
+    "goals": "Decode the Astral Index and reconcile three rival magical traditions.",
+    "fears": "Forgetting the names of those who made the journey possible.",
+    "age": 142,
+    "height": "5 ft. 8 in.",
+    "weight": "125 lb.",
+    "eyes": "Violet",
+    "skin": "Bronze",
+    "hair": "Black with a silver streak",
+    "distinguishingMarks": "A constellation-shaped scar across the left palm.",
+    "physicalDescription": "A poised high elf scholar carrying too many annotated books.",
+    "appearance": "Ink-stained fingers, violet eyes, travel-worn half plate, and midnight-blue robes.",
+    "clothingStyle": "Layered scholar's robes worn over practical armor.",
+    "mannerisms": "Counts doorways and taps a quill against her thumb while thinking.",
+    "faction": "The Harpers",
+    "rank": "Watcher",
+    "factionNotes": "Maintains a covert archive and exchanges coded reports at each new moon.",
+    "patron": "Archmage Ilyra Voss",
+    "patronDetails": "A vanished mentor whose astral correspondence continues to arrive.",
+    "nemesis": "Magister Corven Ash, curator of the sealed stacks.",
+    "allies": [
+      {
+        "id": "ally-ilyra",
+        "name": "Ilyra Voss",
+        "relationship": "Missing mentor",
+        "description": "An archmage who communicates through impossible star maps."
+      },
+      {
+        "id": "ally-brom",
+        "name": "Brom Ironleaf",
+        "relationship": "Former adventuring companion",
+        "description": "A dwarven cartographer with contacts in every major port."
+      },
+      {
+        "id": "ally-mara",
+        "name": "Sister Mara",
+        "relationship": "Temple ally",
+        "description": "A healer who safeguards Seraphina's research copies."
+      }
+    ],
+    "origin": "Raised in a remote elven observatory above the Moonsea.",
+    "family": "The Manypaths are mapmakers, translators, and keepers of disputed histories.",
+    "definingMoment": "Survived the collapse of the Glass Library and recovered its living index.",
+    "lifeEvents": "Apprenticed as a wizard, served with a mercenary company, then took vows at a temple of knowledge.",
+    "backstory": "Seraphina followed a map written in starlight through ruined academies, border wars, and divine archives. Each class represents a distinct chapter of that journey.",
+    "organizationSelectionKey": "",
+    "organizationCustomName": "",
+    "organizationCustomDescription": "",
+    "organizationCustomImage": "",
+    "organizationCustomGradient": "linear-gradient(135deg, #312e81, #0f766e)"
+  },
+  "portrait": "/assets/images/characters/placeholder_char_card9.jpg",
+  "portraitTransform": {
+    "zoom": 1.35,
+    "panX": 8,
+    "panY": -6,
+    "rotation": 2
+  },
+  "allowedSources": [
+    "XDMG",
+    "XPHB"
+  ],
+  "variantRules": {
+    "optionalClassFeatures": true,
+    "averageHitPoints": false,
+    "abilityScoreMethod": "custom",
+    "bladesingerAnyRace": true,
+    "battleragerAnyRace": true,
+    "preferNewerPrintings": false,
+    "ignoreEquipRestrictions": true
+  },
+  "raceAsiChoices": [],
+  "backgroundEquipmentChoices": [],
+  "classEquipmentChoices": {},
+  "asiChoices": [],
+  "specialFeats": [
+    {
+      "id": "special-magic-initiate",
+      "name": "Magic Initiate",
+      "source": "XPHB",
+      "description": "",
+      "options": {
+        "spellcastingClass": "Wizard Spells",
+        "spells": [
+          "Friends|XPHB",
+          "Light|XPHB",
+          "Detect Magic|XPHB"
+        ]
+      }
+    },
+    {
+      "id": "special-tough",
+      "name": "Tough",
+      "source": "XPHB",
+      "description": ""
+    }
+  ],
+  "classFeatChoices": [
+    {
+      "id": "class:fighter|xphb|choice:fighting-style|1",
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "progressionName": "Fighting Style",
+      "categories": [
+        "FS"
+      ],
+      "feats": [
+        {
+          "id": "class-class:fighter|xphb|choice:fighting-style|1-Defense-XPHB",
+          "name": "Defense",
+          "source": "XPHB",
+          "description": "",
+          "className": "Fighter",
+          "classSource": "XPHB",
+          "classLevel": 1
+        }
+      ]
+    }
+  ],
+  "fixedFeatOptions": {},
+  "inspiration": true,
+  "deathSaves": {
+    "successes": 2,
+    "failures": 1
+  },
+  "conditions": [
+    "Blinded",
+    "Grappled",
+    "Poisoned",
+    "Prone",
+    "Restrained"
+  ],
+  "exhaustion": 3,
+  "hitDiceUsed": {
+    "wizard|xphb": 9
+  },
+  "ritualCasting": true,
+  "classResources": {
+    "wizard-arcane-recovery": 0,
+    "fighter-second-wind": 0,
+    "fighter-action-surge": 1,
+    "cleric-channel-divinity": 0
+  },
+  "createdAt": "2026-09-11T12:00:00.000Z",
+  "lastModified": "2026-09-11T12:00:00.000Z",
+  "provenance": {
+    "proficiencies": {
+      "armor": {
+        "light armor": [
+          {
+            "sourceType": "class",
+            "sourceName": "Fighter",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Fighter"
+          }
+        ],
+        "medium armor": [
+          {
+            "sourceType": "class",
+            "sourceName": "Fighter",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Fighter"
+          }
+        ],
+        "heavy armor": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "shields": [
+          {
+            "sourceType": "class",
+            "sourceName": "Fighter",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Fighter"
+          }
+        ]
+      },
+      "weapons": {
+        "simple weapons": [
+          {
+            "sourceType": "class",
+            "sourceName": "Fighter",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Fighter"
+          }
+        ],
+        "martial weapons": [
+          {
+            "sourceType": "class",
+            "sourceName": "Fighter",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Fighter"
+          }
+        ],
+        "longsword": [
+          {
+            "sourceType": "class",
+            "sourceName": "Fighter",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Fighter"
+          }
+        ],
+        "longbow": [
+          {
+            "sourceType": "class",
+            "sourceName": "Fighter",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Fighter"
+          }
+        ],
+        "dagger": [
+          {
+            "sourceType": "class",
+            "sourceName": "Wizard",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Wizard"
+          }
+        ],
+        "light crossbow": [
+          {
+            "sourceType": "class",
+            "sourceName": "Wizard",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Wizard"
+          }
+        ]
+      },
+      "tools": {
+        "calligrapher's supplies": [
+          {
+            "sourceType": "class",
+            "sourceName": "Fighter",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Fighter"
+          }
+        ],
+        "herbalism kit": [
+          {
+            "sourceType": "class",
+            "sourceName": "Cleric",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Cleric"
+          }
+        ],
+        "thieves' tools": [
+          {
+            "sourceType": "background",
+            "sourceName": "Criminal",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Criminal"
+          }
+        ],
+        "navigator's tools": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "disguise kit": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "dice set": [
+          {
+            "sourceType": "background",
+            "sourceName": "Criminal",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Criminal"
+          }
+        ]
+      },
+      "languages": {
+        "common": [
+          {
+            "sourceType": "race",
+            "sourceName": "Elf",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Elf"
+          }
+        ],
+        "elvish": [
+          {
+            "sourceType": "race",
+            "sourceName": "Elf",
+            "sourceRef": "XPHB",
+            "grantType": "fixed",
+            "label": "Elf"
+          }
+        ],
+        "draconic": [
+          {
+            "sourceType": "background",
+            "sourceName": "Criminal",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Criminal"
+          }
+        ],
+        "dwarvish": [
+          {
+            "sourceType": "background",
+            "sourceName": "Criminal",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Criminal"
+          }
+        ],
+        "celestial": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "infernal": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ]
+      },
+      "skills": {
+        "acrobatics": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "animal handling": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "arcana": [
+          {
+            "sourceType": "background",
+            "sourceName": "Criminal",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Criminal"
+          }
+        ],
+        "athletics": [
+          {
+            "sourceType": "class",
+            "sourceName": "Fighter",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Fighter"
+          }
+        ],
+        "deception": [
+          {
+            "sourceType": "background",
+            "sourceName": "Criminal",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Criminal"
+          }
+        ],
+        "history": [
+          {
+            "sourceType": "background",
+            "sourceName": "Criminal",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Criminal"
+          }
+        ],
+        "insight": [
+          {
+            "sourceType": "class",
+            "sourceName": "Cleric",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Cleric"
+          }
+        ],
+        "intimidation": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "investigation": [
+          {
+            "sourceType": "class",
+            "sourceName": "Wizard",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Wizard"
+          }
+        ],
+        "medicine": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "nature": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "perception": [
+          {
+            "sourceType": "class",
+            "sourceName": "Fighter",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Fighter"
+          }
+        ],
+        "performance": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "persuasion": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "religion": [
+          {
+            "sourceType": "class",
+            "sourceName": "Cleric",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Cleric"
+          }
+        ],
+        "sleight of hand": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "stealth": [
+          {
+            "sourceType": "background",
+            "sourceName": "Criminal",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Criminal"
+          }
+        ],
+        "survival": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ]
+      },
+      "savingThrows": {
+        "strength": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "dexterity": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "constitution": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ],
+        "intelligence": [
+          {
+            "sourceType": "class",
+            "sourceName": "Wizard",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Wizard"
+          }
+        ],
+        "wisdom": [
+          {
+            "sourceType": "class",
+            "sourceName": "Wizard",
+            "sourceRef": "XPHB",
+            "grantType": "choice",
+            "label": "Wizard"
+          }
+        ],
+        "charisma": [
+          {
+            "sourceType": "manual",
+            "sourceName": "Full-coverage test fixture",
+            "grantType": "choice",
+            "label": "User Choice"
+          }
+        ]
+      }
+    },
+    "abilityBonuses": [
+      {
+        "ability": "dexterity",
+        "value": 2,
+        "sourceTag": {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Criminal"
+        }
+      },
+      {
+        "ability": "constitution",
+        "value": 1,
+        "sourceTag": {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Criminal"
+        }
+      }
+    ],
+    "features": {
+      "arcane recovery": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        }
+      ],
+      "ritual adept": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        }
+      ],
+      "spellcasting": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "scholar": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        }
+      ],
+      "wizard subclass": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        }
+      ],
+      "evoker": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Evoker",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Evoker"
+        }
+      ],
+      "evocation savant": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Evoker",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Evoker"
+        }
+      ],
+      "potent cantrip": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Evoker",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Evoker"
+        }
+      ],
+      "ability score improvement": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "memorize spell": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Wizard"
+        }
+      ],
+      "subclass feature": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "sculpt spells": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Evoker",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Evoker"
+        }
+      ],
+      "empowered evocation": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Evoker",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Evoker"
+        }
+      ],
+      "fighting style": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Fighter"
+        }
+      ],
+      "second wind": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Fighter"
+        }
+      ],
+      "weapon mastery": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "action surge": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Fighter"
+        }
+      ],
+      "protector": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Cleric"
+        },
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "grantVariant": "class:cleric|xphb|choice:divine-order|1"
+        }
+      ]
+    },
+    "feats": {
+      "war caster": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard"
+        }
+      ],
+      "fey-touched": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard"
+        }
+      ],
+      "resilient": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fighter"
+        }
+      ],
+      "skill expert": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric"
+        }
+      ],
+      "magic initiate": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "tough": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "defense": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fighter",
+          "grantVariant": "class:fighter|xphb|choice:fighting-style|1"
+        }
+      ],
+      "alert": [
+        {
+          "sourceType": "background",
+          "sourceName": "Criminal",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Criminal"
+        }
+      ]
+    },
+    "spells": {
+      "acid splash": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "blade ward": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "chill touch": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "alarm": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "burning hands": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "charm person": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "chromatic orb": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "color spray": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "comprehend languages": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "detect magic": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 2,
+          "spellAttributionMode": "exact"
+        },
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 2,
+          "spellAttributionMode": "exact"
+        },
+        {
+          "sourceType": "feat",
+          "sourceName": "Magic Initiate",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Magic Initiate"
+        }
+      ],
+      "disguise self": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 2,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "alter self": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 3,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "arcane lock": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 3,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "dancing lights": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 4,
+          "spellAttributionMode": "exact"
+        },
+        {
+          "sourceType": "subrace",
+          "sourceName": "Drow Lineage",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Drow Lineage"
+        }
+      ],
+      "arcane vigor": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 4,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "augury": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 4,
+          "spellAttributionMode": "exact"
+        },
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 4,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "animate dead": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 5,
+          "spellAttributionMode": "exact"
+        },
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 5,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "bestow curse": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 5,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "blink": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 6,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "clairvoyance": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 6,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "arcane eye": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 7,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "banishment": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 7,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "blight": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 8,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "charm monster": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 8,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "animate objects": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 9,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "bigby's hand": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 9,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "elementalism": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 10,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "circle of power": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 10,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "cloudkill": [
+        {
+          "sourceType": "class",
+          "sourceName": "Wizard",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Wizard",
+          "spellGrantedAtLevel": 10,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "guidance": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "light": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        },
+        {
+          "sourceType": "feat",
+          "sourceName": "Magic Initiate",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Magic Initiate"
+        }
+      ],
+      "mending": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "resistance": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 4,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "bane": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "command": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "create or destroy water": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "detect evil and good": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 1,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "aid": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 3,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "aura of vitality": [
+        {
+          "sourceType": "class",
+          "sourceName": "Cleric",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Cleric",
+          "spellGrantedAtLevel": 5,
+          "spellAttributionMode": "exact"
+        }
+      ],
+      "bless": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain"
+        }
+      ],
+      "cure wounds": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain"
+        }
+      ],
+      "lesser restoration": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain"
+        }
+      ],
+      "spiritual weapon": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain"
+        }
+      ],
+      "beacon of hope": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain"
+        }
+      ],
+      "revivify": [
+        {
+          "sourceType": "subclass",
+          "sourceName": "Life Domain",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Life Domain"
+        }
+      ],
+      "faerie fire": [
+        {
+          "sourceType": "subrace",
+          "sourceName": "Drow Lineage",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Drow Lineage"
+        }
+      ],
+      "darkness": [
+        {
+          "sourceType": "subrace",
+          "sourceName": "Drow Lineage",
+          "sourceRef": "XPHB",
+          "grantType": "fixed",
+          "label": "Drow Lineage"
+        }
+      ],
+      "friends": [
+        {
+          "sourceType": "feat",
+          "sourceName": "Magic Initiate",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Magic Initiate"
+        }
+      ]
+    },
+    "equipment": {
+      "longsword": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fighter"
+        }
+      ],
+      "longbow": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fighter"
+        }
+      ],
+      "dagger": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fighter"
+        }
+      ],
+      "light crossbow": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fighter"
+        }
+      ],
+      "quarterstaff": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fighter"
+        }
+      ],
+      "battleaxe": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fighter"
+        }
+      ],
+      "half plate armor": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fighter"
+        }
+      ],
+      "shield": [
+        {
+          "sourceType": "class",
+          "sourceName": "Fighter",
+          "sourceRef": "XPHB",
+          "grantType": "choice",
+          "label": "Fighter"
+        }
+      ],
+      "staff of power": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "cloak of protection": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "ring of spell storing": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "bag of holding": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "boots of elvenkind": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "acid": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "airship": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "alchemist's fire": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "alchemist's supplies": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "ale (mug)": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "amulet": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "antitoxin": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "arrow": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "arrows (20)": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "backpack": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "bagpipes": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "ball bearings": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "barrel": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "basic poison": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "basket": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "bedroll": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "bell": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "blanket": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "block and tackle": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "bolt": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "bolts (20)": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "book": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "bread (loaf)": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "brewer's supplies": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "bucket": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "bullseye lantern": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "burglar's pack": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "calligrapher's supplies": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "caltrops": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "camel": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "candle": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "carpenter's tools": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "carriage": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "cart": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "cartographer's tools": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "chain": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "chariot": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "cheese (wedge)": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "chest": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "climber's kit": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "cobbler's tools": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "common wine (bottle)": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "component pouch": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "cook's utensils": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "costume": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "crossbow bolt case": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "crowbar": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "crystal": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "dice set": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "diplomat's pack": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "disguise kit": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "draft horse": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "dragonchess set": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "drum": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "dulcimer": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "dungeoneer's pack": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "elephant": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "emblem": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "entertainer's pack": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "exotic saddle": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "explorer's pack": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "feed (per day)": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "fine clothes": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "fine wine (bottle)": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "firearm bullet": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "firearm bullets (10)": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "flask": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "flute": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "forgery kit": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "galley": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "glass bottle": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "glassblower's tools": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "grappling hook": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "healer's kit": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "herbalism kit": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "holy water": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ],
+      "hooded lantern": [
+        {
+          "sourceType": "manual",
+          "sourceName": "Full-coverage test fixture",
+          "grantType": "choice",
+          "label": "User Choice"
+        }
+      ]
+    },
+    "choices": []
+  },
+  "movement": {
+    "speeds": {},
+    "source": {
+      "kind": "manual",
+      "name": "Full-coverage test fixture"
+    }
+  },
+  "schemaVersion": 2,
+  "hitPoints": {
+    "current": 121,
+    "temporary": 17
+  },
+  "classChoiceSelections": [
+    {
+      "choiceId": "class:fighter|xphb|choice:fighting-style|1",
+      "label": "Fighting Style",
+      "kind": "feat",
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "classLevel": 1,
+      "selected": [
+        {
+          "entityType": "feat",
+          "name": "Defense",
+          "source": "XPHB",
+          "slotLevel": 1
+        }
+      ]
+    },
+    {
+      "choiceId": "class:fighter|xphb|choice:weapon-mastery|1",
+      "label": "Weapon Mastery",
+      "kind": "item",
+      "className": "Fighter",
+      "classSource": "XPHB",
+      "classLevel": 1,
+      "selected": [
+        {
+          "entityType": "item",
+          "name": "Battleaxe",
+          "source": "XPHB",
+          "slotLevel": 1
+        },
+        {
+          "entityType": "item",
+          "name": "Dagger",
+          "source": "XPHB",
+          "slotLevel": 1
+        },
+        {
+          "entityType": "item",
+          "name": "Greatsword",
+          "source": "XPHB",
+          "slotLevel": 1
+        },
+        {
+          "entityType": "item",
+          "name": "Longbow",
+          "source": "XPHB",
+          "slotLevel": 1
+        }
+      ]
+    },
+    {
+      "choiceId": "class:cleric|xphb|choice:divine-order|1",
+      "label": "Divine Order",
+      "kind": "class-feature",
+      "className": "Cleric",
+      "classSource": "XPHB",
+      "classLevel": 1,
+      "selected": [
+        {
+          "entityType": "classFeature",
+          "name": "Protector",
+          "source": "XPHB",
+          "slotLevel": 1
+        }
+      ]
+    }
+  ],
+  "backgroundEquipmentItemChoices": {},
+  "classEquipmentItemChoices": {},
+  "movementAdjustments": [],
+  "movementOverrides": {},
+  "manualEffects": [],
+  "suppressedEffectIds": [],
+  "effectFlags": {},
+  "manualActions": [],
+  "backgroundAsiBlockIndex": 0,
+  "backgroundAsiChoices": [
+    "dexterity",
+    "constitution"
+  ]
+}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useUnifiedClassSelection } from '@/hooks/character/useUnifiedClassSelection'
 import { useSubclass } from '@/hooks/data/useGameData'
 import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
@@ -28,6 +29,7 @@ export function useSubclassSelectionController({
   onSelectionApplied,
 }: SubclassSelectionControllerParams) {
   const { selectSubclass } = useUnifiedClassSelection()
+  const calculationContext = useCharacterCalculationContext(character)
   const [pickerOpen, setPickerOpen] = useState(false)
   const subclasses = useMemo(() => {
     if (!character || !viewingClass) return []
@@ -35,24 +37,27 @@ export function useSubclassSelectionController({
     const implicitSource = getImplicitSource(character?.originSystem ?? '2014')
     const effectiveSources =
       allowedSources && allowedSources.length > 0
-        ? allowedSources.includes(implicitSource)
+        ? allowedSources.some((source) => source.toUpperCase() === implicitSource.toUpperCase())
           ? allowedSources
           : [...allowedSources, implicitSource]
         : undefined
+    const enabledSources = effectiveSources?.map((source) => source.toUpperCase())
 
     return (viewingClassData?.subclasses ?? []).filter(
       (subclass) =>
-        (!effectiveSources || effectiveSources.includes(subclass.source)) &&
-        isSubclassEligible({ subclass, className: viewingClass, character }),
+        (!enabledSources || enabledSources.includes(subclass.source.toUpperCase())) &&
+        isSubclassEligible({
+          subclass,
+          className: viewingClass,
+          character,
+          effectiveAbilityScores: calculationContext?.abilityScores.total,
+        }),
     )
-  }, [character, viewingClass, viewingClassData?.subclasses])
+  }, [character, calculationContext, viewingClass, viewingClassData?.subclasses])
   const subclassTitle =
     typeof viewingClassData?.subclassTitle === 'string'
       ? viewingClassData.subclassTitle
       : 'Subclass'
-  // `getCharacterClassEntries` already folds the legacy top-level subclass into
-  // its synthesized entry. Falling back here would make every subclass-less
-  // multiclass entry display the primary class's top-level subclass.
   const viewingSubclass = viewingEntry?.subclass
   const viewingSubclassData = useSubclass(
     viewingClass ?? '',

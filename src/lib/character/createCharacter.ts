@@ -1,7 +1,7 @@
 import { SPECIAL_SPELL_PROFILE_LABEL } from '@/lib/calculations/spellProfiles'
 import { DEFAULT_PORTRAIT_TRANSFORM } from '@/lib/portraitConstants'
 import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
-import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
+import { CURRENT_CHARACTER_SCHEMA_VERSION } from '@/lib/schema/characterSchemaVersion'
 import type { Character } from '@/types/character'
 
 export function emptyProvenance(): ProvenanceLedger {
@@ -28,15 +28,14 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
   const now = new Date().toISOString()
   return {
     id: crypto.randomUUID(),
-    version: `${CURRENT_SCHEMA_VERSION}.0.0`,
+    schemaVersion: CURRENT_CHARACTER_SCHEMA_VERSION,
     name: '',
     originSystem: '2014',
     race: '',
-    class: '',
     background: '',
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
-    level: 1,
     experiencePoints: 0,
+    classProgression: [],
     abilityScores: {
       strength: 10,
       dexterity: 10,
@@ -50,6 +49,7 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
       weapons: [],
       tools: [],
       skills: [],
+      expertise: [],
       languages: [],
       savingThrows: [],
     },
@@ -78,26 +78,37 @@ export function createEmptyCharacter(initial: Partial<Character> = {}): Characte
         8: { max: 0, used: 0 },
         9: { max: 0, used: 0 },
       },
+      pactSpellSlots: {
+        1: { max: 0, used: 0 },
+        2: { max: 0, used: 0 },
+        3: { max: 0, used: 0 },
+        4: { max: 0, used: 0 },
+        5: { max: 0, used: 0 },
+        6: { max: 0, used: 0 },
+        7: { max: 0, used: 0 },
+        8: { max: 0, used: 0 },
+        9: { max: 0, used: 0 },
+      },
     },
     equipment: [],
-    hitPoints: { max: 0, current: 0, temporary: 0 },
+    hitPoints: { current: 0, temporary: 0 },
     hitPointsInitialized: false,
     hitPointGains: [],
     hitPointAdjustments: [],
     armorClassAdjustments: [],
-    initiative: 0,
-    speed: 30,
-    savingThrows: {
-      strength: { proficient: false, bonus: 0 },
-      dexterity: { proficient: false, bonus: 0 },
-      constitution: { proficient: false, bonus: 0 },
-      intelligence: { proficient: false, bonus: 0 },
-      wisdom: { proficient: false, bonus: 0 },
-      charisma: { proficient: false, bonus: 0 },
+    movement: {
+      speeds: {},
+      source: { kind: 'manual', name: 'Unspecified movement' },
     },
-    skills: {},
+    movementAdjustments: [],
+    movementOverrides: {},
     details: {},
     portraitTransform: { ...DEFAULT_PORTRAIT_TRANSFORM },
+    classChoiceSelections: [],
+    manualEffects: [],
+    suppressedEffectIds: [],
+    effectFlags: {},
+    manualActions: [],
     createdAt: now,
     lastModified: now,
     provenance: emptyProvenance(),

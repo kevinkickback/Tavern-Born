@@ -8,10 +8,12 @@ import {
   ensureSpellProfiles,
   evaluatePreparedSpellsFormula,
   getPreparedSpellLimit,
+  getSpellProfileSelectionCounts,
   inferClassSpellAttributionLevels,
   isLevelOnlyPreparedCaster,
   isPreparedCaster,
   isSpellOnClassList,
+  isSpellOnSubclassList,
   isTruePreparedCaster,
   SPECIAL_SPELL_PROFILE_ID,
   SPECIAL_SPELL_PROFILE_LABEL,
@@ -39,9 +41,6 @@ function makeBaseProvenance() {
 describe('spellProfiles', () => {
   test('ensureSpellProfiles creates class profiles and special unrestricted profile', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [
         { name: 'Wizard', source: 'PHB', levels: 3 },
         { name: 'Cleric', source: 'PHB', levels: 2 },
@@ -75,13 +74,35 @@ describe('spellProfiles', () => {
     expect(profiles[2].label).toBe(SPECIAL_SPELL_PROFILE_LABEL)
   })
 
+  test('ensureSpellProfiles preserves fixed ownership metadata on the special profile', () => {
+    const character = makeCharacterFixture({
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: SPECIAL_SPELL_PROFILE_ID,
+            type: 'special',
+            label: 'Special',
+            cantrips: ['Light|PHB'],
+            spellsKnown: [],
+            preparedSpells: [],
+            fixedSpells: ['Light|PHB'],
+            alwaysPrepared: true,
+          },
+        ],
+      },
+    })
+
+    expect(
+      ensureSpellProfiles(character).find((profile) => profile.type === 'special'),
+    ).toMatchObject({
+      cantrips: ['Light|PHB'],
+      fixedSpells: ['Light|PHB'],
+    })
+  })
+
   test('ensureSpellProfiles merges subclass grants into the parent class profile', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      classSource: 'PHB',
-      subclass: 'Eldritch Knight',
-      subclassSource: 'PHB',
-      level: 3,
       classProgression: [
         {
           name: 'Fighter',
@@ -146,13 +167,53 @@ describe('spellProfiles', () => {
     expect(known.preparedSpells).not.toContain('mage armor')
   })
 
+  test('preserves class-owned spells and cantrips that overlap a removed subclass grant', () => {
+    const classTag = {
+      sourceType: 'class' as const,
+      sourceName: 'Sorcerer',
+      sourceRef: 'PHB',
+      grantType: 'choice' as const,
+      label: 'Sorcerer',
+      spellGrantedAtLevel: 1,
+      spellAttributionMode: 'exact' as const,
+    }
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Sorcerer', source: 'PHB', levels: 5 }],
+      provenance: {
+        ...makeBaseProvenance(),
+        spells: {
+          'dispel magic': [classTag],
+          'mage hand': [classTag],
+        },
+      },
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Sorcerer|PHB',
+            type: 'class',
+            label: 'Sorcerer (Lv 5)',
+            className: 'Sorcerer',
+            classSource: 'PHB',
+            cantrips: ['Mage Hand', 'Subclass Cantrip'],
+            spellsKnown: ['Dispel Magic', 'Subclass Spell'],
+            preparedSpells: [],
+            fixedSpells: ['mage hand', 'subclass cantrip', 'dispel magic', 'subclass spell'],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+
+    const [profile] = ensureSpellProfiles(character)
+
+    expect(profile.cantrips).toEqual(['Mage Hand'])
+    expect(profile.spellsKnown).toEqual(['Dispel Magic'])
+    expect(profile.fixedSpells).toBeUndefined()
+  })
+
   test('ensureSpellProfiles models Battle Smith spells as locked, always-prepared Artificer spells', () => {
     const character = makeCharacterFixture({
-      class: 'Artificer',
-      classSource: 'PHB',
-      subclass: 'Battle Smith',
-      subclassSource: 'PHB',
-      level: 3,
       classProgression: [
         {
           name: 'Artificer',
@@ -220,11 +281,25 @@ describe('spellProfiles', () => {
     expect(isSpellOnClassList({}, 'Wizard', 'PHB')).toBe(false)
   })
 
+  test('isSpellOnSubclassList matches source-qualified subclass lists', () => {
+    const spell = {
+      classes: {
+        fromSubclass: [
+          {
+            class: { name: 'Rogue', source: 'PHB' },
+            subclass: { name: 'Arcane Trickster', shortName: 'Arcane Trickster', source: 'PHB' },
+          },
+        ],
+      },
+    }
+
+    expect(isSpellOnSubclassList(spell, 'Rogue', 'PHB', 'Arcane Trickster', 'PHB')).toBe(true)
+    expect(isSpellOnSubclassList(spell, 'Rogue', 'XPHB', 'Arcane Trickster', 'PHB')).toBe(false)
+    expect(isSpellOnSubclassList(spell, 'Rogue', 'PHB', 'Thief', 'PHB')).toBe(false)
+  })
+
   test('collectKnownSpells includes always-prepared unrestricted spells', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 2,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
       spells: {
         spellProfiles: [
@@ -236,7 +311,7 @@ describe('spellProfiles', () => {
             classSource: 'PHB',
             cantrips: ['Mage Hand'],
             spellsKnown: ['Shield'],
-            preparedSpells: ['Shield'],
+            preparedSpells: ['Shield|PHB'],
             alwaysPrepared: false,
           },
           {
@@ -261,9 +336,6 @@ describe('spellProfiles', () => {
 
   test('calculateCharacterSpellSlots combines multiclass shared slots and keeps pact separate', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [
         { name: 'Wizard', source: 'PHB', levels: 3 },
         { name: 'Cleric', source: 'PHB', levels: 2 },
@@ -373,11 +445,6 @@ describe('spellProfiles', () => {
 
   test('calculateCharacterSpellSlots uses subclass caster progression for non-caster classes', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      classSource: 'PHB',
-      subclass: 'Eldritch Knight',
-      subclassSource: 'PHB',
-      level: 3,
       classProgression: [
         {
           name: 'Fighter',
@@ -427,11 +494,106 @@ describe('spellProfiles', () => {
     expect(slots.shared[1]?.max).toBe(2)
   })
 
+  test('buildSpellcastingClassDetails uses known-spell limits from a 2014 casting subclass', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Fighter',
+          source: 'PHB',
+          levels: 5,
+          subclass: 'Eldritch Knight',
+          subclassSource: 'PHB',
+        },
+      ],
+      abilityScores: { ...makeCharacterFixture().abilityScores, intelligence: 16 },
+    })
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'PHB',
+      casterProgression: 'none',
+      spellcastingAbility: undefined,
+      subclasses: [
+        {
+          name: 'Eldritch Knight',
+          shortName: 'Eldritch Knight',
+          source: 'PHB',
+          className: 'Fighter',
+          classSource: 'PHB',
+          spellcastingAbility: 'int',
+          casterProgression: '1/3',
+          cantripProgression: [2, 2, 2, 2, 2],
+          spellsKnownProgression: [3, 3, 3, 4, 4],
+        },
+      ],
+    })
+
+    const details = buildSpellcastingClassDetails(
+      character,
+      new Map([['class:Fighter|PHB', fighter]]),
+      character.abilityScores,
+    )
+
+    expect(details[0]).toMatchObject({
+      casterProgression: '1/3',
+      cantripLimit: 2,
+      knownSpellLimit: 4,
+      preparedSpellLimit: null,
+      isPreparedCaster: false,
+    })
+  })
+
+  test('buildSpellcastingClassDetails uses prepared limits from a 2024 casting subclass', () => {
+    const character = makeCharacterFixture({
+      classProgression: [
+        {
+          name: 'Fighter',
+          source: 'XPHB',
+          levels: 5,
+          subclass: 'Eldritch Knight',
+          subclassSource: 'XPHB',
+        },
+      ],
+      abilityScores: { ...makeCharacterFixture().abilityScores, intelligence: 16 },
+    })
+    const fighter = makeClassFixture({
+      name: 'Fighter',
+      source: 'XPHB',
+      edition: 'one',
+      casterProgression: 'none',
+      spellcastingAbility: undefined,
+      subclasses: [
+        {
+          name: 'Eldritch Knight',
+          shortName: 'Eldritch Knight',
+          source: 'XPHB',
+          className: 'Fighter',
+          classSource: 'XPHB',
+          spellcastingAbility: 'int',
+          casterProgression: '1/3',
+          cantripProgression: [2, 2, 2, 2, 2],
+          preparedSpellsProgression: [3, 3, 3, 4, 4],
+          preparedSpellsChange: 'level',
+        },
+      ],
+    })
+
+    const details = buildSpellcastingClassDetails(
+      character,
+      new Map([['class:Fighter|XPHB', fighter]]),
+      character.abilityScores,
+    )
+
+    expect(details[0]).toMatchObject({
+      casterProgression: '1/3',
+      cantripLimit: 2,
+      knownSpellLimit: 4,
+      preparedSpellLimit: null,
+      isLevelOnlyPreparedCaster: true,
+    })
+  })
+
   test('buildSpellcastingClassDetails computes save and attack values per class', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
       abilityScores: {
         strength: 10,
@@ -481,7 +643,7 @@ describe('spellProfiles', () => {
       ],
     ])
 
-    const details = buildSpellcastingClassDetails(character, classesById)
+    const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
     expect(details).toHaveLength(1)
     expect(details[0].spellSaveDC).toBe(14)
     expect(details[0].spellAttackBonus).toBe(6)
@@ -561,9 +723,6 @@ describe('spellProfiles', () => {
   test('buildClassSpellSelectionsByLevel reconstructs class-level picks from provenance attribution', () => {
     const baseProvenance = makeBaseProvenance()
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
       spells: {
         spellProfiles: [
@@ -646,9 +805,6 @@ describe('spellProfiles', () => {
     // Absorb Elements has provenance at level 3 but should NOT count as a
     // level-3 selection — the swap is independent of new spell choices.
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
       spells: {
         spellProfiles: [
@@ -732,9 +888,6 @@ describe('spellProfiles', () => {
     // Scenario: Shield (picked at level 1) is swapped out at level 3 for Absorb Elements.
     // The replacement should still occupy the original level-1 spell pick slot.
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
       spells: {
         spellProfiles: [
@@ -820,9 +973,6 @@ describe('spellProfiles', () => {
     // - provenance: Shield provenance still lingers (stale closure overwrites
     //   the removal), Absorb Elements has provenance at level 3
     const rawCharacter = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
       spells: {
         spellProfiles: [
@@ -933,9 +1083,6 @@ describe('spellProfiles', () => {
   test('buildClassSpellSelectionsByLevel excludes class-profile spells without provenance level attribution', () => {
     const baseProvenance = makeBaseProvenance()
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
       spells: {
         spellProfiles: [
@@ -1060,11 +1207,8 @@ describe('spellProfiles', () => {
     expect(result).toBeNull()
   })
 
-  test('buildSpellcastingClassDetails uses prepared spell formula for prepared casters', () => {
+  test('buildSpellcastingClassDetails keeps spellbook and prepared limits separate', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 5,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
       abilityScores: {
         strength: 8,
@@ -1110,15 +1254,28 @@ describe('spellProfiles', () => {
           casterProgression: 'full',
           spellcastingAbility: 'int',
           preparedSpells: '<$level$> + <$int_mod$>',
-          spellsKnownProgression: [6, 8, 10, 12, 14],
+          spellsKnownProgressionFixed: [6, 2, 2, 2, 2],
         }),
       ],
     ])
 
-    const details = buildSpellcastingClassDetails(character, classesById)
+    const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
     expect(details).toHaveLength(1)
     expect(details[0].isPreparedCaster).toBe(true)
-    expect(details[0].knownSpellLimit).toBe(9)
+    expect(details[0].knownSpellLimit).toBe(14)
+    expect(details[0].preparedSpellLimit).toBe(9)
+  })
+
+  test('counts unique player selections without fixed or always-prepared grants', () => {
+    expect(
+      getSpellProfileSelectionCounts({
+        cantrips: ['Fire Bolt|PHB', 'fire bolt|XPHB', 'Light|PHB'],
+        spellsKnown: ['Magic Missile|PHB', 'magic missile|XPHB', 'Detect Magic|PHB', 'Shield|PHB'],
+        preparedSpells: ['Magic Missile|PHB', 'magic missile|XPHB', 'Shield|PHB'],
+        fixedSpells: ['Light|XPHB', 'Detect Magic|XPHB', 'Shield|XPHB'],
+        alwaysPreparedSpells: ['Shield|XPHB'],
+      }),
+    ).toEqual({ cantrips: 1, spells: 1, prepared: 1 })
   })
 
   // ── XPHB classification ────────────────────────────────────────────
@@ -1231,7 +1388,7 @@ describe('spellProfiles', () => {
         }),
       )
       const classesById = new Map([['class:Sorcerer|XPHB', makeXphbSorcererFixture()]])
-      const details = buildSpellcastingClassDetails(character, classesById)
+      const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
       expect(details).toHaveLength(1)
       expect(details[0].isLevelOnlyPreparedCaster).toBe(true)
       expect(details[0].isTruePreparedCaster).toBe(false)
@@ -1254,12 +1411,12 @@ describe('spellProfiles', () => {
         }),
       )
       const classesById = new Map([['class:Cleric|XPHB', makeXphbClericFixture()]])
-      const details = buildSpellcastingClassDetails(character, classesById)
+      const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
       expect(details).toHaveLength(1)
       expect(details[0].isTruePreparedCaster).toBe(true)
       expect(details[0].isLevelOnlyPreparedCaster).toBe(false)
       expect(details[0].preparedSpellLimit).toBe(6) // preparedSpellsProgression[2]
-      expect(details[0].knownSpellLimit).toBe(6) // same as prepared for true-prepared
+      expect(details[0].knownSpellLimit).toBeNull()
     })
 
     test('sets isLevelOnlyPreparedCaster for XPHB Warlock with pact progression', () => {
@@ -1277,7 +1434,7 @@ describe('spellProfiles', () => {
         }),
       )
       const classesById = new Map([['class:Warlock|XPHB', makeXphbWarlockFixture()]])
-      const details = buildSpellcastingClassDetails(character, classesById)
+      const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
       expect(details).toHaveLength(1)
       expect(details[0].isLevelOnlyPreparedCaster).toBe(true)
       expect(details[0].casterProgression).toBe('pact')
@@ -1285,7 +1442,7 @@ describe('spellProfiles', () => {
       expect(details[0].preparedSpellLimit).toBeNull()
     })
 
-    test('preserves 2014 PHB Wizard behavior unchanged', () => {
+    test('uses the 2014 PHB Wizard spellbook total instead of its prepared total', () => {
       const character = characterPersistenceSchema.parse(
         makeCharacterFixture({
           classProgression: [{ name: 'Wizard', source: 'PHB', levels: 5 }],
@@ -1305,14 +1462,42 @@ describe('spellProfiles', () => {
         casterProgression: 'full',
         spellcastingAbility: 'int',
         preparedSpells: '<$level$> + <$int_mod$>',
-        spellsKnownProgression: [6, 8, 10, 12, 14],
+        spellsKnownProgressionFixed: [6, 2, 2, 2, 2],
       })
       const classesById = new Map([['class:Wizard|PHB', phbWizard]])
-      const details = buildSpellcastingClassDetails(character, classesById)
+      const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
       expect(details).toHaveLength(1)
       expect(details[0].isLevelOnlyPreparedCaster).toBe(false)
       expect(details[0].isPreparedCaster).toBe(true)
-      expect(details[0].knownSpellLimit).toBe(8) // 5 + 3
+      expect(details[0].isTruePreparedCaster).toBe(false)
+      expect(details[0].knownSpellLimit).toBe(14)
+      expect(details[0].preparedSpellLimit).toBe(8)
+    })
+
+    test('keeps 2024 Wizard spellbook and daily prepared totals independent', () => {
+      const character = characterPersistenceSchema.parse(
+        makeCharacterFixture({
+          classProgression: [{ name: 'Wizard', source: 'XPHB', levels: 5 }],
+          abilityScores: {
+            strength: 10,
+            dexterity: 10,
+            constitution: 10,
+            intelligence: 16,
+            wisdom: 10,
+            charisma: 10,
+          },
+        }),
+      )
+      const classesById = new Map([['class:Wizard|XPHB', makeXphbWizardFixture()]])
+      const details = buildSpellcastingClassDetails(character, classesById, character.abilityScores)
+
+      expect(details[0]).toMatchObject({
+        isPreparedCaster: true,
+        isTruePreparedCaster: false,
+        isLevelOnlyPreparedCaster: false,
+        knownSpellLimit: 14,
+        preparedSpellLimit: 9,
+      })
     })
   })
 })

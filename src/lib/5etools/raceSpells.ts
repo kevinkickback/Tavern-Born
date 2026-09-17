@@ -10,7 +10,7 @@ export interface RaceSpellGrant {
   source: 'innate' | 'known'
 }
 
-export interface RaceSpellChoiceDescriptor {
+interface RaceSpellChoiceDescriptor {
   id: string
   count: number
   isCantrip: boolean

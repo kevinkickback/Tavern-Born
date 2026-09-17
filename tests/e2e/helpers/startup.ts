@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import { GAME_DATA_CACHE_SCHEMA_VERSION } from '@/lib/storage/dataCache'
 import type { GameData } from '@/types/5etools'
 
 export const MINIMAL_GAME_DATA: GameData = {
@@ -18,7 +19,6 @@ export const MINIMAL_GAME_DATA: GameData = {
   skills: [],
   senses: [],
   languages: [],
-  magicvariants: [],
   optionalfeatures: [],
   variantrules: [],
   trapHazards: [],
@@ -74,6 +74,7 @@ export async function seedAppState(
     {
       cacheSeed: {
         data: gameData,
+        cacheSchemaVersion: GAME_DATA_CACHE_SCHEMA_VERSION,
         cachedAt: now,
         sourceSnapshot: { type: 'remote', path: sourcePath },
       },

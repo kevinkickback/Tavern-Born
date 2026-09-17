@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useClassLookup, useSkillList, useSkillToAbilityMap } from '@/hooks/data/useGameData'
 import { ABILITY_NAMES, type AbilityName } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -6,21 +7,14 @@ import {
   ALL_SKILLS,
   deriveAllSkills,
   getExpertiseSlotsFromClasses,
-  mergeSkillState,
   type SkillResult,
 } from '@/lib/calculations/skills'
 import { getCharacterClassEntries, getTotalCharacterLevel } from '@/lib/characterUtils'
-import { addGrant, makeSourceTag } from '@/lib/provenance'
-import { normalizeKey } from '@/lib/provenance/normalization'
-import type { ProvenanceLedger } from '@/lib/provenance/types'
-import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
-
-export type { SkillResult }
+import { useCharacterStore } from '@/store/characterStore'
 
 export interface SkillsState {
   skills: SkillResult[]
   passivePerception: number
-  toggleProficiency: (skillName: string) => void
   toggleExpertise: (skillName: string) => void
   availableExpertiseSlots: number
   usedExpertiseSlots: number
@@ -37,29 +31,24 @@ export function useSkills(): SkillsState {
     Object.keys(rawSkillToAbilityMap).length > 0 ? rawSkillToAbilityMap : undefined
   const parsedSkillList = rawSkillList.length > 0 ? rawSkillList : undefined
 
-  const resolvedSkillList = parsedSkillList ?? ALL_SKILLS
-
   const level = useMemo(() => getTotalCharacterLevel(activeCharacter), [activeCharacter])
-  const abilityScores = activeCharacter?.abilityScores
-  const storedSkills = activeCharacter?.skills ?? {}
-
-  const abilityModifiers = useMemo(
-    () =>
-      Object.fromEntries(
-        ABILITY_NAMES.map((a) => [a, getAbilityModifier(abilityScores?.[a] ?? 10)]),
-      ) as Record<AbilityName, number>,
-    [abilityScores],
-  )
+  const calculationContext = useCharacterCalculationContext(activeCharacter)
+  const abilityModifiers = useMemo(() => {
+    if (calculationContext) return calculationContext.abilityScores.modifiers
+    return Object.fromEntries(
+      ABILITY_NAMES.map((ability) => [ability, getAbilityModifier(10)]),
+    ) as Record<AbilityName, number>
+  }, [calculationContext])
 
   const proficiencyBonus = useMemo(() => getProficiencyBonus(level), [level])
 
   const proficientSkills = useMemo(
-    () => resolvedSkillList.filter((name) => storedSkills[name]?.proficient),
-    [resolvedSkillList, storedSkills],
+    () => activeCharacter?.proficiencies.skills ?? [],
+    [activeCharacter?.proficiencies.skills],
   )
   const expertiseSkills = useMemo(
-    () => resolvedSkillList.filter((name) => storedSkills[name]?.expertise),
-    [resolvedSkillList, storedSkills],
+    () => activeCharacter?.proficiencies.expertise ?? [],
+    [activeCharacter?.proficiencies.expertise],
   )
 
   const skills = useMemo(
@@ -70,7 +59,9 @@ export function useSkills(): SkillsState {
         expertiseSkills,
         proficiencyBonus,
         skillToAbilityMap,
-        parsedSkillList,
+        parsedSkillList ?? ALL_SKILLS,
+        calculationContext?.effects.declarations,
+        calculationContext?.effects.resolutionContext,
       ),
     [
       abilityModifiers,
@@ -79,6 +70,7 @@ export function useSkills(): SkillsState {
       proficiencyBonus,
       skillToAbilityMap,
       parsedSkillList,
+      calculationContext,
     ],
   )
 
@@ -92,68 +84,21 @@ export function useSkills(): SkillsState {
     [activeCharacter, classesByKey],
   )
 
-  const usedExpertiseSlots = useMemo(
-    () => Object.values(activeCharacter?.skills ?? {}).filter((s) => s?.expertise).length,
-    [activeCharacter?.skills],
-  )
-
-  const toggleProficiency = useCallback(
-    (skillName: string) => {
-      if (!activeCharacter) return
-      const key = skillName.toLowerCase()
-      const current = activeCharacter.skills?.[key] ?? {
-        proficient: false,
-        expertise: false,
-        bonus: 0,
-      }
-      const proficient = !current.proficient
-      const nextProficientSkills = proficient
-        ? [...new Set([...(activeCharacter.proficiencies?.skills ?? []), key])]
-        : (activeCharacter.proficiencies?.skills ?? []).filter((n) => n.toLowerCase() !== key)
-      const nextSkills = mergeSkillState(activeCharacter.skills ?? {}, nextProficientSkills)
-
-      const ledger = activeCharacter.provenance ?? emptyProvenance()
-      let nextLedger: ProvenanceLedger
-      if (proficient) {
-        const tag = makeSourceTag('manual', 'User Choice', 'choice')
-        nextLedger = addGrant(ledger, 'skills', key, tag)
-      } else {
-        const normKey = normalizeKey(key)
-        const skillMap = ledger.proficiencies.skills
-        const filtered = (skillMap[normKey] ?? []).filter((tag) => tag.sourceType !== 'manual')
-        const newMap =
-          filtered.length > 0
-            ? { ...skillMap, [normKey]: filtered }
-            : Object.fromEntries(Object.entries(skillMap).filter(([k]) => k !== normKey))
-        nextLedger = { ...ledger, proficiencies: { ...ledger.proficiencies, skills: newMap } }
-      }
-
-      updateCharacter(activeCharacter.id, {
-        skills: nextSkills,
-        proficiencies: {
-          ...activeCharacter.proficiencies,
-          skills: nextProficientSkills,
-        },
-        provenance: nextLedger,
-      })
-    },
-    [activeCharacter, updateCharacter],
-  )
+  const usedExpertiseSlots = activeCharacter?.proficiencies.expertise.length ?? 0
 
   const toggleExpertise = useCallback(
     (skillName: string) => {
       if (!activeCharacter) return
       const key = skillName.toLowerCase()
-      const current = activeCharacter.skills?.[key] ?? {
-        proficient: false,
-        expertise: false,
-        bonus: 0,
-      }
-      if (!current.proficient) return
+      if (!activeCharacter.proficiencies.skills.some((skill) => skill.toLowerCase() === key)) return
+      const expertise = activeCharacter.proficiencies.expertise
+      const hasExpertise = expertise.some((skill) => skill.toLowerCase() === key)
       updateCharacter(activeCharacter.id, {
-        skills: {
-          ...activeCharacter.skills,
-          [key]: { ...current, expertise: !current.expertise },
+        proficiencies: {
+          ...activeCharacter.proficiencies,
+          expertise: hasExpertise
+            ? expertise.filter((skill) => skill.toLowerCase() !== key)
+            : [...expertise, key],
         },
       })
     },
@@ -163,7 +108,6 @@ export function useSkills(): SkillsState {
   return {
     skills,
     passivePerception,
-    toggleProficiency,
     toggleExpertise,
     availableExpertiseSlots,
     usedExpertiseSlots,

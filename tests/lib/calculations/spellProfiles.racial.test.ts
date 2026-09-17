@@ -141,6 +141,40 @@ describe('buildRacialSpellProfile', () => {
     expect(rebuilt.cantrips).toContain('light')
   })
 
+  test('preserves source-qualified selections from a plain-name pool', () => {
+    const rebuilt = buildRacialSpellProfile({
+      raceName: 'Astral Elf',
+      raceSource: 'AAG',
+      additionalSpells: [
+        { known: { '1': ['dancing lights#c'] }, ability: 'int' },
+        { known: { '1': ['light#c'] }, ability: 'int' },
+      ],
+      totalLevel: 1,
+      existingProfile: {
+        id: toRacialProfileId('Astral Elf', 'AAG'),
+        type: 'racial',
+        label: 'Racial Spellcasting',
+        raceName: 'Astral Elf',
+        raceSource: 'AAG',
+        cantrips: ['Light|PHB'],
+        spellsKnown: [],
+        preparedSpells: [],
+        choices: [
+          {
+            id: 'block-choice',
+            count: 1,
+            isCantrip: true,
+            pool: ['dancing lights', 'light'],
+            selected: ['Light|PHB'],
+          },
+        ],
+      },
+    })
+
+    expect(rebuilt.choices?.[0].selected).toEqual(['Light|PHB'])
+    expect(rebuilt.cantrips).toContain('Light|PHB')
+  })
+
   test('sets abilityOptions for choose ability blocks', () => {
     const profile = buildRacialSpellProfile({
       raceName: 'Test Race',

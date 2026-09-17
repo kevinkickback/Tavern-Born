@@ -1,15 +1,50 @@
-import { useEffect } from 'react'
+import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/react-dom'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { PreviewNavigationControls } from '@/components/editor/PreviewNavigationControls'
+import { useDraggablePreview } from '@/hooks/ui/useDraggablePreview'
+import { getTitleBarSafeTop, type PreviewBounds, type PreviewPosition } from '@/lib/overlayPosition'
 import type { RecursiveHintState } from '@/lib/renderer/recursiveTooltip'
 import { cn } from '@/lib/utils'
+import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
 interface RecursiveTooltipChainProps {
   hints: RecursiveHintState[]
   index?: number
+  historyTitles: string[]
+  pinnedDepth: number | null
+  pinnedPosition: PreviewPosition | null
+  mode?: 'chain' | 'pinned'
+  onNavigate: (depth: number) => void
+  onPinToggle: (depth: number, bounds?: PreviewBounds) => void
+  onPinnedPositionChange: (position: PreviewPosition) => void
 }
 
-export function RecursiveTooltipChain({ hints, index = 0 }: RecursiveTooltipChainProps) {
+export function RecursiveTooltipChain({
+  hints,
+  index = 0,
+  historyTitles,
+  pinnedDepth,
+  pinnedPosition,
+  mode = 'chain',
+  onNavigate,
+  onPinToggle,
+  onPinnedPositionChange,
+}: RecursiveTooltipChainProps) {
+  const uiScale = useAppPreferencesStore((state) => state.uiScale)
+  const safeTop = getTitleBarSafeTop(uiScale)
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
   const hint = hints[index]
   const triggerElement = hint?.triggerElement
+  const depth = index + 1
+  const isPinned = pinnedDepth === depth
+  const { dragHandleProps, dragging } = useDraggablePreview({
+    enabled: mode === 'pinned' && isPinned,
+    label: hint?.title ?? 'pinned',
+    position: pinnedPosition,
+    previewRef: tooltipRef,
+    safeTop,
+    onPositionChange: onPinnedPositionChange,
+  })
 
   useEffect(() => {
     if (!triggerElement) return
@@ -21,31 +56,81 @@ export function RecursiveTooltipChain({ hints, index = 0 }: RecursiveTooltipChai
     }
   }, [triggerElement])
 
+  useLayoutEffect(() => {
+    const tooltip = tooltipRef.current
+    if (!tooltip || !triggerElement || !hint || mode === 'pinned') return
+
+    let active = true
+    const cleanup = autoUpdate(triggerElement, tooltip, () => {
+      void computePosition(triggerElement, tooltip, {
+        placement: 'right-start',
+        strategy: 'fixed',
+        middleware: [
+          offset(8),
+          flip({ padding: { top: safeTop, right: 8, bottom: 8, left: 8 } }),
+          shift({ padding: { top: safeTop, right: 8, bottom: 8, left: 8 } }),
+        ],
+      }).then(({ x, y }) => {
+        if (!active || !tooltip.isConnected) return
+        tooltip.style.left = `${x}px`
+        tooltip.style.top = `${y}px`
+      })
+    })
+    return () => {
+      active = false
+      cleanup()
+    }
+  }, [hint, mode, safeTop, triggerElement])
+
   if (!hint) return null
-  const totalCards = hints.length + 1
   const isNewest = index === hints.length - 1
 
   return (
     <div
+      ref={tooltipRef}
       role="dialog"
       aria-label={`${hint.title} preview`}
       data-recursive-tooltip-depth={index + 1}
       className={cn(
-        'absolute w-[320px] max-w-[calc(100vw-1rem)] rounded border bg-card text-card-foreground transition-[box-shadow,border-color] duration-100',
-        isNewest
+        'w-[320px] max-w-[calc(100vw-1rem)] rounded border bg-card text-card-foreground transition-[box-shadow,border-color] duration-100',
+        'fixed',
+        mode === 'pinned' ? 'z-[9999]' : '',
+        isNewest || isPinned
           ? 'border-accent/70 ring-1 ring-accent/45 shadow-xl'
           : 'border-border/80 shadow-md',
       )}
-      style={{ left: hint.x, top: hint.y, zIndex: 100 + index }}
+      style={mode === 'pinned' && pinnedPosition ? pinnedPosition : { zIndex: 100 + index }}
     >
       <div className="border-b border-border px-3 py-2">
         <div className="flex items-start justify-between gap-2">
-          <div className="font-semibold text-base leading-tight">{hint.title}</div>
-          {totalCards >= 3 ? (
-            <span className="shrink-0 rounded-full border border-border bg-muted/30 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
-              {index + 2} of {totalCards}
-            </span>
-          ) : null}
+          <div
+            {...(mode === 'pinned' ? dragHandleProps : {})}
+            className={cn(
+              'min-w-0 flex-1',
+              mode === 'pinned' && 'app-no-drag cursor-grab touch-none select-none',
+              dragging && 'cursor-grabbing',
+            )}
+          >
+            {mode === 'pinned' ? (
+              <div className="font-semibold text-base leading-tight">{hint.title}</div>
+            ) : (
+              <button
+                type="button"
+                className="text-left font-semibold text-base leading-tight hover:text-accent-foreground"
+                onClick={() => onNavigate(depth)}
+                title={`Return to ${hint.title}`}
+              >
+                {hint.title}
+              </button>
+            )}
+          </div>
+          <PreviewNavigationControls
+            currentDepth={depth}
+            historyTitles={historyTitles}
+            pinned={isPinned}
+            onNavigate={onNavigate}
+            onPinToggle={onPinToggle}
+          />
         </div>
         {hint.subtitle ? (
           <div className="mt-0.5 text-sm text-muted-foreground">{hint.subtitle}</div>
@@ -63,7 +148,18 @@ export function RecursiveTooltipChain({ hints, index = 0 }: RecursiveTooltipChai
         )}
       </div>
 
-      <RecursiveTooltipChain hints={hints} index={index + 1} />
+      {mode === 'chain' ? (
+        <RecursiveTooltipChain
+          hints={hints}
+          index={index + 1}
+          historyTitles={historyTitles}
+          pinnedDepth={pinnedDepth}
+          pinnedPosition={pinnedPosition}
+          onNavigate={onNavigate}
+          onPinToggle={onPinToggle}
+          onPinnedPositionChange={onPinnedPositionChange}
+        />
+      ) : null}
     </div>
   )
 }

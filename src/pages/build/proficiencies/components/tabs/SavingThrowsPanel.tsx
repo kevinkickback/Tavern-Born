@@ -1,4 +1,5 @@
 import { ShieldCheck } from '@phosphor-icons/react'
+import { ABILITY_FULL_TO_ABBREV } from '@/lib/calculations/abilityNames'
 import { normalizeKey } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
 import {
@@ -9,15 +10,6 @@ import {
   ProficiencyStatus,
 } from './shared'
 import type { ProficiencyLedger, ProficiencyPanelCallbacks, SavingThrowRow } from './types'
-
-const SAVE_ABBREVIATIONS: Record<string, string> = {
-  strength: 'str',
-  dexterity: 'dex',
-  constitution: 'con',
-  intelligence: 'int',
-  wisdom: 'wis',
-  charisma: 'cha',
-}
 
 interface SavingThrowsPanelProps {
   savingThrows: SavingThrowRow[]
@@ -38,7 +30,7 @@ export function SavingThrowsPanel({
       <div className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-border bg-workspace-pane sm:grid-cols-2 2xl:grid-cols-3">
         {savingThrows.map((save) => {
           const normAbility = normalizeKey(save.ability)
-          const abbr = SAVE_ABBREVIATIONS[normAbility]
+          const abbr = ABILITY_FULL_TO_ABBREV[normAbility]
           const sourceTags = [
             ...(ledger.proficiencies.savingThrows[normAbility] ?? []),
             ...(abbr ? (ledger.proficiencies.savingThrows[abbr] ?? []) : []),

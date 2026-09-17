@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="public/assets/images/ui/logo_name.png" alt="Tavern Born Logo" width="250"/>
+<img src="docs/assets/logo_name.png" alt="Tavern Born Logo" width="250"/>
 
 **A desktop Dungeons & Dragons 5th Edition character creator**
 
@@ -83,7 +83,7 @@ Download the latest installer or portable build for your platform from the
 
 ### Option 2: Build from Source
 
-**Prerequisites:** [Node.js](https://nodejs.org/) 22.12 or newer and npm.
+**Prerequisites:** [Node.js](https://nodejs.org/) 24 or newer and npm.
 
 ```bash
 git clone https://github.com/kevinkickback/Tavern-Born.git

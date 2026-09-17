@@ -12,7 +12,11 @@ vi.mock('idb-keyval', () => ({
   del: vi.fn(async () => undefined),
 }))
 
-import { writeGameDataCache } from '@/lib/storage/dataCache'
+import {
+  GAME_DATA_CACHE_SCHEMA_VERSION,
+  readGameDataCache,
+  writeGameDataCache,
+} from '@/lib/storage/dataCache'
 
 function makeGameData(seed = 'a'): GameData {
   return {
@@ -32,7 +36,6 @@ function makeGameData(seed = 'a'): GameData {
     skills: [],
     senses: [],
     languages: [],
-    magicvariants: [],
     optionalfeatures: [],
     variantrules: [],
     trapHazards: [],
@@ -59,6 +62,17 @@ describe('writeGameDataCache', () => {
     expect(entry.lastDataChangedAt).toBeDefined()
     expect(new Date(entry.lastDataChangedAt!).getTime()).toBeGreaterThanOrEqual(before)
     expect(new Date(entry.lastDataChangedAt!).getTime()).toBeLessThanOrEqual(after)
+    expect(entry.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
+  })
+
+  test('invalidates cache entries produced by an older normalization schema', async () => {
+    idbGetMock.mockResolvedValue({
+      data: makeGameData(),
+      cachedAt: new Date().toISOString(),
+      sourceSnapshot: { type: config.type, path: config.path },
+    })
+
+    await expect(readGameDataCache()).resolves.toBeNull()
   })
 
   test('preserves lastDataChangedAt when fingerprint matches existing cache', async () => {
@@ -186,7 +200,7 @@ describe('writeGameDataCache', () => {
     expect(second.lastDataChangedAt).toBe(knownChangedAt)
   })
 
-  test('preserves lastDataChangedAt when legacy cache lacks fingerprint and no fallback is provided', async () => {
+  test('does not reuse timestamps from an obsolete cache schema without a fallback', async () => {
     const data = makeGameData('legacy')
     const before = '2025-01-01T00:00:00.000Z'
 
@@ -200,6 +214,7 @@ describe('writeGameDataCache', () => {
 
     const entry = await writeGameDataCache(data, config)
 
-    expect(entry.lastDataChangedAt).toBe(before)
+    expect(entry.lastDataChangedAt).not.toBe(before)
+    expect(entry.cacheSchemaVersion).toBe(GAME_DATA_CACHE_SCHEMA_VERSION)
   })
 })

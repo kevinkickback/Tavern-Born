@@ -1,12 +1,28 @@
-import type { ItemProperty5e, ItemType5e, Language5e } from '@/types/5etools'
+import type {
+  Background5e,
+  Item5e,
+  ItemMastery5e,
+  ItemProperty5e,
+  ItemType5e,
+  Language5e,
+} from '@/types/5etools'
+import { normalizeBackgroundOriginRules } from '../backgroundRuleNormalization'
 import { SOURCE_FALLBACKS } from '../sourceFallbacks'
 import { asArray, asObject, type ParsedObject } from './shared'
 
 export function parseBackgrounds(data: unknown): unknown[] {
   const obj = asObject(data)
-  if (obj.background) return asArray(obj.background)
-  if (Array.isArray(data)) return data
-  return []
+  const backgrounds = obj.background ? asArray(obj.background) : Array.isArray(data) ? data : []
+  return backgrounds.map((background) => {
+    const record = asObject(background)
+    if (typeof record.name !== 'string' || typeof record.source !== 'string') return background
+    return {
+      ...record,
+      normalizedOriginRules: normalizeBackgroundOriginRules(
+        record as unknown as Pick<Background5e, 'name' | 'source' | 'ability' | 'feats'>,
+      ),
+    }
+  })
 }
 
 export function parseFeats(data: unknown): unknown[] {
@@ -81,12 +97,28 @@ export function parseLanguages(data: unknown): Language5e[] {
   return []
 }
 
-export function parseMagicVariants(data: unknown): unknown[] {
+export function parseMagicVariants(data: unknown): Item5e[] {
   const obj = asObject(data)
-  if (obj.variant) return asArray(obj.variant)
-  if (obj.magicvariant) return asArray(obj.magicvariant)
-  if (Array.isArray(data)) return data
-  return []
+  const variants = obj.variant
+    ? asArray(obj.variant)
+    : obj.magicvariant
+      ? asArray(obj.magicvariant)
+      : Array.isArray(data)
+        ? data
+        : []
+  return variants.flatMap((value) => {
+    const variant = asObject(value)
+    const inherits = asObject(variant.inherits)
+    const name = typeof variant.name === 'string' ? variant.name.replace(/ \(\*\)$/, '') : ''
+    const source =
+      typeof inherits.source === 'string'
+        ? inherits.source
+        : typeof variant.source === 'string'
+          ? variant.source
+          : ''
+    if (!name || !source || typeof variant.type !== 'string') return []
+    return [{ ...variant, ...inherits, name, source, type: variant.type } as unknown as Item5e]
+  })
 }
 
 export function parseOptionalFeatures(data: unknown): unknown[] {
@@ -139,7 +171,13 @@ export function parseItemTypes(data: unknown): ItemType5e[] {
   return []
 }
 
-export function parseBooks(data: unknown): unknown[] {
+export function parseItemMasteries(data: unknown): ItemMastery5e[] {
+  const obj = asObject(data)
+  if (obj.itemMastery) return asArray(obj.itemMastery) as ItemMastery5e[]
+  return []
+}
+
+function parseBooks(data: unknown): unknown[] {
   const obj = asObject(data)
   if (!data) return []
   if (obj.book) return asArray(obj.book)

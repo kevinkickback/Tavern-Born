@@ -150,15 +150,31 @@ function getCurrentWindowState(window: BrowserWindow): WindowState {
   }
 }
 
-async function writeWindowState(window: BrowserWindow): Promise<void> {
-  if (window.isDestroyed()) {
-    return
-  }
-
-  const state = getCurrentWindowState(window)
+async function writeWindowState(state: WindowState): Promise<void> {
   const windowStatePath = getWindowStatePath()
   await mkdir(dirname(windowStatePath), { recursive: true })
   await writeFile(windowStatePath, JSON.stringify(state, null, 2), 'utf-8')
+}
+
+let pendingWindowStateWrite: Promise<void> = Promise.resolve()
+
+function saveWindowStateSafely(window: BrowserWindow): void {
+  if (window.isDestroyed()) return
+
+  const state = getCurrentWindowState(window)
+  pendingWindowStateWrite = pendingWindowStateWrite
+    .then(() => writeWindowState(state))
+    .catch((error: unknown) => {
+      console.warn(
+        'Unable to save window state:',
+        error instanceof Error ? error.message : String(error),
+      )
+    })
+}
+
+/** Wait for the most recently queued window-state write to settle. */
+export async function flushWindowStateWrites(): Promise<void> {
+  await pendingWindowStateWrite
 }
 
 export function attachWindowStatePersistence(window: BrowserWindow): void {
@@ -175,7 +191,7 @@ export function attachWindowStatePersistence(window: BrowserWindow): void {
 
     saveTimeout = setTimeout(() => {
       saveTimeout = null
-      void writeWindowState(window)
+      saveWindowStateSafely(window)
     }, SAVE_DEBOUNCE_MS)
   }
 
@@ -185,6 +201,6 @@ export function attachWindowStatePersistence(window: BrowserWindow): void {
     if (saveTimeout) {
       clearTimeout(saveTimeout)
     }
-    void writeWindowState(window)
+    saveWindowStateSafely(window)
   })
 }

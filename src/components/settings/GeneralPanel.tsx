@@ -13,6 +13,16 @@ import { Section } from '@/components/workspace'
 import { resetAllHints } from '@/lib/storage/hints'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 
+interface UpdateCheckStatus {
+  status: 'available' | 'not-available' | 'error'
+  error?: string
+}
+
+function isUpdateCheckStatus(value: unknown): value is UpdateCheckStatus {
+  if (!value || typeof value !== 'object' || !('status' in value)) return false
+  return ['available', 'not-available', 'error'].includes(String(value.status))
+}
+
 export function GeneralPanel() {
   const autoUpdate = useAppPreferencesStore((s) => s.autoUpdate)
   const setAutoUpdate = useAppPreferencesStore((s) => s.setAutoUpdate)
@@ -66,7 +76,33 @@ export function GeneralPanel() {
       }),
     )
 
-    await window.electronAPI.checkForUpdate()
+    try {
+      const result = await window.electronAPI.checkForUpdate()
+      if (!result.success) {
+        setStatusMessage(`Error: ${result.error ?? 'The update check could not be completed.'}`)
+        return
+      }
+      if (!isUpdateCheckStatus(result.data)) {
+        setStatusMessage('Error: The update check returned an unexpected response.')
+        return
+      }
+      if (result.data.status === 'available') {
+        setStatusMessage('Update available!')
+      } else if (result.data.status === 'not-available') {
+        setStatusMessage('You are on the latest version.')
+      } else {
+        setStatusMessage(
+          `Error: ${result.data.error ?? 'The update check could not be completed.'}`,
+        )
+      }
+    } catch (error) {
+      setStatusMessage(
+        `Error: ${error instanceof Error ? error.message : 'The update check could not be completed.'}`,
+      )
+    } finally {
+      setChecking(false)
+      cleanup()
+    }
   }, [])
 
   const handleViewChangelog = useCallback(async () => {
@@ -88,9 +124,9 @@ export function GeneralPanel() {
         <div className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium">Enable Auto Update</p>
+              <p className="text-sm font-medium">Automatically Check for Updates</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Download and install updates automatically on launch.
+                Check for new releases when Tavern Born starts and notify you when one is available.
               </p>
             </div>
             <Switch
@@ -98,7 +134,9 @@ export function GeneralPanel() {
               onCheckedChange={(v) => {
                 setAutoUpdate(v)
                 void window.electronAPI?.setAutoCheck?.(v)
-                toast.success(v ? 'Auto-update enabled' : 'Auto-update disabled')
+                toast.success(
+                  v ? 'Automatic update checks enabled' : 'Automatic update checks disabled',
+                )
               }}
             />
           </div>

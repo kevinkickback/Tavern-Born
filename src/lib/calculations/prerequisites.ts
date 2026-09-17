@@ -1,3 +1,4 @@
+import { toAbilityName } from '@/lib/calculations/abilityNames'
 import { collectKnownSpells, ensureSpellProfiles } from '@/lib/calculations/spellProfiles'
 import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
 import type { Raw5ePrereq } from '@/types/5etools'
@@ -5,8 +6,7 @@ import type { Character, CharacterClassEntry } from '@/types/character'
 import type { AbilityName } from './abilityScores'
 
 export interface PrereqCharacterSnapshot {
-  level: number
-  class?: string
+  progression: readonly CharacterClassEntry[]
   race?: string
   abilityScores?: Partial<Record<AbilityName, number>>
   features?: Array<{ name: string }>
@@ -15,36 +15,31 @@ export interface PrereqCharacterSnapshot {
     spellsKnown?: string[]
     preparedSpells?: string[]
   }
-  /** Optional multi-class progression. When present, takes precedence over `level`/`class`. */
-  progression?: readonly CharacterClassEntry[]
 }
 
 interface BuildPrerequisiteSnapshotParams {
   character: Character | null
   classProgression?: CharacterClassEntry[]
-  viewingClass?: string
+  effectiveAbilityScores?: Partial<Record<AbilityName, number>>
 }
 
 export function buildPrerequisiteSnapshot({
   character,
   classProgression = getCharacterClassEntries(character),
-  viewingClass,
+  effectiveAbilityScores,
 }: BuildPrerequisiteSnapshotParams): PrereqCharacterSnapshot {
   const profileSpells = character ? collectKnownSpells(ensureSpellProfiles(character)) : null
-  const progressionLevel = classProgression.reduce((sum, entry) => sum + (entry.levels ?? 0), 0)
 
   return {
-    level: progressionLevel > 0 ? progressionLevel : (character?.level ?? 0),
-    class: viewingClass ?? character?.class,
+    progression: classProgression,
     race: character?.race,
-    abilityScores: character?.abilityScores,
+    abilityScores: effectiveAbilityScores ?? {},
     features: character?.features ?? [],
     spells: {
       cantrips: profileSpells?.cantrips ?? [],
       spellsKnown: profileSpells?.spellsKnown ?? [],
       preparedSpells: profileSpells?.preparedSpells ?? [],
     },
-    ...(classProgression.length > 0 ? { progression: classProgression } : {}),
   }
 }
 
@@ -77,22 +72,7 @@ function parseSpellPrereqRef(ref: string): {
 }
 
 function normalizeAbilityName(input: string): AbilityName | null {
-  const map: Record<string, AbilityName> = {
-    str: 'strength',
-    strength: 'strength',
-    dex: 'dexterity',
-    dexterity: 'dexterity',
-    con: 'constitution',
-    constitution: 'constitution',
-    int: 'intelligence',
-    intelligence: 'intelligence',
-    wis: 'wisdom',
-    wisdom: 'wisdom',
-    cha: 'charisma',
-    charisma: 'charisma',
-  }
-
-  return map[input.toLowerCase().trim()] ?? null
+  return toAbilityName(input) as AbilityName | null
 }
 
 export interface CheckPrereqOptions {
@@ -134,15 +114,13 @@ export function checkPrerequisite(
   if (prereq.level !== undefined) {
     let charLevel: number
 
-    if (options.className && character.progression) {
+    if (options.className) {
       const entry = character.progression.find(
         (c) => c.name.toLowerCase() === options.className?.toLowerCase(),
       )
       charLevel = entry?.levels ?? 0
     } else {
-      charLevel = character.progression
-        ? getTotalClassLevels(character.progression)
-        : (character.level ?? 0)
+      charLevel = getTotalClassLevels(character.progression)
     }
 
     const required = typeof prereq.level === 'object' ? (prereq.level.level ?? 1) : prereq.level
@@ -189,7 +167,7 @@ export function checkPrerequisite(
   }
 
   if (Array.isArray(prereq.class)) {
-    const primaryClass = character.progression?.[0]?.name ?? character.class ?? ''
+    const primaryClass = character.progression[0]?.name ?? ''
     const charClass = primaryClass.toLowerCase()
     const meetsClass = prereq.class.some((req) => {
       const name = typeof req === 'string' ? req : req.name
@@ -203,10 +181,8 @@ export function checkPrerequisite(
     const casterClasses = options.spellcastingClasses
     let hasSpellcasting = false
 
-    if (casterClasses && character.progression) {
+    if (casterClasses) {
       hasSpellcasting = character.progression.some((cls) => casterClasses.has(cls.name))
-    } else if (casterClasses && character.class) {
-      hasSpellcasting = casterClasses.has(character.class)
     } else {
       // Fall back: has any spells listed
       const sp = character.spells

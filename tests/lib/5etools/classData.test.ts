@@ -15,6 +15,7 @@ import {
   makeXphbClericFixture,
   makeXphbSorcererFixture,
   makeXphbWarlockFixture,
+  makeXphbWizardFixture,
 } from '../../fixtures/gameDataFixtures'
 
 const ABJURATION_REF = {
@@ -195,6 +196,14 @@ describe('getClassSpellGainAtLevel', () => {
     expect(getClassSpellGainAtLevel(cleric, 1).spells).toBe(4)
     expect(getClassSpellGainAtLevel(cleric, 2).spells).toBe(1) // 5 - 4
     expect(getClassSpellGainAtLevel(cleric, 5).spells).toBe(2) // 9 - 7
+  })
+
+  test('returns each level fixed spellbook gain for XPHB Wizard', () => {
+    const wizard = makeXphbWizardFixture()
+    expect(getClassSpellGainAtLevel(wizard, 1).spells).toBe(6)
+    expect(getClassSpellGainAtLevel(wizard, 2).spells).toBe(2)
+    expect(getClassSpellGainAtLevel(wizard, 4).spells).toBe(2)
+    expect(getClassSpellGainAtLevel(wizard, 4).cantrips).toBe(1)
   })
 
   test('canSwap is true for XPHB level-only casters at level 2+', () => {

@@ -1,5 +1,5 @@
 import { Check, Sword } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -17,26 +17,35 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { WorkspacePaneHeader } from '@/components/workspace'
-import {
-  featCategoryToFull,
-  getOptFeatureTotal,
-  type OptionalFeatureLike,
-  optFeatureTypeToFull,
-} from '@/lib/5etools/classData'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
+import { getReplaceableClassSpellNames } from '@/lib/calculations/classSpellChoiceRules'
 import {
   buildClassSpellSelectionsByLevel,
   ensureSpellProfiles,
 } from '@/lib/calculations/spellProfiles'
+import {
+  type ClassChoiceOptionView,
+  isClassChoiceOptionEligible,
+} from '@/lib/character/classChoiceOptions'
+import {
+  classAsiReadinessId,
+  classChoiceDiagnosticReadinessId,
+  classChoiceReadinessId,
+  classSubclassReadinessId,
+  findFocusedProvenanceChoice,
+} from '@/lib/navigation/readinessFocus'
+import { readinessClassKey } from '@/lib/readiness/readinessIssue'
 import { cn } from '@/lib/utils'
 import type { Class5e, Feat5e, Spell5e, Subclass5e } from '@/types/5etools'
 import type { AsiChoice, Character, CharacterClassEntry, Feat } from '@/types/character'
-import type { ClassFeatProgression, OptionalFeatureProgression } from '../model/levelsUtils'
+import type { ClassChoiceDiagnostic, NormalizedCharacterChoice } from '@/types/classRules'
 import { computeLevelDisplayData } from '../model/levelsUtils'
 import { BuildClassAsiSection } from './AsiSection'
+import { BuildClassChoicesSection } from './ClassChoicesSection'
 import type { ClassFeatureDisplay, SelectedFeatureState } from './DetailsPanel'
 import { BuildClassEquipmentSection } from './EquipmentSection'
 import { BuildClassPassiveFeatureList } from './PassiveFeatureList'
-import { BuildClassProgressionChoiceCard } from './ProgressionChoiceCard'
 import { BuildClassSpellSection } from './SpellSection'
 import { BuildClassSubclassSection } from './SubclassSection'
 
@@ -57,8 +66,6 @@ interface BuildClassLevelsPanelProps {
       canSwap: boolean
     }
   >
-  optFeatureProgressions: OptionalFeatureProgression[]
-  classFeatProgressions: ClassFeatProgression[]
   featuresByLevel: Map<number, ClassFeatureDisplay[]>
   subclassFeatureName: string | null
   selectedFeature: SelectedFeatureState | null
@@ -70,31 +77,57 @@ interface BuildClassLevelsPanelProps {
   viewingClassSource?: string
   viewingClassLevel: number
   classEquipmentBlockChoices: string[]
-  selectedNames: Set<string>
-  optFeatures: OptionalFeatureLike[]
-  featByCompositeId: Map<string, Feat5e>
+  classEquipmentItemChoices?: Readonly<Record<string, string>>
   feats: Feat5e[]
-  spellByName: Map<string, Spell5e>
+  spellByReference: Map<string, Spell5e>
   appliedAsiChoicesForClass: AsiChoice[]
   classAsiFeats: Feat[]
   asiModeByLevel: Record<string, 'asi' | 'feat'>
   usedASI: number
   totalASIAcrossClasses: number
+  classChoices: NormalizedCharacterChoice[]
+  classChoiceDiagnostics: ClassChoiceDiagnostic[]
+  selectedClassChoiceViewsById: ReadonlyMap<string, ClassChoiceOptionView[]>
   onOpenClassPicker: () => void
   onOpenSubclassPicker: () => void
   onOpenSpellPicker: (level: number) => void
   onOpenSpellSwap: (level: number) => void
   onOpenFeatPicker: (level: number) => void
   onOpenAsiPicker: (level: number) => void
-  onOpenOptPicker: (state: { progName: string; featureTypes: string[]; total: number }) => void
-  onOpenClassFeatPicker: (state: { progName: string; categories: string[]; total: number }) => void
+  onOpenClassChoice: (choice: NormalizedCharacterChoice) => void
   onBlockChoiceChange: (blockIndex: number, choice: string) => void
+  onItemChoiceChange?: (blockIndex: number, choice: string, key: string, itemRef: string) => void
   onSelectFeature: (feature: SelectedFeatureState) => void
   onExpandDetails: () => void
   onAsiReset: (level: number) => void
   onSetAsiModeByLevel: (levelKey: string, mode: 'asi' | 'feat') => void
   onClearFeatSelectionsForAsi: (level: number) => void
   getOrdinalForm: (n: number) => string
+  focusLevel?: number
+  readinessFocus?: string | null
+}
+
+function normalized(value: string | undefined): string {
+  return value?.trim().toLowerCase() ?? ''
+}
+
+function featureOwnsChoice(
+  feature: ClassFeatureDisplay,
+  choice: NormalizedCharacterChoice,
+): boolean {
+  if (normalized(feature.name) !== normalized(choice.owner.featureName)) return false
+  return (
+    !feature.source ||
+    !choice.owner.featureSource ||
+    normalized(feature.source) === normalized(choice.owner.featureSource)
+  )
+}
+
+function featureOwnsDiagnostic(
+  feature: ClassFeatureDisplay,
+  diagnostic: ClassChoiceDiagnostic,
+): boolean {
+  return normalized(feature.name) === normalized(diagnostic.featureName)
 }
 
 export function BuildClassLevelsPanel({
@@ -106,8 +139,6 @@ export function BuildClassLevelsPanel({
   subclassLevel,
   asiLevels,
   spellChoicesByLevel,
-  optFeatureProgressions,
-  classFeatProgressions,
   featuresByLevel,
   subclassFeatureName,
   selectedFeature,
@@ -119,33 +150,79 @@ export function BuildClassLevelsPanel({
   viewingClassSource,
   viewingClassLevel,
   classEquipmentBlockChoices,
-  selectedNames,
-  optFeatures,
-  featByCompositeId,
+  classEquipmentItemChoices = {},
   feats,
-  spellByName,
+  spellByReference,
   appliedAsiChoicesForClass,
   classAsiFeats,
   asiModeByLevel,
   usedASI,
   totalASIAcrossClasses,
+  classChoices,
+  classChoiceDiagnostics,
+  selectedClassChoiceViewsById,
   onOpenClassPicker,
   onOpenSubclassPicker,
   onOpenSpellPicker,
   onOpenSpellSwap,
   onOpenFeatPicker,
   onOpenAsiPicker,
-  onOpenOptPicker,
-  onOpenClassFeatPicker,
+  onOpenClassChoice,
   onBlockChoiceChange,
+  onItemChoiceChange = () => undefined,
   onSelectFeature,
   onExpandDetails,
   onAsiReset,
   onSetAsiModeByLevel,
   onClearFeatSelectionsForAsi,
   getOrdinalForm,
+  focusLevel,
+  readinessFocus,
 }: BuildClassLevelsPanelProps) {
   const [openSections, setOpenSections] = useState<string[]>([])
+  const { ref: classPickerRef, highlighted: classPickerHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:class')
+  const focusedClassChoice = findFocusedProvenanceChoice(
+    readinessFocus,
+    character.provenance.choices,
+  )
+  const focusedViewingClassChoice =
+    focusedClassChoice?.sourceTag.sourceType === 'class' &&
+    focusedClassChoice.sourceTag.sourceName === viewingClass
+      ? focusedClassChoice
+      : undefined
+  const viewingClassKey = readinessClassKey({
+    name: viewingClass,
+    source: viewingClassSource ?? viewingClassData?.source ?? '',
+  })
+  const focusedNormalizedChoiceId = classChoices.find(
+    (choice) => readinessFocus === classChoiceReadinessId(choice.id),
+  )?.id
+  const isDiagnosticFocused = (diagnostic: ClassChoiceDiagnostic) =>
+    readinessFocus ===
+    classChoiceDiagnosticReadinessId(viewingClassKey, diagnostic.featureName, diagnostic.code)
+  const focusedEquipmentChoice =
+    focusedViewingClassChoice?.domain === 'equipment' ? focusedViewingClassChoice : undefined
+  const { ref: equipmentChoiceRef, highlighted: equipmentChoiceHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(!!focusedEquipmentChoice)
+  const { ref: classChoiceRef, highlighted: classChoiceHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(
+      focusedViewingClassChoice?.domain === 'features' ||
+        focusedViewingClassChoice?.domain === 'feats',
+    )
+
+  useEffect(() => {
+    if (!focusLevel) return
+    const section = `level-${focusLevel}`
+    setOpenSections((current) => (current.includes(section) ? current : [...current, section]))
+  }, [focusLevel])
+
+  useEffect(() => {
+    if (!focusedEquipmentChoice) return
+    setOpenSections((current) =>
+      current.includes('starting-equipment') ? current : [...current, 'starting-equipment'],
+    )
+  }, [focusedEquipmentChoice])
 
   const spellSelectionsByLevel = buildClassSpellSelectionsByLevel({
     character,
@@ -155,11 +232,23 @@ export function BuildClassLevelsPanel({
 
   const classProfileId = `class:${viewingClass}|${viewingClassSource ?? ''}`
   const classProfile = ensureSpellProfiles(character).find((p) => p.id === classProfileId)
-  const hasExistingKnown = (classProfile?.spellsKnown?.length ?? 0) > 0
+  const hasExistingKnown =
+    getReplaceableClassSpellNames(
+      classProfile,
+      character.provenance,
+      viewingClass,
+      viewingClassSource,
+    ).length > 0
   const swapsByLevel = classProfile?.spellSwaps ?? {}
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+    <div
+      ref={classChoiceRef}
+      className={cn(
+        'min-w-0 flex-1 flex flex-col overflow-hidden rounded-lg',
+        classChoiceHighlighted && 'animate-route-focus',
+      )}
+    >
       <WorkspacePaneHeader
         title={classProgression.length > 1 ? 'Current class' : 'Class progression'}
         className={detailCollapsed ? 'pr-20' : undefined}
@@ -170,7 +259,7 @@ export function BuildClassLevelsPanel({
               value={
                 selectedClassTab ||
                 (classProgression[0]
-                  ? `${classProgression[0].name}|${classProgression[0].source ?? ''}`
+                  ? `${classProgression[0].name}|${classProgression[0].source}`
                   : '')
               }
               onValueChange={(value) => onSelectClassTab(value)}
@@ -195,8 +284,8 @@ export function BuildClassLevelsPanel({
               <SelectContent align="end">
                 {classProgression.map((entry) => (
                   <SelectItem
-                    key={`${entry.name}|${entry.source ?? ''}`}
-                    value={`${entry.name}|${entry.source ?? ''}`}
+                    key={`${entry.name}|${entry.source}`}
+                    value={`${entry.name}|${entry.source}`}
                     className="text-xs"
                   >
                     {entry.name} · Level {entry.levels}
@@ -214,8 +303,14 @@ export function BuildClassLevelsPanel({
 
       <ScrollArea className="flex-1 overflow-hidden">
         <div className="p-4">
-          {!character.class ? (
-            <div className="flex flex-col items-center justify-center h-40 gap-3 text-muted-foreground">
+          {character.classProgression.length === 0 ? (
+            <div
+              ref={classPickerRef}
+              className={cn(
+                'flex h-40 flex-col items-center justify-center gap-3 rounded-lg text-muted-foreground',
+                classPickerHighlighted && 'animate-route-focus',
+              )}
+            >
               <Sword className="h-8 w-8 opacity-30" weight="duotone" />
               <p className="text-sm">No class selected</p>
               <Button size="sm" onClick={onOpenClassPicker}>
@@ -236,12 +331,20 @@ export function BuildClassLevelsPanel({
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <div className="pt-1 pb-2 px-1">
+                    <div
+                      ref={equipmentChoiceRef}
+                      className={cn(
+                        'rounded-lg px-1 pb-2 pt-1',
+                        equipmentChoiceHighlighted && 'animate-route-focus',
+                      )}
+                    >
                       <BuildClassEquipmentSection
                         viewingClassData={viewingClassData}
                         blockChoices={classEquipmentBlockChoices}
+                        itemChoices={classEquipmentItemChoices}
                         detailCollapsed={detailCollapsed}
                         onBlockChoiceChange={onBlockChoiceChange}
+                        onItemChoiceChange={onItemChoiceChange}
                         onSelectFeature={onSelectFeature}
                         onExpandDetails={onExpandDetails}
                       />
@@ -255,8 +358,6 @@ export function BuildClassLevelsPanel({
                   isSubclassLevel,
                   isASILevel,
                   spellGain,
-                  optFeatureGainsAtLevel,
-                  classFeatGainsAtLevel,
                   passiveFeatures,
                   choiceCount,
                   totalCount,
@@ -266,10 +367,14 @@ export function BuildClassLevelsPanel({
                   subclassFeatureName,
                   asiLevels,
                   spellChoicesByLevel,
-                  optFeatureProgressions,
-                  classFeatProgressions,
                   featuresByLevel,
                 })
+                const levelClassChoices = classChoices.filter((choice) => choice.level === lv)
+                const levelDiagnostics = classChoiceDiagnostics.filter(
+                  (diagnostic) => (diagnostic.level ?? 1) === lv,
+                )
+                const normalizedChoiceCount = levelClassChoices.length + levelDiagnostics.length
+                const levelChoiceCount = choiceCount + normalizedChoiceCount
 
                 const asiChoiceComplete =
                   !isASILevel ||
@@ -279,35 +384,48 @@ export function BuildClassLevelsPanel({
                 const selectedSpellCount = spellSelectionsByLevel.get(lv)?.length ?? 0
                 const spellChoiceComplete =
                   !spellGain || selectedSpellCount >= spellGain.cantrips + spellGain.spells
-                const classFeatChoicesComplete = classFeatGainsAtLevel.every((prog) => {
-                  const categorySet = new Set(prog.category)
-                  const selectedCount = (character.specialFeats ?? []).filter((specialFeat) => {
-                    const feat = featByCompositeId.get(
-                      `${specialFeat.name}|${specialFeat.source ?? ''}`,
-                    )
-                    return !!feat?.category && categorySet.has(feat.category)
-                  }).length
-                  return selectedCount >= getOptFeatureTotal(prog.progression, viewingClassLevel)
-                })
-                const optionalFeatureChoicesComplete = optFeatureGainsAtLevel.every((prog) => {
-                  const selectedCount = optFeatures.filter((feature) => {
-                    const featureTypes = Array.isArray(feature.featureType)
-                      ? feature.featureType
-                      : [feature.featureType ?? '']
-                    return (
-                      prog.featureType.some((type) => featureTypes.includes(type)) &&
-                      selectedNames.has(feature.name)
-                    )
-                  }).length
-                  return selectedCount >= getOptFeatureTotal(prog.progression, viewingClassLevel)
-                })
+                const normalizedChoicesComplete =
+                  levelDiagnostics.length === 0 &&
+                  levelClassChoices.every((choice) => {
+                    const required = getRequiredChoiceSelectionCount(choice, viewingClassLevel)
+                    const eligibleSelected = (
+                      selectedClassChoiceViewsById.get(choice.id) ?? []
+                    ).filter(isClassChoiceOptionEligible).length
+                    return eligibleSelected >= required
+                  })
                 const allChoicesComplete =
-                  choiceCount > 0 &&
+                  levelChoiceCount > 0 &&
                   asiChoiceComplete &&
                   subclassChoiceComplete &&
                   spellChoiceComplete &&
-                  classFeatChoicesComplete &&
-                  optionalFeatureChoicesComplete
+                  normalizedChoicesComplete
+
+                const matchedChoiceIds = new Set(
+                  passiveFeatures.flatMap((feature) =>
+                    levelClassChoices
+                      .filter((choice) => featureOwnsChoice(feature, choice))
+                      .map((choice) => choice.id),
+                  ),
+                )
+                const matchedDiagnosticKeys = new Set(
+                  passiveFeatures.flatMap((feature) =>
+                    levelDiagnostics
+                      .filter((diagnostic) => featureOwnsDiagnostic(feature, diagnostic))
+                      .map(
+                        (diagnostic) =>
+                          `${diagnostic.featureName}|${diagnostic.level ?? ''}|${diagnostic.code}|${diagnostic.message}`,
+                      ),
+                  ),
+                )
+                const unmatchedChoices = levelClassChoices.filter(
+                  (choice) => !matchedChoiceIds.has(choice.id),
+                )
+                const unmatchedDiagnostics = levelDiagnostics.filter(
+                  (diagnostic) =>
+                    !matchedDiagnosticKeys.has(
+                      `${diagnostic.featureName}|${diagnostic.level ?? ''}|${diagnostic.code}|${diagnostic.message}`,
+                    ),
+                )
 
                 return (
                   <AccordionItem key={lv} value={`level-${lv}`}>
@@ -322,7 +440,7 @@ export function BuildClassLevelsPanel({
                             {totalCount}
                           </Badge>
                         )}
-                        {choiceCount > 0 && (
+                        {levelChoiceCount > 0 && (
                           <Badge
                             className={cn(
                               'h-5 gap-1 px-1.5 text-xs pointer-events-none border',
@@ -334,7 +452,7 @@ export function BuildClassLevelsPanel({
                             {allChoicesComplete ? (
                               <Check className="h-3 w-3" weight="bold" />
                             ) : null}
-                            {choiceCount} {choiceCount === 1 ? 'choice' : 'choices'}
+                            {levelChoiceCount} {levelChoiceCount === 1 ? 'choice' : 'choices'}
                           </Badge>
                         )}
                       </div>
@@ -354,105 +472,11 @@ export function BuildClassLevelsPanel({
                             onSelectFeature={onSelectFeature}
                             onExpandDetails={onExpandDetails}
                             onOpenSubclassPicker={onOpenSubclassPicker}
+                            highlighted={
+                              readinessFocus === classSubclassReadinessId(viewingClassKey)
+                            }
                           />
                         )}
-
-                        {classFeatGainsAtLevel.map((prog) => {
-                          const totalAllowed = getOptFeatureTotal(
-                            prog.progression,
-                            viewingClassLevel,
-                          )
-                          const categorySet = new Set(prog.category)
-                          const chosenStyles = (character.specialFeats ?? []).filter((sf) => {
-                            const feat = featByCompositeId.get(`${sf.name}|${sf.source ?? ''}`)
-                            return !!feat?.category && categorySet.has(feat.category)
-                          })
-                          const selectedCount = chosenStyles.length
-                          const progLabel =
-                            prog.name ??
-                            prog.category.map((category) => featCategoryToFull(category)).join(', ')
-                          const isFull = selectedCount >= totalAllowed
-
-                          return (
-                            <BuildClassProgressionChoiceCard
-                              key={`${progLabel}|${prog.category.join('|')}`}
-                              id={progLabel}
-                              label={progLabel}
-                              selectedCount={selectedCount}
-                              totalAllowed={totalAllowed}
-                              isFull={isFull}
-                              chosenItems={chosenStyles.map((style) => {
-                                const feat = featByCompositeId.get(
-                                  `${style.name}|${style.source ?? ''}`,
-                                )
-                                return {
-                                  name: style.name,
-                                  source: style.source,
-                                  entries: feat?.entries ?? [],
-                                }
-                              })}
-                              detailCollapsed={detailCollapsed}
-                              onChoose={() =>
-                                onOpenClassFeatPicker({
-                                  progName: progLabel,
-                                  categories: prog.category,
-                                  total: totalAllowed,
-                                })
-                              }
-                              onSelectFeature={onSelectFeature}
-                              onExpandDetails={onExpandDetails}
-                            />
-                          )
-                        })}
-
-                        {optFeatureGainsAtLevel.map((prog) => {
-                          const totalAllowed = getOptFeatureTotal(
-                            prog.progression,
-                            viewingClassLevel,
-                          )
-                          const featuresOfType = optFeatures.filter((feature) => {
-                            const featureTypes = Array.isArray(feature.featureType)
-                              ? feature.featureType
-                              : [feature.featureType ?? '']
-                            return prog.featureType.some((type) => featureTypes.includes(type))
-                          })
-                          const selectedCount = featuresOfType.filter((feature) =>
-                            selectedNames.has(feature.name),
-                          ).length
-                          const progLabel =
-                            prog.name ||
-                            prog.featureType.map((type) => optFeatureTypeToFull(type)).join(', ')
-                          const isFull = selectedCount >= totalAllowed
-                          const chosenFeatures = featuresOfType.filter((feature) =>
-                            selectedNames.has(feature.name),
-                          )
-
-                          return (
-                            <BuildClassProgressionChoiceCard
-                              key={`${progLabel}|${prog.featureType.join('|')}`}
-                              id={progLabel}
-                              label={progLabel}
-                              selectedCount={selectedCount}
-                              totalAllowed={totalAllowed}
-                              isFull={isFull}
-                              chosenItems={chosenFeatures.map((feature) => ({
-                                name: feature.name,
-                                source: feature.source,
-                                entries: feature.entries ?? [],
-                              }))}
-                              detailCollapsed={detailCollapsed}
-                              onChoose={() =>
-                                onOpenOptPicker({
-                                  progName: progLabel,
-                                  featureTypes: prog.featureType,
-                                  total: totalAllowed,
-                                })
-                              }
-                              onSelectFeature={onSelectFeature}
-                              onExpandDetails={onExpandDetails}
-                            />
-                          )
-                        })}
 
                         {isASILevel && (
                           <BuildClassAsiSection
@@ -475,6 +499,9 @@ export function BuildClassLevelsPanel({
                             onOpenFeatPicker={onOpenFeatPicker}
                             onSetAsiModeByLevel={onSetAsiModeByLevel}
                             onClearFeatSelectionsForAsi={onClearFeatSelectionsForAsi}
+                            highlighted={
+                              readinessFocus === classAsiReadinessId(viewingClassKey, lv)
+                            }
                           />
                         )}
 
@@ -483,9 +510,10 @@ export function BuildClassLevelsPanel({
                             level={lv}
                             spellGain={spellGain}
                             chosenNames={spellSelectionsByLevel.get(lv) ?? []}
-                            spellByName={spellByName}
+                            spellByReference={spellByReference}
                             detailCollapsed={detailCollapsed}
                             hasExistingKnown={hasExistingKnown}
+                            requiredSelectionsComplete={spellChoiceComplete}
                             swapDoneAtLevel={!!swapsByLevel[lv]}
                             onOpenSpellPicker={onOpenSpellPicker}
                             onOpenSpellSwap={onOpenSpellSwap}
@@ -502,7 +530,71 @@ export function BuildClassLevelsPanel({
                           detailCollapsed={detailCollapsed}
                           onSelectFeature={onSelectFeature}
                           onExpandDetails={onExpandDetails}
+                          renderFeature={(feature) => {
+                            const featureChoices = levelClassChoices.filter((choice) =>
+                              featureOwnsChoice(feature, choice),
+                            )
+                            if (featureChoices.length === 0) return undefined
+                            const featureDiagnostics = levelDiagnostics.filter((diagnostic) =>
+                              featureOwnsDiagnostic(feature, diagnostic),
+                            )
+                            return (
+                              <BuildClassChoicesSection
+                                choices={featureChoices}
+                                diagnostics={featureDiagnostics}
+                                classLevel={viewingClassLevel}
+                                selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                                detailCollapsed={detailCollapsed}
+                                onChoose={onOpenClassChoice}
+                                onSelectFeature={onSelectFeature}
+                                onExpandDetails={onExpandDetails}
+                                feature={feature}
+                                focusedChoiceId={focusedNormalizedChoiceId}
+                                isDiagnosticFocused={featureDiagnostics.some(isDiagnosticFocused)}
+                              />
+                            )
+                          }}
+                          renderAfterFeature={(feature) => {
+                            const featureChoices = levelClassChoices.filter((choice) =>
+                              featureOwnsChoice(feature, choice),
+                            )
+                            if (featureChoices.length > 0) return null
+                            const featureDiagnostics = levelDiagnostics.filter((diagnostic) =>
+                              featureOwnsDiagnostic(feature, diagnostic),
+                            )
+                            if (featureDiagnostics.length === 0) return null
+                            return (
+                              <BuildClassChoicesSection
+                                choices={[]}
+                                diagnostics={featureDiagnostics}
+                                classLevel={viewingClassLevel}
+                                selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                                detailCollapsed={detailCollapsed}
+                                onChoose={onOpenClassChoice}
+                                onSelectFeature={onSelectFeature}
+                                onExpandDetails={onExpandDetails}
+                                feature={feature}
+                                className="ml-3 border-l border-border pl-3"
+                                isDiagnosticFocused={featureDiagnostics.some(isDiagnosticFocused)}
+                              />
+                            )
+                          }}
                         />
+
+                        {(unmatchedChoices.length > 0 || unmatchedDiagnostics.length > 0) && (
+                          <BuildClassChoicesSection
+                            choices={unmatchedChoices}
+                            diagnostics={unmatchedDiagnostics}
+                            classLevel={viewingClassLevel}
+                            selectedViewsByChoiceId={selectedClassChoiceViewsById}
+                            detailCollapsed={detailCollapsed}
+                            onChoose={onOpenClassChoice}
+                            onSelectFeature={onSelectFeature}
+                            onExpandDetails={onExpandDetails}
+                            focusedChoiceId={focusedNormalizedChoiceId}
+                            isDiagnosticFocused={unmatchedDiagnostics.some(isDiagnosticFocused)}
+                          />
+                        )}
                       </div>
                     </AccordionContent>
                   </AccordionItem>

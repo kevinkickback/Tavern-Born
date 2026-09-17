@@ -1,4 +1,32 @@
 <details>
+<summary><strong>v0.4.0</strong></summary>
+
+## ✨ Changes
+
+* Support for Weapon Masteries in 5.5e (2024) rulesets added
+* Custom Actions & Effects page added
+* Character Review page added to the Builder
+* PDF export now checks for incomplete or unsupported character data
+* Spells page improved for multiclass characters, Pact Magic, and spell preparation
+* Level-up choices and subclass spellcasting improved
+* Character calculations, movement, Hit Points, and Armor Class management improved
+* One-click character duplication and clearer export actions added
+* Equipment browsing, filtering, and item details improved
+* Character Rules and Sources pages added to Rules navigation
+* Race, background, class, and feat setup improved
+* Class resource and multiclass hit-die tracking corrected
+* Light theme, tooltips, contextual hints, and small-window layouts improved
+* Organization emblems added to 2014 character sheets
+* Remote game-data loading and update reliability improved
+* Too many bug fixes to count
+
+## ⚠️ Important
+
+* Characters created before v0.4.0 are no longer supported and must be recreated. When incompatible characters are found, Tavern Born offers to export their original `.tbc` before removal in case you would like to use them in an older compatible version.
+
+</details>
+
+<details>
 <summary><strong>v0.3.0</strong></summary>
 
 ## ✨ Changes

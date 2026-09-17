@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, describe, expect, test, vi } from 'vitest'
@@ -67,6 +67,42 @@ describe('update modals', () => {
     await waitFor(() => expect(screen.getByText('Update Failed')).toBeTruthy())
     expect(screen.getByText('Download service unavailable')).toBeTruthy()
     expect(callOrder.indexOf('subscribe')).toBeLessThan(callOrder.indexOf('download'))
+  })
+
+  test('keeps the cancelled state when the download request rejects afterward', async () => {
+    let notifyCancelled: (() => void) | undefined
+    let rejectDownload: ((error: Error) => void) | undefined
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        downloadUpdate: vi.fn(
+          () =>
+            new Promise((_resolve, reject) => {
+              rejectDownload = reject
+            }),
+        ),
+        cancelUpdate: vi.fn(),
+        installUpdate: vi.fn(),
+        onDownloadProgress: vi.fn(() => vi.fn()),
+        onUpdateDownloaded: vi.fn(() => vi.fn()),
+        onUpdateError: vi.fn(() => vi.fn()),
+        onUpdateCancelled: vi.fn((callback: () => void) => {
+          notifyCancelled = callback
+          return vi.fn()
+        }),
+      },
+    })
+
+    render(<UpdateProgressModal open version="2.0.0" onOpenChange={vi.fn()} />)
+    act(() => notifyCancelled?.())
+    expect(screen.getByText('Download Cancelled')).toBeTruthy()
+
+    await act(async () => {
+      rejectDownload?.(new Error('cancelled'))
+      await Promise.resolve()
+    })
+    expect(screen.getByText('Download Cancelled')).toBeTruthy()
+    expect(screen.queryByText('Update Failed')).toBeNull()
   })
 
   test.each([

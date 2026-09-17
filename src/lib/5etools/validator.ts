@@ -13,7 +13,7 @@ import {
   OptionalFeatureDataSchema,
   RaceDataSchema,
 } from './schemas'
-import { findCorrectBranch, normalizeGitHubUrl } from './urlUtils'
+import { findCorrectBranch, parseRemoteDataSourceUrl } from './urlUtils'
 
 interface ValidationResult {
   isValid: boolean
@@ -78,25 +78,27 @@ async function validateRemoteFile(basePath: string, file: FileValidationConfig):
       method: 'HEAD',
       signal: AbortSignal.timeout(10000),
     })
-    if (!headResponse.ok) return false
+    if (headResponse.ok) {
+      const contentType = headResponse.headers.get('content-type')
+      if (
+        contentType &&
+        !contentType.includes('application/json') &&
+        !contentType.includes('text/plain')
+      ) {
+        return false
+      }
 
-    const contentType = headResponse.headers.get('content-type')
-    if (
-      contentType &&
-      !contentType.includes('application/json') &&
-      !contentType.includes('text/plain')
-    ) {
-      return false
+      if (!file.schema) return true
     }
 
-    if (!file.schema) return true
-
-    // GET only when a schema must be validated
+    // Validate content when a schema exists, and fall back to GET when the host
+    // does not support HEAD.
     const response = await fetch(url, {
       method: 'GET',
       signal: AbortSignal.timeout(10000),
     })
     if (!response.ok) return false
+    if (!file.schema) return true
 
     const data = await response.json()
     if (!data || typeof data !== 'object') return false
@@ -123,44 +125,23 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
       }
     }
 
-    if (config.type === 'remote') {
-      try {
-        const url = new URL(config.path)
-        if (!['http:', 'https:'].includes(url.protocol)) {
-          return {
-            isValid: false,
-            error: 'URL must use HTTP or HTTPS protocol',
-          }
-        }
-      } catch {
-        return {
-          isValid: false,
-          error: 'Invalid URL format',
-        }
-      }
-    }
-
     let normalizedPath = config.path
+    let persistedPath = config.path
     if (config.type === 'remote') {
-      const initialNormalized = normalizeGitHubUrl(config.path)
-
-      const url = new URL(config.path)
-      if (
-        url.hostname.includes('github.com') &&
-        !url.pathname.includes('/tree/') &&
-        !url.pathname.includes('/blob/')
-      ) {
-        const pathParts = url.pathname.split('/').filter(Boolean)
-        if (pathParts.length >= 2) {
-          const owner = pathParts[0]
-          const repo = pathParts[1]
-          const correctBranch = await findCorrectBranch(owner, repo)
-          normalizedPath = `https://raw.githubusercontent.com/${owner}/${repo}/${correctBranch}`
-        } else {
-          normalizedPath = initialNormalized
-        }
+      const parsedUrl = parseRemoteDataSourceUrl(config.path)
+      if (parsedUrl.kind === 'invalid') {
+        return { isValid: false, error: parsedUrl.error }
+      }
+      normalizedPath = parsedUrl.normalizedUrl
+      if (parsedUrl.kind === 'github-repository' && parsedUrl.branch?.includes('/')) {
+        persistedPath = config.path.trim()
       } else {
-        normalizedPath = initialNormalized
+        persistedPath = normalizedPath
+      }
+      if (parsedUrl.kind === 'github-repository' && !parsedUrl.branch) {
+        const correctBranch = await findCorrectBranch(parsedUrl.owner, parsedUrl.repo)
+        normalizedPath = `https://raw.githubusercontent.com/${parsedUrl.owner}/${parsedUrl.repo}/${correctBranch}`
+        persistedPath = normalizedPath
       }
     }
 
@@ -180,7 +161,7 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
       return {
         isValid: false,
         error: 'No valid 5etools data files found at this location',
-        normalizedPath,
+        normalizedPath: persistedPath,
       }
     }
 
@@ -192,14 +173,14 @@ export async function validateDataSource(config: DataSourceConfig): Promise<Vali
       return {
         isValid: false,
         error: `Missing required ${missingRequired.length === 1 ? 'file' : 'files'}: ${missingRequired.join(', ')}`,
-        normalizedPath,
+        normalizedPath: persistedPath,
       }
     }
 
     return {
       isValid: true,
       foundResources,
-      normalizedPath,
+      normalizedPath: persistedPath,
     }
   } catch (error) {
     return {

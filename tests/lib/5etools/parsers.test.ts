@@ -4,11 +4,14 @@ import {
   extractProficiencyBlockNames,
   parseClasses,
   parseClassFeatures,
+  parseItemMasteries,
   parseItems,
+  parseMagicVariants,
   parseOrganizations,
   parseRaces,
   parseSpells,
 } from '@/lib/5etools/parsers'
+import type { Race5e } from '@/types/5etools'
 
 describe('5etools/parsers', () => {
   test('parseRaces nests subraces by race name and source', () => {
@@ -18,6 +21,30 @@ describe('5etools/parsers', () => {
     }) as Array<{ subraces?: Array<{ name: string }> }>
 
     expect(races[0]?.subraces?.map((s) => s.name)).toEqual(['High Elf'])
+  })
+
+  test('normalizes presentation entries only when structured race fields replace them', () => {
+    const [race] = parseRaces({
+      race: [
+        {
+          name: 'Test Race',
+          source: 'PHB',
+          size: ['M'],
+          speed: 30,
+          entries: [
+            { type: 'entries', name: 'Age', entries: ['Age text.'] },
+            { type: 'entries', name: 'Size', entries: ['Size text.'] },
+            { type: 'entries', name: 'Speed', entries: ['Speed text.'] },
+            { type: 'entries', name: 'Darkvision', entries: ['Darkvision text.'] },
+          ],
+        },
+      ],
+    }) as Race5e[]
+
+    expect(race?.presentationEntries).toEqual([
+      { type: 'entries', name: 'Age', entries: ['Age text.'] },
+      { type: 'entries', name: 'Darkvision', entries: ['Darkvision text.'] },
+    ])
   })
 
   test('parseRaces names unnamed base subraces as Default', () => {
@@ -142,6 +169,87 @@ describe('5etools/parsers', () => {
     expect(parsed[0]?.isSpellcaster).toBe(false)
   })
 
+  test('materializes copied subclasses for a revised parent class', () => {
+    const parsed = parseClasses({
+      class: [
+        { name: 'Fighter', source: 'PHB' },
+        { name: 'Fighter', source: 'XPHB' },
+      ],
+      subclass: [
+        {
+          name: 'Arcane Archer',
+          shortName: 'Arcane Archer',
+          source: 'XGE',
+          className: 'Fighter',
+          classSource: 'PHB',
+          subclassFeatures: [
+            'Arcane Archer|Fighter||Arcane Archer|XGE|3',
+            'Magic Arrow|Fighter||Arcane Archer|XGE|7',
+          ],
+        },
+        {
+          name: 'Arcane Archer',
+          shortName: 'Arcane Archer',
+          source: 'XGE',
+          className: 'Fighter',
+          classSource: 'XPHB',
+          _copy: {
+            name: 'Arcane Archer',
+            shortName: 'Arcane Archer',
+            source: 'XGE',
+            className: 'Fighter',
+            classSource: 'PHB',
+          },
+        },
+      ],
+      subclassFeature: [
+        {
+          name: 'Arcane Archer',
+          source: 'XGE',
+          className: 'Fighter',
+          classSource: 'PHB',
+          subclassShortName: 'Arcane Archer',
+          subclassSource: 'XGE',
+          level: 3,
+          entries: ['{@i Deploy Magical Effects Through Enchanted Ammunition}'],
+        },
+        {
+          name: 'Magic Arrow',
+          source: 'XGE',
+          className: 'Fighter',
+          classSource: 'PHB',
+          subclassShortName: 'Arcane Archer',
+          subclassSource: 'XGE',
+          level: 7,
+          entries: ['Magic Arrow details.'],
+        },
+      ],
+    }) as Array<{
+      source: string
+      subclasses?: Array<{
+        classSource?: string
+        entries?: unknown[]
+        subclassFeatureRefs?: Array<{ name: string; feature?: { entries?: unknown[] } }>
+      }>
+    }>
+
+    const revisedFighter = parsed.find((classData) => classData.source === 'XPHB')
+    const copiedSubclass = revisedFighter?.subclasses?.[0]
+
+    expect(copiedSubclass?.classSource).toBe('XPHB')
+    expect(copiedSubclass?.entries).toEqual([
+      '{@i Deploy Magical Effects Through Enchanted Ammunition}',
+    ])
+    expect(copiedSubclass?.subclassFeatureRefs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Magic Arrow',
+          feature: expect.objectContaining({ entries: ['Magic Arrow details.'] }),
+        }),
+      ]),
+    )
+  })
+
   test('parseItems combines item, itemGroup, and baseitem arrays', () => {
     const items = parseItems({
       item: [{ name: 'Rope' }],
@@ -150,6 +258,103 @@ describe('5etools/parsers', () => {
     }) as Array<{ name: string }>
 
     expect(items.map((i) => i.name)).toEqual(['Rope', 'Pack', 'Longsword'])
+  })
+
+  test('parseMagicVariants exposes inherited item metadata as selectable templates', () => {
+    const [variant] = parseMagicVariants([
+      { name: '+1 Shield (*)', type: 'GV|XDMG', inherits: { source: 'XDMG', rarity: 'uncommon' } },
+    ])
+    expect(variant).toMatchObject({ name: '+1 Shield', source: 'XDMG', rarity: 'uncommon' })
+  })
+
+  test('parseItemMasteries preserves data-driven mastery descriptions', () => {
+    expect(
+      parseItemMasteries({
+        itemMastery: [{ name: 'Sap', source: 'XPHB', entries: ['Sap details'] }],
+      }),
+    ).toEqual([{ name: 'Sap', source: 'XPHB', entries: ['Sap details'] }])
+  })
+
+  test('resolves a uniquely source-qualified feature retained by a copied subclass', () => {
+    const parsed = parseClasses({
+      class: [{ name: 'Test Class', source: 'NEW' }],
+      subclass: [
+        {
+          name: 'Copied Path',
+          shortName: 'Copied',
+          source: 'EXT',
+          className: 'Test Class',
+          classSource: 'NEW',
+          subclassFeatures: ['Retained Feature|Test Class||Copied||6'],
+        },
+      ],
+      subclassFeature: [
+        {
+          name: 'Retained Feature',
+          source: 'OLD',
+          className: 'Test Class',
+          classSource: 'OLD',
+          subclassShortName: 'Copied',
+          subclassSource: 'OLD',
+          level: 6,
+          entries: ['retained feature text'],
+        },
+      ],
+    }) as Array<{
+      subclasses?: Array<{
+        subclassFeatureRefs?: Array<{ feature?: { entries?: unknown[] } }>
+      }>
+    }>
+
+    expect(parsed[0]?.subclasses?.[0]?.subclassFeatureRefs?.[0]?.feature?.entries).toEqual([
+      'retained feature text',
+    ])
+  })
+
+  test('does not guess when a copied subclass feature reference remains ambiguous', () => {
+    const sharedFeature = {
+      name: 'Retained Feature',
+      source: 'EXT',
+      className: 'Test Class',
+      subclassShortName: 'Copied',
+      subclassSource: 'EXT',
+      level: 6,
+    }
+    const parsed = parseClasses({
+      class: [{ name: 'Test Class', source: 'NEW' }],
+      subclass: [
+        {
+          name: 'Copied Path',
+          shortName: 'Copied',
+          source: 'EXT',
+          className: 'Test Class',
+          classSource: 'NEW',
+          subclassFeatures: ['Retained Feature|Test Class||Copied||6'],
+        },
+      ],
+      subclassFeature: [
+        {
+          ...sharedFeature,
+          source: 'OLD-A',
+          subclassSource: 'OLD-A',
+          classSource: 'OLD-A',
+          entries: ['first'],
+        },
+        {
+          ...sharedFeature,
+          source: 'OLD-B',
+          subclassSource: 'OLD-B',
+          classSource: 'OLD-B',
+          entries: ['second'],
+        },
+      ],
+    }) as Array<{
+      subclasses?: Array<{
+        subclassFeatureRefs?: Array<{ feature?: unknown }>
+      }>
+    }>
+
+    expect(parsed[0]?.subclasses?.[0]?.subclassFeatureRefs?.[0]?.feature).toBeUndefined()
   })
 
   test('extractProficiencyBlockNames includes fixed keys, anyStandard, and choose count', () => {
@@ -358,13 +563,13 @@ describe('5etools/parsers', () => {
         name: 'The Harpers',
         source: 'SCAG',
         description: 'A secretive organization focused on knowledge and justice.',
-        imagePath: '/assets/images/factions/harpers-5e.png',
+        imagePath: '/assets/images/factions/harpers-5e.webp',
       },
       {
         name: 'The Zhentarim',
         source: 'SCAG',
         description: 'The Black Network seeks influence through covert operations.',
-        imagePath: '/assets/images/factions/zhentarim-5e-symbol.png',
+        imagePath: '/assets/images/factions/zhentarim-5e-symbol.webp',
       },
     ])
   })

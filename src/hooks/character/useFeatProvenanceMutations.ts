@@ -2,7 +2,6 @@ import { useCallback, useMemo } from 'react'
 import type { CharacterCommandResult } from '@/lib/character/commands/commandResult'
 import {
   applyFeatSelectionCommand,
-  applyOptionalFeatureSelectionCommand,
   commitFeatOptionsCommand,
   editFeatOptionsCommand,
   type FeatOptionTarget,
@@ -10,7 +9,6 @@ import {
   removeFeatProvenanceCommand,
   replaceBonusFeatSelectionsCommand,
   replaceFeatSelectionsCommand,
-  replaceOptionalFeatureSelectionsCommand,
   resolveFeatChoiceCommand,
   resolveProficiencyChoiceCommand,
   retractFeatOptionsCommand,
@@ -72,61 +70,18 @@ export function useFeatProvenanceMutations() {
     [character, ledger, applyCommand],
   )
 
-  const applyOptionalFeatureSelection = useCallback(
-    (
-      featureName: string,
-      featureSource: string | undefined,
-      grantingSourceName: string,
-      grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
-    ) => {
-      if (!character) return
-      applyCommand(
-        applyOptionalFeatureSelectionCommand(
-          ledger,
-          featureName,
-          featureSource,
-          grantingSourceName,
-          grantingSourceType,
-        ),
-      )
-    },
-    [character, ledger, applyCommand],
-  )
-
-  const replaceOptionalFeatureSelections = useCallback(
-    (
-      replacedFeatures: Array<{ name: string; source?: string }>,
-      selectedFeatures: Array<{ name: string; source?: string }>,
-      grantingSourceName: string,
-      grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
-    ) => {
-      if (!character) return
-      applyCommand(
-        replaceOptionalFeatureSelectionsCommand(
-          character,
-          ledger,
-          replacedFeatures,
-          selectedFeatures,
-          grantingSourceName,
-          grantingSourceType,
-        ),
-      )
-    },
-    [character, ledger, applyCommand],
-  )
-
   const resolveFeatChoiceSelection = useCallback(
     (choiceId: string, feat: { name: string; source?: string }) => {
       if (!character) return
-      applyCommand(resolveFeatChoiceCommand(ledger, choiceId, feat))
+      applyCommand(resolveFeatChoiceCommand(character, ledger, choiceId, feat))
     },
     [character, ledger, applyCommand],
   )
 
   const removeFeatChoiceSelection = useCallback(
-    (choiceId: string, featName: string) => {
+    (choiceId: string, featName: string, featSource?: string) => {
       if (!character) return
-      applyCommand(removeFeatChoiceCommand(ledger, choiceId, featName))
+      applyCommand(removeFeatChoiceCommand(character, ledger, choiceId, featName, featSource))
     },
     [character, ledger, applyCommand],
   )
@@ -182,8 +137,6 @@ export function useFeatProvenanceMutations() {
     removeFeatProvenance,
     replaceFeatSelections,
     replaceBonusFeatSelections,
-    applyOptionalFeatureSelection,
-    replaceOptionalFeatureSelections,
     resolveFeatChoiceSelection,
     removeFeatChoiceSelection,
     resolveChoiceSelection,

@@ -1,5 +1,6 @@
 import { Check, Package } from '@phosphor-icons/react'
 import { Fragment, useMemo } from 'react'
+import { GenericEquipmentSelect } from '@/components/character/GenericEquipmentSelect'
 import { GameContent } from '@/components/editor/GameContent'
 import { useItemLookup } from '@/hooks/data/useGameData'
 import {
@@ -10,14 +11,16 @@ import { cn } from '@/lib/utils'
 import type { Class5e } from '@/types/5etools'
 import type { SelectedFeatureState } from './DetailsPanel'
 
-const STARTING_EQUIPMENT_DESCRIPTION =
-  'When you create your character, you receive equipment based on a combination of your class and background. Alternatively, you can start with a number of gold pieces based on your class and spend them on items from the lists in this section. See the Starting Wealth by Class table to determine how much gold you have to spend.\n\nYou decide how your character came by this starting equipment. It might have been an inheritance, or goods that the character purchased during his or her upbringing. You might have been equipped with a weapon, armor, and a backpack as part of military service. You might even have stolen your gear. A weapon could be a family heirloom, passed down from generation to generation until your character finally took up the mantle and followed in an ancestor\u2019s adventurous footsteps.'
+const STARTING_EQUIPMENT_HELP =
+  'Tavern-Born applies the equipment package selected below together with equipment granted by your background. Choose each alternative and any specific item requested by a generic equipment option.'
 
 interface BuildClassEquipmentSectionProps {
   viewingClassData?: Class5e
   blockChoices: string[]
+  itemChoices: Readonly<Record<string, string>>
   detailCollapsed: boolean
   onBlockChoiceChange: (blockIndex: number, choice: string) => void
+  onItemChoiceChange: (blockIndex: number, choice: string, key: string, itemRef: string) => void
   onSelectFeature: (feature: SelectedFeatureState) => void
   onExpandDetails: () => void
 }
@@ -25,22 +28,24 @@ interface BuildClassEquipmentSectionProps {
 export function BuildClassEquipmentSection({
   viewingClassData,
   blockChoices,
+  itemChoices,
   detailCollapsed,
   onBlockChoiceChange,
+  onItemChoiceChange,
   onSelectFeature,
   onExpandDetails,
 }: BuildClassEquipmentSectionProps) {
   const itemLookup = useItemLookup()
   const equipmentBlocks = useMemo(
-    () => resolveClassEquipmentBlocks(viewingClassData?.startingEquipment, itemLookup),
-    [viewingClassData?.startingEquipment, itemLookup],
+    () => resolveClassEquipmentBlocks(viewingClassData?.startingEquipment, itemLookup, itemChoices),
+    [viewingClassData?.startingEquipment, itemLookup, itemChoices],
   )
 
   const showEquipmentDetails = () => {
     onSelectFeature({
       name: 'Starting Equipment',
-      source: viewingClassData?.source,
-      entries: [STARTING_EQUIPMENT_DESCRIPTION],
+      source: 'Tavern-Born',
+      entries: [STARTING_EQUIPMENT_HELP],
     })
     if (detailCollapsed) onExpandDetails()
   }
@@ -64,21 +69,35 @@ export function BuildClassEquipmentSection({
       <div className="divide-y divide-border/40">
         {equipmentBlocks.map((block) => {
           const currentChoice = blockChoices[block.index]?.toLowerCase() ?? 'a'
+          const currentPackage = block.options[block.isFixed ? '_' : currentChoice]
 
           if (block.isFixed) {
             return (
-              <div key={block.index} className="px-3 py-2 flex items-start gap-2">
-                <span className="text-xs text-muted-foreground mt-0.5 shrink-0">•</span>
-                {block.displayText ? (
-                  <GameContent
-                    entry={block.displayText}
-                    className="text-xs text-foreground equipment-entry"
+              <div key={block.index} className="px-3 py-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-xs text-muted-foreground mt-0.5 shrink-0">•</span>
+                  {block.displayText ? (
+                    <GameContent
+                      entry={block.displayText}
+                      className="text-xs text-foreground equipment-entry"
+                    />
+                  ) : (
+                    <span className="text-xs text-foreground">
+                      {formatEquipmentOptionEntries(block.options._).join(', ') || 'Fixed item'}
+                    </span>
+                  )}
+                </div>
+                {currentPackage?.genericChoices?.map((genericChoice) => (
+                  <GenericEquipmentSelect
+                    key={genericChoice.key}
+                    choice={genericChoice}
+                    value={itemChoices[genericChoice.key] ?? ''}
+                    ariaLabel={`Starting equipment choice ${block.index + 1} specific item`}
+                    onChange={(itemRef) =>
+                      onItemChoiceChange(block.index, '_', genericChoice.key, itemRef)
+                    }
                   />
-                ) : (
-                  <span className="text-xs text-foreground">
-                    {block.options._.items.map((i) => i.name).join(', ') || 'Fixed item'}
-                  </span>
-                )}
+                ))}
               </div>
             )
           }
@@ -115,6 +134,17 @@ export function BuildClassEquipmentSection({
                   )
                 })}
               </div>
+              {currentPackage?.genericChoices?.map((genericChoice) => (
+                <GenericEquipmentSelect
+                  key={genericChoice.key}
+                  choice={genericChoice}
+                  value={itemChoices[genericChoice.key] ?? ''}
+                  ariaLabel={`Starting equipment choice ${block.index + 1} specific item`}
+                  onChange={(itemRef) =>
+                    onItemChoiceChange(block.index, currentChoice, genericChoice.key, itemRef)
+                  }
+                />
+              ))}
             </div>
           )
         })}

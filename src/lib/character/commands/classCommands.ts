@@ -10,7 +10,14 @@ import {
   getClassDefaultEquipmentBlocks,
   resolveEquipmentWithBlockChoices,
 } from '@/lib/5etools/startingEquipment'
-import { mergeSkillState } from '@/lib/calculations/skills'
+import { reconcileHitDiceUsed } from '@/lib/calculations/hitDice'
+import { reconcileSkillExpertise } from '@/lib/calculations/skills'
+import { toClassProfileId } from '@/lib/calculations/spellProfiles.constants'
+import { retractFeatOptionsCommand } from '@/lib/character/commands/featCommands'
+import {
+  removeSpellFromCharacter,
+  rollbackClassSpellSwapsAboveLevel,
+} from '@/lib/character/commands/spellCommands'
 import {
   removeSourceGrantedEquipment,
   upsertGrantedEquipment,
@@ -21,42 +28,37 @@ import {
   applyClassGrants,
   applyMulticlassGrants,
   diffProficiencyGrants,
+  getSpellsGrantedAtLevel,
   makeSourceTag,
   reconcileClassChange,
   removeGrantsBySourceRef,
+  removeSpellChoicesAtLevel,
+  removeSpellGrantsAtLevel,
   stripItemTag,
 } from '@/lib/provenance'
+import { applyAsiChoices } from '@/lib/provenance/applyAsiChoices'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger, SourceTag } from '@/lib/provenance/types'
 import type { Class5e, Item5e } from '@/types/5etools'
 import type {
   Character,
   CharacterClassEntry,
+  ClassFeatChoice,
   HitPointGain,
   HitPointGainMethod,
-  Skills,
 } from '@/types/character'
+import {
+  reconcileClassChoiceSelectionGrants,
+  reconcileClassChoiceSelections,
+} from './classChoiceCommands'
+import { isNarrativeTool, normalizeSavingThrowName } from './classProficiencies'
 import type { CharacterCommandResult } from './commandResult'
 
-const SAVING_THROW_NAME_BY_KEY: Record<string, string> = {
-  str: 'strength',
-  dex: 'dexterity',
-  con: 'constitution',
-  int: 'intelligence',
-  wis: 'wisdom',
-  cha: 'charisma',
-}
-
-function normalizeSavingThrowName(name: string): string {
-  const normalized = normalizeKey(name)
-  return SAVING_THROW_NAME_BY_KEY[normalized] ?? normalized
-}
-
-const isNarrativeTool = (value: string) => /of your choice|choose|one type of/i.test(value)
+export { buildInitialCharacterProficiencies } from './classProficiencies'
 
 export interface ClassSelectionEntity {
   name: string
-  source?: string
+  source: string
   proficiency?: string[]
   startingEquipment?: unknown
   startingProficiencies?: {
@@ -77,7 +79,7 @@ export interface ClassCommandResult extends CharacterCommandResult {
 
 export interface LevelUpHitPointChoice {
   className: string
-  classSource?: string
+  classSource: string
   classLevel: number
   hitDie: number
   dieResult: number
@@ -89,70 +91,64 @@ interface SelectSubclassOptions {
   viewingEntry?: CharacterClassEntry
 }
 
-export function buildInitialCharacterProficiencies(
-  cls: (Omit<ClassSelectionEntity, 'name'> & { name?: string }) | undefined,
-  normalizedBackground:
-    | {
-        skillProficiencies?: unknown[]
-        languageProficiencies?: unknown[]
-        toolProficiencies?: unknown[]
-      }
-    | undefined,
-): {
-  proficiencies: {
-    armor: string[]
-    weapons: string[]
-    tools: string[]
-    skills: string[]
-    languages: string[]
-    savingThrows: string[]
-  }
-  skills: Skills
-} {
-  const clsProfs = cls?.startingProficiencies ?? {}
-  const armor = (clsProfs.armor ?? [])
-    .filter((value): value is string => typeof value === 'string')
-    .map(stripItemTag)
-  const weapons = (clsProfs.weapons ?? [])
-    .filter((value): value is string => typeof value === 'string')
-    .map(stripItemTag)
-  const classTools = [
-    ...(clsProfs.tools ?? [])
-      .filter((value): value is string => typeof value === 'string')
-      .map(stripItemTag)
-      .filter((value) => value && !isNarrativeTool(value)),
-    ...extractProficiencyBlockNames((clsProfs.toolProficiencies as unknown[]) ?? [], {
-      includeAnyStandard: false,
-    }),
-  ]
-  const savingThrows = [...new Set((cls?.proficiency ?? []).map(normalizeSavingThrowName))]
-  const backgroundSkills = extractProficiencyBlockNames(
-    normalizedBackground?.skillProficiencies ?? [],
-    { includeAnyStandard: false },
-  ).filter((name) => !name.toLowerCase().startsWith('choose '))
-  const backgroundLanguages = extractProficiencyBlockNames(
-    normalizedBackground?.languageProficiencies ?? [],
-    { includeAnyStandard: false },
-  )
-  const backgroundTools = extractProficiencyBlockNames(
-    normalizedBackground?.toolProficiencies ?? [],
-    { includeAnyStandard: false },
-  )
-  const skills = [...new Set(backgroundSkills.map((skill) => skill.toLowerCase()))]
-  const proficiencies = {
-    armor,
-    weapons,
-    tools: [...new Set([...classTools, ...backgroundTools])],
-    skills,
-    languages: [...new Set(backgroundLanguages)],
-    savingThrows,
-  }
-
-  return { proficiencies, skills: mergeSkillState({}, skills) }
-}
-
 function getClassChoiceKey(name: string, source?: string): string {
   return `${name}|${source ?? ''}`
+}
+
+function isExactClassTag(
+  tag: SourceTag,
+  className: string,
+  classSource: string | undefined,
+): boolean {
+  return (
+    tag.sourceType === 'class' &&
+    tag.sourceName === className &&
+    (tag.sourceRef ?? '') === (classSource ?? '')
+  )
+}
+
+function retractRemovedClassMaterializedState(
+  character: Character,
+  ledger: ProvenanceLedger,
+  removed: CharacterClassEntry,
+): Character {
+  let proficiencies = { ...character.proficiencies }
+  for (const domain of [
+    'armor',
+    'weapons',
+    'tools',
+    'skills',
+    'languages',
+    'savingThrows',
+  ] as const) {
+    const exclusivelyOwnedKeys = new Set(
+      Object.entries(ledger.proficiencies[domain])
+        .filter(
+          ([, tags]) =>
+            tags.length > 0 &&
+            tags.every((tag) => isExactClassTag(tag, removed.name, removed.source)),
+        )
+        .map(([key]) => key),
+    )
+    if (exclusivelyOwnedKeys.size === 0) continue
+    proficiencies = {
+      ...proficiencies,
+      [domain]: proficiencies[domain].filter((name) => {
+        const key = domain === 'savingThrows' ? normalizeSavingThrowName(name) : normalizeKey(name)
+        return !exclusivelyOwnedKeys.has(key)
+      }),
+    }
+  }
+
+  const profileId = toClassProfileId(removed.name, removed.source)
+  return {
+    ...character,
+    proficiencies: reconcileSkillExpertise(proficiencies),
+    spells: {
+      ...character.spells,
+      spellProfiles: character.spells.spellProfiles.filter((profile) => profile.id !== profileId),
+    },
+  }
 }
 
 function replaceClassEquipmentGrants(
@@ -191,6 +187,9 @@ export function applyClassEquipmentChoiceCommand(
   blockIndex: number,
   choice: string,
   itemLookup: Map<string, Item5e>,
+  genericSelections: Readonly<Record<string, string>> = character.classEquipmentItemChoices?.[
+    getClassChoiceKey(cls.name, cls.source)
+  ] ?? {},
 ): CharacterCommandResult {
   const equipmentToRemove = Object.entries(ledger.equipment)
     .filter(([, tags]) =>
@@ -212,7 +211,7 @@ export function applyClassEquipmentChoiceCommand(
   choices[blockIndex] = choice.toLowerCase()
 
   const blocks = getClassDefaultEquipmentBlocks(cls.startingEquipment)
-  const resolved = resolveEquipmentWithBlockChoices(blocks, itemLookup, choices)
+  const resolved = resolveEquipmentWithBlockChoices(blocks, itemLookup, choices, genericSelections)
 
   return {
     characterPatch: {
@@ -220,6 +219,10 @@ export function applyClassEquipmentChoiceCommand(
       classEquipmentChoices: {
         ...(character.classEquipmentChoices ?? {}),
         [classChoiceKey]: choices,
+      },
+      classEquipmentItemChoices: {
+        ...(character.classEquipmentItemChoices ?? {}),
+        [classChoiceKey]: { ...genericSelections },
       },
     },
     provenanceUpdate: replaceClassEquipmentGrants(
@@ -239,8 +242,8 @@ function computeClassSelectionEffects(
   itemLookup: Map<string, Item5e>,
 ): CharacterCommandResult {
   const primaryClassEntry = getCharacterClassEntries(character)[0]
-  const oldClassName = primaryClassEntry?.name ?? character.class ?? undefined
-  const oldSubclassName = primaryClassEntry?.subclass ?? character.subclass ?? undefined
+  const oldClassName = primaryClassEntry?.name
+  const oldSubclassName = primaryClassEntry?.subclass
 
   let provenanceUpdate = reconcileClassChange(ledger, oldClassName, oldSubclassName)
   provenanceUpdate = applyClassGrants(cls, subclass, provenanceUpdate, { itemLookup })
@@ -249,7 +252,7 @@ function computeClassSelectionEffects(
   let equipment = [...(character.equipment ?? [])]
 
   if (oldClassName) {
-    const domains = ['armor', 'weapons', 'tools', 'savingThrows'] as const
+    const domains = ['armor', 'weapons', 'tools', 'skills', 'savingThrows'] as const
     for (const domain of domains) {
       const { toRemove } = diffProficiencyGrants(ledger, domain, 'class', oldClassName)
       if (toRemove.length === 0) continue
@@ -322,6 +325,7 @@ function computeClassSelectionEffects(
     classBlocks,
     itemLookup,
     savedBlockChoices,
+    character.classEquipmentItemChoices?.[classChoiceKey] ?? {},
   )
   provenanceUpdate = replaceClassEquipmentGrants(
     provenanceUpdate,
@@ -332,12 +336,17 @@ function computeClassSelectionEffects(
 
   return {
     characterPatch: {
-      proficiencies,
-      skills: { ...(character.skills ?? {}) },
+      proficiencies: reconcileSkillExpertise(proficiencies),
       equipment: upsertGrantedEquipment(equipment, classEquipment.items),
       classEquipmentChoices: {
         ...(character.classEquipmentChoices ?? {}),
         [classChoiceKey]: savedBlockChoices,
+      },
+      classEquipmentItemChoices: {
+        ...(character.classEquipmentItemChoices ?? {}),
+        [classChoiceKey]: {
+          ...(character.classEquipmentItemChoices?.[classChoiceKey] ?? {}),
+        },
       },
     },
     provenanceUpdate,
@@ -349,7 +358,6 @@ function computeClassSelectionEffects(
  *
  * Centralizes the shared logic used by level up/down flows:
  * - update classProgression and total character level
- * - keep top-level class/classSource in sync with the first class entry
  * - reconcile provenance when a class entry is fully removed
  */
 export function applyClassProgressionUpdate(
@@ -357,16 +365,74 @@ export function applyClassProgressionUpdate(
   ledger: ProvenanceLedger,
   nextProgression: CharacterClassEntry[],
 ): ClassCommandResult {
-  const previousProgression = character.classProgression ?? []
+  const previousProgression = character.classProgression
   const removedEntries = previousProgression.filter(
     (old) =>
-      !nextProgression.some(
-        (entry) => entry.name === old.name && (entry.source ?? '') === (old.source ?? ''),
-      ),
+      !nextProgression.some((entry) => entry.name === old.name && entry.source === old.source),
   )
 
+  let workingCharacter = character
   let provenanceUpdate = ledger
+
+  for (const previousEntry of previousProgression) {
+    const retainedEntry = nextProgression.find(
+      (entry) => entry.name === previousEntry.name && entry.source === previousEntry.source,
+    )
+    if (!retainedEntry || retainedEntry.levels >= previousEntry.levels) continue
+
+    for (let level = previousEntry.levels; level > retainedEntry.levels; level -= 1) {
+      const affectedSpells = getSpellsGrantedAtLevel(
+        provenanceUpdate,
+        previousEntry.name,
+        level,
+        previousEntry.source,
+      )
+      provenanceUpdate = removeSpellChoicesAtLevel(
+        provenanceUpdate,
+        previousEntry.name,
+        level,
+        previousEntry.source,
+      )
+      provenanceUpdate = removeSpellGrantsAtLevel(
+        provenanceUpdate,
+        previousEntry.name,
+        level,
+        previousEntry.source,
+      )
+
+      for (const spellName of affectedSpells) {
+        if ((provenanceUpdate.spells[normalizeKey(spellName)] ?? []).length > 0) continue
+        const result = removeSpellFromCharacter(workingCharacter, provenanceUpdate, spellName, {
+          profileId: toClassProfileId(previousEntry.name, previousEntry.source),
+        })
+        workingCharacter = {
+          ...workingCharacter,
+          ...result.characterPatch,
+          provenance: result.provenanceUpdate,
+        }
+        provenanceUpdate = result.provenanceUpdate
+      }
+    }
+
+    const swapRollback = rollbackClassSpellSwapsAboveLevel(workingCharacter, provenanceUpdate, {
+      className: previousEntry.name,
+      classSource: previousEntry.source,
+      retainedLevel: retainedEntry.levels,
+    })
+    workingCharacter = {
+      ...workingCharacter,
+      ...swapRollback.characterPatch,
+      provenance: swapRollback.provenanceUpdate,
+    }
+    provenanceUpdate = swapRollback.provenanceUpdate
+  }
+
   for (const removed of removedEntries) {
+    workingCharacter = retractRemovedClassMaterializedState(
+      workingCharacter,
+      provenanceUpdate,
+      removed,
+    )
     provenanceUpdate = removeGrantsBySourceRef(
       provenanceUpdate,
       'class',
@@ -375,13 +441,58 @@ export function applyClassProgressionUpdate(
     )
   }
 
+  const retainedClassFeatChoices: ClassFeatChoice[] = []
+  for (const choice of character.classFeatChoices ?? []) {
+    const matchingEntry = nextProgression.find(
+      (entry) => entry.name === choice.className && entry.source === choice.classSource,
+    )
+    const retainedFeats = matchingEntry
+      ? choice.feats.filter(
+          (feat) => feat.classLevel == null || feat.classLevel <= matchingEntry.levels,
+        )
+      : []
+    const retainedIds = new Set(retainedFeats.map((feat) => feat.id))
+    for (const feat of choice.feats) {
+      if (retainedIds.has(feat.id)) continue
+      if (feat.options) {
+        const result = retractFeatOptionsCommand(
+          workingCharacter,
+          provenanceUpdate,
+          { name: feat.name, source: feat.source, classFeatChoiceId: choice.id },
+          feat.options,
+        )
+        workingCharacter = {
+          ...workingCharacter,
+          ...result.characterPatch,
+          provenance: result.provenanceUpdate,
+        }
+        provenanceUpdate = result.provenanceUpdate
+      }
+      const key = normalizeKey(feat.name)
+      const retainedTags = (provenanceUpdate.feats[key] ?? []).filter(
+        (tag) =>
+          !(
+            tag.sourceType === 'class' &&
+            tag.sourceName === choice.className &&
+            tag.sourceRef === choice.classSource &&
+            tag.grantVariant === choice.id
+          ),
+      )
+      const feats = { ...provenanceUpdate.feats }
+      if (retainedTags.length > 0) feats[key] = retainedTags
+      else delete feats[key]
+      provenanceUpdate = { ...provenanceUpdate, feats }
+    }
+    if (matchingEntry && retainedFeats.length > 0) {
+      retainedClassFeatChoices.push({ ...choice, feats: retainedFeats })
+    }
+  }
+
   const newTotalLevel = nextProgression.reduce((sum, entry) => sum + entry.levels, 0)
   const previousTotalLevel = previousProgression.reduce((sum, entry) => sum + entry.levels, 0)
   const retainedHitPointGains = (character.hitPointGains ?? []).filter((gain) => {
     const matchingEntry = nextProgression.find(
-      (entry) =>
-        entry.name === gain.className &&
-        (entry.source == null || gain.classSource == null || entry.source === gain.classSource),
+      (entry) => entry.name === gain.className && entry.source === gain.classSource,
     )
     return matchingEntry != null && gain.classLevel <= matchingEntry.levels
   })
@@ -394,12 +505,37 @@ export function applyClassProgressionUpdate(
             characterLevel: newTotalLevel - gains.length + index + 1,
           }))
       : retainedHitPointGains
+  const classChoiceSelections = reconcileClassChoiceSelections(
+    character.classChoiceSelections,
+    nextProgression,
+  )
+  const classChoiceGrants = reconcileClassChoiceSelectionGrants(
+    character,
+    provenanceUpdate,
+    classChoiceSelections,
+  )
+  provenanceUpdate = classChoiceGrants.provenanceUpdate
+  const asiChoices = (character.asiChoices ?? []).filter((choice) => {
+    const matchingEntry = nextProgression.find(
+      (entry) =>
+        normalizeKey(entry.name) === normalizeKey(choice.className) &&
+        normalizeKey(entry.source) === normalizeKey(choice.classSource),
+    )
+    return matchingEntry != null && choice.level <= matchingEntry.levels
+  })
+  provenanceUpdate = applyAsiChoices(provenanceUpdate, asiChoices)
+
   const characterPatch: Partial<Character> = {
     classProgression: nextProgression,
-    level: newTotalLevel,
-    class: nextProgression[0]?.name ?? character.class,
-    classSource: nextProgression[0]?.source ?? character.classSource,
+    hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, nextProgression),
     hitPointGains,
+    classFeatChoices: retainedClassFeatChoices,
+    classChoiceSelections,
+    asiChoices,
+    features: classChoiceGrants.features,
+    spells: workingCharacter.spells,
+    proficiencies: workingCharacter.proficiencies,
+    abilityScores: workingCharacter.abilityScores,
   }
 
   return {
@@ -417,14 +553,11 @@ export function applyLevelUp(
   ledger: ProvenanceLedger,
   nextProgression: CharacterClassEntry[],
   hpChoice: LevelUpHitPointChoice,
+  maximumHitPoints: number,
 ): ClassCommandResult {
   const characterLevel = nextProgression.reduce((sum, entry) => sum + entry.levels, 0)
   const targetEntry = nextProgression.find(
-    (entry) =>
-      entry.name === hpChoice.className &&
-      (entry.source == null ||
-        hpChoice.classSource == null ||
-        entry.source === hpChoice.classSource),
+    (entry) => entry.name === hpChoice.className && entry.source === hpChoice.classSource,
   )
 
   if (!targetEntry || targetEntry.levels !== hpChoice.classLevel) {
@@ -442,6 +575,9 @@ export function applyLevelUp(
   ) {
     throw new RangeError('Hit-point die result must be an integer within the hit die range.')
   }
+  if (!Number.isInteger(maximumHitPoints) || maximumHitPoints < 1) {
+    throw new RangeError('Maximum hit points must be a positive integer.')
+  }
 
   const progressionResult = applyClassProgressionUpdate(character, ledger, nextProgression)
   const gain: HitPointGain = { ...hpChoice, characterLevel }
@@ -451,7 +587,7 @@ export function applyLevelUp(
         !(
           existing.className === gain.className &&
           existing.classLevel === gain.classLevel &&
-          (existing.classSource ?? '') === (gain.classSource ?? '')
+          existing.classSource === gain.classSource
         ),
     ),
     gain,
@@ -462,6 +598,11 @@ export function applyLevelUp(
     characterPatch: {
       ...progressionResult.characterPatch,
       hitPointGains,
+      hitPoints: {
+        ...character.hitPoints,
+        current: maximumHitPoints,
+      },
+      hitPointsInitialized: true,
     },
   }
 }
@@ -469,14 +610,10 @@ export function applyLevelUp(
 /**
  * Apply a base class selection to a character.
  *
- * Manages both:
- * - Character state: updates character.class, character.classSource, proficiencies, and classProgression
- * - Attribution: records the class source (PHB, custom manual selection, etc.)
- *
  * @param character - Active character
  * @param ledger - Current provenance ledger
  * @param className - Name of class to select
- * @param classSource - Source of the class (e.g., 'PHB', or undefined for fallback single match)
+ * @param classSource - Source of the class
  * @returns { classEntity, characterPatch, provenanceUpdate } - Apply both atomically
  */
 export function selectBaseClass(
@@ -484,7 +621,7 @@ export function selectBaseClass(
   ledger: ProvenanceLedger,
   className: string,
   classEntity: Class5e,
-  classSource?: string,
+  classSource: string = classEntity.source,
 ): ClassCommandResult {
   const startingProfs = classEntity.startingProficiencies ?? {}
   const updatedProficiencies = {
@@ -508,33 +645,28 @@ export function selectBaseClass(
     ],
   }
 
-  const existingClassIndex =
-    character.classProgression?.findIndex((c) => c.name === className) ?? -1
-  const updatedProgression = [...(character.classProgression ?? [])]
-
-  if (existingClassIndex >= 0) {
-    updatedProgression[existingClassIndex] = {
-      ...updatedProgression[existingClassIndex],
+  const updatedProgression = [...character.classProgression]
+  if (updatedProgression.length > 0) {
+    updatedProgression[0] = {
+      ...updatedProgression[0],
       name: className,
-      source: classSource ?? classEntity.source ?? undefined,
-      levels: updatedProgression[existingClassIndex].levels ?? 1,
+      source: classSource,
+      levels: updatedProgression[0].levels,
+      subclass: undefined,
+      subclassSource: undefined,
     }
   } else {
     updatedProgression.push({
       name: className,
-      source: classSource ?? classEntity.source ?? undefined,
+      source: classSource,
       levels: 1,
     })
   }
 
   const characterPatch: Partial<Character> = {
-    class: className,
-    classSource: classSource ?? undefined,
-    subclass: undefined,
-    subclassSource: undefined,
-    proficiencies: updatedProficiencies,
-    skills: mergeSkillState(character.skills ?? {}, updatedProficiencies.skills),
+    proficiencies: reconcileSkillExpertise(updatedProficiencies),
     classProgression: updatedProgression,
+    hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, updatedProgression),
   }
 
   const provenanceUpdate = ledger
@@ -563,32 +695,21 @@ export function selectSubclass(
   subclassEntity?: Record<string, unknown>,
   options?: SelectSubclassOptions,
 ): ClassCommandResult {
-  let nextProgression = options?.classProgression
-
-  if (options?.classProgression && options.viewingEntry) {
-    nextProgression = options.classProgression.map((entry) =>
-      entry.name === options.viewingEntry?.name &&
-      (entry.source ?? '') === (options.viewingEntry?.source ?? '')
-        ? {
-            ...entry,
-            subclass: subclassName,
-            subclassSource,
-          }
-        : entry,
-    )
-  }
-
-  const shouldUpdateTopLevel =
-    !options?.viewingEntry || options.viewingEntry.name === character.class
-
-  const characterPatch: Partial<Character> = {
-    ...(nextProgression ? { classProgression: nextProgression } : {}),
-    ...(shouldUpdateTopLevel
+  const progression = options?.classProgression ?? character.classProgression
+  const target = options?.viewingEntry ?? progression[0]
+  if (!target) throw new Error('Cannot choose a subclass before choosing a class.')
+  const nextProgression = progression.map((entry) =>
+    entry.name === target.name && entry.source === target.source
       ? {
+          ...entry,
           subclass: subclassName,
           subclassSource,
         }
-      : {}),
+      : entry,
+  )
+
+  const characterPatch: Partial<Character> = {
+    classProgression: nextProgression,
   }
 
   const provenanceUpdate = ledger
@@ -608,29 +729,58 @@ export function applyClassSelectionCommand(
   itemLookup: Map<string, Item5e>,
   options?: SelectSubclassOptions,
 ): ClassCommandResult {
+  if (subclass) {
+    return selectSubclass(
+      character,
+      ledger,
+      subclass.name,
+      subclass.source ?? '',
+      undefined,
+      options,
+    )
+  }
+
   const effects = computeClassSelectionEffects(character, ledger, cls, subclass, itemLookup)
-  const identity = subclass
-    ? selectSubclass(character, ledger, subclass.name, subclass.source ?? '', undefined, options)
-    : selectBaseClass(character, ledger, cls.name, cls as Class5e, cls.source)
+  const identityCharacter = { ...character, ...effects.characterPatch }
+  const identity = selectBaseClass(identityCharacter, ledger, cls.name, cls as Class5e, cls.source)
   const identityProficiencies = identity.characterPatch.proficiencies
   const effectProficiencies = effects.characterPatch.proficiencies ?? character.proficiencies
+  const selectionPatch: Partial<Character> = {
+    ...effects.characterPatch,
+    ...identity.characterPatch,
+    ...(identityProficiencies
+      ? {
+          proficiencies: {
+            ...effectProficiencies,
+            skills: identityProficiencies.skills,
+            expertise: identityProficiencies.expertise,
+          },
+        }
+      : {}),
+  }
+  const nextProgression = identity.characterPatch.classProgression
+  if (!nextProgression) {
+    return {
+      classEntity: cls as Class5e,
+      characterPatch: selectionPatch,
+      provenanceUpdate: effects.provenanceUpdate,
+    }
+  }
 
+  const progressionResult = applyClassProgressionUpdate(
+    {
+      ...character,
+      ...selectionPatch,
+      classProgression: character.classProgression,
+      provenance: effects.provenanceUpdate,
+    },
+    effects.provenanceUpdate,
+    nextProgression,
+  )
   return {
     classEntity: cls as Class5e,
-    characterPatch: {
-      ...effects.characterPatch,
-      ...identity.characterPatch,
-      ...(identityProficiencies
-        ? {
-            proficiencies: {
-              ...effectProficiencies,
-              skills: identityProficiencies.skills,
-            },
-            skills: identity.characterPatch.skills,
-          }
-        : {}),
-    },
-    provenanceUpdate: effects.provenanceUpdate,
+    characterPatch: { ...selectionPatch, ...progressionResult.characterPatch },
+    provenanceUpdate: progressionResult.provenanceUpdate,
   }
 }
 
@@ -651,12 +801,12 @@ export function updateCharacterLevel(
     throw new Error(`Invalid level: ${newLevel}. Level must be between 1 and 20.`)
   }
 
-  const primaryClass = character.classProgression?.[0]
+  const primaryClass = character.classProgression[0]
   if (!primaryClass) {
     throw new Error('Character has no class selected. Cannot set level without a class.')
   }
 
-  const updatedProgression = (character.classProgression ?? []).map((entry, idx) => {
+  const updatedProgression = character.classProgression.map((entry, idx) => {
     if (idx === 0) {
       return {
         ...entry,
@@ -666,17 +816,7 @@ export function updateCharacterLevel(
     return entry
   })
 
-  const characterPatch: Partial<Character> = {
-    level: newLevel,
-    classProgression: updatedProgression,
-  }
-
-  const provenanceUpdate = ledger
-
-  return {
-    characterPatch,
-    provenanceUpdate,
-  }
+  return applyClassProgressionUpdate(character, ledger, updatedProgression)
 }
 
 /**
@@ -695,25 +835,23 @@ export function addMulticlass(
   ledger: ProvenanceLedger,
   className: string,
   classEntity: Class5e,
-  classSource?: string,
+  classSource: string = classEntity.source,
   startAtLevel: number = 1,
 ): ClassCommandResult {
-  const resolvedClassSource = classSource ?? classEntity.source ?? undefined
-  const existingClassIndex =
-    character.classProgression?.findIndex(
-      (entry) => entry.name === className && (entry.source ?? '') === (resolvedClassSource ?? ''),
-    ) ?? -1
+  const existingClassIndex = character.classProgression.findIndex(
+    (entry) => entry.name === className && entry.source === classSource,
+  )
   if (existingClassIndex >= 0) {
     throw new Error(
-      `Character already has class ${className}|${resolvedClassSource ?? ''}. Cannot add duplicate class.`,
+      `Character already has class ${className}|${classSource}. Cannot add duplicate class.`,
     )
   }
 
   const updatedProgression = [
-    ...(character.classProgression ?? []),
+    ...character.classProgression,
     {
       name: className,
-      source: resolvedClassSource,
+      source: classSource,
       levels: startAtLevel,
     },
   ]
@@ -762,14 +900,11 @@ export function addMulticlass(
 
   const characterPatch: Partial<Character> = {
     classProgression: updatedProgression,
-    proficiencies: updatedProficiencies,
-    skills: mergeSkillState(character.skills ?? {}, updatedProficiencies.skills),
+    proficiencies: reconcileSkillExpertise(updatedProficiencies),
+    hitDiceUsed: reconcileHitDiceUsed(character.hitDiceUsed, updatedProgression),
   }
 
-  const provenanceUpdate = applyMulticlassGrants(
-    { ...classEntity, source: resolvedClassSource ?? '' },
-    ledger,
-  )
+  const provenanceUpdate = applyMulticlassGrants({ ...classEntity, source: classSource }, ledger)
 
   return {
     classEntity,
@@ -791,33 +926,19 @@ export function removeMulticlass(
   character: Character,
   ledger: ProvenanceLedger,
   className: string,
-  classSource?: string,
+  classSource: string,
 ): ClassCommandResult {
   const matchesClass = (entry: CharacterClassEntry) =>
-    entry.name === className &&
-    (classSource == null || (entry.source ?? '') === (classSource ?? ''))
+    entry.name === className && entry.source === classSource
   if (
-    character.classProgression?.[0] &&
+    character.classProgression[0] &&
     matchesClass(character.classProgression[0]) &&
     character.classProgression.length === 1
   ) {
     throw new Error('Cannot remove the primary class. Character must have at least one class.')
   }
 
-  const updatedProgression =
-    character.classProgression?.filter((entry) => !matchesClass(entry)) ?? []
+  const updatedProgression = character.classProgression.filter((entry) => !matchesClass(entry))
 
-  const characterPatch: Partial<Character> = {
-    classProgression: updatedProgression,
-  }
-
-  const provenanceUpdate =
-    classSource == null
-      ? reconcileClassChange(ledger, className, undefined)
-      : removeGrantsBySourceRef(ledger, 'class', className, classSource)
-
-  return {
-    characterPatch,
-    provenanceUpdate,
-  }
+  return applyClassProgressionUpdate(character, ledger, updatedProgression)
 }

@@ -5,6 +5,7 @@ import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUt
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Class5e, RaceAdditionalSpells } from '@/types/5etools'
 import type { Character, RaceSpellChoice, SpellProfile } from '@/types/character'
+import { buildSpellNameKeySet, getSpellNameKey } from './spellIdentity'
 import {
   buildClassProfileLabel,
   RACIAL_SPELL_PROFILE_LABEL,
@@ -35,13 +36,62 @@ function cloneProfile(profile: SpellProfile): SpellProfile {
 
 function mergeSpellNames(existing: string[], additions: string[]): string[] {
   if (additions.length === 0) return existing
-  const byKey = new Map(existing.map((name) => [normalizeKey(name), name] as const))
+  const byKey = new Map(existing.map((name) => [getSpellNameKey(name), name] as const))
   for (const name of additions) {
-    const key = normalizeKey(name)
+    const key = getSpellNameKey(name)
     if (!key || byKey.has(key)) continue
     byKey.set(key, name)
   }
   return [...byKey.values()]
+}
+
+function uniqueSpellKeys(names: readonly string[]): Set<string> {
+  return new Set(names.map(getSpellNameKey).filter(Boolean))
+}
+
+function hasIndependentClassOwnership(
+  character: Character,
+  entry: { name: string; source?: string },
+  spellName: string,
+): boolean {
+  return (character.provenance?.spells?.[normalizeKey(spellName)] ?? []).some(
+    (tag) =>
+      tag.sourceType === 'class' &&
+      tag.sourceName === entry.name &&
+      (tag.sourceRef ?? '') === (entry.source ?? ''),
+  )
+}
+
+export interface SpellProfileSelectionCounts {
+  cantrips: number
+  spells: number
+  prepared: number
+}
+
+/** Counts unique player-managed entries without treating derived grants as class selections. */
+export function getSpellProfileSelectionCounts(
+  profile: Pick<
+    SpellProfile,
+    'cantrips' | 'spellsKnown' | 'preparedSpells' | 'fixedSpells' | 'alwaysPreparedSpells'
+  >,
+): SpellProfileSelectionCounts {
+  const fixed = uniqueSpellKeys(profile.fixedSpells ?? [])
+  const alwaysPrepared = uniqueSpellKeys(profile.alwaysPreparedSpells ?? [])
+  const countSelectable = (names: readonly string[]) =>
+    new Set(names.map(getSpellNameKey).filter((key) => key && !fixed.has(key))).size
+
+  return {
+    cantrips: countSelectable(profile.cantrips),
+    spells: countSelectable(profile.spellsKnown),
+    prepared: new Set(
+      profile.preparedSpells.map(getSpellNameKey).filter((key) => key && !alwaysPrepared.has(key)),
+    ).size,
+  }
+}
+
+/** Counts spell identities case-insensitively for derived presentation summaries. */
+export function countUniqueSpellNames(names: readonly string[]): number {
+  return uniqueSpellKeys(names).size
 }
 
 /**
@@ -86,7 +136,9 @@ export function buildRacialSpellProfile(params: {
 
     if (pool.length > 0) {
       const existingChoice = existingProfile?.choices?.find((c) => c.id === 'block-choice')
-      const selected = existingChoice?.selected.filter((s) => pool.includes(s)) ?? []
+      const poolKeys = buildSpellNameKeySet(pool)
+      const selected =
+        existingChoice?.selected.filter((spell) => poolKeys.has(getSpellNameKey(spell))) ?? []
       choices.push({
         id: 'block-choice',
         count: 1,
@@ -210,15 +262,14 @@ export function ensureSpellProfiles(
     // derived set before merging so changing subclasses or losing a level cannot
     // leave stale grants behind in the parent class profile.
     const previousFixedKeys = new Set(
-      (existingProfile?.fixedSpells ?? []).map((name) => normalizeKey(name)),
+      (existingProfile?.fixedSpells ?? []).map((name) => getSpellNameKey(name)),
     )
-    const retainedCantrips = (existingProfile?.cantrips ?? []).filter(
-      (name) => !previousFixedKeys.has(normalizeKey(name)),
-    )
-    const retainedSpellsKnown = (existingProfile?.spellsKnown ?? []).filter(
-      (name) => !previousFixedKeys.has(normalizeKey(name)),
-    )
-    const alwaysPreparedKeys = new Set(alwaysPreparedSubclassSpells.map(normalizeKey))
+    const shouldRetain = (name: string) =>
+      !previousFixedKeys.has(getSpellNameKey(name)) ||
+      hasIndependentClassOwnership(character, entry, name)
+    const retainedCantrips = (existingProfile?.cantrips ?? []).filter(shouldRetain)
+    const retainedSpellsKnown = (existingProfile?.spellsKnown ?? []).filter(shouldRetain)
+    const alwaysPreparedKeys = new Set(alwaysPreparedSubclassSpells.map(getSpellNameKey))
 
     next.push({
       id,
@@ -229,7 +280,7 @@ export function ensureSpellProfiles(
       cantrips: mergeSpellNames(retainedCantrips, grantedSubclassCantrips),
       spellsKnown: mergeSpellNames(retainedSpellsKnown, grantedSubclassLeveledSpells),
       preparedSpells: (existingProfile?.preparedSpells ?? []).filter(
-        (name) => !alwaysPreparedKeys.has(normalizeKey(name)),
+        (name) => !alwaysPreparedKeys.has(getSpellNameKey(name)),
       ),
       fixedSpells:
         grantedSubclassSpells.length > 0
@@ -265,6 +316,10 @@ export function ensureSpellProfiles(
     cantrips: special?.cantrips ?? [],
     spellsKnown: special?.spellsKnown ?? [],
     preparedSpells: [],
+    ...(special?.fixedSpells ? { fixedSpells: [...special.fixedSpells] } : {}),
+    ...(special?.alwaysPreparedSpells
+      ? { alwaysPreparedSpells: [...special.alwaysPreparedSpells] }
+      : {}),
     alwaysPrepared: true,
   })
 
@@ -282,18 +337,21 @@ export function collectKnownSpells(profiles: SpellProfile[]): {
 
   for (const profile of profiles) {
     const alwaysPreparedKeys = new Set(
-      (profile.alwaysPreparedSpells ?? []).map((name) => normalizeKey(name)),
+      (profile.alwaysPreparedSpells ?? []).map((name) => getSpellNameKey(name)),
     )
     for (const name of profile.cantrips) {
       cantrips.add(name)
-      if (profile.alwaysPrepared || alwaysPreparedKeys.has(normalizeKey(name))) prepared.add(name)
+      if (profile.alwaysPrepared || alwaysPreparedKeys.has(getSpellNameKey(name)))
+        prepared.add(name)
     }
     for (const name of profile.spellsKnown) {
       spellsKnown.add(name)
       if (
         profile.alwaysPrepared ||
-        alwaysPreparedKeys.has(normalizeKey(name)) ||
-        profile.preparedSpells.includes(name)
+        alwaysPreparedKeys.has(getSpellNameKey(name)) ||
+        profile.preparedSpells.some(
+          (preparedSpell) => getSpellNameKey(preparedSpell) === getSpellNameKey(name),
+        )
       ) {
         prepared.add(name)
       }

@@ -13,7 +13,7 @@ export type AcroWidget = {
   dict: AcroDict
 }
 
-export type AcroDict = {
+type AcroDict = {
   has: (name: unknown) => boolean
   delete: (name: unknown) => void
   get: (name: unknown) => unknown

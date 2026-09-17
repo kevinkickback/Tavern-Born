@@ -1,3 +1,5 @@
+import { normalizeClassRules } from '@/lib/5etools/classRuleNormalization'
+import type { ClassFeatureReference } from '@/types/5etools'
 import { asArray, asObject, normalizeKey, type ParsedObject } from './shared'
 
 function getClassFeatureIndex(classFeatureRecords: unknown[]): Map<string, ParsedObject> {
@@ -184,6 +186,31 @@ function resolveSubclassFeatureRecord(
     return feature
   }
 
+  // A copied subclass can retain source-qualified feature references from its original
+  // class printing while changing only the parent class source. Resolve that mismatch
+  // only when every other encoded identity field selects one unique record.
+  if (source) {
+    const sourceQualifiedCandidates = subclassFeatureRecords.map(asObject).filter((feature) => {
+      if (normalizeKey(feature.name) !== name) return false
+      if (className && normalizeKey(feature.className) !== className) return false
+      if (subclassShortName && normalizeKey(feature.subclassShortName) !== subclassShortName)
+        return false
+      if (subclassSource && normalizeKey(feature.subclassSource) !== subclassSource) return false
+      if (level !== undefined && feature.level !== level) return false
+      return normalizeKey(feature.source) === source
+    })
+    if (sourceQualifiedCandidates.length === 1) return sourceQualifiedCandidates[0]
+  }
+
+  const encodedIdentityCandidates = subclassFeatureRecords.map(asObject).filter((feature) => {
+    if (normalizeKey(feature.name) !== name) return false
+    if (className && normalizeKey(feature.className) !== className) return false
+    if (subclassShortName && normalizeKey(feature.subclassShortName) !== subclassShortName)
+      return false
+    return level === undefined || feature.level === level
+  })
+  if (encodedIdentityCandidates.length === 1) return encodedIdentityCandidates[0]
+
   if (!source) {
     for (const record of subclassFeatureRecords) {
       const feature = asObject(record)
@@ -292,6 +319,33 @@ function groupSubclassFeaturesByLevel(
     .map(([level, features]) => ({ level, features }))
 }
 
+function getSubclassIdentityKey(subclass: ParsedObject): string | undefined {
+  const name = typeof subclass.name === 'string' ? subclass.name : undefined
+  const source = typeof subclass.source === 'string' ? subclass.source : undefined
+  const shortName = typeof subclass.shortName === 'string' ? subclass.shortName : undefined
+  const className = typeof subclass.className === 'string' ? subclass.className : undefined
+  const classSource = typeof subclass.classSource === 'string' ? subclass.classSource : undefined
+  if (!name || !source || !shortName || !className || !classSource) return undefined
+  return `${name}|${source}|${shortName}|${className}|${classSource}`
+}
+
+function materializeSubclassCopies(subclasses: unknown[]): ParsedObject[] {
+  const byIdentity = new Map<string, ParsedObject>()
+  for (const subclass of subclasses) {
+    const subclassObj = asObject(subclass)
+    const key = getSubclassIdentityKey(subclassObj)
+    if (key && !byIdentity.has(key)) byIdentity.set(key, subclassObj)
+  }
+
+  return subclasses.map((subclass) => {
+    const subclassObj = asObject(subclass)
+    const copy = asObject(subclassObj._copy)
+    const copiedIdentity = getSubclassIdentityKey(copy)
+    const copiedSubclass = copiedIdentity ? byIdentity.get(copiedIdentity) : undefined
+    return copiedSubclass ? { ...copiedSubclass, ...subclassObj } : subclassObj
+  })
+}
+
 export function parseClasses(data: unknown): unknown[] {
   const obj = asObject(data)
   const classes: unknown[] = obj.class
@@ -299,7 +353,7 @@ export function parseClasses(data: unknown): unknown[] {
     : Array.isArray(data)
       ? [...data]
       : []
-  const subclassEntries: unknown[] = asArray(obj.subclass)
+  const subclassEntries = materializeSubclassCopies(asArray(obj.subclass))
   const classFeatureRecords: unknown[] = asArray(obj.classFeature)
   const classFeatureIndex = getClassFeatureIndex(classFeatureRecords)
 
@@ -352,7 +406,17 @@ export function parseClasses(data: unknown): unknown[] {
     const introKey = `${String(scObj.shortName ?? '')}|${className}|${classSource ?? ''}`
     // Fallback: PHB-style subclasses where shortName != feature name; look up by sc.name
     const fullNameKey = `${String(scObj.name ?? '')}|${className}|${classSource ?? ''}`
-    const entries = introEntriesMap.get(introKey) ?? fullNameIntroMap.get(fullNameKey) ?? []
+    const copiedSubclass = asObject(scObj._copy)
+    const copiedClassName = String(copiedSubclass.className ?? '')
+    const copiedClassSource = String(copiedSubclass.classSource ?? '')
+    const copiedIntroKey = `${String(copiedSubclass.shortName ?? '')}|${copiedClassName}|${copiedClassSource}`
+    const copiedFullNameKey = `${String(copiedSubclass.name ?? '')}|${copiedClassName}|${copiedClassSource}`
+    const entries =
+      introEntriesMap.get(introKey) ??
+      fullNameIntroMap.get(fullNameKey) ??
+      introEntriesMap.get(copiedIntroKey) ??
+      fullNameIntroMap.get(copiedFullNameKey) ??
+      []
     const subclassFeatureRefs = parseSubclassFeatureReferences(scObj, subclassFeatureRecords)
     const levelFeatures =
       groupSubclassFeaturesByLevel(subclassFeatureRefs).length > 0
@@ -381,6 +445,10 @@ export function parseClasses(data: unknown): unknown[] {
       ...clsObj,
       subclasses: nested ?? [],
       classFeatureRefs,
+      normalizedRules: normalizeClassRules(
+        clsObj as unknown as import('@/types/5etools').Class5e,
+        classFeatureRefs as unknown as ClassFeatureReference[],
+      ),
       isSpellcaster: getIsSpellcasterClass(clsObj),
       spellSlotProgression,
     }

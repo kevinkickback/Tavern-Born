@@ -46,8 +46,10 @@ release-infrastructure changes use the same manual exception.
 ## Day-to-day development
 
 Work on `dev`, commit, and push normally. `ci.yml` runs on non-draft PRs targeting `dev` or `main`.
-It performs linting, type checking, coverage tests, a production build, browser end-to-end tests,
-and the Electron smoke test.
+It checks unused code and architectural boundaries, then performs linting, type checking, coverage
+tests, a production build, measured bundle-budget enforcement, browser end-to-end tests, and the
+Electron smoke test. Repository-run Node commands use Node 24 throughout CI and release
+validation/build jobs, matching `.nvmrc` and the package engine requirement.
 
 For an ordinary ready `dev` to `main` PR:
 
@@ -181,6 +183,11 @@ Validate release metadata locally with:
 ```bash
 npm run check:release
 ```
+
+`npm run dist` also runs `npm run check:bundle` after the production build and before packaging.
+The check covers the complete renderer distribution, static assets, renderer code, initial script
+and stylesheet, largest lazy script, and PDF worker. A deliberate increase requires an explicit
+budget review rather than silently growing release artifacts.
 
 Publish an approved draft with:
 

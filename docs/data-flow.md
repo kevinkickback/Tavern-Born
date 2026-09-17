@@ -23,11 +23,19 @@ Flow:
 5. useDataInit shows a toast when cached data is used without a configured source, or when enabled launch auto-refresh confirms that content changed. Successful no-change checks remain silent.
 6. On successful fetch, parsed gameData is written to cache and store.
 
+Resource failures are classified by whether they affect the canonical gameplay catalog. Foreground
+loads reject and preserve the previous store/cache when any required resource fails; optional
+presentation resources such as fluff may be absent without blocking a usable load. Background
+refreshes remain stricter and reject any dropped resource so an existing complete cache is never
+silently replaced by a less complete snapshot.
+
 Startup preference behavior:
 - Theme is applied immediately from localStorage before React renders, then reconciled with the persisted app preferences store after IndexedDB hydration.
 - Home-page card size is read from the app preferences store. The size slider is on the home page itself, not in Settings.
 - Stale cache always triggers a background refresh on startup. It remains silent unless launch auto-refresh is enabled and the content fingerprint changes.
 - Background refreshes are atomic: if any requested resource fails or the refresh returns an empty catalog, the current in-memory/cache data and update timestamps are preserved.
+- Foreground loads are atomic for required catalog resources; optional presentation failures are
+  reported but do not prevent a usable catalog from being cached.
 
 Update metadata behavior:
 - `lastUpdateCheckAt` is set only after a successful source check/fetch.
@@ -46,6 +54,10 @@ Flow:
 3. Parsed arrays are produced by parser functions in src/lib/5etools/parsers/* (barrel export: src/lib/5etools/parsers/index.ts).
 4. Source list is built and lookup maps are created in src/lib/5etools/lookups.ts.
 5. Store state is updated and cache metadata set to fetched.
+
+Each load receives a monotonically increasing request identity. Final results, failures, and progress
+updates from superseded requests are ignored, including local reads that cannot be cancelled by the
+shared `AbortController`.
 
 Important behavior:
 - Class index handling differs from spell index behavior; class index keys are slugs, not sources.
@@ -66,18 +78,26 @@ Flow:
 3. UI hooks derive display and computed values from activeCharacter.
 4. Edits call updateCharacter(id, patch).
 5. If id is activeCharacter, patch applies to in-memory draft.
-6. saveActiveCharacter persists draft into characters array.
-7. Persist middleware writes updated state to IndexedDB.
+6. `saveActiveCharacter()` stages the current draft revision in the characters array while keeping
+   the unsaved guard active.
+7. Persist middleware writes that snapshot to IndexedDB; the returned promise is the durability
+   boundary.
+8. Success marks only that unchanged draft revision clean. Failure restores the prior saved snapshot,
+   keeps the draft dirty, and lets the UI offer a retry.
 
 Validation behavior:
 - Imported files are validated with full character-shape checks before addCharacter.
 - Character store mutations apply minimal structural coercion and then validate against `characterPersistenceSchema`; payloads missing required canonical fields such as `proficiencies.skills` are rejected.
-- Rehydrated characters from IndexedDB are validated and normalized; invalid records are dropped.
+- Rehydrated characters from IndexedDB are validated and normalized. Unsupported-version and
+  malformed current-version records move into a persisted quarantine until the user acknowledges
+  the compatibility dialog.
 - Spell payloads are additionally checked against spellSelectionSchema for structural integrity.
 
 Unsaved changes behavior:
 - src/main.tsx syncs hasUnsavedChanges into Electron.
 - electron/main.ts blocks close with a confirmation dialog when unsaved changes exist.
+- Pending and rejected saves continue to report unsaved changes; an edit made during Save is not
+  acknowledged by the earlier write.
 - App preference changes do not flow through the character store and therefore never mark a character dirty.
 
 ## 3a) Hit Point Advancement and Management
@@ -96,12 +116,12 @@ Level-up flow:
 5. Removing a level prunes gain records outside the retained progression.
 
 Header management flow:
-1. The header heart opens `HitPointsModal` with the character's actual current and temporary HP. Legacy characters whose current HP was never initialized begin from their effective maximum.
+1. The header heart opens `HitPointsModal` with the character's actual current and temporary HP. An uninitialized current HP value begins from the effective maximum.
 2. The player may edit current/temp HP and add labeled flat or per-level maximum-HP bonuses or penalties. Negative adjustments are valid.
 3. An optional exact maximum overrides calculation and adjustments without deleting them.
 4. `useHitPoints().saveHitPointSettings()` applies the complete settings patch in one character-store mutation.
 
-Effective maximum HP resolves in this order: class/Constitution calculation, lasting adjustments, exact override. `hitPoints.max` is a zeroed legacy field and is not a canonical maximum-HP read.
+Effective maximum HP resolves in this order: class/Constitution calculation, lasting adjustments, exact override.
 
 ## 3b) Armor Class Management
 
@@ -117,17 +137,21 @@ Flow:
 4. An optional exact override takes final precedence without deleting saved adjustments.
 5. The modal saves adjustments and the optional override atomically.
 
-All UI and PDF reads must use `computeEffectiveCharacterArmorClass()` or `useArmorClass()`. The legacy `character.armorClass` field is retained only for migration compatibility.
+All UI and PDF reads must use `computeEffectiveCharacterArmorClass()` or `useArmorClass()`.
 
 ## 3c) Per-Character Rules and Sources
 
 Entry points:
 - src/pages/rules/RulesPage.tsx
-- src/pages/sources/SourcesPage.tsx
+- src/pages/rules/SourcesPage.tsx
+- src/pages/rules/SourcesPanel.tsx
 - src/hooks/data/useFilteredGameData.ts
 
 Flow:
-1. The Builder sidebar's Options group exposes Rules and Sources after character creation.
+1. Character-scoped Rules is the top-level configuration workspace after Builder and before
+   Character Sheet. Its navigation contains separate Character Rules and Sources pages. Character
+   Rules contains Ruleset, Advancement, and Character Options tabs. The workspace remains protected
+   until a character is active. Manual Actions & Effects lives in Builder's Details group.
 2. Rules edits patch `character.variantRules`; the selected `originSystem` is displayed but cannot be changed because switching it would require rebuilding origin and progression choices.
 3. Source edits patch `character.allowedSources`. The character's implicit PHB/XPHB ruleset source remains included in the effective filter.
 4. The Prefer Newer Printings control patches `variantRules.preferNewerPrintings` and changes the source-page warning to explain the active filtering behavior.
@@ -207,7 +231,7 @@ Tooltip note:
 
 Entry points:
 - src/components/character/wizard/steps/2-RulesStep.tsx
-- src/pages/sources/SourcesPage.tsx
+- src/pages/rules/SourcesPanel.tsx
 - src/pages/rules/RulesPage.tsx
 - src/hooks/data/useFilteredGameData.ts
 - src/hooks/data/useWizardGameData.ts
@@ -221,7 +245,8 @@ Flow:
 5. When `variantRules.preferNewerPrintings` is enabled, the shared hooks build a suppression set from 5etools `reprintedAs` metadata.
 6. DataFilter removes any entity whose `name|source` key is in the suppression set.
 7. Older printings remain available when newer reprints are not in the selected source list.
-8. After creation, `/sources` updates `allowedSources` and the newer-printing preference; `/rules` exposes the same preference alongside the other character rules.
+8. After creation, the Sources page at `/sources` updates `allowedSources` and owns the
+   newer-printing preference alongside the Character Rules page in Rules navigation.
 
 Wizard defaults:
 - New-character setup defaults `allowedSources` to the `2014-recommended` source preset (filtered to currently loaded sources).
@@ -249,35 +274,36 @@ Flow:
 5. Exhaustion uses the loaded ruleset record: PHB table rows are displayed and highlighted cumulatively, while formula-based XPHB text is rendered directly.
 6. Only active condition names and the exhaustion level are persisted; rules text remains game data.
 
-## 6) Character Schema Versioning and Migrations
+## 6) Character Schema Versioning
 
 Entry points:
-- src/lib/schema/migrations.ts
-- src/store/characterStore.ts (on rehydrate)
+- src/lib/schema/characterSchemaVersion.ts
+- src/store/characterStore.ts
 
 Flow:
-1. Character.version field tracks the schema version of a saved character.
-2. On rehydration from IndexedDB, migrateCharacter() is called with the character's version.
-3. Migration registry applies up-migrations to bring character from its version to CURRENT_SCHEMA_VERSION.
-4. If migration chain is broken or migration fails, character is rejected and logged.
-5. Migrations are registered with up() and down() handlers for forward/backward compatibility.
-
-Current implementation note:
-- `downgradeCharacter()` is intentionally infrastructure-only today (rollback/export support) and has no runtime callers in the app flow.
-- `CURRENT_SCHEMA_VERSION` is 6. v5 adds durable per-level hit-point gain records; v6 migrates legacy maximum HP into the explicit override model and initializes lasting HP/AC adjustment collections.
+1. `Character.schemaVersion` must equal `CURRENT_CHARACTER_SCHEMA_VERSION`.
+2. Import validates the exact current version and strict character schema before saving.
+3. IndexedDB hydration keeps valid current records and removes unsupported or malformed records from
+   the character list.
+4. Rejected records are moved into a persisted quarantine until the Home page requires the user to
+   acknowledge their removal. The dialog can export each original record as a `.tbc` backup for
+   recovery or use with a compatible older app version. A restart before acknowledgment preserves
+   the quarantine and presents the dialog again.
 
 Versioning strategy:
-- Schema version is incremented only on **breaking changes** (added required fields, removed fields, restructured data).
-- Non-breaking changes (new optional fields with defaults, enum expansions) don't require versioning.
-- Migration handlers must be idempotent and testable.
-- Downgrade support (down handlers) allows rolling back if needed.
+- Increment the integer character schema version for breaking changes such as required fields, removed fields, or restructured data.
+- Non-breaking optional additions do not require a version bump.
+- Older and newer files are intentionally unsupported before 1.0; do not add conversion paths or compatibility fields.
+- Purely derived initiative and saving-throw totals are not persisted. Initiative resolves from the
+  effective Dexterity modifier plus active effects; saving throws resolve from effective abilities,
+  proficiency ownership, and active effects.
 
-Example breaking change requiring migration:
+Example breaking change requiring a version bump:
 - Adding a required field without a safe default
 - Restructuring a nested object that changes how data is accessed
 - Removing a field that changes the interpretation of other fields
 
-See docs/contributor-start-here.md for schema migration guidelines.
+See docs/contributor-start-here.md for the pre-1.0 character-format policy.
 
 
 ## 7) Auto-Update Lifecycle
@@ -304,8 +330,10 @@ Portable executable behavior:
 - `updateManager` detects portable mode and adjusts behavior accordingly.
 
 Offline behavior:
-- Scheduled and manual checks short-circuit to `not-available` when Electron reports no network connectivity.
-- Connectivity-related updater failures are treated as `not-available` (not hard errors), avoiding noisy offline startup failure states.
+- Scheduled and manual checks return an explicit connection error when Electron reports no network
+  connectivity or the updater fails for a connectivity-related reason.
+- Scheduled checks remain quiet because only the Settings manual-check surface subscribes to update
+  errors; manual checks can therefore distinguish an offline failure from a confirmed current version.
 
 IPC channels:
 - `update:check`, `update:download`, `update:cancel`, `update:install`, `update:status`, `update:set-auto-check`, `update:get-version`, `update:get-current-changelog`

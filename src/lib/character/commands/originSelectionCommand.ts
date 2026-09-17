@@ -1,3 +1,4 @@
+import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
 import { createEmptyCharacter, emptyProvenance } from '@/lib/character/createCharacter'
 import type { Background5e, Class5e, Item5e, Race5e } from '@/types/5etools'
@@ -27,7 +28,10 @@ export function buildInitialCharacter(
   itemLookup: Map<string, Item5e>,
   resolveRaceChoiceOptions: ResolveRaceChoiceOptions,
 ): Character {
-  let character = createEmptyCharacter(selections.initial)
+  let character = createEmptyCharacter({
+    ...selections.initial,
+    raceAsiChoices: selections.raceAsiChoices ?? selections.initial.raceAsiChoices,
+  })
   let ledger = character.provenance ?? emptyProvenance()
 
   // Background is applied before race: under the 2024 origin system, the race and
@@ -80,7 +84,14 @@ export function buildInitialCharacter(
     const startingMaxHP = Math.max(
       1,
       getHitDiceFromClass(selections.classEntity) +
-        getAbilityModifier(character.abilityScores.constitution),
+        getAbilityModifier(
+          deriveEffectiveAbilityScores(
+            character,
+            selections.race,
+            selections.subrace,
+            selections.background,
+          ).total.constitution,
+        ),
     )
     character = applyPatch(character, {
       hitPoints: { ...character.hitPoints, current: startingMaxHP },

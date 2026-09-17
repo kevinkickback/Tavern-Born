@@ -29,6 +29,10 @@ describe('formatSpellDisplayName', () => {
   test('title-cases unresolved lowercase references', () => {
     expect(formatSpellDisplayName('custom shadow-bolt')).toBe('Custom Shadow-Bolt')
   })
+
+  test('hides a persisted source qualifier when canonical data is unavailable', () => {
+    expect(formatSpellDisplayName('fire bolt|XPHB')).toBe('Fire Bolt')
+  })
 })
 
 describe('ordinalSuffix', () => {

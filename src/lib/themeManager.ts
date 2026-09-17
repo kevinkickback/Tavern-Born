@@ -61,7 +61,7 @@ export function initThemeFromStorage() {
   applyThemeRootAttributes(root, getStoredAccentTheme(), getStoredAppearanceTheme())
 }
 
-export function setThemePreferences(accent: AccentTheme, appearance: AppearanceTheme) {
+function setThemePreferences(accent: AccentTheme, appearance: AppearanceTheme) {
   const root = document.getElementById('root')
   if (root) {
     applyThemeRootAttributes(root, accent, appearance)

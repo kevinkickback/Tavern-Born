@@ -1,3 +1,5 @@
+import type { FeatOptionSelections } from '@/types/feat'
+
 export type SourceType =
   | 'race'
   | 'subrace'
@@ -11,7 +13,7 @@ export type SourceType =
 
 export type GrantType = 'fixed' | 'choice' | 'placeholder'
 
-export type SpellAttributionMode = 'exact' | 'inferred-lowest-eligible'
+type SpellAttributionMode = 'exact' | 'inferred-lowest-eligible'
 
 /** SourceTag extended with spell-specific attribution metadata. Only used in ledger.spells. */
 export type SpellSourceTag = SourceTag & {
@@ -69,6 +71,12 @@ export interface ChoiceRecord {
   optionPool: string[]
   /** Names the user has selected so far. */
   selected: string[]
+  /** Source-qualified feat selections and their owned follow-up choices. */
+  selectedRefs?: Array<{
+    name: string
+    source?: string
+    options?: FeatOptionSelections
+  }>
   status: ChoiceStatus
 }
 

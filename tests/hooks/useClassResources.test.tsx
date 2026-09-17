@@ -29,7 +29,6 @@ const FIGHTER_CLASS_DATA = {
 
 function seedFighterCharacter(level: number, classResources?: Record<string, number>) {
   const character = makeCharacterFixture({
-    class: 'Fighter',
     classProgression: [{ name: 'Fighter', source: 'PHB', levels: level }],
     classResources,
   })
@@ -57,7 +56,6 @@ function seedFighterCharacter(level: number, classResources?: Record<string, num
       skills: [],
       senses: [],
       languages: [],
-      magicvariants: [],
       optionalfeatures: [],
       variantrules: [],
       trapHazards: [],
@@ -118,6 +116,27 @@ describe('useClassResources', () => {
 
     const secondWind = result.current.resources.find((r) => r.id === 'fighter-second-wind')
     expect(secondWind?.current).toBe(secondWind?.max)
+  })
+
+  test('applies resource maximum effects to current and reset limits', () => {
+    const character = seedFighterCharacter(1)
+    const effect = {
+      id: 'extra-second-wind',
+      label: 'Extra Second Wind uses',
+      target: { kind: 'resource-maximum' as const, resourceId: 'fighter-second-wind' },
+      operation: { kind: 'add' as const, value: 2 },
+      source: { kind: 'manual' as const, name: 'User adjustment' },
+    }
+    useCharacterStore.setState({
+      characters: [{ ...character, manualEffects: [effect] }],
+      activeCharacter: { ...character, manualEffects: [effect] },
+    })
+
+    const { result } = renderHook(() => useClassResources())
+
+    expect(
+      result.current.resources.find((resource) => resource.id === 'fighter-second-wind'),
+    ).toMatchObject({ current: 3, max: 3 })
   })
 
   test('updateCurrent clamps value to [0, max]', () => {

@@ -1,5 +1,5 @@
 import { Warning } from '@phosphor-icons/react'
-import { memo, useCallback, useMemo, useRef } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import {
   type ActiveFilters,
@@ -95,10 +95,8 @@ export interface FeatSelectionModalProps {
   feats: Feat5e[]
   maxSelections: number
   initialSelectedIds?: string[]
-  initialSpecialIds?: string[]
   characterSnapshot: PrereqCharacterSnapshot
   initialFilters?: ActiveFilters
-  allowIgnoreLimit?: boolean
   swapOnLimit?: boolean
   onConfirm: (selectedFeats: Feat5e[]) => void
 }
@@ -109,10 +107,8 @@ export function FeatSelectionModal({
   feats,
   maxSelections,
   initialSelectedIds = [],
-  initialSpecialIds = [],
   characterSnapshot,
   initialFilters,
-  allowIgnoreLimit = true,
   swapOnLimit = true,
   onConfirm,
 }: FeatSelectionModalProps) {
@@ -141,21 +137,8 @@ export function FeatSelectionModal({
     return { prereqMap: map, hasUnmetPrerequisites: hasUnmet }
   }, [feats, characterSnapshot])
 
-  const ignoreLimitRef = useRef(false)
-  const specialIdsRef = useRef(new Set(initialSpecialIds))
-
   const filterSections: FilterSection[] = useMemo(
     () => [
-      ...(allowIgnoreLimit
-        ? [
-            {
-              key: 'limit',
-              label: 'Options',
-              type: 'switches' as const,
-              options: [{ value: 'ignoreLimit', label: 'Ignore selection limit' }],
-            },
-          ]
-        : []),
       ...(featCategoryOptions.length > 1
         ? [
             {
@@ -183,7 +166,7 @@ export function FeatSelectionModal({
           ]
         : []),
     ],
-    [allowIgnoreLimit, featCategoryOptions, hasUnmetPrerequisites],
+    [featCategoryOptions, hasUnmetPrerequisites],
   )
 
   const categories: CategoryLimit<Feat5e>[] = useMemo(
@@ -191,17 +174,15 @@ export function FeatSelectionModal({
       {
         key: 'all',
         label: maxSelections === 1 ? 'feat' : 'feats',
-        max: maxSelections + specialIdsRef.current.size,
+        max: maxSelections,
         test: () => true,
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- special IDs are mutable via ref.
     [maxSelections],
   )
 
   const matchItem = useCallback(
     (item: Feat5e, search: string, activeFilters: ActiveFilters) => {
-      ignoreLimitRef.current = activeFilters.limit?.has('ignoreLimit') ?? false
       if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false
       const selectedCategories = activeFilters.featCategory
       if (selectedCategories && selectedCategories.size > 0) {
@@ -217,17 +198,6 @@ export function FeatSelectionModal({
       return true
     },
     [prereqMap],
-  )
-
-  const canSelect = useCallback(
-    (item: Feat5e, selectedIds: Set<string>, _allItems: Feat5e[]) => {
-      if (ignoreLimitRef.current) return true
-      const id = `${item.name}|${item.source ?? ''}`
-      if (selectedIds.has(id)) return true
-      const normalCount = [...selectedIds].filter((sid) => !specialIdsRef.current.has(sid)).length
-      return normalCount < maxSelections
-    },
-    [maxSelections],
   )
 
   const renderCard = useCallback(
@@ -260,7 +230,6 @@ export function FeatSelectionModal({
       matchItem={matchItem}
       filterSections={filterSections}
       categories={categories}
-      canSelect={canSelect}
       swapOnLimit={swapOnLimit}
       initialSelectedIds={initialSelectedIds}
       initialFilters={initialFilters}

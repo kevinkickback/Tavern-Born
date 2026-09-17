@@ -15,7 +15,9 @@ vi.mock('@/lib/storage/idb-storage', () => ({
 }))
 
 vi.mock('@/hooks/character/useHitPoints', () => ({
-  useHitPoints: () => ({ hitDie: 8 }),
+  useHitPoints: () => ({
+    hitDicePools: [{ id: 'fighter|phb', label: 'Fighter', die: 8, max: 1, used: 0 }],
+  }),
 }))
 
 vi.mock('@/hooks/character/useRitualCasting', () => ({

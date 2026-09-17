@@ -26,9 +26,6 @@ describe('Spell Operations', () => {
   describe('Adding spells (profile + provenance)', () => {
     test('addSpellToProfile adds cantrip and applySpellSelection updates provenance', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 1,
         classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
         spells: {
           spellProfiles: [
@@ -81,9 +78,6 @@ describe('Spell Operations', () => {
 
     test('addSpellToProfile adds a known spell', () => {
       const character = makeCharacterFixture({
-        class: 'Bard',
-        classSource: 'PHB',
-        level: 3,
         classProgression: [{ name: 'Bard', source: 'PHB', levels: 3 }],
         spells: {
           spellProfiles: [
@@ -120,9 +114,6 @@ describe('Spell Operations', () => {
 
     test('setProfileSpells replaces spell list on a profile', () => {
       const character = makeCharacterFixture({
-        class: 'Cleric',
-        classSource: 'PHB',
-        level: 5,
         classProgression: [{ name: 'Cleric', source: 'PHB', levels: 5 }],
         spells: {
           spellProfiles: [
@@ -167,9 +158,6 @@ describe('Spell Operations', () => {
   describe('Removing spells (profile + provenance)', () => {
     test('removeSpellFromProfile removes cantrip and provenance removal clears attribution', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 3,
         classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
         spells: {
           spellProfiles: [
@@ -223,9 +211,6 @@ describe('Spell Operations', () => {
 
     test('removeSpellFromProfile cleans up prepared spells list', () => {
       const character = makeCharacterFixture({
-        class: 'Druid',
-        classSource: 'PHB',
-        level: 5,
         classProgression: [{ name: 'Druid', source: 'PHB', levels: 5 }],
         spells: {
           spellProfiles: [
@@ -267,9 +252,6 @@ describe('Spell Operations', () => {
   describe('Swapping spells (atomic provenance operation)', () => {
     test('swapSpellProvenance maintains grant level attribution when replacing a choice', () => {
       const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 6,
         classProgression: [{ name: 'Wizard', source: 'PHB', levels: 6 }],
         spells: {
           spellProfiles: [
@@ -326,11 +308,7 @@ describe('Spell Operations', () => {
     })
 
     test('swapSpellProvenance preserves unrelated grants on the replaced spell', () => {
-      const character = makeCharacterFixture({
-        class: 'Wizard',
-        classSource: 'PHB',
-        level: 6,
-      })
+      const character = makeCharacterFixture({})
 
       // Spell has multiple grants: one from class choice, one from feat
       const mockLedger = {
@@ -380,11 +358,7 @@ describe('Spell Operations', () => {
 
   describe('Manual spell grants', () => {
     test('applyManualSpellGrant adds spell to provenance with manual source tag', () => {
-      const character = makeCharacterFixture({
-        class: 'Rogue',
-        classSource: 'PHB',
-        level: 3,
-      })
+      const character = makeCharacterFixture({})
 
       useCharacterStore.setState({
         activeCharacter: character,
@@ -408,11 +382,7 @@ describe('Spell Operations', () => {
     })
 
     test('removeSpellProvenance removes all tags for a spell', () => {
-      const character = makeCharacterFixture({
-        class: 'Cleric',
-        classSource: 'PHB',
-        level: 5,
-      })
+      const character = makeCharacterFixture({})
 
       const mockLedger = makeLedgerWithSpellEntry('Cure Wounds', {
         sourceType: 'class',
@@ -441,9 +411,6 @@ describe('Spell Operations', () => {
   describe('Prepared spells', () => {
     test('togglePrepared updates prepared list for prepared casters', () => {
       const character = makeCharacterFixture({
-        class: 'Cleric',
-        classSource: 'PHB',
-        level: 5,
         classProgression: [{ name: 'Cleric', source: 'PHB', levels: 5 }],
         spells: {
           spellProfiles: [
