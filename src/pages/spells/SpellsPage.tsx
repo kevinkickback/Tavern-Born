@@ -22,7 +22,6 @@ import { getSelectedSubclassData } from '@/lib/5etools/classData'
 import { parseSubclassSpells } from '@/lib/5etools/subclassSpells'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
-  buildSpellNameKeySet,
   dedupeSpellNames,
   formatSpellReference,
   getSpellNameKey,
@@ -101,8 +100,8 @@ export function SpellsPage() {
     removeSpellFromProfile,
     setProfileSpells,
     togglePrepared,
-    selectRacialSpell,
     removeRacialSpell,
+    setRacialSpellChoice,
     setRacialCastingAbility,
   } = useSpellProfileMutations(spellProfiles, spellcastingDetailByProfileId)
 
@@ -561,25 +560,12 @@ export function SpellsPage() {
     (names: string[]) => {
       if (!activeRacialChoice) return
 
-      const previousSelected = buildSpellNameKeySet(activeRacialChoice.selected)
-      const nextSelected = buildSpellNameKeySet(names)
-
-      for (const name of names) {
-        if (!previousSelected.has(getSpellNameKey(name))) {
-          selectRacialSpell(activeRacialChoice.profileId, activeRacialChoice.choiceId, name)
-        }
-      }
-
-      for (const name of activeRacialChoice.selected) {
-        if (!nextSelected.has(getSpellNameKey(name))) {
-          removeRacialSpell(activeRacialChoice.profileId, activeRacialChoice.choiceId, name)
-        }
-      }
+      setRacialSpellChoice(activeRacialChoice.profileId, activeRacialChoice.choiceId, names)
 
       setRacialChoiceModalOpen(false)
       setActiveRacialChoice(null)
     },
-    [activeRacialChoice, selectRacialSpell, removeRacialSpell],
+    [activeRacialChoice, setRacialSpellChoice],
   )
 
   if (!character) {

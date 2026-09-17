@@ -148,10 +148,12 @@ function itemRequirement(
 export function deriveStructuredItemEffects(
   equipment: readonly Equipment[],
   itemLookup: ReadonlyMap<string, Item5e> | undefined,
+  fallbackItemLookup?: ReadonlyMap<string, Item5e>,
 ): CharacterEffect[] {
   const effects: CharacterEffect[] = []
   for (const item of equipment) {
-    const data = resolveItemReference(item, itemLookup)
+    const data =
+      resolveItemReference(item, itemLookup) ?? resolveItemReference(item, fallbackItemLookup)
     if (!data) continue
     const source = {
       kind: 'item' as const,

@@ -179,6 +179,54 @@ describe('createCharacterSheetViewModel', () => {
     )
   })
 
+  test('projects initiative, sense, and resource maximum effects into exports', () => {
+    const fighter = {
+      name: 'Fighter',
+      source: 'PHB',
+      hd: { faces: 10 },
+      classTableGroups: [],
+      startingProficiencies: {},
+    } as Class5e
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
+      abilityScores: { ...makeCharacterFixture().abilityScores, dexterity: 14 },
+      visions: [{ type: 'darkvision', range: 60 }],
+      manualEffects: [
+        {
+          id: 'initiative',
+          label: 'Initiative bonus',
+          target: { kind: 'initiative' },
+          operation: { kind: 'add', value: 2 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        },
+        {
+          id: 'sense',
+          label: 'Darkvision bonus',
+          target: { kind: 'sense', sense: 'darkvision' },
+          operation: { kind: 'add', value: 30 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        },
+        {
+          id: 'resource',
+          label: 'Second Wind uses',
+          target: { kind: 'resource-maximum', resourceId: 'fighter-second-wind' },
+          operation: { kind: 'add', value: 2 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        },
+      ],
+    })
+
+    const viewModel = createCharacterSheetViewModel(character, {
+      classesByKey: buildClassLookup([fighter]),
+    })
+
+    expect(viewModel.initiativeModifier).toBe(4)
+    expect(viewModel.visionSummary).toBe('Darkvision 90 ft.')
+    expect(viewModel.classResourceRows[0]).toMatchObject({ max: 3, used: 0 })
+    expect(mapCharacterSheet2014(viewModel).textFields['Initiative bonus']).toBe('+4')
+    expect(mapCharacterSheet2024(viewModel).textFields.Text_16).toBe('+4')
+  })
+
   test('uses the shared effect totals in both fixed PDF templates', () => {
     const testClass = {
       name: 'Test Class',

@@ -102,9 +102,12 @@ export function pruneSpellsForDisabledSources(
 
   let changed = false
   const newProfiles = character.spells.spellProfiles.map((profile) => {
-    const newCantrips = profile.cantrips.filter(isSpellAllowed)
-    const newSpellsKnown = profile.spellsKnown.filter(isSpellAllowed)
-    const newPreparedSpells = profile.preparedSpells.filter(isSpellAllowed)
+    const fixedKeys = new Set((profile.fixedSpells ?? []).map(getSpellNameKey))
+    const keepMaterializedSpell = (reference: string) =>
+      fixedKeys.has(getSpellNameKey(reference)) || isSpellAllowed(reference)
+    const newCantrips = profile.cantrips.filter(keepMaterializedSpell)
+    const newSpellsKnown = profile.spellsKnown.filter(keepMaterializedSpell)
+    const newPreparedSpells = profile.preparedSpells.filter(keepMaterializedSpell)
     const newChoices = profile.choices?.map((choice) => ({
       ...choice,
       selected: choice.selected.filter(isSpellAllowed),

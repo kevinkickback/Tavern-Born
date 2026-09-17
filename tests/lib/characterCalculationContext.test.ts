@@ -9,7 +9,7 @@ import {
   createCharacterCalculationContext,
   deriveEffectiveAbilityScores,
 } from '@/lib/calculations/characterCalculationContext'
-import type { Background5e, Class5e, Feat5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Feat5e, Item5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('character calculation context', () => {
@@ -158,6 +158,68 @@ describe('character calculation context', () => {
         { kind: 'sense', sense: 'darkvision' },
         { kind: 'damage-resistance', damageType: 'test damage' },
       ]),
+    )
+  })
+
+  test('projects initiative and sense effects into canonical derived values', () => {
+    const character = makeCharacterFixture({
+      abilityScores: {
+        ...makeCharacterFixture().abilityScores,
+        dexterity: 14,
+      },
+      visions: [{ type: 'darkvision', range: 60 }],
+      manualEffects: [
+        {
+          id: 'initiative-bonus',
+          label: 'Initiative bonus',
+          target: { kind: 'initiative' },
+          operation: { kind: 'add', value: 3 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        },
+        {
+          id: 'darkvision-bonus',
+          label: 'Darkvision bonus',
+          target: { kind: 'sense', sense: 'darkvision' },
+          operation: { kind: 'add', value: 30 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        },
+      ],
+    })
+
+    const context = createCharacterCalculationContext(character, {})
+
+    expect(context.initiativeModifier).toBe(5)
+    expect(context.senses).toEqual([{ type: 'darkvision', range: 90 }])
+  })
+
+  test('falls back to raw item data when filtered item effects cannot resolve', () => {
+    const item = {
+      name: 'Ring of Protection',
+      source: 'DMG',
+      type: 'RG',
+      bonusAc: '+1',
+    } as Item5e
+    const character = makeCharacterFixture({
+      equipment: [
+        {
+          id: 'ring',
+          name: item.name,
+          source: item.source,
+          type: item.type,
+          quantity: 1,
+          equipped: true,
+        },
+      ],
+    })
+
+    const context = createCharacterCalculationContext(
+      character,
+      { itemLookup: new Map() },
+      { itemLookup: new Map([['Ring of Protection|DMG', item]]) },
+    )
+
+    expect(context.effects.sourceDeclarations).toEqual(
+      expect.arrayContaining([expect.objectContaining({ target: { kind: 'armor-class' } })]),
     )
   })
 

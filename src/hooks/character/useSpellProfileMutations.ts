@@ -19,6 +19,7 @@ import {
   selectRacialSpell as selectRacialSpellCommand,
   setProfileSpells as setProfileSpellsCommand,
   setRacialCastingAbility as setRacialCastingAbilityCommand,
+  setRacialSpellChoice as setRacialSpellChoiceCommand,
   syncSpellProfiles,
   toggleSpellPrepared,
 } from '@/lib/character/commands/spellCommands'
@@ -231,6 +232,22 @@ export function useSpellProfileMutations(
     [character, commandCharacter, currentLedger, applySpellCommand],
   )
 
+  const setRacialSpellChoice = useCallback(
+    (profileId: string, choiceId: string, selectedSpells: string[]) => {
+      if (!character || !commandCharacter) return
+      applySpellCommand(
+        setRacialSpellChoiceCommand(
+          commandCharacter,
+          currentLedger,
+          profileId,
+          choiceId,
+          selectedSpells,
+        ),
+      )
+    },
+    [character, commandCharacter, currentLedger, applySpellCommand],
+  )
+
   const setRacialCastingAbility = useCallback(
     (profileId: string, ability: string) => {
       if (!character || !commandCharacter) return
@@ -249,6 +266,7 @@ export function useSpellProfileMutations(
     togglePrepared,
     selectRacialSpell,
     removeRacialSpell,
+    setRacialSpellChoice,
     setRacialCastingAbility,
   }
 }

@@ -415,20 +415,6 @@ const hitPointsSchema = z.object({
   temporary: z.number().int().min(0),
 })
 
-const savingThrowEntrySchema = z.object({
-  proficient: z.boolean(),
-  bonus: z.number().int(),
-})
-
-const savingThrowsSchema = z.object({
-  strength: savingThrowEntrySchema,
-  dexterity: savingThrowEntrySchema,
-  constitution: savingThrowEntrySchema,
-  intelligence: savingThrowEntrySchema,
-  wisdom: savingThrowEntrySchema,
-  charisma: savingThrowEntrySchema,
-})
-
 const skillEntrySchema = z.object({
   proficient: z.boolean(),
   expertise: z.boolean(),
@@ -788,7 +774,6 @@ export const characterSchema = z
     maxHitPointsOverride: z.number().int().min(1).optional(),
     armorClassOverride: z.number().int().min(0).optional(),
     armorClassAdjustments: z.array(armorClassAdjustmentSchema).optional(),
-    initiative: z.number().int(),
     movement: characterMovementSchema,
     movementAdjustments: z.array(movementAdjustmentSchema).optional(),
     movementOverrides: z.record(z.number().int().nonnegative()).optional(),
@@ -796,7 +781,6 @@ export const characterSchema = z
     damageResistances: z.array(z.string()).optional(),
     damageImmunities: z.array(z.string()).optional(),
     conditionImmunities: z.array(z.string()).optional(),
-    savingThrows: savingThrowsSchema,
     skills: skillsSchema,
     details: characterDetailsSchema,
     portrait: z.string().optional(),

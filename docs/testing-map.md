@@ -184,7 +184,8 @@ new tests land and do not lower them to merge a change.
 - Portrait preview rendering and wizard preview wiring in tests/integration/portraitCardPreview.test.tsx and tests/integration/basicsStepPortraitPreview.test.tsx
 - Spell hook behavior coverage in tests/hooks/useSpellSlots.test.tsx (add/remove spells, profile management, prepared toggles)
 - Spell identity coverage includes lowercase legacy references, source-qualified catalog resolution,
-  modal hiding/locking, and mixed-case command deduplication.
+  modal hiding/locking, mixed-case command deduplication, source-qualified racial-pool retention,
+  and atomic racial-choice replacement.
 - Command-layer spell and class coverage in tests/unit/spellCommands.test.ts and tests/unit/classCommands.test.ts
 - Structured class-choice command coverage in tests/unit/classChoiceCommands.test.ts includes
   partial drafts, cardinality/source validation, identity-stable slot ownership across later
@@ -242,13 +243,16 @@ new tests land and do not lower them to merge a change.
 	including class icons, current portrait and organization paths, hosted base paths, and real packaged SVG loading
 - Store-level atomic load coverage in tests/store/gameDataStore.test.ts prevents failed background
   refreshes and required foreground resource failures from clobbering cache/state while allowing
-  optional foreground presentation failures.
+  optional foreground presentation failures, and rejects stale progress from superseded loads.
 - Character sheet PDF boundary coverage for lookup-enriched view-model projection, active typed
   defenses, unified feat ownership, organization-emblem embedding, semantic 2014/2024 mapping,
   shared field-capacity limits, export-preflight classification, real shipped-template field-name
   contracts, form filling, and 2014 MPMB cleanup, plus saved-file compatibility coverage for
   resistance, armor, language, tool, and checkbox appearances and flat
   workspace-shell/preview-canvas presentation coverage
+- Calculation-context, resource-hook, and PDF regressions verify initiative, sense-range, and
+  resource-maximum effects have live consumers. Filtered item-effect resolution also verifies exact
+  raw-catalog fallback for retained source-qualified equipment.
 - Action projection coverage resolves parsed class, subclass, selected-feature, and every persisted
   feat-owner container instead of relying on empty saved presentation descriptions. Spellcasting
   detail coverage also verifies 2014 known and 2024 prepared limits owned by casting subclasses;

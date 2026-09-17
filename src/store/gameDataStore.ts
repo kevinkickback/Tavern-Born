@@ -225,7 +225,11 @@ export const useGameDataStore = create<GameDataState>()(
           const data = await loadDataFromSource(config, {
             onProgress: background
               ? undefined
-              : (current, total, resource) => set({ loadProgress: { current, total, resource } }),
+              : (current, total, resource) => {
+                  if (requestId === activeLoadRequestId) {
+                    set({ loadProgress: { current, total, resource } })
+                  }
+                },
             onResourceFailure: (resource, failure) => {
               failedResources.add(resource)
               if (failure.required) failedRequiredResources.add(resource)

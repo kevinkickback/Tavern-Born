@@ -74,6 +74,33 @@ describe('spellProfiles', () => {
     expect(profiles[2].label).toBe(SPECIAL_SPELL_PROFILE_LABEL)
   })
 
+  test('ensureSpellProfiles preserves fixed ownership metadata on the special profile', () => {
+    const character = makeCharacterFixture({
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: SPECIAL_SPELL_PROFILE_ID,
+            type: 'special',
+            label: 'Special',
+            cantrips: ['Light|PHB'],
+            spellsKnown: [],
+            preparedSpells: [],
+            fixedSpells: ['Light|PHB'],
+            alwaysPrepared: true,
+          },
+        ],
+      },
+    })
+
+    expect(
+      ensureSpellProfiles(character).find((profile) => profile.type === 'special'),
+    ).toMatchObject({
+      cantrips: ['Light|PHB'],
+      fixedSpells: ['Light|PHB'],
+    })
+  })
+
   test('ensureSpellProfiles merges subclass grants into the parent class profile', () => {
     const character = makeCharacterFixture({
       classProgression: [

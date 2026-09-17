@@ -67,6 +67,8 @@ export interface CharacterCalculationContext {
   classes: readonly Class5e[]
   feats: readonly Feat5e[]
   abilityScores: EffectiveAbilityScoreData
+  initiativeModifier: number
+  senses: readonly EffectiveSense[]
   equipment: CharacterEquipmentCalculationState
   movement: EffectiveMovement
   effects: {
@@ -74,6 +76,46 @@ export interface CharacterCalculationContext {
     declarations: readonly CharacterEffect[]
     resolutionContext: EffectResolutionContext
   }
+}
+
+interface EffectiveSense {
+  type: string
+  range?: number
+}
+
+function deriveEffectiveSenses(
+  character: Character,
+  effects: readonly CharacterEffect[],
+  context: EffectResolutionContext,
+): EffectiveSense[] {
+  const senses = new Map<string, EffectiveSense>()
+  const storedSenseKeys = new Set<string>()
+  for (const vision of character.visions ?? []) {
+    const key = vision.type.trim().toLowerCase()
+    if (key) {
+      senses.set(key, { ...vision })
+      storedSenseKeys.add(key)
+    }
+  }
+  for (const effect of effects) {
+    if (effect.target.kind !== 'sense') continue
+    const key = effect.target.sense.trim().toLowerCase()
+    if (key && !senses.has(key)) senses.set(key, { type: effect.target.sense })
+  }
+
+  return [...senses.entries()].flatMap(([key, sense]) => {
+    const resolved = resolveNumericEffect(
+      sense.range ?? 0,
+      { kind: 'sense', sense: key },
+      effects,
+      context,
+    )
+    if (resolved.steps.length === 0 && sense.range === undefined) {
+      return storedSenseKeys.has(key) ? [sense] : []
+    }
+    const range = Math.max(0, Math.trunc(resolved.value))
+    return range > 0 ? [{ ...sense, range }] : []
+  })
 }
 
 function getProvenanceRacialBonuses(
@@ -225,12 +267,16 @@ export function createCharacterCalculationContext(
   const sourceEffects = [
     ...deriveStructuredRaceEffects(raceResolution.mergedRace),
     ...deriveStructuredFeatEffects(resolvedFeats),
-    ...deriveStructuredItemEffects(
-      allEquipment,
-      primaryLookups.itemLookup ?? rawLookups.itemLookup,
-    ),
+    ...deriveStructuredItemEffects(allEquipment, primaryLookups.itemLookup, rawLookups.itemLookup),
   ]
   const effects = getCharacterEffects(character, getTotalCharacterLevel(character), sourceEffects)
+  const abilityScores = deriveEffectiveAbilityScores(
+    character,
+    raceResolution.parentRace,
+    raceResolution.subraceData,
+    background,
+    sourceEffects,
+  )
 
   return {
     character,
@@ -242,13 +288,16 @@ export function createCharacterCalculationContext(
     background,
     classes,
     feats: resolvedFeats,
-    abilityScores: deriveEffectiveAbilityScores(
-      character,
-      raceResolution.parentRace,
-      raceResolution.subraceData,
-      background,
-      sourceEffects,
+    abilityScores,
+    initiativeModifier: Math.trunc(
+      resolveNumericEffect(
+        abilityScores.modifiers.dexterity,
+        { kind: 'initiative' },
+        effects,
+        effectResolutionContext,
+      ).value,
     ),
+    senses: deriveEffectiveSenses(character, effects, effectResolutionContext),
     equipment: {
       all: allEquipment,
       equipped: allEquipment.filter((item) => item.equipped),

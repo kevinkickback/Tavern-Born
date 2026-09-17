@@ -88,18 +88,9 @@ test('active-character spell workflow: profile switch, add/remove, prepared togg
     },
     equipment: [],
     hitPoints: { current: 12, temporary: 0 },
-    initiative: 2,
     movement: {
       speeds: { walk: 30 },
       source: { kind: 'manual', name: 'E2E seed' },
-    },
-    savingThrows: {
-      strength: { proficient: false, bonus: 0 },
-      dexterity: { proficient: false, bonus: 0 },
-      constitution: { proficient: false, bonus: 0 },
-      intelligence: { proficient: false, bonus: 0 },
-      wisdom: { proficient: false, bonus: 0 },
-      charisma: { proficient: false, bonus: 0 },
     },
     skills: {},
     details: {},

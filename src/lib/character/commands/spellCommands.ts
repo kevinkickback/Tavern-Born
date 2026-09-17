@@ -653,47 +653,19 @@ export function selectRacialSpell(
   choiceId: string,
   spellName: string,
 ): SpellCommandResult {
-  const racialProfile = character.spells.spellProfiles.find((profile) => profile.id === profileId)
-  const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
-    if (profile.id !== profileId) return profile
-    const choice =
-      profile.type === 'racial'
-        ? profile.choices?.find((entry) => entry.id === choiceId)
-        : undefined
-    const isCantrip = choice?.isCantrip ?? true
-    const choices = profile.choices?.map((entry) => {
-      if (
-        entry.id !== choiceId ||
-        entry.selected.some((name) => getSpellNameKey(name) === getSpellNameKey(spellName)) ||
-        entry.selected.length >= entry.count
-      ) {
-        return entry
-      }
-      return { ...entry, selected: [...entry.selected, spellName] }
-    })
+  const choice = character.spells.spellProfiles
+    .find((profile) => profile.id === profileId)
+    ?.choices?.find((entry) => entry.id === choiceId)
+  if (!choice || choice.selected.length >= choice.count) {
     return {
-      ...profile,
-      ...(choices ? { choices } : {}),
-      cantrips: isCantrip ? dedupeSpellNames([...profile.cantrips, spellName]) : profile.cantrips,
-      spellsKnown: isCantrip
-        ? profile.spellsKnown
-        : dedupeSpellNames([...profile.spellsKnown, spellName]),
+      characterPatch: createSpellProfilePatch(character, character.spells.spellProfiles),
+      provenanceUpdate: ledger,
     }
-  })
-
-  const sourceType = character.subrace ? 'subrace' : 'race'
-  const sourceName = character.subrace ?? character.race ?? racialProfile?.raceName ?? 'Race'
-  const sourceRef = character.subrace
-    ? character.subraceSource
-    : (character.raceSource ?? racialProfile?.raceSource)
-  const sourceTag = makeSourceTag(sourceType, sourceName, 'choice', sourceRef)
-
-  const updatedLedger = addSpellGrant(ledger, spellName, sourceTag)
-
-  return {
-    characterPatch: createSpellProfilePatch(character, updatedProfiles),
-    provenanceUpdate: updatedLedger,
   }
+  return setRacialSpellChoice(character, ledger, profileId, choiceId, [
+    ...choice.selected,
+    spellName,
+  ])
 }
 
 /**
@@ -714,52 +686,107 @@ export function removeRacialSpell(
   spellName: string,
 ): SpellCommandResult {
   const spellKey = getSpellNameKey(spellName)
-  const racialProfile = character.spells.spellProfiles.find((profile) => profile.id === profileId)
-  const updatedProfiles = (character.spells.spellProfiles ?? []).map((profile) => {
-    if (profile.id !== profileId) return profile
+  const choice = character.spells.spellProfiles
+    .find((profile) => profile.id === profileId)
+    ?.choices?.find((entry) => entry.id === choiceId)
+  return setRacialSpellChoice(
+    character,
+    ledger,
+    profileId,
+    choiceId,
+    choice?.selected.filter((name) => getSpellNameKey(name) !== spellKey) ?? [],
+  )
+}
 
+/** Replace one racial spell choice and its provenance in a single command result. */
+export function setRacialSpellChoice(
+  character: Character,
+  ledger: ProvenanceLedger,
+  profileId: string,
+  choiceId: string,
+  selectedSpells: readonly string[],
+): SpellCommandResult {
+  const racialProfile = character.spells.spellProfiles.find((profile) => profile.id === profileId)
+  const choice = racialProfile?.choices?.find((entry) => entry.id === choiceId)
+  if (!racialProfile || racialProfile.type !== 'racial' || !choice) {
+    return {
+      characterPatch: createSpellProfilePatch(character, character.spells.spellProfiles),
+      provenanceUpdate: ledger,
+    }
+  }
+
+  const poolKeys = choice.pool ? buildSpellNameKeySet(choice.pool) : null
+  const nextSelected = dedupeSpellNames(selectedSpells)
+    .filter((name) => !poolKeys || poolKeys.has(getSpellNameKey(name)))
+    .slice(0, choice.count)
+  const previousKeys = buildSpellNameKeySet(choice.selected)
+  const nextKeys = buildSpellNameKeySet(nextSelected)
+  const otherChoiceKeys = buildSpellNameKeySet(
+    (racialProfile.choices ?? [])
+      .filter((entry) => entry.id !== choiceId)
+      .flatMap((entry) => entry.selected),
+  )
+  const retainedByProfile = new Set([
+    ...buildSpellNameKeySet(racialProfile.fixedSpells ?? []),
+    ...otherChoiceKeys,
+  ])
+  const removableKeys = new Set(
+    [...previousKeys].filter((key) => !nextKeys.has(key) && !retainedByProfile.has(key)),
+  )
+  const retainSpell = (name: string) => !removableKeys.has(getSpellNameKey(name))
+
+  const updatedProfiles = character.spells.spellProfiles.map((profile) => {
+    if (profile.id !== profileId) return profile
+    const cantrips = profile.cantrips.filter(retainSpell)
+    const spellsKnown = profile.spellsKnown.filter(retainSpell)
     return {
       ...profile,
-      choices: profile.choices?.map((choice) =>
-        choice.id === choiceId
-          ? {
-              ...choice,
-              selected: choice.selected.filter((name) => getSpellNameKey(name) !== spellKey),
-            }
-          : choice,
+      choices: profile.choices?.map((entry) =>
+        entry.id === choiceId ? { ...entry, selected: nextSelected } : entry,
       ),
-      cantrips: profile.cantrips.filter((name) => getSpellNameKey(name) !== spellKey),
-      spellsKnown: profile.spellsKnown.filter((name) => getSpellNameKey(name) !== spellKey),
-      preparedSpells: profile.preparedSpells.filter((name) => getSpellNameKey(name) !== spellKey),
+      cantrips: choice.isCantrip ? dedupeSpellNames([...cantrips, ...nextSelected]) : cantrips,
+      spellsKnown: choice.isCantrip
+        ? spellsKnown
+        : dedupeSpellNames([...spellsKnown, ...nextSelected]),
+      preparedSpells: profile.preparedSpells.filter(retainSpell),
     }
   })
 
-  const normKey = spellKey
-  const tags = ledger.spells[normKey] ?? []
   const sourceType = character.subrace ? 'subrace' : 'race'
-  const sourceName = character.subrace ?? character.race ?? racialProfile?.raceName ?? 'Race'
+  const sourceName = character.subrace ?? character.race ?? racialProfile.raceName ?? 'Race'
   const sourceRef = character.subrace
     ? character.subraceSource
-    : (character.raceSource ?? racialProfile?.raceSource)
-  const filtered = tags.filter(
-    (tag) =>
-      !(
-        tag.sourceType === sourceType &&
-        tag.sourceName === sourceName &&
-        (tag.sourceRef ?? '') === (sourceRef ?? '')
-      ),
-  )
-
-  const newSpells =
-    filtered.length > 0
-      ? { ...ledger.spells, [normKey]: filtered }
-      : Object.fromEntries(Object.entries(ledger.spells).filter(([key]) => key !== normKey))
-
-  const updatedLedger = { ...ledger, spells: newSpells }
+    : (character.raceSource ?? racialProfile.raceSource)
+  const sourceTag: SpellSourceTag = {
+    ...makeSourceTag(sourceType, sourceName, 'choice', sourceRef),
+    grantVariant: choiceId,
+  }
+  let provenanceUpdate = ledger
+  for (const previous of choice.selected) {
+    const key = getSpellNameKey(previous)
+    const retained = (provenanceUpdate.spells[key] ?? []).filter(
+      (tag) =>
+        !(
+          tag.sourceType === sourceType &&
+          tag.sourceName === sourceName &&
+          (tag.sourceRef ?? '') === (sourceRef ?? '') &&
+          tag.grantType === 'choice' &&
+          (tag.grantVariant === choiceId ||
+            (tag.grantVariant === undefined && !otherChoiceKeys.has(key)))
+        ),
+    )
+    const spells = { ...provenanceUpdate.spells }
+    if (retained.length > 0) spells[key] = retained
+    else delete spells[key]
+    provenanceUpdate = { ...provenanceUpdate, spells }
+  }
+  for (const selected of nextSelected) {
+    provenanceUpdate = addSpellGrant(provenanceUpdate, selected, sourceTag)
+  }
 
   return {
     characterPatch: createSpellProfilePatch(character, updatedProfiles),
-    provenanceUpdate: updatedLedger,
+    provenanceUpdate,
   }
 }
 

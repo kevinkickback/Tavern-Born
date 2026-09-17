@@ -127,7 +127,7 @@ export function mapCharacterSheet2024(viewModel: CharacterSheetViewModel): Chara
     Text_12: String(Math.max(0, character.hitDiceUsed ?? 0)),
     Text_13: String(viewModel.level),
     Text_14: formatViewModelModifier(viewModel.proficiencyBonus),
-    Text_16: formatViewModelModifier(viewModel.abilityModifiers.dexterity),
+    Text_16: formatViewModelModifier(viewModel.initiativeModifier),
     Text_17: `${viewModel.walkingSpeed} ft`,
     Text_18: normalizeSize(viewModel.sizeSummary),
     Text_19: String(passivePerception),

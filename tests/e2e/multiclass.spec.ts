@@ -79,18 +79,9 @@ const MULTICLASS_CHARACTER = {
   },
   equipment: [],
   hitPoints: { current: 52, temporary: 0 },
-  initiative: 1,
   movement: {
     speeds: { walk: 30 },
     source: { kind: 'manual' as const, name: 'E2E seed' },
-  },
-  savingThrows: {
-    strength: { proficient: true, bonus: 0 },
-    dexterity: { proficient: false, bonus: 0 },
-    constitution: { proficient: true, bonus: 0 },
-    intelligence: { proficient: true, bonus: 0 },
-    wisdom: { proficient: true, bonus: 0 },
-    charisma: { proficient: false, bonus: 0 },
   },
   skills: {},
   details: {},

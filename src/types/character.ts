@@ -144,7 +144,6 @@ export interface Character {
   armorClassOverride?: number
   /** Lasting bonuses or penalties applied to calculated AC. */
   armorClassAdjustments?: ArmorClassAdjustment[]
-  initiative: number
   /** Canonical structured base movement, normally supplied by the selected race/species. */
   movement: CharacterMovement
   /** Labeled additive changes applied to individual movement modes. */
@@ -162,7 +161,6 @@ export interface Character {
 
   /** Condition immunities granted by race or other sources. */
   conditionImmunities?: string[]
-  savingThrows: SavingThrows
   skills: Skills
 
   details: CharacterDetails
@@ -421,15 +419,6 @@ export interface Currency {
 export interface HitPoints {
   current: number
   temporary: number
-}
-
-interface SavingThrows {
-  strength: { proficient: boolean; bonus: number }
-  dexterity: { proficient: boolean; bonus: number }
-  constitution: { proficient: boolean; bonus: number }
-  intelligence: { proficient: boolean; bonus: number }
-  wisdom: { proficient: boolean; bonus: number }
-  charisma: { proficient: boolean; bonus: number }
 }
 
 export interface Skills {

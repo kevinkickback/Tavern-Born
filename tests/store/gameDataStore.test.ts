@@ -112,6 +112,42 @@ describe('gameDataStore', () => {
     expect(contentChanged).toBe(true)
   })
 
+  test('ignores progress reported by a superseded load', async () => {
+    let firstProgress: ((current: number, total: number, resource: string) => void) | undefined
+    let secondProgress: ((current: number, total: number, resource: string) => void) | undefined
+    let resolveFirst: ((data: GameData) => void) | undefined
+    let resolveSecond: ((data: GameData) => void) | undefined
+    loadDataFromSourceMock
+      .mockImplementationOnce((_config, options) => {
+        firstProgress = options?.onProgress
+        return new Promise<GameData>((resolve) => {
+          resolveFirst = resolve
+        })
+      })
+      .mockImplementationOnce((_config, options) => {
+        secondProgress = options?.onProgress
+        return new Promise<GameData>((resolve) => {
+          resolveSecond = resolve
+        })
+      })
+
+    const firstLoad = useGameDataStore.getState().loadGameData(config)
+    const secondLoad = useGameDataStore.getState().loadGameData({ ...config, path: '/new-data' })
+    secondProgress?.(1, 4, 'new/classes')
+    firstProgress?.(9, 10, 'old/spells')
+
+    expect(useGameDataStore.getState().loadProgress).toEqual({
+      current: 1,
+      total: 4,
+      resource: 'new/classes',
+    })
+
+    resolveSecond?.(makeGameDataFixture())
+    await secondLoad
+    resolveFirst?.(makeGameDataFixture())
+    await firstLoad
+  })
+
   test('loadGameData reports unchanged content without replacing in-memory data', async () => {
     const data = makeGameDataFixture()
     const lastDataChangedAt = '2026-01-01T00:00:00.000Z'

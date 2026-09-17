@@ -9,6 +9,7 @@ import {
 } from '@/lib/5etools/classRuleNormalization'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { buildClassLookup } from '@/lib/5etools/lookups'
+import { getEffectiveClassResourceMaximum } from '@/lib/calculations/classResources'
 import { getCharacterClassEntries } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { ClassResourceRecovery } from '@/types/classRules'
@@ -42,7 +43,7 @@ export function useClassResources(): {
     const stored = character.classResources ?? {}
     const progression = getCharacterClassEntries(character)
     const chaScore = calculationContext?.abilityScores.total.charisma ?? 10
-    const chaMod = Math.max(1, Math.floor((chaScore - 10) / 2))
+    const chaMod = Math.floor((chaScore - 10) / 2)
 
     return progression.flatMap((entry) => {
       const classData = resolveClassReference(
@@ -53,12 +54,18 @@ export function useClassResources(): {
       const defs = getClassResourceDefs(classData, entry.levels ?? 1)
       const levelIdx = Math.max(0, Math.min(19, (entry.levels ?? 1) - 1))
       return defs.map((def) => {
-        const max = def.maxFormula === 'cha-mod' ? chaMod : (def.maxPerLevel[levelIdx] ?? 0)
+        const max = getEffectiveClassResourceMaximum(
+          def,
+          levelIdx,
+          chaMod,
+          calculationContext?.effects.declarations,
+          calculationContext?.effects.resolutionContext,
+        )
         const recovery = getClassResourceRecoveryAtLevel(def, levelIdx)
         return {
           id: def.id,
           label: def.label,
-          current: stored[def.id] ?? max,
+          current: Math.max(0, Math.min(max, stored[def.id] ?? max)),
           max,
           restType: recovery.shortRest !== undefined ? 'short' : 'long',
           recovery,

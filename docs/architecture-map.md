@@ -64,7 +64,7 @@ This document describes the current Tavern-Born runtime architecture and where r
 
 Spellcasting note:
 - `src/hooks/character/useSpellSlots.ts` is a **read-only** derivation hook: exposes spell slots, profiles, and spellcasting detail per profile. It does not include mutations.
-- `src/hooks/character/useSpellProfileMutations.ts` owns all spell mutation callbacks (add/remove spells, toggle prepared, racial spells, profile sync). Callers that need both derived spell state and mutation callbacks must call both hooks and wire their outputs together (see `SpellsPage.tsx` for the pattern).
+- `src/hooks/character/useSpellProfileMutations.ts` owns all spell mutation callbacks (add/remove spells, toggle prepared, atomic racial-choice replacement, profile sync). Callers that need both derived spell state and mutation callbacks must call both hooks and wire their outputs together (see `SpellsPage.tsx` for the pattern).
 - `src/hooks/character/useSpellSlotMutations.ts` is the thin store adapter for shared/Pact slot use
   and explicit manual corrections. `src/hooks/character/useRestPreview.ts` composes current derived
   maxima/resources/HP into `applyRest()` and commits its reviewed result as one draft patch.
@@ -155,8 +155,10 @@ Current implementation notes:
   workbench keeps the manual form and Actions/Effects tabs in the narrower left pane and the
   complete current source/manual list in the larger right pane. Source-owned entries remain
   editable only through Equipment, Race, Class, Feats, Spells, and their other owning workflows;
-  this page never duplicates or deletes them. Source action projection is conservative: structured
-  weapon attacks and timed spells are supplemented only by parsed race, selected-feat, class,
+  this page never duplicates or deletes them. Initiative, sense-range, and
+  class-resource-maximum effects project through the shared calculation context and PDF/runtime
+  resource consumers; effect targets are not presentation-only records. Source action projection
+  is conservative: structured weapon attacks and timed spells are supplemented only by parsed race, selected-feat, class,
   subclass, and selected-feature rules text that explicitly grants an action, bonus action,
   reaction, or attack replacement. Persisted empty presentation descriptions are not treated as the
   canonical rules source. Passive prose is not promoted to an action, and non-action casting times

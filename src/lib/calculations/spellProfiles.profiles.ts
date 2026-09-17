@@ -5,7 +5,7 @@ import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUt
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { Class5e, RaceAdditionalSpells } from '@/types/5etools'
 import type { Character, RaceSpellChoice, SpellProfile } from '@/types/character'
-import { getSpellNameKey } from './spellIdentity'
+import { buildSpellNameKeySet, getSpellNameKey } from './spellIdentity'
 import {
   buildClassProfileLabel,
   RACIAL_SPELL_PROFILE_LABEL,
@@ -136,7 +136,9 @@ export function buildRacialSpellProfile(params: {
 
     if (pool.length > 0) {
       const existingChoice = existingProfile?.choices?.find((c) => c.id === 'block-choice')
-      const selected = existingChoice?.selected.filter((s) => pool.includes(s)) ?? []
+      const poolKeys = buildSpellNameKeySet(pool)
+      const selected =
+        existingChoice?.selected.filter((spell) => poolKeys.has(getSpellNameKey(spell))) ?? []
       choices.push({
         id: 'block-choice',
         count: 1,
@@ -314,6 +316,10 @@ export function ensureSpellProfiles(
     cantrips: special?.cantrips ?? [],
     spellsKnown: special?.spellsKnown ?? [],
     preparedSpells: [],
+    ...(special?.fixedSpells ? { fixedSpells: [...special.fixedSpells] } : {}),
+    ...(special?.alwaysPreparedSpells
+      ? { alwaysPreparedSpells: [...special.alwaysPreparedSpells] }
+      : {}),
     alwaysPrepared: true,
   })
 

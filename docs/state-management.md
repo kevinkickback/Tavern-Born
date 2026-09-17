@@ -288,7 +288,7 @@ factory in `src/lib/character/createCharacter.ts`.
 **Current Workflow:**
 - Domain commands in `src/lib/character/commands/spellCommands.ts` coordinate profile updates and provenance ledger changes together.
 - `useSpellSlots()` is read-only and derives slots, profiles, and spellcasting detail.
-- `useSpellProfileMutations()` provides all spell mutation callbacks (add/remove/prepare/racial spells) for components that need spell writes outside the spell slot derivation hook.
+- `useSpellProfileMutations()` provides all spell mutation callbacks (add/remove/prepare/racial spells) for components that need spell writes outside the spell slot derivation hook. Racial choice confirmation replaces the complete selected set through one command and one provenance patch; components never sequence per-spell writes from a stale render snapshot.
 - `useSpellSlotMutations()` adapts the pure slot-use commands to the active-character draft.
 - The Builder's Spellcasting details pane reads only derived slot capacity and exposes no slot-use
   controls. Persisted slot usage and its mutation adapter remain intentional runtime state for the

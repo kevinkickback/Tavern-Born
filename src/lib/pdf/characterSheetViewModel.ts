@@ -11,6 +11,7 @@ import { deriveCharacterActions } from '@/lib/calculations/actions'
 import { computeEffectiveCharacterArmorClass } from '@/lib/calculations/armorClass'
 import { getEffectiveCarryCapacity } from '@/lib/calculations/carryingCapacity'
 import { createCharacterCalculationContext } from '@/lib/calculations/characterCalculationContext'
+import { getEffectiveClassResourceMaximum } from '@/lib/calculations/classResources'
 import { type EffectResolutionContext, isCharacterEffectActive } from '@/lib/calculations/effects'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
 import {
@@ -103,6 +104,7 @@ export interface CharacterSheetViewModel {
   proficiencyBonus: number
   effectiveAbilityScores: AbilityScores
   abilityModifiers: Record<AbilityName, number>
+  initiativeModifier: number
   skillByName: ReadonlyMap<string, ModifierResult>
   savingThrowByAbility: ReadonlyMap<AbilityName, ModifierResult>
   effectiveArmorClass: number
@@ -195,16 +197,13 @@ function extractBackgroundFeatureBlock(
   }
 }
 
-function buildVisionSummary(character: Character, mergedRace?: Race5e): string {
-  if (character.visions?.length) {
-    return character.visions
-      .map((vision) => {
-        const label = vision.type.charAt(0).toUpperCase() + vision.type.slice(1)
-        return vision.range != null ? `${label} ${vision.range} ft.` : label
-      })
-      .join(', ')
-  }
-  return mergedRace?.darkvision ? `Darkvision ${mergedRace.darkvision} ft.` : ''
+function buildVisionSummary(senses: readonly { type: string; range?: number }[]): string {
+  return senses
+    .map((sense) => {
+      const label = sense.type.charAt(0).toUpperCase() + sense.type.slice(1)
+      return sense.range != null ? `${label} ${sense.range} ft.` : label
+    })
+    .join(', ')
 }
 
 function buildRacialTraitsSummary(character: Character, mergedRace?: Race5e): string {
@@ -477,18 +476,23 @@ function buildClassResourceRows(
   character: Character,
   rawLookups: CharacterSheetLookupSet,
   effectiveAbilityScores: AbilityScores,
+  effects: readonly CharacterEffect[],
+  effectContext: EffectResolutionContext,
 ): CharacterSheetClassResourceRow[] {
   const stored = character.classResources ?? {}
-  const charismaModifier = Math.max(1, getAbilityModifier(effectiveAbilityScores.charisma))
+  const charismaModifier = getAbilityModifier(effectiveAbilityScores.charisma)
   return getCharacterClassEntries(character).flatMap((entry) => {
     const classData = resolveClassReference(entry, rawLookups)
     const levelIndex = Math.max(0, Math.min(19, entry.levels - 1))
     return getClassResourceDefs(classData, entry.levels).map((definition) => {
-      const max =
-        definition.maxFormula === 'cha-mod'
-          ? charismaModifier
-          : (definition.maxPerLevel[levelIndex] ?? 0)
-      const current = stored[definition.id] ?? max
+      const max = getEffectiveClassResourceMaximum(
+        definition,
+        levelIndex,
+        charismaModifier,
+        effects,
+        effectContext,
+      )
+      const current = Math.max(0, Math.min(max, stored[definition.id] ?? max))
       const recovery = getClassResourceRecoveryAtLevel(definition, levelIndex)
       return {
         label: definition.label,
@@ -617,6 +621,7 @@ export function createCharacterSheetViewModel(
     proficiencyBonus,
     effectiveAbilityScores,
     abilityModifiers,
+    initiativeModifier: calculationContext.initiativeModifier,
     skillByName,
     savingThrowByAbility,
     effectiveArmorClass: computeEffectiveCharacterArmorClass(
@@ -636,7 +641,13 @@ export function createCharacterSheetViewModel(
     walkingSpeed: getWalkingSpeed(calculationContext.movement),
     remainingHitDice: Math.max(0, level - Math.max(0, character.hitDiceUsed ?? 0)),
     hitDiceRows: buildHitDiceRows(character, rawLookups),
-    classResourceRows: buildClassResourceRows(character, rawLookups, effectiveAbilityScores),
+    classResourceRows: buildClassResourceRows(
+      character,
+      rawLookups,
+      effectiveAbilityScores,
+      calculationContext.effects.declarations,
+      calculationContext.effects.resolutionContext,
+    ),
     weaponRows: buildWeaponRows(actions),
     actions,
     spellRows: buildSpellRows(character, rawLookups.spellsByKey ?? {}),
@@ -651,7 +662,7 @@ export function createCharacterSheetViewModel(
       calculationContext.effects.declarations,
       calculationContext.effects.resolutionContext,
     ),
-    visionSummary: buildVisionSummary(character, raceResolution.mergedRace),
+    visionSummary: buildVisionSummary(calculationContext.senses),
     racialTraitsSummary: buildRacialTraitsSummary(character, raceResolution.mergedRace),
     backgroundFeature: getBackgroundFeature(character, background),
     classFeaturesSummary2014: buildClassFeaturesSummary(character),

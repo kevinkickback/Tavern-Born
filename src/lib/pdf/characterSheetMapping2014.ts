@@ -172,7 +172,7 @@ export function mapCharacterSheet2014(viewModel: CharacterSheetViewModel): Chara
     'Passive Perception': String(
       10 + (viewModel.skillByName.get('perception')?.modifier ?? viewModel.abilityModifiers.wisdom),
     ),
-    'Initiative bonus': formatViewModelModifier(viewModel.abilityModifiers.dexterity),
+    'Initiative bonus': formatViewModelModifier(viewModel.initiativeModifier),
     Speed: `${viewModel.walkingSpeed} ft`,
     AC: String(viewModel.effectiveArmorClass),
     'HP Max': String(viewModel.maxHP),

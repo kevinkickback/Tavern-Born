@@ -279,20 +279,17 @@ describe('pruneSpellsForDisabledSources', () => {
             label: 'Cleric',
             className: 'Cleric',
             classSource: 'PHB',
-            cantrips: [],
-            spellsKnown: [],
+            cantrips: ['Control Flames'],
+            spellsKnown: ['Frostbite'],
             preparedSpells: ['Frostbite'],
-            fixedSpells: ['Control Flames'], // auto-granted; must survive
+            fixedSpells: ['Control Flames', 'Frostbite'],
             alwaysPrepared: false,
           },
         ],
       },
     })
     const result = pruneSpellsForDisabledSources(char, ['PHB'], allSpells)
-    expect(result).not.toBeNull()
-    // preparedSpells removed, fixedSpells untouched
-    expect(result!.spells.spellProfiles[0].preparedSpells).toEqual([])
-    expect(result!.spells.spellProfiles[0].fixedSpells).toEqual(['Control Flames'])
+    expect(result).toBeNull()
   })
 
   test('keeps unknown spells (not in any game-data source)', () => {

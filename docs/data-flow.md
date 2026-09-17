@@ -55,6 +55,10 @@ Flow:
 4. Source list is built and lookup maps are created in src/lib/5etools/lookups.ts.
 5. Store state is updated and cache metadata set to fetched.
 
+Each load receives a monotonically increasing request identity. Final results, failures, and progress
+updates from superseded requests are ignored, including local reads that cannot be cancelled by the
+shared `AbortController`.
+
 Important behavior:
 - Class index handling differs from spell index behavior; class index keys are slugs, not sources.
 - Composite key lookups use name|source and are expected by downstream hooks.
@@ -289,6 +293,9 @@ Versioning strategy:
 - Increment the integer character schema version for breaking changes such as required fields, removed fields, or restructured data.
 - Non-breaking optional additions do not require a version bump.
 - Older and newer files are intentionally unsupported before 1.0; do not add conversion paths or compatibility fields.
+- Purely derived initiative and saving-throw totals are not persisted. Initiative resolves from the
+  effective Dexterity modifier plus active effects; saving throws resolve from effective abilities,
+  proficiency ownership, and active effects.
 
 Example breaking change requiring a version bump:
 - Adding a required field without a safe default

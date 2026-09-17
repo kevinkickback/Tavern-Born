@@ -1918,7 +1918,6 @@
       "createdAt": "2026-09-11T12:00:00.000Z"
     }
   ],
-  "initiative": 4,
   "damageResistances": [
     "Fire",
     "Cold",
@@ -1938,32 +1937,6 @@
     "Poisoned",
     "Paralyzed"
   ],
-  "savingThrows": {
-    "strength": {
-      "proficient": true,
-      "bonus": 1
-    },
-    "dexterity": {
-      "proficient": true,
-      "bonus": 0
-    },
-    "constitution": {
-      "proficient": true,
-      "bonus": 2
-    },
-    "intelligence": {
-      "proficient": true,
-      "bonus": 0
-    },
-    "wisdom": {
-      "proficient": true,
-      "bonus": 1
-    },
-    "charisma": {
-      "proficient": true,
-      "bonus": -1
-    }
-  },
   "skills": {
     "acrobatics": {
       "proficient": true,

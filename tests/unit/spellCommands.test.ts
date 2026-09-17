@@ -13,6 +13,7 @@ import {
   selectRacialSpell,
   setClassSpellSelectionsAtLevel,
   setProfileSpells,
+  setRacialSpellChoice,
   swapClassSpellAtLevel,
   swapSpellOnCharacter,
 } from '@/lib/character/commands/spellCommands'
@@ -70,6 +71,129 @@ describe('Spell Commands', () => {
       'Mage Hand',
     )
     expect(removed.provenanceUpdate.spells).toEqual({})
+  })
+
+  test('replaces and batches racial spell choices atomically', () => {
+    const character = makeCharacterFixture({
+      race: 'Astral Elf',
+      raceSource: 'AAG',
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'racial:Astral Elf|AAG',
+            type: 'racial',
+            label: 'Racial Spellcasting',
+            raceName: 'Astral Elf',
+            raceSource: 'AAG',
+            choices: [
+              {
+                id: 'block-choice',
+                count: 2,
+                isCantrip: true,
+                pool: ['light', 'sacred flame', 'dancing lights'],
+                selected: ['Light|PHB'],
+              },
+            ],
+            cantrips: ['Light|PHB'],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
+      },
+    })
+    const initial = selectRacialSpell(
+      {
+        ...character,
+        spells: {
+          ...character.spells,
+          spellProfiles: character.spells.spellProfiles.map((profile) => ({
+            ...profile,
+            cantrips: [],
+            choices: profile.choices?.map((choice) => ({ ...choice, selected: [] })),
+          })),
+        },
+      },
+      emptyProvenance(),
+      'racial:Astral Elf|AAG',
+      'block-choice',
+      'Light|PHB',
+    )
+    const configured = {
+      ...character,
+      provenance: initial.provenanceUpdate,
+    }
+
+    const result = setRacialSpellChoice(
+      configured,
+      initial.provenanceUpdate,
+      'racial:Astral Elf|AAG',
+      'block-choice',
+      ['Sacred Flame|PHB', 'Dancing Lights|PHB'],
+    )
+    const profile = result.characterPatch.spells?.spellProfiles[0]
+
+    expect(profile?.choices?.[0].selected).toEqual(['Sacred Flame|PHB', 'Dancing Lights|PHB'])
+    expect(profile?.cantrips).toEqual(['Sacred Flame|PHB', 'Dancing Lights|PHB'])
+    expect(result.provenanceUpdate.spells).not.toHaveProperty('light')
+    expect(result.provenanceUpdate.spells['sacred flame']).toEqual([
+      expect.objectContaining({ grantVariant: 'block-choice', sourceType: 'race' }),
+    ])
+    expect(result.provenanceUpdate.spells['dancing lights']).toEqual([
+      expect.objectContaining({ grantVariant: 'block-choice', sourceType: 'race' }),
+    ])
+  })
+
+  test('retains a legacy racial spell grant still owned by another choice', () => {
+    const character = makeCharacterFixture({
+      race: 'High Elf',
+      raceSource: 'PHB',
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'racial:High Elf|PHB',
+            type: 'racial',
+            label: 'Racial Spellcasting',
+            raceName: 'High Elf',
+            raceSource: 'PHB',
+            choices: [
+              { id: 'first-choice', count: 1, isCantrip: true, selected: ['Light|PHB'] },
+              { id: 'second-choice', count: 1, isCantrip: true, selected: ['Light|PHB'] },
+            ],
+            cantrips: ['Light|PHB'],
+            spellsKnown: [],
+            preparedSpells: [],
+            alwaysPrepared: true,
+          },
+        ],
+      },
+    })
+    const legacyTag = {
+      sourceType: 'race' as const,
+      sourceName: 'High Elf',
+      sourceRef: 'PHB',
+      grantType: 'choice' as const,
+      label: 'High Elf',
+    }
+    const ledger = {
+      ...emptyProvenance(),
+      spells: { light: [legacyTag] },
+    }
+
+    const result = setRacialSpellChoice(character, ledger, 'racial:High Elf|PHB', 'first-choice', [
+      'Sacred Flame|PHB',
+    ])
+
+    expect(result.characterPatch.spells?.spellProfiles[0].cantrips).toEqual([
+      'Light|PHB',
+      'Sacred Flame|PHB',
+    ])
+    expect(result.provenanceUpdate.spells.light).toEqual([legacyTag])
+    expect(result.provenanceUpdate.spells['sacred flame']).toEqual([
+      expect.objectContaining({ grantVariant: 'first-choice' }),
+    ])
   })
 
   describe('setClassSpellSelectionsAtLevel', () => {
