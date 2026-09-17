@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { getClassResourceDefs } from '@/lib/5etools/classData'
@@ -8,6 +8,8 @@ import {
   normalizeClassRules,
 } from '@/lib/5etools/classRuleNormalization'
 import type { Class5e, ClassFeatureReference } from '@/types/5etools'
+
+const hasConfiguredCorpus = existsSync(join(process.cwd(), 'data', 'class', 'index.json'))
 
 function normalize(
   classData: Pick<Class5e, 'name' | 'source' | 'classTableGroups'>,
@@ -66,51 +68,60 @@ describe('class rule normalization', () => {
     expect(rules.resources).not.toContainEqual(expect.objectContaining({ label: 'Damage Bonus' }))
   })
 
-  test('keeps finite resource levels when the final level becomes unlimited', () => {
-    const classData = loadClassData('class-barbarian.json', 'Barbarian', 'PHB')
-    const rules = normalize(classData)
-    const rage = rules.resources.find((resource) => resource.id === 'barbarian-rages')
+  test.runIf(hasConfiguredCorpus)(
+    'keeps finite resource levels when the final level becomes unlimited',
+    () => {
+      const classData = loadClassData('class-barbarian.json', 'Barbarian', 'PHB')
+      const rules = normalize(classData)
+      const rage = rules.resources.find((resource) => resource.id === 'barbarian-rages')
 
-    expect(rage?.maxPerLevel[0]).toBe(2)
-    expect(rage?.maxPerLevel[18]).toBe(6)
-    expect(rage?.maxPerLevel[19]).toBe(0)
-    expect(getClassResourceDefs(classData, 1)).toContainEqual(rage)
-    expect(getClassResourceDefs(classData, 19)).toContainEqual(rage)
-    expect(getClassResourceDefs(classData, 20)).not.toContainEqual(rage)
-  })
+      expect(rage?.maxPerLevel[0]).toBe(2)
+      expect(rage?.maxPerLevel[18]).toBe(6)
+      expect(rage?.maxPerLevel[19]).toBe(0)
+      expect(getClassResourceDefs(classData, 1)).toContainEqual(rage)
+      expect(getClassResourceDefs(classData, 19)).toContainEqual(rage)
+      expect(getClassResourceDefs(classData, 20)).not.toContainEqual(rage)
+    },
+  )
 
-  test('adds prose-backed Action Surge and Indomitable resources for 2024 fighters', () => {
-    const classData = loadClassData('class-fighter.json', 'Fighter', 'XPHB')
-    const rules = normalize(classData)
-    const actionSurge = rules.resources.find((resource) => resource.id === 'fighter-action-surge')
-    const indomitable = rules.resources.find((resource) => resource.id === 'fighter-indomitable')
+  test.runIf(hasConfiguredCorpus)(
+    'adds prose-backed Action Surge and Indomitable resources for 2024 fighters',
+    () => {
+      const classData = loadClassData('class-fighter.json', 'Fighter', 'XPHB')
+      const rules = normalize(classData)
+      const actionSurge = rules.resources.find((resource) => resource.id === 'fighter-action-surge')
+      const indomitable = rules.resources.find((resource) => resource.id === 'fighter-indomitable')
 
-    expect(actionSurge?.maxPerLevel[1]).toBe(1)
-    expect(actionSurge?.maxPerLevel[16]).toBe(2)
-    expect(actionSurge?.recovery).toEqual({ shortRest: 'all', longRest: 'all' })
-    expect(indomitable?.maxPerLevel[8]).toBe(1)
-    expect(indomitable?.maxPerLevel[12]).toBe(2)
-    expect(indomitable?.maxPerLevel[16]).toBe(3)
-    expect(indomitable?.recovery).toEqual({ longRest: 'all' })
-    expect(getClassResourceDefs(classData, 2)).toContainEqual(actionSurge)
-    expect(getClassResourceDefs(classData, 9)).toContainEqual(indomitable)
-    expect(getClassResourceDefs(classData, 13)).toContainEqual(indomitable)
-    expect(getClassResourceDefs(classData, 17)).toEqual(
-      expect.arrayContaining([actionSurge, indomitable]),
-    )
-  })
+      expect(actionSurge?.maxPerLevel[1]).toBe(1)
+      expect(actionSurge?.maxPerLevel[16]).toBe(2)
+      expect(actionSurge?.recovery).toEqual({ shortRest: 'all', longRest: 'all' })
+      expect(indomitable?.maxPerLevel[8]).toBe(1)
+      expect(indomitable?.maxPerLevel[12]).toBe(2)
+      expect(indomitable?.maxPerLevel[16]).toBe(3)
+      expect(indomitable?.recovery).toEqual({ longRest: 'all' })
+      expect(getClassResourceDefs(classData, 2)).toContainEqual(actionSurge)
+      expect(getClassResourceDefs(classData, 9)).toContainEqual(indomitable)
+      expect(getClassResourceDefs(classData, 13)).toContainEqual(indomitable)
+      expect(getClassResourceDefs(classData, 17)).toEqual(
+        expect.arrayContaining([actionSurge, indomitable]),
+      )
+    },
+  )
 
-  test('keeps 2014 Paladin Channel Divinity at one use at every eligible level', () => {
-    const classData = loadClassData('class-paladin.json', 'Paladin', 'PHB')
-    const channelDivinity = normalize(classData).resources.find(
-      (resource) => resource.id === 'paladin-channel-divinity',
-    )
+  test.runIf(hasConfiguredCorpus)(
+    'keeps 2014 Paladin Channel Divinity at one use at every eligible level',
+    () => {
+      const classData = loadClassData('class-paladin.json', 'Paladin', 'PHB')
+      const channelDivinity = normalize(classData).resources.find(
+        (resource) => resource.id === 'paladin-channel-divinity',
+      )
 
-    expect(channelDivinity?.maxPerLevel[2]).toBe(1)
-    expect(channelDivinity?.maxPerLevel[5]).toBe(1)
-    expect(channelDivinity?.maxPerLevel[17]).toBe(1)
-    expect(channelDivinity?.recovery).toEqual({ shortRest: 'all', longRest: 'all' })
-  })
+      expect(channelDivinity?.maxPerLevel[2]).toBe(1)
+      expect(channelDivinity?.maxPerLevel[5]).toBe(1)
+      expect(channelDivinity?.maxPerLevel[17]).toBe(1)
+      expect(channelDivinity?.recovery).toEqual({ shortRest: 'all', longRest: 'all' })
+    },
+  )
 
   test.each([
     ['Artificer', 'TCE', 'Infused Items'],

@@ -204,6 +204,9 @@ new tests land and do not lower them to merge a change.
   unique 20-level matrix for every tagged class, and reject diagnostics, incomplete progressions,
   and mismatched owners (`tests/lib/5etools/classChoiceCoverage.test.ts` and
   `tests/corpus/dataCapabilities.test.ts`).
+- Tests that validate the ignored local `data/` corpus must use `runIf` guards and skip cleanly when
+  that external corpus is absent in CI. Deterministic parser behavior remains covered by committed
+  test fixtures and synthetic inputs.
 - Strict current-version import and hydration rejection coverage in tests/store/characterStore.test.ts
 - Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)
 - Current workflow coverage in tests/integration/spellOperations.test.tsx, tests/integration/multiclassUpdates.test.tsx, tests/integration/contentFiltering.test.tsx, and tests/integration/armorClass.test.tsx

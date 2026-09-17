@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import {
@@ -7,6 +7,8 @@ import {
 } from '@/lib/5etools/classChoiceNormalization'
 import { parseClasses } from '@/lib/5etools/parsers'
 import type { Class5e, ClassFeatureReference } from '@/types/5etools'
+
+const hasConfiguredCorpus = existsSync(join(process.cwd(), 'data', 'class', 'index.json'))
 
 function featureRef(
   name: string,
@@ -357,79 +359,82 @@ describe('class choice normalization', () => {
     expect(getRequiredChoiceSelectionCount(choice!, 2)).toBe(2)
   })
 
-  test('covers the required 2024 core choice families in the configured corpus', () => {
-    const cleric = loadParsedClass('class-cleric.json', 'Cleric')
-    const druid = loadParsedClass('class-druid.json', 'Druid')
-    const sorcerer = loadParsedClass('class-sorcerer.json', 'Sorcerer')
-    const warlock = loadParsedClass('class-warlock.json', 'Warlock')
-    const barbarian = loadParsedClass('class-barbarian.json', 'Barbarian')
-    const fighter = loadParsedClass('class-fighter.json', 'Fighter')
-    const paladin = loadParsedClass('class-paladin.json', 'Paladin')
-    const ranger = loadParsedClass('class-ranger.json', 'Ranger')
-    const rogue = loadParsedClass('class-rogue.json', 'Rogue')
+  test.runIf(hasConfiguredCorpus)(
+    'covers the required 2024 core choice families in the configured corpus',
+    () => {
+      const cleric = loadParsedClass('class-cleric.json', 'Cleric')
+      const druid = loadParsedClass('class-druid.json', 'Druid')
+      const sorcerer = loadParsedClass('class-sorcerer.json', 'Sorcerer')
+      const warlock = loadParsedClass('class-warlock.json', 'Warlock')
+      const barbarian = loadParsedClass('class-barbarian.json', 'Barbarian')
+      const fighter = loadParsedClass('class-fighter.json', 'Fighter')
+      const paladin = loadParsedClass('class-paladin.json', 'Paladin')
+      const ranger = loadParsedClass('class-ranger.json', 'Ranger')
+      const rogue = loadParsedClass('class-rogue.json', 'Rogue')
 
-    expect(cleric.normalizedRules?.choices).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ label: 'Divine Order', maximumSelections: 1 }),
-      ]),
-    )
-    expect(druid.normalizedRules?.choices).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ label: 'Primal Order', maximumSelections: 1 }),
-        expect.objectContaining({ label: 'Elemental Fury', level: 7, maximumSelections: 1 }),
-      ]),
-    )
-    expect(sorcerer.normalizedRules?.choices).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ label: 'Metamagic', kind: 'optional-feature' }),
-      ]),
-    )
-    expect(warlock.normalizedRules?.choices).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          label: 'Eldritch Invocations',
-          optionFilter: expect.objectContaining({ featureTypes: ['EI'] }),
-        }),
-      ]),
-    )
-    expect(barbarian.normalizedRules?.choices).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          label: 'Weapon Mastery',
-          optionFilter: expect.objectContaining({
-            requiresMastery: true,
-            anyOf: expect.arrayContaining([expect.objectContaining({ weaponRanges: ['melee'] })]),
+      expect(cleric.normalizedRules?.choices).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ label: 'Divine Order', maximumSelections: 1 }),
+        ]),
+      )
+      expect(druid.normalizedRules?.choices).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ label: 'Primal Order', maximumSelections: 1 }),
+          expect.objectContaining({ label: 'Elemental Fury', level: 7, maximumSelections: 1 }),
+        ]),
+      )
+      expect(sorcerer.normalizedRules?.choices).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ label: 'Metamagic', kind: 'optional-feature' }),
+        ]),
+      )
+      expect(warlock.normalizedRules?.choices).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: 'Eldritch Invocations',
+            optionFilter: expect.objectContaining({ featureTypes: ['EI'] }),
           }),
-        }),
-      ]),
-    )
-    expect(fighter.normalizedRules?.choices).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          label: 'Weapon Mastery',
-          kind: 'item',
-          optionFilter: expect.objectContaining({ requiresMastery: true }),
-        }),
-        expect.objectContaining({ label: 'Fighting Style', kind: 'feat' }),
-      ]),
-    )
-    for (const classData of [paladin, ranger, rogue]) {
-      expect(classData.normalizedRules?.choices).toEqual(
+        ]),
+      )
+      expect(barbarian.normalizedRules?.choices).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            label: 'Weapon Mastery',
+            optionFilter: expect.objectContaining({
+              requiresMastery: true,
+              anyOf: expect.arrayContaining([expect.objectContaining({ weaponRanges: ['melee'] })]),
+            }),
+          }),
+        ]),
+      )
+      expect(fighter.normalizedRules?.choices).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             label: 'Weapon Mastery',
             kind: 'item',
-            maximumSelections: 2,
-            optionFilter: expect.objectContaining({
-              requiresProficiency: true,
-              requiresMastery: true,
-            }),
-            replacement: { cadence: 'long-rest', maximumPerEvent: 'all' },
+            optionFilter: expect.objectContaining({ requiresMastery: true }),
           }),
+          expect.objectContaining({ label: 'Fighting Style', kind: 'feat' }),
         ]),
       )
-    }
-  })
+      for (const classData of [paladin, ranger, rogue]) {
+        expect(classData.normalizedRules?.choices).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              label: 'Weapon Mastery',
+              kind: 'item',
+              maximumSelections: 2,
+              optionFilter: expect.objectContaining({
+                requiresProficiency: true,
+                requiresMastery: true,
+              }),
+              replacement: { cadence: 'long-rest', maximumPerEvent: 'all' },
+            }),
+          ]),
+        )
+      }
+    },
+  )
 
   test('does not classify choices from feature or class names', () => {
     const [choice] = normalizeClassChoices(
@@ -460,17 +465,20 @@ describe('class choice normalization', () => {
     expect(getRequiredChoiceSelectionCount(choice!, 2)).toBe(3)
   })
 
-  test('preserves Artificer plan level gates from the configured tables', () => {
-    const artificer = loadParsedClass('class-artificer.json', 'Artificer', 'EFA')
-    const choice = artificer.normalizedRules?.choices.find(
-      (candidate) => candidate.label === 'Replicate Magic Item',
-    )
-    const levelOf = (name: string) =>
-      choice?.options.find((option) => option.name === name)?.minimumClassLevel
-    expect([levelOf('Bag of Holding'), levelOf('Boots of Elvenkind')]).toEqual([2, 6])
-    expect(choice?.optionFilter?.anyOf?.map((filter) => filter.minimumClassLevel)).toEqual([
-      2, 10, 14,
-    ])
-    expect(choice?.selectionCountByLevel.slice(0, 4)).toEqual([0, 4, 4, 4])
-  })
+  test.runIf(hasConfiguredCorpus)(
+    'preserves Artificer plan level gates from the configured tables',
+    () => {
+      const artificer = loadParsedClass('class-artificer.json', 'Artificer', 'EFA')
+      const choice = artificer.normalizedRules?.choices.find(
+        (candidate) => candidate.label === 'Replicate Magic Item',
+      )
+      const levelOf = (name: string) =>
+        choice?.options.find((option) => option.name === name)?.minimumClassLevel
+      expect([levelOf('Bag of Holding'), levelOf('Boots of Elvenkind')]).toEqual([2, 6])
+      expect(choice?.optionFilter?.anyOf?.map((filter) => filter.minimumClassLevel)).toEqual([
+        2, 10, 14,
+      ])
+      expect(choice?.selectionCountByLevel.slice(0, 4)).toEqual([0, 4, 4, 4])
+    },
+  )
 })

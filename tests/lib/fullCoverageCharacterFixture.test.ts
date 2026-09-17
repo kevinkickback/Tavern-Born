@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import { getRequiredChoiceSelectionCount } from '@/lib/5etools/classChoiceNormalization'
@@ -80,6 +80,7 @@ const fixturePaths = {
   '2014': join(fixtureRoot, 'full-coverage-character-2014.tbc'),
   '2024': join(fixtureRoot, 'full-coverage-character-2024.tbc'),
 } as const
+const hasConfiguredCorpus = existsSync(join(dataRoot, 'class', 'index.json'))
 
 function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, 'utf8'))
@@ -96,8 +97,8 @@ function loadIndexedPayloads(directory: 'class' | 'spells'): unknown[] {
   return Object.values(index).map((fileName) => readJson(join(dataRoot, directory, fileName)))
 }
 
-const classPayloads = loadIndexedPayloads('class')
-const spellPayloads = loadIndexedPayloads('spells')
+const classPayloads = hasConfiguredCorpus ? loadIndexedPayloads('class') : []
+const spellPayloads = hasConfiguredCorpus ? loadIndexedPayloads('spells') : []
 const classes = classPayloads.flatMap((payload) => parseClasses(payload)) as Class5e[]
 const classFeatures = classPayloads.flatMap((payload) =>
   parseClassFeatures(payload),
@@ -106,24 +107,36 @@ const rawClassFeatures = classPayloads.flatMap((payload) => [
   ...collection(payload, 'classFeature'),
   ...collection(payload, 'subclassFeature'),
 ]) as Array<{ name: string; source: string }>
-const races = parseRaces(readJson(join(dataRoot, 'races.json'))) as Race5e[]
-const backgrounds = parseBackgrounds(readJson(join(dataRoot, 'backgrounds.json'))) as Background5e[]
-const feats = parseFeats(readJson(join(dataRoot, 'feats.json'))) as Feat5e[]
-const items = [
-  ...parseItems(readJson(join(dataRoot, 'items.json'))),
-  ...parseMagicVariants(readJson(join(dataRoot, 'magicvariants.json'))),
-] as Item5e[]
-const itemsBasePayload = readJson(join(dataRoot, 'items-base.json'))
-const itemsBase = parseItems(itemsBasePayload) as Item5e[]
+const races = hasConfiguredCorpus
+  ? (parseRaces(readJson(join(dataRoot, 'races.json'))) as Race5e[])
+  : []
+const backgrounds = hasConfiguredCorpus
+  ? (parseBackgrounds(readJson(join(dataRoot, 'backgrounds.json'))) as Background5e[])
+  : []
+const feats = hasConfiguredCorpus
+  ? (parseFeats(readJson(join(dataRoot, 'feats.json'))) as Feat5e[])
+  : []
+const items = hasConfiguredCorpus
+  ? ([
+      ...parseItems(readJson(join(dataRoot, 'items.json'))),
+      ...parseMagicVariants(readJson(join(dataRoot, 'magicvariants.json'))),
+    ] as Item5e[])
+  : []
+const itemsBasePayload = hasConfiguredCorpus ? readJson(join(dataRoot, 'items-base.json')) : {}
+const itemsBase = hasConfiguredCorpus ? (parseItems(itemsBasePayload) as Item5e[]) : []
 const allItems = [...items, ...itemsBase]
-const itemMasteries = parseItemMasteries(itemsBasePayload) as ItemMastery5e[]
-const itemTypes = parseItemTypes(itemsBasePayload) as ItemType5e[]
-const optionalFeatures = parseOptionalFeatures(
-  readJson(join(dataRoot, 'optionalfeatures.json')),
-) as OptionalFeatureLike[]
-const spellSourceLookup = readJson(
-  join(dataRoot, 'generated', 'gendata-spell-source-lookup.json'),
-) as SpellSourceLookup
+const itemMasteries = hasConfiguredCorpus
+  ? (parseItemMasteries(itemsBasePayload) as ItemMastery5e[])
+  : []
+const itemTypes = hasConfiguredCorpus ? (parseItemTypes(itemsBasePayload) as ItemType5e[]) : []
+const optionalFeatures = hasConfiguredCorpus
+  ? (parseOptionalFeatures(
+      readJson(join(dataRoot, 'optionalfeatures.json')),
+    ) as OptionalFeatureLike[])
+  : []
+const spellSourceLookup = hasConfiguredCorpus
+  ? (readJson(join(dataRoot, 'generated', 'gendata-spell-source-lookup.json')) as SpellSourceLookup)
+  : ({} as SpellSourceLookup)
 const spells = spellPayloads.flatMap((payload) =>
   parseSpells(payload, { sourceLookup: spellSourceLookup }),
 ) as Spell5e[]
@@ -201,7 +214,7 @@ function getStoredSpellReferences(character: Character): Array<{
   })
 }
 
-describe('full-coverage character fixtures', () => {
+describe.runIf(hasConfiguredCorpus)('full-coverage character fixtures', () => {
   test.each([
     '2014',
     '2024',

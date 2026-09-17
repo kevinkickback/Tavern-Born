@@ -2,6 +2,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { setCollapseState } from '@/lib/storage/collapseState'
 import { BuildAbilityScoresPage } from '@/pages/build/ability-scores/AbilityScoresPage'
 import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
@@ -46,6 +47,7 @@ describe('BuildAbilityScoresPage', () => {
     )
 
   beforeEach(() => {
+    setCollapseState('sources:build-ability-scores', true)
     const character = makeCharacterFixture({
       originSystem: '2024',
       race: testRace.name,
