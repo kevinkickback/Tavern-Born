@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
+import { RulesPreviewManager } from '@/components/editor/RulesPreviewManager'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AppLoadingOverlay } from '@/components/layout/AppLoadingOverlay'
 import { DataSourceStartupModal } from '@/components/settings/DataSourceStartupModal'
@@ -197,92 +198,94 @@ function App() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <HashRouter>
-        <AppLayout>
-          <Suspense fallback={<RouteLoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route element={<RequireActiveCharacter />}>
-                <Route path="/build" element={<Navigate to="/build/race" replace />} />
-                <Route path="/build/race" element={<BuildRacePage />} />
-                <Route path="/build/class" element={<BuildClassPage />} />
-                <Route path="/build/background" element={<BuildBackgroundPage />} />
-                <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
-                <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
-                <Route path="/build/review" element={<BuildReviewPage />} />
-                <Route path="/build/adjustments" element={<AdjustmentsPage />} />
-                <Route path="/feats" element={<FeatsPage />} />
-                <Route path="/spells" element={<SpellsPage />} />
-                <Route path="/equipment" element={<EquipmentPage />} />
-                <Route path="/rules" element={<RulesPage />} />
-                <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
-                <Route path="/details/portrait" element={<PortraitPage />} />
-                <Route path="/details/characteristics" element={<CharacteristicsPage />} />
-                <Route path="/details/conditions" element={<ConditionsPage />} />
-                <Route path="/sources" element={<SourcesPage />} />
-                <Route path="/character-sheet" element={<CharacterSheetRedirect />} />
-                <Route
-                  path="/character-sheet/2014"
-                  element={<CharacterSheetPage key="character-sheet-2014" templateId="2014" />}
-                />
-                <Route
-                  path="/character-sheet/2024"
-                  element={<CharacterSheetPage key="character-sheet-2024" templateId="2024" />}
-                />
-              </Route>
-              <Route path="/compendium" element={<CompendiumPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/settings/*" element={<Navigate to="/settings" replace />} />
-            </Routes>
-          </Suspense>
-        </AppLayout>
-        <Toaster position="bottom-right" />
-        <DataSourceStartupModal />
-        <AppLoadingOverlay />
-        <CloseConfirmDialog />
-        {updateData && (
-          <ChangelogModal
-            open={changelogOpen}
-            onOpenChange={setChangelogOpen}
-            version={updateData.version}
-            changelog={updateData.changelog}
-            updateAvailable
-            onInstall={
-              updateData.isPortable
-                ? undefined
-                : () => {
-                    setChangelogOpen(false)
-                    setProgressOpen(true)
-                  }
-            }
-            onOpenDownloadPage={
-              updateData.isPortable
-                ? async () => {
-                    try {
-                      const result = await window.electronAPI.openPortableUpdatePage()
-                      if (!result.success) {
-                        toast.error('Could not open the download page', {
-                          description: result.error ?? undefined,
-                        })
-                        return
-                      }
+      <RulesPreviewManager>
+        <HashRouter>
+          <AppLayout>
+            <Suspense fallback={<RouteLoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route element={<RequireActiveCharacter />}>
+                  <Route path="/build" element={<Navigate to="/build/race" replace />} />
+                  <Route path="/build/race" element={<BuildRacePage />} />
+                  <Route path="/build/class" element={<BuildClassPage />} />
+                  <Route path="/build/background" element={<BuildBackgroundPage />} />
+                  <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
+                  <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
+                  <Route path="/build/review" element={<BuildReviewPage />} />
+                  <Route path="/build/adjustments" element={<AdjustmentsPage />} />
+                  <Route path="/feats" element={<FeatsPage />} />
+                  <Route path="/spells" element={<SpellsPage />} />
+                  <Route path="/equipment" element={<EquipmentPage />} />
+                  <Route path="/rules" element={<RulesPage />} />
+                  <Route path="/details" element={<Navigate to="/details/portrait" replace />} />
+                  <Route path="/details/portrait" element={<PortraitPage />} />
+                  <Route path="/details/characteristics" element={<CharacteristicsPage />} />
+                  <Route path="/details/conditions" element={<ConditionsPage />} />
+                  <Route path="/sources" element={<SourcesPage />} />
+                  <Route path="/character-sheet" element={<CharacterSheetRedirect />} />
+                  <Route
+                    path="/character-sheet/2014"
+                    element={<CharacterSheetPage key="character-sheet-2014" templateId="2014" />}
+                  />
+                  <Route
+                    path="/character-sheet/2024"
+                    element={<CharacterSheetPage key="character-sheet-2024" templateId="2024" />}
+                  />
+                </Route>
+                <Route path="/compendium" element={<CompendiumPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/*" element={<Navigate to="/settings" replace />} />
+              </Routes>
+            </Suspense>
+          </AppLayout>
+          <Toaster position="bottom-right" />
+          <DataSourceStartupModal />
+          <AppLoadingOverlay />
+          <CloseConfirmDialog />
+          {updateData && (
+            <ChangelogModal
+              open={changelogOpen}
+              onOpenChange={setChangelogOpen}
+              version={updateData.version}
+              changelog={updateData.changelog}
+              updateAvailable
+              onInstall={
+                updateData.isPortable
+                  ? undefined
+                  : () => {
                       setChangelogOpen(false)
-                    } catch (error) {
-                      toast.error('Could not open the download page', {
-                        description: error instanceof Error ? error.message : 'Unknown error',
-                      })
+                      setProgressOpen(true)
                     }
-                  }
-                : undefined
-            }
+              }
+              onOpenDownloadPage={
+                updateData.isPortable
+                  ? async () => {
+                      try {
+                        const result = await window.electronAPI.openPortableUpdatePage()
+                        if (!result.success) {
+                          toast.error('Could not open the download page', {
+                            description: result.error ?? undefined,
+                          })
+                          return
+                        }
+                        setChangelogOpen(false)
+                      } catch (error) {
+                        toast.error('Could not open the download page', {
+                          description: error instanceof Error ? error.message : 'Unknown error',
+                        })
+                      }
+                    }
+                  : undefined
+              }
+            />
+          )}
+          <UpdateProgressModal
+            open={progressOpen}
+            version={updateData?.version ?? ''}
+            onOpenChange={setProgressOpen}
           />
-        )}
-        <UpdateProgressModal
-          open={progressOpen}
-          version={updateData?.version ?? ''}
-          onOpenChange={setProgressOpen}
-        />
-      </HashRouter>
+        </HashRouter>
+      </RulesPreviewManager>
     </TooltipProvider>
   )
 }

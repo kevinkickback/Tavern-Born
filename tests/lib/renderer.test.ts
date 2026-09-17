@@ -6,6 +6,10 @@ describe('renderEntry', () => {
     expect(renderEntry('Hello')).toBe('<p>Hello</p>')
   })
 
+  test('does not expose internal item-template references', () => {
+    expect(renderEntry('{#itemEntry Ioun Stone|XDMG}')).toBe('<p></p>')
+  })
+
   test('renders an entries object with name and nested text', () => {
     const result = renderEntry({
       type: 'entries',

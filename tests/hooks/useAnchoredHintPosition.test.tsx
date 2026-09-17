@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { isHintAnchorVisible, useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 
@@ -15,7 +15,9 @@ const anchorRect = {
 } as DOMRect
 
 afterEach(() => {
+  cleanup()
   document.body.replaceChildren()
+  vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
 
@@ -94,5 +96,76 @@ describe('useAnchoredHintPosition', () => {
     anchor.style.display = 'block'
     act(() => window.dispatchEvent(new Event('resize')))
     await waitFor(() => expect(result.current?.reference).toBe(anchor))
+  })
+
+  test('coalesces rapid layout signals into one visibility check and cancels pending work', async () => {
+    vi.stubGlobal(
+      'MutationObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    )
+    const anchor = document.createElement('button')
+    anchor.dataset.hintAnchor = 'true'
+    const getBounds = vi.fn(() => anchorRect)
+    anchor.getBoundingClientRect = getBounds
+    document.body.append(anchor)
+    Object.defineProperty(document, 'elementsFromPoint', {
+      configurable: true,
+      value: vi.fn(() => [anchor]),
+    })
+
+    let frameId = 0
+    const frames = new Map<number, FrameRequestCallback>()
+    const requestFrame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        frameId += 1
+        frames.set(frameId, callback)
+        return frameId
+      })
+    const cancelFrame = vi
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation((id) => void frames.delete(id))
+
+    const { unmount } = renderHook(() =>
+      useAnchoredHintPosition({
+        enabled: true,
+        selector: '[data-hint-anchor="true"]',
+      }),
+    )
+
+    for (const [id, callback] of frames) {
+      frames.delete(id)
+      act(() => callback(performance.now()))
+    }
+    await act(async () => Promise.resolve())
+    for (const [id, callback] of frames) {
+      frames.delete(id)
+      act(() => callback(performance.now()))
+    }
+    getBounds.mockClear()
+    requestFrame.mockClear()
+    cancelFrame.mockClear()
+
+    act(() => {
+      window.dispatchEvent(new Event('scroll'))
+      window.dispatchEvent(new Event('resize'))
+      document.dispatchEvent(new Event('transitionend', { bubbles: true }))
+    })
+
+    expect(frames.size).toBe(1)
+    const [[pendingId, pendingCallback]] = Array.from(frames.entries())
+    frames.delete(pendingId)
+    act(() => pendingCallback(performance.now()))
+    expect(getBounds).toHaveBeenCalledTimes(1)
+    expect(requestFrame).toHaveBeenCalledTimes(3)
+    expect(cancelFrame).toHaveBeenCalledTimes(2)
+
+    act(() => window.dispatchEvent(new Event('resize')))
+    expect(frames.size).toBe(1)
+    unmount()
+    expect(frames.size).toBe(0)
   })
 })

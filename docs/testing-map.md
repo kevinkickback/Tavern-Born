@@ -19,6 +19,10 @@ Key scripts in package.json:
 - npm run test
 - npm run test:coverage
 - npm run test:e2e
+- npm run test:e2e:focused
+- npm run test:e2e:golden
+- npm run test:e2e:release
+- npm run test:progression
 - npm run test:electron (run after `npm run build`)
 
 `npm run check:health` rejects unused files, exports, dependencies, circular dependencies, UI
@@ -94,9 +98,13 @@ new tests land and do not lower them to merge a change.
   source-less rejection, and nested subrace merging
 - Organizations parser coverage in tests/lib/5etools/parsers.test.ts (faction extraction from fluff backgrounds)
 - Renderer output in src/lib/renderer.ts
-- Recursive tooltip builder, hook, and nested interaction coverage for explicit collection sets,
-  stable source/name keys, `itemsBase`, multi-level tooltip chains, Floating UI anchoring, and
-  active-depth styling
+- Recursive reference lookup coverage includes explicit collection sets, stable source/name keys,
+  and `itemsBase`. Rules-preview integration and browser coverage enforce the rolling two-preview
+  chain, physical-slot reuse without moving the spawning surface, a pin plus two bounded transient levels, hover intent,
+  pointer-safe corridors, immutable pinned content, explicit pin transfer, modal-safe portaled interaction, layered Escape behavior,
+  collision-safe placement, stable pinned-child positioning, keyboard access, and pinned snapshots
+  that survive virtualized source-row unmounts. Selection-modal coverage verifies portaled previews
+  remain pointer-interactive and scroll independently above modal dialog layers.
 - Provenance ledger/reconciliation modules
 - Provenance section row routing helper in src/lib/provenance/sectionRows.ts
 - Provenance composed hooks in src/hooks/character/useProvenance*.ts
@@ -118,13 +126,17 @@ new tests land and do not lower them to merge a change.
 	- src/pages/build/class/model/levelsUtils.ts
 	- Grouped tool-choice expansion coverage (gaming set/musical instrument/artisan's tools/any-tool)
 	- `formatWeaponCategoryLabel` weapon category key → display label
-- Compendium entry shaping and filtering in src/lib/compendiumEntries.ts, including 5e / 5.5e / Both edition classification and composition with type, source, and text filters
+- Compendium entry shaping and filtering in src/lib/compendiumEntries.ts, including the curated
+  user-facing collection boundary, source-qualified deduplication, lightweight readable summaries,
+  revised-core edition classification, and composition with type, source, and text filters
 - Equipment page detail rendering, category-matched detail icons, type-aware metadata, canonical armor enrichment, exceptional populated statistics, theme-surface styling, recursive link tooltips, persistent inventory headers, and the container-responsive weight/attunement/currency summary in tests/integration/equipmentPage.test.tsx, tests/unit/itemDetailFields.test.ts, and tests/e2e/equipment.spec.ts; base-item recursive lookup in tests/hooks/useRecursiveLookup.test.tsx
 - Manual item-selection category coverage includes parsed spellcasting-focus types and unknown or
   homebrew type codes in tests/unit/itemSelectionModal.test.ts.
 - Shared class/background generic-equipment selection has an accessible-name regression test in
   tests/integration/genericEquipmentSelect.test.tsx.
 - Shared compact list/detail pane behavior in tests/integration/splitPane.test.tsx and tests/e2e/responsive-workspaces.spec.ts, including every split workspace and persistent secondary navigation at the 900x700 minimum app window
+- Proficiency attention-link browser coverage verifies the requested category opens initially but
+  later proficiency mutations do not override the user's manual tab navigation.
 - Atomic equipment command coverage for add/remove/manual proficiency alignment, duplicate names, and retained source tags
 - Armor-restriction reconciliation coverage for nonproficient armor, duplicate body/shield slots,
 	legacy type-only armor records, and preservation of other equipped gear
@@ -143,12 +155,16 @@ new tests land and do not lower them to merge a change.
   reset coverage, responsive persistent-anchor recovery, and one-time entrance animation across
   temporary anchor loss in tests/integration/appHeader.test.tsx,
   tests/integration/anchoredHint.test.tsx, and tests/hooks/useAnchoredHintPosition.test.tsx
+- App-mechanics coverage verifies that one-time hint resets preserve unrelated storage, notify only
+  subscribed listeners, tolerate unavailable browser storage, and remain available from Settings.
+  Anchored hints coalesce rapid layout signals and cancel pending work on teardown; rules previews
+  synchronously anchor the transient slot to its trigger or pinned shell and flip away from viewport
+  edges without flashing at the window origin.
 - Character-card action behavior and consistent accent-colored level, race, and class icons in tests/integration/characterCard.test.tsx
 - Title-bar-safe Floating UI collision padding and live anchoring across supported interface scales,
-  plus nested-only history navigation, streamlined transient controls, selected-entry pinning
-  without a position jump, and constrained pointer/keyboard movement. Pure positioning tests cover
-  only Tavern Born's pinned-preview clamping; Floating UI's geometry implementation is not
-  duplicated in the test suite.
+  plus global preview-slot invariants, selected-entry pinning without a position jump, and
+  constrained pointer/keyboard movement. Pure positioning tests cover only Tavern Born's fallback
+  and pinned-preview clamping; Floating UI's geometry implementation is not duplicated.
 - HP and AC Overview/Manual changes modal coverage in tests/integration/hitPointsModal.test.tsx and
   tests/integration/armorClassModal.test.tsx
 - Builder Actions & Effects page/editor coverage in tests/integration/adjustmentsPage.test.tsx,
@@ -210,6 +226,24 @@ new tests land and do not lower them to merge a change.
 - Strict current-version import and hydration rejection coverage in tests/store/characterStore.test.ts
 - Full spell workflow integration tests in tests/integration/spellManagement.test.ts (create/save/load cycle, multiclass slots, profile syncing)
 - Current workflow coverage in tests/integration/spellOperations.test.tsx, tests/integration/multiclassUpdates.test.tsx, tests/integration/contentFiltering.test.tsx, and tests/integration/armorClass.test.tsx
+- Progression uses three complementary layers:
+  - `tests/e2e/progression-golden.spec.ts` runs deterministic 2014 Variant Human/Arcane
+    Trickster and 2024 Human/Eldritch Knight journeys from the creation wizard through level 20,
+    including origin choices, every earned class ASI, weapon mastery, subclass spellcasting, HP
+    refill checkpoints, readiness, save, and reload.
+  - `tests/unit/characterProgressionMatrix.test.ts` exercises every 2014 and 2024 core class at
+    every level from 1 through 20. This is the fast invariant layer for progression ownership,
+    hit-point gains, full-current-HP behavior, level-down retraction, and the level cap.
+  - `tests/corpus/dataCapabilities.test.ts` verifies that the golden journeys' Variant Human,
+    revised Human/Soldier, Arcane Trickster, Eldritch Knight, and origin-feat assumptions remain
+    present in the parsed managed corpus. The browser fixtures are therefore deterministic subsets,
+    not an independent hand-written rules source.
+- Focused browser journeys are tagged `@focused`; the level-1-to-20 release blockers are tagged
+  `@golden`. Use the tagged scripts for quick diagnosis and `npm run test:e2e:release` for the full
+  browser suite. The release script uses one worker so persistence-heavy journeys are deterministic
+  on developer machines as well as CI; `npm run test:e2e` remains the faster parallel feedback loop.
+  Pull-request CI deliberately continues to run the full suite because it is still small enough to
+  provide stronger coverage than the minimum golden-plus-focused gate.
 - Class-page spell choice coverage in tests/unit/spellCommands.test.ts and
   tests/hooks/useClassPageControllers.test.tsx verifies that later-level additions and reselections
   update profile/provenance state atomically without removing earlier or unattributed choices, while
@@ -224,6 +258,8 @@ new tests land and do not lower them to merge a change.
 - Character-library E2E for metadata search, cancel/confirm deletion, persisted deletion, and distinct malformed/schema-invalid import errors
 - Character copy and transfer coverage for immediate exact deep copies, collision-free naming,
   complete-character `.tbc` export, and schema-validated import.
+- Initial-character command coverage verifies that legacy racial feat choices are retained and
+  racial ability choices made in the creation wizard resolve their provenance records immediately.
 - Active-character spell workflow E2E (profile switching, add/remove, prepared toggle) in tests/e2e/spells-active.spec.ts
 - Startup cache-branch full coverage in tests/hooks/useDataInit.test.tsx (unconfigured, stale, fresh, offline, source-changed, direct-load)
 - Provenance reconciliation edge cases in tests/lib/provenance/reconciliation.test.ts (mixed-source retention, background choice removal, multiclass-safe class reconciliation)
@@ -285,7 +321,9 @@ new tests land and do not lower them to merge a change.
 
 1. **SpellProfileManager decomposition**: Large component (~783 lines); defer until next feature touch.
 2. **FeatOptionsModal**: Fixed-step skipping and unrestricted spellcasting-list initialization are covered; broader multi-step navigation and every option kind still need dedicated component coverage.
-3. **Character page journeys**: Route access is covered comprehensively, but Race, Background, Proficiencies, Ability Scores, Feats, Rules, Conditions, and character-sheet behavior still rely primarily on integration tests rather than focused E2E journeys.
+3. **Remaining character page journeys**: Golden progression now crosses Race, Proficiencies,
+   Ability Scores, Class, Spells, and Review. Rules, Conditions, and character-sheet interactions
+   still rely primarily on integration tests rather than focused E2E journeys.
 
 ## Test Coverage by Layer
 
@@ -296,7 +334,7 @@ new tests land and do not lower them to merge a change.
 | Hooks (char) | ✅ Good | ⚠️ Growing | Spell, HP, and startup data-init branch coverage; other UI-dependent hooks remain limited |
 | Spell workflows | ✅ Good | ✅ Good | Unit/integration + active-character E2E coverage now in place |
 | Provenance | ✅ Good | ✅ Good | Core logic + multiclass/mix-source edge cases tested |
-| Pages/Components | ⚠️ Minimal | ⚠️ Minimal | Mostly snapshot/smoke tested; full interaction E2E planned |
+| Pages/Components | ⚠️ Growing | ✅ Good | Golden progression covers the highest-risk creation and level-up path; several secondary pages remain integration-only |
 | Character schema | ✅ Good | ✅ Good | Exact-version import and hydration rejection coverage |
 
 ## Practical Test Patterns
@@ -318,6 +356,13 @@ E2E tests:
 - Start with create -> edit -> save -> reload -> verify state.
 - Add stale-cache startup flow checks where feasible.
 - Handle startup data-source prompts deterministically by seeding cache/config in test setup when no source is configured.
+- Keep long journeys deterministic and small by using real-shaped subsets, then pin each important
+  subset assumption to the parsed corpus in a guarded corpus contract.
+- Assert invariants at meaningful checkpoints rather than only the final screen: readiness issue
+  counts, effective ability bonuses, current/max HP synchronization, class-owned profiles and
+  choices, and post-reload state.
+- Tag narrow mechanics as `@focused` and complete release-blocking journeys as `@golden`; the full
+  suite remains the authoritative release check.
 
 ## Definition of Done for New Features
 

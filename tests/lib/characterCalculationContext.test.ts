@@ -9,6 +9,7 @@ import {
   createCharacterCalculationContext,
   deriveEffectiveAbilityScores,
 } from '@/lib/calculations/characterCalculationContext'
+import { makeSourceTag } from '@/lib/provenance'
 import type { Background5e, Class5e, Feat5e, Item5e, Race5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -48,6 +49,31 @@ describe('character calculation context', () => {
     expect(result.total).toMatchObject({ strength: 16, constitution: 16 })
     expect(result.modifiers).toMatchObject({ strength: 3, constitution: 3 })
     expect(character.abilityScores).toMatchObject({ strength: 14, constitution: 14 })
+  })
+
+  test('composes feat-option bonuses from provenance without changing allocated scores', () => {
+    const character = makeCharacterFixture({
+      abilityScores: {
+        ...makeCharacterFixture().abilityScores,
+        intelligence: 15,
+      },
+      provenance: {
+        ...makeCharacterFixture().provenance!,
+        abilityBonuses: [
+          {
+            ability: 'intelligence',
+            value: 1,
+            sourceTag: makeSourceTag('feat', 'Skill Expert', 'choice', 'TCE'),
+          },
+        ],
+      },
+    })
+
+    const result = deriveEffectiveAbilityScores(character)
+
+    expect(result.base.intelligence).toBe(15)
+    expect(result.featBonuses).toEqual({ intelligence: 1 })
+    expect(result.total.intelligence).toBe(16)
   })
 
   test('uses 2024 background ASIs and suppresses legacy racial ASIs', () => {

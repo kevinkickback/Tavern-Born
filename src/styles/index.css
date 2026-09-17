@@ -231,7 +231,7 @@
   }
 }
 
-[data-recursive-preview-active="true"] {
+[data-rules-preview-active="true"] {
   color: var(--accent-foreground);
   background-color: color-mix(in oklab, var(--accent) 28%, transparent);
   border-radius: var(--radius-sm);

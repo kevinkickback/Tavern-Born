@@ -172,6 +172,10 @@ function renderTags(text: string): string {
   let result = text
   const toAttr = (value: string) => value.replace(/"/g, '&quot;')
   const pickDisplay = (name: string, display?: string) => (display?.trim() ? display : name)
+
+  // 5etools uses these as internal template includes. Unresolved directives are not prose and
+  // must never leak into user-facing content.
+  result = result.replace(/\{#itemEntry [^}]+\}/g, '')
   const renderEntityTag = (
     tagName: string,
     defaultSource: string,

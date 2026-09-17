@@ -6,6 +6,34 @@ import type { Background5e, Class5e, Feat5e, Item5e, Race5e } from '@/types/5eto
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
 describe('getCharacterReadiness', () => {
+  test('validates point-buy against allocated scores when a feat grants an ability bonus', () => {
+    const character = makeCharacterFixture({
+      variantRules: { abilityScoreMethod: 'point-buy' },
+      abilityScores: {
+        strength: 15,
+        dexterity: 15,
+        constitution: 15,
+        intelligence: 8,
+        wisdom: 8,
+        charisma: 8,
+      },
+      provenance: {
+        ...makeCharacterFixture().provenance!,
+        abilityBonuses: [
+          {
+            ability: 'intelligence',
+            value: 1,
+            sourceTag: makeSourceTag('feat', 'Skill Expert', 'choice', 'TCE'),
+          },
+        ],
+      },
+    })
+
+    const result = getCharacterReadiness(character)
+
+    expect(result.blockingIssues.map((issue) => issue.id)).not.toContain('ability-scores:point-buy')
+  })
+
   test('returns stable navigation issues for an incomplete draft without game data', () => {
     const character = makeCharacterFixture({
       name: '',

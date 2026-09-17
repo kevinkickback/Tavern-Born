@@ -21,6 +21,8 @@ interface ViewportSize {
   height: number
 }
 
+export type AnchoredPreviewPlacement = 'top-start' | 'right-start'
+
 type CollisionPadding = Partial<Record<'top' | 'right' | 'bottom' | 'left', number>>
 
 export function getTitleBarOverlayHeight(uiScale: number): number {
@@ -70,4 +72,41 @@ export function clampPreviewPosition(
     left: Math.max(OVERLAY_VIEWPORT_MARGIN, Math.min(position.left, maxLeft)),
     top: Math.max(safeTop, Math.min(position.top, maxTop)),
   }
+}
+
+/**
+ * Provides a synchronous, collision-aware position while Floating UI calculates its final
+ * placement. This prevents a newly opened rules preview from briefly rendering at (0, 0),
+ * where it could otherwise be pinned before its asynchronous position resolves.
+ */
+export function getAnchoredPreviewFallbackPosition(
+  trigger: PreviewBounds,
+  overlay: OverlaySize,
+  viewport: ViewportSize,
+  safeTop: number,
+  placement: AnchoredPreviewPlacement,
+  gap: number,
+): PreviewPosition {
+  if (placement === 'right-start') {
+    const right = trigger.left + trigger.width + gap
+    const left = trigger.left - overlay.width - gap
+    const fitsRight = right + overlay.width + OVERLAY_VIEWPORT_MARGIN <= viewport.width
+
+    return clampPreviewPosition(
+      { left: fitsRight ? right : left, top: trigger.top },
+      overlay,
+      viewport,
+      safeTop,
+    )
+  }
+
+  const above = trigger.top - overlay.height - gap
+  const below = trigger.top + trigger.height + gap
+
+  return clampPreviewPosition(
+    { left: trigger.left, top: above >= safeTop ? above : below },
+    overlay,
+    viewport,
+    safeTop,
+  )
 }

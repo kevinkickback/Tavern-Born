@@ -142,14 +142,18 @@ Current implementation notes:
   across route changes and its stat group is responsive, the shared anchor hook also rechecks on
   window load/resize, observed anchor resize, and relevant DOM changes instead of assuming the
   anchor was visible when the hint first evaluated.
-- Unpinned portaled hints and recursive rules previews use `@floating-ui/react-dom` for measured
-  anchoring, offsets, collision-aware flipping/shifting, and live viewport updates. The shared
-  scale-aware native title-bar inset in `src/lib/overlayPosition.ts` supplies Floating UI's top
-  collision boundary; that module retains only the application-specific clamping used after a
-  preview is pinned and dragged. Root previews keep only their Pin action, nested previews add
-  direct-history navigation, and pinning freezes the selected entry at its current viewport
-  position. Pinned title areas use `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and
-  keyboard repositioning while History and Unpin remain independent controls.
+- Portaled hints and rules previews use `@floating-ui/react-dom` for measured anchoring, offsets,
+  collision-aware flipping/shifting, and live viewport updates. The shared scale-aware native
+  title-bar inset in `src/lib/overlayPosition.ts` supplies Floating UI's top collision boundary;
+  that module retains only the application-specific clamping used after a preview is pinned and
+  dragged. `src/components/editor/RulesPreviewManager.tsx` owns one app-level portal and enforces a
+  rolling maximum of two unpinned previews across every page and modal. The immediate spawning
+  surface is retained while the oldest unpinned ancestor is retired. Pinned content is an
+  element-independent snapshot, so source rerenders and virtualized-row unmounts do not dismiss it;
+  a pin may coexist with the two-level transient chain. Pinning a transient explicitly transfers the
+  single pin. Short hover intent, pointer-safe inter-preview corridors, and delayed outside-chain
+  dismissal keep traversal stable without animating shell geometry. Pinned title areas use
+  `src/hooks/ui/useDraggablePreview.ts` for constrained pointer and keyboard repositioning.
 - Actions & Effects lives in Builder's Details group and presents source-derived actions and typed
   effects as read-only rows beside clearly separated manual editors. Its responsive split
   workbench keeps the manual form and Actions/Effects tabs in the narrower left pane and the
@@ -222,13 +226,17 @@ Feat options note:
 - Parsing support lives in `src/lib/5etools/parsers/featOptions.ts`.
 
 Compendium edition filtering note:
-- `src/lib/compendiumEntries.ts` classifies entries with `edition: "one"` or source `XPHB` as
-	5.5e; untagged entries are classified as 5e.
+- `src/lib/compendiumEntries.ts` classifies entries with `edition: "one"` or a revised core
+	rulebook source (`XPHB`, `XDMG`, or `XMM`) as 5.5e; untagged entries are classified as 5e.
 - `src/pages/compendium/CompendiumPage.tsx` exposes a local 5e / 5.5e / Both selector beside
 	Sources and always defaults to Both.
 - Compendium builds its index from all loaded game data and does not read the active character's
 	`originSystem` or `allowedSources`. Its edition, source, type, and text filters are explicit local
 	UI state and do not mutate or persist character state.
+- The index is deliberately curated for user-facing reference material. It includes base equipment,
+	item properties, weapon masteries, and organizations in addition to the primary character-option
+	and rules collections. Level-scoped class-feature records and internal item-type taxonomy are not
+	standalone entries; base and magic items and other exact source-qualified duplicates are collapsed.
 - Character build and gameplay surfaces remain character-scoped through their existing ruleset and
 	allowed-source filtering; the global Compendium behavior is intentionally page-local.
 

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   clampPreviewPosition,
+  getAnchoredPreviewFallbackPosition,
   getTitleBarCollisionPadding,
   getTitleBarOverlayHeight,
   getTitleBarSafeTop,
@@ -46,5 +47,53 @@ describe('title-bar-safe overlay positioning', () => {
         40,
       ),
     ).toEqual({ left: 952, top: 472 })
+  })
+
+  test('places rules previews beside their trigger before async positioning resolves', () => {
+    expect(
+      getAnchoredPreviewFallbackPosition(
+        { left: 300, top: 180, width: 80, height: 24 },
+        { width: 320, height: 240 },
+        { width: 1280, height: 720 },
+        40,
+        'right-start',
+        8,
+      ),
+    ).toEqual({ left: 388, top: 180 })
+
+    expect(
+      getAnchoredPreviewFallbackPosition(
+        { left: 1080, top: 180, width: 80, height: 24 },
+        { width: 320, height: 240 },
+        { width: 1280, height: 720 },
+        40,
+        'right-start',
+        8,
+      ),
+    ).toEqual({ left: 752, top: 180 })
+  })
+
+  test('places root previews above or below their trigger without entering the title bar', () => {
+    expect(
+      getAnchoredPreviewFallbackPosition(
+        { left: 120, top: 400, width: 100, height: 24 },
+        { width: 320, height: 200 },
+        { width: 1280, height: 720 },
+        40,
+        'top-start',
+        4,
+      ),
+    ).toEqual({ left: 120, top: 196 })
+
+    expect(
+      getAnchoredPreviewFallbackPosition(
+        { left: 120, top: 60, width: 100, height: 24 },
+        { width: 320, height: 200 },
+        { width: 1280, height: 720 },
+        40,
+        'top-start',
+        4,
+      ),
+    ).toEqual({ left: 120, top: 88 })
   })
 })

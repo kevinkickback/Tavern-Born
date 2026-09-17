@@ -40,5 +40,6 @@ export function useTotalAbilityScores(
     bgAsiData: data.backgroundAbilityData,
     backgroundBonuses: data.backgroundBonuses,
     asiBonuses: data.asiBonuses,
+    featBonuses: data.featBonuses,
   }
 }

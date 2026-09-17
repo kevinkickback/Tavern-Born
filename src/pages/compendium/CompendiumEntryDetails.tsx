@@ -180,7 +180,9 @@ function getRenderableEntries(selectedEntry: CompendiumEntry): unknown[] {
       entries: asArray(section.entries),
     }))
 
-  return classFluffSections
+  if (classFluffSections.length) return classFluffSections
+
+  return selectedEntry.description ? [selectedEntry.description] : []
 }
 
 export function CompendiumEntryDetails({ selectedEntry }: CompendiumEntryDetailsProps) {
