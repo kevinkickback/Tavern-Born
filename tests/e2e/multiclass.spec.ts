@@ -12,23 +12,18 @@ async function navigateToClassPage(page: import('@playwright/test').Page) {
 
 const MULTICLASS_CHARACTER = {
   id: 'multiclass-e2e-1',
-  version: '2.0.0',
+  schemaVersion: 2,
   name: 'Multiclass E2E Hero',
   originSystem: '2014' as const,
   race: 'Human',
   raceSource: 'PHB',
-  class: 'Fighter',
-  classSource: 'PHB',
   background: 'Soldier',
   backgroundSource: 'PHB',
-  level: 8,
   experiencePoints: 0,
   classProgression: [
     { name: 'Fighter', source: 'PHB', levels: 5 },
     { name: 'Wizard', source: 'PHB', levels: 3 },
   ],
-  subclass: undefined,
-  subclassSource: undefined,
   abilityScores: {
     strength: 16,
     dexterity: 12,
@@ -42,6 +37,7 @@ const MULTICLASS_CHARACTER = {
     weapons: ['simple weapons', 'martial weapons', 'daggers', 'darts'],
     tools: [],
     skills: ['athletics', 'perception'],
+    expertise: [],
     languages: ['Common'],
     savingThrows: ['strength', 'constitution', 'intelligence', 'wisdom'],
   },
@@ -83,18 +79,11 @@ const MULTICLASS_CHARACTER = {
     },
   },
   equipment: [],
-  hitPoints: { max: 52, current: 52, temporary: 0 },
-  initiative: 1,
-  speed: 30,
-  savingThrows: {
-    strength: { proficient: true, bonus: 0 },
-    dexterity: { proficient: false, bonus: 0 },
-    constitution: { proficient: true, bonus: 0 },
-    intelligence: { proficient: true, bonus: 0 },
-    wisdom: { proficient: true, bonus: 0 },
-    charisma: { proficient: false, bonus: 0 },
+  hitPoints: { current: 52, temporary: 0 },
+  movement: {
+    speeds: { walk: 30 },
+    source: { kind: 'manual' as const, name: 'E2E seed' },
   },
-  skills: {},
   details: {},
   provenance: {
     proficiencies: {

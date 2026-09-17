@@ -15,14 +15,13 @@ function loadLibraryCharacters(): Record<string, unknown>[] {
       ...fixture,
       id: 'library-alpha',
       name: 'Alpha Hero',
-      class: 'Fighter',
       lastModified: '2026-01-02T00:00:00.000Z',
     },
     {
       ...fixture,
       id: 'library-bravo',
       name: 'Bravo Mage',
-      class: 'Wizard',
+      classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
       lastModified: '2026-01-03T00:00:00.000Z',
     },
   ]
@@ -107,7 +106,7 @@ test('malformed and schema-invalid imports show distinct errors without changing
           ...fixture,
           id: 'bad',
           name: 'Corrupted',
-          version: '6.0.0',
+          schemaVersion: 2,
           proficiencies: {
             ...(fixture.proficiencies as Record<string, unknown>),
             weapons: [{ name: 'Not a valid proficiency' }],

@@ -1,6 +1,6 @@
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
 import { mergeRaceWithSubrace } from '@/lib/calculations/raceUtils'
-import type { Background5e, Class5e, Race5e } from '@/types/5etools'
+import type { Background5e, Class5e, Feat5e, Item5e, Race5e } from '@/types/5etools'
 
 export interface EntityReference {
   name?: string
@@ -11,6 +11,8 @@ export interface EntityLookupSet {
   classesByKey?: Readonly<Record<string, Class5e>>
   racesByKey?: Readonly<Record<string, Race5e>>
   backgroundsByKey?: Readonly<Record<string, Background5e>>
+  featsByKey?: Readonly<Record<string, Feat5e>>
+  itemLookup?: ReadonlyMap<string, Item5e>
 }
 
 export interface RaceReference extends EntityReference {
@@ -25,22 +27,6 @@ export interface ResolvedRaceReference {
   subraceIsNested: boolean
 }
 
-function deterministicNameMatch<T extends { name: string; source: string }>(
-  name: string,
-  primaryLookup: Readonly<Record<string, T>> | undefined,
-  rawLookup: Readonly<Record<string, T>> | undefined,
-): T | undefined {
-  const compare = (left: T, right: T) =>
-    left.source.localeCompare(right.source) || left.name.localeCompare(right.name)
-  const primary = Object.values(primaryLookup ?? {})
-    .filter((entity) => entity.name === name)
-    .sort(compare)[0]
-  if (primary) return primary
-  return Object.values(rawLookup ?? {})
-    .filter((entity) => entity.name === name)
-    .sort(compare)[0]
-}
-
 function resolveEntity<T extends { name: string; source: string }>(
   reference: EntityReference,
   primaryLookup: Readonly<Record<string, T>> | undefined,
@@ -49,11 +35,9 @@ function resolveEntity<T extends { name: string; source: string }>(
   const name = reference.name?.trim()
   if (!name) return undefined
   const source = reference.source?.trim()
-  if (source) {
-    const key = getEntityLookupKey(name, source)
-    return primaryLookup?.[key] ?? rawLookup?.[key]
-  }
-  return deterministicNameMatch(name, primaryLookup, rawLookup)
+  if (!source) return undefined
+  const key = getEntityLookupKey(name, source)
+  return primaryLookup?.[key] ?? rawLookup?.[key]
 }
 
 export function resolveClassReference(
@@ -72,6 +56,14 @@ export function resolveBackgroundReference(
   return resolveEntity(reference, primaryLookups.backgroundsByKey, rawLookups.backgroundsByKey)
 }
 
+export function resolveFeatReference(
+  reference: EntityReference,
+  primaryLookups: EntityLookupSet,
+  rawLookups: EntityLookupSet = primaryLookups,
+): Feat5e | undefined {
+  return resolveEntity(reference, primaryLookups.featsByKey, rawLookups.featsByKey)
+}
+
 function resolveSubraceFromParents(
   reference: EntityReference,
   primaryParent: Race5e | undefined,
@@ -80,18 +72,12 @@ function resolveSubraceFromParents(
   const name = reference.name?.trim()
   if (!name) return undefined
   const source = reference.source?.trim()
+  if (!source) return undefined
   const candidates = [primaryParent, rawParent]
   for (const parent of candidates) {
     const subraces = parent?.subraces ?? []
-    if (source) {
-      const exact = subraces.find((subrace) => subrace.name === name && subrace.source === source)
-      if (exact) return exact
-      continue
-    }
-    const byName = subraces
-      .filter((subrace) => subrace.name === name)
-      .sort((left, right) => left.source.localeCompare(right.source))[0]
-    if (byName) return byName
+    const exact = subraces.find((subrace) => subrace.name === name && subrace.source === source)
+    if (exact) return exact
   }
   return undefined
 }

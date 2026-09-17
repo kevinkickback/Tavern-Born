@@ -19,7 +19,7 @@ import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useRitualCasting } from '@/hooks/character/useRitualCasting'
 import { useConditions } from '@/hooks/data/useGameData'
 import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
-import { getTotalCharacterLevel } from '@/lib/characterUtils'
+import { CORE_RULES_METADATA } from '@/lib/5etools/rulesetMetadata'
 import type { RecursiveLookup } from '@/lib/renderer/recursiveTooltip'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
@@ -44,8 +44,31 @@ export function getExhaustionTableRows(entries: unknown[] | undefined): Exhausti
   return table.rows.flatMap((row) => {
     if (!Array.isArray(row) || row.length < 2) return []
     const level = Number(row[0])
-    return Number.isInteger(level) && level >= 1 && level <= 6 ? [{ level, effect: row[1] }] : []
+    return Number.isInteger(level) && level >= 1 ? [{ level, effect: row[1] }] : []
   })
+}
+
+export function getExhaustionMaximum(entries: unknown[] | undefined): number | null {
+  const rows = getExhaustionTableRows(entries)
+  if (rows.length > 0) return Math.max(...rows.map((row) => row.level))
+
+  const visit = (value: unknown): number | null => {
+    if (typeof value === 'string') {
+      const match = value.match(/exhaustion level is\s+(\d+)/i)
+      return match ? Number.parseInt(match[1], 10) : null
+    }
+    if (Array.isArray(value)) {
+      for (const child of value) {
+        const found = visit(child)
+        if (found !== null) return found
+      }
+    } else if (isRecord(value)) {
+      return visit(Object.values(value))
+    }
+    return null
+  }
+
+  return visit(entries)
 }
 
 function selectRulesetConditions(records: readonly Condition5e[], source: string) {
@@ -164,7 +187,7 @@ export function ConditionsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
-  const { hitDie } = useHitPoints()
+  const { hitDicePools = [] } = useHitPoints()
   const ritualCasting = useRitualCasting()
   const { resources, updateCurrent, resetResource, resetAll } = useClassResources()
   const conditionRecords = useConditions()
@@ -184,6 +207,20 @@ export function ConditionsPage() {
     () => getExhaustionTableRows(exhaustionRule?.entries),
     [exhaustionRule?.entries],
   )
+  const exhaustionMaximum =
+    getExhaustionMaximum(exhaustionRule?.entries) ??
+    CORE_RULES_METADATA[character?.originSystem ?? '2014'].exhaustionMaximum
+  const exhaustionLevels = useMemo(
+    () =>
+      [0, ...exhaustionRows.map((row) => row.level)].filter(
+        (level, index, levels) => levels.indexOf(level) === index,
+      ),
+    [exhaustionRows],
+  )
+  const selectableExhaustionLevels =
+    exhaustionLevels.length > 1
+      ? exhaustionLevels
+      : Array.from({ length: exhaustionMaximum + 1 }, (_, level) => level)
   const exhaustionRuleSections = useMemo(() => {
     const entries = exhaustionRule?.entries ?? []
     const tableIndex = entries.findIndex((entry) => isRecord(entry) && entry.type === 'table')
@@ -217,9 +254,8 @@ export function ConditionsPage() {
   const deathSaves = character.deathSaves ?? { successes: 0, failures: 0 }
   const conditions = character.conditions ?? []
   const exhaustion = character.exhaustion ?? 0
-  const hitDiceUsed = character.hitDiceUsed ?? 0
-  const totalLevel = getTotalCharacterLevel(character) ?? 1
-  const hitDiceRemaining = Math.max(0, totalLevel - hitDiceUsed)
+  const hitDiceUsed = character.hitDiceUsed ?? {}
+  const totalHitDiceUsed = hitDicePools.reduce((total, pool) => total + pool.used, 0)
 
   const toggleCondition = (name: string) => {
     const next = conditions.includes(name)
@@ -235,7 +271,7 @@ export function ConditionsPage() {
   }
 
   const setExhaustion = (level: number) => {
-    update('exhaustion', Math.max(0, Math.min(6, level)))
+    update('exhaustion', Math.max(0, Math.min(exhaustionMaximum, level)))
   }
 
   return (
@@ -361,39 +397,49 @@ export function ConditionsPage() {
                       Track hit dice spent to recover hit points during rests.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="size-8 p-0"
-                      aria-label="Spend one hit die"
-                      disabled={hitDiceUsed >= totalLevel}
-                      onClick={() => update('hitDiceUsed', hitDiceUsed + 1)}
-                    >
-                      <Minus size={14} />
-                    </Button>
-                    <div className="flex-1 text-center">
-                      <span className="text-lg font-bold tabular-nums">{hitDiceRemaining}</span>
-                      <span className="text-sm text-muted-foreground">/{totalLevel}</span>
-                      <div className="text-xs text-muted-foreground">d{hitDie} remaining</div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="size-8 p-0"
-                      aria-label="Restore one hit die"
-                      disabled={hitDiceUsed === 0}
-                      onClick={() => update('hitDiceUsed', hitDiceUsed - 1)}
-                    >
-                      <Plus size={14} />
-                    </Button>
+                  <div className="space-y-2">
+                    {hitDicePools.map((pool) => (
+                      <div key={pool.id} className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="size-8 p-0"
+                          aria-label={`Spend one ${pool.label} hit die`}
+                          disabled={pool.used >= pool.max}
+                          onClick={() =>
+                            update('hitDiceUsed', { ...hitDiceUsed, [pool.id]: pool.used + 1 })
+                          }
+                        >
+                          <Minus size={14} />
+                        </Button>
+                        <div className="flex-1 text-center">
+                          <span className="font-bold tabular-nums">{pool.max - pool.used}</span>
+                          <span className="text-sm text-muted-foreground">/{pool.max}</span>
+                          <div className="text-xs text-muted-foreground">
+                            {pool.label} d{pool.die}
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="size-8 p-0"
+                          aria-label={`Restore one ${pool.label} hit die`}
+                          disabled={pool.used === 0}
+                          onClick={() =>
+                            update('hitDiceUsed', { ...hitDiceUsed, [pool.id]: pool.used - 1 })
+                          }
+                        >
+                          <Plus size={14} />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-7 text-xs text-muted-foreground"
-                    disabled={hitDiceUsed === 0}
-                    onClick={() => update('hitDiceUsed', 0)}
+                    disabled={totalHitDiceUsed === 0}
+                    onClick={() => update('hitDiceUsed', {})}
                   >
                     Restore All
                   </Button>
@@ -425,7 +471,7 @@ export function ConditionsPage() {
                     <p
                       className={cn(
                         'mt-1 text-2xl font-bold tabular-nums',
-                        exhaustion === 6
+                        exhaustion === exhaustionMaximum
                           ? 'text-destructive'
                           : exhaustion > 0
                             ? 'text-primary'
@@ -435,8 +481,8 @@ export function ConditionsPage() {
                       Level {exhaustion}
                     </p>
                   </div>
-                  <div className="grid grid-cols-7 gap-2">
-                    {[0, 1, 2, 3, 4, 5, 6].map((level) => {
+                  <div className="grid grid-cols-[repeat(auto-fit,minmax(2.5rem,1fr))] gap-2">
+                    {selectableExhaustionLevels.map((level) => {
                       const current = exhaustion === level
                       return (
                         <button
@@ -447,7 +493,7 @@ export function ConditionsPage() {
                           aria-pressed={current}
                           className={cn(
                             'flex h-10 cursor-pointer items-center justify-center rounded-md border text-sm font-bold tabular-nums transition-colors',
-                            current && level === 6
+                            current && level === exhaustionMaximum
                               ? 'border-destructive bg-destructive text-destructive-foreground'
                               : current
                                 ? 'border-accent bg-accent text-accent-foreground'
@@ -482,7 +528,7 @@ export function ConditionsPage() {
                                 key={row.level}
                                 className={cn(
                                   'grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 px-2 py-3 transition-colors',
-                                  current && row.level === 6
+                                  current && row.level === exhaustionMaximum
                                     ? 'bg-destructive/15'
                                     : current
                                       ? 'bg-accent/15'
@@ -710,7 +756,7 @@ export function ConditionsPage() {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold">{resource.label}</p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
-                            {resource.className} · Restores on a {resource.restType} rest
+                            {resource.className} · {resource.recoveryText}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">

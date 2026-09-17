@@ -1,3 +1,4 @@
+import { getSpellNameKey, parseSpellReference } from '@/lib/calculations/spellIdentity'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { SpellSourceTag } from '@/lib/provenance/types'
 import type { Spell5e } from '@/types/5etools'
@@ -12,26 +13,22 @@ export function detectSourceConflicts(
   character: Character,
   allowedSources: string[],
 ): SourceConflict[] {
-  const allowed = new Set(allowedSources)
+  const allowed = new Set(allowedSources.map((source) => source.toUpperCase()))
   const bySource = new Map<string, string[]>()
 
   const flag = (label: string, source?: string) => {
-    if (!source || allowed.has(source)) return
+    if (!source || allowed.has(source.toUpperCase())) return
     if (!bySource.has(source)) bySource.set(source, [])
-    bySource.get(source)?.push(label)
+    const items = bySource.get(source)
+    if (!items?.includes(label)) items?.push(label)
   }
 
   flag(character.race, character.raceSource)
   if (character.subrace) flag(character.subrace, character.subraceSource)
 
-  if (character.classProgression?.length) {
-    for (const cls of character.classProgression) {
-      flag(cls.name, cls.source)
-      if (cls.subclass) flag(`${cls.subclass} (subclass)`, cls.subclassSource)
-    }
-  } else {
-    flag(character.class, character.classSource)
-    if (character.subclass) flag(`${character.subclass} (subclass)`, character.subclassSource)
+  for (const cls of character.classProgression) {
+    flag(cls.name, cls.source)
+    if (cls.subclass) flag(`${cls.subclass} (subclass)`, cls.subclassSource)
   }
 
   flag(character.background, character.backgroundSource)
@@ -42,30 +39,38 @@ export function detectSourceConflicts(
   for (const feat of character.specialFeats ?? []) {
     flag(feat.name, feat.source)
   }
+  for (const choice of character.classFeatChoices ?? []) {
+    for (const feat of choice.feats) flag(feat.name, feat.source)
+  }
+  for (const choice of character.classChoiceSelections ?? []) {
+    for (const option of choice.selected) flag(option.name, option.source)
+  }
 
   return Array.from(bySource.entries()).map(([source, items]) => ({ source, items }))
 }
 
 /** Count player-selected spells that were removed (excludes fixedSpells). */
 export function countRemovedSpells(character: Character, newProfiles: SpellProfile[]): number {
-  let before = 0
-  let after = 0
-  for (let i = 0; i < character.spells.spellProfiles.length; i++) {
-    const prev = character.spells.spellProfiles[i]
-    const next = newProfiles[i]
-    if (!prev || !next) continue
-    before +=
-      prev.cantrips.length +
-      prev.spellsKnown.length +
-      prev.preparedSpells.length +
-      (prev.choices?.reduce((s, c) => s + c.selected.length, 0) ?? 0)
-    after +=
-      next.cantrips.length +
-      next.spellsKnown.length +
-      next.preparedSpells.length +
-      (next.choices?.reduce((s, c) => s + c.selected.length, 0) ?? 0)
+  const selectedSpellKeys = (profile: SpellProfile): Set<string> =>
+    new Set(
+      [
+        ...profile.cantrips,
+        ...profile.spellsKnown,
+        ...profile.preparedSpells,
+        ...(profile.choices?.flatMap((choice) => choice.selected) ?? []),
+      ].map(getSpellNameKey),
+    )
+  const nextById = new Map(newProfiles.map((profile) => [profile.id, profile]))
+  let removed = 0
+  for (const previous of character.spells.spellProfiles) {
+    const before = selectedSpellKeys(previous)
+    const after = nextById.get(previous.id)
+    const afterKeys = after ? selectedSpellKeys(after) : new Set<string>()
+    for (const key of before) {
+      if (!afterKeys.has(key)) removed += 1
+    }
   }
-  return before - after
+  return removed
 }
 
 /**
@@ -84,15 +89,18 @@ export function pruneSpellsForDisabledSources(
   // Build index: normalized spell name → set of source abbreviations (uppercased)
   const spellSourceIndex = new Map<string, Set<string>>()
   for (const spell of allSpells) {
-    const key = spell.name.toLowerCase().trim()
+    const key = getSpellNameKey(spell.name)
     if (!spellSourceIndex.has(key)) spellSourceIndex.set(key, new Set())
     spellSourceIndex.get(key)?.add(spell.source.toUpperCase())
   }
 
   const effectiveSet = new Set(effectiveSources.map((s) => s.toUpperCase()))
 
-  const isSpellAllowed = (name: string): boolean => {
-    const key = name.toLowerCase().trim()
+  const isSpellAllowed = (reference: string): boolean => {
+    const { source } = parseSpellReference(reference)
+    if (source) return effectiveSet.has(source.toUpperCase())
+
+    const key = getSpellNameKey(reference)
     const sources = spellSourceIndex.get(key)
     if (!sources) return true // unknown spell — keep it
     for (const src of sources) {
@@ -103,9 +111,12 @@ export function pruneSpellsForDisabledSources(
 
   let changed = false
   const newProfiles = character.spells.spellProfiles.map((profile) => {
-    const newCantrips = profile.cantrips.filter(isSpellAllowed)
-    const newSpellsKnown = profile.spellsKnown.filter(isSpellAllowed)
-    const newPreparedSpells = profile.preparedSpells.filter(isSpellAllowed)
+    const fixedKeys = new Set((profile.fixedSpells ?? []).map(getSpellNameKey))
+    const keepMaterializedSpell = (reference: string) =>
+      fixedKeys.has(getSpellNameKey(reference)) || isSpellAllowed(reference)
+    const newCantrips = profile.cantrips.filter(keepMaterializedSpell)
+    const newSpellsKnown = profile.spellsKnown.filter(keepMaterializedSpell)
+    const newPreparedSpells = profile.preparedSpells.filter(keepMaterializedSpell)
     const newChoices = profile.choices?.map((choice) => ({
       ...choice,
       selected: choice.selected.filter(isSpellAllowed),

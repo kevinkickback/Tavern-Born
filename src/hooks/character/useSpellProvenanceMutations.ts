@@ -1,5 +1,10 @@
 import { useCallback, useMemo } from 'react'
 import { useLedgerPatch } from '@/hooks/character/useLedgerPatch'
+import {
+  type ClassSpellSelectionInput,
+  setClassSpellSelectionsAtLevel as setClassSpellSelectionsAtLevelCommand,
+  swapClassSpellAtLevel as swapClassSpellAtLevelCommand,
+} from '@/lib/character/commands/spellCommands'
 import { addSpellGrant, applyClassSpellGrant, makeSourceTag } from '@/lib/provenance'
 import { normalizeKey } from '@/lib/provenance/normalization'
 import type { ProvenanceLedger } from '@/lib/provenance/types'
@@ -7,6 +12,7 @@ import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 
 export function useSpellProvenanceMutations() {
   const character = useCharacterStore((s) => s.activeCharacter)
+  const updateCharacter = useCharacterStore((s) => s.updateCharacter)
 
   const ledger = useMemo<ProvenanceLedger>(
     () => character?.provenance ?? emptyProvenance(),
@@ -22,7 +28,7 @@ export function useSpellProvenanceMutations() {
       spellName: string,
       grantedAtLevel?: number,
     ) => {
-      if (!character) return
+      if (!character || !classSource) return
       const newLedger = applyClassSpellGrant(ledger, className, classSource, spellName, 'choice', {
         ...(grantedAtLevel ? { spellGrantedAtLevel: grantedAtLevel } : {}),
         spellAttributionMode: grantedAtLevel ? 'exact' : undefined,
@@ -56,6 +62,54 @@ export function useSpellProvenanceMutations() {
       patch(accumulated)
     },
     [character, ledger, patch],
+  )
+
+  const setClassSpellSelectionsAtLevel = useCallback(
+    (
+      className: string,
+      classSource: string | undefined,
+      classLevel: number,
+      selections: ClassSpellSelectionInput[],
+    ) => {
+      if (!character || !classSource) return
+      const result = setClassSpellSelectionsAtLevelCommand(character, ledger, {
+        className,
+        classSource,
+        classLevel,
+        selections,
+      })
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    },
+    [character, ledger, updateCharacter],
+  )
+
+  const swapClassSpellAtLevel = useCallback(
+    (
+      className: string,
+      classSource: string | undefined,
+      swapAtLevel: number,
+      removedName: string,
+      addedName: string,
+      addedSpellSchool?: string,
+    ) => {
+      if (!character || !classSource) return
+      const result = swapClassSpellAtLevelCommand(character, ledger, {
+        className,
+        classSource,
+        swapAtLevel,
+        removedName,
+        addedName,
+        addedSpellSchool,
+      })
+      updateCharacter(character.id, {
+        ...result.characterPatch,
+        provenance: result.provenanceUpdate,
+      })
+    },
+    [character, ledger, updateCharacter],
   )
 
   const applyInferredClassSpellSelection = useCallback(
@@ -149,6 +203,8 @@ export function useSpellProvenanceMutations() {
   return {
     applySpellSelection,
     applyBatchSpellSelections,
+    setClassSpellSelectionsAtLevel,
+    swapClassSpellAtLevel,
     applyInferredClassSpellSelection,
     applyManualSpellGrant,
     removeSpellProvenance,

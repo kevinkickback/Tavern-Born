@@ -5,11 +5,13 @@ import {
   Book,
   Books,
   Certificate,
+  ClipboardText,
   FilePdf,
   Gear,
   Image,
   Lightning,
   MagicWand,
+  PencilSimple,
   PersonSimple,
   Scroll,
   SlidersHorizontal,
@@ -19,7 +21,7 @@ import {
   Users,
   Wrench,
 } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   AlertDialog,
@@ -37,6 +39,12 @@ import { resolvePortraitSrc } from '@/lib/portraitConstants'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 
+const CharacterReadinessBadge = lazy(() =>
+  import('@/components/character/CharacterReadinessBadge').then((module) => ({
+    default: module.CharacterReadinessBadge,
+  })),
+)
+
 interface ContextItem {
   label: string
   path: string
@@ -50,7 +58,7 @@ interface ContextGroup {
 }
 
 interface Workspace {
-  id: 'start' | 'build' | 'sheet' | 'compendium'
+  id: 'start' | 'build' | 'rules' | 'sheet' | 'compendium'
   label: string
   path: string
   icon: Icon
@@ -80,8 +88,8 @@ const workspaces: Workspace[] = [
     icon: Wrench,
     requiresCharacter: true,
     matches: (pathname) =>
-      ['/build', '/feats', '/spells', '/equipment', '/details', '/rules', '/sources'].some(
-        (prefix) => pathname.startsWith(prefix),
+      ['/build', '/feats', '/spells', '/equipment', '/details'].some((prefix) =>
+        pathname.startsWith(prefix),
       ),
     groups: [
       {
@@ -103,12 +111,27 @@ const workspaces: Workspace[] = [
           { label: 'Portrait', path: '/details/portrait', icon: Image },
           { label: 'Characteristics', path: '/details/characteristics', icon: Sparkle },
           { label: 'Conditions', path: '/details/conditions', icon: Lightning },
+          { label: 'Actions & Effects', path: '/build/adjustments', icon: PencilSimple },
         ],
       },
       {
-        label: 'Options',
+        label: 'Finish',
+        items: [{ label: 'Review', path: '/build/review', icon: ClipboardText }],
+      },
+    ],
+  },
+  {
+    id: 'rules',
+    label: 'Rules',
+    path: '/rules',
+    icon: SlidersHorizontal,
+    requiresCharacter: true,
+    matches: (pathname) => pathname.startsWith('/rules') || pathname.startsWith('/sources'),
+    groups: [
+      {
+        label: 'Character Configuration',
         items: [
-          { label: 'Rules', path: '/rules', icon: SlidersHorizontal },
+          { label: 'Character Rules', path: '/rules', icon: SlidersHorizontal },
           { label: 'Sources', path: '/sources', icon: Books },
         ],
       },
@@ -364,6 +387,15 @@ export function AppSidebar() {
                           weight={active ? 'fill' : 'regular'}
                         />
                         <span className="truncate">{item.label}</span>
+                        {item.path === '/build/review' && activeCharacter && (
+                          <Suspense fallback={null}>
+                            <CharacterReadinessBadge
+                              character={activeCharacter}
+                              compact
+                              className="ml-auto px-1.5 py-0 text-[10px]"
+                            />
+                          </Suspense>
+                        )}
                       </Link>
                     </li>
                   )

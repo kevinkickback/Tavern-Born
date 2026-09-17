@@ -20,7 +20,7 @@ export function casterProgressionToFull(progression: string): string {
   return CASTER_PROGRESSION_TO_FULL[progression as CasterProgression] ?? progression
 }
 
-export interface SpellSlotLevel {
+interface SpellSlotLevel {
   max: number
   used: number
   isPactMagic?: boolean
@@ -230,18 +230,22 @@ export function getMaxSpellLevelForClassLevel(
  * record, preserving the `used` count while updating `max` from calculated slots.
  *
  * @param calculated   - slots calculated from class + level
- * @param storedUsed   - existing used counts keyed by spell level (1–9)
+ * @param storedUsed   - existing used counts keyed by spell level
  */
 export function mergeSpellSlots(
   calculated: SpellSlotsResult,
   storedUsed: Record<number, number>,
 ): SpellSlotsResult {
   const result: SpellSlotsResult = {}
-  for (let sl = 1; sl <= 9; sl++) {
-    const calc = calculated[sl]
+  const levels = Object.keys(calculated)
+    .map(Number)
+    .filter((level) => Number.isInteger(level) && level > 0)
+    .sort((left, right) => left - right)
+  for (const level of levels) {
+    const calc = calculated[level]
     if (!calc) continue
-    const used = Math.min(storedUsed[sl] ?? 0, calc.max)
-    result[sl] = { ...calc, used }
+    const used = Math.min(storedUsed[level] ?? 0, calc.max)
+    result[level] = { ...calc, used }
   }
   return result
 }

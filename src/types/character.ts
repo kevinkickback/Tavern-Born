@@ -1,6 +1,9 @@
 import type { ProvenanceLedger } from '@/lib/provenance/types'
+import type { FeatOptionSelections } from '@/types/feat'
+import type { CharacterAction } from './actions'
+import type { CharacterEffect } from './effects'
 
-export type { ProvenanceLedger }
+export type { FeatOptionSelections } from '@/types/feat'
 
 export type OriginSystem = '2014' | '2024'
 
@@ -14,18 +17,20 @@ export type AbilityName =
 
 export interface CharacterClassEntry {
   name: string
-  source?: string
+  source: string
   levels: number
   subclass?: string
   subclassSource?: string
 }
+
+export type HitDiceUsed = Record<string, number>
 
 export type HitPointGainMethod = 'average' | 'rolled' | 'manual'
 
 /** The raw hit-die result chosen for a level after character level 1. */
 export interface HitPointGain {
   className: string
-  classSource?: string
+  classSource: string
   classLevel: number
   characterLevel: number
   hitDie: number
@@ -33,9 +38,9 @@ export interface HitPointGain {
   method: HitPointGainMethod
 }
 
-export type HitPointAdjustmentMode = 'flat' | 'per-level'
-export type AdjustmentSource = 'manual' | 'item' | 'feat' | 'other'
-export type HitPointAdjustmentSource = AdjustmentSource
+type HitPointAdjustmentMode = 'flat' | 'per-level'
+type AdjustmentSource = 'manual' | 'item' | 'feat' | 'other'
+type HitPointAdjustmentSource = AdjustmentSource
 
 /** A permanent additive change applied after class and Constitution HP. */
 export interface HitPointAdjustment {
@@ -58,28 +63,65 @@ export interface ArmorClassAdjustment {
   createdAt: string
 }
 
+export type MovementMode = 'walk' | 'climb' | 'swim' | 'fly' | 'burrow'
+
+export interface CharacterMovement {
+  speeds: Partial<Record<MovementMode, number>>
+  hover?: boolean
+  /** Numeric or boolean movement keys not yet understood by Tavern-Born. */
+  other?: Record<string, number | boolean>
+  unresolvedInheritedModes?: MovementMode[]
+  source: {
+    kind: 'race' | 'manual'
+    name: string
+    source?: string
+  }
+}
+
+export interface MovementAdjustment {
+  id: string
+  label: string
+  mode: string
+  amount: number
+  sourceType: AdjustmentSource
+  sourceRef?: string
+  createdAt: string
+}
+
+type CharacterClassChoiceKind = 'class-feature' | 'feat' | 'item' | 'optional-feature'
+
+export interface CharacterClassChoiceOption {
+  entityType: 'classFeature' | 'feat' | 'item' | 'optionalFeature'
+  name: string
+  source?: string
+  /** Class level at which this selection occupied an available choice slot. */
+  slotLevel: number
+}
+
+export interface CharacterClassChoiceSelection {
+  choiceId: string
+  label: string
+  kind: CharacterClassChoiceKind
+  className: string
+  classSource: string
+  classLevel: number
+  selected: CharacterClassChoiceOption[]
+}
+
 export interface Character {
   id: string
-  version: string
+  schemaVersion: number
   name: string
   originSystem: OriginSystem
   race: string
   raceSource?: string
   subrace?: string
   subraceSource?: string
-  /** Primary class name — always mirrors classProgression[0].name when classProgression is present */
-  class: string
-  classSource?: string
-  subclass?: string
-  subclassSource?: string
   background: string
   backgroundSource?: string
   currency?: Currency
-  /** Total character level — always mirrors sum of classProgression[*].levels when classProgression is present */
-  level: number
   experiencePoints: number
-  /** Authoritative multiclass progression. When present, class/level are derived from it. */
-  classProgression?: CharacterClassEntry[]
+  classProgression: CharacterClassEntry[]
 
   abilityScores: AbilityScores
 
@@ -100,14 +142,18 @@ export interface Character {
   hitPointAdjustments?: HitPointAdjustment[]
   /** Exact maximum HP override. When set, derived HP and adjustments do not change the maximum. */
   maxHitPointsOverride?: number
-  /** Stored AC — retained for migration compatibility only; never read for display. Use `computeEffectiveCharacterArmorClass` instead. */
-  armorClass?: number
   /** Optional manual override that takes precedence over calculated AC in UI reads. */
   armorClassOverride?: number
   /** Lasting bonuses or penalties applied to calculated AC. */
   armorClassAdjustments?: ArmorClassAdjustment[]
-  initiative: number
-  speed: number
+  /** Canonical structured base movement, normally supplied by the selected race/species. */
+  movement: CharacterMovement
+  /** Labeled additive changes applied to individual movement modes. */
+  movementAdjustments?: MovementAdjustment[]
+  /** Exact per-mode values applied after base movement and adjustments. */
+  movementOverrides?: Record<string, number>
+  /** Exact hover override applied after the base movement profile. */
+  movementHoverOverride?: boolean
 
   /** Damage resistances granted by race or other sources. */
   damageResistances?: string[]
@@ -117,8 +163,6 @@ export interface Character {
 
   /** Condition immunities granted by race or other sources. */
   conditionImmunities?: string[]
-  savingThrows: SavingThrows
-  skills: Skills
 
   details: CharacterDetails
   portrait?: string
@@ -140,12 +184,16 @@ export interface Character {
 
   /** Preferred background starting-equipment option keys per block. */
   backgroundEquipmentChoices?: string[]
+  /** Concrete item references selected for generic background equipment choices. */
+  backgroundEquipmentItemChoices?: Record<string, string>
 
   /** Last currency grant applied from background starting equipment. */
   backgroundCurrencyGrant?: Currency
 
   /** Equipment option choices for each class, keyed by "className|source". Per-block choice keys array. */
   classEquipmentChoices?: Record<string, string[]>
+  /** Concrete item references selected for generic class equipment choices, keyed by class. */
+  classEquipmentItemChoices?: Record<string, Record<string, string>>
   /**
    * Ordered ability selections for the chosen background ability block.
    * selections[i] receives weights[i] bonus from the selected block.
@@ -159,11 +207,17 @@ export interface Character {
    *  are never removed by normal feat-slot management (e.g. level-down, class change). */
   specialFeats?: Feat[]
 
+  /** Feat selections owned by a specific class progression grant. */
+  classFeatChoices?: ClassFeatChoice[]
+
+  /** Structured choices owned by a source-qualified class feature or progression. */
+  classChoiceSelections?: CharacterClassChoiceSelection[]
+
   /** Follow-up selections for fixed provenance feat grants, keyed by name|source|variant. */
   fixedFeatOptions?: Record<string, FeatOptionSelections>
 
   /** Provenance ledger tracking the origin of every granted option. */
-  provenance?: ProvenanceLedger
+  provenance: ProvenanceLedger
 
   // ── Session state ────────────────────────────────────────────────────────
   /** Whether the character currently has inspiration. */
@@ -174,12 +228,21 @@ export interface Character {
   conditions?: string[]
   /** Exhaustion level 0–6. */
   exhaustion?: number
-  /** Hit dice expended (spent on short rests). Type and max are derived from class data. */
-  hitDiceUsed?: number
+  /** Expended hit dice keyed by source-qualified class pool. */
+  hitDiceUsed?: HitDiceUsed
   /** Whether the character can cast spells as rituals (derived from class, may be manually set). */
   ritualCasting?: boolean
   /** Current usage counts for class resources, keyed by stable ID. Label/max are derived. */
   classResources?: Record<string, number>
+
+  /** User-authored typed effects; source-derived effects are projected from game data at runtime. */
+  manualEffects?: CharacterEffect[]
+  /** Effect IDs deliberately disabled by the user without deleting their source declarations. */
+  suppressedEffectIds?: string[]
+  /** Explicit boolean switches used by typed effect activation requirements. */
+  effectFlags?: Record<string, boolean>
+  /** User-authored actions; source-derived actions are projected from game data at runtime. */
+  manualActions?: CharacterAction[]
 
   createdAt: string
   lastModified: string
@@ -209,6 +272,7 @@ export interface Proficiencies {
   weapons: string[]
   tools: string[]
   skills: string[]
+  expertise: string[]
   languages: string[]
   savingThrows: string[]
 }
@@ -219,25 +283,6 @@ export interface Feature {
   source: string
   description: string
   level?: number
-}
-
-export interface FeatOptionSelections {
-  /** Spellcaster class name chosen (e.g. "Wizard"), when the feat keys off a class list. */
-  spellcastingClass?: string
-  /** Spell names granted by the feat (stored as `name|source` composite keys). */
-  spells?: string[]
-  /** Skill names granted by the feat. */
-  skills?: string[]
-  /** Language names granted by the feat. */
-  languages?: string[]
-  /** Tool names granted by the feat. */
-  tools?: string[]
-  /** Ability score key targeted (e.g. "str"), for feats with a single +1 to choose. */
-  abilityScore?: string
-  /** Optional feature name chosen (e.g. a Fighting Style name). */
-  optionalFeature?: string
-  /** Skill name chosen for expertise. */
-  expertiseSkill?: string
 }
 
 export interface Feat {
@@ -254,23 +299,36 @@ export interface Feat {
   classLevel?: number
 }
 
+export interface ClassFeatChoice {
+  /** Stable owner identity derived from class printing and progression metadata. */
+  id: string
+  className: string
+  classSource: string
+  progressionName: string
+  categories: string[]
+  feats: Feat[]
+}
+
 export interface AsiChoice {
   id: string
   /** Class level at which this ASI is earned. */
   level: number
   /** Class name this ASI belongs to (for multiclass support). */
   className: string
-  classSource?: string
+  classSource: string
   /** Ability key → bonus applied (e.g. { strength: 2 } or { strength: 1, dexterity: 1 }). */
   abilityChanges: Record<string, 1 | 2>
 }
 
-export interface SpellSelection {
+interface SpellSelection {
   spellProfiles: SpellProfile[]
+  /** Shared Spellcasting slot usage. Maxima are reconciled from class data. */
   spellSlots: SpellSlots
+  /** Pact Magic usage kept separate when both pools have slots of the same level. */
+  pactSpellSlots?: SpellSlots
 }
 
-export type SpellProfileType = 'class' | 'special' | 'racial'
+type SpellProfileType = 'class' | 'special' | 'racial'
 
 export interface RaceSpellChoice {
   id: string
@@ -305,7 +363,12 @@ export interface SpellProfile {
   spellSwaps?: Record<number, { removed: string; added: string }>
 }
 
-export type SpellSlots = Partial<Record<number, { max: number; used: number }>>
+interface SpellSlotState {
+  max: number
+  used: number
+}
+
+export type SpellSlots = Partial<Record<number, SpellSlotState>>
 
 export interface Equipment {
   id: string
@@ -356,25 +419,11 @@ export interface Currency {
 }
 
 export interface HitPoints {
-  max: number
   current: number
   temporary: number
 }
 
-export interface SavingThrows {
-  strength: { proficient: boolean; bonus: number }
-  dexterity: { proficient: boolean; bonus: number }
-  constitution: { proficient: boolean; bonus: number }
-  intelligence: { proficient: boolean; bonus: number }
-  wisdom: { proficient: boolean; bonus: number }
-  charisma: { proficient: boolean; bonus: number }
-}
-
-export interface Skills {
-  [key: string]: { proficient: boolean; expertise: boolean; bonus: number }
-}
-
-export interface CharacterDetails {
+interface CharacterDetails {
   playerName?: string
   gender?: string
   alignment?: string
@@ -415,10 +464,9 @@ export interface CharacterDetails {
   organizationCustomDescription?: string
   organizationCustomImage?: string
   organizationCustomGradient?: string
-  alliesAndOrganizations?: string
 }
 
-export interface Ally {
+interface Ally {
   id: string
   name: string
   relationship: string

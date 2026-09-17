@@ -31,15 +31,12 @@ lerna-debug.log*
 
 # Tooling/CI artifacts
 **/agent-eval-report*
-docs/desktop-ui-redesign.md
-docs/review/
+docs/review
 AGENTS.md
 
 # Temp folders
 /temp/
 /.tmp/
-/release-review/
-/release-review-final/
 /test-results
 /coverage
 /playwright-report

@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
   buildRecursiveLookup,
-  getRecursiveHintPosition,
   getRecursiveTooltipData,
   markRecursiveTooltipReferences,
 } from '@/lib/renderer/recursiveTooltip'
@@ -195,30 +194,5 @@ describe('buildRecursiveLookup', () => {
     expect(marked).toContain('aria-haspopup="dialog"')
     expect(marked).toContain('aria-expanded="false"')
     expect(marked).toContain('<span title="Book">PHB</span>')
-  })
-
-  test('staggers a child preview when neither side has room', () => {
-    const container = document.createElement('div')
-    const target = document.createElement('span')
-    container.dataset.recursiveTooltipDepth = '0'
-    container.append(target)
-    document.body.append(container)
-
-    const originalWidth = window.innerWidth
-    const originalHeight = window.innerHeight
-    try {
-      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 640 })
-      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 480 })
-      container.getBoundingClientRect = () =>
-        ({ left: 160, right: 480, top: 100, bottom: 340, width: 320, height: 240 }) as DOMRect
-      target.getBoundingClientRect = () =>
-        ({ left: 220, right: 280, top: 120, bottom: 140, width: 60, height: 20 }) as DOMRect
-
-      expect(getRecursiveHintPosition(target, true)).toEqual({ x: 24, y: 24 })
-    } finally {
-      Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth })
-      Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight })
-      container.remove()
-    }
   })
 })

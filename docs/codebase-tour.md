@@ -14,7 +14,7 @@ Character state and lifecycle:
 - src/store/characterStore.ts
 - src/types/character.ts
 - src/types/characterSchema.ts — Zod validation schema for character imports and persistence validation (separate from TypeScript types)
-- src/lib/schema/migrations.ts — Schema versioning and migration system for backward compatibility
+- src/lib/schema/characterSchemaVersion.ts — Exact supported character-schema version and rejection message
 - src/hooks/character/*
 - src/lib/provenance/sectionRows.ts
 
@@ -119,19 +119,43 @@ Spells page UI orchestration:
 - src/lib/character/commands/spellCommands.ts — canonical spell mutation commands for profile/provenance coordination
 - src/hooks/character/useSpellSlots.ts — read state: spell slots, profiles, spellcasting detail (no mutations)
 - src/hooks/character/useSpellProfileMutations.ts — all spell mutation callbacks (add/remove/prepare/racial spells)
+- src/lib/character/commands/spellSlotCommands.ts — shared/Pact slot spend, restore, correction, and maxima reconciliation
+- src/hooks/character/useSpellSlotMutations.ts — thin active-character adapter for slot-use commands
+- src/pages/spells/components/SpellcastingDetailsCard.tsx — read-only class/racial spellcasting
+  statistics and shared/Pact slot capacities; live slot-use controls are intentionally absent
+- src/lib/character/commands/restCommands.ts — pure atomic rest patch and change-preview construction
+- src/hooks/character/useRestPreview.ts and src/components/modals/RestPreviewDialog.tsx — retained
+  derived rest context, preview, and one-patch commit for the deferred local-play workspace; there
+  is intentionally no shared-header launcher
 
 Combat stats and advancement:
 - src/components/modals/LevelUpModal.tsx — class-level changes and average/rolled/manual hit-die result collection
 - src/lib/character/commands/classCommands.ts — atomic progression updates and durable per-level HP gain records
 - src/hooks/character/useHitPoints.ts — calculated, adjusted, overridden, current, and temporary HP views plus atomic modal save
-- src/components/modals/HitPointsModal.tsx — player-facing current/temp HP and lasting maximum-HP management
+- src/components/modals/HitPointsModal.tsx — player-facing HP Overview and separate manual
+  maximum-HP changes/overrides
 - src/hooks/character/useArmorClass.ts — calculated, adjusted, overridden, and effective AC views plus atomic modal save
-- src/components/modals/ArmorClassModal.tsx — player-facing lasting AC changes and fixed AC management
-- src/components/layout/AppHeader.tsx — heart/shield launch controls and the one-time anchored management hint
+- src/components/modals/ArmorClassModal.tsx — player-facing AC Overview and separate manual
+  changes/overrides
+- src/components/layout/AppHeader.tsx — heart/shield launch controls and the one-time anchored
+  management hint
+- src/hooks/ui/useAnchoredHintPosition.ts — Floating UI anchor selection plus lifecycle recovery for
+  persistent and responsive controls
+- src/pages/adjustments/components/DerivedMechanicsOverview.tsx — flat, read-only projections of
+  source-derived character actions and typed effects; the route pairs these with separate manual
+  form/list components in a responsive split workbench
 
 Rules, sources, and condition tracking:
-- src/pages/rules/RulesPage.tsx — post-creation rules review and edits, split into Ruleset, Advancement, and Character Options tabs
-- src/pages/sources/SourcesPage.tsx — per-character allowed sources and newer-printing preference
+- src/components/layout/AppSidebar.tsx — Rules is the character-configuration workspace between
+  Builder and Character Sheet; manual Actions & Effects is in Builder Details and Review is in the
+  final Builder Finish group
+- src/pages/build/review/ReviewPage.tsx — header-tabbed readiness issues and calculated character
+  overview
+- src/pages/rules/RulesPage.tsx — Character Rules configuration split into Ruleset, Advancement,
+  and Character Options tabs
+- src/pages/rules/SourcesPage.tsx — route-level Sources page in the Rules navigation
+- src/pages/rules/SourcesPanel.tsx — reusable per-character allowed-sources and newer-printing
+  preference content
 - src/pages/details/ConditionsPage.tsx — Combat State, Exhaustion, Conditions, and Class Resources tabs
 - src/hooks/data/useGameData.ts — `useConditions()` supplies parsed condition records
 - src/lib/5etools/parsers/basic.ts — tags condition and disease records during ingestion so gameplay UI can exclude diseases without hardcoded lists

@@ -1,13 +1,11 @@
 import { useCallback, useMemo } from 'react'
 import {
-  ABILITY_ABBREVIATIONS,
   ABILITY_NAMES,
   type AbilityName,
   calculatePointBuyTotal,
   formatModifier,
   getRemainingPointBuy,
   getValidPointBuyScores,
-  isValidPointBuyScore,
 } from '@/lib/calculations/abilityScores'
 import { getAbilityModifier, POINT_BUY_BUDGET, POINT_BUY_MIN } from '@/lib/calculations/gameRules'
 import { useCharacterStore } from '@/store/characterStore'
@@ -112,5 +110,3 @@ export function useAbilityScores(): AbilityScoreState {
     resetScores,
   }
 }
-
-export { ABILITY_ABBREVIATIONS, ABILITY_NAMES, isValidPointBuyScore }

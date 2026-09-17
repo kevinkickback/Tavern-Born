@@ -13,7 +13,7 @@ import {
 export const UI_SCALE_OPTIONS = [80, 90, 100, 110, 120] as const
 export type UiScale = (typeof UI_SCALE_OPTIONS)[number]
 const DEFAULT_UI_SCALE: UiScale = 100
-export type CharacterViewMode = 'gallery' | 'list'
+type CharacterViewMode = 'gallery' | 'list'
 
 export function applyUiScale(scale: UiScale) {
   document.documentElement.style.fontSize = `${scale}%`

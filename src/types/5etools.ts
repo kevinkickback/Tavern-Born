@@ -16,6 +16,8 @@ export interface Race5e {
       }
   ability?: AbilityBonus[]
   entries?: unknown[]
+  /** Entry sections left after ingestion marks sections represented by structured race fields. */
+  presentationEntries?: unknown[]
   darkvision?: number
   languageProficiencies?: LanguageProficiency[]
   skillProficiencies?: SkillProficiency[]
@@ -32,7 +34,7 @@ export interface Race5e {
   [key: string]: unknown
 }
 
-export interface MulticlassRequirements {
+interface MulticlassRequirements {
   or?: Array<Record<string, number>>
   [ability: string]: number | Array<Record<string, number>> | undefined
 }
@@ -72,15 +74,20 @@ export interface Class5e {
   classTableGroups?: unknown[]
   classFeatures?: string[] | ClassFeature[]
   classFeatureRefs?: ClassFeatureReference[]
+  normalizedRules?: import('./classRules').NormalizedClassRules
   subclasses?: Subclass5e[]
   isSidekick?: boolean
   spellcastingAbility?: string
   casterProgression?: string
   isSpellcaster?: boolean
   spellSlotProgression?: number[][]
+  cantripProgression?: number[]
+  spellsKnownProgression?: number[]
+  spellsKnownProgressionFixed?: number[]
   preparedSpells?: string
   preparedSpellsProgression?: number[]
   preparedSpellsChange?: string
+  edition?: string
   optionalfeatureProgression?: OptFeatureProg[]
   [key: string]: unknown
 }
@@ -96,26 +103,18 @@ export interface ClassFeature {
   [key: string]: unknown
 }
 
-export interface ClassFluffSection {
+interface ClassFluffSection {
   name: string
   entries: unknown[]
 }
 
-export interface ClassFluffImage {
+interface ClassFluffImage {
   type: 'image'
   href?: {
     url?: string
     path?: string
   }
   title?: string
-}
-
-export interface ClassFluff {
-  name: string
-  source: string
-  summary: string
-  sections: ClassFluffSection[]
-  images?: ClassFluffImage[]
 }
 
 export interface ClassFeatureReference {
@@ -141,8 +140,15 @@ export interface Subclass5e {
   levelFeatures?: Array<{ level: number; features: SubclassFeature[] }>
   spellcastingAbility?: string
   casterProgression?: string
+  isSpellcaster?: boolean
+  spellSlotProgression?: number[][]
   cantripProgression?: number[]
   spellsKnownProgression?: number[]
+  spellsKnownProgressionFixed?: number[]
+  preparedSpells?: string
+  preparedSpellsProgression?: number[]
+  preparedSpellsChange?: string
+  edition?: string
   additionalSpells?: SubclassAdditionalSpells[]
   [key: string]: unknown
 }
@@ -176,7 +182,7 @@ export interface SubclassFeature {
   [key: string]: unknown
 }
 
-export interface SubclassFeatureReference {
+interface SubclassFeatureReference {
   ref: string
   name: string
   source?: string
@@ -199,6 +205,7 @@ export interface OptionalFeatureLike {
   source?: string
   featureType?: string | string[]
   entries?: unknown[]
+  prerequisite?: Raw5ePrereq[]
 }
 
 export interface ItemProperty5e {
@@ -220,6 +227,7 @@ export interface GameDataLookups {
   classesByKey: Record<string, Class5e>
   racesByKey: Record<string, Race5e>
   backgroundsByKey: Record<string, Background5e>
+  featsByKey: Record<string, Feat5e>
   classFeaturesByKey: Record<string, ClassFeature>
   spellsByKey: Record<string, Spell5e>
   optionalFeaturesByKey: Record<string, unknown>
@@ -244,6 +252,8 @@ export interface Background5e {
   /** Present on 2024 (XPHB/one-D&D) backgrounds; value is 'one'. */
   edition?: string
   ability?: unknown[]
+  feats?: unknown[]
+  normalizedOriginRules?: import('@/lib/5etools/backgroundRuleNormalization').NormalizedBackgroundOriginRules
   skillProficiencies?: SkillProficiency[]
   languageProficiencies?: LanguageProficiency[]
   toolProficiencies?: ToolProficiency[]
@@ -282,13 +292,16 @@ export interface Feat5e {
   category?: string
   prerequisite?: Raw5ePrereq[]
   ability?: AbilityBonus[]
+  resist?: Array<string | Record<string, unknown>>
+  immune?: Array<string | Record<string, unknown>>
+  conditionImmune?: Array<string | Record<string, unknown>>
   entries?: unknown[]
   [key: string]: unknown
 }
 
-export type Raw5eAbilityPrereq = string | { ability: string; score?: number }
-export type Raw5eRacePrereq = string | { name: string }
-export type Raw5eClassPrereq = string | { name: string }
+type Raw5eAbilityPrereq = string | { ability: string; score?: number }
+type Raw5eRacePrereq = string | { name: string }
+type Raw5eClassPrereq = string | { name: string }
 
 export interface Raw5ePrereq {
   level?: number | { level: number }
@@ -308,6 +321,7 @@ export interface Item5e {
   type: string
   tier?: string
   rarity?: string
+  curse?: boolean
   weight?: number
   value?: number
   entries?: unknown[]
@@ -318,6 +332,7 @@ export interface Item5e {
   dmgType?: string
   property?: string[]
   range?: string
+  mastery?: string[]
   ac?: number
   strength?: string
   stealth?: boolean
@@ -329,10 +344,30 @@ export interface Item5e {
   focus?: string[]
   /** Whether the item requires attunement; may be a class restriction string. */
   reqAttune?: boolean | string
+  bonusAc?: string | number
+  bonusSpellAttack?: string | number
+  bonusSpellSaveDc?: string | number
+  bonusSavingThrow?: string | number
+  bonusAbilityCheck?: string | number
+  modifySpeed?: {
+    static?: Record<string, number>
+    multiply?: Record<string, number>
+    bonus?: Record<string, number>
+    equal?: Record<string, string>
+  }
+  resist?: string[]
+  immune?: string[]
+  conditionImmune?: string[]
   [key: string]: unknown
 }
 
-export type AbilityBonus = {
+export interface ItemMastery5e {
+  name: string
+  source: string
+  entries?: unknown[]
+}
+
+type AbilityBonus = {
   choose?: {
     from: string[]
     count: number
@@ -341,7 +376,7 @@ export type AbilityBonus = {
   [ability: string]: number | { from: string[]; count: number; amount?: number } | undefined
 }
 
-export type LanguageProficiency = {
+type LanguageProficiency = {
   [lang: string]: boolean
 } & {
   choose?: {
@@ -360,7 +395,7 @@ export type SkillProficiency = {
   }
 }
 
-export type ToolProficiency = {
+type ToolProficiency = {
   [tool: string]: boolean
 } & {
   choose?: {
@@ -398,12 +433,12 @@ export interface SpellDuration {
   concentration?: boolean
 }
 
-export interface ClassReference {
+interface ClassReference {
   name: string
   source: string
 }
 
-export interface SubclassReference {
+interface SubclassReference {
   class: { name: string; source: string }
   subclass: { name: string; source: string }
 }
@@ -461,6 +496,8 @@ export interface GameData {
   itemProperties: ItemProperty5e[]
   /** Parsed from data/items-base.json → .itemType[]. */
   itemTypes: ItemType5e[]
+  /** Parsed from data/items-base.json → .itemMastery[]. */
+  itemMasteries?: ItemMastery5e[]
   classFeatures: ClassFeature[]
   actions: unknown[]
   conditions: unknown[]
@@ -468,7 +505,6 @@ export interface GameData {
   skills: unknown[]
   senses: unknown[]
   languages: Language5e[]
-  magicvariants: unknown[]
   optionalfeatures: unknown[]
   variantrules: unknown[]
   trapHazards: unknown[]

@@ -37,19 +37,11 @@ describe('useAnchoredHintPosition', () => {
       useAnchoredHintPosition({
         enabled: true,
         selector: '[data-hint-anchor="true"]',
-        width: 300,
       }),
     )
 
-    await waitFor(() =>
-      expect(result.current).toEqual({
-        top: 152,
-        left: 16,
-        arrowLeft: 124,
-        anchorTop: 100,
-        gap: 12,
-      }),
-    )
+    await waitFor(() => expect(result.current?.reference).toBe(anchor))
+    expect(result.current).toMatchObject({ gap: 12, placement: 'bottom' })
 
     covered = true
     act(() => window.dispatchEvent(new Event('scroll')))
@@ -57,15 +49,7 @@ describe('useAnchoredHintPosition', () => {
 
     covered = false
     act(() => window.dispatchEvent(new Event('scroll')))
-    await waitFor(() =>
-      expect(result.current).toEqual({
-        top: 152,
-        left: 16,
-        arrowLeft: 124,
-        anchorTop: 100,
-        gap: 12,
-      }),
-    )
+    await waitFor(() => expect(result.current?.reference).toBe(anchor))
 
     unmount()
   })
@@ -86,5 +70,29 @@ describe('useAnchoredHintPosition', () => {
     anchor.style.display = 'block'
     anchor.getBoundingClientRect = () => ({ ...anchorRect, top: -60, bottom: -20 }) as DOMRect
     expect(isHintAnchorVisible(anchor)).toBe(false)
+  })
+
+  test('rechecks a responsive anchor when the window resizes', async () => {
+    const anchor = document.createElement('button')
+    anchor.dataset.hintAnchor = 'true'
+    anchor.style.display = 'none'
+    anchor.getBoundingClientRect = () => anchorRect
+    document.body.append(anchor)
+    Object.defineProperty(document, 'elementsFromPoint', {
+      configurable: true,
+      value: vi.fn(() => [anchor]),
+    })
+
+    const { result } = renderHook(() =>
+      useAnchoredHintPosition({
+        enabled: true,
+        selector: '[data-hint-anchor="true"]',
+      }),
+    )
+
+    await waitFor(() => expect(result.current).toBeNull())
+    anchor.style.display = 'block'
+    act(() => window.dispatchEvent(new Event('resize')))
+    await waitFor(() => expect(result.current?.reference).toBe(anchor))
   })
 })

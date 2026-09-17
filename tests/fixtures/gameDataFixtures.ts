@@ -19,7 +19,6 @@ export function makeGameDataFixture(overrides: Partial<GameData> = {}): GameData
     skills: [],
     senses: [],
     languages: [],
-    magicvariants: [],
     optionalfeatures: [],
     variantrules: [],
     trapHazards: [],

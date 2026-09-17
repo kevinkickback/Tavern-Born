@@ -47,32 +47,18 @@ This guide is the fastest path to make safe changes in Tavern-Born.
 - Note that `npm run lint` auto-formats and auto-fixes files; use `npx biome ci .` for a read-only check.
 - If architecture or flow changed, update `docs/` in the same change.
 
-## Schema Migrations
+## Character Format Changes
 
-When making **breaking changes** to the character data format:
+Tavern-Born is pre-1.0 and intentionally supports only the current character format. For a
+breaking persisted-data change:
 
-1. **Understand the migration system**: See `src/lib/schema/migrations.ts` and `docs/data-flow.md`.
-2. **Increment `CURRENT_SCHEMA_VERSION`** by one in `migrations.ts`.
-3. **Register both directions** from the previous version to the new version:
-   ```typescript
-   registerMigration({
-     fromVersion: previousVersion,
-     toVersion: nextVersion,
-     up: (character) => { /* transform and stamp the next version */ },
-     down: (character) => { /* reverse the transform and restore the previous version */ },
-     description: 'Brief explanation of what changed',
-   });
-   ```
-4. **Test migration**: Add to `tests/lib/migrations.test.ts`.
-5. **Verify both entry points**: imported and IndexedDB-rehydrated characters pass through the
-   character store's migration and validation pipeline.
+1. Increment `CURRENT_CHARACTER_SCHEMA_VERSION` in `src/lib/schema/characterSchemaVersion.ts`.
+2. Update `Character`, `characterSchema`, and `createEmptyCharacter` together.
+3. Keep `characterSchema` strict and require the exact current integer schema version.
+4. Test current-format import and persistence plus explicit rejection of older and newer formats.
 
-### Example: Adding a Required Field
-
-If you need to add `character.newField`, ensure:
-- Migration `up` initializes `newField` with a sensible default
-- Migration `down` removes `newField` for older clients
-- Test backward compatibility: old → new → old
+Do not add migrations, downgrade paths, compatibility mirrors, or old-shape fallbacks. Testers with
+unsupported pre-1.0 characters must be recreated.
 
 ## Review Readiness Checklist
 

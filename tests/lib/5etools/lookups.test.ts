@@ -10,7 +10,7 @@ import {
 import { makeClassFixture, makeSpellFixture } from '../../fixtures/gameDataFixtures'
 
 describe('5etools/lookups', () => {
-  test('buildGameDataLookups creates composite-key lookups for classes, spells, features, optional features, and subclasses', () => {
+  test('buildGameDataLookups creates composite-key lookups for classes, feats, spells, features, optional features, and subclasses', () => {
     const subclass = {
       name: 'School of Evocation',
       shortName: 'Evocation',
@@ -24,7 +24,7 @@ describe('5etools/lookups', () => {
       classes: [makeClassFixture({ subclasses: [subclass] })],
       backgrounds: [],
       spells: [makeSpellFixture()],
-      feats: [],
+      feats: [{ name: 'Alert', source: 'PHB' }],
       items: [],
       itemsBase: [],
       itemProperties: [],
@@ -44,7 +44,6 @@ describe('5etools/lookups', () => {
       skills: [],
       senses: [],
       languages: [],
-      magicvariants: [],
       optionalfeatures: [{ name: 'Cantrip Formulas', source: 'TCE' }],
       variantrules: [],
       trapHazards: [],
@@ -58,6 +57,7 @@ describe('5etools/lookups', () => {
     expect(lookups.racesByKey).toEqual({})
     expect(lookups.backgroundsByKey).toEqual({})
     expect(lookups.classFeaturesByKey[getEntityLookupKey('Arcane Recovery', 'PHB')]).toBeTruthy()
+    expect(lookups.featsByKey[getEntityLookupKey('Alert', 'PHB')]).toBeTruthy()
     expect(lookups.spellsByKey[getEntityLookupKey('Magic Missile', 'PHB')]).toBeTruthy()
     expect(
       lookups.optionalFeaturesByKey[getEntityLookupKey('Cantrip Formulas', 'TCE')],

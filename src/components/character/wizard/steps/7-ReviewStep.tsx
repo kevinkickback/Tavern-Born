@@ -17,6 +17,7 @@ import {
   normalizeRaceSelectionForOriginSystem,
   usesRaceOriginBenefits,
 } from '@/lib/calculations/originSystem'
+import { getSpeedDisplay } from '@/lib/calculations/raceUtils'
 import { cn } from '@/lib/utils'
 import type { Race5e, SourceBook } from '@/types/5etools'
 import type { CharacterWizardData } from '../types'
@@ -131,12 +132,7 @@ export function ReviewStep({ data, raceResolution, sources }: ReviewStepProps) {
 
   const hasDarkvision = displayRace?.darkvision !== undefined && displayRace.darkvision > 0
 
-  const speedValue =
-    typeof displayRace?.speed === 'number'
-      ? `${displayRace.speed} ft`
-      : displayRace?.speed?.walk
-        ? `${displayRace.speed.walk} ft`
-        : 'Not specified'
+  const speedValue = getSpeedDisplay(displayRace)
   const sizeValue = displayRace?.size?.join(', ') || 'Not specified'
 
   const variantRuleRows = [

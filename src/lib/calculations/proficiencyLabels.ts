@@ -32,17 +32,17 @@ export function sanitizeProficiencyLabel(value: unknown): string | null {
   return out
 }
 
-export function toGenericChoiceLabel(value: string): string {
+function toGenericChoiceLabel(value: string): string {
   return normalizeGenericToolChoice(value) ?? value
 }
 
-export function canonicalizeToolName(value: string): string {
+function canonicalizeToolName(value: string): string {
   const key = normalizeKey(value)
   if (key === "theives' tools" || key === 'theives tools') return "thieves' tools"
   return value
 }
 
-export function isConcreteToolName(value: string): boolean {
+function isConcreteToolName(value: string): boolean {
   const key = normalizeKey(value)
   if (key.includes('choose')) return false
   if (key.includes('any')) return false
@@ -52,7 +52,7 @@ export function isConcreteToolName(value: string): boolean {
   return true
 }
 
-export function isConcreteWeaponName(value: string): boolean {
+function isConcreteWeaponName(value: string): boolean {
   const key = normalizeKey(value)
   if (key.includes('that have')) return false
   if (key.includes('property')) return false

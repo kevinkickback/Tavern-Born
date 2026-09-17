@@ -14,14 +14,15 @@ import {
   Target,
   Trash,
 } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { RenderedEntryWithTooltip } from '@/components/editor/RenderedEntryWithTooltip'
 import { ItemSelectionModal } from '@/components/modals/ItemSelectionModal'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -32,29 +33,34 @@ import {
   WorkspacePage,
   WorkspacePaneHeader,
 } from '@/components/workspace'
-import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useEquipment } from '@/hooks/character/useEquipment'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useItemLookup, useItemPropertyLookup } from '@/hooks/data/useGameData'
 import { useRecursiveLookup } from '@/hooks/data/useRecursiveLookup'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { getEntityLookupKey } from '@/lib/5etools/lookups'
-import { ARMOR_TYPE_MAP } from '@/lib/calculations/armorClass'
 import { MAX_ATTUNEMENT_SLOTS } from '@/lib/calculations/gameRules'
 import { enforceArmorEquipmentRestrictions, isEquippable } from '@/lib/calculations/itemEquippable'
+import { equipmentUnresolvedReadinessId, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
 import { cn } from '@/lib/utils'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
-import type { Equipment } from '@/types/character'
 import { NoCharCard } from '../_shared'
+import {
+  buildItemDetailFields,
+  getDamageSummary,
+  getItemCategory,
+  getPropertySummary,
+  type ItemCategory,
+  itemMatchesFilter,
+} from './itemDetailFields'
 
 const EQUIPMENT_EQUIP_HINT_ID = 'equipment-equip-toggle'
 const EQUIP_AC_TOGGLE_SELECTOR = '[data-equip-ac-toggle="true"]'
 const EQUIP_HINT_WIDTH = 300
-type ItemCategory = 'All' | 'Weapons' | 'Armor' | 'Ammunition' | 'Gear' | 'Potions' | 'Scrolls'
-
 const FILTER_CHIPS: ItemCategory[] = [
   'All',
   'Weapons',
@@ -65,33 +71,13 @@ const FILTER_CHIPS: ItemCategory[] = [
   'Scrolls',
 ]
 
-// Derived from ARMOR_TYPE_MAP so they share a single source of truth.
-const ARMOR_TYPE_CODES = new Set(Object.keys(ARMOR_TYPE_MAP))
-// Melee (M) and ranged (R) weapon type codes. These are 5etools item-type
-// abbreviations from data/items-base.json; no standalone list exists, so they
-// are declared here alongside ARMOR_TYPE_CODES for symmetry.
-const WEAPON_TYPE_CODES = new Set(['M', 'R'])
-
-function getItemCategory(item: Equipment): Exclude<ItemCategory, 'All'> {
-  const t = (item.type ?? '').split('|')[0].toUpperCase()
-  if (item.weaponCategory || WEAPON_TYPE_CODES.has(t)) return 'Weapons'
-  if (item.armorType || ARMOR_TYPE_CODES.has(t)) return 'Armor'
-  if (t === 'A') return 'Ammunition'
-  if (t === 'P') return 'Potions'
-  if (t === 'SC') return 'Scrolls'
-  return 'Gear'
-}
-
-function itemMatchesFilter(item: Equipment, filter: ItemCategory): boolean {
-  if (filter === 'All') return true
-  const t = (item.type ?? '').split('|')[0].toUpperCase()
-  if (filter === 'Weapons') return Boolean(item.weaponCategory) || WEAPON_TYPE_CODES.has(t)
-  if (filter === 'Armor') return Boolean(item.armorType) || ARMOR_TYPE_CODES.has(t)
-  if (filter === 'Ammunition') return t === 'A'
-  if (filter === 'Potions') return t === 'P'
-  if (filter === 'Scrolls') return t === 'SC'
-  if (filter === 'Gear') return t === 'G'
-  return false
+function getItemCategoryIcon(category: Exclude<ItemCategory, 'All'>) {
+  if (category === 'Weapons') return Sword
+  if (category === 'Armor') return Shield
+  if (category === 'Ammunition') return Target
+  if (category === 'Potions') return Flask
+  if (category === 'Scrolls') return Scroll
+  return Package
 }
 
 function getRarityClass(rarity: string): string {
@@ -111,38 +97,12 @@ function getRarityClass(rarity: string): string {
   }
 }
 
-function toTitleCase(value: string): string {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(' ')
-}
-
-function getDamageSummary(item: Equipment): string | null {
-  if (!item.dmg1) return null
-  const damageType = item.dmgType ? ` ${toTitleCase(item.dmgType)}` : ''
-  if (item.dmg2) return `${item.dmg1}${damageType} (${item.dmg2} versatile)`
-  return `${item.dmg1}${damageType}`
-}
-
-function resolvePropertyLabel(tag: string, propertyByAbbr: Record<string, string>): string {
-  const key = tag.trim().split('|')[0].toUpperCase()
-  return propertyByAbbr[key] ?? tag
-}
-
-function getPropertySummary(
-  item: Equipment,
-  propertyByAbbr: Record<string, string>,
-): string | null {
-  if (!item.properties || item.properties.length === 0) return null
-  return item.properties.map((p) => resolvePropertyLabel(p, propertyByAbbr)).join(', ')
-}
-
 export function EquipmentPage() {
+  const [searchParams] = useSearchParams()
   const [addItemOpen, setAddItemOpen] = useState(false)
   const [inventoryCollapsed, setInventoryCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [showEquipHint, setShowEquipHint] = useState(
     () => !isHintDismissed(EQUIPMENT_EQUIP_HINT_ID),
@@ -166,7 +126,6 @@ export function EquipmentPage() {
   const hintPosition = useAnchoredHintPosition({
     enabled: showEquipHint && equipment.length > 0,
     selector: EQUIP_AC_TOGGLE_SELECTOR,
-    width: EQUIP_HINT_WIDTH,
   })
 
   const handleDismissEquipHint = () => {
@@ -199,7 +158,6 @@ export function EquipmentPage() {
     })
   }
   const { getSourcesRowsBySection } = useProvenanceLedger()
-  const { calculatedAC, overrideAC } = useArmorClass()
   const equipmentItems = useMemo(
     () =>
       Array.from(
@@ -231,6 +189,23 @@ export function EquipmentPage() {
       return true
     })
   }, [equipment, itemSearch, itemTypeFilter])
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedItemId = equipment.find(
+    (item) => readinessFocus === equipmentUnresolvedReadinessId(item.id),
+  )?.id
+  const { ref: focusedItemRef, highlighted: focusedItemHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(
+      focusedItemId !== undefined && equipment.some((item) => item.id === focusedItemId),
+    )
+
+  useEffect(() => {
+    if (!focusedItemId || !equipment.some((item) => item.id === focusedItemId)) return
+    setItemSearch('')
+    setItemTypeFilter('All')
+    setInventoryCollapsed(false)
+    setSelectedItemId(focusedItemId)
+    setCompactPane('left')
+  }, [equipment, focusedItemId])
   const selectedItem =
     equipment.find((item) => item.id === selectedItemId) ?? filteredEquipment[0] ?? null
   const selectedItemData = selectedItem
@@ -239,13 +214,23 @@ export function EquipmentPage() {
       )
     : undefined
   const selectedItemEntries = selectedItemData?.entries ?? []
+  const selectedItemDetailFields = selectedItem
+    ? buildItemDetailFields(selectedItem, selectedItemData, itemPropertyByAbbr)
+    : []
+  const selectedItemCategory = selectedItem ? getItemCategory(selectedItem) : null
+  const SelectedItemIcon = selectedItemCategory
+    ? getItemCategoryIcon(selectedItemCategory)
+    : Package
 
   const handleAddItem = (item: Item5e) => {
     addFromGameData(item)
   }
   const handleRemoveItem = (itemId: string) => {
     removeItem(itemId)
-    if (selectedItemId === itemId) setSelectedItemId(null)
+    if (selectedItemId === itemId) {
+      setSelectedItemId(null)
+      setCompactPane('left')
+    }
   }
 
   if (!character) {
@@ -281,6 +266,10 @@ export function EquipmentPage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setInventoryCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Inventory"
+          compactRightLabel="Item details"
           rightFixedWidth="var(--workspace-master-width)"
           left={
             <>
@@ -321,9 +310,15 @@ export function EquipmentPage() {
                 </div>
               </WorkspacePaneHeader>
 
-              <div className="shrink-0 overflow-x-auto border-b border-border bg-surface-raised/45">
-                <div className="grid min-w-[820px] grid-cols-[1fr_0.8fr_0.7fr_1.8fr] divide-x divide-border">
-                  <div className="px-4 py-3">
+              <section
+                aria-label="Inventory summary"
+                className="@container shrink-0 border-b border-border bg-surface-raised/45"
+              >
+                <div
+                  data-slot="equipment-summary-grid"
+                  className="grid grid-cols-2 @min-[820px]:grid-cols-[1fr_0.8fr_1.8fr]"
+                >
+                  <div className="col-span-2 border-b border-border px-4 py-3 @min-[520px]:col-span-1 @min-[520px]:border-r @min-[520px]:border-b-0">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Scales className="size-5 text-primary" weight="fill" />
                       <span className="text-[11px] font-semibold uppercase tracking-wide">
@@ -351,7 +346,7 @@ export function EquipmentPage() {
                     </div>
                   </div>
 
-                  <div className="px-4 py-3">
+                  <div className="border-r border-border px-4 py-3">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Diamond className="size-5 text-violet-400" weight="fill" />
                       <span className="text-[11px] font-semibold uppercase tracking-wide">
@@ -385,20 +380,7 @@ export function EquipmentPage() {
                     </div>
                   </div>
 
-                  <div className="px-4 py-3">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Shield className="size-5 text-warning" weight="fill" />
-                      <span className="text-[11px] font-semibold uppercase tracking-wide">
-                        Armor Class
-                      </span>
-                    </div>
-                    <p className="mt-1 font-mono text-xl font-semibold">{calculatedAC}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {overrideAC !== undefined ? 'Override active' : 'Equipped armor'}
-                    </p>
-                  </div>
-
-                  <div className="px-4 py-3">
+                  <div className="col-span-2 border-t border-border px-4 py-3 @min-[820px]:col-span-1 @min-[820px]:border-t-0">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Coins className="size-5 text-yellow-500" weight="fill" />
@@ -410,7 +392,7 @@ export function EquipmentPage() {
                         {(totalCurrencyCopper / 100).toFixed(2)} gp
                       </span>
                     </div>
-                    <div className="mt-2 grid grid-cols-5 gap-1.5">
+                    <div className="mt-2 grid grid-cols-3 gap-1.5 @min-[380px]:grid-cols-5">
                       {(
                         [
                           ['cp', 'CP'],
@@ -440,43 +422,51 @@ export function EquipmentPage() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </section>
 
-              <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-2.5">
-                <div className="relative min-w-56 flex-1">
-                  <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search inventory…"
-                    value={itemSearch}
-                    onChange={(event) => setItemSearch(event.target.value)}
-                    className="h-8 pl-8 text-sm"
-                  />
-                </div>
-                <div
-                  className="flex shrink-0 items-stretch gap-4 overflow-x-auto self-stretch"
-                  role="tablist"
-                  aria-label="Inventory category"
-                >
-                  {FILTER_CHIPS.map((chip) => {
-                    const active = itemTypeFilter === chip
-                    return (
-                      <button
-                        key={chip}
-                        type="button"
-                        role="tab"
-                        aria-selected={active}
-                        onClick={() => setItemTypeFilter(chip)}
-                        className={cn(
-                          'relative cursor-pointer border-b-2 px-0.5 text-xs font-semibold transition-colors',
-                          active
-                            ? 'border-primary text-foreground'
-                            : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
-                        )}
-                      >
-                        {chip}
-                      </button>
-                    )
-                  })}
+              <div className="@container shrink-0 border-b border-border">
+                <div className="flex min-w-0 flex-col gap-2 px-4 py-2.5 @min-[680px]:flex-row @min-[680px]:items-center @min-[680px]:gap-3">
+                  <div className="relative min-w-0 flex-1">
+                    <MagnifyingGlass className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search inventory…"
+                      value={itemSearch}
+                      onChange={(event) => setItemSearch(event.target.value)}
+                      className="h-8 pl-8 text-sm"
+                    />
+                  </div>
+                  <div
+                    className="flex min-w-0 max-w-full shrink items-stretch gap-4 overflow-x-auto @min-[680px]:self-stretch"
+                    role="tablist"
+                    aria-label="Inventory category"
+                  >
+                    {FILTER_CHIPS.map((chip) => {
+                      const active = itemTypeFilter === chip
+                      return (
+                        <button
+                          key={chip}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={(event) => {
+                            setItemTypeFilter(chip)
+                            event.currentTarget.scrollIntoView({
+                              block: 'nearest',
+                              inline: 'nearest',
+                            })
+                          }}
+                          className={cn(
+                            'relative h-8 shrink-0 cursor-pointer border-b-2 px-0.5 text-xs font-semibold transition-colors',
+                            active
+                              ? 'border-primary text-foreground'
+                              : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
+                          )}
+                        >
+                          {chip}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -516,18 +506,7 @@ export function EquipmentPage() {
                       <div className="divide-y divide-border">
                         {filteredEquipment.map((item) => {
                           const category = getItemCategory(item)
-                          const ItemIcon =
-                            category === 'Weapons'
-                              ? Sword
-                              : category === 'Armor'
-                                ? Shield
-                                : category === 'Ammunition'
-                                  ? Target
-                                  : category === 'Potions'
-                                    ? Flask
-                                    : category === 'Scrolls'
-                                      ? Scroll
-                                      : Package
+                          const ItemIcon = getItemCategoryIcon(category)
                           const dmg = getDamageSummary(item)
                           const props = getPropertySummary(item, itemPropertyByAbbr)
                           const selected = selectedItem?.id === item.id
@@ -535,11 +514,15 @@ export function EquipmentPage() {
                           return (
                             <div
                               key={item.id}
+                              ref={item.id === focusedItemId ? focusedItemRef : undefined}
                               className={cn(
                                 'grid min-h-14 grid-cols-[minmax(16rem,1fr)_7rem_8rem_8rem_2.5rem] items-center px-3 text-sm transition-colors',
                                 selected
                                   ? 'bg-surface-selected'
                                   : 'bg-workspace-pane hover:bg-surface-hover',
+                                item.id === focusedItemId &&
+                                  focusedItemHighlighted &&
+                                  'animate-route-focus',
                               )}
                             >
                               <button
@@ -549,6 +532,7 @@ export function EquipmentPage() {
                                 onClick={() => {
                                   setSelectedItemId(item.id)
                                   setDetailCollapsed(false)
+                                  setCompactPane('right')
                                 }}
                                 className="flex min-w-0 cursor-default items-center gap-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                               >
@@ -676,7 +660,12 @@ export function EquipmentPage() {
                     <>
                       <div>
                         <div className="flex items-start gap-3">
-                          <Package className="mt-0.5 size-7 shrink-0 text-primary" weight="fill" />
+                          <SelectedItemIcon
+                            data-slot="item-detail-category-icon"
+                            data-item-category={selectedItemCategory}
+                            className="mt-0.5 size-7 shrink-0 text-primary"
+                            weight="fill"
+                          />
                           <div className="min-w-0">
                             <h2 className="text-xl font-semibold">{selectedItem.name}</h2>
                             <p className="mt-1 text-sm text-muted-foreground">
@@ -703,34 +692,28 @@ export function EquipmentPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-background">
-                        {[
-                          ['Quantity', selectedItem.quantity],
-                          [
-                            'Weight',
-                            selectedItem.weight !== undefined
-                              ? `${selectedItem.weight} lb each`
-                              : '—',
-                          ],
-                          ['Armor Class', selectedItem.ac ?? '—'],
-                          ['Damage', getDamageSummary(selectedItem) ?? '—'],
-                          ['Range', selectedItem.range ?? '—'],
-                          [
-                            'Properties',
-                            getPropertySummary(selectedItem, itemPropertyByAbbr) ?? '—',
-                          ],
-                        ].map(([label, value]) => (
+                      <section
+                        aria-label="Item statistics"
+                        data-slot="item-detail-fields"
+                        className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-surface-raised"
+                      >
+                        {selectedItemDetailFields.map(({ label, value }, index) => (
                           <div
-                            key={String(label)}
-                            className="min-w-0 border border-border/60 px-3 py-2.5"
+                            key={label}
+                            className={cn(
+                              'min-w-0 border border-border/60 px-3 py-2.5',
+                              selectedItemDetailFields.length % 2 === 1 &&
+                                index === selectedItemDetailFields.length - 1 &&
+                                'col-span-2',
+                            )}
                           >
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            <h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                               {label}
-                            </p>
+                            </h3>
                             <p className="mt-1 break-words text-sm font-medium">{value}</p>
                           </div>
                         ))}
-                      </div>
+                      </section>
 
                       {selectedItemEntries.length > 0 ? (
                         <section className="border-t border-border pt-4">

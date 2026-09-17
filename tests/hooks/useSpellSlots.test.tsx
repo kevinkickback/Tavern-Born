@@ -42,9 +42,6 @@ function resetCharacterStore() {
 function makeWizardCharacter() {
   return makeCharacterFixture({
     id: 'spell-hook-char',
-    class: 'Wizard',
-    classSource: 'PHB',
-    level: 2,
     classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
     spells: {
       spellProfiles: [
@@ -82,9 +79,6 @@ describe('useSpellSlots hook', () => {
   test('add/remove known spells and prepared toggles mutate class profile', () => {
     const character = makeCharacterFixture({
       id: 'spell-hook-2',
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 2,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 2 }],
       spells: {
         spellProfiles: [
@@ -172,6 +166,13 @@ describe('useSpellSlots hook', () => {
       .activeCharacter?.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB')
 
     expect(classProfile?.cantrips).toContain('Light')
+    expect(
+      useCharacterStore.getState().activeCharacter?.provenance?.spells.light?.[0],
+    ).toMatchObject({
+      sourceType: 'class',
+      sourceName: 'Wizard',
+      sourceRef: 'PHB',
+    })
   })
 
   test('addSpellToProfile adds a cantrip to an explicit special profile', () => {
@@ -306,6 +307,63 @@ describe('useSpellSlots hook', () => {
       .activeCharacter?.spells.spellProfiles.find((profile) => profile.id === 'class:Wizard|PHB')
 
     expect(classProfile?.preparedSpells).not.toContain('Shield')
+  })
+
+  test('prevents the same spell from being prepared across profiles with different casing', () => {
+    const character = makeCharacterFixture({
+      id: 'spell-hook-multiclass',
+      classProgression: [
+        { name: 'Wizard', source: 'PHB', levels: 2 },
+        { name: 'Cleric', source: 'PHB', levels: 2 },
+      ],
+      spells: {
+        spellProfiles: [
+          {
+            id: 'class:Wizard|PHB',
+            type: 'class',
+            label: 'Wizard (Lv 2)',
+            className: 'Wizard',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Shield'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+          {
+            id: 'class:Cleric|PHB',
+            type: 'class',
+            label: 'Cleric (Lv 2)',
+            className: 'Cleric',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['shield'],
+            preparedSpells: ['shield'],
+            alwaysPrepared: false,
+          },
+        ],
+        spellSlots: makeCharacterFixture().spells.spellSlots,
+      },
+    })
+
+    useCharacterStore.setState({
+      characters: [character],
+      activeCharacterId: character.id,
+      activeCharacter: character,
+    })
+
+    const { result } = renderHook(() => useSpellActions())
+
+    act(() => {
+      result.current.togglePrepared('class:Wizard|PHB', 'Shield')
+    })
+
+    const profiles = useCharacterStore.getState().activeCharacter?.spells.spellProfiles ?? []
+    expect(profiles.find((profile) => profile.id === 'class:Wizard|PHB')?.preparedSpells).toEqual(
+      [],
+    )
+    expect(profiles.find((profile) => profile.id === 'class:Cleric|PHB')?.preparedSpells).toEqual([
+      'shield',
+    ])
   })
 
   test('removeSpellFromProfile removes spell from spellsKnown and prepared', () => {

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
+import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
@@ -83,26 +84,9 @@ function RulesSection({
   )
 }
 
-const ABILITY_METHODS = [
-  {
-    value: 'point-buy' as const,
-    label: 'Point Buy',
-    description: 'Use the 27-point budget when editing scores.',
-  },
-  {
-    value: 'standard-array' as const,
-    label: 'Standard Array',
-    description: 'Assign 15, 14, 13, 12, 10, and 8.',
-  },
-  {
-    value: 'custom' as const,
-    label: 'Custom',
-    description: 'Enter scores freely, including rolled scores.',
-  },
-]
-
 export function RulesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const tabIdPrefix = useId()
   const character = useCharacterStore((state) => state.activeCharacter)
   const updateCharacter = useCharacterStore((state) => state.updateCharacter)
   const activePanel = getActivePanel(searchParams.get('section'))
@@ -117,6 +101,7 @@ export function RulesPage() {
 
   const rules = character.variantRules ?? {}
   const abilityMethod = rules.abilityScoreMethod ?? 'standard-array'
+  const abilityMethods = getAbilityScoreMethodOptions(character.originSystem)
   const hasOptionalFeatureGrants = Object.values(character.provenance?.features ?? {}).some(
     (tags) => tags.some((tag) => tag.sourceType === 'optionalFeature'),
   )
@@ -126,6 +111,7 @@ export function RulesPage() {
   }
 
   const updateBooleanRule = (key: BooleanRuleKey, checked: boolean) => {
+    const selectedSubclass = character.classProgression.find((entry) => entry.subclass)?.subclass
     if (!checked && key === 'optionalClassFeatures' && hasOptionalFeatureGrants) {
       toast.warning('Existing optional class feature choices will be kept.', {
         description: 'Review the Class page if you want to replace or remove them.',
@@ -133,10 +119,10 @@ export function RulesPage() {
     }
     if (
       !checked &&
-      ((key === 'bladesingerAnyRace' && character.subclass?.toLowerCase() === 'bladesinger') ||
-        (key === 'battleragerAnyRace' && character.subclass?.toLowerCase() === 'battlerager'))
+      ((key === 'bladesingerAnyRace' && selectedSubclass?.toLowerCase() === 'bladesinger') ||
+        (key === 'battleragerAnyRace' && selectedSubclass?.toLowerCase() === 'battlerager'))
     ) {
-      toast.warning(`Your existing ${character.subclass} subclass will be kept.`, {
+      toast.warning(`Your existing ${selectedSubclass} subclass will be kept.`, {
         description: 'This rule will apply the next time you choose a subclass.',
       })
     }
@@ -160,11 +146,11 @@ export function RulesPage() {
               return (
                 <button
                   key={value}
-                  id={`rules-tab-${value}`}
+                  id={`${tabIdPrefix}-tab-${value}`}
                   type="button"
                   role="tab"
                   aria-selected={active}
-                  aria-controls={`rules-panel-${value}`}
+                  aria-controls={`${tabIdPrefix}-panel-${value}`}
                   onClick={() => setActivePanel(value)}
                   className={cn(
                     'relative flex h-full cursor-pointer items-center gap-2 border-b-2 px-1 text-xs font-semibold transition-colors',
@@ -195,9 +181,9 @@ export function RulesPage() {
           </Alert>
 
           <div
-            id={`rules-panel-${activePanel}`}
+            id={`${tabIdPrefix}-panel-${activePanel}`}
             role="tabpanel"
-            aria-labelledby={`rules-tab-${activePanel}`}
+            aria-labelledby={`${tabIdPrefix}-tab-${activePanel}`}
           >
             {activePanel === 'ruleset' && (
               <RulesSection
@@ -232,7 +218,7 @@ export function RulesPage() {
                     Changing the method does not replace your existing scores.
                   </p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                    {ABILITY_METHODS.map((method) => {
+                    {abilityMethods.map((method) => {
                       const selected = abilityMethod === method.value
                       return (
                         <Button
@@ -287,12 +273,6 @@ export function RulesPage() {
                   description="Allow characters of any race to choose the Battlerager Barbarian subclass."
                   checked={rules.battleragerAnyRace ?? false}
                   onCheckedChange={(checked) => updateBooleanRule('battleragerAnyRace', checked)}
-                />
-                <RuleRow
-                  label="Prefer Newer Printings"
-                  description="Hide older versions when newer printings of the same race, class, feat, spell, or item are available."
-                  checked={rules.preferNewerPrintings ?? false}
-                  onCheckedChange={(checked) => updateBooleanRule('preferNewerPrintings', checked)}
                 />
                 <RuleRow
                   label="Ignore Equipment Restrictions"

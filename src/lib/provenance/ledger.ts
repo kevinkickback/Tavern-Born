@@ -1,4 +1,4 @@
-import { emptyProvenance } from '@/store/characterStore'
+import { emptyProvenance } from '@/lib/character/createCharacter'
 import { normalizeKey } from './normalization'
 import type {
   AbilityBonusProvenanceRecord,
@@ -176,11 +176,13 @@ export function removeGrantsBySourceRef(
   sourceType: string,
   sourceName: string,
   sourceRef: string | undefined,
+  grantVariant?: string,
 ): ProvenanceLedger {
   const matchesSource = (tag: SourceTag) =>
     tag.sourceType === sourceType &&
     tag.sourceName === sourceName &&
-    (tag.sourceRef ?? '') === (sourceRef ?? '')
+    (tag.sourceRef ?? '') === (sourceRef ?? '') &&
+    (grantVariant === undefined || tag.grantVariant === grantVariant)
   let result = ledger
 
   for (const domain of ALL_MAP_DOMAINS) {
@@ -220,6 +222,9 @@ export function addAbilityBonus(
     (r) =>
       r.sourceTag.sourceType === record.sourceTag.sourceType &&
       r.sourceTag.sourceName === record.sourceTag.sourceName &&
+      r.sourceTag.sourceRef === record.sourceTag.sourceRef &&
+      r.sourceTag.grantType === record.sourceTag.grantType &&
+      r.sourceTag.grantVariant === record.sourceTag.grantVariant &&
       r.ability === record.ability &&
       r.value === record.value,
   )
@@ -279,7 +284,7 @@ export function clearChoiceSelectionsBySource(
 ): ProvenanceLedger {
   const choices = ledger.choices.map((c) => {
     if (c.sourceTag.sourceType !== sourceType || c.sourceTag.sourceName !== sourceName) return c
-    return { ...c, selected: [], status: 'pending' as ChoiceStatus }
+    return { ...c, selected: [], selectedRefs: undefined, status: 'pending' as ChoiceStatus }
   })
   return { ...ledger, choices }
 }

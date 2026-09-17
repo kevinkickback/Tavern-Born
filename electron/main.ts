@@ -25,10 +25,17 @@ import {
   startAutoCheckSchedule,
   stopAutoCheckSchedule,
 } from './updateManager'
-import { attachWindowStatePersistence, loadWindowState, MIN_HEIGHT, MIN_WIDTH } from './windowState'
+import {
+  attachWindowStatePersistence,
+  flushWindowStateWrites,
+  loadWindowState,
+  MIN_HEIGHT,
+  MIN_WIDTH,
+} from './windowState'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+const RENDERER_ROOT_URL = pathToFileURL(join(__dirname, '../dist') + sep).href
 
 let mainWindow: BrowserWindow | null = null
 let hasUnsavedChanges = false
@@ -45,10 +52,9 @@ function isTrustedIpcSender(event: TrustedIpcEvent): boolean {
   const senderFrame = event.senderFrame
   if (!senderFrame || senderFrame !== event.sender.mainFrame) return false
 
-  const rendererRoot = pathToFileURL(join(__dirname, '../dist') + sep).href
   return isTrustedRendererUrl(
     senderFrame.url,
-    rendererRoot,
+    RENDERER_ROOT_URL,
     isDev ? process.env.VITE_DEV_SERVER_URL : undefined,
   )
 }
@@ -152,9 +158,13 @@ async function createWindow(): Promise<void> {
   })
 
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    const allowedOrigins = ['http://localhost:', `file://${__dirname}`]
-    const isAllowed = allowedOrigins.some((origin) => url.startsWith(origin))
-    if (!isAllowed) {
+    if (
+      !isTrustedRendererUrl(
+        url,
+        RENDERER_ROOT_URL,
+        isDev ? process.env.VITE_DEV_SERVER_URL : undefined,
+      )
+    ) {
       event.preventDefault()
     }
   })
@@ -370,7 +380,7 @@ app.on('activate', () => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    app.quit()
+    void flushWindowStateWrites().finally(() => app.quit())
   }
 })
 

@@ -1,3 +1,4 @@
+import { formatSourceType } from '@/lib/provenance/summaries'
 import type { SourceRow, SourceType } from '@/lib/provenance/types'
 
 interface ProficiencyRows {
@@ -21,7 +22,18 @@ interface SectionRowsInput {
 }
 
 function excludeSources(rows: SourceRow[], blocked: SourceType[]): SourceRow[] {
-  return rows.filter((row) => !row.sourceTypes.some((t) => blocked.includes(t)))
+  return rows.flatMap((row) => {
+    const sourceTypes = row.sourceTypes.filter((type) => !blocked.includes(type))
+    if (sourceTypes.length === 0) return []
+    if (sourceTypes.length === row.sourceTypes.length) return [row]
+    return [
+      {
+        ...row,
+        attribution: sourceTypes.map(formatSourceType).join(', '),
+        sourceTypes,
+      },
+    ]
+  })
 }
 
 export function getSourcesRowsBySectionId({

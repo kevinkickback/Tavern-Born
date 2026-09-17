@@ -47,17 +47,17 @@
   --control-height-lg: 2.5rem;
 
   /* Semantic surface ladder. Neutral roles remain stable when the accent changes. */
-  --app-shell: var(--color-neutral-2);
-  --workspace-canvas: var(--color-neutral-1);
-  --workspace-pane: var(--color-neutral-2);
-  --workspace-detail: var(--color-neutral-3);
-  --surface-raised: var(--color-neutral-3);
-  --surface-hover: var(--color-neutral-4);
+  --app-shell: #e8e8ec;
+  --workspace-canvas: #f4f4f6;
+  --workspace-pane: #eeeef1;
+  --workspace-detail: #e8e8ec;
+  --surface-raised: #e1e1e6;
+  --surface-hover: #d9d9e0;
   --surface-selected: var(--color-accent-3);
   --surface-selected-hover: var(--color-accent-4);
-  --border-subtle: var(--color-neutral-6);
-  --border-default: var(--color-neutral-7);
-  --border-strong: var(--color-neutral-8);
+  --border-subtle: #cdced6;
+  --border-default: #b9bbc6;
+  --border-strong: #a9abb6;
 
   /* Type roles use rem so the Settings interface scale remains authoritative. */
   --font-size-caption: 0.6875rem;
@@ -76,13 +76,13 @@
   --card-foreground: var(--color-fg);
   --popover: var(--surface-raised);
   --popover-foreground: var(--color-fg);
-  --primary: var(--color-accent-10);
+  --primary: var(--color-accent-11);
   --primary-foreground: var(--color-accent-contrast);
   --secondary: var(--surface-hover);
   --secondary-foreground: var(--color-fg);
   --muted: var(--surface-raised);
-  --muted-foreground: var(--color-fg-secondary);
-  --accent: var(--color-accent-10);
+  --muted-foreground: #5b5f67;
+  --accent: var(--color-accent-11);
   --accent-foreground: var(--color-accent-contrast);
   --destructive: var(--red-9);
   --destructive-foreground: oklch(0.98 0 0);
@@ -104,9 +104,9 @@
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: var(--app-shell);
   --sidebar-foreground: var(--color-fg);
-  --sidebar-primary: var(--color-accent-10);
+  --sidebar-primary: var(--color-accent-11);
   --sidebar-primary-foreground: var(--color-accent-contrast);
-  --sidebar-accent: var(--color-accent-10);
+  --sidebar-accent: var(--color-accent-11);
   --sidebar-accent-foreground: var(--color-accent-contrast);
   --sidebar-border: var(--border-default);
   --sidebar-ring: var(--color-focus-ring);

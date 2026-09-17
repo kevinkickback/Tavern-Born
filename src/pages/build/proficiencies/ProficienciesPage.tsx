@@ -1,7 +1,8 @@
 import { Certificate } from '@phosphor-icons/react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { SourcesAccordion } from '@/components/provenance/SourcesAccordion'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { WorkspaceBody, WorkspacePage, WorkspacePaneHeader } from '@/components/workspace'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
@@ -10,6 +11,8 @@ import { useSavingThrows } from '@/hooks/character/useSavingThrows'
 import { useSkills } from '@/hooks/character/useSkills'
 import { useAvailableProficiencies } from '@/hooks/data/useAvailableProficiencies'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { normalizeKey } from '@/lib/provenance'
 import { getImplicitSource } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
@@ -37,6 +40,7 @@ import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
 import { useCharacterStore } from '@/store/characterStore'
 
 export function BuildProficienciesPage() {
+  const [searchParams] = useSearchParams()
   const character = useCharacterStore((state) => state.activeCharacter)
   const { skills: skillDefs, items, itemsBase, languages } = useFilteredGameData()
   const { skills, toggleExpertise, availableExpertiseSlots, usedExpertiseSlots } = useSkills()
@@ -47,8 +51,25 @@ export function BuildProficienciesPage() {
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [focused, setFocused] = useState<ProfFocus | null>(null)
   const [activeTab, setActiveTab] = useState<ProficiencyTabValue>('skills')
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedChoice = findFocusedProvenanceChoice(readinessFocus, ledger.choices)
+  const focusProficiencyChoice =
+    (focusedChoice?.domain === 'skills' ||
+      focusedChoice?.domain === 'languages' ||
+      focusedChoice?.domain === 'tools' ||
+      focusedChoice?.domain === 'armor' ||
+      focusedChoice?.domain === 'weapons') ??
+    false
+  const { ref: choicePanelRef, highlighted: choicePanelHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(focusProficiencyChoice)
+
+  useEffect(() => {
+    if (!focusProficiencyChoice || !focusedChoice) return
+    setActiveTab(focusedChoice.domain as ProficiencyTabValue)
+  }, [focusProficiencyChoice, focusedChoice])
 
   const { itemsByName, weaponInfoMap } = useMemo(() => {
     const byName = new Map<string, (typeof itemsBase)[0]>()
@@ -89,6 +110,7 @@ export function BuildProficienciesPage() {
       } else {
         setFocused(focus)
       }
+      setCompactPane('right')
     },
     [itemsByName, languagesByName],
   )
@@ -243,6 +265,10 @@ export function BuildProficienciesPage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Proficiencies"
+          compactRightLabel="Proficiency details"
           rightFixedWidth="var(--workspace-master-width)"
           left={
             <>
@@ -258,7 +284,13 @@ export function BuildProficienciesPage() {
                 />
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
-                <div className="mx-auto w-full max-w-5xl p-4">
+                <div
+                  ref={choicePanelRef}
+                  className={cn(
+                    'mx-auto w-full max-w-5xl rounded-lg p-4',
+                    choicePanelHighlighted && 'animate-route-focus',
+                  )}
+                >
                   <BuildProficienciesTabsPanel
                     skills={skills}
                     savingThrows={savingThrows}
@@ -290,6 +322,7 @@ export function BuildProficienciesPage() {
                     onFocusChange={handleFocusChange}
                     onExpandDetails={() => {
                       if (detailCollapsed) setDetailCollapsed(false)
+                      setCompactPane('right')
                     }}
                     onResolveChoiceSelection={resolveChoiceSelection}
                     onToggleExpertise={toggleExpertise}

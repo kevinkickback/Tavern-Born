@@ -221,11 +221,19 @@ export const useGameDataStore = create<GameDataState>()(
 
         try {
           const failedResources = new Set<string>()
+          const failedRequiredResources = new Set<string>()
           const data = await loadDataFromSource(config, {
             onProgress: background
               ? undefined
-              : (current, total, resource) => set({ loadProgress: { current, total, resource } }),
-            onResourceFailure: background ? (resource) => failedResources.add(resource) : undefined,
+              : (current, total, resource) => {
+                  if (requestId === activeLoadRequestId) {
+                    set({ loadProgress: { current, total, resource } })
+                  }
+                },
+            onResourceFailure: (resource, failure) => {
+              failedResources.add(resource)
+              if (failure.required) failedRequiredResources.add(resource)
+            },
             signal: controller.signal,
           })
 
@@ -233,6 +241,11 @@ export const useGameDataStore = create<GameDataState>()(
           if (background && failedResources.size > 0) {
             throw new Error(
               `Background refresh incomplete (${failedResources.size} resource${failedResources.size === 1 ? '' : 's'} failed); keeping existing cache`,
+            )
+          }
+          if (!background && failedRequiredResources.size > 0) {
+            throw new Error(
+              `Data load incomplete (${failedRequiredResources.size} required resource${failedRequiredResources.size === 1 ? '' : 's'} failed); no changes were saved`,
             )
           }
           if (

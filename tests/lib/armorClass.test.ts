@@ -4,6 +4,7 @@ import {
   computeArmorClass,
   computeEffectiveCharacterArmorClass,
   getArmorCategory,
+  getArmorClassBaseBreakdown,
   isArmorOrShield,
   resolveArmorType,
 } from '@/lib/calculations/armorClass'
@@ -59,6 +60,37 @@ describe('armorClass', () => {
     expect(computeArmorClass(equipment, 5)).toBe(21)
   })
 
+  test('exposes each equipped source used by the base calculation', () => {
+    const equipment = [
+      makeItem({ id: 'armor', name: 'Test Armor', type: 'MA', ac: 14, equipped: true }),
+      makeItem({ id: 'shield', name: 'Test Shield', type: 'S', equipped: true }),
+    ]
+
+    expect(getArmorClassBaseBreakdown(equipment, 4)).toEqual({
+      total: 18,
+      components: [
+        {
+          id: 'equipment:armor',
+          label: 'Test Armor',
+          detail: 'Equipped medium armor',
+          value: 14,
+        },
+        {
+          id: 'dexterity',
+          label: 'Dexterity modifier',
+          detail: 'Applied with the armor limit',
+          value: 2,
+        },
+        {
+          id: 'equipment:shield',
+          label: 'Test Shield',
+          detail: 'Equipped shield',
+          value: 2,
+        },
+      ],
+    })
+  })
+
   test('resolveArmorType maps 5etools item type codes', () => {
     expect(resolveArmorType('LA')).toBe('light')
     expect(resolveArmorType('MA')).toBe('medium')
@@ -80,50 +112,88 @@ describe('armorClass', () => {
   })
 
   test('computeEffectiveCharacterArmorClass prefers override when present', () => {
-    const effective = computeEffectiveCharacterArmorClass({
-      armorClassOverride: 19,
-      abilityScores: { dexterity: 18 },
-      equipment: [makeItem({ type: 'LA', ac: 11, equipped: true })],
-    })
+    const effective = computeEffectiveCharacterArmorClass(
+      {
+        armorClassOverride: 19,
+        abilityScores: { dexterity: 18 },
+        equipment: [makeItem({ type: 'LA', ac: 11, equipped: true })],
+      },
+      { dexterity: 18 },
+    )
 
     expect(effective).toBe(19)
   })
 
   test('computeEffectiveCharacterArmorClass derives from equipment when no override exists', () => {
-    const effective = computeEffectiveCharacterArmorClass({
-      abilityScores: { dexterity: 14 },
-      equipment: [
-        makeItem({ type: 'LA', ac: 11, equipped: true }),
-        makeItem({ type: 'S', equipped: true }),
-      ],
-    })
+    const effective = computeEffectiveCharacterArmorClass(
+      {
+        abilityScores: { dexterity: 14 },
+        equipment: [
+          makeItem({ type: 'LA', ac: 11, equipped: true }),
+          makeItem({ type: 'S', equipped: true }),
+        ],
+      },
+      { dexterity: 14 },
+    )
 
     expect(effective).toBe(15)
   })
 
   test('computeEffectiveCharacterArmorClass includes lasting adjustments', () => {
-    const effective = computeEffectiveCharacterArmorClass({
-      abilityScores: { dexterity: 14 },
-      equipment: [],
-      armorClassAdjustments: [
-        {
-          id: 'ring',
-          label: 'Ring of protection',
-          amount: 1,
-          sourceType: 'item',
-          createdAt: '2026-01-01T00:00:00.000Z',
-        },
-        {
-          id: 'curse',
-          label: 'Curse',
-          amount: -2,
-          sourceType: 'other',
-          createdAt: '2026-01-01T00:00:00.000Z',
-        },
-      ],
-    })
+    const effective = computeEffectiveCharacterArmorClass(
+      {
+        abilityScores: { dexterity: 14 },
+        equipment: [],
+        armorClassAdjustments: [
+          {
+            id: 'ring',
+            label: 'Ring of protection',
+            amount: 1,
+            sourceType: 'item',
+            createdAt: '2026-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'curse',
+            label: 'Curse',
+            amount: -2,
+            sourceType: 'other',
+            createdAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+      { dexterity: 14 },
+    )
 
     expect(calculateArmorClassAdjustmentTotal([])).toBe(0)
     expect(effective).toBe(11)
+  })
+
+  test('applies active typed effects and exposes equipment-gated behavior', () => {
+    const effect = {
+      id: 'item-effect',
+      label: 'Test item effect',
+      target: { kind: 'armor-class' as const },
+      operation: { kind: 'add' as const, value: 2 },
+      source: { kind: 'item' as const, name: 'Test Item', entityId: 'item' },
+      requirements: [
+        { kind: 'equipment' as const, itemId: 'item', state: 'equipped-and-attuned' as const },
+      ],
+    }
+    const base = {
+      speed: 0,
+      abilityScores: { dexterity: 10 },
+      equipment: [
+        { id: 'item', name: 'Test Item', type: 'G', quantity: 1, equipped: true, attuned: true },
+      ],
+      manualEffects: [effect],
+    }
+
+    expect(computeEffectiveCharacterArmorClass(base, base.abilityScores)).toBe(12)
+    expect(
+      computeEffectiveCharacterArmorClass(
+        { ...base, equipment: [{ ...base.equipment[0], attuned: false }] },
+        base.abilityScores,
+      ),
+    ).toBe(10)
   })
 })

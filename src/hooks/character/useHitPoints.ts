@@ -1,9 +1,13 @@
 import { useMemo } from 'react'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useClassLookup } from '@/hooks/data/useGameData'
 import { resolveClassReference } from '@/lib/5etools/entityResolvers'
 import { buildClassLookup } from '@/lib/5etools/lookups'
+import { type ResolvedNumericEffect, resolveNumericEffect } from '@/lib/calculations/effects'
 import { getAbilityModifier, getHitDiceFromClass } from '@/lib/calculations/gameRules'
+import { getHitDiePoolId } from '@/lib/calculations/hitDice'
+import { type HitPointSettings, resolveHitPointSettings } from '@/lib/calculations/statSettings'
 import {
   calculateHitPointAdjustmentTotal,
   calculateHPBreakdown,
@@ -12,14 +16,7 @@ import {
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
 import { useCharacterStore } from '@/store/characterStore'
-import type { HitPointAdjustment, HitPoints } from '@/types/character'
-
-export interface HitPointSettings {
-  current: number
-  temporary: number
-  adjustments: HitPointAdjustment[]
-  maxOverride?: number
-}
+import type { HitPoints } from '@/types/character'
 
 export interface HitPointsState {
   hitPoints: HitPoints
@@ -28,19 +25,23 @@ export interface HitPointsState {
   adjustedMaxHP: number
   overrideMaxHP?: number
   effectiveMaxHP: number
+  resolution: ResolvedNumericEffect
   hitDie: number
+  hitDicePools: Array<{ id: string; label: string; die: number; max: number; used: number }>
   conMod: number
   levelsHPBreakdown: number[]
   setCurrentHP: (hp: number) => void
   setTempHP: (hp: number) => void
   heal: (amount: number) => void
   damage: (amount: number) => void
+  previewHitPointSettings: (settings: HitPointSettings) => ResolvedNumericEffect
   saveHitPointSettings: (settings: HitPointSettings) => void
 }
 
 export function useHitPoints(): HitPointsState {
   const character = useCharacterStore((s) => s.activeCharacter)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const { classes } = useFilteredGameData()
   const rawClassLookup = useClassLookup()
   const filteredClassLookup = useMemo(() => buildClassLookup(classes), [classes])
@@ -51,25 +52,39 @@ export function useHitPoints(): HitPointsState {
 
   const hitDie = useMemo(() => {
     const primary = resolvedProgression[0]
-    const name = primary?.name ?? character?.class ?? ''
-    const source = primary?.source ?? character?.classSource
+    const name = primary?.name ?? ''
+    const source = primary?.source
     const found = resolveClassReference(
       { name, source },
       { classesByKey: filteredClassLookup },
       { classesByKey: rawClassLookup },
     )
     return getHitDiceFromClass(found)
-  }, [
-    character?.class,
-    character?.classSource,
-    resolvedProgression,
-    filteredClassLookup,
-    rawClassLookup,
-  ])
+  }, [resolvedProgression, filteredClassLookup, rawClassLookup])
+
+  const hitDicePools = useMemo(
+    () =>
+      resolvedProgression.map((entry) => {
+        const classData = resolveClassReference(
+          entry,
+          { classesByKey: filteredClassLookup },
+          { classesByKey: rawClassLookup },
+        )
+        const id = getHitDiePoolId(entry)
+        return {
+          id,
+          label: entry.name,
+          die: getHitDiceFromClass(classData),
+          max: entry.levels,
+          used: Math.min(entry.levels, Math.max(0, character?.hitDiceUsed?.[id] ?? 0)),
+        }
+      }),
+    [character?.hitDiceUsed, filteredClassLookup, rawClassLookup, resolvedProgression],
+  )
 
   const conMod = useMemo(
-    () => getAbilityModifier(character?.abilityScores.constitution ?? 10),
-    [character?.abilityScores.constitution],
+    () => getAbilityModifier(calculationContext?.abilityScores.total.constitution ?? 10),
+    [calculationContext?.abilityScores.total.constitution],
   )
 
   const useAverage = character?.variantRules?.averageHitPoints !== false
@@ -113,7 +128,19 @@ export function useHitPoints(): HitPointsState {
   )
   const adjustedMaxHP = Math.max(1, calculatedMaxHP + adjustmentTotal)
   const overrideMaxHP = character ? getMaxHitPointsOverride(character) : undefined
-  const effectiveMaxHP = overrideMaxHP ?? adjustedMaxHP
+  const resolution = useMemo(
+    () =>
+      resolveNumericEffect(
+        calculatedMaxHP,
+        { kind: 'hit-point-maximum' },
+        calculationContext?.effects.declarations ?? [],
+        calculationContext?.effects.resolutionContext,
+      ),
+    [calculatedMaxHP, calculationContext],
+  )
+  const effectiveMaxHP = calculationContext
+    ? Math.max(1, Math.trunc(resolution.value))
+    : (overrideMaxHP ?? adjustedMaxHP)
 
   const update = (patch: Partial<HitPoints>) => {
     if (!character) return
@@ -122,7 +149,7 @@ export function useHitPoints(): HitPointsState {
     })
   }
 
-  const hitPoints = character?.hitPoints ?? { max: 0, current: 0, temporary: 0 }
+  const hitPoints = character?.hitPoints ?? { current: 0, temporary: 0 }
 
   return {
     hitPoints,
@@ -131,7 +158,9 @@ export function useHitPoints(): HitPointsState {
     adjustedMaxHP,
     overrideMaxHP,
     effectiveMaxHP,
+    resolution,
     hitDie,
+    hitDicePools,
     conMod,
     levelsHPBreakdown,
     setCurrentHP: (hp) =>
@@ -154,24 +183,33 @@ export function useHitPoints(): HitPointsState {
         current: Math.max(0, character.hitPoints.current - remaining),
       })
     },
+    previewHitPointSettings: (settings) =>
+      character
+        ? resolveHitPointSettings(
+            character,
+            calculatedMaxHP,
+            settings,
+            calculationContext?.effects.sourceDeclarations,
+          )
+        : resolution,
     saveHitPointSettings: (settings) => {
       if (!character) return
-      const nextAdjustmentTotal = calculateHitPointAdjustmentTotal(
-        settings.adjustments,
-        characterLevel,
-      )
-      const nextAdjustedMaxHP = Math.max(1, calculatedMaxHP + nextAdjustmentTotal)
       const nextOverride =
         typeof settings.maxOverride === 'number' && settings.maxOverride > 0
           ? Math.trunc(settings.maxOverride)
           : undefined
-      const nextEffectiveMaxHP = nextOverride ?? nextAdjustedMaxHP
+      const nextResolution = resolveHitPointSettings(
+        character,
+        calculatedMaxHP,
+        { ...settings, maxOverride: nextOverride },
+        calculationContext?.effects.sourceDeclarations,
+      )
+      const nextEffectiveMaxHP = Math.max(1, Math.trunc(nextResolution.value))
       updateCharacter(character.id, {
         hitPointAdjustments: settings.adjustments,
         hitPointsInitialized: true,
         maxHitPointsOverride: nextOverride,
         hitPoints: {
-          max: 0,
           current: Math.max(0, Math.min(Math.trunc(settings.current), nextEffectiveMaxHP)),
           temporary: Math.max(0, Math.trunc(settings.temporary)),
         },

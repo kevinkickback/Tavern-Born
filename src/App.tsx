@@ -43,6 +43,16 @@ const BuildProficienciesPage = lazy(() =>
 const BuildRacePage = lazy(() =>
   import('@/pages/build/race/RacePage').then((module) => ({ default: module.BuildRacePage })),
 )
+const BuildReviewPage = lazy(() =>
+  import('@/pages/build/review/ReviewPage').then((module) => ({
+    default: module.BuildReviewPage,
+  })),
+)
+const AdjustmentsPage = lazy(() =>
+  import('@/pages/adjustments/AdjustmentsPage').then((module) => ({
+    default: module.AdjustmentsPage,
+  })),
+)
 const CharacterSheetPage = lazy(() =>
   import('@/pages/CharacterSheetPage').then((module) => ({ default: module.CharacterSheetPage })),
 )
@@ -62,7 +72,7 @@ const ConditionsPage = lazy(() =>
   })),
 )
 const PortraitPage = lazy(() =>
-  import('@/pages/details/PortraitPage').then((module) => ({ default: module.PortraitPage })),
+  import('@/pages/details/PortraitPage').then((module) => ({ default: module.RoutedPortraitPage })),
 )
 const EquipmentPage = lazy(() =>
   import('@/pages/equipment/EquipmentPage').then((module) => ({ default: module.EquipmentPage })),
@@ -71,7 +81,7 @@ const FeatsPage = lazy(() =>
   import('@/pages/feats/FeatsPage').then((module) => ({ default: module.FeatsPage })),
 )
 const HomePage = lazy(() =>
-  import('@/pages/HomePage').then((module) => ({ default: module.HomePage })),
+  import('@/pages/HomePage').then((module) => ({ default: module.RoutedHomePage })),
 )
 const SettingsPage = lazy(() =>
   import('@/pages/SettingsPage').then((module) => ({ default: module.SettingsPage })),
@@ -80,7 +90,7 @@ const RulesPage = lazy(() =>
   import('@/pages/rules/RulesPage').then((module) => ({ default: module.RulesPage })),
 )
 const SourcesPage = lazy(() =>
-  import('@/pages/sources/SourcesPage').then((module) => ({ default: module.SourcesPage })),
+  import('@/pages/rules/SourcesPage').then((module) => ({ default: module.SourcesPage })),
 )
 const SpellsPage = lazy(() =>
   import('@/pages/spells/SpellsPage').then((module) => ({ default: module.SpellsPage })),
@@ -199,6 +209,8 @@ function App() {
                 <Route path="/build/background" element={<BuildBackgroundPage />} />
                 <Route path="/build/proficiencies" element={<BuildProficienciesPage />} />
                 <Route path="/build/ability-scores" element={<BuildAbilityScoresPage />} />
+                <Route path="/build/review" element={<BuildReviewPage />} />
+                <Route path="/build/adjustments" element={<AdjustmentsPage />} />
                 <Route path="/feats" element={<FeatsPage />} />
                 <Route path="/spells" element={<SpellsPage />} />
                 <Route path="/equipment" element={<EquipmentPage />} />

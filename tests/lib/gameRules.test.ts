@@ -47,8 +47,8 @@ describe('gameRules', () => {
     expect(getASILevelsFromClass(cls)).toEqual([4, 8, 12])
   })
 
-  test('getASILevelsFromClass falls back when class data is missing', () => {
-    expect(getASILevelsFromClass(undefined)).toEqual([4, 8, 12, 16, 19])
+  test('getASILevelsFromClass returns no levels when class data is missing', () => {
+    expect(getASILevelsFromClass(undefined)).toEqual([])
   })
 
   test('getASILevelsFromClass detects epic boon as an ASI-equivalent level', () => {

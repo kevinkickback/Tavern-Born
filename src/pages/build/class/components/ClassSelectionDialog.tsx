@@ -21,7 +21,7 @@ export interface ClassSelectionDialogProps {
   selectedClassSource?: string
   onOpenChange: (open: boolean) => void
   onSearchChange: (value: string) => void
-  onClassSelect: (className: string, classSource?: string) => void
+  onClassSelect: (className: string, classSource: string) => void
 }
 
 export function ClassSelectionDialog({
@@ -70,7 +70,7 @@ export function ClassSelectionDialog({
                 <button
                   key={`${cls.name}|${cls.source ?? ''}`}
                   type="button"
-                  onClick={() => onClassSelect(cls.name, cls.source ?? undefined)}
+                  onClick={() => onClassSelect(cls.name, cls.source)}
                   className={cn(
                     'p-3 rounded-lg border-2 text-left transition-all hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
                     isSelected

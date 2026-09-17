@@ -3,6 +3,7 @@ import {
   ABILITY_ABBREV_ORDER,
   ABILITY_ABBREV_TO_FULL,
   ABILITY_ABBREV_TO_TITLE,
+  toAbilityName,
 } from './abilityNames'
 import {
   ABILITY_SCORE_ABSOLUTE_MAX,
@@ -44,6 +45,12 @@ export function makeDefaultAbilityScores(base = 8): AbilityScores {
     wisdom: base,
     charisma: base,
   }
+}
+
+export function makeDefaultStandardArrayAssignment(): AbilityScores {
+  return Object.fromEntries(
+    ABILITY_NAMES.map((ability, index) => [ability, STANDARD_ARRAY[index] ?? POINT_BUY_MIN]),
+  ) as unknown as AbilityScores
 }
 
 export function makeEmptyAbilityBonuses(): AbilityBonuses {
@@ -137,13 +144,13 @@ export function formatModifier(mod: number): string {
   return mod >= 0 ? `+${mod}` : `${mod}`
 }
 
-export interface FixedAbilityBonus {
+interface FixedAbilityBonus {
   ability: AbilityName
   value: number
   source: 'race' | 'subrace'
 }
 
-export interface ChoosableAbilityBonus {
+interface ChoosableAbilityBonus {
   count: number
   amount: number
   from: AbilityName[]
@@ -153,6 +160,61 @@ export interface ChoosableAbilityBonus {
 export interface RaceAbilityData {
   fixed: FixedAbilityBonus[]
   choices: ChoosableAbilityBonus[]
+}
+
+export function hasUnresolvedRaceAbilityChoices(
+  data: RaceAbilityData,
+  selections: string[][],
+): boolean {
+  const selectedAcrossBlocks = new Set<AbilityName>()
+
+  return data.choices.some((block, blockIndex) => {
+    let validSelectionCount = 0
+    const selectedInBlock = new Set<AbilityName>()
+
+    for (const rawSelection of selections[blockIndex] ?? []) {
+      const ability = normalizeAbilityName(rawSelection)
+      if (
+        !ability ||
+        !block.from.includes(ability) ||
+        selectedInBlock.has(ability) ||
+        selectedAcrossBlocks.has(ability)
+      ) {
+        continue
+      }
+      selectedInBlock.add(ability)
+      selectedAcrossBlocks.add(ability)
+      validSelectionCount += 1
+      if (validSelectionCount === block.count) break
+    }
+
+    return validSelectionCount < block.count
+  })
+}
+
+export function buildRacialBonuses(
+  raceAsiData: {
+    fixed: Array<{ ability: AbilityName; value: number }>
+    choices: Array<{ amount: number; count?: number; from?: AbilityName[] }>
+  },
+  raceAsiChoices: string[][],
+): Partial<Record<AbilityName, number>> {
+  const racialBonuses: Partial<Record<AbilityName, number>> = {}
+
+  for (const fixedBonus of raceAsiData.fixed) {
+    racialBonuses[fixedBonus.ability] = (racialBonuses[fixedBonus.ability] ?? 0) + fixedBonus.value
+  }
+
+  for (const [blockIndex, block] of raceAsiData.choices.entries()) {
+    for (const rawChoice of raceAsiChoices[blockIndex] ?? []) {
+      const ability = normalizeAbilityName(rawChoice)
+      if (ability) {
+        racialBonuses[ability] = (racialBonuses[ability] ?? 0) + block.amount
+      }
+    }
+  }
+
+  return racialBonuses
 }
 
 type FlexibleRaceAbilitySource = {
@@ -184,30 +246,40 @@ type RaceAbilityEntry = {
 }
 
 export function normalizeAbilityName(input: string): AbilityName | null {
-  const map: Record<string, AbilityName> = {
-    str: 'strength',
-    strength: 'strength',
-    dex: 'dexterity',
-    dexterity: 'dexterity',
-    con: 'constitution',
-    constitution: 'constitution',
-    int: 'intelligence',
-    intelligence: 'intelligence',
-    wis: 'wisdom',
-    wisdom: 'wisdom',
-    cha: 'charisma',
-    charisma: 'charisma',
-  }
-  return map[input.toLowerCase().trim()] ?? null
+  return toAbilityName(input) as AbilityName | null
 }
 
-export interface BackgroundAbilityBlock {
+interface BackgroundAbilityBlock {
   from: AbilityName[]
   weights: number[]
 }
 
 export interface BackgroundAbilityData {
   blocks: BackgroundAbilityBlock[]
+}
+
+export function formatBackgroundAbilityPatterns(data: BackgroundAbilityData): string[] {
+  return data.blocks.map((block) => {
+    const weights = block.weights.map((weight) => `+${weight}`).join('/')
+    const abilities = block.from.map((ability) => ABILITY_ABBREVIATIONS[ability]).join(', ')
+    return `${weights} from ${abilities}`
+  })
+}
+
+export function isBackgroundAbilitySelectionComplete(
+  data: BackgroundAbilityData,
+  blockIndex: number,
+  choices: string[],
+): boolean {
+  const block = data.blocks[blockIndex] ?? data.blocks[0]
+  if (!block || choices.length < block.weights.length) return false
+  const selected = choices
+    .slice(0, block.weights.length)
+    .map((choice) => normalizeAbilityName(choice))
+  return (
+    selected.every((ability) => ability !== null && block.from.includes(ability)) &&
+    new Set(selected).size === block.weights.length
+  )
 }
 
 /**

@@ -1,5 +1,5 @@
 import { ArrowsLeftRight, BookOpen, Lock, Plus, Trash, WarningCircle } from '@phosphor-icons/react'
-import { memo, type ReactNode } from 'react'
+import { memo, type ReactNode, useEffect, useMemo, useState } from 'react'
 import {
   Accordion,
   AccordionContent,
@@ -9,16 +9,27 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { SPECIAL_SPELL_PROFILE_ID } from '@/lib/calculations/spellProfiles.constants'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
+import { getSpellNameKey } from '@/lib/calculations/spellIdentity'
+import {
+  buildSpellProfileDisplayModels,
+  type PreparedCasterSpellItem,
+  type SpellcastingDetailLike,
+  type SpellListItem,
+  type SpellProfileLike,
+} from '@/lib/calculations/spellProfileDisplayModel'
 import {
   formatSpellDisplayName,
   formatSpellLevel,
   getSchoolName,
 } from '@/lib/calculations/spellUtils'
-import { normalizeKey } from '@/lib/provenance/normalization'
 import { cn } from '@/lib/utils'
 import type { Spell5e } from '@/types/5etools'
-import type { RaceSpellChoice } from '@/types/character'
+
+export type {
+  PreparedCasterSpellItem,
+  SpellListItem,
+} from '@/lib/calculations/spellProfileDisplayModel'
 
 const SCHOOL_STYLES: Record<string, string> = {
   A: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
@@ -50,181 +61,236 @@ function getSpanForGroup(index: number, totalGroups: number, itemCount: number) 
 
 function getColSpanClasses(span: { xlSpan: number; xxlSpan: number }) {
   const parts: string[] = []
-  if (span.xlSpan === 2) parts.push('xl:col-span-2')
-  if (span.xxlSpan === 2) parts.push('2xl:col-span-2')
-  if (span.xxlSpan === 3) parts.push('2xl:col-span-3')
+  if (span.xlSpan === 2) parts.push('@min-[36rem]:col-span-2')
+  if (span.xxlSpan === 1) parts.push('@min-[54rem]:col-span-1')
+  if (span.xxlSpan === 2) parts.push('@min-[54rem]:col-span-2')
+  if (span.xxlSpan === 3) parts.push('@min-[54rem]:col-span-3')
   return parts.join(' ')
 }
 
 function getInnerColumnClasses(span: { xlSpan: number; xxlSpan: number }) {
-  const xlCols = span.xlSpan >= 2 ? 'xl:grid-cols-2' : 'xl:grid-cols-1'
+  const xlCols = span.xlSpan >= 2 ? '@min-[36rem]:grid-cols-2' : '@min-[36rem]:grid-cols-1'
   const xxlCols =
     span.xxlSpan >= 3
-      ? '2xl:grid-cols-3'
+      ? '@min-[54rem]:grid-cols-3'
       : span.xxlSpan >= 2
-        ? '2xl:grid-cols-2'
-        : '2xl:grid-cols-1'
-  return `grid grid-cols-1 gap-px sm:grid-cols-2 ${xlCols} ${xxlCols}`
+        ? '@min-[54rem]:grid-cols-2'
+        : '@min-[54rem]:grid-cols-1'
+  return `grid grid-cols-1 gap-px ${xlCols} ${xxlCols}`
 }
 
-interface CantripGroupProps {
-  items: SpellListItem[]
+const SPELL_LEVEL_GRID_CLASSES =
+  '@container grid grid-cols-1 gap-3 pt-3 @min-[36rem]:grid-cols-2 @min-[54rem]:grid-cols-3'
+
+interface SpellLevelGroupProps {
+  title: string
   span: { xlSpan: number; xxlSpan: number }
-  swappedByAddedName: Map<string, { removed: string; level: number }>
-  selectionSourceByProfileAndSpell: Map<string, string>
-  getSpellByName: (spellName: string) => Spell5e | undefined
-  renderSpellName: (params: {
-    item: SpellListItem
-    spell?: Spell5e
-    sourceContext?: string
-  }) => ReactNode
-  onRemoveSpell: (item: SpellListItem) => void
+  children: ReactNode
 }
 
-const CantripGroup = memo(function CantripGroup({
-  items,
+const SpellLevelGroup = memo(function SpellLevelGroup({
+  title,
   span,
-  swappedByAddedName,
-  selectionSourceByProfileAndSpell,
-  getSpellByName,
-  renderSpellName,
-  onRemoveSpell,
-}: CantripGroupProps) {
-  const cantripItems = items.filter((item) => item.level === 0)
-
+  children,
+}: SpellLevelGroupProps) {
   return (
     <div
+      data-slot="spell-level-group"
       className={cn(
         'overflow-hidden rounded-md border border-border bg-surface-raised/35',
         getColSpanClasses(span),
       )}
     >
       <div className="flex h-10 items-center border-b border-border bg-surface-raised px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Cantrips
+        {title}
       </div>
-      <div className={getInnerColumnClasses(span)}>
-        {cantripItems.map((item) => {
-          const spell = getSpellByName(item.name)
-          const sourceContext = selectionSourceByProfileAndSpell.get(
-            `${item.profileId}|${item.name}`,
-          )
-          return (
-            <div
-              key={`${item.profileId}|${item.kind}|${item.name}`}
-              className="flex min-h-11 min-w-0 break-inside-avoid items-center gap-3 bg-workspace-pane px-3 py-2.5 text-sm ring-1 ring-inset ring-border/75 transition-colors hover:bg-surface-hover"
-            >
-              <div className="min-w-0 flex-1">
-                {renderSpellName({
-                  item,
-                  spell,
-                  sourceContext,
-                })}
-              </div>
-              {spell?.school ? (
-                <span
-                  className={cn(
-                    'text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0',
-                    getSchoolStyle(spell.school),
-                  )}
-                >
-                  {getSchoolName(spell.school).slice(0, 3)}
-                </span>
-              ) : null}
-              <div className="flex items-center gap-1.5 shrink-0">
-                {(() => {
-                  const swap = swappedByAddedName.get(item.name)
-                  if (!swap) return null
-                  return (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground">
-                          <ArrowsLeftRight className="h-3.5 w-3.5" />
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="text-xs">
-                        Swapped from{' '}
-                        {formatSpellDisplayName(swap.removed, getSpellByName(swap.removed)?.name)}{' '}
-                        at level {swap.level}
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })()}
-                {item.isFixed ? (
-                  <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="size-9 cursor-pointer p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onRemoveSpell(item)
-                    }}
-                  >
-                    <Trash className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          )
-        })}
-        {cantripItems.length === 0 ? (
-          <div className="px-4 py-2 text-sm text-muted-foreground/80 break-inside-avoid">
-            No cantrips in this list.
-          </div>
+      <div className={getInnerColumnClasses(span)}>{children}</div>
+    </div>
+  )
+})
+
+interface SpellRowProps {
+  item: SpellListItem
+  spell?: Spell5e
+  sourceContext?: string
+  swap?: { removed: string; level: number }
+  selected?: boolean
+  preparation?: {
+    prepared: boolean
+    disabled?: boolean
+    title: string
+    onToggle: () => void
+  }
+  removable?: boolean
+  getSpellByName: (spellName: string) => Spell5e | undefined
+  onRemoveSpell: (item: SpellListItem) => void
+  renderSpellName: SpellProfileManagerProps['renderSpellName']
+}
+
+const SpellRow = memo(function SpellRow({
+  item,
+  spell,
+  sourceContext,
+  swap,
+  selected = false,
+  preparation,
+  removable = false,
+  getSpellByName,
+  onRemoveSpell,
+  renderSpellName,
+}: SpellRowProps) {
+  return (
+    <div
+      className={cn(
+        'flex min-h-11 min-w-0 break-inside-avoid items-center gap-3 px-3 py-2.5 text-sm ring-1 ring-inset ring-border/75 transition-colors',
+        selected ? 'bg-primary/10 hover:bg-primary/15' : 'bg-workspace-pane hover:bg-surface-hover',
+      )}
+    >
+      <div className="min-w-0 flex-1">{renderSpellName({ item, spell, sourceContext })}</div>
+      {spell?.school ? (
+        <span
+          className={cn(
+            'text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0',
+            getSchoolStyle(spell.school),
+          )}
+        >
+          {getSchoolName(spell.school).slice(0, 3)}
+        </span>
+      ) : null}
+      <div className="flex shrink-0 items-center gap-1.5">
+        {swap ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground">
+                <ArrowsLeftRight className="h-3.5 w-3.5" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Swapped from{' '}
+              {formatSpellDisplayName(swap.removed, getSpellByName(swap.removed)?.name)} at level{' '}
+              {swap.level}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+        {preparation ? (
+          <button
+            type="button"
+            data-spell-prepare-toggle="true"
+            disabled={preparation.disabled}
+            onClick={(event) => {
+              event.stopPropagation()
+              preparation.onToggle()
+            }}
+            className={cn(
+              'flex size-8 flex-shrink-0 items-center justify-center rounded-md transition-colors',
+              preparation.disabled
+                ? 'cursor-not-allowed'
+                : 'cursor-pointer hover:bg-workspace-row-hover',
+            )}
+            title={preparation.title}
+          >
+            <span
+              className={cn(
+                'size-4 rounded-full border-2 transition-colors',
+                preparation.prepared
+                  ? 'border-accent bg-accent'
+                  : preparation.disabled
+                    ? 'border-muted-foreground/30'
+                    : 'border-muted-foreground',
+              )}
+            />
+          </button>
+        ) : null}
+        {item.isFixed ? (
+          <Lock
+            className="h-3.5 w-3.5 text-muted-foreground/50"
+            aria-label="Granted spell — cannot be removed"
+          />
+        ) : removable ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`Remove ${item.name}`}
+            className="size-9 cursor-pointer p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            onClick={(event) => {
+              event.stopPropagation()
+              onRemoveSpell(item)
+            }}
+          >
+            <Trash className="h-3.5 w-3.5" />
+          </Button>
         ) : null}
       </div>
     </div>
   )
 })
 
-export interface SpellListItem {
-  profileId: string
-  profileLabel: string
-  className?: string
-  classSource?: string
-  alwaysPrepared?: boolean
-  isPreparedCaster?: boolean
-  name: string
-  level: number
-  kind: 'cantrip' | 'spell'
-  prepared: boolean
-  isFixed?: boolean
+interface KnownSpellLevelGroupProps {
+  title: string
+  items: SpellListItem[]
+  span: { xlSpan: number; xxlSpan: number }
+  swappedByAddedName: Map<string, { removed: string; level: number }>
+  selectionSourceByProfileAndSpell: Map<string, string>
+  canPrepare?: (item: SpellListItem) => boolean
+  getSpellByName: (spellName: string) => Spell5e | undefined
+  onTogglePrepared: (profileId: string, spellName: string) => void
+  onRemoveSpell: (item: SpellListItem) => void
+  renderSpellName: SpellProfileManagerProps['renderSpellName']
 }
 
-export interface PreparedCasterSpellItem {
-  spell: Spell5e
-  item: SpellListItem
-}
-
-interface SpellProfileLike {
-  id: string
-  type?: string
-  label: string
-  className?: string
-  classSource?: string
-  alwaysPrepared?: boolean
-  castingAbility?: string
-  castingAbilityOptions?: string[]
-  choices?: RaceSpellChoice[]
-  fixedSpells?: string[]
-  alwaysPreparedSpells?: string[]
-  preparedSpells?: string[]
-  spellSwaps?: Record<number, { removed: string; added: string }>
-}
-
-interface SpellcastingDetailLike {
-  profileId: string
-  isPreparedCaster?: boolean
-  isTruePreparedCaster?: boolean
-  isLevelOnlyPreparedCaster?: boolean
-  preparedSpellLimit?: number | null
-  knownSpellLimit?: number | null
-  cantripLimit?: number | null
-}
+const KnownSpellLevelGroup = memo(function KnownSpellLevelGroup({
+  title,
+  items,
+  span,
+  swappedByAddedName,
+  selectionSourceByProfileAndSpell,
+  canPrepare,
+  getSpellByName,
+  onTogglePrepared,
+  onRemoveSpell,
+  renderSpellName,
+}: KnownSpellLevelGroupProps) {
+  return (
+    <SpellLevelGroup title={title} span={span}>
+      {items.map((item) => {
+        const spell = getSpellByName(item.name)
+        const sourceContext = selectionSourceByProfileAndSpell.get(`${item.profileId}|${item.name}`)
+        const showPreparation = canPrepare?.(item) ?? false
+        return (
+          <SpellRow
+            key={`${item.profileId}|${item.kind}|${item.name}`}
+            item={item}
+            spell={spell}
+            sourceContext={sourceContext}
+            swap={swappedByAddedName.get(item.name)}
+            preparation={
+              showPreparation
+                ? {
+                    prepared: item.prepared,
+                    title: item.prepared ? 'Prepared' : 'Not prepared',
+                    onToggle: () => onTogglePrepared(item.profileId, item.name),
+                  }
+                : undefined
+            }
+            removable
+            getSpellByName={getSpellByName}
+            onRemoveSpell={onRemoveSpell}
+            renderSpellName={renderSpellName}
+          />
+        )
+      })}
+      {items.length === 0 ? (
+        <div className="px-4 py-2 text-sm text-muted-foreground/80 break-inside-avoid">
+          No spells in this level.
+        </div>
+      ) : null}
+    </SpellLevelGroup>
+  )
+})
 
 interface SpellProfileManagerProps {
   spellProfiles: SpellProfileLike[]
+  focusProfileId?: string
   detailsByProfileId: Map<string, SpellcastingDetailLike>
   groupedItems: Map<string, SpellListItem[]>
   selectionSourceByProfileAndSpell: Map<string, string>
@@ -243,6 +309,7 @@ interface SpellProfileManagerProps {
 
 export const SpellProfileManager = memo(function SpellProfileManager({
   spellProfiles,
+  focusProfileId,
   detailsByProfileId,
   groupedItems,
   selectionSourceByProfileAndSpell,
@@ -254,6 +321,27 @@ export const SpellProfileManager = memo(function SpellProfileManager({
   onOpenRacialChoice,
   renderSpellName,
 }: SpellProfileManagerProps) {
+  const [openProfiles, setOpenProfiles] = useState(() => spellProfiles.map((profile) => profile.id))
+  const { ref: focusedProfileRef, highlighted: focusedProfileHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(!!focusProfileId)
+
+  useEffect(() => {
+    if (!focusProfileId) return
+    setOpenProfiles((current) =>
+      current.includes(focusProfileId) ? current : [...current, focusProfileId],
+    )
+  }, [focusProfileId])
+  const displayModels = useMemo(
+    () =>
+      buildSpellProfileDisplayModels({
+        spellProfiles,
+        detailsByProfileId,
+        groupedItems,
+        preparedCasterItemsByProfile,
+      }),
+    [spellProfiles, detailsByProfileId, groupedItems, preparedCasterItemsByProfile],
+  )
+
   return (
     <div className="w-full">
       {spellProfiles.length === 0 ? (
@@ -263,102 +351,48 @@ export const SpellProfileManager = memo(function SpellProfileManager({
       ) : (
         <Accordion
           type="multiple"
-          defaultValue={spellProfiles.map((profile) => profile.id)}
+          value={openProfiles}
+          onValueChange={setOpenProfiles}
           className="space-y-6"
         >
-          {spellProfiles.map((profile) => {
-            const items = groupedItems.get(profile.id) ?? []
-            const swappedByAddedName = new Map<string, { removed: string; level: number }>()
-            for (const [levelStr, swap] of Object.entries(profile.spellSwaps ?? {})) {
-              swappedByAddedName.set(swap.added, {
-                removed: swap.removed,
-                level: Number(levelStr),
-              })
-            }
-            const isRacial = profile.type === 'racial'
-            const isBonusProfile = profile.id === SPECIAL_SPELL_PROFILE_ID
-            const unfulfilledChoices = (profile.choices ?? []).filter(
-              (choice) => choice.selected.length < choice.count,
-            )
-            const hasUnfulfilledChoices = unfulfilledChoices.length > 0
-            const totalUnchosenSpells = unfulfilledChoices.reduce(
-              (sum, choice) => sum + (choice.count - choice.selected.length),
-              0,
-            )
-            const firstUnfulfilledChoice = unfulfilledChoices[0]
-            if (isRacial && items.length === 0 && !hasUnfulfilledChoices) return null
-            const detail = detailsByProfileId.get(profile.id)
-
-            // XPHB level-only casters (Sorcerer/Bard/Warlock 2024) behave like known casters — no toggle
-            const isLevelOnly = profile.type === 'class' && !!detail?.isLevelOnlyPreparedCaster
-
-            // True prepared casters show the full class spell list inline
-            const isTruePrepared = profile.type === 'class' && !!detail?.isTruePreparedCaster
-            const availableClassItems = isTruePrepared
-              ? (preparedCasterItemsByProfile?.get(profile.id) ?? [])
-              : []
-            const availableClassSpells = availableClassItems.map(({ spell }) => spell)
-
-            // For true prepared casters, prepared state lives in profile.preparedSpells
-            // (not in items, since spellsKnown is empty for them).
-            const alwaysPreparedSet = new Set(
-              (profile.alwaysPreparedSpells ?? []).map(normalizeKey),
-            )
-            const preparedSet = isTruePrepared
-              ? new Set(
-                  (profile.preparedSpells ?? [])
-                    .filter((name) => !alwaysPreparedSet.has(normalizeKey(name)))
-                    .map(normalizeKey),
-                )
-              : new Set(items.filter((i) => i.kind === 'spell' && i.prepared).map((i) => i.name))
-            const preparedCount = preparedSet.size
-            const preparableSpells = isTruePrepared
-              ? availableClassItems
-                  .filter(({ item }) => !item.alwaysPrepared)
-                  .map(({ spell }) => spell)
-              : items.filter((item) => item.kind === 'spell' && !item.alwaysPrepared)
-            const preparedTotal = detail?.isPreparedCaster
-              ? (detail.preparedSpellLimit ?? preparableSpells.length)
-              : preparableSpells.length
-            const levels = [...new Set(items.map((item) => item.level))].sort((a, b) => a - b)
-            const availLevels = isTruePrepared
-              ? [...new Set(availableClassSpells.map((s) => s.level))].sort((a, b) => a - b)
-              : []
-
-            const currentCantrips = items.filter((item) => item.kind === 'cantrip').length
-            const displayedTotal = isTruePrepared
-              ? currentCantrips + availableClassSpells.length
-              : items.length
-            // Known-spell limits should track only choosable class spells; always-prepared
-            // and other fixed grants should not consume the "known" quota.
-            const currentSpells = items.filter(
-              (item) => item.kind === 'spell' && !item.isFixed,
-            ).length
-            const missingCantrips =
-              detail?.cantripLimit != null ? Math.max(0, detail.cantripLimit - currentCantrips) : 0
-            const missingSpells =
-              !isRacial && !isTruePrepared && detail?.knownSpellLimit != null
-                ? Math.max(0, detail.knownSpellLimit - currentSpells)
-                : 0
-            const hasMissingSpells = missingCantrips > 0 || missingSpells > 0
-            const missingSummary = [
-              missingCantrips > 0
-                ? `${missingCantrips} cantrip${missingCantrips !== 1 ? 's' : ''}`
-                : null,
-              missingSpells > 0 ? `${missingSpells} spell${missingSpells !== 1 ? 's' : ''}` : null,
-            ]
-              .filter(Boolean)
-              .join(', ')
-            const showDefaultEmptyState =
-              items.length === 0 && availableClassSpells.length === 0 && !hasUnfulfilledChoices
-            const isClassWithoutSpellcasting = profile.type === 'class' && !detail
-            if (isClassWithoutSpellcasting) return null
+          {displayModels.map((model) => {
+            const {
+              profile,
+              items,
+              swappedByAddedName,
+              isRacial,
+              isBonusProfile,
+              unfulfilledChoices,
+              hasUnfulfilledChoices,
+              totalUnchosenSpells,
+              firstUnfulfilledChoice,
+              detail,
+              isLevelOnly,
+              isTruePrepared,
+              availableClassItems,
+              availableClassSpells,
+              preparedSet,
+              preparedCount,
+              preparedTotal,
+              levels,
+              availableLevels: availLevels,
+              displayedTotal,
+              hasMissingSpells,
+              missingSummary,
+              showDefaultEmptyState,
+            } = model
 
             return (
               <AccordionItem
                 key={profile.id}
                 value={profile.id}
-                className="border-0 bg-transparent last:border-b-0"
+                ref={profile.id === focusProfileId ? focusedProfileRef : undefined}
+                className={cn(
+                  'border-0 bg-transparent last:border-b-0',
+                  profile.id === focusProfileId &&
+                    focusedProfileHighlighted &&
+                    'animate-route-focus',
+                )}
               >
                 <AccordionTrigger className="min-h-11 cursor-pointer rounded-none border-b border-border bg-transparent px-1 py-2.5 transition-colors hover:bg-surface-hover/35 hover:no-underline">
                   <div className="flex items-center gap-2 text-left w-full min-w-0">
@@ -453,19 +487,13 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                     <div className="px-5 pb-3.5">
                       <div className="min-h-40 flex flex-col items-center justify-center text-center p-6">
                         <BookOpen className="h-6 w-6 text-muted-foreground mb-2" weight="duotone" />
-                        <h3 className="text-sm font-semibold">
-                          {isClassWithoutSpellcasting
-                            ? 'Spellcasting Not Available'
-                            : 'No Spells Selected'}
-                        </h3>
+                        <h3 className="text-sm font-semibold">No Spells Selected</h3>
                         <p className="mt-1 text-xs text-muted-foreground max-w-sm">
                           {isBonusProfile
                             ? "Bonus spells are optional and do not count against your class's spell limits."
-                            : isClassWithoutSpellcasting
-                              ? 'This class does not currently grant spellcasting. If a subclass grants spellcasting, this section will update automatically.'
-                              : hasMissingSpells
-                                ? 'Visit the Class page to select your spells.'
-                                : 'This spell list is currently empty.'}
+                            : hasMissingSpells
+                              ? 'Visit the Class page to select your spells.'
+                              : 'This spell list is currently empty.'}
                         </p>
                         {isBonusProfile ? (
                           <Button
@@ -513,7 +541,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                         const totalGroups = (levels.includes(0) ? 1 : 0) + availLevels.length
                         let groupIndex = 0
                         return (
-                          <div className="grid grid-cols-1 gap-3 pt-3 xl:grid-cols-2 2xl:grid-cols-3">
+                          <div data-slot="spell-level-grid" className={SPELL_LEVEL_GRID_CLASSES}>
                             {levels.includes(0)
                               ? (() => {
                                   const cantripCount = items.filter((i) => i.level === 0).length
@@ -523,8 +551,9 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                     cantripCount,
                                   )
                                   return (
-                                    <CantripGroup
-                                      items={items}
+                                    <KnownSpellLevelGroup
+                                      title="Cantrips"
+                                      items={items.filter((item) => item.level === 0)}
                                       span={span}
                                       swappedByAddedName={swappedByAddedName}
                                       selectionSourceByProfileAndSpell={
@@ -532,6 +561,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                       }
                                       getSpellByName={getSpellByName}
                                       renderSpellName={renderSpellName}
+                                      onTogglePrepared={onTogglePrepared}
                                       onRemoveSpell={onRemoveSpell}
                                     />
                                   )
@@ -547,105 +577,53 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                 itemsAtLevel.length,
                               )
                               return (
-                                <div
+                                <SpellLevelGroup
                                   key={`${profile.id}|avail|${spellLevel}`}
-                                  className={cn(
-                                    'overflow-hidden rounded-md border border-border bg-surface-raised/35',
-                                    getColSpanClasses(span),
-                                  )}
+                                  title={`${formatSpellLevel(spellLevel)}s`}
+                                  span={span}
                                 >
-                                  <div className="flex h-10 items-center border-b border-border bg-surface-raised px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    {formatSpellLevel(spellLevel)}s
-                                  </div>
-                                  <div className={getInnerColumnClasses(span)}>
-                                    {itemsAtLevel.map(({ spell, item }) => {
-                                      const isAlwaysPrepared = !!item.alwaysPrepared
-                                      const isPrepared =
-                                        isAlwaysPrepared || preparedSet.has(normalizeKey(item.name))
-                                      const atLimit =
-                                        !isAlwaysPrepared &&
-                                        !isPrepared &&
-                                        preparedTotal > 0 &&
-                                        preparedCount >= preparedTotal
-                                      const sourceContext = selectionSourceByProfileAndSpell.get(
-                                        `${item.profileId}|${item.name}`,
-                                      )
-                                      return (
-                                        <div
-                                          key={`${profile.id}|avail|${spell.name}|${spell.source ?? ''}`}
-                                          className={cn(
-                                            'flex min-h-11 min-w-0 break-inside-avoid items-center gap-3 px-3 py-2.5 text-sm ring-1 ring-inset ring-border/75 transition-colors',
-                                            isPrepared
-                                              ? 'bg-primary/10 hover:bg-primary/15'
-                                              : 'bg-workspace-pane hover:bg-surface-hover',
-                                          )}
-                                        >
-                                          <div className="min-w-0 flex-1">
-                                            {renderSpellName({ item, spell, sourceContext })}
-                                          </div>
-                                          {spell.school ? (
-                                            <span
-                                              className={cn(
-                                                'text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0',
-                                                getSchoolStyle(spell.school),
-                                              )}
-                                            >
-                                              {getSchoolName(spell.school).slice(0, 3)}
-                                            </span>
-                                          ) : null}
-                                          <div className="flex shrink-0 items-center gap-1.5">
-                                            {!isAlwaysPrepared ? (
-                                              <button
-                                                type="button"
-                                                data-spell-prepare-toggle="true"
-                                                disabled={atLimit}
-                                                onClick={(event) => {
-                                                  event.stopPropagation()
-                                                  onTogglePrepared(profile.id, item.name)
-                                                }}
-                                                className={cn(
-                                                  'flex size-8 flex-shrink-0 items-center justify-center rounded-md transition-colors',
-                                                  atLimit
-                                                    ? 'cursor-not-allowed'
-                                                    : 'cursor-pointer hover:bg-workspace-row-hover',
-                                                )}
-                                                title={
-                                                  isPrepared
-                                                    ? 'Prepared — click to unprepare'
-                                                    : atLimit
-                                                      ? `Prepare limit reached (${preparedCount}/${preparedTotal})`
-                                                      : 'Not prepared — click to prepare'
-                                                }
-                                              >
-                                                <span
-                                                  className={cn(
-                                                    'size-4 rounded-full border-2 transition-colors',
-                                                    isPrepared
-                                                      ? 'border-accent bg-accent'
-                                                      : atLimit
-                                                        ? 'border-muted-foreground/30'
-                                                        : 'border-muted-foreground',
-                                                  )}
-                                                />
-                                              </button>
-                                            ) : null}
-                                            {item.isFixed ? (
-                                              <Lock
-                                                className="h-3.5 w-3.5 text-muted-foreground/50"
-                                                aria-label="Granted spell — cannot be removed"
-                                              />
-                                            ) : null}
-                                          </div>
-                                        </div>
-                                      )
-                                    })}
-                                    {itemsAtLevel.length === 0 ? (
-                                      <div className="px-4 py-2 text-sm text-muted-foreground/80 break-inside-avoid">
-                                        No spells in this level.
-                                      </div>
-                                    ) : null}
-                                  </div>
-                                </div>
+                                  {itemsAtLevel.map(({ spell, item }) => {
+                                    const isAlwaysPrepared = !!item.alwaysPrepared
+                                    const isPrepared =
+                                      isAlwaysPrepared ||
+                                      preparedSet.has(getSpellNameKey(item.name))
+                                    const atLimit =
+                                      !isAlwaysPrepared &&
+                                      !isPrepared &&
+                                      preparedTotal > 0 &&
+                                      preparedCount >= preparedTotal
+                                    const sourceContext = selectionSourceByProfileAndSpell.get(
+                                      `${item.profileId}|${item.name}`,
+                                    )
+                                    return (
+                                      <SpellRow
+                                        key={`${profile.id}|avail|${spell.name}|${spell.source ?? ''}`}
+                                        item={item}
+                                        spell={spell}
+                                        sourceContext={sourceContext}
+                                        selected={isPrepared}
+                                        preparation={
+                                          isAlwaysPrepared
+                                            ? undefined
+                                            : {
+                                                prepared: isPrepared,
+                                                disabled: atLimit,
+                                                title: isPrepared
+                                                  ? 'Prepared — click to unprepare'
+                                                  : atLimit
+                                                    ? `Prepare limit reached (${preparedCount}/${preparedTotal})`
+                                                    : 'Not prepared — click to prepare',
+                                                onToggle: () =>
+                                                  onTogglePrepared(profile.id, item.name),
+                                              }
+                                        }
+                                        getSpellByName={getSpellByName}
+                                        onRemoveSpell={onRemoveSpell}
+                                        renderSpellName={renderSpellName}
+                                      />
+                                    )
+                                  })}
+                                </SpellLevelGroup>
                               )
                             })}
                           </div>
@@ -658,7 +636,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                         const totalGroups = levels.length
                         let groupIndex = 0
                         return (
-                          <div className="grid grid-cols-1 gap-3 pt-3 xl:grid-cols-2 2xl:grid-cols-3">
+                          <div data-slot="spell-level-grid" className={SPELL_LEVEL_GRID_CLASSES}>
                             {levels.includes(0)
                               ? (() => {
                                   const cantripCount = items.filter((i) => i.level === 0).length
@@ -668,8 +646,9 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                     cantripCount,
                                   )
                                   return (
-                                    <CantripGroup
-                                      items={items}
+                                    <KnownSpellLevelGroup
+                                      title="Cantrips"
+                                      items={items.filter((item) => item.level === 0)}
                                       span={span}
                                       swappedByAddedName={swappedByAddedName}
                                       selectionSourceByProfileAndSpell={
@@ -677,6 +656,7 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                       }
                                       getSpellByName={getSpellByName}
                                       renderSpellName={renderSpellName}
+                                      onTogglePrepared={onTogglePrepared}
                                       onRemoveSpell={onRemoveSpell}
                                     />
                                   )
@@ -692,122 +672,27 @@ export const SpellProfileManager = memo(function SpellProfileManager({
                                   levelItems.length,
                                 )
                                 return (
-                                  <div
+                                  <KnownSpellLevelGroup
                                     key={`${profile.id}|level|${level}`}
-                                    className={cn(
-                                      'overflow-hidden rounded-md border border-border bg-surface-raised/35',
-                                      getColSpanClasses(span),
-                                    )}
-                                  >
-                                    <div className="flex h-10 items-center border-b border-border bg-surface-raised px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                      {formatSpellLevel(level)}s
-                                    </div>
-                                    <div className={getInnerColumnClasses(span)}>
-                                      {levelItems.map((item) => {
-                                        const canPrepare =
-                                          !isRacial &&
-                                          !isLevelOnly &&
-                                          item.kind === 'spell' &&
-                                          !item.alwaysPrepared &&
-                                          !!item.isPreparedCaster
-                                        const spell = getSpellByName(item.name)
-                                        const sourceContext = selectionSourceByProfileAndSpell.get(
-                                          `${item.profileId}|${item.name}`,
-                                        )
-                                        return (
-                                          <div
-                                            key={`${item.profileId}|${item.kind}|${item.name}`}
-                                            className="flex min-h-11 min-w-0 break-inside-avoid items-center gap-3 bg-workspace-pane px-3 py-2.5 text-sm ring-1 ring-inset ring-border/75 transition-colors hover:bg-surface-hover"
-                                          >
-                                            <div className="min-w-0 flex-1">
-                                              {renderSpellName({
-                                                item,
-                                                spell,
-                                                sourceContext,
-                                              })}
-                                            </div>
-                                            {spell?.school ? (
-                                              <span
-                                                className={cn(
-                                                  'text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0',
-                                                  getSchoolStyle(spell.school),
-                                                )}
-                                              >
-                                                {getSchoolName(spell.school).slice(0, 3)}
-                                              </span>
-                                            ) : null}
-                                            <div className="flex items-center gap-1.5 shrink-0">
-                                              {(() => {
-                                                const swap = swappedByAddedName.get(item.name)
-                                                if (!swap) return null
-                                                return (
-                                                  <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/60 text-muted-foreground">
-                                                        <ArrowsLeftRight className="h-3.5 w-3.5" />
-                                                      </span>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side="top" className="text-xs">
-                                                      Swapped from{' '}
-                                                      {formatSpellDisplayName(
-                                                        swap.removed,
-                                                        getSpellByName(swap.removed)?.name,
-                                                      )}{' '}
-                                                      at level {swap.level}
-                                                    </TooltipContent>
-                                                  </Tooltip>
-                                                )
-                                              })()}
-                                              {canPrepare ? (
-                                                <button
-                                                  type="button"
-                                                  data-spell-prepare-toggle="true"
-                                                  onClick={(event) => {
-                                                    event.stopPropagation()
-                                                    onTogglePrepared(item.profileId, item.name)
-                                                  }}
-                                                  className="flex size-8 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-workspace-row-hover"
-                                                  title={
-                                                    item.prepared ? 'Prepared' : 'Not prepared'
-                                                  }
-                                                >
-                                                  <span
-                                                    className={cn(
-                                                      'size-4 rounded-full border-2 transition-colors',
-                                                      item.prepared
-                                                        ? 'border-accent bg-accent'
-                                                        : 'border-muted-foreground',
-                                                    )}
-                                                  />
-                                                </button>
-                                              ) : null}
-                                              {item.isFixed ? (
-                                                <Lock className="h-3.5 w-3.5 text-muted-foreground/50" />
-                                              ) : (
-                                                <Button
-                                                  variant="ghost"
-                                                  size="sm"
-                                                  aria-label={`Remove ${item.name}`}
-                                                  className="size-9 cursor-pointer p-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                                  onClick={(event) => {
-                                                    event.stopPropagation()
-                                                    onRemoveSpell(item)
-                                                  }}
-                                                >
-                                                  <Trash className="h-3.5 w-3.5" />
-                                                </Button>
-                                              )}
-                                            </div>
-                                          </div>
-                                        )
-                                      })}
-                                      {levelItems.length === 0 ? (
-                                        <div className="px-4 py-2 text-sm text-muted-foreground/80 break-inside-avoid">
-                                          No spells in this level.
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                  </div>
+                                    title={`${formatSpellLevel(level)}s`}
+                                    items={levelItems}
+                                    span={span}
+                                    swappedByAddedName={swappedByAddedName}
+                                    selectionSourceByProfileAndSpell={
+                                      selectionSourceByProfileAndSpell
+                                    }
+                                    canPrepare={(item) =>
+                                      !isRacial &&
+                                      !isLevelOnly &&
+                                      item.kind === 'spell' &&
+                                      !item.alwaysPrepared &&
+                                      !!item.isPreparedCaster
+                                    }
+                                    getSpellByName={getSpellByName}
+                                    onTogglePrepared={onTogglePrepared}
+                                    onRemoveSpell={onRemoveSpell}
+                                    renderSpellName={renderSpellName}
+                                  />
                                 )
                               })}
                           </div>

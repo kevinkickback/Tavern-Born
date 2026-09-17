@@ -14,7 +14,7 @@ Without provenance, changing race/class/background can leave stale proficiencies
 - src/lib/provenance/normalization.ts
 - src/lib/provenance/sourceLabels.ts
 - src/lib/provenance/summaries.ts
-- src/lib/provenance/resolveRaceAsiChoices.ts — pure function that syncs `raceAsiChoices` into ledger `ChoiceRecord.selected` arrays; called by `useProvenanceLedger`/`useProvenance` before deriving rows, and by `applyRaceAsiChoices` when persisting choices
+- src/lib/provenance/resolveRaceAsiChoices.ts — pure function used by `applyRaceAsiChoices` to sync `raceAsiChoices` into ledger `ChoiceRecord.selected` arrays
 - src/lib/provenance/applyRaceGrants.ts
 - src/lib/provenance/applyClassGrants.ts
 - src/lib/provenance/applyBackgroundGrants.ts
@@ -28,7 +28,7 @@ Without provenance, changing race/class/background can leave stale proficiencies
 
 **For production pages:** use the self-contained `use*ProvenanceMutations` hooks directly — `useRaceProvenanceMutations`, `useClassProvenanceMutations`, `useBackgroundProvenanceMutations`, `useSpellProvenanceMutations`, `useFeatProvenanceMutations`, `useEquipmentProvenanceMutations`. Each reads character/store state and lookup dependencies, delegates canonical transition logic to pure commands, and applies one atomic patch.
 
-**For reading provenance rows:** use `useProvenanceLedger` (src/hooks/character/useProvenanceLedger.ts) in pages that only need to display provenance state. It normalizes the ledger via `resolveRaceAsiChoicesInLedger` before deriving rows, so all row functions receive a fully-resolved ledger.
+**For reading provenance rows:** use `useProvenanceLedger` (src/hooks/character/useProvenanceLedger.ts) in pages that only need to display provenance state. Current mutation commands persist a fully resolved ledger, so row functions consume it directly.
 
 **For tests:** `useProvenance` (src/hooks/character/useProvenance.ts) is the integration test harness. It composes all six domains via `useProvenanceMutations` (src/hooks/character/useProvenanceMutations.ts, the aggregator) and exposes mutations + provenance rows from a single hook. Use it in tests that need cross-domain provenance interactions. Do not call it from production pages.
 
@@ -54,7 +54,14 @@ Fixed feat `SourceTag` values may include `grantVariant`, which preserves a para
 the canonical `magic initiate` ledger key with `grantVariant: "cleric"`. Tag identity includes the
 variant so multiple fixed forms remain distinct. Follow-up selections for these grants are stored in
 `character.fixedFeatOptions` under a normalized `name|source|variant` key; they do not consume class
-feat slots or become bonus feats.
+feat slots or become bonus feats. Unparameterized fixed grants use the same storage with an empty
+variant, so every fixed feat that needs setup has a stable options owner.
+
+Race and background feat choices keep display names in `ChoiceRecord.selected` and store
+the authoritative `name|source` identity plus follow-up selections in `ChoiceRecord.selectedRefs`.
+Class progression feats are owned separately by `character.classFeatChoices`; their provenance tags
+include the class-choice ID as `grantVariant`. Replacing a feat, changing its granting origin, removing
+a class, or losing its class level retracts the owned option grants before removing the selection.
 
 ## Background Ability Score Choices (XPHB 2024)
 
@@ -71,9 +78,22 @@ The mutation `applyBackgroundAbilityChoices(bg, blockIndex, choices)` in `usePro
 2. Writes new `abilityBonuses` entries via `addAbilityBonus` (one per choice/weight pair).
 3. Persists `backgroundAsiBlockIndex` and `backgroundAsiChoices` on the character.
 
+The Background page uses the reconciliation variant of this mutation only when it auto-selects a
+fully determined XPHB block. On a clean draft the correction is synchronized to the persisted
+record without creating an unsaved change. If unrelated draft edits already exist, the correction
+stays in the draft and the dirty state is preserved until the user explicitly saves.
+
 When a background is swapped, `reconcileBackgroundChange` → `removeGrantsBySource('background', ...)` clears all background ability bonuses and resets `backgroundAsiBlockIndex`/`backgroundAsiChoices`.
 
-The UI for choosing ability blocks and slots lives in `src/pages/build/background/BackgroundPage.tsx`. The bonuses are included in `displayBonuses` on `AbilityScoresPage` via `buildBackgroundBonuses` from `src/lib/calculations/abilityScores.ts`.
+Ability Scores is the canonical UI for choosing background ability blocks and slots. The Background
+page derives a read-only current selection and every available assignment pattern from the parsed
+blocks, then links to that editor. The bonuses are included in `displayBonuses` on
+`AbilityScoresPage` via `buildBackgroundBonuses` from `src/lib/calculations/abilityScores.ts`.
+Selecting a background applies its fixed origin-feat grant but does not automatically open the feat
+options wizard; any required follow-up remains visible and editable through a source-qualified link
+to the owning Feats entry. Until the ability assignment is complete,
+`getPendingBackgroundAbilityRows` derives a view-only Sources placeholder from the parsed blocks;
+it does not write a speculative grant to the ledger.
 
 ## Grant Application Pattern
 
@@ -87,10 +107,14 @@ Origin-system normalization behavior:
 - `2014`: race/subrace retains origin ASI, background origin ASI and background origin feat are stripped.
 - `2024`: background retains origin ASI and exactly one origin feat, race/subrace origin ASI and starting feat are stripped.
 - Missing canonical origin data is synthesized only at normalization time (for example: fallback 2014 race ASI choice, fallback 2024 background ASI/feat choice).
-- Character schema v4 migrates legacy semicolon-bearing fixed feat ledger keys to canonical keys and
-  preserves the suffix in `grantVariant`.
+- Fixed feat ledger keys use canonical `name|source` identity and preserve option ownership in
+  `grantVariant`.
 
 Mutation hooks should stay separate from row-derivation hooks: grant/reconciliation callbacks belong in the mutation layer, while UI-facing source rows and collapse-state helpers belong in the derived-view layer.
+
+Section-specific source summaries remove only the attribution types owned by that section. If an
+item has mixed ownership (for example, a skill granted by both class and background), the remaining
+external attribution stays visible instead of dropping the entire row.
 
 ## Reconciliation Pattern
 
@@ -114,20 +138,60 @@ Class equipment choice behavior:
 Feat replacement behavior:
 - Regular selected feats use normalized `name|source` identity. Replacing a feat with a same-name entity from another source retracts the old source's option effects and does not copy its stored options.
 - Feat ledger entries remain grouped by normalized name, so replacement removes only the matching manual-choice tag and preserves tags for fixed or same-name grants from other sources.
+- Spells granted by feat setup are fixed entries in the bonus spell profile. They cannot be removed
+  from the spells page, and retracting the feat releases the fixed marker only after the final
+  non-manual owner is gone.
 
 Manual equipment behavior:
 - `equipmentCommands.ts` materializes inventory and manual ledger tags together for add/remove actions.
 - Removing one duplicate inventory row retains the manual tag while another same-name row remains.
-- Manual proficiency transitions update the persisted proficiency list and ledger together; skills also synchronize `character.skills` through `mergeSkillState`.
+- Manual proficiency transitions update the persisted proficiency list and ledger together; skill expertise is stored in `character.proficiencies.expertise` and reconciled when proficiency is removed.
 
 Optional-feature behavior:
 - Class optional-feature replacement is a batch command. It removes only scoped prior choice tags,
   preserves unrelated features/grants, accumulates every selected feature, and applies one patch.
 
+Normalized class-choice behavior:
+- `applyClassChoiceSelectionWithGrantsCommand` persists the source-qualified selection and rebuilds
+  feature-shaped grants in the same command result. Each tag is owned by the exact class printing
+  and carries the normalized choice ID as `grantVariant`, so replacement and progression changes
+  retract only that choice's grants.
+- Choice and class-feat slot levels are stable ownership metadata, not display positions. Retained
+  source-qualified selections keep their prior slot when sorted catalogs return a different order;
+  only newly added selections consume the remaining earned slots.
+- Class-feature and optional-feature selections can be materialized without interpreting prose.
+
+Class and subclass spell-choice behavior:
+- Removing or replacing a class progression entry retracts materialized proficiencies that are owned
+  only by that exact class printing and removes its class spell profile. Grants shared with another
+  source remain materialized.
+- Every class progression entry is source-qualified; readiness, spell presentation, and PDF export
+  resolve only that exact printing.
+- The 2014 PHB Eldritch Knight and Arcane Trickster school limits are enforced in both the picker and
+  spell commands. Their unrestricted choices at levels 3, 8, 14, and 20 carry
+  `grantVariant: "unrestricted-school"`, so the exception follows that choice when it is swapped.
+- A class spell is replaceable when the ledger identifies it as a choice owned by that exact class.
+  A non-fixed spell on that exact class profile is also accepted as a consistency fallback, and the
+  replacement command restores the missing class-choice tag atomically. Fixed subclass spells are
+  never eligible replacement sources without independent class-choice ownership.
+- Replacement level limits come from the parsed class progression. If that value is temporarily
+  unavailable, the picker conservatively falls back to the highest resolved spell already eligible
+  for replacement rather than presenting an unrestricted or empty selection. The limit belongs to
+  the class level at which the replacement occurs; the level at which the removed spell was first
+  selected does not cap its replacement.
+- Level rollback restores a swapped-out spell only while its original class-choice grant still
+  exists; removing the originating level must not resurrect it.
+  Feat selections require the feat-options workflow, and item selections may describe mastery or
+  another relationship rather than inventory; those kinds stay persisted until their domain
+  handlers can apply them explicitly.
+
 Race trait application behavior:
 - `applyRaceSelection(race, subrace)` and `applySubraceChange(race, subrace)` apply and reconcile `darkvision`, `resist`, `immune`, and `conditionImmune`.
 - Applied race traits are persisted on the character as `visions`, `damageResistances`, `damageImmunities`, and `conditionImmunities`.
 - Subrace values are merged with race values, and subrace darkvision overrides base race darkvision when present.
+- Race/subrace commands validate only race-owned origin invariants. This allows an incomplete 2024
+  character to choose a lineage before its background feat and origin-language choices are
+  complete; background/full-origin commands retain the complete cross-domain invariant check.
 
 Lineage race ASI behavior:
 - Some lineage races (for example VRGR-style entries) omit an explicit `ability` block in 5etools data.
@@ -140,6 +204,8 @@ Grouped tool choices:
 - Placeholder choices may carry grouped tool options (for example: `gaming set`, `musical instrument`, `artisan's tools`, `tool`).
 - Grouped entries are placeholders only; final grants are always concrete tool names selected by the user.
 - Resolving grouped tool choices updates both `ledger.choices` and `character.proficiencies.tools`; removing a choice-granted concrete tool reopens the underlying placeholder capacity.
+- Removing any proficiency choice keeps its materialized proficiency while another provenance tag
+  still owns the same grant.
 
 ## Race ASI Choices and ChoiceRecord.selected
 
@@ -147,14 +213,15 @@ When a lineage race is selected, `applyRaceGrants` creates `ChoiceRecord` entrie
 1. Calls `resolveRaceAsiChoicesInLedger` to populate `ChoiceRecord.selected` in the ledger.
 2. Writes both `provenance` and `raceAsiChoices` to the character in a single `updateCharacter` call.
 
-For existing characters where `ChoiceRecord.selected` may be empty (e.g. created before this pattern was established), `useProvenanceLedger` and `useProvenance` apply `resolveRaceAsiChoicesInLedger` at read time using `character.raceAsiChoices` as a fallback. This ensures `getAbilityBonusRows` always receives a fully-resolved ledger without needing external parameters.
+Current mutation commands write `raceAsiChoices` and the resolved ledger together, so read hooks use
+the stored ledger directly. `getAbilityBonusRows` therefore needs no external selection parameters.
 
 ## Invariants
 
 - Every non-user-manual grant should be traceable to a source tag.
 - Reconciliation should be additive/subtractive by source, not by brittle string matching alone.
 - UI summaries should read from ledger data rather than duplicate source logic.
-- `getAbilityBonusRows(ledger)` takes only the ledger — no external `raceAsiChoices` or `backgroundAsiChoices` params. The ledger must be normalized via `resolveRaceAsiChoicesInLedger` before calling it.
+- `getAbilityBonusRows(ledger)` takes only the fully resolved ledger — no external `raceAsiChoices` or `backgroundAsiChoices` parameters.
 - Spell grants may include optional class-level attribution metadata:
 	- exact: selected from class-page level picker
 	- inferred-lowest-eligible: selected from spells page and attributed to the lowest eligible class level with remaining gain capacity

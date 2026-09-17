@@ -247,24 +247,6 @@ export function BuildClassDetailsPanel({
                 </div>
               </div>
             )}
-
-            {(viewingClassData.classFluffImages?.length ?? 0) > 0 && (
-              <section className="border-t border-border pt-4">
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Class artwork
-                </h4>
-                <ul className="space-y-1 text-sm text-muted-foreground">
-                  {viewingClassData.classFluffImages?.map((image) => (
-                    <li
-                      key={`${image.title ?? 'artwork'}|${image.href?.path ?? image.href?.url ?? ''}`}
-                    >
-                      {image.title ?? 'Artwork'}
-                      {image.href?.path ? ` (${image.href.path})` : ''}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
           </WorkspaceDetailContent>
         </ScrollArea>
       ) : (

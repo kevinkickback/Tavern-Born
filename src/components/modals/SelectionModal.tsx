@@ -29,7 +29,7 @@ const MODAL_ROW_ESTIMATE = 148
 const MODAL_LIST_INITIAL_RECT = { width: 800, height: 600 }
 const estimateModalRowSize = () => MODAL_ROW_ESTIMATE
 
-export interface FilterOption {
+interface FilterOption {
   value: string
   label: string
 }
@@ -48,6 +48,7 @@ export interface CategoryLimit<T> {
   label: string
   max: number
   test: (item: T) => boolean
+  showCount?: boolean
 }
 
 export interface SelectionModalProps<T> {
@@ -60,6 +61,7 @@ export interface SelectionModalProps<T> {
   matchItem: (item: T, search: string, activeFilters: ActiveFilters) => boolean
   filterSections?: FilterSection[]
   categories?: CategoryLimit<T>[]
+  selectionHint?: ReactNode
   canSelect?: (item: T, selectedIds: Set<string>, allItems: T[]) => boolean
   swapOnLimit?: boolean
   initialSelectedIds?: string[]
@@ -94,6 +96,7 @@ function SelectionModalInner<T>({
   matchItem,
   filterSections = [],
   categories = [],
+  selectionHint,
   canSelect,
   swapOnLimit = false,
   initialSelectedIds = [],
@@ -143,10 +146,12 @@ function SelectionModalInner<T>({
 
   const categoryCounts = useMemo(
     () =>
-      categories.map((cat) => ({
-        ...cat,
-        selected: selectedItems.filter((i) => cat.test(i)).length,
-      })),
+      categories
+        .filter((cat) => cat.showCount !== false)
+        .map((cat) => ({
+          ...cat,
+          selected: selectedItems.filter((i) => cat.test(i)).length,
+        })),
     [categories, selectedItems],
   )
 
@@ -433,7 +438,7 @@ function SelectionModalInner<T>({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
             <span className="text-xs font-semibold uppercase text-muted-foreground">Selected</span>
-            {categoryCounts.length > 0 ? (
+            {categories.length > 0 ? (
               categoryCounts.map((cat) => {
                 const full = cat.max !== Number.POSITIVE_INFINITY && cat.selected >= cat.max
                 return (
@@ -451,6 +456,9 @@ function SelectionModalInner<T>({
               <Badge variant="secondary" className="h-6 px-2 text-xs tabular-nums">
                 {selectedIds.size}
               </Badge>
+            )}
+            {selectionHint && (
+              <span className="text-xs text-muted-foreground">{selectionHint}</span>
             )}
           </div>
           <p className="text-xs text-muted-foreground truncate leading-none mt-1">{statusText}</p>

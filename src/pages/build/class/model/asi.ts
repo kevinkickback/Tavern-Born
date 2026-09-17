@@ -13,50 +13,10 @@ export function isClassAsiFeatForSlot(
   )
 }
 
-export interface ClassAsiSlot {
-  className: string
-  classSource?: string
-  level: number
-}
-
-/** Assign legacy unscoped feats to the first earned, unresolved class ASI slots. */
-export function assignLegacyClassAsiFeats(
-  feats: Feat[],
-  slots: ClassAsiSlot[],
-  asiChoices: AsiChoice[],
-): Feat[] {
-  const availableSlots = slots.filter((slot) => {
-    const hasAsi = asiChoices.some(
-      (choice) =>
-        choice.className === slot.className &&
-        choice.level === slot.level &&
-        (choice.classSource == null || (choice.classSource ?? '') === (slot.classSource ?? '')),
-    )
-    const hasScopedFeat = feats.some((feat) =>
-      isClassAsiFeatForSlot(feat, slot.className, slot.classSource, slot.level),
-    )
-    return !hasAsi && !hasScopedFeat
-  })
-
-  let slotIndex = 0
-  return feats.map((feat) => {
-    if (feat.className != null && feat.classLevel != null) return feat
-    const slot = availableSlots[slotIndex]
-    if (!slot) return feat
-    slotIndex += 1
-    return {
-      ...feat,
-      className: slot.className,
-      classSource: slot.classSource,
-      classLevel: slot.level,
-    }
-  })
-}
-
 interface ApplyAsiParams {
   currentAsiChoices: AsiChoice[]
   className: string
-  classSource?: string
+  classSource: string
   level: number
   abilityChanges: Record<string, 1 | 2>
 }
@@ -74,11 +34,11 @@ export function applyClassAsiChoice({
         !(
           choice.level === level &&
           choice.className === className &&
-          (choice.classSource == null || (choice.classSource ?? '') === (classSource ?? ''))
+          choice.classSource === classSource
         ),
     ),
     {
-      id: `asi-${className}${classSource ? `-${classSource}` : ''}-${level}`,
+      id: `asi-${className}-${classSource}-${level}`,
       level,
       className,
       classSource,
@@ -90,7 +50,7 @@ export function applyClassAsiChoice({
 interface ResetAsiParams {
   currentAsiChoices: AsiChoice[]
   className: string
-  classSource?: string
+  classSource: string
   level: number
 }
 
@@ -104,7 +64,7 @@ export function resetClassAsiChoice({
     (choice) =>
       choice.level === level &&
       choice.className === className &&
-      (choice.classSource == null || (choice.classSource ?? '') === (classSource ?? '')),
+      choice.classSource === classSource,
   )
   if (!exists) return null
 
@@ -113,7 +73,7 @@ export function resetClassAsiChoice({
       !(
         choice.level === level &&
         choice.className === className &&
-        (choice.classSource == null || (choice.classSource ?? '') === (classSource ?? ''))
+        choice.classSource === classSource
       ),
   )
 }

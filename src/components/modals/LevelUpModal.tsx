@@ -31,7 +31,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { getEntityLookupKey } from '@/lib/5etools/lookups'
+import { deriveEffectiveAbilityScores } from '@/lib/calculations/characterCalculationContext'
 import {
   checkMulticlassRequirements,
   getAbilityModifier,
@@ -45,26 +48,21 @@ import {
   applyLevelUp,
   type LevelUpHitPointChoice,
 } from '@/lib/character/commands/classCommands'
-import { removeSpellFromCharacter } from '@/lib/character/commands/spellCommands'
 import {
   calculateHitPointAdjustmentTotal,
   calculateMaxHP,
   getCharacterClassEntries,
+  getEffectiveMaxHP,
   getMaxHitPointsOverride,
   getTotalCharacterLevel,
 } from '@/lib/characterUtils'
 import { getClassIconUrl } from '@/lib/classIcons'
-import {
-  getSpellsGrantedAtLevel,
-  normalizeKey,
-  removeSpellChoicesAtLevel,
-  removeSpellGrantsAtLevel,
-} from '@/lib/provenance'
+import { getSpellsGrantedAtLevel } from '@/lib/provenance'
 import { cn } from '@/lib/utils'
-import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
+import { useCharacterStore } from '@/store/characterStore'
 import { useGameDataStore } from '@/store/gameDataStore'
 import type { Class5e } from '@/types/5etools'
-import type { CharacterClassEntry } from '@/types/character'
+import type { Character, CharacterClassEntry } from '@/types/character'
 
 interface LevelUpModalProps {
   open: boolean
@@ -74,7 +72,7 @@ interface LevelUpModalProps {
 interface PendingLevelUp {
   kind: 'existing' | 'multiclass'
   className: string
-  classSource?: string
+  classSource: string
   classLevel: number
   hitDie: number
 }
@@ -85,6 +83,7 @@ const EMPTY_CLASSES: Class5e[] = []
 
 export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const character = useCharacterStore((s) => s.activeCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const updateCharacter = useCharacterStore((s) => s.updateCharacter)
   const { classes } = useFilteredGameData()
   const rawClasses = useGameDataStore((state) => state.gameData?.classes ?? EMPTY_CLASSES)
@@ -97,12 +96,15 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const [hpEntryMethod, setHpEntryMethod] = useState<'rolled' | 'manual'>('rolled')
   const [hpDieResult, setHpDieResult] = useState('')
   const [levelHistory, setLevelHistory] = useState<
-    Array<{ className: string; classSource?: string; classLevel: number }>
+    Array<{ className: string; classSource: string; classLevel: number }>
   >([])
   const ignoreRestrictionsId = useId()
   const manualHpRollId = useId()
 
   if (!character) return null
+
+  const effectiveAbilityScores =
+    calculationContext?.abilityScores.total ?? deriveEffectiveAbilityScores(character).total
 
   const classProgression: CharacterClassEntry[] = getCharacterClassEntries(character)
 
@@ -121,7 +123,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     .map((cls) => {
       const { meetsRequirements, requirementText } = checkMulticlassRequirements(
         cls,
-        character.abilityScores,
+        effectiveAbilityScores,
       )
       return {
         cls,
@@ -150,8 +152,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const commitLevelUp = (pending: PendingLevelUp, hpChoice: LevelUpHitPointChoice) => {
     if (pending.kind === 'existing') {
       const targetIndex = classProgression.findIndex(
-        (entry) =>
-          entry.name === pending.className && (entry.source ?? '') === (pending.classSource ?? ''),
+        (entry) => entry.name === pending.className && entry.source === pending.classSource,
       )
       if (targetIndex < 0) {
         toast.error('Could not find the class to level up.')
@@ -162,9 +163,10 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       )
       const result = applyLevelUp(
         character,
-        character.provenance ?? emptyProvenance(),
+        character.provenance,
         newProgression,
         hpChoice,
+        getProjectedMaximumHitPoints(hpChoice),
       )
       updateCharacter(character.id, {
         ...result.characterPatch,
@@ -192,7 +194,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     const multiclassResult = selectedClass
       ? addMulticlass(
           character,
-          character.provenance ?? emptyProvenance(),
+          character.provenance,
           pending.className,
           selectedClass,
           selectedClass.source,
@@ -201,14 +203,18 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       : null
     const nextProficiencies =
       multiclassResult?.characterPatch.proficiencies ?? character.proficiencies
-    const nextProvenance =
-      multiclassResult?.provenanceUpdate ?? character.provenance ?? emptyProvenance()
-    const result = applyLevelUp(character, nextProvenance, newProgression, hpChoice)
+    const nextProvenance = multiclassResult?.provenanceUpdate ?? character.provenance
+    const result = applyLevelUp(
+      character,
+      nextProvenance,
+      newProgression,
+      hpChoice,
+      getProjectedMaximumHitPoints(hpChoice),
+    )
 
     updateCharacter(character.id, {
       ...result.characterPatch,
       proficiencies: nextProficiencies,
-      skills: multiclassResult?.characterPatch.skills ?? character.skills,
       provenance: result.provenanceUpdate,
     })
     toast.success(`Added ${pending.className} (level 1).`)
@@ -269,10 +275,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       toast.error('Could not find the selected class.')
       return
     }
-    const { meetsRequirements } = checkMulticlassRequirements(
-      selectedClass,
-      character.abilityScores,
-    )
+    const { meetsRequirements } = checkMulticlassRequirements(selectedClass, effectiveAbilityScores)
     if (!ignoreRestrictions && !meetsRequirements) {
       toast.warning(`You don't meet the ability score requirements for ${selectedClass.name}.`)
       return
@@ -299,16 +302,11 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     const lastHistoryEntry = levelHistory[levelHistory.length - 1] ?? lastRecordedGain
     const fallbackProgressionEntry = classProgression[classProgression.length - 1]
     const targetClassName = lastHistoryEntry?.className ?? fallbackProgressionEntry.name
-    const targetClassSource = lastHistoryEntry
-      ? lastHistoryEntry.classSource || undefined
-      : fallbackProgressionEntry.source
+    const targetClassSource = lastHistoryEntry?.classSource ?? fallbackProgressionEntry.source
     const targetClassLevel = lastHistoryEntry?.classLevel ?? fallbackProgressionEntry.levels
 
     const targetIndices = classProgression.flatMap((entry, index) =>
-      entry.name === targetClassName &&
-      (targetClassSource == null || entry.source === targetClassSource)
-        ? [index]
-        : [],
+      entry.name === targetClassName && entry.source === targetClassSource ? [index] : [],
     )
     if (targetIndices.length !== 1) {
       toast.error('Could not find the target class to remove a level from.')
@@ -317,40 +315,13 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     }
     const targetIdx = targetIndices[0]
 
-    const ledger = character.provenance ?? emptyProvenance()
+    const ledger = character.provenance
     const affectedSpells = getSpellsGrantedAtLevel(
       ledger,
       targetClassName,
       targetClassLevel,
       targetClassSource,
     )
-    let updatedLedger = removeSpellChoicesAtLevel(
-      ledger,
-      targetClassName,
-      targetClassLevel,
-      targetClassSource,
-    )
-    updatedLedger = removeSpellGrantsAtLevel(
-      updatedLedger,
-      targetClassName,
-      targetClassLevel,
-      targetClassSource,
-    )
-    let spellProfileUpdate: Parameters<typeof updateCharacter>[1] = {}
-    if (affectedSpells.length > 0) {
-      let updatedChar = character
-      for (const spellName of affectedSpells) {
-        if ((updatedLedger.spells[normalizeKey(spellName)] ?? []).length > 0) continue
-        const result = removeSpellFromCharacter(updatedChar, updatedLedger, spellName)
-        updatedChar = {
-          ...updatedChar,
-          ...result.characterPatch,
-        } as typeof character
-        updatedLedger = result.provenanceUpdate
-      }
-      spellProfileUpdate = { spells: updatedChar.spells }
-    }
-
     let newProgression = classProgression.map((e, i) =>
       i === targetIdx ? { ...e, levels: e.levels - 1 } : e,
     )
@@ -358,11 +329,44 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
       newProgression = newProgression.filter((_, i) => i !== targetIdx)
     }
 
-    const progressionResult = applyClassProgressionUpdate(character, updatedLedger, newProgression)
-    updateCharacter(character.id, {
+    const progressionResult = applyClassProgressionUpdate(character, ledger, newProgression)
+    const projectedCharacter: Character = {
+      ...character,
       ...progressionResult.characterPatch,
       provenance: progressionResult.provenanceUpdate,
-      ...spellProfileUpdate,
+    }
+    const retainedFeatKeys = new Set(
+      [
+        ...(projectedCharacter.feats ?? []),
+        ...(projectedCharacter.specialFeats ?? []),
+        ...(projectedCharacter.classFeatChoices ?? []).flatMap((choice) => choice.feats),
+      ].map((feat) => getEntityLookupKey(feat.name, feat.source)),
+    )
+    const projectedSourceEffects = (calculationContext?.effects.sourceDeclarations ?? []).filter(
+      (effect) =>
+        effect.source.kind !== 'feat' ||
+        retainedFeatKeys.has(getEntityLookupKey(effect.source.name, effect.source.source)),
+    )
+    const projectedAbilityScores = deriveEffectiveAbilityScores(
+      projectedCharacter,
+      calculationContext?.raceResolution.parentRace,
+      calculationContext?.raceResolution.subraceData,
+      calculationContext?.background,
+      projectedSourceEffects,
+    ).total
+    const projectedMaximumHitPoints = getEffectiveMaxHP(
+      projectedCharacter,
+      allClasses,
+      projectedAbilityScores,
+      projectedSourceEffects,
+    )
+    updateCharacter(character.id, {
+      ...progressionResult.characterPatch,
+      hitPoints: {
+        ...character.hitPoints,
+        current: Math.min(character.hitPoints.current, projectedMaximumHitPoints),
+      },
+      provenance: progressionResult.provenanceUpdate,
     })
 
     setLevelHistory((prev) => prev.slice(0, -1))
@@ -391,7 +395,7 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
     Number.isInteger(parsedHpDieResult) &&
     parsedHpDieResult >= 1 &&
     parsedHpDieResult <= pendingLevelUp.hitDie
-  const conModifier = getAbilityModifier(character.abilityScores.constitution)
+  const conModifier = getAbilityModifier(effectiveAbilityScores.constitution)
   const hpIncrease = validHpDieResult ? Math.max(1, parsedHpDieResult + conModifier) : null
   const calculatedMaxHp = calculateMaxHP(classProgression, conModifier, {
     averageHp: character.variantRules?.averageHitPoints !== false,
@@ -414,6 +418,10 @@ export function LevelUpModal({ open, onOpenChange }: LevelUpModalProps) {
   const maximumOverride = getMaxHitPointsOverride(character)
   const currentEffectiveMaxHp = maximumOverride ?? currentAdjustedMaxHp
   const projectedEffectiveMaxHp = maximumOverride ?? projectedAdjustedMaxHp
+  const getProjectedMaximumHitPoints = (choice: LevelUpHitPointChoice) => {
+    const levelGain = Math.max(1, choice.dieResult + conModifier)
+    return maximumOverride ?? Math.max(1, calculatedMaxHp + levelGain + projectedAdjustmentTotal)
+  }
 
   const handleConfirmHitPoints = () => {
     if (!pendingLevelUp || !validHpDieResult) return

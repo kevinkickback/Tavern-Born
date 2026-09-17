@@ -47,13 +47,18 @@ describe('RulesPage', () => {
     vi.clearAllMocks()
   })
 
-  test('shows each rule section in a settings-style tab', async () => {
+  test('shows each Character Rules section in a settings-style tab', async () => {
     const user = userEvent.setup()
     const { container } = renderPage()
 
     expect(screen.getByRole('alert').className).toContain('border-warning/35')
     expect(screen.getByRole('alert').className).toContain('bg-warning/10')
     expect(screen.getByRole('tablist', { name: 'Rules category' })).toBeTruthy()
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Ruleset',
+      'Advancement',
+      'Character Options',
+    ])
     expect(screen.getByRole('tab', { name: 'Ruleset' }).getAttribute('aria-selected')).toBe('true')
     expect(container.querySelectorAll('[data-slot="rules-section"]')).toHaveLength(1)
     expect(container.querySelector('[data-slot="rules-section"]')?.className).toContain(
@@ -71,7 +76,6 @@ describe('RulesPage', () => {
 
     expect(screen.getByLabelText('Bladesinger Any Race')).toBeTruthy()
     expect(screen.getByLabelText('Battlerager Any Race')).toBeTruthy()
-    expect(screen.getByLabelText('Prefer Newer Printings')).toBeTruthy()
     expect(screen.getByLabelText('Ignore Equipment Restrictions')).toBeTruthy()
   })
 

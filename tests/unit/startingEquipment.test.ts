@@ -252,11 +252,26 @@ describe('resolveEquipmentWithBlockChoices', () => {
     expect(result.items[0].name).toBe('A holy symbol of your deity')
   })
 
-  test('handles equipmentType entry', () => {
+  test('exposes equipmentType entries as concrete item choices', () => {
+    const smithTools = makeItem("Smith's Tools", 'PHB', 'AT')
     const blocks = [{ _: [{ equipmentType: 'toolArtisan' }] }]
-    const result = resolveEquipmentWithBlockChoices(blocks, EMPTY_LOOKUP, [])
+    const lookup = buildItemLookup([smithTools])
+    const unresolved = resolveEquipmentWithBlockChoices(blocks, lookup, [])
 
-    expect(result.items[0].name).toBe("Artisan's Tools")
+    expect(unresolved.items).toEqual([])
+    expect(unresolved.genericChoices).toEqual([
+      {
+        key: '0:_:0',
+        token: 'toolArtisan',
+        quantity: 1,
+        candidates: [{ name: "Smith's Tools", source: 'PHB' }],
+      },
+    ])
+
+    const selected = resolveEquipmentWithBlockChoices(blocks, lookup, [], {
+      '0:_:0': "Smith's Tools|PHB",
+    })
+    expect(selected.items[0].name).toBe("Smith's Tools")
   })
 
   test('returns empty items for empty blocks', () => {

@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest'
 import {
   calculateMaxHP,
   getEffectiveMaxHP,
-  getTotalCharacterLevel,
   getTotalClassLevels,
   matchesGameDataEntry,
 } from '@/lib/characterUtils'
@@ -13,21 +12,11 @@ import { makeClassFixture } from '../fixtures/gameDataFixtures'
 describe('characterUtils', () => {
   test('getTotalClassLevels sums class levels', () => {
     const progression: CharacterClassEntry[] = [
-      { name: 'Fighter', levels: 3 },
-      { name: 'Wizard', levels: 2 },
+      { name: 'Fighter', source: 'PHB', levels: 3 },
+      { name: 'Wizard', source: 'PHB', levels: 2 },
     ]
 
     expect(getTotalClassLevels(progression)).toBe(5)
-  })
-
-  test('getTotalCharacterLevel falls back to a legacy flat level', () => {
-    const character = makeCharacterFixture({
-      class: 'Wizard',
-      level: 9,
-      classProgression: undefined,
-    })
-
-    expect(getTotalCharacterLevel(character)).toBe(9)
   })
 
   test('matchesGameDataEntry matches name and source when source exists', () => {
@@ -37,8 +26,8 @@ describe('characterUtils', () => {
 
   test('calculateMaxHP computes multiclass average hit points', () => {
     const progression: CharacterClassEntry[] = [
-      { name: 'Fighter', levels: 3 },
-      { name: 'Wizard', levels: 2 },
+      { name: 'Fighter', source: 'PHB', levels: 3 },
+      { name: 'Wizard', source: 'PHB', levels: 2 },
     ]
 
     const classesData = [
@@ -105,11 +94,8 @@ describe('characterUtils', () => {
     const fighter = makeClassFixture({ name: 'Fighter', source: 'PHB', hd: { faces: 10 } })
     const character = {
       ...makeCharacterFixture({
-        class: 'Fighter',
-        classSource: 'PHB',
-        level: 1,
         classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
-        hitPoints: { max: 0, current: 10, temporary: 0 },
+        hitPoints: { current: 10, temporary: 0 },
         hitPointAdjustments: [
           {
             id: 'toughness',
@@ -123,16 +109,36 @@ describe('characterUtils', () => {
       }),
     }
 
-    expect(getEffectiveMaxHP(character, [fighter])).toBe(12)
+    expect(getEffectiveMaxHP(character, [fighter], character.abilityScores)).toBe(12)
     expect(
       getEffectiveMaxHP(
         {
           ...character,
-          level: 2,
           classProgression: [{ name: 'Fighter', source: 'PHB', levels: 2 }],
         },
         [fighter],
+        character.abilityScores,
       ),
     ).toBe(20)
+  })
+
+  test('applies typed maximum-HP effects after the derived class total', () => {
+    const testClass = makeClassFixture({ name: 'Test Class', source: 'TEST', hd: { faces: 8 } })
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Test Class', source: 'TEST', levels: 1 }],
+      abilityScores: { ...makeCharacterFixture().abilityScores, constitution: 10 },
+      hitPoints: { current: 8, temporary: 0 },
+      manualEffects: [
+        {
+          id: 'maximum-hp-adjustment',
+          label: 'Maximum HP adjustment',
+          target: { kind: 'hit-point-maximum' },
+          operation: { kind: 'add', value: 3 },
+          source: { kind: 'manual', name: 'User adjustment' },
+        },
+      ],
+    })
+
+    expect(getEffectiveMaxHP(character, [testClass], character.abilityScores)).toBe(11)
   })
 })

@@ -3,6 +3,7 @@ import {
   validateRarityCoverage,
   validateSpellSchoolCoverage,
 } from '@/lib/5etools/constants'
+import { mapWithConcurrency } from '@/lib/async'
 import { validateArmorTypeCodes } from '@/lib/calculations/armorClass'
 import { validateSkillToAbilityMap } from '@/lib/calculations/skills'
 import { validateParsedSpellSlotProgressions } from '@/lib/calculations/spellSlots'
@@ -20,6 +21,7 @@ import {
   parseCultsBoons,
   parseDeities,
   parseFeats,
+  parseItemMasteries,
   parseItemProperties,
   parseItems,
   parseItemTypes,
@@ -36,11 +38,16 @@ import {
   parseTrapHazards,
   parseVariantRules,
 } from './parsers/index'
+import { parseRemoteDataSourceUrl } from './urlUtils'
 
 export interface DataLoaderOptions {
   onProgress?: (current: number, total: number, resource: string) => void
-  onResourceFailure?: (resource: string) => void
+  onResourceFailure?: (resource: string, failure: DataResourceFailure) => void
   signal?: AbortSignal
+}
+
+interface DataResourceFailure {
+  required: boolean
 }
 
 interface IndexedFileEntry {
@@ -52,22 +59,71 @@ interface ExtractIndexFilesOptions {
   treatObjectKeysAsSources?: boolean
 }
 
+export const DATA_REQUEST_TIMEOUT_MS = 15_000
+export const DATA_FETCH_CONCURRENCY = 6
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError'
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (!signal?.aborted) return
+  if (signal.reason instanceof Error && signal.reason.name === 'AbortError') throw signal.reason
+  throw new DOMException('Data loading aborted', 'AbortError')
+}
+
+function createTimedSignal(parentSignal?: AbortSignal): {
+  signal: AbortSignal
+  cleanup: () => void
+} {
+  const controller = new AbortController()
+  const abortFromParent = () =>
+    controller.abort(
+      parentSignal?.reason instanceof Error && parentSignal.reason.name === 'AbortError'
+        ? parentSignal.reason
+        : new DOMException('Data loading aborted', 'AbortError'),
+    )
+  const timeout = setTimeout(() => {
+    controller.abort(new DOMException('Data request timed out', 'TimeoutError'))
+  }, DATA_REQUEST_TIMEOUT_MS)
+
+  if (parentSignal?.aborted) {
+    abortFromParent()
+  } else {
+    parentSignal?.addEventListener('abort', abortFromParent, { once: true })
+  }
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      clearTimeout(timeout)
+      parentSignal?.removeEventListener('abort', abortFromParent)
+    },
+  }
+}
+
 export class FiveEToolsDataLoader {
   private baseUrl: string
   private isRemote: boolean
 
   constructor(config: DataSourceConfig) {
-    this.baseUrl = config.path
     this.isRemote = config.type === 'remote'
+    if (this.isRemote) {
+      const parsedUrl = parseRemoteDataSourceUrl(config.path)
+      if (parsedUrl.kind === 'invalid') throw new Error(parsedUrl.error)
+      this.baseUrl = parsedUrl.normalizedUrl
+    } else {
+      this.baseUrl = config.path
+    }
   }
 
   async loadAllData(options?: DataLoaderOptions): Promise<GameData> {
-    const resources = [
+    const resources: Array<{ key: string; file: string; required?: boolean }> = [
       { key: 'books', file: 'books.json' },
       { key: 'adventures', file: 'adventures.json' },
       { key: 'races', file: 'races.json' },
-      { key: 'raceFluff', file: 'fluff-races.json' },
-      { key: 'backgroundFluff', file: 'fluff-backgrounds.json' },
+      { key: 'raceFluff', file: 'fluff-races.json', required: false },
+      { key: 'backgroundFluff', file: 'fluff-backgrounds.json', required: false },
       { key: 'classIndex', file: 'class/index.json' },
       { key: 'backgrounds', file: 'backgrounds.json' },
       { key: 'spellIndex', file: 'spells/index.json' },
@@ -103,6 +159,7 @@ export class FiveEToolsDataLoader {
       itemsBase: [],
       itemProperties: [],
       itemTypes: [],
+      itemMasteries: [],
       classFeatures: [],
       actions: [],
       conditions: [],
@@ -110,7 +167,6 @@ export class FiveEToolsDataLoader {
       skills: [],
       senses: [],
       languages: [],
-      magicvariants: [],
       optionalfeatures: [],
       variantrules: [],
       trapHazards: [],
@@ -125,137 +181,133 @@ export class FiveEToolsDataLoader {
     let classIndexData: unknown = null
     let spellIndexData: unknown = null
     let spellSourceLookupData: unknown = null
+    let magicVariants: GameData['items'] = []
     let raceFluffSummaryByKey = new Map<string, string>()
     let loadedTopLevelResources = 0
 
     let completedResources = 0
-    await Promise.all(
-      resources.map(async (resource) => {
-        if (options?.signal?.aborted) {
-          throw new Error('Data loading aborted')
-        }
+    await mapWithConcurrency(resources, DATA_FETCH_CONCURRENCY, async (resource) => {
+      throwIfAborted(options?.signal)
 
-        try {
-          const data = await this.loadResource(resource.file, options?.signal)
-          loadedTopLevelResources += 1
+      try {
+        const data = await this.loadResource(resource.file, options?.signal)
+        loadedTopLevelResources += 1
 
-          switch (resource.key) {
-            case 'books':
-              booksData = data
-              break
-            case 'adventures':
-              adventuresData = data
-              break
-            case 'classIndex':
-              classIndexData = data
-              break
-            case 'spellIndex':
-              spellIndexData = data
-              break
-            case 'spellSourceLookup':
-              spellSourceLookupData = data
-              break
-            case 'races':
-              gameData.races = parseRaces(data) as GameData['races']
-              this.addItemSources(gameData.races, sourcesSet)
-              break
-            case 'raceFluff':
-              raceFluffSummaryByKey = new Map(
-                parseRaceFluffSummaries(data).map((item) => [
-                  `${item.name}|${item.source}`,
-                  item.summary,
-                ]),
-              )
-              break
-            case 'backgroundFluff':
-              gameData.organizations = parseOrganizations(data)
-              this.addItemSources(gameData.organizations, sourcesSet)
-              break
-            case 'backgrounds':
-              gameData.backgrounds = parseBackgrounds(data) as GameData['backgrounds']
-              this.addItemSources(gameData.backgrounds, sourcesSet)
-              break
-            case 'feats':
-              gameData.feats = parseFeats(data) as GameData['feats']
-              this.addItemSources(gameData.feats, sourcesSet)
-              break
-            case 'items':
-              gameData.items = parseItems(data) as GameData['items']
-              this.addItemSources(gameData.items, sourcesSet)
-              break
-            case 'itemsBase':
-              gameData.itemsBase = parseItems(data) as GameData['itemsBase']
-              gameData.itemProperties = parseItemProperties(data)
-              gameData.itemTypes = parseItemTypes(data)
-              this.addItemSources(gameData.itemsBase, sourcesSet)
-              break
-            case 'actions':
-              gameData.actions = parseActions(data)
-              this.addItemSources(gameData.actions, sourcesSet)
-              break
-            case 'conditions':
-              gameData.conditions = parseConditions(data)
-              this.addItemSources(gameData.conditions, sourcesSet)
-              break
-            case 'deities':
-              gameData.deities = parseDeities(data)
-              this.addItemSources(gameData.deities, sourcesSet)
-              break
-            case 'skills':
-              gameData.skills = parseSkills(data)
-              this.addItemSources(gameData.skills, sourcesSet)
-              if (import.meta.env.DEV) {
-                validateSkillToAbilityMap(gameData.skills)
-              }
-              break
-            case 'senses':
-              gameData.senses = parseSenses(data)
-              this.addItemSources(gameData.senses, sourcesSet)
-              break
-            case 'languages':
-              gameData.languages = parseLanguages(data)
-              this.addItemSources(gameData.languages, sourcesSet)
-              break
-            case 'magicvariants':
-              gameData.magicvariants = parseMagicVariants(data)
-              this.addItemSources(gameData.magicvariants, sourcesSet)
-              break
-            case 'optionalfeatures':
-              gameData.optionalfeatures = parseOptionalFeatures(data)
-              this.addItemSources(gameData.optionalfeatures, sourcesSet)
-              break
-            case 'variantrules':
-              gameData.variantrules = parseVariantRules(data)
-              this.addItemSources(gameData.variantrules, sourcesSet)
-              break
-            case 'trapHazards':
-              gameData.trapHazards = parseTrapHazards(data)
-              this.addItemSources(gameData.trapHazards, sourcesSet)
-              break
-            case 'rewards':
-              gameData.rewards = parseRewards(data)
-              this.addItemSources(gameData.rewards, sourcesSet)
-              break
-            case 'cultsBoons':
-              gameData.cultsBoons = parseCultsBoons(data)
-              this.addItemSources(gameData.cultsBoons, sourcesSet)
-              break
-          }
-        } catch (error) {
-          const isAbort =
-            (error instanceof DOMException && error.name === 'AbortError') ||
-            (error instanceof Error && error.name === 'AbortError')
-          if (isAbort) throw error
-          console.warn(`Failed to load ${resource.file}:`, error)
-          options?.onResourceFailure?.(resource.file)
-        } finally {
-          completedResources += 1
-          if (options?.onProgress) {
-            options.onProgress(completedResources, resources.length, resource.file)
-          }
+        switch (resource.key) {
+          case 'books':
+            booksData = data
+            break
+          case 'adventures':
+            adventuresData = data
+            break
+          case 'classIndex':
+            classIndexData = data
+            break
+          case 'spellIndex':
+            spellIndexData = data
+            break
+          case 'spellSourceLookup':
+            spellSourceLookupData = data
+            break
+          case 'races':
+            gameData.races = parseRaces(data) as GameData['races']
+            this.addItemSources(gameData.races, sourcesSet)
+            break
+          case 'raceFluff':
+            raceFluffSummaryByKey = new Map(
+              parseRaceFluffSummaries(data).map((item) => [
+                `${item.name}|${item.source}`,
+                item.summary,
+              ]),
+            )
+            break
+          case 'backgroundFluff':
+            gameData.organizations = parseOrganizations(data)
+            this.addItemSources(gameData.organizations, sourcesSet)
+            break
+          case 'backgrounds':
+            gameData.backgrounds = parseBackgrounds(data) as GameData['backgrounds']
+            this.addItemSources(gameData.backgrounds, sourcesSet)
+            break
+          case 'feats':
+            gameData.feats = parseFeats(data) as GameData['feats']
+            this.addItemSources(gameData.feats, sourcesSet)
+            break
+          case 'items':
+            gameData.items = parseItems(data) as GameData['items']
+            this.addItemSources(gameData.items, sourcesSet)
+            break
+          case 'itemsBase':
+            gameData.itemsBase = parseItems(data) as GameData['itemsBase']
+            gameData.itemProperties = parseItemProperties(data)
+            gameData.itemTypes = parseItemTypes(data)
+            gameData.itemMasteries = parseItemMasteries(data)
+            this.addItemSources(gameData.itemsBase, sourcesSet)
+            this.addItemSources(gameData.itemMasteries, sourcesSet)
+            break
+          case 'actions':
+            gameData.actions = parseActions(data)
+            this.addItemSources(gameData.actions, sourcesSet)
+            break
+          case 'conditions':
+            gameData.conditions = parseConditions(data)
+            this.addItemSources(gameData.conditions, sourcesSet)
+            break
+          case 'deities':
+            gameData.deities = parseDeities(data)
+            this.addItemSources(gameData.deities, sourcesSet)
+            break
+          case 'skills':
+            gameData.skills = parseSkills(data)
+            this.addItemSources(gameData.skills, sourcesSet)
+            if (import.meta.env.DEV) {
+              validateSkillToAbilityMap(gameData.skills)
+            }
+            break
+          case 'senses':
+            gameData.senses = parseSenses(data)
+            this.addItemSources(gameData.senses, sourcesSet)
+            break
+          case 'languages':
+            gameData.languages = parseLanguages(data)
+            this.addItemSources(gameData.languages, sourcesSet)
+            break
+          case 'magicvariants':
+            magicVariants = parseMagicVariants(data)
+            this.addItemSources(magicVariants, sourcesSet)
+            break
+          case 'optionalfeatures':
+            gameData.optionalfeatures = parseOptionalFeatures(data)
+            this.addItemSources(gameData.optionalfeatures, sourcesSet)
+            break
+          case 'variantrules':
+            gameData.variantrules = parseVariantRules(data)
+            this.addItemSources(gameData.variantrules, sourcesSet)
+            break
+          case 'trapHazards':
+            gameData.trapHazards = parseTrapHazards(data)
+            this.addItemSources(gameData.trapHazards, sourcesSet)
+            break
+          case 'rewards':
+            gameData.rewards = parseRewards(data)
+            this.addItemSources(gameData.rewards, sourcesSet)
+            break
+          case 'cultsBoons':
+            gameData.cultsBoons = parseCultsBoons(data)
+            this.addItemSources(gameData.cultsBoons, sourcesSet)
+            break
         }
-      }),
-    )
+      } catch (error) {
+        if (isAbortError(error)) throw error
+        console.warn(`Failed to load ${resource.file}:`, error)
+        options?.onResourceFailure?.(resource.file, { required: resource.required !== false })
+      } finally {
+        completedResources += 1
+        if (options?.onProgress) {
+          options.onProgress(completedResources, resources.length, resource.file)
+        }
+      }
+    })
 
     if (this.isRemote && loadedTopLevelResources === 0) {
       throw new Error(
@@ -263,7 +315,7 @@ export class FiveEToolsDataLoader {
       )
     }
 
-    if (options?.signal?.aborted) return gameData
+    throwIfAborted(options?.signal)
 
     if (classIndexData) {
       await this.loadClassData(classIndexData, gameData, sourcesSet, options)
@@ -276,7 +328,9 @@ export class FiveEToolsDataLoader {
       })
     }
 
-    if (options?.signal?.aborted) return gameData
+    throwIfAborted(options?.signal)
+
+    gameData.items.push(...magicVariants)
 
     if (spellIndexData) {
       await this.loadSpellData(spellIndexData, gameData, sourcesSet, options, spellSourceLookupData)
@@ -290,7 +344,7 @@ export class FiveEToolsDataLoader {
       validateArmorTypeCodes(gameData.lookups.itemTypeByAbbr)
       validateSpellSchoolCoverage(gameData.spells)
       validateDamageTypeCoverage([...(gameData.items ?? []), ...(gameData.itemsBase ?? [])])
-      validateRarityCoverage([...(gameData.items ?? []), ...(gameData.magicvariants ?? [])])
+      validateRarityCoverage(gameData.items ?? [])
     }
 
     if (options?.onProgress) {
@@ -313,8 +367,10 @@ export class FiveEToolsDataLoader {
     const allClasses: GameData['classes'] = []
     const allClassFeatures: GameData['classFeatures'] = []
 
-    const classResults = await Promise.all(
-      classFiles.map(async (classFile) => {
+    const classResults = await mapWithConcurrency(
+      classFiles,
+      DATA_FETCH_CONCURRENCY,
+      async (classFile) => {
         try {
           const classData = await this.loadResource(`class/${classFile.file}`, options?.signal)
 
@@ -339,8 +395,9 @@ export class FiveEToolsDataLoader {
             const fluffData = await this.loadResource(`class/${fluffFile}`, options?.signal)
             fluffSummaries = parseClassFluffSummaries(fluffData)
             richFluff = parseClassFluff(fluffData)
-          } catch {
-            options?.onResourceFailure?.(`class/${fluffFile}`)
+          } catch (error) {
+            if (isAbortError(error)) throw error
+            options?.onResourceFailure?.(`class/${fluffFile}`, { required: false })
             fluffSummaries = []
             richFluff = []
           }
@@ -376,14 +433,15 @@ export class FiveEToolsDataLoader {
             features: parsedFeatures,
           }
         } catch (error) {
+          if (isAbortError(error)) throw error
           console.warn(`Failed to load class file ${classFile.file}:`, error)
-          options?.onResourceFailure?.(`class/${classFile.file}`)
+          options?.onResourceFailure?.(`class/${classFile.file}`, { required: true })
           return {
             classes: [] as GameData['classes'],
             features: [] as GameData['classFeatures'],
           }
         }
-      }),
+      },
     )
 
     classResults.forEach((result) => {
@@ -408,8 +466,10 @@ export class FiveEToolsDataLoader {
 
     const allSpells: GameData['spells'] = []
 
-    const spellResults = await Promise.all(
-      spellFiles.map(async (spellFile) => {
+    const spellResults = await mapWithConcurrency(
+      spellFiles,
+      DATA_FETCH_CONCURRENCY,
+      async (spellFile) => {
         try {
           const spellData = await this.loadResource(`spells/${spellFile.file}`, options?.signal)
 
@@ -421,11 +481,12 @@ export class FiveEToolsDataLoader {
           )
           return parsedSpells
         } catch (error) {
+          if (isAbortError(error)) throw error
           console.warn(`Failed to load spell file ${spellFile.file}:`, error)
-          options?.onResourceFailure?.(`spells/${spellFile.file}`)
+          options?.onResourceFailure?.(`spells/${spellFile.file}`, { required: true })
           return [] as GameData['spells']
         }
-      }),
+      },
     )
 
     spellResults.forEach((parsedSpells) => {
@@ -508,11 +569,16 @@ export class FiveEToolsDataLoader {
     }
 
     const url = this.buildUrl(filename)
-    const response = await fetch(url, { signal })
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${filename}: ${response.statusText}`)
+    const timedSignal = createTimedSignal(signal)
+    try {
+      const response = await fetch(url, { signal: timedSignal.signal })
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${filename}: ${response.statusText}`)
+      }
+      return await response.json()
+    } finally {
+      timedSignal.cleanup()
     }
-    return await response.json()
   }
 
   private buildUrl(filename: string): string {

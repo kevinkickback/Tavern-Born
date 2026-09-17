@@ -1,9 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { AppHeader } from '@/components/layout/AppHeader'
-import { setHintDismissed } from '@/lib/storage/hints'
+import { resetAllHints, setHintDismissed } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
 
@@ -39,7 +39,7 @@ vi.mock('@/hooks/character/useArmorClass', () => ({
 
 vi.mock('@/hooks/character/useHitPoints', () => ({
   useHitPoints: () => ({
-    hitPoints: { max: 42, current: 37, temporary: 0 },
+    hitPoints: { current: 37, temporary: 0 },
     calculatedMaxHP: 40,
     effectiveMaxHP: 42,
     hitDie: 10,
@@ -54,7 +54,7 @@ vi.mock('@/hooks/character/useHitPoints', () => ({
 
 vi.mock('@/hooks/ui/useAnchoredHintPosition', () => ({
   useAnchoredHintPosition: ({ enabled }: { enabled: boolean }) =>
-    enabled ? { top: 40, left: 40, arrowLeft: 20, anchorTop: 20, gap: 12 } : null,
+    enabled ? { reference: document.body, gap: 12, placement: 'bottom' } : null,
 }))
 
 describe('app header character summary', () => {
@@ -63,8 +63,6 @@ describe('app header character summary', () => {
     const character = makeCharacterFixture({
       name: 'Aelar',
       race: 'Elf',
-      class: 'Fighter',
-      level: 2,
       classProgression: [
         { name: 'Fighter', source: 'PHB', levels: 3 },
         { name: 'Wizard', source: 'PHB', levels: 2 },
@@ -137,6 +135,8 @@ describe('app header character summary', () => {
 
     expect(screen.getByTestId('header-ac-badge').textContent).toContain('Armor Class 18')
     expect(screen.getByTestId('header-hp-badge').textContent).toContain('Maximum Hit Points 42')
+    expect(screen.getByTestId('header-ac-badge').className).toContain('cursor-pointer')
+    expect(screen.getByTestId('header-hp-badge').className).toContain('cursor-pointer')
     expect(screen.getByText('18')).toBeTruthy()
     expect(screen.getByText('42')).toBeTruthy()
   })
@@ -165,6 +165,16 @@ describe('app header character summary', () => {
     expect(screen.getByTestId('armor-class-modal-mock')).toBeTruthy()
   })
 
+  test('keeps rest controls out of the builder header', () => {
+    render(
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('button', { name: 'Preview a rest' })).toBeNull()
+  })
+
   test('introduces the shield and heart menus once on the Race page', async () => {
     const user = userEvent.setup()
     render(
@@ -174,12 +184,30 @@ describe('app header character summary', () => {
     )
 
     expect(screen.getByRole('status').textContent).toContain(
-      'Click the shield or heart to manage Armor Class and Hit Points',
+      'Click the shield or heart to review Armor Class and Hit Point sources',
     )
     await user.click(
       screen.getByRole('button', { name: 'Dismiss Armor Class and Hit Points hint' }),
     )
     expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  test('shows the persistent header hint again immediately after hints are reset', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/build/race']}>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: 'Dismiss Armor Class and Hit Points hint' }),
+    )
+    act(() => resetAllHints())
+
+    expect(screen.getByRole('status').textContent).toContain(
+      'Click the shield or heart to review Armor Class and Hit Point sources',
+    )
   })
 
   test('keeps level up contextual while leaving save persistently visible', () => {
@@ -193,6 +221,21 @@ describe('app header character summary', () => {
     expect(screen.getByRole('button', { name: 'Save character' }).hasAttribute('disabled')).toBe(
       true,
     )
+    expect(screen.queryByRole('button', { name: 'Manage manual effects' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Manage manual actions' })).toBeNull()
+  })
+
+  test('does not advertise an unimplemented save keyboard shortcut', async () => {
+    const user = userEvent.setup()
+    useCharacterStore.setState({ isActiveCharacterDirty: true })
+    render(
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>,
+    )
+
+    await user.hover(screen.getByRole('button', { name: 'Save character' }))
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Save character')
   })
 
   test('shows level up in the build workspace', () => {
@@ -221,14 +264,14 @@ describe('app header character summary', () => {
     expect(screen.getByText('Portrait')).toBeTruthy()
   })
 
-  test('treats Character Rules as part of the Builder workspace', () => {
+  test('keeps Character Rules outside Builder-only level-up actions', () => {
     render(
       <MemoryRouter initialEntries={['/rules']}>
         <AppHeader />
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('button', { name: 'Level up character' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Level up character' })).toBeNull()
     expect(screen.getByText('Character Rules')).toBeTruthy()
   })
 

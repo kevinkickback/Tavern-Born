@@ -19,6 +19,8 @@ import {
   getRaceAbilityData,
   hasFlexibleRaceOriginAsi,
   isValidStandardArrayAssignment,
+  makeDefaultAbilityScores,
+  makeDefaultStandardArrayAssignment,
   normalizeAbilityName,
 } from '@/lib/calculations/abilityScores'
 import {
@@ -40,31 +42,9 @@ interface AbilityScoresStepProps extends StepProps {
   raceResolution: ResolvedRaceReference
 }
 
-const DEFAULT_STANDARD_SCORES: Partial<Record<AbilityName, number>> = ABILITY_NAMES.reduce(
-  (acc, ab, idx) => {
-    acc[ab] = STANDARD_ARRAY[idx] ?? 8
-    return acc
-  },
-  {} as Partial<Record<AbilityName, number>>,
-)
-
-const DEFAULT_POINT_BUY_SCORES: Record<AbilityName, number> = {
-  strength: 8,
-  dexterity: 8,
-  constitution: 8,
-  intelligence: 8,
-  wisdom: 8,
-  charisma: 8,
-}
-
-const DEFAULT_CUSTOM_SCORES: Record<AbilityName, number> = {
-  strength: ABILITY_SCORE_MIN,
-  dexterity: ABILITY_SCORE_MIN,
-  constitution: ABILITY_SCORE_MIN,
-  intelligence: ABILITY_SCORE_MIN,
-  wisdom: ABILITY_SCORE_MIN,
-  charisma: ABILITY_SCORE_MIN,
-}
+const DEFAULT_STANDARD_SCORES = makeDefaultStandardArrayAssignment()
+const DEFAULT_POINT_BUY_SCORES = makeDefaultAbilityScores(POINT_BUY_MIN)
+const DEFAULT_CUSTOM_SCORES = makeDefaultAbilityScores(ABILITY_SCORE_MIN)
 
 function RaceAsiBonuses({
   data,

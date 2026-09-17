@@ -1,3 +1,8 @@
+import {
+  type BackgroundAbilityData,
+  formatBackgroundAbilityPatterns,
+  isBackgroundAbilitySelectionComplete,
+} from '@/lib/calculations/abilityScores'
 import { stripItemTag, toDisplayName } from './normalization'
 import type {
   ProficiencyProvenance,
@@ -7,7 +12,7 @@ import type {
   SourceType,
 } from './types'
 
-function formatSourceType(type: SourceType): string {
+export function formatSourceType(type: SourceType): string {
   switch (type) {
     case 'optionalFeature':
       return 'optional feature'
@@ -171,6 +176,25 @@ export function getAbilityBonusRows(ledger: ProvenanceLedger): SourceRow[] {
     })
 
   return [...fixedRows, ...choiceRows]
+}
+
+export function getPendingBackgroundAbilityRows(
+  data: BackgroundAbilityData,
+  blockIndex: number,
+  choices: string[],
+): SourceRow[] {
+  if (data.blocks.length === 0 || isBackgroundAbilitySelectionComplete(data, blockIndex, choices)) {
+    return []
+  }
+  return [
+    {
+      itemName: `choose ${formatBackgroundAbilityPatterns(data).join(' or ')}`,
+      category: 'Ability Bonuses',
+      attribution: 'background',
+      sourceTypes: ['background'],
+      isPending: true,
+    },
+  ]
 }
 
 /** Derive feat source rows. */

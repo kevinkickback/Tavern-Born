@@ -59,7 +59,12 @@ describe('FeatOptionsModal fixed spellcasting class', () => {
     expect(screen.getByText(/Step 1 of 1/)).toBeTruthy()
     expect(screen.getByRole('button', { name: /Finish/ }).hasAttribute('disabled')).toBe(true)
 
-    for (const checkbox of screen.getAllByRole('checkbox')) fireEvent.click(checkbox)
+    const checkboxes = screen.getAllByRole('checkbox')
+    fireEvent.click(checkboxes[0])
+    expect(screen.getByText('Guidance').closest('label')?.className).toContain('border-l-accent')
+    expect(screen.getByText('Guidance').closest('label')?.className).toContain('bg-accent/10')
+    expect(checkboxes[0].className).toContain('data-[state=checked]:bg-accent')
+    fireEvent.click(checkboxes[1])
     fireEvent.click(screen.getByRole('button', { name: /Finish/ }))
 
     expect(onFinish).toHaveBeenCalledWith({

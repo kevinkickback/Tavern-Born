@@ -4,6 +4,7 @@ import {
   Book,
   Books,
   Certificate,
+  ClipboardText,
   FilePdf,
   FloppyDisk,
   Gear,
@@ -12,6 +13,7 @@ import {
   Image,
   Lightning,
   MagicWand,
+  PencilSimple,
   PersonSimple,
   Scroll,
   Shield,
@@ -22,7 +24,7 @@ import {
   TrendUp,
   Users,
 } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArmorClassModal } from '@/components/modals/ArmorClassModal'
@@ -35,7 +37,7 @@ import { useArmorClass } from '@/hooks/character/useArmorClass'
 import { useHitPoints } from '@/hooks/character/useHitPoints'
 import { useAnchoredHintPosition } from '@/hooks/ui/useAnchoredHintPosition'
 import { resolvePortraitSrc } from '@/lib/portraitConstants'
-import { isHintDismissed, setHintDismissed } from '@/lib/storage/hints'
+import { isHintDismissed, setHintDismissed, subscribeToHintReset } from '@/lib/storage/hints'
 import { useCharacterStore } from '@/store/characterStore'
 
 const STAT_MENUS_HINT_ID = 'header-stat-management-menus'
@@ -43,6 +45,8 @@ const STAT_MENUS_HINT_SELECTOR = '[data-character-stat-menus]'
 const STAT_MENUS_HINT_WIDTH = 340
 
 const PAGE_DETAILS: Array<[prefix: string, title: string, icon: Icon]> = [
+  ['/build/review', 'Character Review', ClipboardText],
+  ['/build/adjustments', 'Actions & Effects', PencilSimple],
   ['/build/ability-scores', 'Ability Scores', Barbell],
   ['/build/proficiencies', 'Proficiencies', Certificate],
   ['/build/background', 'Background', Scroll],
@@ -87,35 +91,21 @@ export function AppHeader() {
   const statMenusHintPosition = useAnchoredHintPosition({
     enabled: showStatMenusHint && showStatMenusHintOnPage && !!activeCharacter,
     selector: STAT_MENUS_HINT_SELECTOR,
-    width: STAT_MENUS_HINT_WIDTH,
     horizontalAlign: 'end',
   })
-  const showLevelUp = [
-    '/build',
-    '/feats',
-    '/spells',
-    '/equipment',
-    '/details',
-    '/rules',
-    '/sources',
-  ].some((prefix) => location.pathname.startsWith(prefix))
+  const showLevelUp = ['/build', '/feats', '/spells', '/equipment', '/details'].some((prefix) =>
+    location.pathname.startsWith(prefix),
+  )
+
+  useEffect(() => subscribeToHintReset(() => setShowStatMenusHint(true)), [])
 
   const characterSummary = useMemo(() => {
     if (!activeCharacter) return { visible: '', classBreakdown: '', isCondensed: false }
 
-    const progression = activeCharacter.classProgression ?? []
-    const classNames =
-      progression.length > 0
-        ? progression.map((entry) => entry.name).filter(Boolean)
-        : [activeCharacter.class].filter((name): name is string => Boolean(name))
-    const totalLevel =
-      progression.length > 0
-        ? progression.reduce((sum, entry) => sum + entry.levels, 0)
-        : activeCharacter.level
-    const classBreakdown =
-      progression.length > 0
-        ? progression.map((entry) => `${entry.name} ${entry.levels}`).join(' · ')
-        : classNames.join(' · ')
+    const progression = activeCharacter.classProgression
+    const classNames = progression.map((entry) => entry.name)
+    const totalLevel = progression.reduce((sum, entry) => sum + entry.levels, 0) || 1
+    const classBreakdown = progression.map((entry) => `${entry.name} ${entry.levels}`).join(' · ')
     const isCondensed = classNames.length > 2
     const classLabel = isCondensed ? `${classNames.length} classes` : classNames.join(' / ')
 
@@ -128,7 +118,7 @@ export function AppHeader() {
     }
   }, [activeCharacter])
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!activeCharacter) return
 
     if (!hasUnsavedChanges) {
@@ -136,8 +126,15 @@ export function AppHeader() {
       return
     }
 
-    saveActiveCharacter()
-    toast.success('Character saved')
+    try {
+      await saveActiveCharacter()
+      toast.success('Character saved')
+    } catch (error) {
+      console.error('Failed to save character:', error)
+      toast.error('Could not save character', {
+        description: 'Your changes are still available. Check storage space and try again.',
+      })
+    }
   }
 
   const dismissStatMenusHint = () => {
@@ -153,8 +150,8 @@ export function AppHeader() {
         onDismiss={dismissStatMenusHint}
         dismissLabel="Dismiss Armor Class and Hit Points hint"
       >
-        Click the shield or heart to manage Armor Class and Hit Points, including lasting bonuses or
-        penalties.
+        Click the shield or heart to review Armor Class and Hit Point sources or add manual bonuses
+        and penalties.
       </AnchoredHint>
 
       <header className="app-drag grid h-16 shrink-0 grid-cols-[minmax(12rem,1fr)_auto_minmax(12rem,1fr)] items-center bg-workspace-canvas px-5">
@@ -206,7 +203,7 @@ export function AppHeader() {
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="relative flex size-10 items-center justify-center tabular-nums"
+                      className="relative flex size-10 cursor-pointer items-center justify-center tabular-nums"
                       data-testid="header-ac-badge"
                       aria-label={`Manage Armor Class. Current ${effectiveAC}`}
                       onClick={() => {
@@ -227,7 +224,7 @@ export function AppHeader() {
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="relative flex size-10 items-center justify-center tabular-nums"
+                      className="relative flex size-10 cursor-pointer items-center justify-center tabular-nums"
                       data-testid="header-hp-badge"
                       aria-label={`Manage hit points. Maximum ${effectiveMaxHP}`}
                       onClick={() => {
@@ -289,7 +286,7 @@ export function AppHeader() {
               {!activeCharacter
                 ? 'No character loaded'
                 : hasUnsavedChanges
-                  ? 'Save character (Ctrl+S)'
+                  ? 'Save character'
                   : 'No changes to save'}
             </TooltipContent>
           </Tooltip>

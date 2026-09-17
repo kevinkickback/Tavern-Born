@@ -1,5 +1,6 @@
 import { Check, Star } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { resolveSubclassFeatureRefs } from '@/lib/5etools/classData'
 import { cn } from '@/lib/utils'
 import type { Feat5e, Subclass5e } from '@/types/5etools'
@@ -26,6 +27,7 @@ interface BuildClassAsiSectionProps {
   onOpenFeatPicker: (level: number) => void
   onSetAsiModeByLevel: (levelKey: string, mode: 'asi' | 'feat') => void
   onClearFeatSelectionsForAsi: (level: number) => void
+  highlighted?: boolean
 }
 
 export function BuildClassAsiSection({
@@ -48,7 +50,10 @@ export function BuildClassAsiSection({
   onOpenFeatPicker,
   onSetAsiModeByLevel,
   onClearFeatSelectionsForAsi,
+  highlighted = false,
 }: BuildClassAsiSectionProps) {
+  const { ref: routeFocusRef, highlighted: routeFocusHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(highlighted)
   const existingAsi = appliedAsiChoicesForClass.find((ac) => ac.level === level)
   const levelKey = `${level}|${viewingClass}|${viewingClassSource ?? ''}`
   const mode = existingAsi ? 'asi' : featForLevel ? 'feat' : (asiModeByLevel[levelKey] ?? 'feat')
@@ -56,6 +61,7 @@ export function BuildClassAsiSection({
 
   return (
     <div
+      ref={routeFocusRef}
       className={cn(
         'rounded-lg border overflow-hidden',
         isApplied
@@ -63,6 +69,7 @@ export function BuildClassAsiSection({
           : mode === 'asi'
             ? 'border-warning/30 bg-warning/5'
             : 'border-info/30 bg-info/5',
+        routeFocusHighlighted && 'animate-route-focus',
       )}
     >
       <div className="flex items-center justify-between px-3 py-2.5">

@@ -1,10 +1,12 @@
-import { Scroll, Star } from '@phosphor-icons/react'
+import { PencilSimple, Scroll, Star } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createSearchParams, Link, useSearchParams } from 'react-router-dom'
+import { GenericEquipmentSelect } from '@/components/character/GenericEquipmentSelect'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -20,10 +22,12 @@ import {
   WorkspacePaneSearch,
 } from '@/components/workspace'
 import { useBackgroundProvenanceMutations } from '@/hooks/character/useBackgroundProvenanceMutations'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
 import { useBackgroundLookup, useItemLookup } from '@/hooks/data/useGameData'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { resolveBackgroundReference } from '@/lib/5etools/entityResolvers'
 import { buildBackgroundLookup } from '@/lib/5etools/lookups'
@@ -32,20 +36,17 @@ import {
   formatEquipmentOptionEntries,
   resolveBackgroundEquipmentBlocks,
 } from '@/lib/5etools/startingEquipment'
-import {
-  ABILITY_ABBREVIATIONS,
-  type AbilityName,
-  getBackgroundAbilityData,
-} from '@/lib/calculations/abilityScores'
+import { getBackgroundAbilityData } from '@/lib/calculations/abilityScores'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
 import { normalizeBackgroundForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
-import { getFixedFeatOptionKey, resolveFixedFeatGrant } from '@/lib/featGrants'
-import { parseFeatGrantBlocks } from '@/lib/provenance/applyFeatAndOptionalFeatureGrants'
+import { resolveFixedFeatGrant } from '@/lib/featGrants'
+import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { BuildBackgroundDetailsPanel } from '@/pages/build/background/components/DetailsPanel'
 import {
+  getBackgroundAbilitySummary,
   getBackgroundLanguageNames,
   getBackgroundSkillNames,
   getBackgroundToolNames,
@@ -56,20 +57,34 @@ import type { Feat5e, Spell5e } from '@/types/5etools'
 type FeatOptionsTarget = Feat5e & {
   grantVariant?: string
   fixedSpellcastingClass?: string
+  provenanceChoiceId?: string
+}
+
+function getFeatLinkTarget(name: string, source: string) {
+  return {
+    pathname: '/feats',
+    search: createSearchParams({ view: 'character', feat: name, source, focus: 'feat' }).toString(),
+  }
+}
+
+const BACKGROUND_BONUSES_LINK = {
+  pathname: '/build/ability-scores',
+  search: createSearchParams({ focus: 'background-bonuses' }).toString(),
 }
 
 export function BuildBackgroundPage() {
+  const [searchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
-  const reconcileCharacter = useCharacterStore((s) => s.reconcileCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const { backgrounds, feats, spells } = useFilteredGameData()
   const itemLookup = useItemLookup()
   const rawBackgroundLookup = useBackgroundLookup()
   const filteredBackgroundLookup = useMemo(() => buildBackgroundLookup(backgrounds), [backgrounds])
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [bgSearch, setBgSearch] = useState('')
-  const { applyBackgroundSelection, applyBackgroundAbilityChoices } =
-    useBackgroundProvenanceMutations()
+  const { applyBackgroundSelection } = useBackgroundProvenanceMutations()
   const { resolveFeatChoiceSelection, commitFeatWithOptions } = useFeatProvenanceMutations()
   const { ledger } = useProvenanceLedger()
   const selectedBackgroundRef = useRef<HTMLDivElement | null>(null)
@@ -114,12 +129,21 @@ export function BuildBackgroundPage() {
     character?.originSystem ?? '2014',
   )
   const selectedBackgroundKey = selectedBg ? `${selectedBg.name}|${selectedBg.source ?? ''}` : null
+  const bgEquipmentChoices = character?.backgroundEquipmentChoices ?? []
+  const bgEquipmentItemChoices = character?.backgroundEquipmentItemChoices ?? {}
 
   const equipmentBlocks = useMemo(
-    () => resolveBackgroundEquipmentBlocks(selectedBg?.startingEquipment, itemLookup),
-    [selectedBg?.startingEquipment, itemLookup],
+    () =>
+      resolveBackgroundEquipmentBlocks(
+        selectedBg?.startingEquipment,
+        itemLookup,
+        bgEquipmentItemChoices,
+      ),
+    [selectedBg?.startingEquipment, itemLookup, bgEquipmentItemChoices],
   )
-  const choiceBlocks = equipmentBlocks.filter((b) => !b.isFixed)
+  const configurableEquipmentBlocks = equipmentBlocks.filter(
+    (block) => !block.isFixed || (block.options._.genericChoices?.length ?? 0) > 0,
+  )
   const optionCountByBackground = useMemo(() => {
     const counts = new Map<string, number>()
     for (const bg of backgrounds) {
@@ -143,18 +167,16 @@ export function BuildBackgroundPage() {
   // Fixed feats granted directly by the selected background (no player choice)
   const fixedBgFeats = useMemo(() => {
     if (!selectedBg) return []
-    return Object.entries(ledger.feats)
-      .flatMap(([name, tags]) =>
-        tags
-          .filter(
-            (tag) =>
-              tag.sourceType === 'background' &&
-              tag.sourceName === selectedBg.name &&
-              tag.grantType === 'fixed',
-          )
-          .map((tag) => resolveFixedFeatGrant(feats as Feat5e[], name, tag)),
-      )
-      .map((grant) => (grant.variantLabel ? `${grant.name} (${grant.variantLabel})` : grant.name))
+    return Object.entries(ledger.feats).flatMap(([name, tags]) =>
+      tags
+        .filter(
+          (tag) =>
+            tag.sourceType === 'background' &&
+            tag.sourceName === selectedBg.name &&
+            tag.grantType === 'fixed',
+        )
+        .map((tag) => resolveFixedFeatGrant(feats as Feat5e[], name, tag)),
+    )
   }, [selectedBg, ledger.feats, feats])
 
   const activeFeatChoice = useMemo(
@@ -166,7 +188,14 @@ export function BuildBackgroundPage() {
     if (!activeFeatChoice) return { eligibleFeats: [], initialFilters: undefined }
     return resolveFeatChoicePool(feats as Feat5e[], activeFeatChoice.optionPool)
   }, [activeFeatChoice, feats])
-  const characterSnapshot = useMemo(() => buildPrerequisiteSnapshot({ character }), [character])
+  const characterSnapshot = useMemo(
+    () =>
+      buildPrerequisiteSnapshot({
+        character,
+        effectiveAbilityScores: calculationContext?.abilityScores.total,
+      }),
+    [character, calculationContext?.abilityScores.total],
+  )
 
   const handleOpenFeatModal = useCallback((choiceId: string) => {
     setActiveFeatChoiceId(choiceId)
@@ -180,36 +209,24 @@ export function BuildBackgroundPage() {
       resolveFeatChoiceSelection(activeFeatChoiceId, { name: feat.name, source: feat.source })
       setFeatModalOpen(false)
       setActiveFeatChoiceId(null)
-      if (hasFeatOptions(feat)) setOptionsPendingFeat(feat)
+      if (hasFeatOptions(feat)) {
+        setOptionsPendingFeat({ ...feat, provenanceChoiceId: activeFeatChoiceId })
+      }
     },
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
-
-  const bgAsiData = getBackgroundAbilityData(normalizedSelectedBg)
-
-  const currentAsiBlock =
-    bgAsiData.blocks[character?.backgroundAsiBlockIndex ?? 0] ?? bgAsiData.blocks[0]
-  const isXphbAutoAssign =
-    selectedBg?.source === 'XPHB' &&
-    !!currentAsiBlock &&
-    currentAsiBlock.from.length === currentAsiBlock.weights.length
-
-  useEffect(() => {
-    if (!isXphbAutoAssign || !character || !selectedBg || !currentAsiBlock) return
-    const blockIndex = character.backgroundAsiBlockIndex ?? 0
-    const choices = character.backgroundAsiChoices ?? []
-    const alreadySet = currentAsiBlock.from.every((a, i) => choices[i] === a)
-    if (alreadySet) return
-    applyBackgroundAbilityChoices(selectedBg, blockIndex, [...currentAsiBlock.from])
-    reconcileCharacter(character.id, {})
-  }, [
-    isXphbAutoAssign,
-    character,
-    selectedBg,
-    currentAsiBlock,
-    applyBackgroundAbilityChoices,
-    reconcileCharacter,
-  ])
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedChoice = findFocusedProvenanceChoice(readinessFocus, ledger.choices)
+  const focusedBackgroundChoice =
+    focusedChoice?.sourceTag.sourceType === 'background' ? focusedChoice : undefined
+  const { ref: configurationRef, highlighted: configurationHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(
+      originFeatChoices.some((choice) => choice.id === focusedChoice?.id),
+    )
+  const { ref: backgroundSelectionRef, highlighted: backgroundSelectionHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:background')
+  const { ref: equipmentChoiceRef, highlighted: equipmentChoiceHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(focusedBackgroundChoice?.domain === 'equipment')
 
   if (!character) {
     return <NoCharCard icon={<Scroll weight="duotone" />} noun="choose a background" />
@@ -223,144 +240,53 @@ export function BuildBackgroundPage() {
     )
     if (!bg) return
     applyBackgroundSelection(bg)
-    const normalizedBackground = normalizeBackgroundForOriginSystem(bg, character.originSystem)
-    const fixedGrant = parseFeatGrantBlocks(
-      normalizedBackground?.feats as unknown[] | undefined,
-    ).find((grant) => grant.type === 'fixed')
-    if (fixedGrant?.type === 'fixed') {
-      const tag = {
-        sourceType: 'background' as const,
-        sourceName: bg.name,
-        sourceRef: fixedGrant.source || bg.source,
-        grantType: 'fixed' as const,
-        grantVariant: fixedGrant.variant,
-        label: bg.name,
-      }
-      const resolved = resolveFixedFeatGrant(feats as Feat5e[], fixedGrant.name, tag)
-      const optionKey = getFixedFeatOptionKey(resolved.name, resolved.source, resolved.variant)
-      if (
-        resolved.feat &&
-        hasFeatOptions(resolved.feat) &&
-        !character.fixedFeatOptions?.[optionKey]
-      ) {
-        setOptionsPendingFeat({
-          ...resolved.feat,
-          grantVariant: resolved.variant,
-          fixedSpellcastingClass: resolved.fixedSpellcastingClass,
-        })
-      }
-    }
     if (detailCollapsed) setDetailCollapsed(false)
+    setCompactPane('right')
   }
 
   const skills = getBackgroundSkillNames(selectedBg)
   const langs = getBackgroundLanguageNames(selectedBg)
   const tools = getBackgroundToolNames(selectedBg)
+  const showBackgroundAsiPanel = character.originSystem === '2024'
+  const bgAsiData = getBackgroundAbilityData(normalizedSelectedBg)
   const bgBlockIndex = character.backgroundAsiBlockIndex ?? 0
   const bgChoices = character.backgroundAsiChoices ?? []
-  const bgEquipmentChoices = character.backgroundEquipmentChoices ?? []
-  const chosenOriginFeat = originFeatChoices.find((c) => c.selected.length > 0)?.selected[0] ?? null
-  const showBackgroundAsiPanel = character.originSystem === '2024'
-  const showBackgroundAsiCard = !!selectedBg && bgAsiData.blocks.length > 0
-
+  const backgroundAbilitySummary = getBackgroundAbilitySummary(bgAsiData, bgBlockIndex, bgChoices)
   const backgroundConfigurationPanel = showBackgroundAsiPanel ? (
-    <div className="mt-4 border-t border-border pt-3">
+    <div
+      ref={configurationRef}
+      className={cn(
+        'mt-4 rounded-lg border-t border-border pt-3',
+        configurationHighlighted && 'animate-route-focus',
+      )}
+    >
       <div className="flex items-start gap-6">
         <div className="min-w-0 flex-1">
           <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Ability Score Improvements
+            Ability Bonuses
           </div>
-          {showBackgroundAsiCard ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              {bgAsiData.blocks.length > 1 && (
-                <div className="inline-flex shrink-0 rounded-md border border-border overflow-hidden text-xs h-8">
-                  <button
-                    type="button"
-                    onClick={() => applyBackgroundAbilityChoices(selectedBg, 0, [])}
-                    className={cn(
-                      'px-3 h-full transition-colors',
-                      bgBlockIndex === 0
-                        ? 'bg-accent text-accent-foreground'
-                        : 'bg-card hover:bg-muted',
-                    )}
-                  >
-                    +2 / +1
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const block1 = bgAsiData.blocks[1]
-                      const autoChoices =
-                        selectedBg?.source === 'XPHB' &&
-                        block1 &&
-                        block1.from.length === block1.weights.length
-                          ? [...block1.from]
-                          : []
-                      applyBackgroundAbilityChoices(selectedBg, 1, autoChoices)
-                    }}
-                    className={cn(
-                      'px-3 h-full border-l border-border transition-colors',
-                      bgBlockIndex === 1
-                        ? 'bg-accent text-accent-foreground'
-                        : 'bg-card hover:bg-muted',
-                    )}
-                  >
-                    +1 / +1 / +1
-                  </button>
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {(() => {
-                  const block = bgAsiData.blocks[bgBlockIndex] ?? bgAsiData.blocks[0]
-                  const slotLabels = ['first', 'second', 'third']
-                  const slots = block.weights.map((weight, i) => ({
-                    weight,
-                    key: slotLabels[i] ?? `slot${i + 1}`,
-                    index: i,
-                  }))
-                  return slots.map(({ weight, key, index: slotIndex }) => {
-                    const currentChoice = (bgChoices[slotIndex] as AbilityName | undefined) ?? ''
-                    return (
-                      <div key={key} className="flex items-center gap-2 h-8 w-44">
-                        <span className="text-xs font-semibold text-primary w-6 text-right shrink-0">
-                          +{weight}
-                        </span>
-                        <Select
-                          value={currentChoice}
-                          disabled={isXphbAutoAssign}
-                          onValueChange={(val) => {
-                            const newChoices = Array.from<string>({
-                              length: block.weights.length,
-                            }).map((_, i) => bgChoices[i] ?? '')
-                            newChoices[slotIndex] = val
-                            applyBackgroundAbilityChoices(selectedBg, bgBlockIndex, newChoices)
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs flex-1 bg-background">
-                            <SelectValue placeholder="Choose ability…" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {block.from.map((ability) => (
-                              <SelectItem
-                                key={ability}
-                                value={ability}
-                                disabled={bgChoices.includes(ability) && currentChoice !== ability}
-                              >
-                                {ABILITY_ABBREVIATIONS[ability]} -{' '}
-                                {ability.charAt(0).toUpperCase() + ability.slice(1)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )
-                  })
-                })()}
+          {selectedBg ? (
+            <div className="mt-2 space-y-2">
+              <div className="text-xs text-muted-foreground">
+                <p>
+                  <span className="font-medium text-foreground">Current:</span>{' '}
+                  {backgroundAbilitySummary.current}
+                </p>
+                <p className="mt-1">
+                  <span className="font-medium text-foreground">Options:</span>{' '}
+                  {backgroundAbilitySummary.options}
+                </p>
               </div>
+              <Button asChild size="sm" variant="accentOutline" className="h-8 text-xs">
+                <Link to={BACKGROUND_BONUSES_LINK}>
+                  <PencilSimple className="size-3" />
+                  Edit bonuses
+                </Link>
+              </Button>
             </div>
           ) : (
             <div className="mt-2 text-sm text-muted-foreground">
-              Select a background to assign origin ability scores here.
+              Select a background before assigning origin ability scores.
             </div>
           )}
         </div>
@@ -372,44 +298,70 @@ export function BuildBackgroundPage() {
             Origin Feat
           </div>
           {fixedBgFeats.length > 0 ? (
-            <div className="mt-2 flex flex-col gap-1">
-              {fixedBgFeats.map((name) => (
-                <Badge key={name} variant="outline" className="text-xs gap-1 opacity-70 w-fit">
-                  <Star className="h-3 w-3" weight="duotone" />
-                  {name}
-                </Badge>
-              ))}
-              <p className="text-xs text-muted-foreground mt-0.5">Provided by background</p>
+            <div className="mt-2 flex flex-col items-start gap-2">
+              {fixedBgFeats.map((grant) => {
+                const label = grant.variantLabel
+                  ? `${grant.name} (${grant.variantLabel})`
+                  : grant.name
+                return (
+                  <div
+                    key={`${grant.name}|${grant.source}|${grant.variant ?? ''}`}
+                    className="flex flex-col items-start gap-2"
+                  >
+                    <Badge variant="outline" className="w-fit gap-1 text-xs opacity-70">
+                      <Star className="h-3 w-3" weight="duotone" />
+                      {label}
+                    </Badge>
+                    {grant.feat && hasFeatOptions(grant.feat) && (
+                      <Button asChild size="sm" variant="accentOutline" className="h-8 text-xs">
+                        <Link to={getFeatLinkTarget(grant.name, grant.source)}>Configure feat</Link>
+                      </Button>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           ) : originFeatChoices.length > 0 ? (
             <div className="mt-2 flex flex-col gap-1.5">
               {originFeatChoices.map((choice) => {
                 const isResolved = choice.selected.length > 0
+                const selectedRef = choice.selectedRefs?.[0]
                 const poolLabel = choice.optionPool
                   .filter((p) => p.startsWith('category:'))
                   .map((p) => featCategoryToFull(p.replace('category:', '')))
                   .join(', ')
                 const resolvedFeat = isResolved
                   ? (feats as Feat5e[]).find(
-                      (f) => f.name.toLowerCase() === choice.selected[0].toLowerCase(),
+                      (f) =>
+                        f.name.toLowerCase() === choice.selected[0].toLowerCase() &&
+                        (!selectedRef?.source || f.source === selectedRef.source),
                     )
                   : undefined
                 return (
                   <div key={choice.id}>
                     {isResolved ? (
-                      <div className="flex items-center gap-1.5">
-                        <Badge variant="outline" className="text-xs gap-1 opacity-70 w-fit">
-                          <Star className="h-3 w-3" weight="duotone" />
-                          {resolvedFeat?.name ?? choice.selected[0]}
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 text-xs px-1.5"
-                          onClick={() => handleOpenFeatModal(choice.id)}
-                        >
-                          Change
-                        </Button>
+                      <div className="flex flex-col items-start gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-xs gap-1 opacity-70 w-fit">
+                            <Star className="h-3 w-3" weight="duotone" />
+                            {resolvedFeat?.name ?? choice.selected[0]}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-xs px-1.5"
+                            onClick={() => handleOpenFeatModal(choice.id)}
+                          >
+                            Change
+                          </Button>
+                        </div>
+                        {resolvedFeat && hasFeatOptions(resolvedFeat) && (
+                          <Button asChild size="sm" variant="accentOutline" className="h-7 text-xs">
+                            <Link to={getFeatLinkTarget(resolvedFeat.name, resolvedFeat.source)}>
+                              Configure feat
+                            </Link>
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <Button
@@ -456,6 +408,10 @@ export function BuildBackgroundPage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Backgrounds"
+          compactRightLabel="Background details"
           leftWidth="var(--workspace-master-width)"
           left={
             <div className="flex h-full min-h-0 flex-col">
@@ -475,7 +431,13 @@ export function BuildBackgroundPage() {
                 </span>
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
-                <div>
+                <div
+                  ref={backgroundSelectionRef}
+                  className={cn(
+                    'rounded-lg',
+                    backgroundSelectionHighlighted && 'animate-route-focus',
+                  )}
+                >
                   {filteredBackgrounds.map((bg) => {
                     const bgKey = `${bg.name}|${bg.source ?? ''}`
                     const isSelected = selectedBackgroundKey === bgKey
@@ -511,7 +473,6 @@ export function BuildBackgroundPage() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-semibold text-sm truncate">{bg.name}</div>
-                            <div className="text-xs text-muted-foreground">{bg.source}</div>
                           </div>
                         </button>
                         <div className="flex max-w-[50%] min-w-0 flex-wrap items-center justify-end gap-1">
@@ -553,50 +514,79 @@ export function BuildBackgroundPage() {
 
                     {backgroundConfigurationPanel}
 
-                    {choiceBlocks.length > 0 && (
-                      <div className="mt-4 border-t border-border pt-3">
+                    {configurableEquipmentBlocks.length > 0 && (
+                      <div
+                        ref={equipmentChoiceRef}
+                        className={cn(
+                          'mt-4 rounded-lg border-t border-border pt-3',
+                          equipmentChoiceHighlighted && 'animate-route-focus',
+                        )}
+                      >
                         <div className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Starting Equipment
                         </div>
                         <div className="flex flex-wrap gap-3">
-                          {choiceBlocks.map((block) => {
-                            const currentChoice =
-                              bgEquipmentChoices[block.index]?.toLowerCase() ??
-                              block.choiceKeys[0] ??
-                              'a'
+                          {configurableEquipmentBlocks.map((block) => {
+                            const currentChoice = block.isFixed
+                              ? '_'
+                              : (bgEquipmentChoices[block.index]?.toLowerCase() ??
+                                block.choiceKeys[0] ??
+                                'a')
+                            const currentPackage = block.options[currentChoice]
                             return (
                               <div key={block.index} className="min-w-0 max-w-md flex-1 basis-72">
                                 <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                                   Equipment choice {block.index + 1}
                                 </div>
-                                <Select
-                                  value={currentChoice}
-                                  onValueChange={(value) => {
-                                    const next = [...bgEquipmentChoices]
-                                    while (next.length <= block.index) next.push('a')
-                                    next[block.index] = value
-                                    applyBackgroundSelection(selectedBg, next)
-                                  }}
-                                >
-                                  <SelectTrigger
-                                    aria-label={`Equipment choice ${block.index + 1}`}
-                                    className="h-8 w-full overflow-hidden bg-background text-xs [&_[data-slot=select-value]]:min-w-0"
-                                  >
-                                    <SelectValue placeholder={`Choice ${block.index + 1}…`} />
-                                  </SelectTrigger>
-                                  <SelectContent className="w-max max-w-[min(32rem,var(--radix-select-content-available-width))]">
-                                    {block.choiceKeys.map((key) => {
-                                      const optionData = block.options[key]
-                                      const label =
-                                        formatEquipmentOptionEntries(optionData).join(', ')
-                                      return (
-                                        <SelectItem key={key} value={key} className="text-xs">
-                                          ({key.toUpperCase()}) {label}
-                                        </SelectItem>
+                                {!block.isFixed && (
+                                  <Select
+                                    value={currentChoice}
+                                    onValueChange={(value) => {
+                                      const next = [...bgEquipmentChoices]
+                                      while (next.length <= block.index) next.push('a')
+                                      next[block.index] = value
+                                      applyBackgroundSelection(
+                                        selectedBg,
+                                        next,
+                                        bgEquipmentItemChoices,
                                       )
-                                    })}
-                                  </SelectContent>
-                                </Select>
+                                    }}
+                                  >
+                                    <SelectTrigger
+                                      aria-label={`Equipment choice ${block.index + 1}`}
+                                      className="h-8 w-full overflow-hidden bg-background text-xs [&_[data-slot=select-value]]:min-w-0"
+                                    >
+                                      <SelectValue placeholder={`Choice ${block.index + 1}…`} />
+                                    </SelectTrigger>
+                                    <SelectContent className="w-max max-w-[min(32rem,var(--radix-select-content-available-width))]">
+                                      {block.choiceKeys.map((key) => {
+                                        const optionData = block.options[key]
+                                        const label =
+                                          formatEquipmentOptionEntries(optionData).join(', ')
+                                        return (
+                                          <SelectItem key={key} value={key} className="text-xs">
+                                            ({key.toUpperCase()}) {label}
+                                          </SelectItem>
+                                        )
+                                      })}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                                {currentPackage?.genericChoices?.map((genericChoice) => (
+                                  <GenericEquipmentSelect
+                                    key={genericChoice.key}
+                                    choice={genericChoice}
+                                    value={bgEquipmentItemChoices[genericChoice.key] ?? ''}
+                                    ariaLabel={`Equipment choice ${block.index + 1} specific item`}
+                                    triggerClassName="bg-background"
+                                    onChange={(itemRef) =>
+                                      applyBackgroundSelection(selectedBg, bgEquipmentChoices, {
+                                        ...bgEquipmentItemChoices,
+                                        [genericChoice.key]: itemRef,
+                                      })
+                                    }
+                                  />
+                                ))}
                               </div>
                             )
                           })}
@@ -613,11 +603,6 @@ export function BuildBackgroundPage() {
                 toolNames={tools}
                 equipmentBlocks={equipmentBlocks}
                 bgEquipmentChoices={bgEquipmentChoices}
-                fixedBgFeats={fixedBgFeats}
-                chosenOriginFeat={chosenOriginFeat}
-                bgAsiData={bgAsiData}
-                bgBlockIndex={bgBlockIndex}
-                bgChoices={bgChoices}
               />
             </div>
           }
@@ -635,7 +620,6 @@ export function BuildBackgroundPage() {
         characterSnapshot={characterSnapshot}
         onConfirm={handleFeatModalConfirm}
         initialFilters={featModalInitialFilters}
-        allowIgnoreLimit={false}
       />
 
       {optionsPendingFeat && (

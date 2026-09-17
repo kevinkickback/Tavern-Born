@@ -1,4 +1,4 @@
-import { Barbell, Brain, Star, Translate, Wrench } from '@phosphor-icons/react'
+import { Brain, Translate, Wrench } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { GameContent } from '@/components/editor/GameContent'
 import { Badge } from '@/components/ui/badge'
@@ -8,11 +8,9 @@ import {
   formatEquipmentOptionEntries,
   type ResolvedEquipmentBlock,
 } from '@/lib/5etools/startingEquipment'
-import { ABILITY_ABBREVIATIONS, type BackgroundAbilityData } from '@/lib/calculations/abilityScores'
 import { cn } from '@/lib/utils'
 import { getBackgroundEntries } from '@/pages/build/background/model/data'
 import type { Background5e } from '@/types/5etools'
-import type { AbilityName } from '@/types/character'
 
 interface BuildBackgroundDetailsPanelProps {
   selectedBackground?: Background5e
@@ -21,33 +19,6 @@ interface BuildBackgroundDetailsPanelProps {
   toolNames: string[]
   equipmentBlocks: ResolvedEquipmentBlock[]
   bgEquipmentChoices: string[]
-  fixedBgFeats: string[]
-  chosenOriginFeat: string | null
-  bgAsiData: BackgroundAbilityData
-  bgBlockIndex: number
-  bgChoices: string[]
-}
-
-function formatAsiDisplay(
-  bgAsiData: BackgroundAbilityData,
-  bgBlockIndex: number,
-  bgChoices: string[],
-): string {
-  const block = bgAsiData.blocks[bgBlockIndex] ?? bgAsiData.blocks[0]
-  if (!block) return '—'
-  const allChosen = block.weights.every((_, i) => !!bgChoices[i])
-  if (allChosen) {
-    return block.weights
-      .map((w, i) => {
-        const a = bgChoices[i] as AbilityName | undefined
-        const abbr = a ? (ABILITY_ABBREVIATIONS[a] ?? a) : '?'
-        return `+${w} ${abbr}`
-      })
-      .join(', ')
-  }
-  const weightsStr = block.weights.map((w) => `+${w}`).join('/')
-  const fromStr = block.from.map((a) => ABILITY_ABBREVIATIONS[a] ?? a).join(', ')
-  return `${weightsStr} from ${fromStr}`
 }
 
 function EquipmentSection({
@@ -128,28 +99,15 @@ function BackgroundDetails2024({
   background,
   skillNames,
   toolNames,
-  fixedBgFeats,
-  chosenOriginFeat,
-  bgAsiData,
-  bgBlockIndex,
-  bgChoices,
   equipmentBlocks,
   bgEquipmentChoices,
 }: {
   background: Background5e
   skillNames: string[]
   toolNames: string[]
-  fixedBgFeats: string[]
-  chosenOriginFeat: string | null
-  bgAsiData: BackgroundAbilityData
-  bgBlockIndex: number
-  bgChoices: string[]
   equipmentBlocks: ResolvedEquipmentBlock[]
   bgEquipmentChoices: string[]
 }) {
-  const asiDisplay = formatAsiDisplay(bgAsiData, bgBlockIndex, bgChoices)
-  const featDisplay = fixedBgFeats[0] ?? chosenOriginFeat ?? 'Not chosen'
-
   const narrativeEntries = ((background.entries as unknown[]) ?? []).filter((e) => {
     const entry = e as { type?: string }
     return typeof e === 'object' && entry.type === 'entries'
@@ -162,24 +120,12 @@ function BackgroundDetails2024({
           icon={<Brain className="size-4" weight="fill" />}
           label="Skills"
           value={skillNames.length > 0 ? skillNames.join(' · ') : '—'}
-          className="border-b border-r border-border"
+          className="border-r border-border"
         />
         <StatTile
           icon={<Wrench className="size-4" weight="fill" />}
           label="Tool Proficiency"
           value={toolNames.length > 0 ? toolNames.join(', ') : '—'}
-          className="border-b border-border"
-        />
-        <StatTile
-          icon={<Barbell className="size-4" weight="fill" />}
-          label="Ability Scores"
-          value={asiDisplay}
-          className="border-r border-border"
-        />
-        <StatTile
-          icon={<Star className="size-4" weight="fill" />}
-          label="Origin Feat"
-          value={featDisplay}
         />
       </div>
 
@@ -327,11 +273,6 @@ export function BuildBackgroundDetailsPanel({
   toolNames,
   equipmentBlocks,
   bgEquipmentChoices,
-  fixedBgFeats,
-  chosenOriginFeat,
-  bgAsiData,
-  bgBlockIndex,
-  bgChoices,
 }: BuildBackgroundDetailsPanelProps) {
   return (
     <ScrollArea className="flex-1 overflow-hidden">
@@ -342,11 +283,6 @@ export function BuildBackgroundDetailsPanel({
               background={selectedBackground}
               skillNames={skillNames}
               toolNames={toolNames}
-              fixedBgFeats={fixedBgFeats}
-              chosenOriginFeat={chosenOriginFeat}
-              bgAsiData={bgAsiData}
-              bgBlockIndex={bgBlockIndex}
-              bgChoices={bgChoices}
               equipmentBlocks={equipmentBlocks}
               bgEquipmentChoices={bgEquipmentChoices}
             />

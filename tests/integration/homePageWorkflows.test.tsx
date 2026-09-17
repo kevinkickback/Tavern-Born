@@ -2,7 +2,11 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { CURRENT_SCHEMA_VERSION } from '@/lib/schema/migrations'
+import { MAX_CHARACTER_SIZE } from '@/lib/calculations/gameRules'
+import {
+  CURRENT_CHARACTER_SCHEMA_VERSION,
+  UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE,
+} from '@/lib/schema/characterSchemaVersion'
 import { HomePage } from '@/pages/HomePage'
 import { useAppPreferencesStore } from '@/store/appPreferencesStore'
 import { useCharacterStore } from '@/store/characterStore'
@@ -21,6 +25,7 @@ vi.mock('sonner', () => ({
     success: vi.fn(),
     info: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
   },
 }))
 
@@ -28,6 +33,7 @@ interface MockCharacterCardProps {
   character: { id: string; name: string }
   onLoad: (id: string) => void
   onDelete: (id: string) => void
+  onDuplicate: (character: { id: string; name: string }) => void
   selectionMode?: boolean
   onToggleSelect?: (id: string) => void
 }
@@ -37,6 +43,7 @@ vi.mock('@/components/character/CharacterCard', () => ({
     character,
     onLoad,
     onDelete,
+    onDuplicate,
     selectionMode,
     onToggleSelect,
   }: MockCharacterCardProps) => (
@@ -47,6 +54,9 @@ vi.mock('@/components/character/CharacterCard', () => ({
       </button>
       <button type="button" onClick={() => onDelete(character.id)}>
         delete-{character.id}
+      </button>
+      <button type="button" onClick={() => onDuplicate(character)}>
+        duplicate-{character.id}
       </button>
       {selectionMode && (
         <button type="button" onClick={() => onToggleSelect?.(character.id)}>
@@ -67,6 +77,8 @@ function resetCharacterStore() {
     characters: [],
     activeCharacterId: null,
     activeCharacter: null,
+    isActiveCharacterDirty: false,
+    unsupportedCharacters: [],
   })
 }
 
@@ -103,6 +115,55 @@ describe('home page integration workflows', () => {
     expect(screen.getByText('No Characters Yet')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'New Character' }))
     expect(screen.getByText('Character Wizard Open')).toBeTruthy()
+  })
+
+  test('requires acknowledgment and can export unsupported-character backups', async () => {
+    const user = userEvent.setup()
+    useCharacterStore.setState({
+      unsupportedCharacters: [
+        { ...makeCharacterFixture({ name: 'Old/Hero' }), schemaVersion: 0 },
+        { ...makeCharacterFixture({ name: 'Second Hero' }), schemaVersion: 0 },
+      ],
+    })
+    const originalCreateElement = document.createElement.bind(document)
+    const downloadLinks: HTMLAnchorElement[] = []
+    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+      const element = originalCreateElement(tagName)
+      if (tagName === 'a') {
+        const link = element as HTMLAnchorElement
+        link.click = vi.fn()
+        downloadLinks.push(link)
+      }
+      return element
+    }) as typeof document.createElement)
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:legacy-character')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+
+    render(<HomePage />)
+
+    const unsupportedDialog = screen.getByRole('alertdialog')
+    expect(unsupportedDialog).toBeTruthy()
+    expect(screen.getByText('Character compatibility issue')).toBeTruthy()
+    expect(unsupportedDialog.textContent).toContain(
+      'Tavern Born found 2 characters that are incompatible with the current version or contain invalid data. They have been removed from the character list.',
+    )
+    expect(unsupportedDialog.textContent).toContain(
+      'Download the original files before continuing if you want to keep backups for recovery or use with a compatible older version of Tavern Born.',
+    )
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('alertdialog')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Download Backups' }))
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(2)
+    expect(downloadLinks.map((link) => link.download)).toEqual([
+      'Old_Hero-legacy-backup-1.tbc',
+      'Second Hero-legacy-backup-2.tbc',
+    ])
+    expect(useCharacterStore.getState().unsupportedCharacters).toHaveLength(2)
+
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(useCharacterStore.getState().unsupportedCharacters).toEqual([])
   })
 
   test('supports multi-select deletion workflow', async () => {
@@ -203,6 +264,34 @@ describe('home page integration workflows', () => {
     expect(useCharacterStore.getState().characters.map((c) => c.id)).toEqual(['c2'])
   })
 
+  test('immediately creates an independent exact copy', async () => {
+    const user = userEvent.setup()
+    const source = makeCharacterFixture({
+      id: 'source',
+      name: 'Source Hero',
+      hitPoints: { current: 4, temporary: 2 },
+      hitPointsInitialized: true,
+      conditions: ['test condition'],
+    })
+    useCharacterStore.setState({
+      characters: [source],
+      activeCharacterId: null,
+      activeCharacter: null,
+    })
+
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'duplicate-source' }))
+
+    const copy = useCharacterStore
+      .getState()
+      .characters.find((character) => character.id !== source.id)
+    expect(screen.queryByRole('heading', { name: 'Duplicate character' })).toBeNull()
+    expect(copy?.name).toBe('Source Hero (Copy)')
+    expect(copy?.hitPoints).toMatchObject({ current: 4, temporary: 2 })
+    expect(copy?.conditions).toEqual(source.conditions)
+    expect(source.hitPoints.current).toBe(4)
+  })
+
   test('prompts before switching when active character has unsaved changes', async () => {
     const user = userEvent.setup()
     const c1 = makeCharacterFixture({ id: 'c1', name: 'Alpha' })
@@ -255,7 +344,31 @@ describe('home page integration workflows', () => {
     expect(useCharacterStore.getState().characters).toHaveLength(2)
   })
 
-  test('imports and migrates a legacy-version character file', async () => {
+  test('rejects an oversized character before reading its contents', async () => {
+    const user = userEvent.setup()
+    useCharacterStore.setState({
+      characters: [makeCharacterFixture({ id: 'existing-1', name: 'Existing' })],
+      activeCharacterId: null,
+      activeCharacter: null,
+    })
+    const fileInput = mockDynamicFileInput()
+    const text = vi.fn(async () => '{}')
+    const oversizedFile = { size: MAX_CHARACTER_SIZE + 1, text } as unknown as File
+
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      get: () => [oversizedFile],
+    })
+
+    await fileInput.onchange?.({ target: fileInput } as unknown as Event)
+
+    expect(text).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith('Character file exceeds the 10MB safety limit.')
+  })
+
+  test('rejects a character from an unsupported older version', async () => {
     const user = userEvent.setup()
     useCharacterStore.setState({
       characters: [makeCharacterFixture({ id: 'existing-1', name: 'Existing' })],
@@ -270,10 +383,9 @@ describe('home page integration workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Import' }))
     expect(fileInput.click).toHaveBeenCalled()
 
-    const legacyCharacter = makeCharacterFixture()
-    legacyCharacter.version = '0.0.0'
+    const oldCharacter = { ...makeCharacterFixture(), schemaVersion: undefined, version: '11.0.0' }
 
-    const file = new File([JSON.stringify(legacyCharacter)], 'legacy.tbc', {
+    const file = new File([JSON.stringify(oldCharacter)], 'old.tbc', {
       type: 'application/json',
     })
 
@@ -284,13 +396,34 @@ describe('home page integration workflows', () => {
 
     await fileInput.onchange?.({ target: fileInput } as unknown as Event)
 
-    const imported = useCharacterStore
-      .getState()
-      .characters.find((c) => c.id === legacyCharacter.id)
+    expect(useCharacterStore.getState().characters).toHaveLength(1)
+    expect(toast.error).toHaveBeenCalledWith(
+      `Invalid character: Invalid character structure: ${UNSUPPORTED_CHARACTER_SCHEMA_VERSION_MESSAGE}`,
+    )
+  })
 
-    expect(imported).toBeTruthy()
-    expect(imported?.version).toBe(`${CURRENT_SCHEMA_VERSION}.0.0`)
-    expect(imported?.originSystem).toBe('2014')
+  test('rejects oversized imports before reading their contents', async () => {
+    const user = userEvent.setup()
+    useCharacterStore.setState({
+      characters: [makeCharacterFixture({ id: 'existing-1', name: 'Existing' })],
+      activeCharacterId: null,
+      activeCharacter: null,
+    })
+    const fileInput = mockDynamicFileInput()
+    const text = vi.fn(async () => '{}')
+    const oversizedFile = { size: MAX_CHARACTER_SIZE + 1, text } as unknown as File
+
+    render(<HomePage />)
+    await user.click(screen.getByRole('button', { name: 'Import' }))
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      get: () => [oversizedFile],
+    })
+
+    await fileInput.onchange?.({ target: fileInput } as unknown as Event)
+
+    expect(text).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith('Character file exceeds the 10MB safety limit.')
   })
 
   test('rejects a current-version character with corrupted nested data and reports why', async () => {
@@ -309,7 +442,7 @@ describe('home page integration workflows', () => {
     expect(fileInput.click).toHaveBeenCalled()
 
     const corruptedCharacter = makeCharacterFixture({ id: 'bad', name: 'Corrupted' })
-    corruptedCharacter.version = `${CURRENT_SCHEMA_VERSION}.0.0`
+    corruptedCharacter.schemaVersion = CURRENT_CHARACTER_SCHEMA_VERSION
     corruptedCharacter.proficiencies.weapons = [
       // @ts-expect-error Deliberately invalid import payload.
       { name: 'Not a valid proficiency' },

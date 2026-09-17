@@ -62,8 +62,6 @@ function resetCharacterStoreWith(character = makeCharacterFixture()) {
 describe('level up modal multiclass requirement text', () => {
   beforeEach(() => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
-      classSource: 'PHB',
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
       abilityScores: {
         strength: 12,
@@ -129,8 +127,6 @@ describe('level up modal multiclass requirement text', () => {
 
   test('marks only the already-selected class printing as taken', () => {
     const character = makeCharacterFixture({
-      class: 'Wizard',
-      classSource: 'PHB',
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 1 }],
     })
     resetCharacterStoreWith(character)
@@ -157,23 +153,18 @@ describe('level up hit-point choices', () => {
     vi.clearAllMocks()
   })
 
-  test.each([
-    ['an exact class hidden by source filters', 'PHB', false],
-    ['a legacy class with an empty source', '', true],
-  ])('uses the raw hit die for %s', async (_label, classSource, includeFilteredClass) => {
+  test('uses the raw hit die for an exact class hidden by source filters', async () => {
     const user = userEvent.setup()
+    const classSource = 'PHB'
     const fighter = makeClassFixture({
       name: 'Fighter',
       source: 'PHB',
       hd: { faces: 10, number: 1 },
     })
-    mockClasses = includeFilteredClass ? [fighter] : []
+    mockClasses = []
     useGameDataStore.setState({ gameData: makeGameDataFixture({ classes: [fighter] }) })
     resetCharacterStoreWith(
       makeCharacterFixture({
-        class: 'Fighter',
-        classSource,
-        level: 1,
         classProgression: [{ name: 'Fighter', source: classSource, levels: 1 }],
         variantRules: { averageHitPoints: false },
       }),
@@ -189,9 +180,6 @@ describe('level up hit-point choices', () => {
     const user = userEvent.setup()
     resetCharacterStoreWith(
       makeCharacterFixture({
-        class: 'Fighter',
-        classSource: 'PHB',
-        level: 1,
         classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
         abilityScores: {
           strength: 10,
@@ -202,7 +190,7 @@ describe('level up hit-point choices', () => {
           charisma: 10,
         },
         variantRules: { averageHitPoints: false },
-        hitPoints: { max: 0, current: 0, temporary: 0 },
+        hitPoints: { current: 0, temporary: 0 },
         hitPointGains: [],
       }),
     )
@@ -216,7 +204,6 @@ describe('level up hit-point choices', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm Level Up' }))
 
     const updated = useCharacterStore.getState().activeCharacter
-    expect(updated?.level).toBe(2)
     expect(updated?.classProgression?.[0]?.levels).toBe(2)
     expect(updated?.hitPointGains).toEqual([
       expect.objectContaining({
@@ -228,18 +215,17 @@ describe('level up hit-point choices', () => {
         method: 'manual',
       }),
     ])
+    expect(updated?.hitPoints).toEqual({ current: 21, temporary: 0 })
+    expect(updated?.hitPointsInitialized).toBe(true)
   })
 
   test('records the fixed average without opening the roll dialog', async () => {
     const user = userEvent.setup()
     resetCharacterStoreWith(
       makeCharacterFixture({
-        class: 'Fighter',
-        classSource: 'PHB',
-        level: 1,
         classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
         variantRules: { averageHitPoints: true },
-        hitPoints: { max: 0, current: 0, temporary: 0 },
+        hitPoints: { current: 0, temporary: 0 },
         hitPointGains: [],
       }),
     )
@@ -251,18 +237,16 @@ describe('level up hit-point choices', () => {
     expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([
       expect.objectContaining({ dieResult: 6, method: 'average' }),
     ])
+    expect(useCharacterStore.getState().activeCharacter?.hitPoints.current).toBe(16)
   })
 
   test('can roll the class hit die and persist the generated result', async () => {
     const user = userEvent.setup()
     resetCharacterStoreWith(
       makeCharacterFixture({
-        class: 'Fighter',
-        classSource: 'PHB',
-        level: 1,
         classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
         variantRules: { averageHitPoints: false },
-        hitPoints: { max: 0, current: 0, temporary: 0 },
+        hitPoints: { current: 0, temporary: 0 },
         hitPointGains: [],
       }),
     )
@@ -282,9 +266,6 @@ describe('level up hit-point choices', () => {
     const user = userEvent.setup()
     resetCharacterStoreWith(
       makeCharacterFixture({
-        class: 'Fighter',
-        classSource: 'PHB',
-        level: 1,
         classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
         variantRules: { averageHitPoints: false },
         hitPointGains: [],
@@ -295,26 +276,31 @@ describe('level up hit-point choices', () => {
     await user.click(screen.getByRole('button', { name: 'Level Up' }))
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
-    expect(useCharacterStore.getState().activeCharacter?.level).toBe(1)
+    expect(useCharacterStore.getState().activeCharacter?.classProgression[0]?.levels).toBe(1)
     expect(useCharacterStore.getState().activeCharacter?.hitPointGains).toEqual([])
   })
 
-  test('removes a legacy source-less HP gain from its matching multiclass entry', async () => {
+  test('clamps current hit points to the new maximum when a level is removed', async () => {
     const user = userEvent.setup()
     resetCharacterStoreWith(
       makeCharacterFixture({
-        class: 'Fighter',
-        classSource: 'PHB',
-        level: 3,
-        classProgression: [
-          { name: 'Fighter', source: 'PHB', levels: 2 },
-          { name: 'Wizard', source: 'XPHB', levels: 1 },
-        ],
+        classProgression: [{ name: 'Fighter', source: 'PHB', levels: 2 }],
+        abilityScores: {
+          strength: 10,
+          dexterity: 10,
+          constitution: 10,
+          intelligence: 10,
+          wisdom: 10,
+          charisma: 10,
+        },
+        variantRules: { averageHitPoints: true },
+        hitPoints: { current: 16, temporary: 0 },
         hitPointGains: [
           {
             className: 'Fighter',
+            classSource: 'PHB',
             classLevel: 2,
-            characterLevel: 3,
+            characterLevel: 2,
             hitDie: 10,
             dieResult: 6,
             method: 'average',
@@ -327,44 +313,9 @@ describe('level up hit-point choices', () => {
     await user.click(screen.getByText('Remove last level'))
     await user.click(screen.getByRole('button', { name: 'Remove' }))
 
-    expect(useCharacterStore.getState().activeCharacter?.classProgression).toEqual([
-      { name: 'Fighter', source: 'PHB', levels: 1 },
-      { name: 'Wizard', source: 'XPHB', levels: 1 },
-    ])
-  })
-
-  test('rejects an ambiguous printing for a legacy source-less HP gain', async () => {
-    const user = userEvent.setup()
-    resetCharacterStoreWith(
-      makeCharacterFixture({
-        class: 'Fighter',
-        classSource: 'PHB',
-        level: 3,
-        classProgression: [
-          { name: 'Fighter', source: 'PHB', levels: 2 },
-          { name: 'Fighter', source: 'XPHB', levels: 1 },
-        ],
-        hitPointGains: [
-          {
-            className: 'Fighter',
-            classLevel: 2,
-            characterLevel: 3,
-            hitDie: 10,
-            dieResult: 6,
-            method: 'average',
-          },
-        ],
-      }),
-    )
-
-    render(<LevelUpModal open={true} onOpenChange={() => {}} />)
-    await user.click(screen.getByText('Remove last level'))
-    await user.click(screen.getByRole('button', { name: 'Remove' }))
-
-    expect(useCharacterStore.getState().activeCharacter?.classProgression).toEqual([
-      { name: 'Fighter', source: 'PHB', levels: 2 },
-      { name: 'Fighter', source: 'XPHB', levels: 1 },
-    ])
+    const updated = useCharacterStore.getState().activeCharacter
+    expect(updated?.classProgression).toEqual([{ name: 'Fighter', source: 'PHB', levels: 1 }])
+    expect(updated?.hitPoints.current).toBe(10)
   })
 
   test('clears level history when the active character changes', async () => {
@@ -372,9 +323,6 @@ describe('level up hit-point choices', () => {
     const fighter = makeCharacterFixture({
       id: 'fighter-id',
       name: 'Fighter Hero',
-      class: 'Fighter',
-      classSource: 'PHB',
-      level: 1,
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
       variantRules: { averageHitPoints: true },
       hitPointGains: [],
@@ -382,9 +330,6 @@ describe('level up hit-point choices', () => {
     const wizard = makeCharacterFixture({
       id: 'wizard-id',
       name: 'Wizard Hero',
-      class: 'Wizard',
-      classSource: 'PHB',
-      level: 3,
       classProgression: [{ name: 'Wizard', source: 'PHB', levels: 3 }],
       variantRules: { averageHitPoints: true },
       hitPointGains: [],

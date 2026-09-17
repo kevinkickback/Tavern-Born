@@ -1,4 +1,4 @@
-import { getSelectedSubclassData } from '@/lib/5etools/classData'
+import { getEffectiveSpellcastingClassData, getSelectedSubclassData } from '@/lib/5etools/classData'
 import { type AbilityName, normalizeAbilityName } from '@/lib/calculations/abilityScores'
 import { safeEvalArithmetic } from '@/lib/calculations/formulaEval'
 import { getAbilityModifier, getProficiencyBonus } from '@/lib/calculations/gameRules'
@@ -13,6 +13,8 @@ import {
 import { getCharacterClassEntries, getTotalClassLevels } from '@/lib/characterUtils'
 import type { Class5e } from '@/types/5etools'
 import type { AbilityScores, Character } from '@/types/character'
+import type { CharacterEffect } from '@/types/effects'
+import { type EffectResolutionContext, resolveNumericEffect } from './effects'
 import { toClassProfileId } from './spellProfiles.constants'
 
 function normalizeProgression(value?: string): CasterProgression {
@@ -99,13 +101,13 @@ export function isLevelOnlyPreparedCaster(classData?: Class5e): boolean {
   return hasPreparedSpellsProgression(classData) && classData.preparedSpellsChange === 'level'
 }
 
-export function getCantripLimit(classData: Class5e | undefined, level: number): number | null {
+function getCantripLimit(classData: Class5e | undefined, level: number): number | null {
   const progression = getProgressionArray(classData?.cantripProgression)
   if (!progression) return null
   return progression[level - 1] ?? progression[progression.length - 1] ?? null
 }
 
-export function getKnownSpellLimit(classData: Class5e | undefined, level: number): number | null {
+function getKnownSpellLimit(classData: Class5e | undefined, level: number): number | null {
   if (!classData?.spellcastingAbility) return null
   const spellsFixed = getProgressionArray(classData.spellsKnownProgressionFixed)
   const spellsKnown = getProgressionArray(classData.spellsKnownProgression)
@@ -193,7 +195,7 @@ export function getPreparedSpellLimit(
   return evaluatePreparedSpellsFormula(classData.preparedSpells, characterLevel, abilityModifiers)
 }
 
-export function getClassMaxSpellLevel(
+function getClassMaxSpellLevel(
   classData: Class5e | undefined,
   classLevel: number,
   casterProgressionOverride?: CasterProgression,
@@ -229,6 +231,9 @@ export function getClassMaxSpellLevel(
 export function buildSpellcastingClassDetails(
   character: Character,
   classesById: Map<string, Class5e>,
+  effectiveAbilityScores: AbilityScores,
+  effects: readonly CharacterEffect[] = [],
+  effectContext: EffectResolutionContext = {},
 ): SpellcastingClassDetail[] {
   const entries = getCharacterClassEntries(character)
   const totalLevel = getTotalClassLevels(entries)
@@ -236,39 +241,56 @@ export function buildSpellcastingClassDetails(
 
   return entries
     .map((entry) => {
+      const profileId = toClassProfileId(entry.name, entry.source)
       const classData = classesById.get(toClassProfileId(entry.name, entry.source))
       const subclassData = getSelectedSubclassData(classData, entry)
+      const effectiveSpellcastingData = getEffectiveSpellcastingClassData(classData, subclassData)
       const effectiveProgression = getEffectiveCasterProgression(classData, subclassData)
       const effectiveAbility = getEffectiveSpellcastingAbility(classData, subclassData)
       const ability = effectiveAbility ? normalizeAbilityName(effectiveAbility) : null
       const mod = ability
-        ? getAbilityModifier((character.abilityScores as AbilityScores)[ability] ?? 10)
+        ? getAbilityModifier((effectiveAbilityScores as AbilityScores)[ability] ?? 10)
         : null
-      const saveDc = mod !== null ? 8 + proficiency + mod : null
-      const attack = mod !== null ? proficiency + mod : null
-      const preparedCaster = isPreparedCaster(classData)
-      const truePreparedCaster = isTruePreparedCaster(classData)
-      const levelOnlyPrepared = isLevelOnlyPreparedCaster(classData)
+      const saveDc =
+        mod !== null
+          ? Math.trunc(
+              resolveNumericEffect(
+                8 + proficiency + mod,
+                { kind: 'spell-save-dc', profileId },
+                effects,
+                effectContext,
+              ).value,
+            )
+          : null
+      const attack =
+        mod !== null
+          ? Math.trunc(
+              resolveNumericEffect(
+                proficiency + mod,
+                { kind: 'spell-attack', profileId },
+                effects,
+                effectContext,
+              ).value,
+            )
+          : null
+      const preparedCaster = isPreparedCaster(effectiveSpellcastingData)
+      const truePreparedCaster = isTruePreparedCaster(effectiveSpellcastingData)
+      const levelOnlyPrepared = isLevelOnlyPreparedCaster(effectiveSpellcastingData)
 
       const preparedSpellLimit = preparedCaster
-        ? getPreparedSpellLimit(classData, entry.levels, mod)
+        ? getPreparedSpellLimit(effectiveSpellcastingData, entry.levels, mod)
         : null
 
-      let knownSpellLimit: number | null
-      const progressionKnownSpellLimit = getKnownSpellLimit(classData, entry.levels)
-      if (preparedCaster || levelOnlyPrepared) {
-        // Prepared casters: known limit equals prepared count. Fall back to
-        // progression only when no formula is available (e.g. ability score unknown).
-        knownSpellLimit = preparedSpellLimit ?? progressionKnownSpellLimit
-      } else if (progressionKnownSpellLimit != null) {
-        // Known casters (Bard, Ranger …): use explicit spells-known progression.
-        knownSpellLimit = progressionKnownSpellLimit
-      } else {
-        knownSpellLimit = null
-      }
+      const progressionKnownSpellLimit = getKnownSpellLimit(effectiveSpellcastingData, entry.levels)
+      // Explicit known/fixed progression owns the selectable spell count, even when the same
+      // caster also has a smaller daily preparation limit (for example, either Wizard ruleset).
+      // Level-only prepared casters persist their selections in spellsKnown, so their prepared
+      // progression is the selection limit. True prepared casters have no finite known list.
+      const knownSpellLimit =
+        progressionKnownSpellLimit ?? (levelOnlyPrepared ? preparedSpellLimit : null)
 
       return {
-        profileId: toClassProfileId(entry.name, entry.source),
+        profileId,
         className: entry.name,
         classSource: entry.source,
         classLevel: entry.levels,
@@ -277,14 +299,14 @@ export function buildSpellcastingClassDetails(
         spellSaveDC: saveDc,
         spellAttackBonus: attack,
         maxSpellLevel: getClassMaxSpellLevel(
-          classData,
+          effectiveSpellcastingData,
           entry.levels,
           normalizeProgression(effectiveProgression),
           classesById.values(),
         ),
         preparedSpellLimit: levelOnlyPrepared ? null : preparedSpellLimit,
         knownSpellLimit,
-        cantripLimit: getCantripLimit(classData, entry.levels),
+        cantripLimit: getCantripLimit(effectiveSpellcastingData, entry.levels),
         isPreparedCaster: preparedCaster,
         isTruePreparedCaster: truePreparedCaster,
         isLevelOnlyPreparedCaster: levelOnlyPrepared,

@@ -1,4 +1,11 @@
 import { extractProficiencyBlockNames } from '@/lib/5etools/parsers'
+import {
+  ABILITY_ABBREVIATIONS,
+  type BackgroundAbilityData,
+  formatBackgroundAbilityPatterns,
+  isBackgroundAbilitySelectionComplete,
+  normalizeAbilityName,
+} from '@/lib/calculations/abilityScores'
 import type { Background5e } from '@/types/5etools'
 
 type BackgroundEntry = {
@@ -42,6 +49,27 @@ export function getBackgroundLanguageNames(background?: Background5e): string[] 
 export function getBackgroundToolNames(background?: Background5e): string[] {
   if (!background) return []
   return extractProficiencyBlockNames(background.toolProficiencies ?? [])
+}
+
+export function getBackgroundAbilitySummary(
+  data: BackgroundAbilityData,
+  blockIndex: number,
+  choices: string[],
+): { current: string; options: string } {
+  const selectedBlock = data.blocks[blockIndex] ?? data.blocks[0]
+  const selected = selectedBlock
+    ? selectedBlock.weights.map((weight, index) => {
+        const ability = normalizeAbilityName(choices[index] ?? '')
+        if (!ability || !selectedBlock.from.includes(ability)) return null
+        return `+${weight} ${ABILITY_ABBREVIATIONS[ability]}`
+      })
+    : []
+  const hasCompleteSelection = isBackgroundAbilitySelectionComplete(data, blockIndex, choices)
+
+  return {
+    current: hasCompleteSelection ? selected.join(' · ') : 'Not configured',
+    options: formatBackgroundAbilityPatterns(data).join(' or '),
+  }
 }
 
 export function getBackgroundEquipmentPackages(

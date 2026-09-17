@@ -5,17 +5,15 @@
  * descriptive prose in variantrules.json). Remove and replace with a parsed
  * source when one becomes available.
  */
-export const ALIGNMENTS: readonly string[] = [
-  'Lawful Good',
-  'Neutral Good',
-  'Chaotic Good',
-  'Lawful Neutral',
-  'True Neutral',
-  'Chaotic Neutral',
-  'Lawful Evil',
-  'Neutral Evil',
-  'Chaotic Evil',
-] as const
+import {
+  ALIGNMENT_OPTIONS_FALLBACK,
+  DAMAGE_TYPE_LABEL_FALLBACKS,
+  ITEM_RARITY_ORDER_FALLBACK,
+  LIFESTYLE_OPTIONS_FALLBACK,
+  SPELL_SCHOOL_LABEL_FALLBACKS,
+} from './rulesetMetadata'
+
+export const ALIGNMENTS: readonly string[] = ALIGNMENT_OPTIONS_FALLBACK
 
 /**
  * The seven D&D 5e lifestyle tiers (PHB "Lifestyle Expenses").
@@ -23,15 +21,7 @@ export const ALIGNMENTS: readonly string[] = [
  * FALLBACK: 5etools does not expose lifestyle names as a structured list.
  * Remove and replace with a parsed source when one becomes available.
  */
-export const LIFESTYLES: readonly string[] = [
-  'Wretched',
-  'Squalid',
-  'Poor',
-  'Modest',
-  'Comfortable',
-  'Wealthy',
-  'Aristocratic',
-] as const
+export const LIFESTYLES: readonly string[] = LIFESTYLE_OPTIONS_FALLBACK
 
 /**
  * Canonical map of 5etools spell school abbreviations to full names.
@@ -41,16 +31,7 @@ export const LIFESTYLES: readonly string[] = [
  * the abbreviations are defined only in the 5etools JS source. Remove and
  * replace with a parsed source if one becomes available.
  */
-export const SP_SCHOOL_ABV_TO_FULL: Readonly<Record<string, string>> = {
-  A: 'Abjuration',
-  C: 'Conjuration',
-  D: 'Divination',
-  E: 'Enchantment',
-  I: 'Illusion',
-  N: 'Necromancy',
-  T: 'Transmutation',
-  V: 'Evocation',
-}
+export const SP_SCHOOL_ABV_TO_FULL = SPELL_SCHOOL_LABEL_FALLBACKS
 
 /**
  * Map of 5etools damage-type abbreviations to human-readable names.
@@ -59,21 +40,7 @@ export const SP_SCHOOL_ABV_TO_FULL: Readonly<Record<string, string>> = {
  * abbreviations are embedded in item/spell entries. Remove and replace with
  * a parsed source if one becomes available.
  */
-export const DAMAGE_TYPE_LABELS: Readonly<Record<string, string>> = {
-  S: 'Slashing',
-  P: 'Piercing',
-  B: 'Bludgeoning',
-  N: 'Necrotic',
-  F: 'Fire',
-  C: 'Cold',
-  L: 'Lightning',
-  T: 'Thunder',
-  A: 'Acid',
-  I: 'Poison',
-  Y: 'Psychic',
-  R: 'Radiant',
-  O: 'Force',
-}
+export const DAMAGE_TYPE_LABELS = DAMAGE_TYPE_LABEL_FALLBACKS
 
 /**
  * Validate that SP_SCHOOL_ABV_TO_FULL covers every spell school abbreviation
@@ -123,19 +90,7 @@ export function validateDamageTypeCoverage(items: unknown[]): void {
  * 'unknown' is a catch-all for items whose rarity field is absent or unrecognised.
  * Remove and replace with a parsed source if 5etools ever exposes a rarity enum.
  */
-export const RARITY_ORDER = [
-  'common',
-  'uncommon',
-  'rare',
-  'very rare',
-  'legendary',
-  'artifact',
-  'varies',
-  'unknown (magic)',
-  'unknown',
-] as const
-
-export type ItemRarity = (typeof RARITY_ORDER)[number]
+export const RARITY_ORDER = ITEM_RARITY_ORDER_FALLBACK
 
 /**
  * Tailwind CSS badge classes per rarity tier.

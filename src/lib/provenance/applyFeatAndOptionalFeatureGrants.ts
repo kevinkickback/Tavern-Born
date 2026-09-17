@@ -21,21 +21,6 @@ export function applyFeatGrant(
   return addGrant(ledger, 'feats', featName, tag)
 }
 
-/**
- * Record an optional feature attribution in the provenance ledger.
- */
-export function applyOptionalFeatureGrant(
-  ledger: ProvenanceLedger,
-  featureName: string,
-  featureSource: string | undefined,
-  /** The class or source entity that offered this optional feature. */
-  grantingSourceName: string,
-  grantingSourceType: 'class' | 'subclass' | 'race' | 'feat' | 'manual',
-): ProvenanceLedger {
-  const tag = makeSourceTag(grantingSourceType, grantingSourceName, 'choice', featureSource)
-  return addGrant(ledger, 'features', featureName, tag)
-}
-
 /** A single parsed entry from a 5etools `feats` block. */
 export type FeatGrantEntry =
   | { type: 'fixed'; name: string; source: string; variant?: string }

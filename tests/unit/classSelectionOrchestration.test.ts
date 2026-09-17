@@ -4,7 +4,7 @@ import {
   applyClassSelectionCommand,
   buildInitialCharacterProficiencies,
 } from '@/lib/character/commands/classCommands'
-import { applyClassGrants } from '@/lib/provenance'
+import { addGrant, applyClassGrants, makeSourceTag } from '@/lib/provenance'
 import { emptyProvenance } from '@/store/characterStore'
 import type { Item5e } from '@/types/5etools'
 import { makeCharacterFixture } from '../fixtures/characterFixtures'
@@ -74,14 +74,14 @@ describe('buildInitialCharacterProficiencies', () => {
     // Common is NOT injected here; it comes from race data via applyRaceGrants
   })
 
-  test('initializes skills state map for background skills', () => {
+  test('initializes background skill proficiency', () => {
     const bg = {
       skillProficiencies: [{ perception: true }],
       languageProficiencies: [],
       toolProficiencies: [],
     }
     const result = buildInitialCharacterProficiencies(undefined, bg)
-    expect(result.skills.perception?.proficient).toBe(true)
+    expect(result.proficiencies.skills).toContain('perception')
   })
 
   test('handles both undefined cls and background', () => {
@@ -125,15 +125,61 @@ describe('buildInitialCharacterProficiencies', () => {
 // ---------------------------------------------------------------------------
 
 describe('applyClassSelectionCommand', () => {
+  test('selecting a subclass preserves base-class grants and provenance', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Fighter', source: 'PHB', levels: 3 }],
+      proficiencies: {
+        armor: ['light armor'],
+        weapons: ['martial weapons'],
+        tools: [],
+        skills: [],
+        expertise: [],
+        languages: [],
+        savingThrows: ['strength', 'constitution'],
+      },
+    })
+    const ledger = addGrant(
+      emptyProvenance(),
+      'armor',
+      'light armor',
+      makeSourceTag('class', 'Fighter', 'fixed', 'PHB'),
+    )
+
+    const result = applyClassSelectionCommand(
+      character,
+      ledger,
+      { name: 'Fighter', source: 'PHB' },
+      { name: 'Battle Master', source: 'PHB' },
+      EMPTY_LOOKUP,
+      {
+        classProgression: character.classProgression,
+        viewingEntry: character.classProgression[0],
+      },
+    )
+
+    expect(result.characterPatch).toEqual({
+      classProgression: [
+        {
+          name: 'Fighter',
+          source: 'PHB',
+          levels: 3,
+          subclass: 'Battle Master',
+          subclassSource: 'PHB',
+        },
+      ],
+    })
+    expect(result.provenanceUpdate).toBe(ledger)
+  })
+
   test('adds armor proficiencies for a new class', () => {
     const character = makeCharacterFixture({
-      class: '',
       classProgression: [],
       proficiencies: {
         armor: [],
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
@@ -160,8 +206,6 @@ describe('applyClassSelectionCommand', () => {
 
   test('ignores non-string armor/weapons entries (e.g. Artificer firearms variant object)', () => {
     const character = makeCharacterFixture({
-      class: '',
-      classSource: '',
       classProgression: [],
     })
     const ledger = emptyProvenance()
@@ -190,13 +234,13 @@ describe('applyClassSelectionCommand', () => {
 
   test('removes old class proficiencies when switching class', () => {
     const character = makeCharacterFixture({
-      class: 'Fighter',
       classProgression: [{ name: 'Fighter', source: 'PHB', levels: 1 }],
       proficiencies: {
         armor: ['light armor', 'medium armor'],
         weapons: ['simple weapons'],
         tools: [],
         skills: [],
+        expertise: [],
         languages: ['Common'],
         savingThrows: ['strength', 'constitution'],
       },
@@ -245,6 +289,43 @@ describe('applyClassSelectionCommand', () => {
     // Wizard's saving throws are added
     expect(result.characterPatch.proficiencies?.savingThrows).toContain('intelligence')
     expect(result.characterPatch.proficiencies?.savingThrows).toContain('wisdom')
+    expect(result.characterPatch.classProgression).toEqual([
+      { name: 'Wizard', source: 'PHB', levels: 1 },
+    ])
+  })
+
+  test('removes an old class skill and synchronizes skill state when switching class', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
+      hitDiceUsed: { 'rogue|phb': 1 },
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        skills: ['stealth'],
+        expertise: ['stealth'],
+        languages: [],
+        savingThrows: [],
+      },
+    })
+    const ledger = addGrant(
+      emptyProvenance(),
+      'skills',
+      'Stealth',
+      makeSourceTag('class', 'Rogue', 'choice', 'PHB'),
+    )
+
+    const result = applyClassSelectionCommand(
+      character,
+      ledger,
+      { name: 'Wizard', source: 'PHB', startingProficiencies: {} },
+      undefined,
+      EMPTY_LOOKUP,
+    )
+
+    expect(result.characterPatch.proficiencies?.skills).toEqual([])
+    expect(result.characterPatch.proficiencies?.expertise).toEqual([])
+    expect(result.characterPatch.hitDiceUsed).toEqual({})
   })
 
   test('adds starting equipment from class blocks', () => {
@@ -252,7 +333,6 @@ describe('applyClassSelectionCommand', () => {
     const lookup = buildItemLookup([dagger])
 
     const character = makeCharacterFixture({
-      class: '',
       classProgression: [],
       equipment: [],
       proficiencies: {
@@ -260,6 +340,7 @@ describe('applyClassSelectionCommand', () => {
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
@@ -282,7 +363,6 @@ describe('applyClassSelectionCommand', () => {
     const lookup = buildItemLookup([dagger])
 
     const character = makeCharacterFixture({
-      class: 'Rogue',
       classProgression: [{ name: 'Rogue', source: 'PHB', levels: 1 }],
       equipment: [
         {
@@ -331,7 +411,6 @@ describe('applyClassSelectionCommand', () => {
     const lookup = buildItemLookup([dagger])
 
     const character = makeCharacterFixture({
-      class: '',
       classProgression: [],
       // User already has a manually-added torch
       equipment: [
@@ -350,6 +429,7 @@ describe('applyClassSelectionCommand', () => {
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
@@ -370,13 +450,13 @@ describe('applyClassSelectionCommand', () => {
 
   test('returns a provenance update', () => {
     const character = makeCharacterFixture({
-      class: '',
       classProgression: [],
       proficiencies: {
         armor: [],
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },

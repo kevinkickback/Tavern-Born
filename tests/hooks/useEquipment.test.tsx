@@ -43,6 +43,7 @@ describe('useEquipment hook', () => {
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
@@ -71,18 +72,24 @@ describe('useEquipment hook', () => {
       result.current.toggleEquip('armor-1')
     })
 
-    expect(computeEffectiveCharacterArmorClass(useCharacterStore.getState().activeCharacter!)).toBe(
-      13,
-    )
+    expect(
+      computeEffectiveCharacterArmorClass(
+        useCharacterStore.getState().activeCharacter!,
+        useCharacterStore.getState().activeCharacter!.abilityScores,
+      ),
+    ).toBe(13)
     expect(useCharacterStore.getState().activeCharacter?.equipment[0]?.equipped).toBe(true)
 
     act(() => {
       result.current.toggleEquip('armor-1')
     })
 
-    expect(computeEffectiveCharacterArmorClass(useCharacterStore.getState().activeCharacter!)).toBe(
-      12,
-    )
+    expect(
+      computeEffectiveCharacterArmorClass(
+        useCharacterStore.getState().activeCharacter!,
+        useCharacterStore.getState().activeCharacter!.abilityScores,
+      ),
+    ).toBe(12)
     expect(useCharacterStore.getState().activeCharacter?.equipment[0]?.equipped).toBe(false)
   })
 
@@ -102,6 +109,7 @@ describe('useEquipment hook', () => {
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },
@@ -139,9 +147,12 @@ describe('useEquipment hook', () => {
       result.current.toggleEquip('shield-1')
     })
 
-    expect(computeEffectiveCharacterArmorClass(useCharacterStore.getState().activeCharacter!)).toBe(
-      18,
-    )
+    expect(
+      computeEffectiveCharacterArmorClass(
+        useCharacterStore.getState().activeCharacter!,
+        useCharacterStore.getState().activeCharacter!.abilityScores,
+      ),
+    ).toBe(18)
   })
 
   test('enforces restrictions for legacy armor records that only have a type code', () => {
@@ -152,6 +163,7 @@ describe('useEquipment hook', () => {
         weapons: [],
         tools: [],
         skills: [],
+        expertise: [],
         languages: [],
         savingThrows: [],
       },

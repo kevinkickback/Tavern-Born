@@ -3,6 +3,7 @@ import { useId } from 'react'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { getAbilityScoreMethodOptions } from '@/lib/calculations/abilityScoreMethods'
 import { IMPLICIT_SOURCES, SOURCE_PRESETS, type SourcePreset } from '@/lib/sourcePresets'
 import { cn } from '@/lib/utils'
 import type { SourceBook } from '@/types/5etools'
@@ -81,26 +82,9 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
   )
   const preferNewerPrintingsEnabled = data.variantRules?.preferNewerPrintings ?? false
 
-  const AS_METHODS = [
-    {
-      value: 'point-buy' as const,
-      label: 'Point Buy',
-      description:
-        'Spend 27 points to customize your six ability scores. Each score starts at 8 and costs more as it gets higher, maxing at 15 before racial bonuses.',
-    },
-    {
-      value: 'standard-array' as const,
-      label: 'Standard Array',
-      description:
-        'Assign the fixed set of scores — 15, 14, 13, 12, 10, 8 — to your six abilities in any order you choose.',
-    },
-    {
-      value: 'custom' as const,
-      label: 'Custom',
-      description:
-        'Enter ability scores freely, such as values rolled with 4d6-drop-lowest. No restrictions are enforced.',
-    },
-  ]
+  const abilityScoreMethods = getAbilityScoreMethodOptions(
+    data.originSystem === '2024' ? '2024' : '2014',
+  )
 
   const VARIANT_RULE_DESCRIPTIONS: Record<string, string> = {
     optionalClassFeatures:
@@ -191,7 +175,7 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
             </div>
 
             <div className="flex rounded-lg overflow-hidden border border-border">
-              {AS_METHODS.map(({ value, label }, i) => (
+              {abilityScoreMethods.map(({ value, label }, i) => (
                 <button
                   key={value}
                   type="button"
@@ -210,7 +194,8 @@ export function RulesStep({ data, onChange, sources = [], invalidFields }: Rules
             </div>
 
             <p className="text-xs text-muted-foreground leading-relaxed min-h-[2.5rem]">
-              {AS_METHODS.find((m) => m.value === data.abilityScoreMethod)?.description ?? ''}
+              {abilityScoreMethods.find((method) => method.value === data.abilityScoreMethod)
+                ?.description ?? ''}
             </p>
           </section>
 

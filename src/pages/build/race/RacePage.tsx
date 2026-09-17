@@ -3,17 +3,20 @@ import {
   Check,
   Eye,
   Lightning,
+  PencilSimple,
   PersonSimple,
   Sparkle,
   Star,
 } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createSearchParams, Link, useSearchParams } from 'react-router-dom'
 import { GameContent } from '@/components/editor/GameContent'
 import { FeatOptionsModal } from '@/components/modals/FeatOptionsModal'
 import { FeatSelectionModal } from '@/components/modals/FeatSelectionModal'
+import { MovementModal } from '@/components/modals/MovementModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { SplitPane } from '@/components/ui/SplitPane'
+import { type CompactPane, SplitPane } from '@/components/ui/SplitPane'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -29,13 +32,20 @@ import {
   WorkspacePaneHeader,
   WorkspacePaneSearch,
 } from '@/components/workspace'
+import { useCharacterCalculationContext } from '@/hooks/character/useCharacterCalculationContext'
 import { useFeatProvenanceMutations } from '@/hooks/character/useFeatProvenanceMutations'
 import { useProvenanceLedger } from '@/hooks/character/useProvenanceLedger'
 import { useRaceProvenanceMutations } from '@/hooks/character/useRaceProvenanceMutations'
 import { useFilteredGameData } from '@/hooks/data/useFilteredGameData'
+import { useRouteFocusTarget } from '@/hooks/ui/useRouteFocusTarget'
 import { featCategoryToFull } from '@/lib/5etools/classData'
 import { hasFeatOptions } from '@/lib/5etools/parsers/featOptions'
+import {
+  getRaceAbilityData,
+  hasUnresolvedRaceAbilityChoices,
+} from '@/lib/calculations/abilityScores'
 import { resolveFeatChoicePool } from '@/lib/calculations/featChoices'
+import { formatEffectiveMovement } from '@/lib/calculations/movement'
 import { normalizeRaceSelectionForOriginSystem } from '@/lib/calculations/originSystem'
 import { buildPrerequisiteSnapshot } from '@/lib/calculations/prerequisites'
 import {
@@ -49,13 +59,23 @@ import {
   mergeRaceWithSubrace,
 } from '@/lib/calculations/raceUtils'
 import { matchesGameDataEntry } from '@/lib/characterUtils'
+import { findFocusedProvenanceChoice, getReadinessFocus } from '@/lib/navigation/readinessFocus'
 import { cn } from '@/lib/utils'
 import { NoCharCard } from '@/pages/_shared'
 import { useCharacterStore } from '@/store/characterStore'
 import type { Feat5e, Race5e, Spell5e } from '@/types/5etools'
 
+type FeatOptionsTarget = Feat5e & { provenanceChoiceId?: string }
+
+const RACE_BONUSES_LINK = {
+  pathname: '/build/ability-scores',
+  search: createSearchParams({ focus: 'race-bonuses' }).toString(),
+}
+
 export function BuildRacePage() {
+  const [searchParams] = useSearchParams()
   const character = useCharacterStore((s) => s.activeCharacter)
+  const calculationContext = useCharacterCalculationContext(character)
   const { races, feats, spells } = useFilteredGameData()
   const { applyRaceSelection, applySubraceChange } = useRaceProvenanceMutations()
   const { resolveFeatChoiceSelection, commitFeatWithOptions } = useFeatProvenanceMutations()
@@ -63,9 +83,11 @@ export function BuildRacePage() {
   const [raceSearch, setRaceSearch] = useState('')
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [detailCollapsed, setDetailCollapsed] = useState(false)
+  const [compactPane, setCompactPane] = useState<CompactPane>('left')
   const [featModalOpen, setFeatModalOpen] = useState(false)
+  const [movementModalOpen, setMovementModalOpen] = useState(false)
   const [activeFeatChoiceId, setActiveFeatChoiceId] = useState<string | null>(null)
-  const [optionsPendingFeat, setOptionsPendingFeat] = useState<Feat5e | null>(null)
+  const [optionsPendingFeat, setOptionsPendingFeat] = useState<FeatOptionsTarget | null>(null)
   const selectedRaceRef = useRef<HTMLDivElement | null>(null)
 
   const filteredRaces = useMemo(() => {
@@ -98,6 +120,16 @@ export function BuildRacePage() {
     normalizedSelection.race && normalizedSelection.subrace
       ? mergeRaceWithSubrace(normalizedSelection.race, normalizedSelection.subrace)
       : (normalizedSelection.subrace ?? normalizedSelection.race)
+  const hasUnresolvedRaceBonuses =
+    character?.originSystem === '2014' &&
+    hasUnresolvedRaceAbilityChoices(
+      getRaceAbilityData(
+        normalizedSelection.race,
+        normalizedSelection.subrace,
+        (character.raceAsiBlockIndex ?? 0) as 0 | 1,
+      ),
+      character.raceAsiChoices ?? [],
+    )
   const selectedRaceKey = selectedRace ? `${selectedRace.name}|${selectedRace.source ?? ''}` : null
 
   // Refs let the effect read the latest values without making them dependencies,
@@ -155,7 +187,14 @@ export function BuildRacePage() {
     if (!activeFeatChoice) return { eligibleFeats: [], initialFilters: undefined }
     return resolveFeatChoicePool(feats as Feat5e[], activeFeatChoice.optionPool)
   }, [activeFeatChoice, feats])
-  const characterSnapshot = useMemo(() => buildPrerequisiteSnapshot({ character }), [character])
+  const characterSnapshot = useMemo(
+    () =>
+      buildPrerequisiteSnapshot({
+        character,
+        effectiveAbilityScores: calculationContext?.abilityScores.total,
+      }),
+    [character, calculationContext?.abilityScores.total],
+  )
 
   const handleOpenFeatModal = useCallback((choiceId: string) => {
     setActiveFeatChoiceId(choiceId)
@@ -169,7 +208,9 @@ export function BuildRacePage() {
       resolveFeatChoiceSelection(activeFeatChoiceId, { name: feat.name, source: feat.source })
       setFeatModalOpen(false)
       setActiveFeatChoiceId(null)
-      if (hasFeatOptions(feat)) setOptionsPendingFeat(feat)
+      if (hasFeatOptions(feat)) {
+        setOptionsPendingFeat({ ...feat, provenanceChoiceId: activeFeatChoiceId })
+      }
     },
     [activeFeatChoiceId, resolveFeatChoiceSelection],
   )
@@ -179,6 +220,17 @@ export function BuildRacePage() {
       choice.sourceTag.sourceName === selectedRace?.name ||
       choice.sourceTag.sourceName === character?.subrace,
   )
+  const readinessFocus = getReadinessFocus(searchParams)
+  const focusedChoice = findFocusedProvenanceChoice(
+    readinessFocus,
+    character?.provenance?.choices ?? [],
+  )
+  const { ref: featChoicesRef, highlighted: featChoicesHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(
+      selectedRaceFeatChoices.some((choice) => choice.id === focusedChoice?.id),
+    )
+  const { ref: raceSelectionRef, highlighted: raceSelectionHighlighted } =
+    useRouteFocusTarget<HTMLDivElement>(readinessFocus === 'identity:race')
 
   if (!character) {
     return <NoCharCard icon={<PersonSimple weight="duotone" />} noun="choose a race" />
@@ -193,6 +245,10 @@ export function BuildRacePage() {
           rightCollapsed={detailCollapsed}
           onLeftCollapsedChange={setLeftCollapsed}
           onRightCollapsedChange={setDetailCollapsed}
+          compactPane={compactPane}
+          onCompactPaneChange={setCompactPane}
+          compactLeftLabel="Races"
+          compactRightLabel="Race details"
           className={cn(
             'my-0 h-full overflow-visible',
             !leftCollapsed && !detailCollapsed && 'gap-3',
@@ -223,7 +279,10 @@ export function BuildRacePage() {
                 </span>
               </WorkspacePaneHeader>
               <ScrollArea className="flex-1 overflow-hidden">
-                <div>
+                <div
+                  ref={raceSelectionRef}
+                  className={cn('rounded-lg', raceSelectionHighlighted && 'animate-route-focus')}
+                >
                   {filteredRaces.map((race) => {
                     const raceKey = `${race.name}|${race.source ?? ''}`
                     const isSelected = selectedRaceKey === raceKey
@@ -248,6 +307,7 @@ export function BuildRacePage() {
                           onClick={() => {
                             const firstSubrace = namedSubraces[0]
                             applyRaceSelection(race, firstSubrace, 0)
+                            setCompactPane('right')
                           }}
                           className="flex items-center gap-3 min-w-0 flex-1 text-left"
                         >
@@ -263,7 +323,6 @@ export function BuildRacePage() {
                           </div>
                           <div className="min-w-0">
                             <div className="font-semibold text-sm truncate">{race.name}</div>
-                            <div className="text-xs text-muted-foreground">{race.source}</div>
                           </div>
                         </button>
 
@@ -306,7 +365,13 @@ export function BuildRacePage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-end justify-end gap-4">
+                    <div
+                      ref={featChoicesRef}
+                      className={cn(
+                        'flex flex-wrap items-end justify-end gap-4 rounded-lg',
+                        featChoicesHighlighted && 'animate-route-focus',
+                      )}
+                    >
                       {selectedRace && subraces.length > 0 && (
                         <div className="flex flex-col gap-1">
                           <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -422,8 +487,24 @@ export function BuildRacePage() {
                                 (character.raceAsiBlockIndex ?? 0) as 0 | 1,
                                 character.raceAsiChoices,
                               )
-                              return asi.length > 0 ? asi.join(' · ') : '—'
+                              if (asi.length > 0) return asi.join(' · ')
+                              return character.originSystem === '2024'
+                                ? 'Provided by background'
+                                : 'No racial bonus'
                             })(),
+                            action: hasUnresolvedRaceBonuses ? (
+                              <Button
+                                asChild
+                                size="sm"
+                                variant="accentOutline"
+                                className="h-7 px-2 text-xs"
+                              >
+                                <Link to={RACE_BONUSES_LINK}>
+                                  <PencilSimple className="size-3" />
+                                  Choose bonuses
+                                </Link>
+                              </Button>
+                            ) : undefined,
                           },
                           {
                             icon: (
@@ -431,18 +512,34 @@ export function BuildRacePage() {
                             ),
                             label: 'Size',
                             value: displayRace.size?.join(', ') ?? '—',
+                            action: undefined,
                           },
                           {
                             icon: <Lightning className="size-4 text-primary" weight="fill" />,
                             label: 'Speed',
-                            value: getSpeedDisplay(displayRace),
+                            value: calculationContext
+                              ? formatEffectiveMovement(calculationContext.movement)
+                              : getSpeedDisplay(displayRace),
+                            action: (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="accentOutline"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => setMovementModalOpen(true)}
+                              >
+                                <PencilSimple className="size-3" />
+                                Edit movement
+                              </Button>
+                            ),
                           },
                           {
                             icon: <Eye className="size-4 text-primary" weight="fill" />,
                             label: 'Darkvision',
                             value: getDarkvisionDisplay(displayRace),
+                            action: undefined,
                           },
-                        ].map(({ icon, label, value }, index) => (
+                        ].map(({ icon, label, value, action }, index) => (
                           <div
                             key={label}
                             className={cn(
@@ -452,14 +549,15 @@ export function BuildRacePage() {
                             )}
                           >
                             {icon}
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                                 {label}
                               </p>
-                              <p className="mt-0.5 truncate text-sm font-semibold tabular-nums">
+                              <p className="mt-0.5 line-clamp-2 text-sm font-semibold tabular-nums">
                                 {value}
                               </p>
                             </div>
+                            {action ? <div className="ml-auto shrink-0">{action}</div> : null}
                           </div>
                         ))}
                       </div>
@@ -551,7 +649,6 @@ export function BuildRacePage() {
         characterSnapshot={characterSnapshot}
         onConfirm={handleFeatModalConfirm}
         initialFilters={featModalInitialFilters}
-        allowIgnoreLimit={false}
       />
 
       {optionsPendingFeat && (
@@ -569,6 +666,8 @@ export function BuildRacePage() {
           onDismiss={() => setOptionsPendingFeat(null)}
         />
       )}
+
+      <MovementModal open={movementModalOpen} onOpenChange={setMovementModalOpen} />
     </WorkspacePage>
   )
 }

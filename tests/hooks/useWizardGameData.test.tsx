@@ -50,4 +50,16 @@ describe('useWizardGameData', () => {
       'MPMM',
     )
   })
+
+  test('treats an empty source selection as the ruleset source only', () => {
+    const { result } = renderHook(() =>
+      useWizardGameData({
+        allowedSources: [],
+        originSystem: '2014',
+      }),
+    )
+
+    expect(result.current.classes.map((classEntity) => classEntity.source)).toEqual(['PHB'])
+    expect(result.current.races).toEqual([])
+  })
 })

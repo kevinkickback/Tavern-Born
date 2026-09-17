@@ -5,6 +5,13 @@ import { Separator } from '@/components/ui/separator'
 import { WorkspaceDetailContent, WorkspacePaneHeader } from '@/components/workspace'
 import { useItemPropertyLookup, useItemTypeLookup } from '@/hooks/data/useGameData'
 import { DAMAGE_TYPE_LABELS } from '@/lib/5etools/constants'
+import { formatCopperValue } from '@/lib/calculations/currency'
+import {
+  getArmorCalculationDescription,
+  getArmorCategoryLabel,
+  getNormalizedItemTraits,
+  inferArmorCategory,
+} from '@/lib/calculations/itemClassification'
 import { cn } from '@/lib/utils'
 import { formatWeaponCategoryLabel } from '@/pages/build/proficiencies/model/data'
 import type { ProfFocus } from '@/pages/build/proficiencies/model/types'
@@ -28,20 +35,6 @@ const SOURCE_EDITION_LABELS: Record<string, string> = {
 
 function stripSource(value: string): string {
   return value.split('|')[0] ?? value
-}
-
-function formatItemCost(value?: number): string {
-  if (value == null) return '—'
-  if (value >= 1000 && value % 1000 === 0) return `${value / 1000} gp`
-  if (value >= 1000) {
-    const gp = Math.floor(value / 1000)
-    const rem = value % 1000
-    if (rem >= 100 && rem % 100 === 0) return `${gp} gp ${rem / 100} sp`
-    return `${gp} gp ${rem} cp`
-  }
-  if (value >= 100 && value % 100 === 0) return `${value / 100} sp`
-  if (value >= 100) return `${Math.floor(value / 100)} sp ${value % 100} cp`
-  return `${value} cp`
 }
 
 function formatWeight(weight?: number): string {
@@ -170,7 +163,7 @@ function ArmorDetails({ item }: { item: Item5e }) {
         <DetailRow label="Str. Requirement" value={item.strength ? `${item.strength}` : 'None'} />
         <DetailRow label="Stealth" value={item.stealth ? 'Disadvantage' : 'Normal'} />
         <DetailRow label="Weight" value={formatWeight(item.weight)} />
-        <DetailRow label="Cost" value={formatItemCost(item.value)} />
+        <DetailRow label="Cost" value={item.value == null ? '—' : formatCopperValue(item.value)} />
       </div>
 
       <EntriesSection entries={item.entries as unknown[] | undefined} />
@@ -213,7 +206,7 @@ function WeaponDetails({ item }: { item: Item5e }) {
         />
         <DetailRow label="Properties" value={formatProperties(item.property, itemPropertyByAbbr)} />
         <DetailRow label="Weight" value={formatWeight(item.weight)} />
-        <DetailRow label="Cost" value={formatItemCost(item.value)} />
+        <DetailRow label="Cost" value={item.value == null ? '—' : formatCopperValue(item.value)} />
       </div>
 
       <EntriesSection entries={item.entries as unknown[] | undefined} />
@@ -236,7 +229,7 @@ function ToolDetails({ item }: { item: Item5e }) {
       <div className="space-y-2 border-y border-border/70 py-3">
         <DetailRow label="Category" value={toolType} />
         <DetailRow label="Weight" value={formatWeight(item.weight)} />
-        <DetailRow label="Cost" value={formatItemCost(item.value)} />
+        <DetailRow label="Cost" value={item.value == null ? '—' : formatCopperValue(item.value)} />
       </div>
 
       <EntriesSection entries={item.entries as unknown[] | undefined} />
@@ -280,49 +273,6 @@ function LanguageDetails({ lang }: { lang: Language5e }) {
 
 // ── Armor / Weapon category-level display ────────────────────────────────────
 
-const ARMOR_CATEGORY_INFO: Record<string, { label: string; acNote: string; examples: string }> = {
-  'light armor': {
-    label: 'Light Armor',
-    acNote: 'AC = base + full DEX modifier',
-    examples: 'Padded, Leather, Studded Leather',
-  },
-  light: {
-    label: 'Light Armor',
-    acNote: 'AC = base + full DEX modifier',
-    examples: 'Padded, Leather, Studded Leather',
-  },
-  'medium armor': {
-    label: 'Medium Armor',
-    acNote: 'AC = base + DEX modifier (max +2)',
-    examples: 'Hide, Chain Shirt, Scale Mail, Breastplate, Half Plate',
-  },
-  medium: {
-    label: 'Medium Armor',
-    acNote: 'AC = base + DEX modifier (max +2)',
-    examples: 'Hide, Chain Shirt, Scale Mail, Breastplate, Half Plate',
-  },
-  'heavy armor': {
-    label: 'Heavy Armor',
-    acNote: 'AC = fixed base (no DEX modifier)',
-    examples: 'Ring Mail, Chain Mail, Splint, Plate',
-  },
-  heavy: {
-    label: 'Heavy Armor',
-    acNote: 'AC = fixed base (no DEX modifier)',
-    examples: 'Ring Mail, Chain Mail, Splint, Plate',
-  },
-  shield: {
-    label: 'Shields',
-    acNote: '+2 AC bonus while equipped',
-    examples: 'Shield',
-  },
-  shields: {
-    label: 'Shields',
-    acNote: '+2 AC bonus while equipped',
-    examples: 'Shield',
-  },
-}
-
 const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
   armor: 'Armor',
   weapons: 'Weapon',
@@ -330,19 +280,33 @@ const CATEGORY_DISPLAY_LABELS: Record<string, string> = {
   languages: 'Language',
 }
 
-function ArmorCategoryDetails({ categoryKey }: { categoryKey: string }) {
-  const info = ARMOR_CATEGORY_INFO[categoryKey.toLowerCase()]
-  if (!info) return null
+function ArmorCategoryDetails({
+  categoryKey,
+  armorItems,
+}: {
+  categoryKey: string
+  armorItems: Item5e[]
+}) {
+  const itemTypeByAbbr = useItemTypeLookup()
+  const category = inferArmorCategory(categoryKey)
+  const label = getArmorCategoryLabel(category)
+  const calculation = getArmorCalculationDescription(category)
+  if (!label || !calculation) return null
+  const examples = armorItems
+    .filter((item) => getNormalizedItemTraits(item, itemTypeByAbbr).armorCategory === category)
+    .map((item) => item.name)
+    .filter((name, index, names) => names.indexOf(name) === index)
+    .sort((left, right) => left.localeCompare(right))
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1.5">
-        <Badge variant="secondary">{info.label}</Badge>
+        <Badge variant="secondary">{label}</Badge>
         <Badge variant="outline">Category</Badge>
       </div>
       <div className="space-y-2 border-y border-border/70 py-3">
-        <DetailRow label="AC Calculation" value={info.acNote} />
-        <DetailRow label="Examples" value={info.examples} />
+        <DetailRow label="AC Calculation" value={calculation} />
+        <DetailRow label="Examples" value={examples.join(', ')} />
       </div>
     </div>
   )
@@ -455,8 +419,10 @@ function ItemDetails({
   } else if (focused.category === 'armor') {
     if (focused.itemData) {
       detailContent = <ArmorDetails item={focused.itemData} />
-    } else if (ARMOR_CATEGORY_INFO[focused.name.toLowerCase()]) {
-      detailContent = <ArmorCategoryDetails categoryKey={focused.name} />
+    } else if (inferArmorCategory(focused.name) !== 'none') {
+      detailContent = (
+        <ArmorCategoryDetails categoryKey={focused.name} armorItems={weaponItemsBase} />
+      )
     } else {
       detailContent = (
         <div className="flex flex-wrap gap-1.5">

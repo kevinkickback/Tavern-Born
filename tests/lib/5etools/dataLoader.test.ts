@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { FiveEToolsDataLoader } from '@/lib/5etools/dataLoader'
+import {
+  DATA_FETCH_CONCURRENCY,
+  DATA_REQUEST_TIMEOUT_MS,
+  FiveEToolsDataLoader,
+} from '@/lib/5etools/dataLoader'
 
 function makeJsonResponse(jsonData: unknown, ok = true) {
   return new Response(JSON.stringify(jsonData), {
@@ -17,6 +21,7 @@ describe('5etools/dataLoader', () => {
 
   afterEach(() => {
     globalThis.fetch = originalFetch
+    vi.useRealTimers()
   })
 
   test('buildUrl always resolves to data path in remote mode', () => {
@@ -49,6 +54,79 @@ describe('5etools/dataLoader', () => {
       (loader as unknown as { buildUrl: (f: string) => string }).buildUrl(filename)
 
     expect(buildUrl('class/class-wizard.json')).toBe('C:\\5etools/class/class-wizard.json')
+  })
+
+  test('times out a stalled remote request', async () => {
+    vi.useFakeTimers()
+    globalThis.fetch = vi.fn((_input, init) => {
+      const signal = init?.signal
+      return new Promise((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(signal.reason), { once: true })
+      })
+    }) as unknown as typeof fetch
+    const loader = new FiveEToolsDataLoader({
+      type: 'remote',
+      path: 'https://example.com/5etools-src/main',
+      isValid: true,
+    })
+    const loadResource = (
+      loader as unknown as { loadResource: (filename: string) => Promise<unknown> }
+    ).loadResource.bind(loader)
+
+    const request = expect(loadResource('books.json')).rejects.toMatchObject({
+      name: 'TimeoutError',
+    })
+    await vi.advanceTimersByTimeAsync(DATA_REQUEST_TIMEOUT_MS)
+
+    await request
+  })
+
+  test('propagates caller cancellation to a remote request', async () => {
+    globalThis.fetch = vi.fn((_input, init) => {
+      const signal = init?.signal
+      return new Promise((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(signal.reason), { once: true })
+      })
+    }) as unknown as typeof fetch
+    const loader = new FiveEToolsDataLoader({
+      type: 'remote',
+      path: 'https://example.com/5etools-src/main',
+      isValid: true,
+    })
+    const controller = new AbortController()
+    const loadResource = (
+      loader as unknown as {
+        loadResource: (filename: string, signal: AbortSignal) => Promise<unknown>
+      }
+    ).loadResource.bind(loader)
+
+    const request = expect(loadResource('books.json', controller.signal)).rejects.toMatchObject({
+      name: 'AbortError',
+    })
+    controller.abort()
+
+    await request
+  })
+
+  test('bounds concurrent remote resource requests', async () => {
+    let activeRequests = 0
+    let maximumActiveRequests = 0
+    globalThis.fetch = vi.fn(async () => {
+      activeRequests += 1
+      maximumActiveRequests = Math.max(maximumActiveRequests, activeRequests)
+      await new Promise((resolve) => setTimeout(resolve, 2))
+      activeRequests -= 1
+      return makeJsonResponse({})
+    }) as unknown as typeof fetch
+    const loader = new FiveEToolsDataLoader({
+      type: 'remote',
+      path: 'https://example.com/5etools-src/main',
+      isValid: true,
+    })
+
+    await loader.loadAllData()
+
+    expect(maximumActiveRequests).toBe(DATA_FETCH_CONCURRENCY)
   })
 
   test('loads classes from class files and filters spells by index source while enriching lookup data', async () => {
@@ -164,8 +242,10 @@ describe('5etools/dataLoader', () => {
         },
       ]),
     )
-    expect(onResourceFailure).toHaveBeenCalledWith('fluff-races.json')
-    expect(onResourceFailure).toHaveBeenCalledWith('class/fluff-class-phb.json')
+    expect(onResourceFailure).toHaveBeenCalledWith('fluff-races.json', { required: false })
+    expect(onResourceFailure).toHaveBeenCalledWith('class/fluff-class-phb.json', {
+      required: false,
+    })
   })
 
   test('loads classes from slug-keyed class index entries without source filtering them out', async () => {
@@ -208,7 +288,10 @@ describe('5etools/dataLoader', () => {
       'generated/gendata-spell-source-lookup.json': {},
       'feats.json': { feat: [] },
       'items.json': { item: [] },
-      'items-base.json': { baseitem: [] },
+      'items-base.json': {
+        baseitem: [],
+        itemMastery: [{ name: 'Sap', source: 'XPHB', entries: ['Sap details'] }],
+      },
       'actions.json': { action: [] },
       'conditionsdiseases.json': { condition: [] },
       'deities.json': { deity: [] },
@@ -237,6 +320,9 @@ describe('5etools/dataLoader', () => {
 
     expect(gameData.classes.map((it) => it.name)).toEqual(['Wizard', 'Fighter'])
     expect(gameData.classFeatures.map((it) => it.name)).toEqual(['Spellcasting', 'Fighting Style'])
+    expect(gameData.itemMasteries).toEqual([
+      { name: 'Sap', source: 'XPHB', entries: ['Sap details'] },
+    ])
   })
 
   test('continues ingestion when an indexed class file is missing', async () => {
@@ -366,7 +452,6 @@ describe('5etools/dataLoader', () => {
     expect(gameData.skills).toEqual([])
     expect(gameData.senses).toEqual([])
     expect(gameData.languages).toEqual([])
-    expect(gameData.magicvariants).toEqual([])
     expect(gameData.optionalfeatures).toEqual([])
     expect(gameData.variantrules).toEqual([])
   })
@@ -427,7 +512,6 @@ describe('5etools/dataLoader', () => {
     expect(gameData.skills).toEqual([])
     expect(gameData.senses).toEqual([])
     expect(gameData.languages).toEqual([])
-    expect(gameData.magicvariants).toEqual([])
     expect(gameData.optionalfeatures).toEqual([])
     expect(gameData.variantrules).toEqual([])
   })
@@ -610,9 +694,15 @@ describe('5etools/dataLoader', () => {
       path: 'https://example.com/5etools-src/main',
       isValid: true,
     })
+    const onResourceFailure = vi.fn()
 
-    await expect(loader.loadAllData()).rejects.toThrow(
+    await expect(loader.loadAllData({ onResourceFailure })).rejects.toThrow(
       'Unable to load remote data source. Check internet connectivity and source URL.',
     )
+    expect(onResourceFailure).toHaveBeenCalledWith('books.json', { required: true })
+    expect(onResourceFailure).toHaveBeenCalledWith('fluff-races.json', { required: false })
+    expect(onResourceFailure).toHaveBeenCalledWith('generated/gendata-spell-source-lookup.json', {
+      required: true,
+    })
   })
 })

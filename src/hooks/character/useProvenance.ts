@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { useProvenanceMutations } from '@/hooks/character/useProvenanceMutations'
 import { useProvenanceRows } from '@/hooks/character/useProvenanceRows'
-import { resolveRaceAsiChoicesInLedger } from '@/lib/provenance'
 import { emptyProvenance, useCharacterStore } from '@/store/characterStore'
 
 /**
@@ -16,8 +15,7 @@ export function useProvenance() {
   const character = useCharacterStore((state) => state.activeCharacter)
 
   const ledger = useMemo(() => {
-    const raw = character?.provenance ?? emptyProvenance()
-    return resolveRaceAsiChoicesInLedger(raw, character?.raceAsiChoices ?? [])
+    return character?.provenance ?? emptyProvenance()
   }, [character])
 
   const mutations = useProvenanceMutations()
