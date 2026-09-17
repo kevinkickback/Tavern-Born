@@ -513,6 +513,7 @@ export function BuildClassLevelsPanel({
                             spellByReference={spellByReference}
                             detailCollapsed={detailCollapsed}
                             hasExistingKnown={hasExistingKnown}
+                            requiredSelectionsComplete={spellChoiceComplete}
                             swapDoneAtLevel={!!swapsByLevel[lv]}
                             onOpenSpellPicker={onOpenSpellPicker}
                             onOpenSpellSwap={onOpenSpellSwap}

@@ -213,6 +213,10 @@ copy atomically without creating an unsaved edit.
   non-fixed-profile consistency fallback, so the control cannot open into a silent no-op. Source
   readiness compares selected references with the catalog through the same normalized,
   case-insensitive name identity used by spell profiles.
+- Spell replacements remain recorded against the class level that granted each opportunity so level
+  rollback can reverse them safely. Replacement candidates use the character's current class-level
+  spell eligibility, and the control remains hidden until that level's required new spell choices
+  are complete and a replaceable known spell exists.
 - Subclass-owned spellcasting progressions are overlaid on their base class for class-page choices
   and Review validation. Review derives an absent class profile before checking quotas, so selecting
   a spellcasting subclass produces actionable cantrip/spell requirements instead of a missing-profile

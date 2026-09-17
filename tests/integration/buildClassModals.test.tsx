@@ -88,11 +88,13 @@ function renderWarlockSwap(
     spellGrantedAtLevel?: number
     swapAtLevel?: number
     replacementSpellLevel?: number
+    currentMaxSpellLevel?: number
   } = {},
 ) {
   const characterLevel = progression.characterLevel ?? 2
   const spellGrantedAtLevel = progression.spellGrantedAtLevel ?? 1
   const swapAtLevel = progression.swapAtLevel ?? 2
+  const currentMaxSpellLevel = progression.currentMaxSpellLevel ?? maxSpellLevel
   const hex = makeSpell('Hex', 'Warlock', 'E')
   const armorOfAgathys = makeSpell(
     'Armor of Agathys',
@@ -155,10 +157,20 @@ function renderWarlockSwap(
     },
   })
 
+  const spellChoicesByLevel = new Map([
+    [swapAtLevel, { cantrips: 0, spells: 1, maxSpellLevel, canSwap: true }],
+  ])
+  if (characterLevel !== swapAtLevel) {
+    spellChoicesByLevel.set(characterLevel, {
+      cantrips: 0,
+      spells: 0,
+      maxSpellLevel: currentMaxSpellLevel,
+      canSwap: true,
+    })
+  }
+
   renderClassModals(character, {
-    spellChoicesByLevel: new Map([
-      [swapAtLevel, { cantrips: 0, spells: 1, maxSpellLevel, canSwap: true }],
-    ]),
+    spellChoicesByLevel,
     classSpells: [armorOfAgathys, bless],
     spellByReference: new Map(
       [hex, armorOfAgathys, bless].map((spell) => [
@@ -194,22 +206,23 @@ describe('BuildClassModals spell replacement', () => {
   test('opens the replacement chooser for a non-fixed class-profile spell without a tag', () => {
     renderWarlockSwap(null, false, false)
 
-    expect(screen.getByText('Replace a Spell at Level 2')).toBeTruthy()
+    expect(screen.getByText('Replace a Spell')).toBeTruthy()
     expect(screen.getByText('Hex')).toBeTruthy()
   })
 
-  test('uses the replacement level rather than the original spell-selection level', async () => {
-    renderWarlockSwap('Hex', false, true, 4, false, {
-      characterLevel: 7,
+  test('uses current class spell eligibility for an earlier replacement opportunity', async () => {
+    renderWarlockSwap('Hex', false, true, 1, false, {
+      characterLevel: 9,
       spellGrantedAtLevel: 2,
-      swapAtLevel: 7,
-      replacementSpellLevel: 4,
+      swapAtLevel: 2,
+      replacementSpellLevel: 5,
+      currentMaxSpellLevel: 5,
     })
 
     await waitFor(() =>
       expect(document.querySelector('[data-selection-list-size="1"]')).toBeTruthy(),
     )
-    expect(screen.getByText(/replacement \(up to 4th-level\)/)).toBeTruthy()
+    expect(screen.getByText(/replacement \(up to 5th-level\)/)).toBeTruthy()
     expect(screen.getByText('1 results')).toBeTruthy()
   })
 

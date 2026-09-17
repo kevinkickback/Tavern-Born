@@ -155,12 +155,18 @@ export function getReplaceableClassSpellNames(
   )
 }
 
-/** Uses parsed progression first, then conservatively falls back to replaceable known spells. */
+/** Resolves replacement eligibility from the character's current class level. */
 export function getClassSpellReplacementLevelLimit(
-  configuredMaximum: number,
+  spellChoicesByLevel: ReadonlyMap<number, { maxSpellLevel: number }>,
+  currentClassLevel: number,
   replaceableSpellNames: readonly string[],
   spellsByReference: ReadonlyMap<string, Spell5e>,
 ): number {
+  const configuredMaximum = [...spellChoicesByLevel.entries()].reduce(
+    (maximum, [classLevel, gain]) =>
+      classLevel <= currentClassLevel ? Math.max(maximum, gain.maxSpellLevel) : maximum,
+    0,
+  )
   if (configuredMaximum > 0) return configuredMaximum
 
   return replaceableSpellNames.reduce((maximum, name) => {

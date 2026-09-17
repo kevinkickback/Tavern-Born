@@ -353,12 +353,9 @@ export function BuildClassModals({
           )
           if (swappableSpellNames.length === 0) return null
 
-          const configuredMaxSpellLevel = (() => {
-            const gain = spellChoicesByLevel.get(spellSwapLevel)
-            return gain?.maxSpellLevel ?? 0
-          })()
           const maxSpellLevel = getClassSpellReplacementLevelLimit(
-            configuredMaxSpellLevel,
+            spellChoicesByLevel,
+            viewingClassEntry?.levels ?? spellSwapLevel,
             swappableSpellNames,
             spellByReference,
           )
@@ -379,15 +376,15 @@ export function BuildClassModals({
               >
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Replace a Spell at Level {spellSwapLevel}</DialogTitle>
+                    <DialogTitle>Replace a Spell</DialogTitle>
                     <DialogDescription className="sr-only">
                       Select a spell to replace with a new one.
                     </DialogDescription>
                   </DialogHeader>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Select a spell to replace. The replacement can be{' '}
-                    {`${getOrdinalForm(maxSpellLevel)}-level`} or lower, based on the spell slots
-                    available at this class level.
+                    Select a spell to replace. You can choose a {viewingClass ?? 'class'} spell of{' '}
+                    {`${getOrdinalForm(maxSpellLevel)}-level`} or lower based on your current class
+                    level.
                   </p>
                   <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
                     {swappableSpellNames.map((name) => {

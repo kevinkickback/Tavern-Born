@@ -76,10 +76,23 @@ describe('class spell replacement candidates', () => {
     }
 
     expect(
-      getClassSpellReplacementLevelLimit(0, ['Alarm|PHB'], new Map([['alarm|phb', alarm]])),
+      getClassSpellReplacementLevelLimit(
+        new Map(),
+        2,
+        ['Alarm|PHB'],
+        new Map([['alarm|phb', alarm]]),
+      ),
     ).toBe(1)
     expect(
-      getClassSpellReplacementLevelLimit(2, ['Alarm|PHB'], new Map([['alarm|phb', alarm]])),
-    ).toBe(2)
+      getClassSpellReplacementLevelLimit(
+        new Map([
+          [2, { maxSpellLevel: 1 }],
+          [9, { maxSpellLevel: 5 }],
+        ]),
+        9,
+        ['Alarm|PHB'],
+        new Map([['alarm|phb', alarm]]),
+      ),
+    ).toBe(5)
   })
 })

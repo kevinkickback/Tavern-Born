@@ -143,8 +143,52 @@ describe('BuildClassLevelsPanel', () => {
     fireEvent.click(screen.getByText('Level 12 Features'))
     expect(screen.getByText('Spell Replacement')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Choose' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Replace at level 12' }))
+    expect(screen.getByText('Replace a spell')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Replace a spell for level 12' }))
     expect(onOpenSpellSwap).toHaveBeenCalledWith(12)
+  })
+
+  test('waits for required spell selections before offering a replacement', () => {
+    const character = makeCharacterFixture({
+      classProgression: [{ name: 'Sorcerer', source: 'PHB', levels: 2 }],
+      spells: {
+        ...makeCharacterFixture().spells,
+        spellProfiles: [
+          {
+            id: 'class:Sorcerer|PHB',
+            type: 'class',
+            label: 'Sorcerer (Lv 2)',
+            className: 'Sorcerer',
+            classSource: 'PHB',
+            cantrips: [],
+            spellsKnown: ['Chromatic Orb'],
+            preparedSpells: [],
+            alwaysPrepared: false,
+          },
+        ],
+      },
+    })
+
+    render(
+      <BuildClassLevelsPanel
+        {...makeProps({
+          character,
+          classProgression: character.classProgression,
+          selectedClassTab: 'Sorcerer|PHB',
+          viewingClass: 'Sorcerer',
+          viewingClassSource: 'PHB',
+          viewingClassLevel: 2,
+          levelsToShow: [2],
+          asiLevels: [],
+          spellChoicesByLevel: new Map([
+            [2, { cantrips: 0, spells: 1, maxSpellLevel: 1, canSwap: true }],
+          ]),
+        })}
+      />,
+    )
+
+    fireEvent.click(screen.getByText('Level 2 Features'))
+    expect(screen.queryByText('Replace a spell')).toBeNull()
   })
 
   test('does not count a retained unavailable class option as complete', () => {

@@ -19,6 +19,7 @@ interface BuildClassSpellSectionProps {
   spellByReference: Map<string, Spell5e>
   detailCollapsed: boolean
   hasExistingKnown: boolean
+  requiredSelectionsComplete: boolean
   swapDoneAtLevel: boolean
   onOpenSpellPicker: (level: number) => void
   onOpenSpellSwap: (level: number) => void
@@ -34,6 +35,7 @@ export function BuildClassSpellSection({
   spellByReference,
   detailCollapsed,
   hasExistingKnown,
+  requiredSelectionsComplete,
   swapDoneAtLevel,
   onOpenSpellPicker,
   onOpenSpellSwap,
@@ -77,15 +79,20 @@ export function BuildClassSpellSection({
               {chosenNames.length > 0 ? 'Edit' : 'Choose'}
             </Button>
           )}
-          {spellGain.canSwap && hasExistingKnown && (
+          {spellGain.canSwap && hasExistingKnown && requiredSelectionsComplete && (
             <Button
               variant={swapDoneAtLevel ? 'ghost' : 'outline'}
               size="sm"
               className="h-7 text-xs gap-1"
+              aria-label={
+                swapDoneAtLevel
+                  ? `Change spell replacement for level ${level}`
+                  : `Replace a spell for level ${level}`
+              }
               onClick={() => onOpenSpellSwap(level)}
             >
               <ArrowsClockwise className="h-3 w-3" />
-              {swapDoneAtLevel ? `Swapped at level ${level}` : `Replace at level ${level}`}
+              {swapDoneAtLevel ? 'Change replacement' : 'Replace a spell'}
             </Button>
           )}
         </div>
